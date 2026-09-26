@@ -71,7 +71,6 @@ import org.codehaus.groovy.ast.expr.ElvisOperatorExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.ListExpression;
-import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -856,9 +855,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
      * resolve the return type from its output block.
      *
      * A pipeline declares its inputs with a params block rather than a `take:`
-     * section, so it is called with named arguments or with a single record.
-     * Each argument must be assignable to the declared param type, like a
-     * workflow input.
+     * section, so it is called with a single record (or no arguments). Each
+     * field must be assignable to the declared param type, like a workflow input.
      *
      * The return type is a record of the declared outputs, matching the record
      * that the pipeline returns at runtime.
@@ -872,65 +870,44 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return false;
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
 
+        var name = node.getMethodAsString();
         var arguments = asMethodCallArguments(node);
-        List<PipelineArgument> args;
-        if( arguments.size() > 1 ) {
-            addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments, one for each of its params", node);
+        if( arguments.isEmpty() ) {
+            checkPipelineParams(node, node, pipeline.getParams(), List.of());
             return true;
         }
-        else if( arguments.isEmpty() ) {
-            args = List.of();
+        if( arguments.size() > 1 || arguments.get(0) instanceof MapExpression ) {
+            addError("Pipeline `" + name + "` should be called with a record", node);
+            return true;
         }
-        else if( arguments.get(0) instanceof MapExpression me ) {
-            args = me.getMapEntryExpressions().stream()
-                .map(entry -> new PipelineArgument(entry.getKeyExpression().getText(), getType(entry.getValueExpression()), entry.getValueExpression(), entry))
-                .toList();
+        var argument = arguments.get(0);
+        var argType = getType(argument);
+        if( !Types.isRecordType(argType) ) {
+            if( !ClassHelper.isDynamicTyped(argType) )
+                addError("Pipeline `" + name + "` should be called with a record, but received a " + Types.getName(argType), argument);
+            return true;
         }
-        else {
-            var argument = arguments.get(0);
-            var argType = getType(argument);
-            if( !Types.isRecordType(argType) ) {
-                if( !ClassHelper.isDynamicTyped(argType) )
-                    addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments or a record, but received a " + Types.getName(argType), argument);
-                return true;
-            }
-            if( argType.getFields().isEmpty() )
-                return true;
-            args = argType.getFields().stream()
-                .map(fn -> new PipelineArgument(fn.getName(), fn.getType(), argument, null))
-                .toList();
-        }
-        checkPipelineParams(node, pipeline.getParams(), args);
+        if( argType.getFields().isEmpty() )
+            return true;
+        checkPipelineParams(node, argument, pipeline.getParams(), argType.getFields());
         return true;
     }
 
-    /**
-     * A named argument of a pipeline call, or a field of a record argument.
-     *
-     * @param name
-     * @param type
-     * @param node the node to report a type error against
-     * @param entry the named argument, or null for a record field
-     */
-    private record PipelineArgument(String name, ClassNode type, ASTNode node, MapEntryExpression entry) {}
-
-    private void checkPipelineParams(MethodCallExpression node, ParamBlockNode params, List<PipelineArgument> args) {
+    private void checkPipelineParams(MethodCallExpression node, ASTNode argument, ParamBlockNode params, List<FieldNode> fields) {
         var declarations = params != null ? params.declarations : Parameter.EMPTY_ARRAY;
         var byName = Arrays.stream(declarations).collect(Collectors.toMap(Parameter::getName, p -> p, (a, b) -> a));
         var provided = new HashSet<String>();
 
-        for( var arg : args ) {
-            var declaration = byName.get(arg.name());
+        for( var fn : fields ) {
+            var declaration = byName.get(fn.getName());
             if( declaration == null ) {
-                addError("Param `" + arg.name() + "` is not defined by pipeline `" + node.getMethodAsString() + "`", arg.entry() != null ? arg.entry() : arg.node());
+                addError("Param `" + fn.getName() + "` is not defined by pipeline `" + node.getMethodAsString() + "`", argument);
                 continue;
             }
-            provided.add(arg.name());
+            provided.add(fn.getName());
             var paramType = declaration.getType();
-            if( !Types.isAssignableFrom(paramType, arg.type()) )
-                addError("Param `" + arg.name() + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(arg.type()), arg.node());
-            if( arg.entry() != null )
-                arg.entry().putNodeMetaData(ASTNodeMarker.NAMED_PARAM, declaration);
+            if( !Types.isAssignableFrom(paramType, fn.getType()) )
+                addError("Param `" + fn.getName() + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(fn.getType()), argument);
         }
 
         var missing = Arrays.stream(declarations)

@@ -76,7 +76,7 @@ class PipelineTypeCheckingTest extends Specification {
             include { workflow as RNASEQ } from './rnaseq.nf'
 
             workflow {
-                RNASEQ( input: channel.of('a'), fasta: file('genome.fa') )
+                RNASEQ( record(input: channel.of('a'), fasta: file('genome.fa')) )
             }
             ''') == []
     }
@@ -87,7 +87,7 @@ class PipelineTypeCheckingTest extends Specification {
             include { workflow as RNASEQ } from './rnaseq.nf'
 
             workflow {
-                RNASEQ( input: channel.of('a'), fasta: channel.value(file('genome.fa')) )
+                RNASEQ( record(input: channel.of('a'), fasta: channel.value(file('genome.fa'))) )
             }
             ''') == [ 'Param `fasta` expects a Path but received a Value<Path>' ]
     }
@@ -98,7 +98,7 @@ class PipelineTypeCheckingTest extends Specification {
             include { workflow as RNASEQ } from './rnaseq.nf'
 
             workflow {
-                RNASEQ( input: channel.value('a'), fasta: file('genome.fa') )
+                RNASEQ( record(input: channel.value('a'), fasta: file('genome.fa')) )
             }
             ''') == [ 'Param `input` expects a Channel<String> but received a Value<String>' ]
     }
@@ -159,7 +159,7 @@ class PipelineTypeCheckingTest extends Specification {
             include { workflow as META } from './meta.nf'
 
             workflow {
-                META( label: 'x' )
+                META( record(label: 'x') )
             }
             ''', [
             'meta.nf': '''\
@@ -199,11 +199,13 @@ class PipelineTypeCheckingTest extends Specification {
 
         where:
         CALL                                                                    | ERROR
-        "RNASEQ( input: channel.of('a'), fasta: file('x'), foo: 1 )"            | 'Param `foo` is not defined by pipeline `RNASEQ`'
-        "RNASEQ( input: channel.of('a') )"                                      | 'Pipeline `RNASEQ` requires the following params: fasta'
+        "RNASEQ( record(input: channel.of('a'), fasta: file('x'), foo: 1) )"    | 'Param `foo` is not defined by pipeline `RNASEQ`'
+        "RNASEQ( record(input: channel.of('a')) )"                              | 'Pipeline `RNASEQ` requires the following params: fasta'
         "RNASEQ()"                                                              | 'Pipeline `RNASEQ` requires the following params: input, fasta'
-        "RNASEQ( channel.of('a'), file('x') )"                                  | 'Pipeline `RNASEQ` should be called with named arguments, one for each of its params'
-        "RNASEQ( 'a' )"                                                         | 'Pipeline `RNASEQ` should be called with named arguments or a record, but received a String'
+        "RNASEQ( input: channel.of('a'), fasta: file('x') )"                    | 'Pipeline `RNASEQ` should be called with a record'
+        "RNASEQ( [input: channel.of('a'), fasta: file('x')] )"                  | 'Pipeline `RNASEQ` should be called with a record'
+        "RNASEQ( channel.of('a'), file('x') )"                                  | 'Pipeline `RNASEQ` should be called with a record'
+        "RNASEQ( 'a' )"                                                         | 'Pipeline `RNASEQ` should be called with a record, but received a String'
     }
 
     def 'should report an included pipeline that is not aliased' () {
@@ -240,7 +242,7 @@ class PipelineTypeCheckingTest extends Specification {
             include { workflow as RNASEQ } from './rnaseq.nf'
 
             workflow {
-                r = RNASEQ( input: channel.of('a'), fasta: file('genome.fa') )
+                r = RNASEQ( record(input: channel.of('a'), fasta: file('genome.fa')) )
                 BAMS( r.bams )
             }
 
@@ -260,7 +262,7 @@ class PipelineTypeCheckingTest extends Specification {
             include { workflow as RNASEQ ; output as RnaseqOutput } from './rnaseq.nf'
 
             workflow {
-                r = RNASEQ( input: channel.of('a'), fasta: file('genome.fa') )
+                r = RNASEQ( record(input: channel.of('a'), fasta: file('genome.fa')) )
                 r.multiqc.view()
                 SUMMARY( r )
             }

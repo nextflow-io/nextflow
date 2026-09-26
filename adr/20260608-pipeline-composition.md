@@ -81,10 +81,10 @@ It can be included and called as follows:
 include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
 
 workflow {
-    rnaseq = RNASEQ(
+    rnaseq = RNASEQ(record(
         input: file('input.csv'),
         fasta: file('index.fasta')
-    )
+    ))
     rnaseq.bams.view()      // Channel<Path>
     rnaseq.multiqc.view()   // Value<Path>
 }
@@ -94,7 +94,7 @@ Notes:
 
 - The pipeline must be included using the `workflow` keyword and aliased to a specific name (`RNASEQ`).
 - The `params` block becomes the `take:` section and the `output` block becomes the `emit:` section.
-- The workflow is called using named arguments so that defaults can be omitted.
+- The workflow is called with a record of params, so that defaults can be omitted.
 - All outputs are either a `Channel` or wrapped as `Value<T>`, allowing them to be used in regular dataflow logic.
 
 ### Best practices for including pipelines
@@ -307,7 +307,7 @@ params {
 workflow {
     main:
     // fetch FASTQ samples from NCBI SRA
-    fetchngs = NFCORE_FETCHNGS( input: params.input )
+    fetchngs = NFCORE_FETCHNGS( record(input: params.input) )
 
     // adapt fetchngs output to rnaseq input (add strandedness)
     ch_samples = fetchngs.samples.map { r ->
@@ -315,7 +315,7 @@ workflow {
     }
 
     // perform RNAseq analysis
-    rnaseq = NFCORE_RNASEQ( input: ch_samples, aligner: params.aligner, fasta: params.fasta )
+    rnaseq = NFCORE_RNASEQ( record(input: ch_samples, aligner: params.aligner, fasta: params.fasta) )
 
     publish:
     multiqc = rnaseq.multiqc

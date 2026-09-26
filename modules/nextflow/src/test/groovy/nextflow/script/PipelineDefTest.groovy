@@ -122,7 +122,7 @@ class PipelineDefTest extends Dsl2Spec {
         def script = pipeline('''
             workflow {
                 main:
-                greet = GREET( names: channel.of('World', 'Nextflow') )
+                greet = GREET( record(names: channel.of('World', 'Nextflow')) )
                 greet.messages
             }
             ''')
@@ -139,7 +139,7 @@ class PipelineDefTest extends Dsl2Spec {
         def script = pipeline('''
             workflow {
                 main:
-                greet = GREET( names: channel.of('World'), greeting: 'Hola' )
+                greet = GREET( record(names: channel.of('World'), greeting: 'Hola') )
                 greet.messages
             }
             ''')
@@ -184,14 +184,16 @@ class PipelineDefTest extends Dsl2Spec {
         e.message == ERROR
 
         where:
-        CALL                                                                    | ERROR
-        "GREET( greeting: 'Hola' )"                                             | 'Parameter `names` of pipeline `GREET` is required but no value was provided'
-        "GREET( names: channel.of('World'), greeting: null )"                   | 'Parameter `greeting` of pipeline `GREET` is required but no value was provided'
-        "GREET( names: channel.of('World'), foo: 'bar' )"                       | 'Pipeline `GREET` does not declare a parameter named `foo`'
-        "GREET( names: channel.of('World'), foo: null )"                        | 'Pipeline `GREET` does not declare a parameter named `foo`'
-        "GREET( names: channel.of('World'), greeting: channel.value('Hola') )"  | 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
-        "GREET( names: channel.value('World') )"                                | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to a Value'
-        "GREET( names: 'World' )"                                               | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to World [String]'
+        CALL                                                                            | ERROR
+        "GREET( record(greeting: 'Hola') )"                                             | 'Parameter `names` of pipeline `GREET` is required but no value was provided'
+        "GREET( record(names: channel.of('World'), greeting: null) )"                   | 'Parameter `greeting` of pipeline `GREET` is required but no value was provided'
+        "GREET( record(names: channel.of('World'), foo: 'bar') )"                       | 'Pipeline `GREET` does not declare a parameter named `foo`'
+        "GREET( record(names: channel.of('World'), foo: null) )"                        | 'Pipeline `GREET` does not declare a parameter named `foo`'
+        "GREET( record(names: channel.of('World'), greeting: channel.value('Hola')) )"  | 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
+        "GREET( record(names: channel.value('World')) )"                                | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to a Value'
+        "GREET( record(names: 'World') )"                                               | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to World [String]'
+        "GREET( names: channel.of('World') )"                                           | 'Pipeline `GREET` should be called with a record, e.g. `GREET( record(input: params.input) )`'
+        "GREET( [names: channel.of('World')] )"                                         | 'Pipeline `GREET` should be called with a record, e.g. `GREET( record(input: params.input) )`'
     }
 
     @Unroll
@@ -242,7 +244,7 @@ class PipelineDefTest extends Dsl2Spec {
 
             workflow {
                 main:
-                SHOUT(GREET( names: channel.of('World') ))
+                SHOUT(GREET( record(names: channel.of('World')) ))
             }
             ''')
 
@@ -277,9 +279,9 @@ class PipelineDefTest extends Dsl2Spec {
 
         where:
         CALL                                                    | RESULT
-        "COUNT( samples: samples, factor: channel.value(2) )"   | 6
+        "COUNT( record(samples: samples, factor: channel.value(2)) )"   | 6
         // the default of a Value param is wrapped in a dataflow value
-        "COUNT( samples: samples )"                             | 3
+        "COUNT( record(samples: samples) )"                             | 3
     }
 
     def 'should fail when a channel is provided for a Value param' () {
@@ -292,7 +294,7 @@ class PipelineDefTest extends Dsl2Spec {
                 workflow {
                     main:
                     samples = channel.of( record(id: 'a', count: 1) )
-                    COUNT( samples: samples, factor: channel.of(1, 2) )
+                    COUNT( record(samples: samples, factor: channel.of(1, 2)) )
                 }
                 '''
         ])
@@ -338,7 +340,7 @@ class PipelineDefTest extends Dsl2Spec {
             include { workflow as GREET } from './greet.nf'
 
             workflow {
-                GREET( names: channel.of('World') ).messages
+                GREET( record(names: channel.of('World')) ).messages
             }
             '''
 
@@ -374,7 +376,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    GREET( name: 'World' ).messages
+                    GREET( record(name: 'World') ).messages
                 }
                 '''
         ])
@@ -421,7 +423,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    greet = GREET( names: channel.of('World') )
+                    greet = GREET( record(names: channel.of('World')) )
                     greet.messages
                 }
                 '''
@@ -438,7 +440,7 @@ class PipelineDefTest extends Dsl2Spec {
         def script = pipeline('''
             workflow {
                 main:
-                greet = GREET( names: channel.of('World') )
+                greet = GREET( record(names: channel.of('World')) )
 
                 publish:
                 out = greet.messages
@@ -484,7 +486,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    greet = GREET( names: channel.of('World') )
+                    greet = GREET( record(names: channel.of('World')) )
                     greet.messages
                 }
                 '''
@@ -541,8 +543,8 @@ class PipelineDefTest extends Dsl2Spec {
 
             workflow {
                 main:
-                a = GREET( names: channel.of('World'), greeting: 'Hola' )
-                b = GREET_AGAIN( names: channel.of('Nextflow'), greeting: 'Ciao' )
+                a = GREET( record(names: channel.of('World'), greeting: 'Hola') )
+                b = GREET_AGAIN( record(names: channel.of('Nextflow'), greeting: 'Ciao') )
                 a.messages.mix(b.messages)
             }
             ''')
@@ -560,8 +562,8 @@ class PipelineDefTest extends Dsl2Spec {
         def script = pipeline('''
             workflow {
                 main:
-                a = GREET( names: channel.of('World'), greeting: 'Hola' )
-                b = GREET( names: channel.of('Nextflow'), greeting: 'Ciao' )
+                a = GREET( record(names: channel.of('World'), greeting: 'Hola') )
+                b = GREET( record(names: channel.of('Nextflow'), greeting: 'Ciao') )
                 a.messages.mix(b.messages)
             }
             ''')
@@ -608,8 +610,8 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    GREET( greeting: 'Hola' )
-                    GREET( greeting: 'Ciao' )
+                    GREET( record(greeting: 'Hola') )
+                    GREET( record(greeting: 'Ciao') )
                 }
                 '''
         ])
@@ -628,7 +630,7 @@ class PipelineDefTest extends Dsl2Spec {
 
             workflow {
                 main:
-                MID( names: channel.of('World') ).messages
+                MID( record(names: channel.of('World')) ).messages
             }
             ''')
         write([
@@ -641,7 +643,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    messages = GREET( names: params.names ).messages
+                    messages = GREET( record(names: params.names) ).messages
 
                     publish:
                     messages = messages
@@ -668,8 +670,8 @@ class PipelineDefTest extends Dsl2Spec {
 
             workflow {
                 main:
-                a = GREET( names: channel.of('World'), greeting: 'Hola' )
-                b = MID( names: channel.of('Nextflow') )
+                a = GREET( record(names: channel.of('World'), greeting: 'Hola') )
+                b = MID( record(names: channel.of('Nextflow')) )
                 a.messages.mix(b.messages)
             }
             ''')
@@ -683,7 +685,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    messages = GREET_INNER( names: params.names, greeting: 'Ciao' ).messages
+                    messages = GREET_INNER( record(names: params.names, greeting: 'Ciao') ).messages
 
                     publish:
                     messages = messages

@@ -102,10 +102,10 @@ include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
 
 workflow {
     main:
-    rnaseq = RNASEQ(
+    rnaseq = RNASEQ(record(
         input: samples,
         fasta: file('index.fasta')
-    )
+    ))
     rnaseq.bams.view()      // Channel<Path>
     rnaseq.multiqc.view()   // Value<Path>
 }
@@ -126,7 +126,7 @@ Because the included pipeline is part of the calling pipeline's dataflow graph, 
 
 Note the following:
 
-- The pipeline is called with named arguments, one for each param, so that params with a default value can be omitted. A record can also be given as a single argument.
+- The pipeline is called with a single record, with one field for each param. Params with a default value can be omitted.
 
 - The outputs published by the included pipeline are emitted to the calling workflow instead of being published. Only the calling pipeline decides what is published, by declaring its own `output` block.
 

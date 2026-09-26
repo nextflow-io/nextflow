@@ -13,11 +13,11 @@ include { workflow as NFCORE_FETCHNGS } from './pipelines/nf-core/fetchngs'
 
 workflow {
     main:
-    fetchngs = NFCORE_FETCHNGS( ids: file('data/ids.txt') )
+    fetchngs = NFCORE_FETCHNGS( record(ids: file('data/ids.txt')) )
 }
 ```
 
-The `params` block acts as the `take:` section, so the pipeline is called with named arguments and params with a default value can be omitted. The `output` block acts as the `emit:` section, so `fetchngs.samples` is a channel that the calling workflow can operate on.
+The `params` block acts as the `take:` section, so the pipeline is called with a record of its params, and params with a default value can be omitted. The `output` block acts as the `emit:` section, so `fetchngs.samples` is a channel that the calling workflow can operate on.
 
 The `params` and `output` blocks can also be imported as record types, which is what `main.nf` does for `params`. That way the meta-pipeline declares one param per included pipeline instead of replicating every param:
 

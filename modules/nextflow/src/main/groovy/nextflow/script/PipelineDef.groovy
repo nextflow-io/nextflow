@@ -34,7 +34,7 @@ import nextflow.util.RecordMap
  *   include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
  *
  * The {@code params} block acts as the {@code take:} section, so the pipeline
- * is called with named arguments, and the {@code output} block acts as the
+ * is called with a single record, and the {@code output} block acts as the
  * {@code emit:} section, so the outputs published by the pipeline are emitted
  * to the calling workflow instead of being published to the output directory.
  *
@@ -72,13 +72,13 @@ class PipelineDef extends BindableDef {
     }
 
     /**
-     * Resolve the named arguments of a pipeline call against the
+     * Resolve the record argument of a pipeline call against the
      * declared params of the included pipeline.
      *
      * @param args
      */
     protected Map<String,Object> resolveParams(Object[] args) {
-        final given = namedArguments(args)
+        final given = recordArgument(args)
         final declarations = script.getParamDeclarations()
 
         for( final name : given.keySet() ) {
@@ -102,17 +102,16 @@ class PipelineDef extends BindableDef {
     }
 
     /**
-     * The named arguments of a pipeline call, either as named arguments or
-     * as a single record (e.g. an included params block).
+     * The record argument of a pipeline call (e.g. an included params block).
      *
      * @param args
      */
-    private Map<String,Object> namedArguments(Object[] args) {
+    private Map<String,Object> recordArgument(Object[] args) {
         if( args.length == 0 )
             return Collections.<String,Object>emptyMap()
-        if( args.length == 1 && args[0] instanceof Map )
-            return (Map<String,Object>)args[0]
-        throw new ScriptRuntimeException("Pipeline `${name}` should be called with named arguments, e.g. `${name}( input: params.input )`")
+        if( args.length == 1 && args[0] instanceof RecordMap )
+            return (RecordMap)args[0]
+        throw new ScriptRuntimeException("Pipeline `${name}` should be called with a record, e.g. `${name}( record(input: params.input) )`")
     }
 
     private Object resolveArgument(Param decl, Object value) {
