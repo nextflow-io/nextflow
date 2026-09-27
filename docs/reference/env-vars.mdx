@@ -216,9 +216,21 @@ Disables the history file (`.nextflow/history`) used to track previous runs (def
 
 When the history file is disabled, `nextflow run` requires an explicit run name (`-name`), and `-resume` requires an explicit session ID. See [Cache stores][cache-stores] for more information.
 
+##### `NXF_JAVA_BASE`
+
+<AddedInVersion version="26.10" />
+
+The base URL from which Nextflow downloads its Java runtime (default: `https://github.com/adoptium`). Use it to point to a mirror with the same path layout, for example in air-gapped environments. `file://` URLs are also supported.
+
 ##### `NXF_JAVA_HOME`
 
-Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the `JAVA_HOME` variable if defined.
+Defines the path location of the Java VM installation used to run Nextflow. This variable overrides both the Java runtime managed by Nextflow and the `JAVA_HOME` variable.
+
+##### `NXF_JAVA_MANAGED`
+
+<AddedInVersion version="26.10" />
+
+When `true`, Nextflow downloads and uses a Java runtime that is known to work with the version of Nextflow being run, stored in `$NXF_HOME/jre`. Set to `false` to use the system Java, which Nextflow finds from `JAVA_HOME` or the `PATH` (default: `true`).
 
 ##### `NXF_JVM_ARGS`
 

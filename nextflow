@@ -135,6 +135,78 @@ function get_ver() {
     fi
 }
 
+function fetch() {
+    if command -v curl &>/dev/null; then curl -fsSL --connect-timeout 10 "$1" -o "$2"
+    elif command -v wget &>/dev/null; then wget -q -T 10 "$1" -O "$2"
+    else return 1
+    fi
+}
+
+# Sets JAVA_CMD to a pinned Temurin JRE for $NXF_VER, installing it on first use.
+# Returns 1 when unavailable, printing the reason unless there is no JRE for this version.
+function java_managed() {
+    local ver os name arch libc dir tmp sum home reason
+    if   [[ $(cmp_ver "$NXF_VER" "25.09.0-edge") -ge 0 ]]; then ver='25.0.4.1+1'
+    elif [[ $(cmp_ver "$NXF_VER" "23.09.2-edge") -ge 0 ]]; then ver='21.0.12.1+1'
+    elif [[ $(cmp_ver "$NXF_VER" "21.10.0") -ge 0 ]]; then ver='17.0.20.1+1'
+    elif [[ $(cmp_ver "$NXF_VER" "18.10.0") -ge 0 ]]; then ver='11.0.32.1+1'
+    else return 1
+    fi
+    # bash builtins instead of uname/ldd keep the already-installed path fork-free
+    case $OSTYPE in
+      linux-musl*) os=alpine-linux; name=linux; libc=-musl ;;
+      linux*) os=linux; name=linux ;;
+      darwin*) os=mac; name=mac ;;
+    esac
+    case $HOSTTYPE in
+      x86_64|amd64) arch=x64 ;;
+      aarch64|arm64) arch=aarch64 ;;
+    esac
+    dir="$NXF_HOME/jre/$ver-$name-$arch$libc"
+    [ -x "$dir/bin/java" ] && JAVA_CMD="$dir/bin/java" && return 0
+
+    if [[ ! $os || ! $arch ]]; then reason="unsupported platform $OSTYPE/$HOSTTYPE"
+    elif command -v sha256sum &>/dev/null; then sum=sha256sum
+    elif command -v shasum &>/dev/null; then sum='shasum -a 256'
+    else reason="sha256sum or shasum command not found"
+    fi
+    if [[ ! $reason ]]; then
+        # a dangling link (e.g. a deleted install) would make the `ln` below fail
+        [[ -L $dir && ! -x $dir/bin/java ]] && rm -f "$dir" 2>/dev/null
+        # mktemp -d creates a 0700 dir, which other users of a shared NXF_HOME could not use
+        mkdir -p "$NXF_HOME/jre" 2>/dev/null && tmp=$(mktemp -d "$dir.XXXXXX" 2>/dev/null) && chmod 755 "$tmp" || reason="cannot write to $NXF_HOME/jre"
+    fi
+    if [[ ! $reason ]]; then
+        trap 'rm -rf "$tmp"' EXIT
+        local file="OpenJDK${ver%%.*}U-jre_${arch}_${os}_hotspot_${ver/+/_}.tar.gz"
+        local url="${NXF_JAVA_BASE:-https://github.com/adoptium}/temurin${ver%%.*}-binaries/releases/download/jdk-$ver/$file"
+        >&2 printf "Downloading Java runtime (one-time). It may require a few seconds, please wait .. "
+        { fetch "$url" "$tmp/$file" && fetch "$url.sha256.txt" "$tmp/sha256"; } 2>"$tmp/err"
+        local status=$?
+        >&2 printf "\r\033[K"
+        if [ $status -ne 0 ]; then reason="cannot download $url: $(head -1 "$tmp/err")"
+        elif [[ $($sum "$tmp/$file" | cut -d' ' -f1) != "$(cut -d' ' -f1 "$tmp/sha256")" ]]; then reason="checksum mismatch for $url"
+        elif ! tar -xzf "$tmp/$file" -C "$tmp" 2>/dev/null; then reason="cannot extract $file"
+        else
+            rm -f "$tmp/$file"
+            for home in "$tmp"/*/Contents/Home "$tmp"/*; do [ -x "$home/bin/java" ] && break; done
+            if ! "$home/bin/java" -version &>/dev/null; then reason="the downloaded Java runtime does not run"
+            # a symlink, not `mv`, because `mv dir existing_dir` nests instead of failing when racing
+            elif ln -sn "${home#"$NXF_HOME/jre/"}" "$dir" 2>/dev/null; then tmp=''
+            fi
+            [[ $reason || -x "$dir/bin/java" ]] || reason="cannot install to $dir"
+        fi
+        [[ $tmp ]] && rm -rf "$tmp"
+        trap - EXIT
+    fi
+    if [[ $reason ]]; then
+        echo_yellow "WARN: Cannot use the Nextflow managed Java runtime ($reason) -- falling back to the system Java.
+      Set NXF_JAVA_HOME to use a specific Java installation, or NXF_JAVA_MANAGED=false to always use the system Java."
+        return 1
+    fi
+    JAVA_CMD="$dir/bin/java"
+}
+
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXXX" || exit $?
@@ -300,9 +372,12 @@ if [[ $NXF_PACK = dist ]]; then
 fi
 
 # use nextflow custom java home path
+JAVA_MANAGED=''
 if [[ "$NXF_JAVA_HOME" ]]; then
   JAVA_HOME="$NXF_JAVA_HOME"
   unset JAVA_CMD
+elif [[ $NXF_JAVA_MANAGED != false ]] && java_managed; then
+  JAVA_MANAGED=1
 fi
 # Determine the Java command to use to start the JVM.
 if [ ! -x "$JAVA_CMD" ] ; then
@@ -332,7 +407,7 @@ else
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
       echo_red "NOTE: Nextflow needs a Java virtual machine to run. To this end:
  - make sure a \`java\` command can be found; or
- - manually define the variables JAVA_HOME to point to an existing installation; or
+ - manually define the variable NXF_JAVA_HOME or JAVA_HOME to point to an existing installation; or
  - install a Java virtual machine, for instance through https://sdkman.io (read the docs);
  - for more details please refer to the Nextflow Get Started page at http://docs.nextflow.io."
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
@@ -348,7 +423,7 @@ else
   minor=${BASH_REMATCH[2]}
   version_check="^(17|18|19|20|21|22|23|24|25|26)"
   version_message="Java 17 or later (up to 26)"
-  if [[ ! $JAVA_VER =~ $version_check ]]; then
+  if [[ ! $JAVA_MANAGED && ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
       if [[ "$NXF_JAVA_HOME" ]]; then
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_JAVA_HOME: $NXF_JAVA_HOME\n"
@@ -372,12 +447,16 @@ fi
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
 JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD" -Dcom.sun.security.enableAIAcaIssuers=true)
+# trust the CAs installed in the OS (e.g. corporate proxies), as the distro Java would
+if [[ $JAVA_MANAGED ]]; then
+  for f in /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts; do [[ -r $f && -s $f ]] && JAVA_OPTS+=(-Djavax.net.ssl.trustStore="$f") && break; done
+fi
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
 if [[ $NXF_LEGACY_LAUNCHER ]]; then
-  [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
+  [[ "$JAVA_HOME" && ! $JAVA_MANAGED ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
   [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
   [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
 fi
