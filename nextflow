@@ -356,8 +356,7 @@ else
       fi
       exit 1
   fi
-  mkdir -p "$(dirname "$JAVA_KEY")"
-  [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
+  { mkdir -p "$(dirname "$JAVA_KEY")" && echo $JAVA_VER > "$JAVA_KEY"; } 2>/dev/null
 fi
 
 # Verify nextflow jar is available
@@ -404,7 +403,7 @@ else MD5=''
 fi
 
 # when no md5 command is available fallback on default execution
-if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
+if [[ $NXF_LEGACY_LAUNCHER ]] && { [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; }; then
     launcher=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     launch_nextflow
     exit 1
@@ -427,7 +426,7 @@ EOF
 }
 
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
-LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+[[ $NXF_LEGACY_LAUNCHER ]] && LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"
