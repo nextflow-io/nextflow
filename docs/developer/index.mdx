@@ -67,24 +67,6 @@ Nextflow depends on a variety of libraries and frameworks, the most prominent of
 
 Any other integrations are likely implemented using a CLI (e.g. Conda, Docker, HPC schedulers) or REST API (e.g. Kubernetes).
 
-## Class Diagrams
-
-Each package has a class diagram, abridged and annotated for relevance and ease of use.
-
-Each node is a class. Fields are selectively documented in order to show only the core data structures and the classes that "own" them. Methods are not explicitly documented, but they are mentioned in certain links where appropriate. Links are selectively documented in order to show only the most important classes and relationships.
-
-Links between classes denote one of the following relationships:
-
-- Inheritance (`A <|-- B`): `B` is a subclass of `A`
-- Composition (`A --* B`): `A` contains `B`
-- Instantiation (`A --> B : f`): `A` creates instance(s) of `B` at runtime via `A::f()`
-
-See [packages-page][packages-page] for the list of Nextflow packages.
-
-```warning
-Class diagrams are manually curated, so they might not always reflect the latest version of the source code.
-```
-
 ## Building from source
 
 If you are interested in modifying the source code, you only need Java 11 or later to build Nextflow from source. Nextflow uses the [Gradle](http://www.gradle.org/) build automation system, but you do not need to install Gradle to build Nextflow. In other words, if you can run Nextflow, then you can probably build it too!
@@ -179,4 +161,3 @@ You can perform limited breakpoint debugging on a Nextflow script using IntelliJ
 Note that this approach can only be used to debug the *script* execution, which does not include the *pipeline* execution.
 
 [install-requirements]: ../install#requirements
-[packages-page]: ./packages
