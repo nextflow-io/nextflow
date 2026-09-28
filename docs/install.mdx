@@ -13,17 +13,21 @@ New versions of Nextflow are released regularly. See [Updating Nextflow][updatin
 
 ## Requirements
 
-Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 26)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
+Nextflow requires Bash 3.2 (or later).
 
-```bash
-java -version
-```
+<AddedInVersion version="26.10" />
+
+Nextflow runs on Java. The first time it runs, Nextflow downloads a Java runtime that is known to work with it ([Eclipse Temurin](https://adoptium.net/)) and stores it in `$NXF_HOME/jre`. You don't need to install Java yourself.
+
+If Nextflow can't use its own Java runtime, it prints a warning and falls back to the system Java. This can happen when there is no network access on the first run, or on an unsupported platform. The system Java must be [Java 17 (or later, up to 26)](https://adoptium.net/). Set `NXF_JAVA_MANAGED=false` to always use the system Java, or `NXF_JAVA_HOME` to use a specific Java installation. See [Environment variables](./reference/env-vars) for more information.
 
 <DeprecatedInVersion version="25.04">
 Support for Java versions prior to 17 was dropped.
 </DeprecatedInVersion>
 
-If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions of Java.
+### Installing Java yourself
+
+If you use the system Java, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions of Java.
 
 To install Java with SDKMAN:
 
