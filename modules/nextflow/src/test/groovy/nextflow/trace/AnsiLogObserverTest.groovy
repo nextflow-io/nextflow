@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import jline.Terminal
 import nextflow.Session
 import nextflow.SysEnv
 import spock.lang.Specification
@@ -28,30 +29,43 @@ import spock.lang.Unroll
 class AnsiLogObserverTest extends Specification {
 
     @Unroll
-    def 'should resolve terminal width from environment' () {
+    def 'should resolve terminal width' () {
         given:
         SysEnv.push(ENV)
+        and:
+        // jline reports the terminal as supported even when there's no tty
+        def terminal = Mock(Terminal) {
+            isSupported() >> true
+            getWidth() >> WIDTH
+        }
 
         expect:
-        AnsiLogObserver.getEnvTerminalWidth() == EXPECTED
+        AnsiLogObserver.getTerminalWidth(terminal, TTY) == EXPECTED
 
         cleanup:
         SysEnv.pop()
 
         where:
-        ENV                                         | EXPECTED
-        [:]                                         | null
-        [COLUMNS: '50']                             | 50
-        [COLUMNS: '']                               | null
-        [COLUMNS: 'abc']                            | null
-        [COLUMNS: '0']                              | null
-        [COLUMNS: '-10']                            | null
-        [COLUMNS: '2147483648']                     | null
-        [TERMINAL_WIDTH: '60']                      | 60
-        [TERMINAL_WIDTH: '60', COLUMNS: '50']       | 60
-        [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']  | 50
-        [TERMINAL_WIDTH: '0', COLUMNS: '50']        | 50
-        [TERMINAL_WIDTH: '-1', COLUMNS: '50']       | 50
+        ENV                                         | TTY   | WIDTH | EXPECTED
+        // the detected terminal width takes precedence over COLUMNS
+        [:]                                         | true  | 200   | 200
+        [COLUMNS: '80']                             | true  | 200   | 200
+        // TERMINAL_WIDTH always forces the width
+        [TERMINAL_WIDTH: '60']                      | true  | 200   | 60
+        [TERMINAL_WIDTH: '60', COLUMNS: '50']       | true  | 200   | 60
+        [TERMINAL_WIDTH: '60', COLUMNS: '50']       | false | 80    | 60
+        // COLUMNS is used when there's no tty
+        [:]                                         | false | 80    | 80
+        [COLUMNS: '50']                             | false | 80    | 50
+        [COLUMNS: '150']                            | false | 80    | 150
+        [COLUMNS: '']                               | false | 80    | 80
+        [COLUMNS: 'abc']                            | false | 80    | 80
+        [COLUMNS: '0']                              | false | 80    | 80
+        [COLUMNS: '-10']                            | false | 80    | 80
+        [COLUMNS: '2147483648']                     | false | 80    | 80
+        [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']  | false | 80    | 50
+        [TERMINAL_WIDTH: '0', COLUMNS: '50']        | false | 80    | 50
+        [TERMINAL_WIDTH: '-1', COLUMNS: '50']       | false | 80    | 50
     }
 
     @Unroll

@@ -22,6 +22,7 @@ import static org.fusesource.jansi.Ansi.*
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import jline.Terminal
 import jline.TerminalFactory
 import nextflow.Session
 import nextflow.SysEnv
@@ -102,8 +103,44 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
 
     private WorkflowStatsObserver statsObserver
 
-    protected static Integer getEnvTerminalWidth() {
-        return parseEnvTerminalWidth('TERMINAL_WIDTH') ?: parseEnvTerminalWidth('COLUMNS')
+    private final boolean tty = hasControllingTerminal()
+
+    /**
+     * Resolve the terminal width used to render the progress.
+     *
+     * The detected terminal width takes precedence over {@code COLUMNS} because the latter
+     * is only a snapshot taken when the process is launched: it does not track terminal resizes
+     * and the {@code nextflow} launcher script exports it as {@code 80} when it cannot query the tty.
+     * A wrong width causes wrapped lines to be miscounted, leaving stale lines on the screen.
+     *
+     * @param terminal The current terminal
+     * @param tty Whether the process has a controlling terminal, see {@link #hasControllingTerminal()}
+     * @return The {@code TERMINAL_WIDTH} value if set, the detected terminal width when there's a tty,
+     *      otherwise the {@code COLUMNS} value falling back to the default terminal width
+     */
+    protected static int getTerminalWidth(Terminal terminal, boolean tty) {
+        final forced = parseEnvTerminalWidth('TERMINAL_WIDTH')
+        if( forced )
+            return forced
+        if( tty )
+            return terminal.getWidth()
+        return parseEnvTerminalWidth('COLUMNS') ?: terminal.getWidth()
+    }
+
+    /**
+     * Check if the process has a controlling terminal i.e. {@code /dev/tty}, which is the
+     * device jline queries to detect the terminal width. Note: {@link Terminal#isSupported()}
+     * cannot be used because jline reports the terminal as supported even when there's no tty
+     * and then falls back to the default width.
+     */
+    private static boolean hasControllingTerminal() {
+        try {
+            new FileInputStream('/dev/tty').close()
+            return true
+        }
+        catch( IOException e ) {
+            return false
+        }
     }
 
     private static Integer parseEnvTerminalWidth(String name) {
@@ -273,8 +310,9 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
             return
         }
 
-        cols = getEnvTerminalWidth() ?: TerminalFactory.get().getWidth()
-        rows = TerminalFactory.get().getHeight()
+        final terminal = TerminalFactory.get()
+        cols = getTerminalWidth(terminal, tty)
+        rows = terminal.getHeight()
 
         // calc max width
         final now = System.currentTimeMillis()
