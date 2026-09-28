@@ -324,7 +324,7 @@ fi
 JAVA_VER=''
 JAVA_REAL="$(resolve_link "$JAVA_CMD")"
 if [[ $JAVA_REAL == */bin/java && -f ${JAVA_REAL%/bin/java}/release ]]; then
-  while IFS= read -r line; do
+  while IFS= read -r line || [[ $line ]]; do
     [[ $line =~ ^JAVA_VERSION=\"?([^\"]+) ]] && JAVA_VER=${BASH_REMATCH[1]} && break
   done < "${JAVA_REAL%/bin/java}/release"
 fi
