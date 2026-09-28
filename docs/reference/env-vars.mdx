@@ -449,11 +449,7 @@ The endpoint that serves an [agent][agent-page] model whose [API provider][agent
 
 <AddedInVersion version="26.10" />
 
-Sets the terminal width of ANSI-formatted log output when `TERMINAL_WIDTH` is not set to a positive integer.
-
-:::note
-Bash sets `COLUMNS` in interactive shells but does not export it, so it is not visible to Nextflow unless you export it explicitly, e.g. `export COLUMNS=100`, or set it for the command, e.g. `COLUMNS=100 nextflow run <pipeline>`. In non-interactive contexts such as a batch job script, `COLUMNS` is not set at all — use `TERMINAL_WIDTH` to force a width there.
-:::
+Sets the terminal width of ANSI-formatted log output when the terminal width cannot be detected automatically, e.g. when running in a batch job, and `TERMINAL_WIDTH` is not set to a positive integer. When Nextflow runs in a terminal, the detected terminal width takes precedence. Use `TERMINAL_WIDTH` to force a specific width.
 
 ##### `FTP_PROXY`
 
@@ -519,7 +515,7 @@ The credential used to authenticate with the model provider of an [agent][agent-
 
 ##### `TERMINAL_WIDTH`
 
-Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to a positive integer. Values that are not positive integers are ignored, in which case Nextflow falls back to `COLUMNS` and then to automatic detection.
+Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to a positive integer. Values that are not positive integers are ignored, in which case Nextflow falls back to automatic detection and then to `COLUMNS`.
 
 [agent-page]: ../agent
 [agent-provider]: ../agent#the-api-provider
