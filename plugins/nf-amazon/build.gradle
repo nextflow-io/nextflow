@@ -55,31 +55,31 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.20'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
-    api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:s3:2.53.1')
-    api ('software.amazon.awssdk:ec2:2.53.1')
-    api ('software.amazon.awssdk:batch:2.53.1')
-    api ('software.amazon.awssdk:iam:2.53.1')
-    api ('software.amazon.awssdk:ecs:2.53.1')
-    api ('software.amazon.awssdk:cloudwatchlogs:2.53.1')
-    api ('software.amazon.awssdk:codecommit:2.53.1')
-    api ('software.amazon.awssdk:sts:2.53.1')
-    api ('software.amazon.awssdk:ses:2.53.1')
-    api ('software.amazon.awssdk:sso:2.53.1')
-    api ('software.amazon.awssdk:ssooidc:2.53.1')
-    api ('software.amazon.awssdk:s3-transfer-manager:2.53.1')
-    api ('software.amazon.awssdk:apache-client:2.53.1')
-    api ('software.amazon.awssdk:aws-crt-client:2.53.1')
+    api ("javax.xml.bind:jaxb-api:${jaxbApiVersion}")
+    api ("software.amazon.awssdk:s3:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ec2:${awsSdkVersion}")
+    api ("software.amazon.awssdk:batch:${awsSdkVersion}")
+    api ("software.amazon.awssdk:iam:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ecs:${awsSdkVersion}")
+    api ("software.amazon.awssdk:cloudwatchlogs:${awsSdkVersion}")
+    api ("software.amazon.awssdk:codecommit:${awsSdkVersion}")
+    api ("software.amazon.awssdk:sts:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ses:${awsSdkVersion}")
+    api ("software.amazon.awssdk:sso:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ssooidc:${awsSdkVersion}")
+    api ("software.amazon.awssdk:s3-transfer-manager:${awsSdkVersion}")
+    api ("software.amazon.awssdk:apache-client:${awsSdkVersion}")
+    api ("software.amazon.awssdk:aws-crt-client:${awsSdkVersion}")
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.33"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
     // wiremock required by S3ClientRetryTest: the SDK's retry lives inside the real S3 client, so a
     // mocked client cannot exercise it -- only an HTTP-level stub below the SDK can
-    testImplementation "org.apache.groovy:groovy-json:4.0.33" // needed by wiremock
-    testImplementation ('org.wiremock:wiremock-standalone:3.13.2') { exclude module: 'groovy-all' }
+    testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock
+    testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
 }

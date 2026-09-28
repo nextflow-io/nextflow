@@ -49,8 +49,8 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.20'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
     // intelligent compute scheduler client
     api 'io.seqera:sched-client:0.79.3'
@@ -59,15 +59,15 @@ dependencies {
     // overload added in 2.6.0: on an older lib-httpx the override binds to nothing and the
     // client silently falls back to retrying every IOException on every request, which
     // re-sends a timed-out batch submit and duplicates the tasks it creates.
-    api 'io.seqera:lib-httpx:2.7.0'
+    api "io.seqera:lib-httpx:${libHttpxVersion}"
     // jackson-databind is pulled transitively (sched-client); an api-scoped constraint raises it
     // across every configuration - including testFixtures* - without a redundant dependency edge.
     // 2.21.5 addresses GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm and later deserialization advisories.
     constraints {
-        api('com.fasterxml.jackson.core:jackson-databind:2.21.5') { because 'jackson-databind deserialization CVEs' }
+        api("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}") { because 'jackson-databind deserialization CVEs' }
     }
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.33"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
 }
