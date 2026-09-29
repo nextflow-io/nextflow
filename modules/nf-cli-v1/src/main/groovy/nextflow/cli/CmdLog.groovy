@@ -158,8 +158,7 @@ class CmdLog extends CmdBase implements CacheBase {
         // -- main
         listIds().each { entry ->
 
-            cacheFor(entry)
-                        .openForRead()
+            openCache(entry)
                         .eachRecord(this.&printRecord)
                         .close()
 

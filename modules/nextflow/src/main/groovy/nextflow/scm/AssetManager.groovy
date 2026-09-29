@@ -53,6 +53,7 @@ import org.eclipse.jgit.merge.MergeStrategy
  * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
  * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
  * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
+ * Setting `NXF_SCM_LEGACY=true` forces the {@link LegacyRepositoryStrategy}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

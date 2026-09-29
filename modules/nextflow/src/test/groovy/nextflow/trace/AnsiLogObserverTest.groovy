@@ -33,7 +33,7 @@ class AnsiLogObserverTest extends Specification {
         SysEnv.push(ENV)
 
         expect:
-        AnsiLogObserver.getEnvTerminalWidth() == EXPECTED
+        AnsiLogObserver.getEnvTerminalWidth(false) == EXPECTED
 
         cleanup:
         SysEnv.pop()
@@ -52,6 +52,23 @@ class AnsiLogObserverTest extends Specification {
         [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']  | 50
         [TERMINAL_WIDTH: '0', COLUMNS: '50']        | 50
         [TERMINAL_WIDTH: '-1', COLUMNS: '50']       | 50
+    }
+
+    @Unroll
+    def 'should ignore COLUMNS when running in a terminal' () {
+        given:
+        SysEnv.push(ENV)
+
+        expect:
+        AnsiLogObserver.getEnvTerminalWidth(true) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                         | EXPECTED
+        [COLUMNS: '80']                             | null
+        [TERMINAL_WIDTH: '60', COLUMNS: '80']       | 60
     }
 
     @Unroll

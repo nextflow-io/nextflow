@@ -19,6 +19,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.SysEnv
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
@@ -46,6 +47,8 @@ trait CacheBase {
 
     abstract List<String> getArgs()
 
+    abstract String getName()
+
     void init() {
 
         if( !history ) {
@@ -53,7 +56,7 @@ trait CacheBase {
         }
 
         if( !history.exists() || history.empty() )
-            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
+            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)" + cloudCacheHint())
 
         if( after && before )
             throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")
@@ -66,8 +69,26 @@ trait CacheBase {
 
     }
 
-    CacheDB cacheFor(HistoryFile.Record entry) {
-        CacheFactory.create(entry.sessionId, entry.runName, basePath)
+    CacheDB openCache(HistoryFile.Record entry) {
+        try {
+            return CacheFactory.create(entry.sessionId, entry.runName, basePath).openForRead()
+        }
+        catch( AbortOperationException e ) {
+            final hint = cloudCacheHint()
+            if( !hint )
+                throw e
+            throw new AbortOperationException(e.message + hint, e)
+        }
+    }
+
+    /**
+     * Explain the failure when the cloud cache is enabled, since
+     * this command can only read the local cache
+     */
+    private String cloudCacheHint() {
+        return SysEnv.get('NXF_CLOUDCACHE_PATH')
+            ? "\n\nNote: the `${getName()}` command does not support the cloud cache"
+            : ''
     }
 
     List<HistoryFile.Record> listIds() {
