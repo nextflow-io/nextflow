@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.8 - 29 Sep 2026
+- Honor token field in BitbucketServerRepositoryProvider (#7120) [a03351431]
+- Preserve `main:` label when onComplete/onError is present (#7346) [db0b73815]
+- Bump nf-amazon@3.4.6
+
 25.10.7 - 15 July 2026
 - Fix issues with v2 config parser (#7249) [0316e831d]
 - Bump nf-google@1.23.6
