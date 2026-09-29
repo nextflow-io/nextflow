@@ -190,6 +190,38 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 5
     }
 
+    def 'should report a generic error for a definition without a body' () {
+        when:
+        def errors = check(
+            '''\
+            process foo
+
+            workflow {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Invalid process definition -- check for missing or out-of-order section labels"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+            }
+
+            process foo
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 4
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Invalid process definition -- check for missing or out-of-order section labels"
+    }
+
     def 'should report an error for mixing script declarations with statements' () {
         when:
         def errors = check(

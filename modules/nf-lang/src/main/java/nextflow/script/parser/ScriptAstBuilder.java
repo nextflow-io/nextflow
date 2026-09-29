@@ -297,7 +297,9 @@ public class ScriptAstBuilder {
      * report the syntax error that caused it to be parsed as a
      * statement, e.g. `process foo { ... }` with an invalid body.
      *
-     * Returns true if a syntax error was reported.
+     * Returns true if a syntax error was reported. Errors past the
+     * end of the statement are ignored, because they point at
+     * unrelated code (e.g. `process foo` without a body).
      *
      * @param ctx
      */
@@ -306,15 +308,25 @@ public class ScriptAstBuilder {
         parser.setErrorHandler(new DescriptiveErrorStrategy(tokenStream.getTokenSource().getInputStream()));
         parser.getInterpreter().setPredictionMode(PredictionMode.LL);
         parser.removeErrorListeners();
-        parser.addErrorListener(createANTLRErrorListener());
+        var reported = new boolean[1];
+        var stopIndex = ctx.getStop().getTokenIndex();
+        parser.addErrorListener(new ANTLRErrorListener() {
+            @Override
+            public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+                if( offendingSymbol instanceof Token token && token.getTokenIndex() > stopIndex )
+                    return;
+                collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
+                reported[0] = true;
+            }
+        });
         tokenStream.seek(ctx.getStart().getTokenIndex());
         try {
             parser.scriptDeclaration();
-            return false;
         }
         catch( ParseCancellationException e ) {
-            return true;
+            // error was reported (or ignored) by the listener
         }
+        return reported[0];
     }
 
     private boolean scriptDeclaration(ScriptDeclarationContext ctx) {
