@@ -1075,6 +1075,14 @@ class TypeCheckingTest extends Specification {
         )
     }
 
+    def 'should not check the return value of a closure with a boolean signature' () {
+        expect: 'findAll() takes a Predicate, which coerces the closure result to a boolean'
+        check(
+            "['a', 'b', ''].findAll { s -> s }",
+            null
+        )
+    }
+
     def 'should treat a wildcard type argument as unknown' () {
         expect: 'channel.topic() returns Channel<?>, so the element type is not known'
         check(
