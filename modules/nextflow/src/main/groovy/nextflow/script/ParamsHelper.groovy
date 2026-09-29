@@ -70,14 +70,7 @@ class ParamsHelper {
                 throw new ScriptRuntimeException("Parameter `${name}` was specified on the command line or params file but is not declared in the script or config")
         }
 
-        final given = new HashMap<String,Object>()
-        for( final name : names ) {
-            if( configParams.containsKey(name) )
-                given.put(name, configParams[name])
-            else if( cliParams.containsKey(name) )
-                given.put(name, cliParams[name])
-        }
-
+        final given = cliParams.subMap(names) + configParams.subMap(names)
         return resolveParams(declarations, given, '') { Param decl, Object value ->
             resolveParam(decl, value, cliParams.containsKey(decl.name))
         }

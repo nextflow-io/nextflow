@@ -20,6 +20,7 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
@@ -47,6 +48,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     private ParamsDef paramsDef
 
     private WorkflowDef entryFlow
+
+    private boolean moduleLoaded
 
     private OutputDef outputDef
 
@@ -76,9 +79,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * The declared params of this script, keyed by name.
      */
     Map<String,Param> getParamDeclarations() {
-        return paramsDef
-            ? paramsDef.getDeclarations()
-            : Collections.<String,Param>emptyMap()
+        return paramsDef.getDeclarations()
     }
 
     /**
@@ -86,6 +87,18 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     WorkflowDef getEntryFlow() {
         return entryFlow
+    }
+
+    /**
+     * Execute this script as an included module, only once
+     * no matter how many scripts include it.
+     */
+    @PackageScope
+    void runModule() {
+        if( moduleLoaded )
+            return
+        moduleLoaded = true
+        run()
     }
 
     /**
@@ -281,9 +294,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         // executed directly -- there is no entry workflow to select
         if( binding.entryName && session.isModuleRun() )
             throw new AbortOperationException("Option `-entry` is not supported when a script is executed as a module")
-
-        if( binding.entryName && paramsDef )
-            throw new AbortOperationException("Option `-entry` is not supported when a script defines a params block")
 
         // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
         if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {

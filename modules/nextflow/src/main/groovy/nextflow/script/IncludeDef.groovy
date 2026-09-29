@@ -102,7 +102,7 @@ class IncludeDef {
         final moduleFile = realModulePath(path).normalize()
         // -- load the module
         final moduleScript = NF.isSyntaxParserV2()
-            ? loadModuleV2(moduleFile, ownerParams, session)
+            ? loadModuleV2(moduleFile, ownerParams)
             : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
         for( Module module : modules ) {
@@ -131,30 +131,14 @@ class IncludeDef {
      *
      * @param path    The included script path
      * @param params  The params of the including script
-     * @param session The current workflow run
      */
     @PackageScope
-    static BaseScript loadModuleV2(Path path, Map params, Session session) {
+    static BaseScript loadModuleV2(Path path, Map params) {
         final script = ScriptMeta.getScriptByPath(path)
         if( !script )
             throw new IllegalStateException("Unable to find module script for path: $path")
         script.getBinding().setParams(params)
-        return runModuleV2(path, session)
-    }
-
-    /**
-     * Execute a module script exactly once, no matter how many scripts
-     * include it. The params are not part of the memo key, because
-     * {@link ScriptBinding.ParamsMap} has an identity hashCode.
-     *
-     * @param path    The included script path
-     * @param session The current workflow run
-     */
-    @PackageScope
-    @Memoized
-    static BaseScript runModuleV2(Path path, Session session) {
-        final script = ScriptMeta.getScriptByPath(path)
-        script.run()
+        script.runModule()
         return script
     }
 

@@ -29,11 +29,8 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.dsl.Nullable;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
-import org.codehaus.groovy.ast.AnnotationNode;
-import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -145,8 +142,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     }
 
     /**
-     * Synthesize a partial record type (all fields nullable) from
-     * the params block of an included pipeline.
+     * Synthesize a record type from the params block of an included
+     * pipeline. The type checker makes it partial (all fields nullable).
      */
     private static ClassNode paramsBlockType(ScriptNode sn, IncludeEntryNode entry) {
         var block = sn.getParams();
@@ -155,14 +152,10 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         var cn = new RecordNode(entry.getNameOrAlias());
         ScriptNode.setPipelineParams(cn);
         for( var declaration : block.declarations ) {
-            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null);
-            fn.addAnnotation(new AnnotationNode(NULLABLE));
-            cn.addField(fn);
+            cn.addField(new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null));
         }
         return cn;
     }
-
-    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
 
     private static void setPlaceholderTargets(IncludeNode node) {
         for( var entry : node.entries ) {

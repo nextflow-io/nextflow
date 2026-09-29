@@ -152,6 +152,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
                 // the type is qualified by the including script, so that two
                 // scripts can include the same block
                 cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
+                addNullableAnnotations(cn);
                 moduleNode.addClass(cn);
                 continue;
             }
@@ -264,13 +265,16 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitRecord(RecordNode node) {
+        addNullableAnnotations(node);
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    private static void addNullableAnnotations(ClassNode node) {
         for( var fn : node.getFields() ) {
             if( fn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
                 fn.addAnnotation(NULLABLE);
         }
-
-        var result = stmt(callThisX("declareType", args(classX(node))));
-        moduleNode.addStatement(result);
     }
 
     @Override
