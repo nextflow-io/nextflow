@@ -12,10 +12,6 @@
 
 - **Remove output block inclusion**: the `output` block of a pipeline can no longer be included. A pipeline call returns its outputs like a workflow call, and the meta-pipeline declares its outputs like any other pipeline.
 
-### Version 1.3 (2026-09-17)
-
-- **Included output block is only a record type**: including the `output` block of a pipeline provides a record type of its outputs and nothing else, mirroring the `params` block. Declaring an output with this type no longer redeclares each output of the included pipeline with its output directives. The meta-pipeline declares its outputs like any other pipeline.
-
 ### Version 1.2 (2026-07-13)
 
 - **Reframe as pipeline composition**: the core feature is the ability to compose pipelines in a Nextflow-native manner. Meta-pipelines are the artifact. Remote pipeline inclusion is deferred to future work.

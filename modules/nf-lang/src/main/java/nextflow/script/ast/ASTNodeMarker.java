@@ -54,9 +54,6 @@ public enum ASTNodeMarker {
     // the MethodNode targeted by a variable expression (PropertyNode)
     METHOD_VARIABLE_TARGET,
 
-    // the Parameter targeted by a named argument (MapEntryExpression)
-    NAMED_PARAM,
-
     // denotes a nullable type annotation (ClassNode)
     NULLABLE,
 

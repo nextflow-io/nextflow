@@ -814,7 +814,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var argType = getType(value);
             if( !Types.isAssignableFrom(namedParam.getType(), argType) )
                 addError("Named param `" + name + "` expects a " + Types.getName(namedParam.getType()) + " but received a " + Types.getName(argType), value);
-            entry.putNodeMetaData(ASTNodeMarker.NAMED_PARAM, namedParam);
+            entry.putNodeMetaData("_NAMED_PARAM", namedParam);
         }
     }
 

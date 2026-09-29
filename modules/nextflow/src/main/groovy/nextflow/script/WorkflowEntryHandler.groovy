@@ -109,15 +109,7 @@ class WorkflowEntryHandler {
      * entry workflow, without creating an output directory.
      */
     OutputDef createOutputDef() {
-        final outputNames = workflowDef.getDeclaredOutputs()
-        // disable the output directory -- report output files by
-        // their work directory path instead of publishing them
-        session.outputDir = null
-        return new OutputDef({ ->
-            final dsl = (OutputDsl)(Object)getDelegate()
-            for( final name : outputNames )
-                dsl.declare(name, { -> })
-        })
+        return OutputDef.unpublished(session) { -> workflowDef.getDeclaredOutputs() }
     }
 
     /**

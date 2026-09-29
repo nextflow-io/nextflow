@@ -35,6 +35,23 @@ class OutputDef {
         this.closure = closure
     }
 
+    /**
+     * Create an output definition that declares the given outputs without
+     * publishing them. The output directory is disabled, so that output
+     * files are reported by their work directory path.
+     *
+     * @param session
+     * @param names provides the output names when the outputs are applied
+     */
+    static OutputDef unpublished(Session session, Closure<List<String>> names) {
+        session.outputDir = null
+        return new OutputDef({ ->
+            final dsl = (OutputDsl)(Object)getDelegate()
+            for( final name : names.call() )
+                dsl.declare(name, { -> })
+        })
+    }
+
     void apply(Session session, Map<String,DataflowWriteChannel> outputs) {
         final dsl = new OutputDsl()
         final cl = (Closure)closure.clone()

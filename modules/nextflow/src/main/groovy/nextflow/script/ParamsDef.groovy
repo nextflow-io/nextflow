@@ -35,7 +35,7 @@ class ParamsDef {
         this.closure = closure
     }
 
-    private Map<String,Param> declarations
+    private ParamsDsl dsl
 
     void apply(Session session) {
         dsl().apply(session)
@@ -45,13 +45,13 @@ class ParamsDef {
      * The declared params, keyed by name.
      */
     Map<String,Param> getDeclarations() {
-        if( declarations == null )
-            declarations = dsl().getDeclarations()
-        return declarations
+        return dsl().getDeclarations()
     }
 
     private ParamsDsl dsl() {
-        final dsl = new ParamsDsl(clazz)
+        if( dsl != null )
+            return dsl
+        dsl = new ParamsDsl(clazz)
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
