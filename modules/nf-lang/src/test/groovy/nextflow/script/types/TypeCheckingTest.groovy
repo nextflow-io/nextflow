@@ -930,6 +930,83 @@ class TypeCheckingTest extends Specification {
         )
     }
 
+    @Unroll
+    def 'should check generic type arguments in a function call' () {
+        expect:
+        check(
+            '''\
+            def hello(xs: List<String>) {
+            }
+
+            workflow {
+                hello( ARG )
+            }
+            '''.replace('ARG', ARG),
+            ERROR
+        )
+
+        where:
+        ARG         | ERROR
+        "[1]"       | 'Argument with type List<Integer> is not compatible with parameter of type List<String>'
+        "['a']"     | null
+    }
+
+    @Unroll
+    def 'should check generic type arguments in a workflow call' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                take:
+                messages: Channel<String>
+
+                main:
+                messages.view()
+            }
+
+            workflow {
+                hello( ARG )
+            }
+            '''.replace('ARG', ARG),
+            ERROR
+        )
+
+        where:
+        ARG                 | ERROR
+        "channel.of(1)"     | 'Argument with type Channel<Integer> is not compatible with parameter of type Channel<String>'
+        "channel.of('a')"   | null
+    }
+
+    @Unroll
+    def 'should check generic type arguments in a process call' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                names: List<String>
+
+                script:
+                ''
+            }
+
+            workflow {
+                hello( ARG )
+            }
+            '''.replace('ARG', ARG),
+            ERROR
+        )
+
+        where:
+        ARG         | ERROR
+        "[1]"       | 'Argument with type List<Integer> is not compatible with process input of type List<String>'
+        "['a']"     | null
+    }
+
     def 'should recognize workflow output type' () {
         when:
         def exp = parseExpression(

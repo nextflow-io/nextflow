@@ -276,7 +276,7 @@ public class TypeCheckingUtils {
                     }
                 }
             }
-            else if( !Types.isAssignableFrom(paramType, getType(source)) ) {
+            else if( !Types.isAssignableFrom(paramType, getType(source), true) ) {
                 return false;
             }
         }

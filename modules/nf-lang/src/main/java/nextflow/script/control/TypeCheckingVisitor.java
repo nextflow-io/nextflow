@@ -720,7 +720,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var paramType = parameters[i].getType();
             var argument = arguments.get(i);
             var argType = getType(argument);
-            if( Types.isAssignableFrom(paramType, argType) )
+            if( Types.isAssignableFrom(paramType, argType, true) )
                 continue;
             if( argument instanceof ClosureExpression ce && Types.isFunctionalInterface(paramType) ) {
                 var parameterTypes = Arrays.stream(ce.getParameters())
@@ -777,7 +777,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
             var namedParam = asNamedParam(namedParams.get(name));
             var argType = getType(value);
-            if( !Types.isAssignableFrom(namedParam.getType(), argType) )
+            if( !Types.isAssignableFrom(namedParam.getType(), argType, true) )
                 addError("Named param `" + name + "` expects a " + Types.getName(namedParam.getType()) + " but received a " + Types.getName(argType), value);
             entry.putNodeMetaData("_NAMED_PARAM", namedParam);
         }
@@ -842,7 +842,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var paramType = parameters[i].getType();
             var argType = getType(arguments.get(i));
             var elementType = dataflowElementType(argType);
-            if( !Types.isAssignableFrom(paramType, elementType) )
+            if( !Types.isAssignableFrom(paramType, elementType, true) )
                 addError("Argument with type " + Types.getName(elementType) + " is not compatible with " + label.toLowerCase() + " input of type " + Types.getName(paramType), arguments.get(i));
         }
 
