@@ -636,6 +636,24 @@ class LinObserverTest extends Specification {
         Path.of("test")                                 | "Path"
         ["test"]                                        | "Collection"
         [key:"value"]                                   | "Map"
+        new ProcessInput('x', Path, false)              | "Path"
+        new ProcessInput('x', List, false)              | "List"
+        new ProcessOutput('x', Object, null)            | "?"
+    }
+
+    @Unroll
+    def 'should get typed parameter type' () {
+        expect:
+        LinObserver.getTypedParameterType(TYPE, VALUE) == STRING
+        where:
+        TYPE    | VALUE             | STRING
+        String  | 'x'               | "String"
+        Record  | [id: 'x']         | "Record"
+        Object  | Path.of('x')      | "Path"
+        Object  | [id: 'x']         | "Map"
+        Object  | new RecordMap(id: 'x') | "Record"
+        Object  | ['x']             | "Collection"
+        Object  | null              | "?"
     }
 
     def 'should save task run' () {
@@ -793,6 +811,12 @@ class LinObserverTest extends Specification {
         def localHash = CacheHelper.hasher(local).hash().toString()
         def outFile = taskWd.resolve('out.txt')
         outFile.text = 'some data'
+        def outHash = CacheHelper.hasher(outFile).hash().toString()
+        def outAttrs = Files.readAttributes(outFile, BasicFileAttributes)
+        def storeDir = folder.resolve('store')
+        def stored = storeDir.resolve('stored.txt')
+        Files.createDirectories(storeDir)
+        stored.text = 'stored data'
         and:
         def inputs = new LinkedHashMap<InParam, Object>()
         inputs.put(new ProcessInput('f', Path, false), upstream)
@@ -801,6 +825,10 @@ class LinObserverTest extends Specification {
         def outputs = new LinkedHashMap<OutParam, Object>()
         outputs.put(new ProcessOutput('$out', Object, null), outFile)
         outputs.put(new ProcessOutput('files', List, null), [outFile, local])
+        outputs.put(new ProcessOutput('set', Set, null), [outFile] as Set)
+        outputs.put(new ProcessOutput('stored', Path, null), stored)
+        // an input sent out again keeps the reference to its producing task
+        outputs.put(new ProcessOutput('same', Path, null), upstream)
         and:
         def task = Mock(TaskRun) {
             getName() >> 'foo'
@@ -809,6 +837,7 @@ class LinObserverTest extends Specification {
             getInputs() >> inputs
             getOutputs() >> outputs
             getWorkDir() >> taskWd
+            getConfig() >> Mock(TaskConfig) { getStoreDir() >> storeDir }
         }
         def localRef = [path: normalizer.normalizePath(local), checksum: [value: localHash, algorithm: "nextflow", mode: "standard"]]
 
@@ -818,15 +847,21 @@ class LinObserverTest extends Specification {
         def taskOutput = store.load("$hash#output") as TaskOutput
         then:
         taskRun.input == [
-            new Parameter("path", "f", 'lid://78567890/file1.txt'),
-            new Parameter("val", "rec", [id: 'x', file: localRef]),
-            new Parameter("val", "id", "value")
+            new Parameter("Path", "f", 'lid://78567890/file1.txt'),
+            new Parameter("Record", "rec", [id: 'x', file: localRef]),
+            new Parameter("String", "id", "value")
         ]
         taskOutput.output == [
-            new Parameter("path", '$out', 'lid://1234567890/out.txt'),
-            new Parameter("val", "files", ['lid://1234567890/out.txt', localRef])
+            new Parameter("Path", '$out', 'lid://1234567890/out.txt'),
+            new Parameter("List", "files", ['lid://1234567890/out.txt', localRef]),
+            new Parameter("Set", "set", ['lid://1234567890/out.txt']),
+            new Parameter("Path", "stored", 'lid://1234567890/stored.txt'),
+            new Parameter("Path", "same", 'lid://78567890/file1.txt')
         ]
-        store.load("$hash/out.txt") instanceof FileOutput
+        store.load("$hash/out.txt") == new FileOutput(outFile.toString(), new Checksum(outHash, "nextflow", "standard"),
+            "lid://1234567890", "lid://hash", "lid://1234567890", outAttrs.size(), LinUtils.toDate(outAttrs.creationTime()), LinUtils.toDate(outAttrs.lastModifiedTime()))
+        store.load("$hash/stored.txt") instanceof FileOutput
+        store.load("78567890/file1.txt") == null
 
         cleanup:
         folder?.deleteDir()

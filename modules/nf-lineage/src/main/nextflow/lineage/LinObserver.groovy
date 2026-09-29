@@ -50,6 +50,7 @@ import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
+import nextflow.script.dsl.Types
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultInParam
@@ -66,6 +67,7 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
+import nextflow.script.types.Record
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
@@ -230,9 +232,7 @@ class LinObserver implements TraceObserverV2 {
             outputParams.add(new Parameter(getParameterType(key), key.name, manageFileOutParam(value, task)))
         }
         else if (key instanceof ProcessOutput) {
-            // untyped outputs are declared as Object, so infer the type from the value
-            final type = value instanceof Path ? 'path' : getParameterType(key)
-            outputParams.add(new Parameter(type, key.name, manageTypedOutput(value, task, normalizer)))
+            outputParams.add(new Parameter(getTypedParameterType(key.getType(), value), key.name, manageTypedOutput(value, task, normalizer)))
         }
         else {
             outputParams.add(new Parameter(getParameterType(key), key.name, normalizeValue(value, normalizer)))
@@ -531,9 +531,9 @@ class LinObserver implements TraceObserverV2 {
         // typed (v2) process/agent params are not BaseParam, so without this they would be
         // recorded as the literal type names 'ProcessInput'/'ProcessOutput'
         if( param instanceof ProcessInput )
-            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
+            return getTypedParameterType(param.getType(), null)
         if( param instanceof ProcessOutput )
-            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
+            return getTypedParameterType(param.getType(), null)
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
@@ -548,6 +548,15 @@ class LinObserver implements TraceObserverV2 {
             return null
         }
         return param.class.simpleName
+    }
+
+    /**
+     * Declared type name of a typed param, or the value type when it is declared as Object (e.g. an unnamed output).
+     */
+    protected static String getTypedParameterType(Class type, Object value) {
+        if( (type == null || type == Object) && value != null )
+            return value instanceof Record ? Types.getName(Record) : getParameterType(value)
+        return Types.getName(type ?: Object)
     }
 
     private Object convertPathsToLidReferences(Object value) {
@@ -605,7 +614,7 @@ class LinObserver implements TraceObserverV2 {
             if( param instanceof FileInParam )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
             else if( param instanceof ProcessInput )
-                managedInputs.add( new Parameter( getParameterType(param), param.name, mapPaths(value) { Path p -> manageInputPath(p, normalizer) } ) )
+                managedInputs.add( new Parameter( getTypedParameterType(param.getType(), value), param.name, mapPaths(value) { Path p -> manageInputPath(p, normalizer) } ) )
             else if( !(param instanceof DefaultInParam) )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, value) )
         }
