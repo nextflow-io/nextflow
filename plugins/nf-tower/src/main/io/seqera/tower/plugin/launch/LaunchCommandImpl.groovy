@@ -27,7 +27,8 @@ import io.seqera.tower.plugin.BaseCommandImpl
 import io.seqera.tower.plugin.TowerClient
 import io.seqera.tower.plugin.exception.ForbiddenException
 import nextflow.BuildInfo
-import nextflow.cli.CmdLaunch
+import nextflow.cli.LaunchCommand
+import nextflow.cli.LaunchOptions
 import nextflow.util.ColorUtil
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -50,7 +51,7 @@ import java.util.regex.Pattern
 @Slf4j
 @InheritConstructors
 @CompileStatic
-class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchCommand {
+class LaunchCommandImpl extends BaseCommandImpl implements LaunchCommand {
 
     // ===== Constants =====
 
@@ -95,7 +96,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     // ===== Main Entry Point =====
 
     @Override
-    void launch(CmdLaunch.LaunchOptions options) {
+    void launch(LaunchOptions options) {
         printBanner(options)
 
         // Validate and resolve pipeline
@@ -141,11 +142,11 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Initialize launch context by loading config and resolving workspace/compute environment
      */
-    private LaunchContext initializeLaunchContext(CmdLaunch.LaunchOptions options) {
+    private LaunchContext initializeLaunchContext(LaunchOptions options) {
         log.debug "Initializing launch context"
 
         // Load configuration
-        final config = readConfig()
+        final config = readConfigFlat()
         final apiEndpoint = (config['tower.endpoint'] ?: TowerClient.DEF_ENDPOINT_URL) as String
         final accessToken = config['tower.accessToken'] as String
 
@@ -190,7 +191,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Build launch request, submit to API, and return result
      */
-    private WorkflowLaunchResult submitWorkflowLaunch(CmdLaunch.LaunchOptions options, LaunchContext context, String pipelineUrl) {
+    private WorkflowLaunchResult submitWorkflowLaunch(LaunchOptions options, LaunchContext context, String pipelineUrl) {
         log.debug "Submitting workflow launch"
 
         // Build request payload
@@ -213,7 +214,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Build the launch request payload
      */
-    private Map buildLaunchRequestPayload(CmdLaunch.LaunchOptions options, LaunchContext context,
+    private Map buildLaunchRequestPayload(LaunchOptions options, LaunchContext context,
                                           String pipelineUrl, String paramsText, String configText) {
         def launch = [:]
         launch.computeEnvId = context.computeEnvId
@@ -252,7 +253,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
      * Extract launch result from API response and workflow details
      */
     private WorkflowLaunchResult extractLaunchResult(Map response, Map workflowDetails,
-                                                     CmdLaunch.LaunchOptions options, String pipelineUrl, LaunchContext context) {
+                                                     LaunchOptions options, String pipelineUrl, LaunchContext context) {
         def runName = 'unknown'
         def commitId = 'unknown'
         def revision = options.revision
@@ -329,7 +330,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
     // ===== Display Methods =====
 
-    protected void printBanner(CmdLaunch.LaunchOptions options) {
+    protected void printBanner(LaunchOptions options) {
         if (ColorUtil.isAnsiEnabled()) {
             // Plain header for verbose log
             log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
@@ -353,7 +354,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         }
     }
 
-    protected void printLaunchInfo(String repo, String runName, String commitId, String revision, String workDir, String computeEnvName, String userName, String orgName, String workspaceName, CmdLaunch.LaunchOptions options) {
+    protected void printLaunchInfo(String repo, String runName, String commitId, String revision, String workDir, String computeEnvName, String userName, String orgName, String workspaceName, LaunchOptions options) {
         def showRevision = commitId && commitId != 'unknown'
         def showRevisionBrackets = revision && revision != 'unknown'
 
@@ -422,7 +423,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         }
     }
 
-    protected void printSuccessMessage(String workflowId, String trackingUrl, CmdLaunch.LaunchOptions options) {
+    protected void printSuccessMessage(String workflowId, String trackingUrl, LaunchOptions options) {
         if (ColorUtil.isAnsiEnabled()) {
             if (trackingUrl) {
                 print(ColorUtil.colorize("Workflow launched successfully: ", "green"))
@@ -456,7 +457,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
      * Poll workflow logs until the workflow completes
      */
     private void pollWorkflowLogs(String workflowId, Long workspaceId, String trackingUrl,
-                                  String accessToken, String apiEndpoint, CmdLaunch.LaunchOptions options) {
+                                  String accessToken, String apiEndpoint, LaunchOptions options) {
         log.debug "Starting log polling for workflow ID: ${workflowId}"
 
         final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]

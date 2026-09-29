@@ -45,7 +45,12 @@ import nextflow.util.MemoryUnit
 class TraceRecord implements Serializable {
 
     // note: ?i stands for ignore case - ?m stands for multiline
-    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*)=(.*)$/
+    // NOTE: `API_?KEY` is the twin of the same alternative in {@code SecretHelper.SECRET_REGEX} and
+    // of `api_?key` in {@code SecretHelper.SECRET_KEYS}. This one masks the `env` field of a trace
+    // record, which is where an out-of-band provider credential (`env { OPENAI_API_KEY = ... }`,
+    // `agent.containerOptions = '-e OPENAI_API_KEY'`) shows up -- and a trace record is persisted
+    // in the resume cache and forwarded to Seqera Platform.
+    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*|.*API_?KEY[^=]*)=(.*)$/
 
     TraceRecord() {
         this.store = new LinkedHashMap<>(FIELDS.size())

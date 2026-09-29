@@ -59,10 +59,11 @@ class CacheCommand implements PluginAbstractExec {
     }
 
     protected void cacheRestore() {
-        if( !getSession().cloudCachePath ) {
+        final env = SysEnv.get()
+        if( !env.get('NXF_CLOUDCACHE_PATH') ) {
             log.debug "Running Nextflow cache restore"
             // legacy cache manager
-            new CacheManager(System.getenv()).restoreCacheFiles()
+            new CacheManager(env).restoreCacheFiles()
         }
         else {
             // this command is only kept for backward compatibility

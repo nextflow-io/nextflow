@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.11.0-edge'
+    nextflowVersion = '26.09.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'
@@ -32,6 +32,8 @@ nextflowPlugin {
         'nextflow.cloud.azure.file.AzPathFactory',
         'nextflow.cloud.azure.file.AzPathSerializer',
         'nextflow.cloud.azure.fusion.AzFusionEnv',
+        'nextflow.cloud.azure.nio.AzAtomicLockProvider',
+        'nextflow.cloud.azure.nio.AzObjectStoreReader',
     ]
 }
 
@@ -52,8 +54,8 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
     api('com.azure:azure-storage-blob:12.33.4') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
@@ -61,22 +63,31 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
-    api('com.azure:azure-identity:1.18.3') {
+    api('com.azure:azure-identity:1.18.6') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
-    // Force patched jackson on the 2.18 line (required by the Azure SDK) to address
-    // GHSA-72hv-8253-57qq (jackson-core DoS) and the jackson-databind deserialization
-    // advisories fixed in 2.18.9 (PolymorphicTypeValidator and @JsonView/@JsonIgnore bypasses)
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.9'
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.18.9'
-
-    // Pin azure-core-http-netty to a version that brings patched netty
-    // (4.1.135.Final) to address GHSA-3qp7-7mw8-wx86 / CVE-2026-44249
-    implementation 'com.azure:azure-core-http-netty:1.16.5'
+    // Raise the vulnerable transitive dependencies of the Azure SDK across ALL configurations -
+    // including testFixtures*, which implementation/runtimeOnly pins never reach. Constraints lift
+    // a transitive version without adding a direct dependency edge; `api` scope is what propagates
+    // to the consumer and testFixtures* classpaths.
+    constraints {
+        // jackson stays on the 2.18 line required by the Azure SDK; addresses GHSA-72hv-8253-57qq
+        // (jackson-core DoS) and the jackson-databind deserialization advisories fixed in 2.18.9
+        api("com.fasterxml.jackson.core:jackson-databind:${jacksonCloudSdkVersion}") { because 'jackson-databind deserialization CVEs' }
+        api("com.fasterxml.jackson.core:jackson-core:${jacksonCloudSdkVersion}") { because 'GHSA-72hv-8253-57qq' }
+        api("com.fasterxml.jackson.core:jackson-annotations:${jacksonCloudSdkVersion}") { because 'keep jackson aligned' }
+    }
+    // netty artifacts do not self-align: reactor-netty requests netty-codec-dns and
+    // netty-resolver-dns independently and leaves them on 4.1.135.Final while the rest of the
+    // family is on 4.1.137.Final. The BOM is netty's own alignment artifact, so it replaces four
+    // hand-written constraints; `api` so the alignment also reaches the testFixtures* classpaths.
+    // 4.1.137.Final carries the netty-codec advisories fixed in 4.1.136.Final, notably
+    // GHSA-93wv-jw9v-4972, GHSA-jppx-w49h-x2qq, GHSA-558v-64gr-wgg4 and GHSA-mfg7-5gfp-c4w3.
+    api platform('io.netty:netty-bom:4.1.137.Final')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.31"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
 }

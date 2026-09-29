@@ -1,0 +1,35 @@
+---
+title: Shifter
+description: Run Nextflow pipeline tasks in Shifter containers converted from Docker images.
+---
+
+# Shifter
+
+[Shifter](https://docs.nersc.gov/programming/shifter/overview/) is a container runtime that converts Docker images to a common format for distribution and launch on high-performance computing (HPC) systems. With Shifter, you select an image from [Docker Hub](https://hub.docker.com/) and submit jobs that run entirely within the container.
+
+## Prerequisites
+
+Shifter must be installed in your execution environment.
+
+On a distributed cluster, install Shifter on all compute nodes, make the `shifterimg` command available, and configure Shifter to access the Image gateway. For more information, see the [Shifter documentation](https://github.com/NERSC/shifter/tree/master/doc).
+
+## Images
+
+Shifter converts a Docker image to Squashfs layers that are distributed and launched in the cluster. To build Shifter images, see the [Shifter documentation](https://docs.nersc.gov/programming/shifter/how-to-use/#building-shifter-images).
+
+## How it works
+
+Enable Shifter in the Nextflow configuration file:
+
+```groovy
+shifter.enabled = true
+process.container = 'dockerhub_user/image_name:image_tag'
+```
+
+Shifter always searches the Docker Hub registry for images. If you do not specify an image tag, Shifter fetches the `latest` tag.
+
+## Advanced settings
+
+See the [`shifter`][config-shifter] configuration scope for advanced Shifter settings.
+
+[config-shifter]: ../reference/config/shifter

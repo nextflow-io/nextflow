@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import nextflow.script.ast.ScriptNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -43,6 +44,16 @@ public class ScriptToGroovyHelper {
 
     public ScriptToGroovyHelper(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
+    }
+
+    /**
+     * Get the name used to qualify hidden classes generated for a script.
+     *
+     * @param moduleNode
+     */
+    public static String packageName(ScriptNode moduleNode) {
+        var scriptClass = moduleNode.getClasses().get(0);
+        return scriptClass.getNameWithoutPackage();
     }
 
     /**

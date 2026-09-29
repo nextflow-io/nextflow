@@ -1,0 +1,38 @@
+---
+title: Unscoped options
+description: Reference for the Nextflow configuration settings that are not part of a config scope.
+---
+
+# Unscoped options
+
+The following settings are not part of a config scope.
+
+##### `bucketDir`
+
+The remote work directory used by hybrid workflows. Equivalent to the `-bucket-dir` option of the `run` command.
+
+##### `cleanup`
+
+Delete all files associated with a run in the work directory when the run completes successfully (default: `false`).
+
+:::warning
+This option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
+:::
+
+:::warning
+This option is not supported for remote work directories, such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
+:::
+
+##### `outputDir`
+
+<AddedInVersion version="24.10" />
+
+The pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
+
+##### `resume`
+
+Enable the use of previously cached task executions. Equivalent to the `-resume` option of the `run` command.
+
+##### `workDir`
+
+The pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.

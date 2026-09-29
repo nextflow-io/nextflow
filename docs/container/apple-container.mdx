@@ -1,0 +1,43 @@
+---
+title: Apple container
+description: Run Nextflow pipeline tasks in Apple container virtual machines on macOS.
+---
+
+# Apple container
+
+<AddedInVersion version="26.04" />
+
+[Apple container](https://github.com/apple/container) is a lightweight container runtime that uses the [Virtualization framework](https://developer.apple.com/documentation/virtualization) to run each container inside its own virtual machine on macOS.
+
+## Prerequisites
+
+Apple container requires Apple silicon (M1 or newer) and a recent macOS release.
+
+Start the system service before running your pipeline:
+
+```bash
+container system start
+```
+
+## How it works
+
+Enable Apple container in the Nextflow configuration file:
+
+```groovy
+appleContainer.enabled = true
+process.container = 'nextflow/examples:latest'
+```
+
+Whenever your pipeline launches a task, Nextflow runs it inside a container created from the specified image using the `container run` command.
+
+Each container runs in its own lightweight virtual machine. This isolates tasks without the overhead of running a full virtual machine for each one. Images are standard OCI images that you can pull from any registry.
+
+:::note
+Apple container only supports Linux images. To run an `amd64` image on Apple silicon, pass `--rosetta` via `appleContainer.runOptions` and set the platform explicitly, for example, `process.arch = 'linux/amd64'`.
+:::
+
+## Advanced settings
+
+See the [`appleContainer`][config-apple-container] configuration scope for advanced Apple container settings.
+
+[config-apple-container]: ../reference/config/apple-container

@@ -1,0 +1,123 @@
+---
+title: nextflow config
+description: Reference for the nextflow config command. Print the resolved pipeline configuration.
+---
+
+# `nextflow config`
+
+Print the resolved pipeline configuration.
+
+## Usage
+
+```console
+$ nextflow config [options] [project name or path]
+```
+
+## Description
+
+The `config` command prints the project's resolved configuration, that is, the settings from `nextflow.config` and any profiles and parameters Nextflow applies when it runs the pipeline. See [Config profiles][config-profiles] for more information.
+
+## Options
+
+##### `-flat`
+
+Print config using flat notation.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-profile`
+
+Choose a configuration profile.
+
+##### `-properties`
+
+Print config using Java properties notation.
+
+##### `-r, -revision`
+
+<AddedInVersion version="26.04" />
+
+Project revision. Can be a git branch, tag, or commit SHA number.
+
+##### `-a, -show-profiles`
+
+Show all configuration profiles.
+
+##### `-sort`
+
+Sort config attributes.
+
+##### `-value`
+
+<AddedInVersion version="23.10" />
+
+Print the value of a config option, or fail if the option is not defined.
+
+## Examples
+
+Print the resolved config using the default group key-value notation:
+
+```console
+$ nextflow config
+
+docker {
+    enabled = true
+}
+
+process {
+    executor = 'local'
+}
+```
+
+Print the config using flat notation:
+
+```console
+$ nextflow config -flat
+
+docker.enabled = true
+process.executor = 'local'
+```
+
+Print the config using Java properties notation:
+
+```console
+$ nextflow config -properties
+
+docker.enabled = true
+process.executor = local
+```
+
+Print the value of a specific configuration property:
+
+```console
+$ nextflow config -value process.executor
+local
+```
+
+Print all profiles from the project's configuration:
+
+```console
+$ nextflow config -show-profiles
+
+docker {
+    enabled = true
+}
+
+profiles {
+    standard {
+        process {
+            executor = 'local'
+        }
+    }
+    cloud {
+        process {
+            executor = 'cirrus'
+            container = 'cbcrg/imagex'
+        }
+    }
+}
+```
+
+[config-profiles]: ../../config#config-profiles

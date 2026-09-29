@@ -1,0 +1,66 @@
+---
+title: apptainer
+description: Reference for the apptainer config scope, which controls how Apptainer containers are executed by Nextflow.
+---
+
+# `apptainer`
+
+The `apptainer` scope controls how [Apptainer](https://apptainer.org) containers are executed by Nextflow.
+
+##### `apptainer.autoMounts`
+
+Automatically mount host paths in the executed container (default: `true`). It requires the `user bind control` feature to be enabled in your Apptainer installation.
+
+##### `apptainer.cacheDir`
+
+The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+##### `apptainer.enabled`
+
+Execute tasks with Apptainer containers (default: `false`).
+
+##### `apptainer.engineOptions`
+
+Specify additional options supported by the Apptainer engine i.e. `apptainer [OPTIONS]`.
+
+##### `apptainer.envWhitelist`
+
+Comma separated list of environment variable names to be included in the container environment.
+
+##### `apptainer.libraryDir`
+
+Directory where remote Apptainer images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+##### `apptainer.noHttps`
+
+Pull the Apptainer image with http protocol (default: `false`).
+
+##### `apptainer.ociAutoPull`
+
+<AddedInVersion version="24.04" />
+
+When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
+
+:::note
+Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the [Build Singularity native images][wave-singularity] section).
+:::
+
+##### `apptainer.pullTimeout`
+
+The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
+
+##### `apptainer.registry`
+
+The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+##### `apptainer.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
+##### `apptainer.runOptions`
+
+Specify extra command line options supported by `apptainer exec`.
+
+[wave-singularity]: ../../wave#build-singularity-native-images

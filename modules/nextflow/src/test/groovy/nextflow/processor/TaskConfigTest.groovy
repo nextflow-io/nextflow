@@ -20,6 +20,7 @@ import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.TaskClosure
@@ -725,6 +726,126 @@ class TaskConfigTest extends Specification {
 //        config.validateShell(['bash', ' -eu '])
 //        then:
 //        thrown(IllegalArgumentException)
+    }
+
+    def 'should return the declared resource labels when no auto labels are given' () {
+        given:
+        def config = new TaskConfig(resourceLabels: [team: 'genomics'])
+
+        when:
+        def labels = config.getResourceLabels()
+        then:
+        labels == [team: 'genomics']
+        and:
+        // the declared map is returned as-is
+        labels.is(config.get('resourceLabels'))
+
+        when:
+        config.setAutoResourceLabels(null)
+        then:
+        config.getResourceLabels() == [team: 'genomics']
+        config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == [team: 'genomics']
+    }
+
+    def 'should merge the auto resource labels under the declared ones' () {
+        given:
+        def config = new TaskConfig(resourceLabels: ['nextflow.io/runName': 'custom', team: 'genomics'])
+        config.setAutoResourceLabels([
+            'nextflow.io/runName': 'crazy_darwin',
+            'nextflow.io/projectName': 'nf-core/rnaseq' ])
+
+        when:
+        def labels = config.getResourceLabels()
+        then:
+        // the declared label wins on the key collision
+        labels == [
+            'nextflow.io/projectName': 'nf-core/rnaseq',
+            'nextflow.io/runName': 'custom',
+            team: 'genomics' ]
+        and:
+        // the auto labels come first, then the declared ones -- an overridden auto entry is
+        // dropped, therefore it takes the position of the declared label overriding it
+        labels.keySet() as List == ['nextflow.io/projectName', 'nextflow.io/runName', 'team']
+        and:
+        config.getResourceLabelsAsString() == 'nextflow.io/projectName=nf-core/rnaseq,nextflow.io/runName=custom,team=genomics'
+    }
+
+    def 'should return the auto resource labels when no label is declared' () {
+        given:
+        def config = new TaskConfig()
+        config.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin'])
+
+        expect:
+        config.getResourceLabels() == ['nextflow.io/runName': 'crazy_darwin']
+    }
+
+    def 'should sanitize the auto resource labels only' () {
+        given:
+        def config = new TaskConfig(resourceLabels: ['My.Team/Name': 'Genomics Team'])
+        config.setAutoResourceLabels([
+            'nextflow.io/runName': 'crazy_darwin',
+            'nextflow.io/repository': 'https://github.com/foo/bar' ])
+
+        when:
+        def labels = config.getResourceLabels(ResourceLabelPolicy.GOOGLE)
+        then:
+        labels == [
+            'nextflow_io_runname': 'crazy_darwin',
+            'nextflow_io_repository': 'https___github_com_foo_bar',
+            'My.Team/Name': 'Genomics Team' ]
+
+        when:
+        labels = config.getResourceLabels(ResourceLabelPolicy.K8S)
+        then:
+        labels == [
+            'nextflow.io/runName': 'crazy_darwin',
+            'nextflow.io/repository': 'github.com_foo_bar',
+            'My.Team/Name': 'Genomics Team' ]
+
+        when:
+        // the un-sanitized labels are what the trace records observe
+        labels = config.getResourceLabels()
+        then:
+        labels == [
+            'nextflow.io/runName': 'crazy_darwin',
+            'nextflow.io/repository': 'https://github.com/foo/bar',
+            'My.Team/Name': 'Genomics Team' ]
+    }
+
+    def 'should override the auto label declared with the canonical key' () {
+        given:
+        def config = new TaskConfig(resourceLabels: ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine'])
+        config.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin', 'seqera.io/platform/workflowId': '1a2b3c'])
+
+        expect:
+        // the auto entry is dropped before the normalisation, therefore the policy cannot
+        // turn the collision into two distinct keys
+        config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+        config.getResourceLabels(ResourceLabelPolicy.K8S) == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+        config.getResourceLabels(ResourceLabelPolicy.AWS) == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+        config.getResourceLabels() == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+    }
+
+    def 'should decide the collision on the sanitized auto key' () {
+        given:
+        def config = new TaskConfig(resourceLabels: ['nextflow_io_runname': 'custom'])
+        config.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin'])
+
+        expect:
+        // the declared key only collides once the auto key is mangled by the policy
+        config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow_io_runname': 'custom']
+        config.getResourceLabels(ResourceLabelPolicy.K8S) == ['nextflow.io/runName': 'crazy_darwin', 'nextflow_io_runname': 'custom']
+    }
+
+    def 'should carry over the auto resource labels on clone' () {
+        given:
+        def config = new TaskConfig(resourceLabels: [team: 'genomics'])
+        config.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin'])
+
+        when:
+        def copy = config.clone()
+        then:
+        copy.getResourceLabels() == ['nextflow.io/runName': 'crazy_darwin', team: 'genomics']
     }
 
     def 'should get arch and container platform' () {

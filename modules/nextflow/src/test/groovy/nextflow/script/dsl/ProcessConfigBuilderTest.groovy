@@ -30,6 +30,14 @@ class ProcessConfigBuilderTest extends Specification {
         new ProcessConfigBuilder(new ProcessConfig([:]))
     }
 
+    def 'should return distinct selector names in precedence order'() {
+        expect:
+        ConfigSelectorResolver.distinctNames('declared', 'alias', 'FLOW:alias') ==
+            ['declared', 'alias', 'FLOW:alias']
+        ConfigSelectorResolver.distinctNames('same', 'same', 'same') == ['same']
+        ConfigSelectorResolver.distinctNames('declared', 'alias', 'alias') == ['declared', 'alias']
+    }
+
     @Unroll
     def 'should match selector: #SELECTOR with #TARGET' () {
         expect:

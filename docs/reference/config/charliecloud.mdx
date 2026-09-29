@@ -1,0 +1,45 @@
+---
+title: charliecloud
+description: Reference for the charliecloud config scope, which controls how Charliecloud containers are executed by Nextflow.
+---
+
+# `charliecloud`
+
+The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
+
+##### `charliecloud.cacheDir`
+
+The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+##### `charliecloud.enabled`
+
+Execute tasks with Charliecloud containers (default: `false`).
+
+##### `charliecloud.envWhitelist`
+
+Comma separated list of environment variable names to be included in the container environment.
+
+##### `charliecloud.pullTimeout`
+
+The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).
+
+##### `charliecloud.registry`
+
+The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+##### `charliecloud.runOptions`
+
+Specify extra command line options supported by the `ch-run` command.
+
+##### `charliecloud.temp`
+
+Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
+
+##### `charliecloud.writableInputMounts`
+
+When `false`, mount input directories as read-only (default: `true`).
+
+##### `charliecloud.writeFake`
+
+Run containers from storage in writeable mode using overlayfs (default: `true`).
+This option requires unprivileged `overlayfs` (Linux kernel >= 5.11). For full support, tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required. See [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.

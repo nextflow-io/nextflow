@@ -60,7 +60,7 @@ class GoogleBatchFusionAdapter implements GoogleBatchLauncherSpec {
     }
 
     @Override
-    Map<String, String> getEnvironment() {
+    Map<String, String> getBatchEnvironment() {
         return launcher.fusionEnv()
     }
 }

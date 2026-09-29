@@ -1,0 +1,86 @@
+---
+title: nextflow lint
+description: Reference for the nextflow lint command. Lint Nextflow scripts and config files.
+---
+
+# `nextflow lint`
+
+Lint Nextflow scripts and config files.
+
+## Usage
+
+```console
+$ nextflow lint [options] [paths]
+```
+
+## Description
+
+The `lint` command parses and analyzes the given Nextflow scripts and config files, formats them if you specify `-format`, and prints any errors. It scans directories recursively for scripts and config files to lint.
+
+## Options
+
+##### `-exclude`
+
+File pattern to exclude from linting (default: `.git, .lineage, .nextflow, .nf-test, nf-test.config, work`).
+
+Can be specified multiple times.
+
+##### `-files-from`
+
+<AddedInVersion version="26.04" />
+
+Read list of paths to lint from a text file. Use `-` to read from standard input.
+
+##### `-format`
+
+Format scripts and config files that have no errors.
+
+##### `-o, -output`
+
+Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
+
+##### `-project-dir`
+
+<AddedInVersion version="26.04" />
+
+Path to project directory (default: `'.'`). Used to locate project-level assets such as the lib directory and modules directory.
+
+##### `-sort-declarations`
+
+Sort script declarations in Nextflow scripts (default: `false`).
+
+##### `-spaces`
+
+Number of spaces to indent (default: `4`).
+
+##### `-tabs`
+
+Indent with tabs (default: `false`).
+
+## Examples
+
+Lint a specific file:
+
+```console
+$ nextflow lint main.nf
+```
+
+Lint all files in the current directory (and subdirectories) with concise output:
+
+```console
+$ nextflow lint -o concise .
+```
+
+Lint and format all files in the current directory (and subdirectories) and use two spaces per indent:
+
+```console
+$ nextflow lint -format -spaces 2 .
+```
+
+:::note
+Formatting code with the `lint` command in Nextflow 25.10 or later may make your code incompatible with previous versions of Nextflow. If you need your code to remain compatible with versions prior to 25.10, run the formatter with Nextflow 25.04:
+
+```bash
+NXF_VER=25.04.8 nextflow lint -format .
+```
+:::

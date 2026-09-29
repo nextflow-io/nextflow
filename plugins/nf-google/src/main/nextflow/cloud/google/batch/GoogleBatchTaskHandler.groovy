@@ -49,6 +49,7 @@ import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
@@ -202,19 +203,22 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected void updateStatus(String jobId, String taskId, String uid) {
+    protected void updateStatus(String jobId, String taskId, String uid, CloudMachineInfo machineInfo=null) {
         if( task instanceof TaskArrayRun ) {
-            // update status for children
+            // update status for children, propagating the machine info resolved for the
+            // array job so each child trace record reports its machine type and cost
             for( int i=0; i<task.children.size(); i++ ) {
                 final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
-                handler.updateStatus(jobId, arrayTaskId, uid)
+                handler.updateStatus(jobId, arrayTaskId, uid, this.machineInfo)
             }
         }
         else {
             this.jobId = jobId
             this.taskId = taskId
             this.uid = uid
+            if( machineInfo != null )
+                this.machineInfo = machineInfo
             this.status = TaskStatus.SUBMITTED
         }
     }
@@ -328,7 +332,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             container.setOptions(containerOptions)
 
         final env = Environment.newBuilder()
-            .putAllVariables(launcher.getEnvironment())
+            .putAllVariables(launcher.getBatchEnvironment())
             .build()
 
         return Runnable.newBuilder()
@@ -535,7 +539,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .setEmail(batchConfig.serviceAccountEmail)
             )
 
-        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+        // the labels derived from the workflow metadata are normalised as required by the Google Batch API
+        allocationPolicy.putAllLabels(task.config.getResourceLabels(ResourceLabelPolicy.GOOGLE))
 
         if( batchConfig.networkTags )
             allocationPolicy.addAllTags(batchConfig.networkTags)
@@ -592,7 +597,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .addTaskGroups(buildTaskGroup(taskSpec, task))
             .setAllocationPolicy(allocationResult.policy)
             .setLogsPolicy(createLogsPolicy())
-            .putAllLabels(task.config.getResourceLabels())
+            .putAllLabels(task.config.getResourceLabels(ResourceLabelPolicy.GOOGLE))
             .build()
     }
 
@@ -807,7 +812,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             if( executor.shouldDeleteJob(jobId) )
-                client.deleteJob(jobId)
+                executor.reaper.submit({ client.deleteJob(jobId) })
         }
         else {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"
@@ -926,9 +931,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
+        final exactType = machineType && !machineType.contains(',') && !machineType.contains('*')
 
         try {
             if( executor.isCloudinfoEnabled() ) {
+                if( !exactType )
+                    log.warn1 "Google Batch machine type selection via the Cloud Info service is deprecated -- use the `machineType` directive to choose a machine type, or set NXF_CLOUDINFO_ENABLED=false to let Google Batch choose one"
                 return bestMachineType0(cpus, memory, location, spot, localSSD, families)
             }
         }
@@ -937,7 +945,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // Check if a specific machine type was provided by the user
-        if( machineType && !machineType.contains(',') && !machineType.contains('*') )
+        if( exactType )
             return new GoogleBatchMachineTypeSelector.MachineType(
                 type: machineType,
                 location: location,

@@ -18,6 +18,7 @@ package nextflow.module
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.Global
 import nextflow.config.ConfigBuilder
 
@@ -45,9 +46,9 @@ import java.nio.file.Path
 class DefaultRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    Path resolve(String moduleName, Path projectDir) {
-        final baseDir = projectDir ?: Path.of('.').toAbsolutePath()
-        final config = Global.config ?: new ConfigBuilder().setBaseDir(baseDir).build()
+    Path resolve(String moduleName, Path baseDir0) {
+        final baseDir = baseDir0 ?: Path.of('.').toAbsolutePath()
+        final config = Global.config ?: buildConfig(baseDir)
         final registryConfig = config.navigate('registry') as RegistryConfig
 
         // Create module resolver
@@ -59,8 +60,11 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             // Parse module reference
             def reference = ModuleReference.parse(moduleName)
 
+            // Honor the version pinned by the including module's `requires.modules`
+            def version = ModuleResolver.pinnedVersion(baseDir, reference)
+
             // Resolve module (will auto-install if missing or version mismatch)
-            def mainFile = resolver.resolve(reference, null, true)
+            def mainFile = resolver.resolve(reference, version, true)
 
             log.debug "Module ${reference} resolved to ${mainFile}"
             return mainFile
@@ -72,5 +76,20 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
     @Override
     int getPriority() {
         return 0  // Default implementation has lowest priority
+    }
+
+    /**
+     * Build a minimal config from the default config files (Nextflow home and the
+     * project base directory) when no global config is available.
+     */
+    protected static Map buildConfig(Path baseDir) {
+        final files = new ArrayList<Path>()
+        final home = Const.APP_HOME_DIR.resolve('config')
+        if( home.exists() )
+            files.add(home)
+        final base = baseDir.resolve('nextflow.config')
+        if( base.exists() )
+            files.add(base)
+        return new ConfigBuilder().setBaseDir(baseDir).build(files)
     }
 }

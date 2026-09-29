@@ -1,0 +1,76 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.cli
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
+/**
+ * CLI sub-command clone
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+@Parameters(commandDescription = "Clone a project into a folder")
+class CmdClone extends CmdBase implements HubAware {
+
+    static final public NAME = 'clone'
+
+    @Parameter(required=true, description = 'name of the project to clone')
+    List<String> args
+
+    @Parameter(names='-r', description = 'Revision of the project to clone (either a git branch, tag or commit SHA number)')
+    String revision
+
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
+    @Override
+    final String getName() { NAME }
+
+    @Override
+    void run() {
+        // init plugin system
+        Plugins.init()
+        // the pipeline name
+        String pipeline = args[0]
+        try (final manager = new AssetManager(pipeline, toHubOptions())) {
+            // the target directory is the second parameter
+            // otherwise default the current pipeline name
+            def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
+            if( target.exists() ) {
+                if( target.isFile() )
+                    throw new AbortOperationException("A file with the same name already exists: $target")
+                if( !target.empty() )
+                    throw new AbortOperationException("Clone target directory must be empty: $target")
+            }
+            else if( !target.mkdirs() ) {
+                throw new AbortOperationException("Cannot create clone target directory: $target")
+            }
+
+            manager.checkValidRemoteRepo()
+            print "Cloning ${manager.getProjectWithRevision()} ..."
+            manager.clone(target, revision, deep)
+            print "\r"
+            println "${manager.getProjectWithRevision()} cloned to: $target"
+        }
+    }
+}

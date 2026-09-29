@@ -1,0 +1,64 @@
+---
+title: errorStrategy
+description: Reference for the `errorStrategy` process directive.
+---
+
+# `errorStrategy`
+
+The `errorStrategy` directive defines how to handle task failures.
+
+A task failure occurs when the executed script returns a non-zero exit code. By default, the pipeline run is aborted.
+
+## Options
+
+The following error strategies are available:
+
+##### `'terminate'` (default)
+
+When a task fails, terminate the pipeline immediately and report an error. Pending and running jobs are killed.
+
+##### `'finish'`
+
+When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline, reporting an error.
+
+##### `'ignore'`
+
+When a task fails, ignore it and continue the pipeline execution. The failure is reported as a message, but the run is not stopped. For example:
+
+```nextflow
+process hello {
+    errorStrategy 'ignore'
+
+    // ...
+}
+```
+
+By default, the pipeline completes successfully and returns an exit status of 0. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline returns a non-zero exit status and reports the failed tasks as an error upon completion. See the [workflow][stdlib-namespaces-workflow] namespace for more information.
+
+##### `'retry'`
+
+When a task fails, retry it. For example:
+
+```nextflow
+process hello {
+    errorStrategy 'retry'
+
+    // ...
+}
+```
+
+Use the [maxRetries](./max-retries) and [maxErrors](./max-errors) directives to limit the number of retries.
+
+:::tip
+Use a dynamic `errorStrategy` to define more complex strategies based on the task exit status or other parametric values. See [Dynamic directives][dynamic-directives] for details.
+:::
+
+## See also
+
+- [maxErrors](./max-errors)
+- [maxRetries](./max-retries)
+- [Dynamic task resources][dynamic-task-resources]
+
+[dynamic-directives]: ../../../process#dynamic-directives
+[dynamic-task-resources]: ../../../process#dynamic-task-resources
+[stdlib-namespaces-workflow]: ../../stdlib-namespaces/workflow

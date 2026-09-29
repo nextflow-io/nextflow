@@ -105,7 +105,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final logFile = builder.redirectOutput().file()
 
         // run async via thread pool
-        session.getExecService().submit( {
+        executor.getExecService().submit( {
             try {
                 // start the execution and notify the event to the monitor
                 process = builder.start()

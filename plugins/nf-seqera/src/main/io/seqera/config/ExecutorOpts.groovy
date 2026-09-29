@@ -19,6 +19,7 @@ package io.seqera.config
 import groovy.transform.CompileStatic
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
+import nextflow.platform.AutoLabels
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
@@ -33,13 +34,12 @@ import nextflow.util.Duration
 @CompileStatic
 class ExecutorOpts implements ConfigScope {
 
-    static final Set<String> VALID_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
-        'projectName', 'userName', 'runName', 'sessionId', 'resume',
-        'revision', 'commitId', 'repository', 'manifestName',
-        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
-    ]))
-
     final RetryOpts retryPolicy
+
+    @Description("""
+        HTTP client settings for requests to the Seqera scheduler service.
+    """)
+    final HttpClientOpts httpClient
 
     @ConfigOption
     @Description("""
@@ -86,10 +86,15 @@ class ExecutorOpts implements ConfigScope {
     """)
     final MachineRequirementOpts machineRequirement
 
+    @Deprecated
     @ConfigOption
     @Description("""
+        DEPRECATED: use `tower.autoLabels` instead. This option is honoured for backward
+        compatibility and takes precedence over `tower.autoLabels` when specified, including
+        when set to `false`.
+
         Automatically attach workflow metadata labels (with the `nextflow.io/` and
-        `seqera.io/platform/` prefixes) to the session. Accepts:
+        `seqera.io/platform/` prefixes) to the compute resources. Accepts:
           - `true`: include all available metadata labels
           - `false` (default): disable
           - a list or comma-separated string of short names: e.g.
@@ -107,6 +112,11 @@ class ExecutorOpts implements ConfigScope {
         When not set, no resource estimation is applied.
     """)
     final String predictionModel
+
+    @Description("""
+        Scheduling requirements applied to this run by the Seqera scheduler.
+    """)
+    final SchedulingRequirementOpts schedulingRequirement
 
     @ConfigOption
     @Description("""
@@ -146,6 +156,7 @@ class ExecutorOpts implements ConfigScope {
 
     ExecutorOpts(Map opts) {
         this.retryPolicy = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.httpClient = new HttpClientOpts(opts.httpClient as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
@@ -159,9 +170,13 @@ class ExecutorOpts implements ConfigScope {
             : Duration.of('5 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
-        this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
+        // note the labels are resolved session-wide by `Session#getAutoResourceLabels` -- parsing
+        // them here still validates the setting and rejects an unknown name at config load time
+        this.autoLabels = AutoLabels.parse(opts.get('autoLabels'), 'seqera.executor.autoLabels')
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
+        // scheduling requirements (e.g. per-user vCPU cap)
+        this.schedulingRequirement = new SchedulingRequirementOpts(opts.schedulingRequirement as Map ?: Map.of())
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
         // backend-specific provider configuration
@@ -174,6 +189,10 @@ class ExecutorOpts implements ConfigScope {
 
     RetryOpts retryOpts() {
         this.retryPolicy
+    }
+
+    HttpClientOpts httpOpts() {
+        this.httpClient
     }
 
     String getEndpoint() {
@@ -208,26 +227,12 @@ class ExecutorOpts implements ConfigScope {
         return autoLabels
     }
 
-    protected static Set<String> parseAutoLabels(Object value) {
-        if( value == null || value == false )
-            return Collections.<String>emptySet()
-        if( value == true )
-            return VALID_AUTO_LABELS
-        List<String> raw
-        if( value instanceof CharSequence )
-            raw = value.toString().tokenize(',').collect { String s -> s.trim() }.findAll { String s -> s }
-        else if( value instanceof List )
-            raw = ((List) value).collect { it?.toString()?.trim() }.findAll { String s -> s } as List<String>
-        else
-            throw new IllegalArgumentException("Invalid 'seqera.executor.autoLabels' value '${value}' - expected true, false, a list, or a comma-separated string")
-        final invalid = raw.findAll { String s -> !(s in VALID_AUTO_LABELS) }
-        if( invalid )
-            throw new IllegalArgumentException("Invalid 'seqera.executor.autoLabels' name(s) ${invalid} - valid names are: ${VALID_AUTO_LABELS.join(', ')}")
-        return Collections.unmodifiableSet(new LinkedHashSet<>(raw))
-    }
-
     String getPredictionModel() {
         return predictionModel
+    }
+
+    SchedulingRequirementOpts getSchedulingRequirement() {
+        return schedulingRequirement
     }
 
     Map<String, String> getTaskEnvironment() {

@@ -18,6 +18,8 @@ package nextflow.secret
 
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.PosixFilePermission
+import java.util.concurrent.atomic.AtomicBoolean
 
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
@@ -54,6 +56,91 @@ class LocalSecretsProviderTest extends Specification {
                   }
                 ]
                 '''.stripIndent(true).rightTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should create the store file with owner-only permissions' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def secretDir = folder.resolve('secrets')
+        def secretFile = secretDir.resolve('store.json')
+        and:
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+
+        when:
+        provider.storeSecrets( [new SecretImpl('foo', 'bar')] )
+        then:
+        secretFile.getPermissions() == 'rw-------'
+        and:
+        // the secrets directory must not be traversable by group/other
+        secretDir.getPermissions() == 'rwx------'
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should not change permissions of a pre-existing secrets directory' () {
+        given:
+        // a directory the user owns but did not create through the provider, e.g. a shared
+        // NXF_SECRETS_FILE parent deliberately left group-readable
+        def folder = Files.createTempDirectory('test')
+        folder.setPermissions('rwxr-x---')
+        def secretFile = folder.resolve('store.json')
+        and:
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+
+        when:
+        provider.storeSecrets( [new SecretImpl('foo', 'bar')] )
+        then:
+        noExceptionThrown()
+        and:
+        // the file must still be locked down to the owner ...
+        secretFile.getPermissions() == 'rw-------'
+        and:
+        // ... but the pre-existing directory must be left untouched
+        folder.getPermissions() == 'rwxr-x---'
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should never expose secret content through world-readable permissions during write' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def secretFile = folder.resolve('store.json')
+        and:
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+        and:
+        def stop = new AtomicBoolean(false)
+        def leaked = new AtomicBoolean(false)
+        // attacker: busy-poll the file and flag it if it is ever readable by group/other
+        def watcher = Thread.start {
+            while( !stop.get() ) {
+                try {
+                    def perms = Files.getPosixFilePermissions(secretFile)
+                    if( perms.contains(PosixFilePermission.GROUP_READ) || perms.contains(PosixFilePermission.OTHERS_READ) )
+                        leaked.set(true)
+                }
+                catch( Exception ignored ) {
+                    // file may not exist yet
+                }
+            }
+        }
+
+        when:
+        // repeatedly (re)write the store while the watcher races to observe a permissive mode
+        100.times { i ->
+            Files.deleteIfExists(secretFile)
+            provider.storeSecrets( [new SecretImpl('token', "SUPERSECRET_$i")] )
+        }
+        stop.set(true)
+        watcher.join()
+        then:
+        !leaked.get()
+        and:
+        secretFile.getPermissions() == 'rw-------'
 
         cleanup:
         folder.deleteDir()

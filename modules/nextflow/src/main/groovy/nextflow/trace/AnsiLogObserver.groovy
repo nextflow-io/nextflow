@@ -102,12 +102,20 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
 
     private WorkflowStatsObserver statsObserver
 
-    private static Integer getEnvTerminalWidth() {
-        final env = SysEnv.get('TERMINAL_WIDTH')
+    protected static Integer getEnvTerminalWidth(boolean tty=System.console()!=null) {
+        // COLUMNS is only a fallback when there's no terminal to query: it doesn't track resizes and
+        // the launcher exports 80 when `tput` cannot read the tty, causing wrapped lines to be miscounted
+        // ponytail: JDK 22-24 return a console even without a tty, COLUMNS is then ignored (width 80)
+        return parseEnvTerminalWidth('TERMINAL_WIDTH') ?: (tty ? null : parseEnvTerminalWidth('COLUMNS'))
+    }
+
+    private static Integer parseEnvTerminalWidth(String name) {
+        final env = SysEnv.get(name)
         if( !env )
             return null
         try {
-            return Integer.parseInt(env)
+            final result = Integer.parseInt(env)
+            return result>0 ? result : null
         }
         catch( NumberFormatException e ) {
             // do not log error to avoid catch-22 logging event (this class renders logging events)

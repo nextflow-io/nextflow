@@ -173,6 +173,9 @@ class TaskArrayCollector {
         taskArray.config.context = taskArray.context
         taskArray.config.process = taskArray.processor.name
         taskArray.config.executor = taskArray.processor.executor.name
+        // the array job is submitted as a task on its own, therefore it needs the auto-derived
+        // resource labels as much as the tasks it wraps -- see TaskProcessor#createTaskRun
+        taskArray.config.setAutoResourceLabels(processor.session?.getAutoResourceLabels())
 
         return taskArray
     }

@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
@@ -35,12 +36,14 @@ import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
 import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -100,6 +103,8 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitParamV1(paramNode);
             for( var workflowNode : sn.getWorkflows() )
                 visitWorkflow(workflowNode);
+            for( var agentNode : sn.getAgents() )
+                visitAgent(agentNode);
             for( var processNode : sn.getProcesses() )
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
@@ -139,6 +144,71 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.publishers);
         resolver.visit(node.onComplete);
         resolver.visit(node.onError);
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        for( var input : node.inputs ) {
+            // a destructured `record(...)` input parses to a TupleParameter
+            // whose type is the bare Record type -- reject it explicitly; any
+            // other resolvable type (scalar, path, named record) is allowed
+            if( input instanceof TupleParameter tp ) {
+                if( RECORD_TYPE.equals(input.getType()) )
+                    rejectDestructuredRecord(input, agentInputLabel(tp, "record"));
+                else
+                    // a tuple input declares no context slot for its components, so an agent
+                    // would silently half-ignore it (no input JSON entry, nothing to stage)
+                    resolver.addError(agentInputLabel(tp, "tuple") + ": tuple inputs are not supported -- declare each component as a separate input", input);
+                continue;
+            }
+            resolver.resolveOrFail(input.getType(), input);
+        }
+        resolver.visit(node.directives);
+        resolveTypedOutputs(node.outputs);
+        checkAgentOutputs(node.outputs);
+        resolver.visit(node.outputs);
+        resolver.visit(node.prompt);
+    }
+
+    /**
+     * Name a destructuring input in a diagnostic. A {@link TupleParameter} is constructed with an
+     * EMPTY name, so it has to be identified by its components — otherwise a script with several
+     * inputs gets a message that names none of them.
+     */
+    private static String agentInputLabel(TupleParameter tp, String form) {
+        var names = new ArrayList<String>();
+        for( var component : tp.components )
+            names.add(component.getName());
+        return "Agent input `" + form + "(" + String.join(", ", names) + ")`";
+    }
+
+    /**
+     * An agent output must be a named declaration, because the name is the channel it binds and
+     * the key the model answers under. The shared `processOutput` grammar rule also admits a bare
+     * expression (a process lowers it to the implicit `$out`), which an agent has nothing to do
+     * with -- reject it here rather than let it be dropped and resurface as a runtime
+     * "must declare exactly one output".
+     */
+    private void checkAgentOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            if( !(stmt instanceof ExpressionStatement stmtX) )
+                continue;
+            var output = stmtX.getExpression();
+            // a destructured `record(...)` output parses to a `record` method call
+            if( output instanceof MethodCallExpression mce && "record".equals(mce.getMethodAsString()) ) {
+                rejectDestructuredRecord(mce, "Agent output");
+                continue;
+            }
+            if( output instanceof VariableExpression )
+                continue;
+            if( output instanceof AssignmentExpression ae && ae.getLeftExpression() instanceof VariableExpression )
+                continue;
+            resolver.addError("Agent output must be declared as `name: Type` -- a bare expression is not supported", output);
+        }
+    }
+
+    private void rejectDestructuredRecord(ASTNode ctx, String label) {
+        resolver.addError(label + " must use a named record type; destructured `record(...)` is not yet supported for agents", ctx);
     }
 
     private void resolveTypedOutputs(Statement block) {

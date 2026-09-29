@@ -1,0 +1,26 @@
+---
+title: Bridge
+description: Reference for the bridge executor, which submits tasks through the Bridge abstraction layer.
+---
+
+# Bridge
+
+The `bridge` executor runs pipeline tasks using [Bridge](https://github.com/cea-hpc/bridge), an abstraction layer to ease batch system and resource manager usage in heterogeneous high-performance computing (HPC) environments. It submits each task as a Bridge job using the `ccc_msub` command.
+
+Bridge is open source software that you can install on top of an existing job scheduler such as SLURM or LSF. Use Bridge to submit jobs, stop jobs, and get information about running jobs and the cluster system. For installation instructions, see the [Bridge documentation](https://github.com/cea-hpc/bridge).
+
+To enable the Bridge executor, set `process.executor = 'bridge'` in the `nextflow.config` file.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
+
+[process-clusteroptions]: ../reference/process/directives/cluster-options
+[process-cpus]: ../reference/process/directives/cpus
+[process-memory]: ../reference/process/directives/memory
+[process-queue]: ../reference/process/directives/queue
+[process-time]: ../reference/process/directives/time

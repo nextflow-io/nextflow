@@ -1,0 +1,16 @@
+---
+title: shifter
+description: Reference for the shifter config scope, which controls how Shifter containers are executed by Nextflow.
+---
+
+# `shifter`
+
+The `shifter` scope controls how [Shifter](https://docs.nersc.gov/programming/shifter/overview/) containers are executed by Nextflow.
+
+##### `shifter.enabled`
+
+Execute tasks with Shifter containers (default: `false`).
+
+##### `shifter.envWhitelist`
+
+Comma-separated list of environment variable names to be included in the container environment.

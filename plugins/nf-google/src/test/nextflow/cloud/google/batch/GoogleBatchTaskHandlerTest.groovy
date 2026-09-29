@@ -44,6 +44,7 @@ import nextflow.executor.Executor
 import nextflow.executor.ExecutorConfig
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -52,6 +53,7 @@ import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
 /**
  *
@@ -76,7 +78,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
-                getResourceLabels() >> [:]
+                getResourceLabels(_) >> [:]
             }
         }
         and:
@@ -179,7 +181,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
-                getResourceLabels() >> [foo: 'bar']
+                getResourceLabels(_) >> [foo: 'bar']
             }
         }
         and:
@@ -262,6 +264,52 @@ class GoogleBatchTaskHandlerTest extends Specification {
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
     }
 
+    def 'should create submit request with auto resource labels' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        and:
+        // the label declared by the process is illegal for the Google Batch API, still it must be applied verbatim
+        def config = new TaskConfig(cpus: 2, resourceLabels: ['My.Label': 'Foo/Bar'])
+        config.setAutoResourceLabels([
+            'nextflow.io/runName': 'crazy_darwin',
+            'nextflow.io/repository': 'https://github.com/foo/bar',
+            'seqera.io/platform/workflowId': '4kZ8Xy' ])
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> config
+        }
+        and:
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run')
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> null
+
+        and:
+        def expected = [
+            nextflow_io_runname: 'crazy_darwin',
+            nextflow_io_repository: 'https___github_com_foo_bar',
+            seqera_io_platform_workflowid: '4kz8xy',
+            'My.Label': 'Foo/Bar' ]
+        and:
+        // the allocation policy and the job carry the very same labels
+        req.getAllocationPolicy().getLabelsMap() == expected
+        req.getLabelsMap() == expected
+    }
+
     def 'should use custom job name'() {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
@@ -322,7 +370,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
                 getMachineType() >> "template://${INSTANCE_TEMPLATE}"
-                getResourceLabels() >> [:]
+                getResourceLabels(_) >> [:]
             }
         }
         and:
@@ -449,7 +497,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
-                getResourceLabels() >> [:]
+                getResourceLabels(_) >> [:]
             }
         }
         and:
@@ -508,7 +556,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
-                getResourceLabels() >> [:]
+                getResourceLabels(_) >> [:]
                 getMachineType() >> "n1-*,n2-*"
             }
         }
@@ -621,6 +669,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         given:
         def client = Mock(BatchClient)
         def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
         def task = Mock(TaskRun)
         def handler = Spy(GoogleBatchTaskHandler)
         handler.@executor = executor
@@ -642,6 +691,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
         and:
         1 * client.deleteJob('job1') >> null
 
@@ -1006,7 +1057,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 8
-                getResourceLabels() >> [:]
+                getResourceLabels(_) >> [:]
             }
         }
         and:
@@ -1045,7 +1096,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 8
-                getResourceLabels() >> [:]
+                getResourceLabels(_) >> [:]
             }
         }
         and:
@@ -1193,6 +1244,29 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--foo'
         result.getContainer().getVolumesList() == ['/mnt:/mnt:rw']
         result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+    }
+
+    def 'should propagate machine info to array child tasks on update status' () {
+        given:
+        def machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        def child0 = Spy(GoogleBatchTaskHandler)
+        def child1 = Spy(GoogleBatchTaskHandler)
+        def arrayTask = new TaskArrayRun(children: [child0, child1])
+        def exec = Mock(GoogleBatchExecutor) {
+            getArrayTaskId('job-1', 0) >> '0.0'
+            getArrayTaskId('job-1', 1) >> '0.1'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = arrayTask
+        handler.@executor = exec
+        handler.@machineInfo = machineInfo
+
+        when:
+        handler.updateStatus('job-1', '0', 'uid-1')
+
+        then:
+        child0.getMachineInfo() == machineInfo
+        child1.getMachineInfo() == machineInfo
     }
 
     def 'should resolve zone from status events: #DESCRIPTION' () {

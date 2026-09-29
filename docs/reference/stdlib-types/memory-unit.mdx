@@ -1,0 +1,77 @@
+---
+title: MemoryUnit
+description: Reference for the MemoryUnit type, a quantity of bytes.
+---
+
+# MemoryUnit
+
+A MemoryUnit represents a quantity of bytes.
+
+A MemoryUnit can be created by adding a unit suffix to an integer (e.g. `1.GB`), or by explicitly casting to `MemoryUnit`:
+
+```nextflow
+// integer with suffix
+oneMegabyte = 1.MB
+
+// integer value (bytes)
+oneKilobyte = 1024 as MemoryUnit
+
+// string value
+oneGigabyte = '1 GB' as MemoryUnit
+```
+
+The following suffixes are available:
+
+| Unit | Description |
+| ---- | ----------- |
+| `B`  | Bytes       |
+| `KB` | Kilobytes   |
+| `MB` | Megabytes   |
+| `GB` | Gigabytes   |
+| `TB` | Terabytes   |
+| `PB` | Petabytes   |
+| `EB` | Exabytes    |
+| `ZB` | Zettabytes  |
+
+:::note
+Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is called a "kibibyte" and abbreviated as "KiB", and so on for the other units. In practice, however, kilobyte is commonly understood to mean 1024 bytes, and Nextflow follows this convention in its implementation as well as this documentation.
+:::
+
+Memory units can be compared like numbers, and they support basic arithmetic operations:
+
+```nextflow
+a = 1.GB
+b = 2.GB
+
+assert a < b
+assert a + a == b
+assert b - a == a
+assert a * 2 == b
+assert b / 2 == a
+```
+
+The following methods are available for a `MemoryUnit` object:
+
+##### `toBytes() -> Integer`
+
+Get the memory value in bytes (B).
+
+##### `toGiga() -> Integer`
+
+Get the memory value in gigabytes (rounded down), where 1 GB = 1024 MB.
+
+##### `toKilo() -> Integer`
+
+Get the memory value in kilobytes (rounded down), where 1 KB = 1024 B.
+
+##### `toMega() -> Integer`
+
+Get the memory value in megabytes (rounded down), where 1 MB = 1024 KB.
+
+##### `toUnit( unit: String ) -> Integer`
+
+Get the memory value in terms of a given unit (rounded down). The unit can be one of: `'B'`, `'KB'`, `'MB'`, `'GB'`, `'TB'`, `'PB'`, `'EB'`, `'ZB'`.
+
+:::note
+These methods are also available as `getBytes()`, `getGiga()`, `getKilo()`, and `getMega()`.
+:::

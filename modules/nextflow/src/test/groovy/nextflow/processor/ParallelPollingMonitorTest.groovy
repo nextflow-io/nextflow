@@ -65,6 +65,9 @@ class ParallelPollingMonitorTest extends Specification {
 
         then:
         handler.submit() >> { println "c=$count"; if(count.getAndIncrement()<2) throw new IllegalArgumentException("Ooops!") }
+        // the session is healthy in this scenario -- the retries come from the
+        // submit operation failing, not from the session being aborted
+        _ * session.canSubmitTasks() >> true
 
         success.get() == 1
         retry.get() == 2
@@ -116,6 +119,51 @@ class ParallelPollingMonitorTest extends Specification {
         and:
         0           |   1    | false | false
         10          |   1    | false | false
+    }
+
+    def 'should not submit a queued task once the session can no longer submit' () {
+        given:
+        def session = Mock(Session)
+        def handler = Mock(TaskHandler)
+        and:
+        def opts = new ThrottlingExecutor.Options().withRateLimit('100/sec')
+        def exec = ThrottlingExecutor.create(opts)
+        def mon = new ParallelPollingMonitor(exec, [session:session, name:'foo', pollInterval:'1sec'])
+
+        when:
+        mon.submit(handler)
+        exec.shutdown()
+        exec.awaitTermination(1, TimeUnit.MINUTES)
+
+        then:
+        // the session was aborted while the wrapper was sitting in the submitter queue
+        _ * session.canSubmitTasks() >> false
+        and:
+        0 * handler.prepareLauncher()
+        0 * handler.submit()
+        0 * session.notifyTaskSubmit(_)
+    }
+
+    def 'should submit a queued task while the session can still submit' () {
+        given:
+        def session = Mock(Session)
+        def handler = Mock(TaskHandler)
+        and:
+        def opts = new ThrottlingExecutor.Options().withRateLimit('100/sec')
+        def exec = ThrottlingExecutor.create(opts)
+        def mon = new ParallelPollingMonitor(exec, [session:session, name:'foo', pollInterval:'1sec'])
+
+        when:
+        mon.submit(handler)
+        exec.shutdown()
+        exec.awaitTermination(1, TimeUnit.MINUTES)
+
+        then:
+        _ * session.canSubmitTasks() >> true
+        and:
+        1 * handler.prepareLauncher()
+        1 * handler.submit()
+        1 * session.notifyTaskSubmit(handler)
     }
 
     def 'should inherit array size validation from parent TaskPollingMonitor' () {

@@ -130,4 +130,28 @@ class RetryConfigTest extends Specification {
         'one'       | 'foo_'    | 'bar'             | [FOO_BAR: 'one']
         'one'       | 'foo_'    | 'thisAndThat'     | [FOO_THIS_AND_THAT: 'one']
     }
+
+    def 'should name the environment variable that carried an invalid value' () {
+        given:
+        SysEnv.push([NXF_RETRY_POLICY_DELAY: 'foo'])
+
+        when:
+        RetryConfig.valueOf([:], 'delay', 'NXF_RETRY_POLICY_', Duration.of('1s'), Duration)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('NXF_RETRY_POLICY_DELAY')
+        e.message.contains('foo')
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should name the config option that carried an invalid value' () {
+        when:
+        RetryConfig.valueOf([delay: 'foo'], 'delay', 'NXF_RETRY_POLICY_', Duration.of('1s'), Duration)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'delay'")
+        e.message.contains('foo')
+    }
 }

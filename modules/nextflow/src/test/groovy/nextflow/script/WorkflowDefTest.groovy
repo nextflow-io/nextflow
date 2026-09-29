@@ -72,10 +72,10 @@ class WorkflowDefTest extends Dsl2Spec {
 
         then:
         meta.definitions.size() == 4
-        meta.getWorkflow('alpha') .declaredInputs == []
-        meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
-        meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
-        meta.getWorkflow('empty') .declaredInputs == []
+        meta.getWorkflow('alpha') .declaredInputs*.name == []
+        meta.getWorkflow('bravo') .declaredInputs*.name == ['foo', 'bar']
+        meta.getWorkflow('delta') .declaredInputs*.name == ['foo','bar']
+        meta.getWorkflow('empty') .declaredInputs*.name == []
     }
 
     def 'should define entry workflow' () {
@@ -113,7 +113,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def script = loadScript(SCRIPT, module: true)
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
-        workflow.declaredInputs == ['foo']
+        workflow.declaredInputs*.name == ['foo']
         workflow.declaredOutputs == ['bar', 'baz']
 
     }
@@ -135,7 +135,7 @@ class WorkflowDefTest extends Dsl2Spec {
         loadScript(SCRIPT)
         then:
         def e = thrown(ScriptCompilationException)
-        e.cause.message.contains('Invalid workflow definition')
+        e.cause.message.contains("Unexpected input: ':' @ line 6, column 19")
 
     }
 

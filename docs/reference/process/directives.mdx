@@ -1,0 +1,113 @@
+---
+title: Directives
+description: Reference for the directives that control the execution of process tasks.
+---
+
+# Directives
+
+Directives are optional settings that affect the execution of the current process. They are declared at the top of a process definition, before any input, output, or script section.
+
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it is evaluated separately for each task. See [Dynamic directives][dynamic-directives] for more information.
+
+You can also specify directives in a configuration file using the `process` config scope. This is the recommended way to configure a pipeline for a particular compute environment. See [Process configuration][config-process-scope] for more information.
+
+Some directives are only supported by specific executors. See [Executors][executor-page] for more information about each executor.
+
+The following directives are available:
+
+| Directive | Description |
+| --------- | ----------- |
+| [`accelerator`][accelerator] | The number of hardware accelerators (for example, GPUs) required by each task. |
+| [`afterScript`][after-script] | A Bash snippet to execute after the task script. |
+| [`arch`][arch] | The CPU architecture to build the software required by each task. |
+| [`array`][array] | Submit tasks as job arrays, for executors that support it. |
+| [`beforeScript`][before-script] | A Bash snippet to execute before the task script. |
+| [`cache`][cache] | Whether and how task executions are cached. |
+| [`clusterOptions`][cluster-options] | Additional submission options for grid executors. |
+| [`conda`][conda] | The set of Conda packages required by each task. |
+| [`container`][container] | The container image required by each task. |
+| [`containerOptions`][container-options] | Additional options for the underlying container runtime. |
+| [`cpus`][cpus] | The number of CPUs required by each task. |
+| [`debug`][debug] | Print the standard output of each task to the pipeline standard output. |
+| [`disk`][disk] | The amount of disk storage required by each task. |
+| [`errorStrategy`][error-strategy] | How to handle task failures. |
+| [`executor`][executor] | The underlying system where tasks are executed. |
+| [`ext`][ext] | A generic directive for user-defined properties. |
+| [`fair`][fair] | Emit process outputs in the order in which they were received. |
+| [`hints`][hints] | Executor-specific hints, specified as key-value pairs. |
+| [`label`][label] | A custom label, used to apply shared process configuration. |
+| [`machineType`][machine-type] | A predefined machine type for cloud executors that support it. |
+| [`maxErrors`][max-errors] | The maximum number of task failures allowed for a process. |
+| [`maxForks`][max-forks] | The maximum number of concurrent task executions for a process. |
+| [`maxRetries`][max-retries] | The maximum number of times a task can be retried. |
+| [`maxSubmitAwait`][max-submit-await] | How long a task can remain in the submission queue before failing. |
+| [`memory`][memory] | The amount of memory required by each task. |
+| [`module`][module] | The set of Environment Modules required by each task. |
+| [`penv`][penv] | The parallel environment to use when submitting tasks to SGE. |
+| [`pod`][pod] | Pod-specific settings for the Kubernetes executor. |
+| [`publishDir`][publish-dir] | Publish matching process output files to a target directory. |
+| [`queue`][queue] | The queue to which tasks should be submitted. |
+| [`resourceLabels`][resource-labels] | Custom name-value pairs to attach to task executions. |
+| [`resourceLimits`][resource-limits] | Environment-specific limits for task resource requests. |
+| [`scratch`][scratch] | Execute each task in a temporary directory local to the compute node. |
+| [`secret`][secret] | The secrets required by each task. |
+| [`shell`][shell] | A custom shell command for process scripts. |
+| [`spack`][spack] | The set of Spack packages required by each task. |
+| [`stageInMode`][stage-in-mode] | How input files are staged into the task directory. |
+| [`stageOutMode`][stage-out-mode] | How output files are staged out of the scratch directory. |
+| [`storeDir`][store-dir] | Store task outputs in a permanent store directory. |
+| [`tag`][tag] | A custom identifier for each task execution. |
+| [`time`][time] | The maximum runtime for each task. |
+
+## See also
+
+- [Dynamic directives][dynamic-directives]: How to define a directive value based on the task inputs.
+- [Dynamic task resources][dynamic-task-resources]: How to define task resources that scale with each retry.
+- [Task directive values][task-directive-values]: How to access directive values in a process body.
+
+[config-process-scope]: ../../config#process-configuration
+[dynamic-directives]: ../../process#dynamic-directives
+[executor-page]: ../../executor
+[dynamic-task-resources]: ../../process#dynamic-task-resources
+[task-directive-values]: ../../process#using-task-directive-values
+[accelerator]: ./directives/accelerator
+[after-script]: ./directives/after-script
+[arch]: ./directives/arch
+[array]: ./directives/array
+[before-script]: ./directives/before-script
+[cache]: ./directives/cache
+[cluster-options]: ./directives/cluster-options
+[conda]: ./directives/conda
+[container]: ./directives/container
+[container-options]: ./directives/container-options
+[cpus]: ./directives/cpus
+[debug]: ./directives/debug
+[disk]: ./directives/disk
+[error-strategy]: ./directives/error-strategy
+[executor]: ./directives/executor
+[ext]: ./directives/ext
+[fair]: ./directives/fair
+[hints]: ./directives/hints
+[label]: ./directives/label
+[machine-type]: ./directives/machine-type
+[max-errors]: ./directives/max-errors
+[max-forks]: ./directives/max-forks
+[max-retries]: ./directives/max-retries
+[max-submit-await]: ./directives/max-submit-await
+[memory]: ./directives/memory
+[module]: ./directives/module
+[penv]: ./directives/penv
+[pod]: ./directives/pod
+[publish-dir]: ./directives/publish-dir
+[queue]: ./directives/queue
+[resource-labels]: ./directives/resource-labels
+[resource-limits]: ./directives/resource-limits
+[scratch]: ./directives/scratch
+[secret]: ./directives/secret
+[shell]: ./directives/shell
+[spack]: ./directives/spack
+[stage-in-mode]: ./directives/stage-in-mode
+[stage-out-mode]: ./directives/stage-out-mode
+[store-dir]: ./directives/store-dir
+[tag]: ./directives/tag
+[time]: ./directives/time

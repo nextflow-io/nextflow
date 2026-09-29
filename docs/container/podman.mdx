@@ -1,0 +1,37 @@
+---
+title: Podman
+description: Run Nextflow pipeline tasks in Podman containers, with or without root privileges.
+---
+
+# Podman
+
+[Podman](https://podman.io) is a drop-in replacement for Docker that can run containers with or without root privileges.
+
+## Prerequisites
+
+Podman must be installed in your execution environment.
+
+Rootless mode requires additional operating system configuration. Because of a Podman limitation, cpuset for CPUs and memory only works with root permissions.
+
+## How it works
+
+Enable Podman in the Nextflow configuration file:
+
+```groovy
+podman.enabled = true
+process.container = 'nextflow/examples:latest'
+```
+
+Whenever your pipeline launches a task, Nextflow runs it inside a Podman container created from the specified image using the `podman run` command.
+
+You can also enable Podman on the command line:
+
+```bash
+nextflow run main.nf -with-podman
+```
+
+## Advanced settings
+
+See the [`podman`][config-podman] configuration scope for advanced Podman settings.
+
+[config-podman]: ../reference/config/podman

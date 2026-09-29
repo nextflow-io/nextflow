@@ -15,6 +15,7 @@
  */
 package nextflow.config.formatter;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 import nextflow.config.ast.ConfigApplyNode;
@@ -24,6 +25,8 @@ import nextflow.config.ast.ConfigBlockNode;
 import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigVisitorSupport;
+import nextflow.script.formatter.Comment;
+import nextflow.script.formatter.CommentAttacher;
 import nextflow.script.formatter.FormattingOptions;
 import nextflow.script.formatter.Formatter;
 import org.codehaus.groovy.control.SourceUnit;
@@ -48,6 +51,15 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
         this.sourceUnit = sourceUnit;
         this.options = options;
         this.fmt = new Formatter(options);
+        this.fmt.setComments(CommentAttacher.of(sourceUnit.getAST()));
+    }
+
+    /**
+     * Get the comments that were not printed. Should always be empty --
+     * a non-empty result means formatting would delete source.
+     */
+    public List<Comment> getMissingComments() {
+        return fmt.getComments().getMissingComments();
     }
 
     @Override
@@ -57,8 +69,10 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     public void visit() {
         var moduleNode = sourceUnit.getAST();
-        if( moduleNode instanceof ConfigNode cn )
+        if( moduleNode instanceof ConfigNode cn ) {
             super.visit(cn);
+            fmt.appendDanglingComments(cn);
+        }
     }
 
     public String toString() {
@@ -77,10 +91,12 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
         fmt.incIndent();
         super.visitConfigApplyBlock(node);
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
 
         fmt.appendIndent();
         fmt.append('}');
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
@@ -101,7 +117,10 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
             fmt.append(" ".repeat(padding));
         }
         fmt.append(" = ");
+        var sid = fmt.beginStatement(node);
         fmt.visit(node.value);
+        fmt.endStatement(sid);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
@@ -144,6 +163,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
         fmt.incIndent();
         super.visitConfigBlock(node);
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
 
         if( options.harshilAlignment() )
@@ -151,6 +171,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
         fmt.appendIndent();
         fmt.append('}');
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
@@ -160,6 +181,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
         fmt.appendIndent();
         fmt.append("includeConfig ");
         fmt.visit(node.source);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 

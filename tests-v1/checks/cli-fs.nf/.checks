@@ -11,10 +11,10 @@ NAME=test-cmd-$(basename `mktemp`).file
 head -c 1000000 </dev/urandom >myfile
 
 ## upload it
-$NXF_CMD -log cmd-fs-1.log fs cp myfile s3://nextflow-ci/$NAME
+$NXF_CMD -log cmd-fs-1.log fs cp myfile s3://nextflow-ci-oss/$NAME
 
 ## download it
-$NXF_CMD -log cmd-fs-2.log fs cp s3://nextflow-ci/$NAME $NAME
+$NXF_CMD -log cmd-fs-2.log fs cp s3://nextflow-ci-oss/$NAME $NAME
 
 ## check they are equals
 diff myfile $NAME || false

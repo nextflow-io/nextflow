@@ -1,0 +1,36 @@
+set -e
+
+#
+# normal run: both tasks execute and every output is emitted
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar'` == 1 ]] || false
+[[ `grep -c 'upper=HELLO' stdout` == 1 ]] || false
+[[ `grep -c 'size=5' stdout` == 1 ]] || false
+[[ `grep -c 'env=hello-env' stdout` == 1 ]] || false
+[[ `grep -c 'file=hello' stdout` == 1 ]] || false
+[[ `grep -c 'std=out:hello' stdout` == 1 ]] || false
+[[ `grep -c 'rev=dlrow' stdout` == 1 ]] || false
+
+#
+# RESUME mode: both tasks are cached and every output is emitted identically.
+#  - `foo` is a script task: its value outputs (upper/size) are NOT persisted in the
+#    cache DB, they are rebuilt from the re-evaluated task context.
+#  - `bar` is an exec task: its body is not re-run, so `rev` can only come from the
+#    persisted task context -- it emits `null` if that context is not cached.
+#
+echo ''
+$NXF_RUN -resume | tee stdout2
+
+[[ `< .nextflow.log grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Missing cache context'` == 0 ]] || false
+[[ `grep -c 'upper=HELLO' stdout2` == 1 ]] || false
+[[ `grep -c 'size=5' stdout2` == 1 ]] || false
+[[ `grep -c 'env=hello-env' stdout2` == 1 ]] || false
+[[ `grep -c 'file=hello' stdout2` == 1 ]] || false
+[[ `grep -c 'std=out:hello' stdout2` == 1 ]] || false
+[[ `grep -c 'rev=dlrow' stdout2` == 1 ]] || false

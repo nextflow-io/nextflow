@@ -62,7 +62,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Job`).
     """)
     final String computeResourceType
 
@@ -221,7 +221,7 @@ class K8sConfig implements ConfigScope {
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
         clientRefreshInterval = opts.clientRefreshInterval as Duration ?: Duration.of('50m')
-        computeResourceType = opts.computeResourceType
+        computeResourceType = opts.computeResourceType ?: ResourceType.Job.name()
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean
         debug = new K8sDebug(opts.debug as Map ?: Collections.emptyMap())

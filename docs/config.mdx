@@ -145,10 +145,12 @@ When including a config file, the included config is evaluated with the paramete
 You should declare parameters in the config file only when other config options use them. When you use a parameter in the script, you should declare it there and override it in config profiles as needed:
 
 ```nextflow
+// main.nf
 params.input = null
 ```
 
 ```groovy
+// nextflow.config
 params {
     publish_mode = 'copy'
 }
@@ -280,6 +282,8 @@ This configuration:
 - Sets 16 CPUs for any process named `bye` (or imported as `bye`)
 - Sets 32 CPUs for any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha`
 
+The same selector syntax and the same priority order apply in the `agent` scope, which configures agent tasks independently from the `process` scope. See [Agents](agent.mdx#configuration).
+
 ## Config profiles
 
 Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected at runtime using the `-profile` command line option.
@@ -345,7 +349,7 @@ This approach is useful for handling workflow events without modifying the pipel
 [config-options]: ./reference/config
 [nxf-env-vars]: ./reference/env-vars#nextflow-settings
 [process-reference]: ./reference/process
-[process-label]: ./reference/process#label
+[process-label]: ./reference/process/directives/label
 [secrets-page]: ./secrets
 [strict-syntax-page]: ./strict-syntax
 [syntax-expressions]: ./reference/syntax#expressions

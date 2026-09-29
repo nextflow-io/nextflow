@@ -22,7 +22,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.util.CacheHelper
 /**
- * Models a checksum including the value as well as the algortihm and mode used to compute it.
+ * Models a checksum including the value as well as the algorithm and mode used to compute it.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
@@ -38,10 +38,12 @@ class Checksum {
     }
 
     static Checksum ofNextflow(String value) {
-        new Checksum(CacheHelper.hasher(value).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+        final mode = CacheHelper.HashMode.DEFAULT()
+        new Checksum(CacheHelper.hasher(value, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 
     static Checksum ofNextflow(Path path) {
-        new Checksum(CacheHelper.hasher(path).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+        final mode = CacheHelper.HashMode.DEFAULT()
+        new Checksum(CacheHelper.hasher(path, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 }

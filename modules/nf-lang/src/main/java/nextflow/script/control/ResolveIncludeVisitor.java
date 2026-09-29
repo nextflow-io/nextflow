@@ -16,13 +16,11 @@
 package nextflow.script.control;
 
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -92,7 +90,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
         URI includeUri;
         try {
-            includeUri = getIncludeUri(source);
+            includeUri = ModuleResolver.getIncludeUri(uri, source, projectDir);
         }
         catch( Exception e ) {
             addError(e.getMessage(), node);
@@ -136,28 +134,6 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private URI getIncludeUri(String source) {
-        if( ModuleResolver.isRemoteModule(source) ) {
-            return RemoteModuleResolverProvider.getInstance()
-                .resolve(source, projectDir)
-                .normalize()
-                .toUri();
-        }
-        else {
-            var parent = Path.of(uri).getParent();
-            return getLocalIncludeUri(parent, source);
-        }
-    }
-
-    private static URI getLocalIncludeUri(Path parent, String source) {
-        Path includePath = parent.resolve(source);
-        if( Files.isDirectory(includePath) )
-            includePath = includePath.resolve("main.nf");
-        else if( !source.endsWith(".nf") )
-            includePath = Path.of(includePath.toString() + ".nf");
-        return includePath.normalize().toUri();
-    }
-
     private boolean isIncludeStale(IncludeNode node, URI includeUri) {
         if( changedUris == null || changedUris.contains(uri) || changedUris.contains(includeUri) )
             return true;
@@ -173,6 +149,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         var result = new ArrayList<AnnotatedNode>();
         result.addAll(scriptNode.getWorkflows());
         result.addAll(scriptNode.getProcesses());
+        result.addAll(scriptNode.getAgents());
         result.addAll(scriptNode.getFunctions());
         result.addAll(scriptNode.getTypes());
         return result;

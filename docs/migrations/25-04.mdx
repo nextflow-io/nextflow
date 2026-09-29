@@ -99,30 +99,40 @@ workflow.output.ignoreErrors = true
 
 ## Miscellaneous
 
-- New config option: `aws.batch.terminateUnschedulableJobs`
-- New config option: `azure.batch.jobMaxWallClockTime`
-- New config option: `fusion.snapshots`
-- New config option: `google.batch.gcsfuseOptions`
-- New config option: `google.batch.networkTags`
-- New config option: `workflow.output.copyAttributes`
-- New environment variable: `NXF_PLUGINS_ALLOWED`
-- New plugin extension point: `TraceObserverFactoryV2`
-- New standard library function: `env()`
-- Support `disk` directive for Azure Batch
+- New config option: [`aws.batch.terminateUnschedulableJobs`][config-aws-batch-terminateUnschedulableJobs]
+- New config option: [`azure.batch.jobMaxWallClockTime`][config-azure-batch-jobMaxWallClockTime]
+- New config option: [`fusion.snapshots`][config-fusion-snapshots]
+- New config option: [`google.batch.gcsfuseOptions`][config-google-batch-gcsfuseOptions]
+- New config option: [`google.batch.networkTags`][config-google-batch-networkTags]
+- New config option: [`workflow.output.copyAttributes`][config-workflow-output-copyAttributes]
+- New environment variable: [`NXF_PLUGINS_ALLOWED`][env-vars-NXF_PLUGINS_ALLOWED]
+- New plugin extension point: [`TraceObserverFactoryV2`][dev-plugins-trace-observers]
+- New standard library function: [`env()`][stdlib-env]
+- Support [`disk`][process-disk] directive for Azure Batch
 
-[channel-from-lineage]: ../reference/channel#fromlineage
-[channel-topic]: ../reference/channel#topic
-[cli-inspect]: ../reference/cli#inspect
-[cli-lineage]: ../reference/cli#lineage
-[cli-lint]: ../reference/cli#lint
+[channel-from-lineage]: ../reference/stdlib-namespaces/channel#fromlineage
+[channel-topic]: ../reference/stdlib-namespaces/channel#topic
+[cli-inspect]: ../reference/cli/inspect
+[cli-lineage]: ../reference/cli/lineage
+[cli-lint]: ../reference/cli/lint
+[config-aws-batch-terminateUnschedulableJobs]: ../reference/config/aws#awsbatchterminateunschedulablejobs
+[config-azure-batch-jobMaxWallClockTime]: ../reference/config/azure#azurebatchjobmaxwallclocktime
+[config-fusion-snapshots]: ../reference/config/fusion#fusionsnapshots
+[config-google-batch-gcsfuseOptions]: ../reference/config/google#googlebatchgcsfuseoptions
+[config-google-batch-networkTags]: ../reference/config/google#googlebatchnetworktags
+[config-workflow-output-copyAttributes]: ../reference/config/workflow#workflowoutputcopyattributes
 [data-lineage-page]: ../tutorials/data-lineage
+[dev-plugins-trace-observers]: ../plugins/developing-plugins#trace-observers
+[env-vars-NXF_PLUGINS_ALLOWED]: ../reference/env-vars#nxf_plugins_allowed
 [gradle-plugin-page]: ../guides/gradle-plugin
-[hyperqueue-executor]: ../executor#hyperqueue
+[hyperqueue-executor]: ../executor/hyperqueue
 [install-requirements]: ../install#requirements
 [plugins-page]: ../plugins
+[process-disk]: ../reference/process/directives/disk
 [process-shell]: ../process#shell
-[syntax-page]: ../reference/syntax
+[stdlib-env]: ../reference/stdlib-namespaces/global#env-name-string----string
 [strict-syntax-page]: ../strict-syntax
-[workflow-outputs-second-preview]: ./24-10#workflow-outputs-second-preview
+[syntax-page]: ../reference/syntax
 [workflow-output-def]: ../workflow#outputs
+[workflow-outputs-second-preview]: ./24-10#workflow-outputs-second-preview
 [workflow-publishing-files]: ../workflow#publishing-files

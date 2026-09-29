@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import groovy.lang.groovydoc.GroovydocHolder;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -36,6 +37,7 @@ import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.AgentDsl;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.EntryWorkflowDsl;
 import nextflow.script.dsl.FeatureFlag;
@@ -117,6 +119,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             }
             for( var processNode : sn.getProcesses() )
                 declareMethod(processNode);
+            for( var agentNode : sn.getAgents() )
+                declareMethod(agentNode);
             for( var functionNode : sn.getFunctions() )
                 declareMethod(functionNode);
             declareTypes(sn);
@@ -127,6 +131,10 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null )
                 continue;
+            if( entry.getTarget() instanceof ClassNode && entry.alias != null ) {
+                vsc.addError("Included types cannot be aliased", entry);
+                continue;
+            }
             var name = entry.getNameOrAlias();
             var otherInclude = vsc.getInclude(name);
             if( otherInclude != null )
@@ -276,8 +284,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( node.main instanceof BlockStatement block )
             copyVariableScope(block.getVariableScope());
 
-        visitTypedOutputs(node.emits, "Workflow emit");
-        visitTypedOutputs(node.publishers, "Workflow output");
+        visitTypedOutputs(node.emits, "Workflow emit", true);
+        visitTypedOutputs(node.publishers, "Workflow output", true);
 
         visit(node.onComplete);
         visit(node.onError);
@@ -305,18 +313,22 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitTypedOutputs(Statement outputs, String typeLabel) {
+    private void visitTypedOutputs(Statement outputs, String typeLabel, boolean hasBody) {
         var declaredOutputs = new HashMap<String,ASTNode>();
         for( var stmt : asBlockStatements(outputs) ) {
             var es = (ExpressionStatement)stmt;
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
-                // a bare name without a type (e.g. `x`) is an output expression
-                // and should be resolved as a variable reference; a name with a type
-                // (e.g. `x: String`) declares a named output and should not be visited
+                // a bare name refers to a variable assigned in the body -- `x: T` lowers
+                // to the same code as `x = x`. A typed name is resolved here rather than
+                // visited because setting its accessed variable would replace the declared
+                // output type with the variable's own. An agent has no body and the model
+                // answers a typed name, so there it is only a declaration.
                 if( ClassHelper.isDynamicTyped(ve.getOriginType()) )
                     visit(ve);
+                else if( hasBody && vsc.findVariableDeclaration(ve.getName(), ve) == null )
+                    vsc.addError("`" + ve.getName() + "` is not defined", ve);
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
@@ -339,6 +351,36 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     }
 
     @Override
+    public void visitAgent(AgentNode node) {
+        vsc.pushScope(AgentDsl.class);
+        currentDefinition = node;
+        node.setVariableScope(currentScope());
+
+        for( var input : asFlatParams(node.inputs) ) {
+            vsc.declare(input, input);
+
+            // suppress "unused variable" warnings since every input is sent to the model
+            vsc.findVariableDeclaration(input.getName(), input);
+        }
+
+        vsc.pushScope(AgentDsl.DirectiveDsl.class);
+        visitDirectives(node.directives, "agent directive", false);
+        vsc.popScope();
+
+        // the prompt template may reference input parameters
+        visit(node.prompt);
+
+        // mirrors visitProcessV2: `file(...)`/`files(...)` in an agent output collect from the
+        // task work dir, so they must NOT resolve to the driver-side global ScriptDsl.file
+        vsc.pushScope(AgentDsl.AgentOutputDsl.class);
+        visitTypedOutputs(node.outputs, "Agent output", false);
+        vsc.popScope();
+
+        currentDefinition = null;
+        vsc.popScope();
+    }
+
+    @Override
     public void visitProcessV2(ProcessNodeV2 node) {
         vsc.pushScope(ProcessDsl.class);
         currentDefinition = node;
@@ -347,17 +389,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var input : asFlatParams(node.inputs) ) {
             vsc.declare(input, input);
 
-            // suppress "unused variable" warnings since Path inputs are implicity staged
+            // suppress "unused variable" warnings since Path inputs are implicitly staged
             vsc.findVariableDeclaration(input.getName(), input);
         }
 
         vsc.pushScope(ProcessDsl.StageDsl.class);
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
-
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addWarning("Process `when` section will not be supported in a future version", "", node.when);
-        visit(node.when);
 
         visit(node.exec);
         visit(node.stub);
@@ -367,7 +405,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         vsc.popScope();
 
         vsc.pushScope(ProcessDsl.OutputDslV2.class);
-        visitTypedOutputs(node.outputs, "Process output");
+        visitTypedOutputs(node.outputs, "Process output", true);
         visit(node.topics);
         vsc.popScope();
 
@@ -763,6 +801,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             return "Processes";
         if( mn instanceof WorkflowNode )
             return "Workflows";
+        if( mn instanceof AgentNode )
+            return "Agents";
         return "Operators";
     }
 

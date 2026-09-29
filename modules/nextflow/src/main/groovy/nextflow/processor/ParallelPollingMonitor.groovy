@@ -75,6 +75,14 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
         // using an thread-pool via the executor service
         final wrapper = (Callable)new ThrottlingExecutor.Recoverable() {
             @Override protected Object invoke() {
+                // the session may have been aborted or cancelled while this
+                // submission was sitting in the submitter queue -- submitting now
+                // would create a job that the shutdown kill sweep has already
+                // missed and that the polling loop will never observe
+                if( !session.canSubmitTasks() ) {
+                    log.debug "Skipping task submission -- session no longer accepting submissions > $handler"
+                    return null
+                }
                 return submit0(handler)
             }
 

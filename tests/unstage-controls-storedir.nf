@@ -1,4 +1,4 @@
-// Test to validate unstage controls copy error is not printed whe using storeDir. https://github.com/nextflow-io/nextflow/issues/6311
+// Test to validate unstage controls copy error is not printed when using storeDir. https://github.com/nextflow-io/nextflow/issues/6311
 
 workflow {
   test()

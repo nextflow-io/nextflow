@@ -117,6 +117,9 @@ class ProcessOutputsDef implements Cloneable {
         result.params = new ArrayList<>(params.size())
         for( final param : params )
             result.params.add(param.clone())
+        result.topics = new ArrayList<>(topics.size())
+        for( final topic : topics )
+            result.topics.add(topic.clone())
         return result
     }
 

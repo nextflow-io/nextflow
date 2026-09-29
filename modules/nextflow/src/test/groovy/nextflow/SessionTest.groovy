@@ -17,24 +17,42 @@
 package nextflow
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import nextflow.cache.CacheDB
+import nextflow.cache.DefaultCacheStore
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
+import nextflow.executor.CachedTaskHandler
 import nextflow.file.FileHelper
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.script.BodyDef
+import nextflow.script.ProcessConfig
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceRecord
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -61,9 +79,9 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.baseDir = Paths.get('some/folder')
+        session.baseDir = Path.of('some/folder')
         then:
-        session.baseDir == Paths.get('some/folder')
+        session.baseDir == Path.of('some/folder')
         session.binDir == null
 
         when:
@@ -99,7 +117,7 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.setBaseDir(Paths.get('/some/path'))
+        session.setBaseDir(Path.of('/some/path'))
         then:
         session.getLibDir() == []
 
@@ -136,6 +154,8 @@ class SessionTest extends Specification {
         def session
         def result
         def observer
+        and:
+        def outputDir = Path.of('/some/results')
 
         when:
         session = [:] as Session
@@ -183,6 +203,56 @@ class SessionTest extends Specification {
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
 
+        when: 'the trace directory is defined'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is resolved against the output directory'
+        observer.tracePath == outputDir.resolve('pipeline_info/trace.txt')
+
+        when: 'the trace directory is the current directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '.', file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is placed in the output directory'
+        observer.tracePath == outputDir.resolve('trace.txt')
+
+        when: 'the trace directory is an absolute path'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '/pipeline_info']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace directory escapes the output directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '../escaped']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace file escapes the output directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: '../../escaped.txt']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace file is an absolute path'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: '/other/trace.txt']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
     }
 
     def 'should return absolute workDir' () {
@@ -212,6 +282,89 @@ class SessionTest extends Specification {
 
     }
 
+    def 'a cache factory that resolves its own work dir is visible to everything below it' () {
+
+        given: 'a cache factory that writes back into the session, as the global cloud cache does'
+        def folder = Files.createTempDirectory('test')
+        def shared = folder.resolve('shared-cache/work')
+        def db = Mock(CacheDB)     // created here: a Spock mock cannot be built inside the subclass
+        def session = new Session([workDir: folder.resolve('local-work').toString()]) {
+            @Override protected CacheDB createCache() {
+                this.workDir = shared
+                this.resumeMode = true
+                return db
+            }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the work dir it resolved is the one that got created, not the one config named'
+        session.workDir == shared
+        Files.isDirectory(shared)
+        !Files.exists(folder.resolve('local-work'))
+        and: 'and the one the workflow reports -- `workflow.workDir` must not name a dir no task uses'
+        session.workflowMetadata.workDir == shared
+        and: 'the resumeMode it forced on survived too'
+        session.resumeMode
+
+        cleanup:
+        session.classesDir?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'an abort after the cache is created still closes it' () {
+
+        given: 'a work dir that cannot be created, so init fails right after createCache()'
+        def folder = Files.createTempDirectory('test')
+        def blocked = folder.resolve('not-a-dir')
+        blocked.text = 'a file, so mkdirs() on it fails'
+        def db = Mock(CacheDB)
+        def session = new Session([workDir: blocked.resolve('work').toString()]) {
+            @Override protected CacheDB createCache() { return db }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the original failure propagates, unchanged'
+        thrown(AbortOperationException)
+        and: 'but the cache does not leak -- ScriptRunner calls init() outside the try that would'
+        and: 'otherwise close it, and DefaultCacheStore.open() has already truncated the index'
+        1 * db.close()
+        session.cache == null
+
+        cleanup:
+        session.classesDir?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'cleanup returns before opening the cache for a non-file work dir' () {
+
+        given: 'a session with `cleanup = true` whose work dir is on a remote (non-file:) file system, as a cloud work dir is'
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        def workDir = TestHelper.createInMemTempDir()
+        def kept = workDir.resolve('ab/cdef0123/out.txt')
+        Files.createDirectories(kept.parent)
+        kept.text = 'data'
+        def session = new Session([cleanup: true])
+        session.workDir = workDir
+
+        when:
+        session.cleanup()
+
+        then: 'it warns and stops -- no cache is opened, nothing under the work dir is touched'
+        Files.exists(kept)
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('not supported for remote work directory') }
+        !appender.list.any { it.formattedMessage.contains('Failed to cleanup work dir') }
+
+        cleanup:
+        logger.detachAppender(appender)
+    }
+
     def 'should collect bin executable files' () {
 
         given:
@@ -236,13 +389,69 @@ class SessionTest extends Specification {
 
     }
 
+    def 'the agent orchestration pool is separate from the execution pool and grows on demand' () {
+        given:
+        def session = new Session([poolSize: 2])
+        session.start()
+
+        expect: 'the execution pool keeps its historical fixed shape, sized to poolSize'
+        ((ThreadPoolExecutor) session.execService).getMaximumPoolSize() == 2
+
+        and: 'orchestration draws from a DIFFERENT pool, so an agent cannot consume an execution thread'
+        !session.getAgentExecService().is(session.execService)
+
+        and: 'and holds no threads until an agent actually runs'
+        ((ThreadPoolExecutor) session.getAgentExecService()).getPoolSize() == 0
+
+        and: 'it is unbounded, so a blocked orchestrator can always be given a thread'
+        ((ThreadPoolExecutor) session.getAgentExecService()).getMaximumPoolSize() == Integer.MAX_VALUE
+
+        when: 'far more blocked orchestrators than the execution pool could ever admit'
+        def pool = (ThreadPoolExecutor) session.getAgentExecService()
+        int n = 50
+        def started = new CountDownLatch(n)
+        def release = new CountDownLatch(1)
+        n.times { pool.submit({ started.countDown(); release.await() } as Runnable) }
+
+        // sharing one fixed pool would admit only poolSize of these, and the tool sub-tasks they
+        // block on would never get a thread -- the deadlock this partition removes
+        then: 'all of them run concurrently'
+        started.await(30, TimeUnit.SECONDS)
+        pool.getPoolSize() >= n
+
+        and: 'none of it consumed the execution pool'
+        ((ThreadPoolExecutor) session.execService).getPoolSize() == 0
+
+        cleanup:
+        release.countDown()
+        pool.shutdownNow()
+        session.execService.shutdownNow()
+    }
+
     def 'should get a warning message' () {
 
         given:
-        def session = new Session([process: ['$foo': [cpus:1], '$bar':[mem:'10GB']]])
+        def session = new Session([process: ['withName:foo': [cpus:1], 'withName:bar':[mem:'10GB']]])
         expect:
         session.validateConfig0(['foo','bar','baz']) == []
         session.validateConfig0(['foo','baz']) == ["There's no process matching config selector: bar -- Did you mean: baz?"]
+    }
+
+    def 'should validate agent selectors against the agent names' () {
+        given:
+        def session = new Session([agent: [
+            model: 'openai/gpt-5-mini',
+            'withName:critic': [cpus: 2],
+            'withName:planer': [cpus: 4],
+            'withLabel:reasoning': [cpus: 8] ]])
+
+        expect: 'a matched agent selector is silent; the typo is reported as an agent, not a process'
+        session.validateConfig0([], ['critic','planner']) == ["There's no agent matching config selector: planer -- Did you mean: planner?"]
+
+        and: 'agent names never satisfy a `process` selector, and vice versa'
+        new Session([process: ['withName:critic': [cpus:2]]]).validateConfig0([], ['critic'])
+            == ["There's no process matching config selector: critic"]
+        session.validateConfig0(['critic','planner'], []).size() == 2
     }
 
     @Unroll
@@ -417,6 +626,85 @@ class SessionTest extends Specification {
 
     }
 
+    def 'should compute the auto resource labels lazily and memoize them' () {
+        given:
+        def session = new Session([tower: [autoLabels: 'runName']])
+        // the Platform metadata is only filled in at `notifyFlowCreate` i.e. after the session is created
+        def meta = Mock(WorkflowMetadata)
+        session.@workflowMetadata = meta
+
+        when:
+        def labels = session.getAutoResourceLabels()
+        then:
+        // the metadata is only read on the first access
+        (1.._) * meta.getRunName() >> 'crazy_darwin'
+        and:
+        labels == ['nextflow.io/runName': 'crazy_darwin']
+
+        when:
+        def again = session.getAutoResourceLabels()
+        then:
+        0 * meta.getRunName()
+        and:
+        again.is(labels)
+    }
+
+    def 'should return no auto resource labels when the option is not set' () {
+        given:
+        def session = new Session()
+        session.@workflowMetadata = Mock(WorkflowMetadata)
+
+        expect:
+        session.getAutoResourceLabels() == [:]
+    }
+
+    @Unroll
+    def 'should resolve the auto resource labels option scope' () {
+        given:
+        def session = new Session(CONFIG)
+        session.@workflowMetadata = Mock(WorkflowMetadata) {
+            getRunName() >> 'crazy_darwin'
+            getProjectName() >> 'nf-core/rnaseq'
+        }
+
+        expect:
+        session.getAutoResourceLabels().keySet() as List == EXPECTED
+
+        where:
+        CONFIG                                                                          | EXPECTED
+        [tower: [autoLabels: 'runName']]                                                | ['nextflow.io/runName']
+        [tower: [autoLabels: ['runName','projectName']]]                                | ['nextflow.io/projectName','nextflow.io/runName']
+        [tower: [autoLabels: false]]                                                    | []
+        [seqera: [executor: [autoLabels: 'runName']]]                                   | ['nextflow.io/runName']
+        // the deprecated option wins when given, even as `false`
+        [seqera: [executor: [autoLabels: 'projectName']], tower: [autoLabels:'runName']]| ['nextflow.io/projectName']
+        [seqera: [executor: [autoLabels: false]], tower: [autoLabels: true]]            | []
+        // ... and only when given
+        [seqera: [executor: [endpoint: 'http://foo']], tower: [autoLabels: 'runName']]  | ['nextflow.io/runName']
+    }
+
+    def 'should report the offending option name for an invalid auto labels value' () {
+        when:
+        new Session([tower: [autoLabels: 'foo']]).getAutoResourceLabels()
+        then:
+        def e1 = thrown(IllegalArgumentException)
+        e1.message.contains("'tower.autoLabels'")
+
+        when:
+        new Session([seqera: [executor: [autoLabels: 'foo']]]).getAutoResourceLabels()
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("'seqera.executor.autoLabels'")
+    }
+
+    def 'should fail fast on an invalid auto labels value at config check' () {
+        when: 'the config is checked, before any task is created'
+        new Session([tower: [autoLabels: 'foo']]).checkConfig()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'tower.autoLabels'")
+    }
+
     def 'should notify flow complete only once when abort and destroy race' () {
         given:
         def observer = Mock(TraceObserverV2)
@@ -434,5 +722,50 @@ class SessionTest extends Specification {
 
         then:
         1 * observer.onFlowComplete()
+    }
+
+    private void writeCacheEntry(CacheDB cache, String key, String workDir) {
+        final hash = CacheHelper.hasher(key).hash()
+        final proc = Mock(TaskProcessor)
+        proc.getTaskBody() >> new BodyDef(null,'source')
+        proc.getConfig() >> new ProcessConfig([:])
+        proc.isCacheable() >> true
+        final task = Mock(TaskRun)
+        task.getProcessor() >> proc
+        task.getHash() >> hash
+        task.getId() >> TaskId.of(1)
+        final trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0, workdir: workDir])
+        final handler = new CachedTaskHandler(task, trace)
+        cache.writeTaskEntry0(handler, trace)
+        cache.writeTaskIndex0(handler, false)
+    }
+
+    def 'should cleanup local task dirs and skip the remote ones' () {
+        given: 'a local work dir holding one task dir'
+        def cacheHome = Files.createTempDirectory('cache')
+        def work = Files.createTempDirectory('work')
+        def localTask = Files.createDirectories(work.resolve('aa/bbbbbb'))
+        Files.createFile(localTask.resolve('.command.sh'))
+        SysEnv.push(NXF_CACHE_DIR: cacheHome.toString())
+
+        and:
+        def session = new Session([cleanup: true, workDir: work.toString(), runName: 'test_1'])
+
+        and: 'a cache holding one remote task and one local task'
+        def cache = new CacheDB(new DefaultCacheStore(session.uniqueId, 'test_1', cacheHome)).open()
+        writeCacheEntry(cache, 'remote', 's3://some-bucket/48/299e411a526eb1453a5a2acfa0f721')
+        writeCacheEntry(cache, 'local', localTask.toString())
+        cache.close()
+
+        when:
+        session.cleanup()
+
+        then: 'the remote task does not prevent the local one from being deleted'
+        !Files.exists(localTask)
+
+        cleanup:
+        SysEnv.pop()
+        work?.deleteDir()
+        cacheHome?.deleteDir()
     }
 }

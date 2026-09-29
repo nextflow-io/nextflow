@@ -188,4 +188,32 @@ class ScriptMetaTest extends Dsl2Spec {
         bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
 
     }
+
+    def 'should determine which definitions are directly executable' () {
+        given:
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
+        and:
+        if( processes )
+            meta.addDefinition(processes.collect { n -> createProcessDef(script, n) } as ComponentDef[])
+        if( workflows )
+            meta.addDefinition(workflows.collect { n -> new WorkflowDef(name: n) } as ComponentDef[])
+        if( module )
+            meta.setModule(true)
+
+        expect:
+        meta.hasExecutableWorkflows() == EXEC_WORKFLOW
+        meta.hasExecutableProcesses() == EXEC_PROCESS
+
+        where:
+        processes    | workflows    | module | EXEC_WORKFLOW | EXEC_PROCESS
+        []           | []           | false  | false         | false
+        ['p1']       | []           | false  | false         | true
+        ['p1', 'p2'] | []           | false  | false         | false
+        []           | ['w1']       | false  | true          | false
+        []           | ['w1', 'w2'] | false  | false         | false
+        ['p1']       | ['w1']       | false  | false         | false
+        ['p1']       | []           | true   | false         | false
+        []           | ['w1']       | true   | false         | false
+    }
 }

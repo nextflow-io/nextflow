@@ -1,0 +1,386 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.module
+
+import java.nio.file.Files
+import java.nio.file.Path
+
+import spock.lang.Specification
+import spock.lang.TempDir
+
+/**
+ * Tests for workflow-module validation in {@link ModuleValidator}.
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
+class ModuleValidatorTest extends Specification {
+
+    @TempDir
+    Path tempDir
+
+    private static final String PERMISSIVE_SCHEMA = '''\
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": { "name": {"type": "string"}, "description": {"type": "string"} },
+          "required": ["name", "description"]
+        }
+        '''.stripIndent()
+
+    private String schema() {
+        final p = tempDir.resolve('schema.json')
+        Files.writeString(p, PERMISSIVE_SCHEMA)
+        return p.toString()
+    }
+
+    private Path moduleDir(String mainNf, String metaYml) {
+        final d = Files.createDirectories(tempDir.resolve('mod'))
+        Files.writeString(d.resolve('main.nf'), mainNf)
+        Files.writeString(d.resolve('meta.yml'), metaYml)
+        Files.writeString(d.resolve('README.md'), '# test module\n')
+        return d
+    }
+
+    def 'a workflow module that defines a workflow passes validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_in
+                main:
+                ch_out = ch_in
+                emit:
+                ch_out
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.isEmpty()
+    }
+
+    def 'a workflow module without a workflow definition fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            process FOO {
+                """
+                echo hello
+                """
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains('must define a workflow') }
+    }
+
+    def 'a workflow module defining more than one workflow fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            workflow BAR {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains('exactly one workflow') }
+    }
+
+    def 'a workflow meta.yml with matching input/output counts passes validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_a
+                ch_b
+                main:
+                ch_out = ch_a.mix(ch_b)
+                emit:
+                ch_out
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            input:
+              - name: ch_a
+                type: channel
+                description: first input
+              - name: ch_b
+                type: channel
+                description: second input
+            output:
+              - name: ch_out
+                type: channel
+                description: the output
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.isEmpty()
+    }
+
+    def 'a workflow meta.yml with mismatched interface counts fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_a
+                ch_b
+                emit:
+                ch_a
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            input:
+              - name: ch_a
+                type: channel
+                description: only one declared, but the workflow takes two
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains('1 inputs but workflow declares 2 take') }
+    }
+
+
+    def 'a module whose declared dependencies match its includes passes validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { STAR_ALIGN } from 'nf-core/star/align'
+
+            workflow FOO {
+                take:
+                ch_in
+                main:
+                ch_out = STAR_ALIGN(ch_in)
+                emit:
+                ch_out
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            requires:
+              modules:
+                - nf-core/star/align@1.2.3
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.isEmpty()
+    }
+
+    def 'a module that includes an undeclared dependency fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { STAR_ALIGN } from 'nf-core/star/align'
+
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains("Module 'nf-core/star/align' is included") && it.contains('not declared') }
+    }
+
+    def 'a module that declares a dependency it does not include fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            requires:
+              modules:
+                - nf-core/star/align@1.2.3
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains("Module 'nf-core/star/align' is declared") && it.contains('not included') }
+    }
+
+    def 'a module that includes a local module fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { HELPER } from './helper.nf'
+
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains('includes a local module') && it.contains('./helper.nf') }
+    }
+
+    def 'a module with a malformed module include fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { FASTQC } from 'nf-core/fastqc@1.2.3'
+
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then: 'it is reported as an invalid module reference, not as a local include'
+        errors.any { it.contains('Invalid module reference') && it.contains('nf-core/fastqc@1.2.3') }
+        !errors.any { it.contains('local module') }
+    }
+
+
+    def 'a workflow module declaring process-only fields fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            tools:
+              - samtools:
+                  description: a process-only field
+            topics:
+              - name: versions
+                type: file
+                description: a process-only field
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains("Invalid setting 'topics'") }
+        errors.any { it.contains("Invalid setting 'tools'") }
+    }
+
+}

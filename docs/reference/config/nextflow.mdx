@@ -1,0 +1,32 @@
+---
+title: nextflow
+description: Reference for the nextflow config scope, which controls the retry policy used for retryable operations.
+---
+
+# `nextflow`
+
+The `nextflow` scope controls the retry policy used for retryable operations, such as publishing a file to a remote storage system.
+
+<ChangedInVersion version="24.10">
+The `nextflow.publish.retryPolicy` settings were moved to `workflow.output.retryPolicy`.
+</ChangedInVersion>
+
+<ChangedInVersion version="25.10">
+The `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
+</ChangedInVersion>
+
+##### `nextflow.retryPolicy.delay`
+
+Delay used for retryable operations (default: `350ms`).
+
+##### `nextflow.retryPolicy.jitter`
+
+Jitter value used for retryable operations (default: `0.25`).
+
+##### `nextflow.retryPolicy.maxAttempts`
+
+Max attempts used for retryable operations (default: `5`).
+
+##### `nextflow.retryPolicy.maxDelay`
+
+Max delay used for retryable operations (default: `90s`).

@@ -36,7 +36,7 @@ process FASTQC {
 }
 ```
 
-This syntax has several limimtations:
+This syntax has several limitations:
 
 - **No static typing**: The `val` qualifier can not specify a type, so there is no way to validate input values. The `path` qualifier can not distinguish between a file and a file collection. The `arity` option was introduced to address this ambiguity, but it is cumbersome and rarely used.
 
@@ -60,9 +60,9 @@ This syntax has several limimtations:
 
 ## Non-goals
 
-- Removing the legacy qualifier syntax -- legacy processes must continue to work without modification.
+- Removing the legacy qualifier syntax. Legacy processes must continue to work without modification.
 
-- Enforcing type checking -- static type checking will be introduced progressively as an opt-in feature.
+- Enforcing type checking. Static type checking will be introduced gradually as an opt-in feature.
 
 ## Decision
 
@@ -90,7 +90,7 @@ process FASTQC {
 }
 ```
 
-All standard library types except `Channel` and `Value` are valid input types. Inputs of type `Path` (or `Path` collections such as `Set<Path>`) are automatically staged into the task directory.
+All standard library types except `Channel` and `Value` are valid input types. Nextflow stages inputs of type `Path` (or `Path` collections such as `Set<Path>`) into the task directory.
 
 ### Nullable inputs
 
@@ -118,7 +118,7 @@ By default, a task fails if any input receives `null`.
 
 ### Stage directives
 
-Staging behavior is moved to a dedicated `stage:` section that appears after `input:`. This replaces the staging aspects of legacy qualifiers:
+Staging behavior moves to a `stage:` section that appears after `input:`. This replaces the staging aspects of legacy qualifiers:
 
 | Legacy qualifier  | Stage directive    |
 |-------------------|--------------------|
@@ -143,7 +143,7 @@ process BLAST {
 }
 ```
 
-Separating staging from type declaration keeps the inputs clean and makes it easier to specify staging behavior independently of the input type.
+Separating staging from the type declaration lets each input specify its staging behavior independently of its type.
 
 ### Tuple inputs
 
@@ -159,7 +159,7 @@ process FASTQC {
 }
 ```
 
-Each component is destructured into a local variable. This mirrors the `tuple()` constructor used in the output section and in workflow logic, making the syntax consistent.
+Each component is destructured into a local variable. This mirrors the `tuple()` constructor used in the output section and in workflow logic.
 
 ### Typed outputs
 
@@ -198,11 +198,11 @@ process ECHO {
 }
 ```
 
-Outputs can be arbitrary expressions, rather that being restricted to specific qualifiers such as `tuple` and `val`. Special functions such as `file()`, `files()`, `env()`, and `stdout()` can be composed into the desired output structure.
+Outputs can be arbitrary expressions, rather than being restricted to specific qualifiers such as `tuple` and `val`. Special functions such as `file()`, `files()`, `env()`, and `stdout()` can be composed into the desired output structure.
 
 ### Nullable outputs
 
-By default, the `file()` and `files()` function raise an error if the given file is missing. These functions can be called with `optionel: true` to allow missing files. This way, it is possible to declare a tuple output that contains nullable values:
+By default, the `file()` and `files()` functions raise an error if the given file is missing. These functions can be called with `optional: true` to allow missing files. A tuple output can then contain nullable values:
 
 ```groovy
 process MAYBE {
@@ -241,11 +241,11 @@ process CAT {
 }
 ```
 
-Moving topic emissions to a dedicated section allows them to be defined without having to include them in the process outputs.
+Moving topic emissions to their own section allows them to be defined without including them in the process outputs.
 
 ## Distinguishing between typed and legacy processes
 
-Typed processes are gated behind the `nextflow.enable.types` feature flag, in order to distinguish between typed and legacy processes in the language.
+Typed processes are gated behind the `nextflow.enable.types` feature flag, to distinguish between typed and legacy processes in the language.
 
 When a script enables this feature flag, its processes are treated as typed processes; otherwise, its processes are treated as legacy processes. This way, typed and legacy processes cannot be mixed in the same script, but they can be used together as long as they are declared in different scripts.
 
@@ -295,9 +295,9 @@ workflow {
 
 With this approach, a process would always be called with a single input, and multiple sources (e.g. `ch_samples` and `index`) would need to be combined into a single input. This could be done explicitly with the `combine` operator or implicitly by the runtime.
 
-However, this approach would be a significant change to process call semantics, even if only applied to typed processes. It would likely be difficult to validate for processes with many inputs.
+However, this approach would be a significant change to process call semantics, even if only applied to typed processes. It would also be hard to validate for processes with many inputs.
 
-The tuple destructuring syntax makes it possible to migrate legacy processes to typed processes without changing workflow logic or call semantics. While the `tuple(...)` syntax is a deviation from the typed input syntax used by the rest of the language, such deviations can be appropriate and even advantageous when used judiciously in a custom language.
+The tuple destructuring syntax makes it possible to migrate legacy processes to typed processes without changing workflow logic or call semantics. The `tuple(...)` syntax deviates from the typed input syntax used by the rest of the language, but a custom language can afford such deviations when they are used sparingly.
 
 ### Type annotation syntax for tuple inputs
 
@@ -317,7 +317,7 @@ This approach attempts to bring the syntax closer to the `<name>: <type>` patter
 
 However, this syntax needlessly separates the component name from its corresponding type, making it harder to read and validate. Although it is semantically equivalent to the legacy syntax, it looks and feels very different, which can be jarring for users.
 
-With the introduction of records, the `tuple(...)` destructuring syntax emerged as a clear pattern to follow for both records and tuples:
+With the introduction of records, the `tuple(...)` destructuring syntax became the clear pattern to follow for both records and tuples:
 
 **Legacy process:**
 ```groovy
@@ -376,9 +376,9 @@ This pattern provides the best balance of continuity with the old way and consis
 
 **Positive:**
 
-- Type annotations make processes self-documenting and provide the information needed to perform static type checking.
+- Type annotations make processes self-documenting and provide the information needed for static type checking.
 
-- Separating type from staging behavior (the `stage:` section) makes each concern independently clear.
+- Separating type from staging behavior (the `stage:` section) lets each be specified independently.
 
 - Nullable types (`?`) provide first-class support for nullable input files.
 
@@ -399,6 +399,6 @@ This pattern provides the best balance of continuity with the old way and consis
 ## Links
 
 - [Nextflow standard types](https://docs.seqera.io/nextflow/reference/stdlib-types)
-- Community issues: #1694, #2678
+- Community issues: [#1694](https://github.com/nextflow-io/nextflow/issues/1694), [#2678](https://github.com/nextflow-io/nextflow/issues/2678)
 - Related nf-core discussion: https://github.com/nf-core/modules/issues/4311
-- Original implementation: #4553
+- Original implementation: [#4553](https://github.com/nextflow-io/nextflow/pull/4553)

@@ -187,11 +187,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     protected TaskMonitor createTaskMonitor() {
 
         // create the throttling executor
-        // note this is invoke only the very first time a AWS Batch executor is created
-        // therefore it's safe to assign to a static attribute
-        submitter = createExecutorService('AWSBatch-executor')
-
-        reaper = createExecutorService('AWSBatch-reaper')
+        this.submitter = createExecutorService('AWSBatch-executor')
+        this.reaper = createExecutorService('AWSBatch-reaper')
 
         final pollInterval = config.getPollInterval(name, Duration.of('10 sec'))
         final dumpInterval = config.getMonitorDumpInterval(name)
@@ -230,7 +227,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
      */
-    private ThrottlingExecutor createExecutorService(String name) {
+    private ThrottlingExecutor createExecutorService(String poolName) {
 
         // queue size can be overridden by submitter options below
         final qs = 5_000
@@ -247,7 +244,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
                 .withKeepAlive(Duration.of('1 min'))
                 .withAutoThrottle(true)
                 .withMaxRetries(10)
-                .withPoolName(name)
+                .withPoolName(poolName)
 
         ThrottlingExecutor.create(opts)
     }

@@ -22,7 +22,7 @@ never leaves the executor.
 
 ## Goals or Decision Drivers
 
-- Make the run identifier available to Platform **as early as possible** — the first task
+- Make the run identifier available to Platform **as early as possible**. The first task
   submission both assigns the id and drives the trace sender loop, so it is reported (via the
   `PATCH /workflow/{id}` endpoint) at the earliest moment it exists, well before completion.
 - Keep `nextflow` core free of any dependency on the `nf-seqera` plugin.
@@ -44,7 +44,7 @@ never leaves the executor.
 
 ## Solution or decision outcome
 
-The scheduler run id is held on `PlatformMetadata` as a single `volatile String schedRunId` field —
+The scheduler run id is held on `PlatformMetadata` as a single `volatile String schedRunId` field,
 i.e. `workflow.platform.schedRunId`, grouped with the other Platform identifiers (`workflowId`,
 `workflowUrl`) rather than promoted to a top-level `workflow.schedRunId` attribute. It is delivered to
 Platform via a one-off `PATCH /workflow/{workflowId}` request with body `{ "schedRunId": "…" }`.
@@ -62,13 +62,13 @@ Platform identifiers, rather than as a top-level `WorkflowMetadata.schedRunId` f
 deliberate choice:
 
 - **It is not a general workflow property.** The run id is meaningless outside a Seqera Platform /
-  Intelligent Compute run — it is a Platform-assigned identifier, conceptually a sibling of
+  Intelligent Compute run. It is a Platform-assigned identifier, conceptually a sibling of
   `platform.workflowId`. Promoting it to a top-level `workflow` attribute would advertise it to every
   pipeline as if it were portable run metadata (like `workflow.runName` or `workflow.sessionId`),
   which it is not.
 - **It keeps the serialization behaviour coherent for free.** `TowerObserver.makeCompleteReq()`
   already strips the whole `platform` sub-object before sending, and at `onFlowBegin` (when the begin
-  and lineage records capture `toMap()`) the id is always still null — it is assigned later, on the
+  and lineage records capture `toMap()`) the id is always still null, because it is assigned later, on the
   first task submission. So nesting under `platform` means the id is never carried as a real value on
   the begin/complete/lineage workflow object, **without** needing a special-case exclusion in
   `WorkflowMetadata.toMap()`. Platform receives the actual value only through the dedicated `PATCH`
@@ -80,8 +80,8 @@ deliberate choice:
 The `TowerObserver` delivers the id via `PATCH /workflow/{workflowId}` (`client.updateWorkflow`) with
 body `{ schedRunId }`. It is sent **exactly once**: the sender thread (`sendTasks0`) calls
 `sendSchedRunId()` each loop iteration, which fires the PATCH the first time the id is non-null and
-then latches. The id is assigned on the first task submission — the same trigger that starts the
-sender loop — so it is propagated at the earliest moment it exists, well before completion. (The run
+then latches. The id is assigned on the first task submission, the same trigger that starts the
+sender loop, so it is propagated at the earliest moment it exists, well before completion. (The run
 id is stable for the life of the run, so re-sending is unnecessary; Platform also treats an identical
 re-supply as idempotent and rejects a *conflicting* value with `400`.)
 
@@ -104,11 +104,11 @@ with the `platform` sub-object (complete) or still null at capture time (begin/l
 
 ### Components changed (Nextflow side)
 
-- `modules/nextflow` — `PlatformMetadata.schedRunId` (`volatile`) field, grouped with the other
+- `modules/nextflow`: `PlatformMetadata.schedRunId` (`volatile`) field, grouped with the other
   Platform identifiers. No change to `WorkflowMetadata.toMap()`.
-- `nf-seqera` — `SeqeraExecutor.createRun()` publishes `runId` to
+- `nf-seqera`: `SeqeraExecutor.createRun()` publishes `runId` to
   `session.workflowMetadata.platform.schedRunId`.
-- `nf-tower` — `TowerObserver` sends the run id once via `PATCH /workflow/{workflowId}`
+- `nf-tower`: `TowerObserver` sends the run id once via `PATCH /workflow/{workflowId}`
   (`TowerClient.updateWorkflow`, best-effort); `TowerClient` gains the `updateWorkflow` method, its
   URL builder, and `PATCH` support in `makeRequest`.
 
@@ -116,7 +116,7 @@ with the `platform` sub-object (complete) or still null at capture time (begin/l
 
 Platform stores the `runId` in a `tw_workflow_ext` workflow-extension satellite table written by the
 new `PATCH /workflow/{workflowId}` endpoint. Until that endpoint ships, the PATCH request would be
-rejected — but because delivery is best-effort (the failure is logged and the run continues), this no
+rejected. But because delivery is best-effort (the failure is logged and the run continues), this no
 longer creates a hard Nextflow ↔ Platform version dependency. The change should still be coordinated
 with the Platform endpoint so the id is actually persisted.
 

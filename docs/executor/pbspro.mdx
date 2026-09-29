@@ -1,0 +1,24 @@
+---
+title: PBS Pro
+description: Reference for the pbspro executor, which submits tasks to the PBS Pro resource manager.
+---
+
+# PBS Pro
+
+The `pbspro` executor runs pipeline tasks using the [PBS Pro](https://www.pbspro.org/) resource manager. It submits each task as a PBS Pro job using the `qsub` command.
+
+To enable the PBS Pro executor, set `process.executor = 'pbspro'` in the `nextflow.config` file. Launch the pipeline from a node where `qsub` is available, typically the cluster login node.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
+
+[process-clusteroptions]: ../reference/process/directives/cluster-options
+[process-cpus]: ../reference/process/directives/cpus
+[process-memory]: ../reference/process/directives/memory
+[process-queue]: ../reference/process/directives/queue
+[process-time]: ../reference/process/directives/time

@@ -44,6 +44,9 @@ subprojects {
         into 'build/resources/main/META-INF'
         dependsOn jar
     }
+    // Run the copy on every jar build so `make compile` / exportClasspath (which
+    // build the plugin jars) populate the manifest for dev mode discovery too
+    jar.finalizedBy copyPluginManifest
     // Ensure manifest is available for test classpath (needed for dev mode plugin discovery)
     tasks.matching { it.name == 'test' }.configureEach {
         dependsOn copyPluginManifest

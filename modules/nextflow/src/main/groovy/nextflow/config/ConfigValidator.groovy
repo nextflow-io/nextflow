@@ -76,6 +76,7 @@ class ConfigValidator {
 
     private void loadPluginScopes() {
         final children = new HashMap<String, SpecNode>()
+        final scopeClasses = new HashMap<String, String>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
@@ -87,10 +88,12 @@ class ConfigValidator {
             if( !name )
                 continue
             if( name in children ) {
-                log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
+                if( scopeClasses[name] != clazz.name )
+                    log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
             children.put(name, SpecNode.Scope.of(clazz, description))
+            scopeClasses.put(name, clazz.name)
         }
         pluginScopes = new SpecNode.Scope('', children)
     }
@@ -112,7 +115,7 @@ class ConfigValidator {
                 names.clear()
 
             if( value instanceof Map ) {
-                if( isSelector(key) )
+                if( isSelector(names) )
                     names.removeLast()
                 if( isMapOption(names) )
                     continue
@@ -125,12 +128,20 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a scope name is a process selector.
+     * Determine whether the last name in a scope path is a selector, i.e. a
+     * process selector (`withLabel:`, `withName:`) or a per-executor selector
+     * (`$<executor>`).
      *
-     * @param name
+     * @param names
      */
-    private boolean isSelector(String name) {
-        return name.startsWith('withLabel:') || name.startsWith('withName:')
+    private boolean isSelector(List<String> names) {
+        if( !names )
+            return false
+        final name = names.last()
+        if( name.startsWith('withLabel:') || name.startsWith('withName:') )
+            return true
+        // per-executor selector in the `executor` scope, e.g. `executor.$local`
+        return name.startsWith('$') && names.size() == 2 && names.first() == 'executor'
     }
 
     /**

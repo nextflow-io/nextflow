@@ -397,6 +397,74 @@ class PublishDirTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should detect publish mode mismatch' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        and:
+        def source = workDir.resolve('foo.txt'); source.text = 'Hello'
+        def realFile = pubDir.resolve('real.txt'); realFile.text = 'Hello'
+        def symlink = Files.createSymbolicLink(pubDir.resolve('link.txt'), source)
+
+        expect:
+        // requested mode produces a real file but destination is a symlink -> mismatch
+        new PublishDir(mode: 'copy').checkPublishModeMismatch(symlink)
+        new PublishDir(mode: 'move').checkPublishModeMismatch(symlink)
+        // requested mode produces a symlink but destination is a real file -> mismatch
+        new PublishDir(mode: 'symlink').checkPublishModeMismatch(realFile)
+        new PublishDir(mode: 'rellink').checkPublishModeMismatch(realFile)
+        new PublishDir().checkPublishModeMismatch(realFile)
+        and:
+        // matching type -> no mismatch
+        !new PublishDir(mode: 'copy').checkPublishModeMismatch(realFile)
+        !new PublishDir(mode: 'symlink').checkPublishModeMismatch(symlink)
+        !new PublishDir(mode: 'rellink').checkPublishModeMismatch(symlink)
+        !new PublishDir().checkPublishModeMismatch(symlink)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should re-publish as copy when an existing symlink mode changes' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        def source = workDir.resolve('foo.txt'); source.text = 'Hello'
+        def destination = pubDir.resolve('foo.txt')
+
+        when:
+        // first publish: rellink -> destination is a symbolic link
+        new PublishDir(mode: 'rellink', sourceDir: workDir).processFile(source, destination)
+        then:
+        Files.isSymbolicLink(destination)
+
+        when:
+        // re-publish the same file with mode 'copy' (mirrors a -resume run after adding mode 'copy')
+        new PublishDir(mode: 'copy', sourceDir: workDir).processFile(source, destination)
+        then:
+        !Files.isSymbolicLink(destination)
+        destination.text == 'Hello'
+
+        when:
+        // re-publish again back to rellink -> destination becomes a symbolic link again
+        new PublishDir(mode: 'rellink', sourceDir: workDir).processFile(source, destination)
+        then:
+        Files.isSymbolicLink(destination)
+
+        when:
+        // explicit `overwrite false` is honored even on a mode mismatch
+        new PublishDir(mode: 'copy', overwrite: false, sourceDir: workDir).processFile(source, destination)
+        then:
+        Files.isSymbolicLink(destination)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should set failOnError via env variable' () {
         given:
         SysEnv.push(ENV)

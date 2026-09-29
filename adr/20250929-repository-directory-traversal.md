@@ -1,4 +1,4 @@
- # ADR: Repository Directory Traversal API
+# ADR: Repository Directory Traversal API
 
 **Date**: 2025-09-29  
 **Status**: Accepted  
@@ -6,11 +6,11 @@
 
 ## Decision
 
-Introduce a `listDirectory(String path, int depth)` method to the `RepositoryProvider` abstraction to enable unified directory traversal across different Git hosting platforms.
+Add a `listDirectory(String path, int depth)` method to the `RepositoryProvider` abstraction so that directory traversal works the same way on every Git hosting platform.
 
 ## Context
 
-Nextflow requires the ability to explore repository directory structures across multiple Git hosting providers (GitHub, GitLab, Bitbucket, Azure DevOps, Gitea) without full repository clones. Each provider has different API capabilities and constraints for directory listing operations.
+Nextflow needs to explore repository directory structures on several Git hosting providers (GitHub, GitLab, Bitbucket, Azure DevOps, Gitea) without cloning the whole repository. Each provider offers different API capabilities and constraints for directory listing.
 
 ## Technical Implementation
 
@@ -18,7 +18,7 @@ Nextflow requires the ability to explore repository directory structures across 
 
 All providers follow a consistent pattern:
 1. **Path Resolution**: Normalize path to provider API format
-2. **Strategy Selection**: Choose recursive vs iterative approach based on API capabilities
+2. **Strategy Selection**: Choose a recursive or iterative approach based on API capabilities
 3. **HTTP Request**: Execute provider-specific API calls
 4. **Response Processing**: Parse to standardized `RepositoryEntry` objects
 5. **Depth Filtering**: Apply client-side limits when APIs lack precise depth control
@@ -43,9 +43,9 @@ All providers follow a consistent pattern:
 
 | Provider | Endpoint | Recursive Support | Performance |
 |----------|----------|-------------------|-------------|
-| GitHub | `/git/trees/{sha}?recursive=1` | Native | Optimal |
-| GitLab | `/repository/tree?recursive=true` | Native | Optimal |
-| Azure | `/items?recursionLevel=Full` | Native | Optimal |
+| GitHub | `/git/trees/{sha}?recursive=1` | Native | Single call |
+| GitLab | `/repository/tree?recursive=true` | Native | Single call |
+| Azure | `/items?recursionLevel=Full` | Native | Single call |
 | Bitbucket Server | `/browse/{path}` | Manual iteration | Multiple calls |
 | Gitea | `/contents/{path}` | Manual iteration | Multiple calls |
 | Bitbucket Cloud | `/src/{commit}/{path}` | None | Unsupported |
@@ -66,19 +66,19 @@ All providers follow a consistent pattern:
 - **Error Resilience**: Handles partial failures and API limitations
 
 ### Negative
-- **Provider Inconsistency**: Performance varies significantly between providers
-- **API Rate Limits**: Multiple calls required for some providers may hit limits faster
+- **Provider Inconsistency**: Performance varies widely between providers
+- **API Rate Limits**: Providers that need several calls hit their rate limit sooner
 - **Memory Usage**: Large directory structures loaded entirely into memory
 
 ### Neutral
 - **Complexity**: Abstraction layer adds code complexity but improves maintainability
-- **Testing**: Comprehensive test coverage required for each provider implementation
+- **Testing**: Each provider implementation needs its own tests
 
 ## Implementation Notes
 
-- Local Git repositories use JGit TreeWalk for optimal performance
-- Client-side depth filtering ensures consistent behavior across providers
+- Local Git repositories use JGit TreeWalk instead of an HTTP API
+- Client-side depth filtering keeps behavior the same across providers
 - Error handling varies by provider: some return empty lists, others throw exceptions
-- Future enhancements could include caching based on commit SHA and pagination support
+- Later work could add caching keyed on the commit SHA, and pagination
 
-This decision enables Nextflow to efficiently explore repository structures regardless of the underlying Git hosting platform, with automatic optimization based on each provider's API capabilities.
+With this method in place, Nextflow can list repository contents on any supported Git host, using the fastest API each one offers.

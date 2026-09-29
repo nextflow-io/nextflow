@@ -27,6 +27,7 @@ import io.seqera.http.HxClient
 import io.seqera.npr.api.schema.v1.ListDependenciesResponse
 import io.seqera.npr.api.schema.v1.PluginDependency
 import nextflow.BuildInfo
+import nextflow.util.ProxyConfig
 import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
@@ -63,6 +64,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             ? URI.create(url.toString() + "/")
             : url
         this.httpClient = HxClient.newBuilder()
+                .withProxyConfig(ProxyConfig.proxyConfig())
                 .retryConfig(RetryConfig.config())
                 .build()
     }
@@ -120,6 +122,10 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     void refresh() {
+        // nothing to refresh when no metadata was prefetched (null or empty): avoid a
+        // pointless registry round-trip. In Groovy an empty or null map is falsy.
+        if( !plugins )
+            return
         plugins = fetchMetadataByIds(plugins.keySet())
     }
 
