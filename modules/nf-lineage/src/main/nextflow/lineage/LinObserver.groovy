@@ -228,7 +228,13 @@ class LinObserver implements TraceObserverV2 {
     private void manageTaskOutputParameter(OutParam key, LinkedList<Parameter> outputParams, value, TaskRun task, PathNormalizer normalizer) {
         if (key instanceof FileOutParam) {
             outputParams.add(new Parameter(getParameterType(key), key.name, manageFileOutParam(value, task)))
-        } else {
+        }
+        else if (key instanceof ProcessOutput) {
+            // untyped outputs are declared as Object, so infer the type from the value
+            final type = value instanceof Path ? 'path' : getParameterType(key)
+            outputParams.add(new Parameter(type, key.name, manageTypedOutput(value, task, normalizer)))
+        }
+        else {
             outputParams.add(new Parameter(getParameterType(key), key.name, normalizeValue(value, normalizer)))
         }
     }
@@ -240,6 +246,32 @@ class LinObserver implements TraceObserverV2 {
             return normalizer.normalizePath(value.toString())
         else
             return value
+    }
+
+    private Object manageTypedOutput(Object value, TaskRun task, PathNormalizer normalizer) {
+        return mapPaths(value) { Path path ->
+            getTaskRelative0(task, path.toAbsolutePath()) != null
+                ? asUriString(storeTaskOutput(task, path))
+                : manageInputPath(path, normalizer)
+        }
+    }
+
+    private Object manageInputPath(Path path, PathNormalizer normalizer) {
+        return getSourceReference(path) ?: new DataPath(normalizer.normalizePath(path), Checksum.ofNextflow(path))
+    }
+
+    /**
+     * Apply {@code fn} to every path in a typed value, recursing into collections, tuples and records.
+     */
+    private static Object mapPaths(Object value, Closure<Object> fn) {
+        if( value instanceof Path )
+            return fn.call(value)
+        if( value instanceof Collection )
+            return value.collect { el -> mapPaths(el, fn) }
+        // also covers records (RecordMap is a Map)
+        if( value instanceof Map )
+            return value.collectEntries { k, v -> [k, mapPaths(v, fn)] }
+        return value
     }
 
     private Object manageFileOutParam(Object value, TaskRun task) {
@@ -427,7 +459,7 @@ class LinObserver implements TraceObserverV2 {
             return workDirAbsolute.relativize(path).toString()
         }
         //If task output is not in the workDir check if output is stored in the task's storeDir
-        final storeDir = task.getConfig().getStoreDir().toAbsolutePath()
+        final storeDir = task.getConfig()?.getStoreDir()?.toAbsolutePath()
         if( storeDir && path.startsWith(storeDir) ) {
             final rel = storeDir.relativize(path)
             //If output stored in storeDir, keep the path in case it is used as workflow output
@@ -572,6 +604,8 @@ class LinObserver implements TraceObserverV2 {
         inputs.forEach { param, value ->
             if( param instanceof FileInParam )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
+            else if( param instanceof ProcessInput )
+                managedInputs.add( new Parameter( getParameterType(param), param.name, mapPaths(value) { Path p -> manageInputPath(p, normalizer) } ) )
             else if( !(param instanceof DefaultInParam) )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, value) )
         }
@@ -581,12 +615,7 @@ class LinObserver implements TraceObserverV2 {
     private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer) {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
-            final path = it.sourcePath ?: it.storePath
-            final ref = getSourceReference(path)
-            paths.add(ref ?: new DataPath(
-                normalizer.normalizePath(path),
-                Checksum.ofNextflow(path))
-            )
+            paths.add(manageInputPath(it.sourcePath ?: it.storePath, normalizer))
         }
         return paths
     }
