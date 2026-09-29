@@ -492,4 +492,75 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         e.cause.message.contains('`sayHello` is already included')
     }
 
+    def 'should execute custom function returning a channel in typed script'() {
+        given:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.types = true
+
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                reverseFn('a string')
+            }
+            '''
+
+        when:
+        def result = runScript(SCRIPT_TEXT)
+
+        then:
+        result.val == 'a string'.reverse()
+        result.val == Channel.STOP
+    }
+
+    def 'should wrap custom function channel as typed channel'() {
+        given:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.types = true
+
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                def ch = reverseFn('a string')
+                channel.value(ch.getClass().getName())
+            }
+            '''
+
+        when:
+        def result = runScript(SCRIPT_TEXT)
+
+        then:
+        result.val == 'nextflow.dataflow.ChannelImpl'
+    }
+
+    def 'should apply typed operators to custom function channel'() {
+        given:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.types = true
+
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                reverseFn('a string').map { s -> s.toUpperCase() }.collect()
+            }
+            '''
+
+        when:
+        def result = runScript(SCRIPT_TEXT)
+
+        then:
+        result.val as List == ['a string'.reverse().toUpperCase()]
+    }
+
+    def 'should execute custom function returning a channel'() {
+        when:
+        def result = runScript('''
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+            workflow {
+                reverseFn('a string')
+            }
+            ''')
+        then:
+        result.val == 'a string'.reverse()
+    }
+
 }

@@ -213,6 +213,8 @@ class PluginExtensionProvider implements ExtensionProvider {
                 result.add(handle.name)
                 continue
             }
+            // skip functions that return a channel
+            if( handle.isAnnotationPresent(Function) ) continue
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
             // skip static methods

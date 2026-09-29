@@ -136,6 +136,14 @@ class HelloExtension extends PluginExtensionPoint {
         return functions.sayHello(lang)
     }
 
+    /**
+     * A @Function that returns a channel, i.e. a factory as a plain function
+     */
+    @Function
+    DataflowWriteChannel reverseFn(String message) {
+        return reverse(message)
+    }
+
     String aNonImportedFunction(){
         throw new IllegalAccessException("This function can't be imported")
     }
