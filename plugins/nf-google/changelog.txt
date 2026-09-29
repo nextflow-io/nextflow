@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.28.1 - 25 Sep 2026
+- Deprecate Google Batch machine type selection via Cloud Info (#7677) [28afbfded]
+- Propagate machine info to array-child tasks in Google Batch executor (#7629) [fc8d42fc6]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
 1.27.5 - 20 Aug 2026
 - Support authenticated forward HTTP/HTTPS proxies across the client stack (#7331) [064a03873]
 - Bump Groovy 4.0.33 (#7429) [c8800d84a]

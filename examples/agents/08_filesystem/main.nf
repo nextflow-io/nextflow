@@ -12,7 +12,7 @@ process word_stats {
     output:
     stats: String
     exec:
-        def words = text.trim().split(/\s+/).length
+        def words = text.trim().tokenize().size()
         def chars  = text.length()
         stats = "{\"words\":${words},\"chars\":${chars}}"
 }

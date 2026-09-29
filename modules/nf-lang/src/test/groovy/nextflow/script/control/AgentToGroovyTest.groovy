@@ -92,7 +92,7 @@ class AgentToGroovyTest extends Specification {
                 sample: Sample
                 n: Integer
                 output:
-                answer: String = 'x'
+                'x'
                 script:
                 'true'
             }
@@ -224,7 +224,7 @@ class AgentToGroovyTest extends Specification {
                 input:
                 x: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 script:
                 "true"
             }
@@ -344,8 +344,10 @@ class AgentToGroovyTest extends Specification {
      */
     private static String fileCallTarget(Statement outputs) {
         final st = ((BlockStatement) outputs).getStatements().first()
-        final assign = (AssignmentExpression) ((ExpressionStatement) st).getExpression()
-        final call = (MethodCallExpression) assign.getRightExpression()
+        final expr = ((ExpressionStatement) st).getExpression()
+        final call = (MethodCallExpression) (expr instanceof AssignmentExpression
+            ? ((AssignmentExpression) expr).getRightExpression()
+            : expr)
         final overloads = (List<MethodNode>) call.getNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS)
         final mn = overloads ? overloads.first() : (MethodNode) call.getNodeMetaData(ASTNodeMarker.METHOD_TARGET)
         return mn?.getDeclaringClass()?.getName()

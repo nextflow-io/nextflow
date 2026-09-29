@@ -7,11 +7,7 @@ description: Use typed workflows in Nextflow to define statically typed inputs a
 
 <AddedInVersion version="26.04" />
 
-:::warning
-Typed workflows are a preview feature. The syntax and behavior may change in future releases.
-:::
-
-Typed workflows let you declare the types of a named workflow's inputs and outputs in its `take:` and `emit:` sections. The Nextflow language server uses the annotations to validate the values that enter and leave the workflow against their declared types.
+Typed workflows let you declare the types of a named workflow's inputs and outputs in its `take:` and `emit:` sections. Nextflow uses the annotations to validate the values that enter and leave the workflow against their declared types.
 
 ```nextflow
 nextflow.enable.types = true

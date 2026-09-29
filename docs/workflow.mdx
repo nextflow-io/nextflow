@@ -201,6 +201,21 @@ Each `>>` specifies a *source file* and *publish target*. The source file should
 
 When using this syntax, only files captured with the `>>` operator are saved to the output directory.
 
+<AddedInVersion version="26.10" />
+
+The closure can also return a map of source files to publish targets, which is equivalent to the `>>` syntax:
+
+```nextflow
+output {
+    samples {
+        path { sample -> [
+            (sample.fastq_1): "fastq/${sample.id}/",
+            (sample.fastq_2): "fastq/${sample.id}/"
+        ] }
+    }
+}
+```
+
 **Conditional publishing**
 
 Outputs can be conditionally published using pipeline parameters:
