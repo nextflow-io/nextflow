@@ -32,7 +32,6 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
@@ -120,8 +119,6 @@ class Session implements ISession {
      * been consumed.
      */
     private volatile boolean dataflowNetworkFired
-
-    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors

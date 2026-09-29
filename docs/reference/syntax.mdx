@@ -88,7 +88,7 @@ include { hello as sayHello } from './some/module'
 The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hello` is included under the alias `sayHello`.
 
 :::note
-[Enum](#enum-type) and [record](#record-type) types cannot be aliased. They must be included under their original name.
+[Enum](#enum-type) and [record](#record-type) types cannot be aliased. They must be included under their original name. The `params` and `output` blocks of an included pipeline are the exception -- they are types created for the include, so they must be aliased.
 :::
 
 Include clauses can be separated by semi-colons or newlines:
@@ -110,6 +110,19 @@ Include clauses can also be specified as separate includes:
 include { hello } from './some/module'
 include { bye as goodbye } from './some/module'
 ```
+
+<AddedInVersion version="26.10" />
+
+The `workflow` name refers to the entire pipeline defined by the included script, i.e., its params block, entry workflow, and output block. The `params` name refers to the params block as a record type. Each of these names must be given an alias:
+
+```nextflow
+include {
+    params as RnaseqParams ;
+    workflow as RNASEQ
+} from './pipelines/rnaseq.nf'
+```
+
+See [pipeline composition][pipeline-composition] for more information.
 
 ### Params block
 
@@ -1015,3 +1028,4 @@ See [strict syntax][strict-syntax-page] for more information.
 [strict-syntax-page]: ../strict-syntax
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-page]: ../workflow-typed
+[pipeline-composition]: ../workflow-typed#pipeline-composition

@@ -345,6 +345,9 @@ public class Types {
     }
 
     public static String getName(Class type) {
+        // a record type is named by its declaration rather than as Record
+        if( type != Record.class && Record.class.isAssignableFrom(type) && !Map.class.isAssignableFrom(type) )
+            return type.getSimpleName();
         return getName(normalize(type).getSimpleName());
     }
 
@@ -456,6 +459,8 @@ public class Types {
                 continue;
             if( STANDARD_TYPES.contains(c) )
                 return c;
+            if( TYPE_ALIASES.containsKey(c) )
+                return TYPE_ALIASES.get(c);
             queue.add(c.getSuperclass());
             for( var ic : c.getInterfaces() )
                 queue.add(ic);
