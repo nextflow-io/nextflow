@@ -484,15 +484,19 @@ else
       fi
     fi
     # JVM AOT cache: a `run` records a training profile, the next launch assembles the cache in the background
-    if [[ "$JAVA_VER" =~ ^(25|26) && ! $NXF_LEGACY_LAUNCHER && $NXF_DISABLE_AOT_CACHE != true ]]; then
-        aot="$NXF_HOME/tmp/aot/$NXF_VER/$JAVA_ID.aot"
+    # the JVM refuses to start when AOT flags are combined with user-supplied CDS options
+    cds_opts="-Xshare|SharedArchiveFile|SharedClassListFile|DumpLoadedClassList|AutoCreateSharedArchive|-XX:AOT"
+    if [[ "$JAVA_VER" =~ ^(25|26) && ! $NXF_LEGACY_LAUNCHER && $NXF_DISABLE_AOT_CACHE != true && ! "$NXF_OPTS $NXF_JVM_ARGS" =~ $cds_opts ]]; then
+        # the version is in the name so an in-place JDK update at the same path gets a new cache
+        aot="$NXF_HOME/tmp/aot/$NXF_VER/${JAVA_ID#.}-$JAVA_VER.aot"
         confs=("$aot".*.conf)
         # -Xlog:aot=off: an unusable cache is silently ignored, otherwise the JVM reports it on stdout
         if [[ -f $aot && $aot -nt $NXF_BIN && $aot -nt $JAVA_CMD ]]; then
             launcher+=(-XX:AOTCache="$aot" -Xlog:aot=off)
         elif [[ -f ${confs[0]} ]]; then
-            ( "${launcher[@]}" -Xlog:aot=off -XX:AOTMode=create -XX:AOTConfiguration="${confs[0]}" -XX:AOTCache="$aot.$$.tmp" "${cmd_tail[@]}" \
-              && mv -f "$aot.$$.tmp" "$aot"; rm -f "$aot.$$.tmp" "${confs[@]}" ) &>/dev/null &
+            # renaming the profile is the lock: only one of several parallel launches wins it and builds
+            mv "${confs[0]}" "$aot.$$.build" 2>/dev/null && ( "${launcher[@]}" -Xlog:aot=off -XX:AOTMode=create -XX:AOTConfiguration="$aot.$$.build" -XX:AOTCache="$aot.$$.tmp" "${cmd_tail[@]}" \
+              && mv -f "$aot.$$.tmp" "$aot"; rm -f "$aot.$$.tmp" "$aot".*.build "${confs[@]}" ) &>/dev/null &
         elif [[ $cmd == run ]] && mkdir -p "$(dirname "$aot")" 2>/dev/null && [[ -w $(dirname "$aot") ]]; then
             # -DisplayVMOutput: the JVM prints "AOTConfiguration recorded" on stdout at exit regardless of -Xlog
             launcher+=(-XX:AOTMode=record -XX:AOTConfiguration="$aot.$$.conf" -Xlog:aot=off -XX:+UnlockDiagnosticVMOptions -XX:-DisplayVMOutput)
