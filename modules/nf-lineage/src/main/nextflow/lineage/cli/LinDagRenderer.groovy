@@ -166,7 +166,8 @@ class LinDagRenderer {
                 visitParameter0(lid, source)
             }
         }
-        else if( value instanceof Map && value.path ) {
+        // a DataPath, i.e. an input file not produced by a task
+        else if( value instanceof Map && value.path && value.checksum ) {
             final path = value.path.toString()
             if( isLidUri(path) ) {
                 enqueueLid(path)
@@ -175,6 +176,11 @@ class LinDagRenderer {
             else {
                 visitParameter0(lid, path)
             }
+        }
+        // a record or map from a typed process
+        else if( value instanceof Map ) {
+            for( final el : value.values() )
+                visitParameter(lid, el)
         }
         else {
             visitParameter0(lid, value.toString())
