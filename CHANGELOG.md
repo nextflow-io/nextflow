@@ -1,5 +1,24 @@
 # Nextflow change-log
 
+## [Version 26.09.1-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.1-edge) - 25 Sep 2026
+
+- Allow a cache factory to decline a session (#7681) [0d3ab36ac]
+- Bump Bouncy Castle to 1.85 to fix critical CVEs (#7658) [ad5cb26f5]
+- Bump pi-coding-agent to 0.84.4 to fix npm advisories (#7659) [c8be9d3f9]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+- Deprecate Google Batch machine type selection via Cloud Info (#7677) [28afbfded]
+- Fix npm advisories in the docs site dependencies (#7660) [17f187792]
+- Make ByteBufferInputStream resettable so an S3 upload can be retried (#7577) [4e9ea7cff]
+- Propagate machine info to array-child tasks in Google Batch executor (#7629) [fc8d42fc6]
+- Remove stray git push from the release task (#7678) [c77740bc6]
+- Type checking (#7656) [523d2dc19]
+- Warn that log and clean do not support the cloud cache (#7676) [f4e2d53a1]
+- Bump nf-agent-pi@0.5.3
+- Bump nf-amazon@3.11.1
+- Bump nf-cloudcache@0.6.2
+- Bump nf-google@1.28.1
+- Bump nf-k8s@1.6.1
+
 ## [Version 26.09.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.0-edge) - 22 Sep 2026
 
 - Add automatic resource labels for any executor (#7528) [1d7b6655a]
