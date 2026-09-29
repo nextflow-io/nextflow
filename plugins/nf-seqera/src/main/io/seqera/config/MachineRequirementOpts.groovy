@@ -45,10 +45,10 @@ class MachineRequirementOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Cost limit on the spot to on-demand fallback for the whole run. With `spotFirst`, a task falls
-        back to on-demand only while on-demand costs at most this multiple of the spot price. When not
-        set, the scheduler's default for the cloud provider applies. Set to `0` to remove the limit, so
-        tasks always fall back whatever the price. Only used when provisioning is `spotFirst`.
+        Cost limit on the spot to on-demand fallback. With `spotFirst`, a task falls back to on-demand
+        only while on-demand costs at most this multiple of the spot price. When not set, the
+        scheduler's default for the cloud provider applies. Set to `0` to remove the limit, so tasks
+        always fall back whatever the price. Only used when provisioning is `spotFirst`.
     """)
     final Double onDemandCostRatio
 

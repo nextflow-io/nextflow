@@ -64,11 +64,7 @@ class SchemaMapperUtil {
             return null
         final diskReq = toDiskRequirement(opts.diskSize, opts)
         final capacityMode = toEcsCapacityMode(opts.capacityMode)
-        // the cost ratio is read by the scheduler at run level only; null check rather than
-        // truthiness, because an explicit 0 (no limit) must be sent
-        final costRatio = opts.onDemandCostRatio
-        if (costRatio != null && costRatio < 0)
-            throw new IllegalArgumentException("Invalid onDemandCostRatio value: ${costRatio} -- the value must be zero or a positive number")
+        final costRatio = toOnDemandCostRatio(opts)
         if (!opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode && costRatio == null)
             return null
         new MachineRequirement()
@@ -123,17 +119,33 @@ class SchemaMapperUtil {
         final effectiveDiskSize = diskSize ?: opts?.diskSize
         final diskReq = toDiskRequirement(effectiveDiskSize, opts)
         final capacityMode = toEcsCapacityMode(opts?.capacityMode)
+        final costRatio = toOnDemandCostRatio(opts)
         // return null if no settings
-        if (!arch && !provisioning && !maxSpotAttempts && !machineTypes && !diskReq && !snapshotEnabled && !capacityMode)
+        if (!arch && !provisioning && !maxSpotAttempts && !machineTypes && !diskReq && !snapshotEnabled && !capacityMode && costRatio == null)
             return null
         new MachineRequirement()
             .arch(arch)
             .provisioning(toProvisioningModel(provisioning))
             .maxSpotAttempts(maxSpotAttempts)
+            .onDemandCostRatio(costRatio)
             .machineTypes(machineTypes)
             .disk(diskReq)
             .snapshotEnabled(snapshotEnabled ? Boolean.TRUE : null)
             .capacityMode(capacityMode)
+    }
+
+    /**
+     * Validates the spot to on-demand fallback cost ratio. Compared against null rather than by
+     * truthiness, because an explicit {@code 0} (no limit) is a real value that must be sent.
+     *
+     * @param opts the config options (can be null)
+     * @return the ratio, or null when not set
+     */
+    static Double toOnDemandCostRatio(MachineRequirementOpts opts) {
+        final ratio = opts?.onDemandCostRatio
+        if (ratio != null && ratio < 0)
+            throw new IllegalArgumentException("Invalid onDemandCostRatio value: ${ratio} -- the value must be zero or a positive number")
+        return ratio
     }
 
     /**

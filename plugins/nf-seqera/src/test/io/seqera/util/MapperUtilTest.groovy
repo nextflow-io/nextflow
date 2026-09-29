@@ -45,11 +45,14 @@ class MapperUtilTest extends Specification {
     }
 
     def 'should send the on-demand cost ratio only when set, including zero' () {
-        when:
-        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([onDemandCostRatio: RATIO]))
+        when: 'mapped for the run (the default for its tasks) and for a task'
+        def opts = new MachineRequirementOpts([onDemandCostRatio: RATIO])
+        def runReq = SchemaMapperUtil.toMachineRequirement(opts)
+        def taskReq = SchemaMapperUtil.toMachineRequirement(opts, null, null, false, 0)
 
         then:
-        result?.onDemandCostRatio == EXPECTED
+        runReq?.onDemandCostRatio == EXPECTED
+        taskReq?.onDemandCostRatio == EXPECTED
 
         where:
         RATIO   | EXPECTED

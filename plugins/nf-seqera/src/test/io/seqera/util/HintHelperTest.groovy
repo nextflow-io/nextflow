@@ -67,6 +67,16 @@ class HintHelperTest extends Specification {
         result.maxSpotAttempts == 3
     }
 
+    def 'should overlay onDemandCostRatio hint over the config value, zero included'() {
+        given:
+        def base = new MachineRequirementOpts([onDemandCostRatio: 3.25])
+
+        when:
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.onDemandCostRatio': 0])
+        then: 'a task 0 (no limit) is a real value, not "unset"'
+        result.onDemandCostRatio == 0d
+    }
+
     def 'should overlay machineTypes as list'() {
         given:
         def base = new MachineRequirementOpts([:])
@@ -186,22 +196,13 @@ class HintHelperTest extends Specification {
     }
 
     def 'should derive known keys from MachineRequirementOpts declared fields'() {
-        expect: 'KNOWN_KEYS covers every declared field of MachineRequirementOpts, except the run-only ones'
+        expect: 'KNOWN_KEYS covers every declared field of MachineRequirementOpts'
         HintHelper.KNOWN_KEYS.size() > 0
         for( final field : MachineRequirementOpts.declaredFields ) {
             if( field.synthetic || java.lang.reflect.Modifier.isStatic(field.modifiers) || field.name.startsWith('$') || field.name == 'metaClass' )
                 continue
-            final key = "machineRequirement.${field.name}".toString()
-            assert HintHelper.KNOWN_KEYS.contains(key) != HintHelper.RUN_ONLY_KEYS.contains(key)
+            assert HintHelper.KNOWN_KEYS.contains("machineRequirement.${field.name}".toString())
         }
-    }
-
-    def 'should reject a run-only option as a task hint'() {
-        when:
-        HintHelper.extractSeqeraHints(['seqera/machineRequirement.onDemandCostRatio': 2])
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("'seqera.executor.machineRequirement.onDemandCostRatio' config option")
     }
 
     def 'should error on unknown seqera hint'() {

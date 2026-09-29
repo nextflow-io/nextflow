@@ -38,6 +38,7 @@ The following [hints][process-hints] are supported:
 - `machineRequirement.diskType`
 - `machineRequirement.machineTypes`
 - `machineRequirement.maxSpotAttempts`
+- `machineRequirement.onDemandCostRatio`
 - `machineRequirement.provisioning`
 - `predictionModel`
 
@@ -77,7 +78,7 @@ See the [`seqera` scope][config-seqera] for the full config reference.
 
 With `provisioning = 'spotFirst'`, the scheduler falls back to on-demand when spot capacity runs out, but only while on-demand is not too expensive. It compares the highest on-demand hourly price of the instance types selected for a task with their highest spot price. When on-demand exceeds the limit, the task is retried on spot instead, and fails if spot capacity stays unavailable. Its error message starts with `on-demand fallback refused`.
 
-The scheduler applies a default limit for each cloud provider. Use `onDemandCostRatio` to set a different limit for the whole run:
+The scheduler applies a default limit for each cloud provider. Use `onDemandCostRatio` to set a different limit for all the tasks of the run:
 
 ```groovy
 seqera {
@@ -96,11 +97,24 @@ Leaving `onDemandCostRatio` unset and setting it to `0` are different:
 | --- | --- |
 | Not set | The scheduler's default limit for the cloud provider applies. |
 | `0` | No limit. Tasks always fall back to on-demand, whatever the price. |
-| Greater than `0` | The run's own limit, used instead of the scheduler's default. |
+| Greater than `0` | This limit, used instead of the scheduler's default. |
 
 `0` does not disable the fallback. To never fall back to on-demand, set `provisioning = 'spot'`.
 
-`onDemandCostRatio` applies to the whole run, so it isn't supported as a process hint. Setting it also stops the run from using the compute environment's warm pool.
+Like `provisioning`, the limit can be overridden for a single process with a hint. For example, to let a long-running process always fall back to on-demand:
+
+```nextflow
+process align {
+    hints 'seqera/machineRequirement.onDemandCostRatio': 0
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Tasks with different limits run on separate clusters. Tasks that set a limit, `0` included, do not use the compute environment's warm pool.
 
 ## Disk support
 
