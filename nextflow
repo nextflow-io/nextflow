@@ -497,9 +497,10 @@ else
             # renaming the profile is the lock: only one of several parallel launches wins it and builds
             mv "${confs[0]}" "$aot.$$.build" 2>/dev/null && ( "${launcher[@]}" -Xlog:aot=off -XX:AOTMode=create -XX:AOTConfiguration="$aot.$$.build" -XX:AOTCache="$aot.$$.tmp" "${cmd_tail[@]}" \
               && mv -f "$aot.$$.tmp" "$aot"; rm -f "$aot.$$.tmp" "$aot".*.build "${confs[@]}" ) &>/dev/null &
-        elif [[ $cmd == run ]] && mkdir -p "$(dirname "$aot")" 2>/dev/null && [[ -w $(dirname "$aot") ]]; then
-            # -DisplayVMOutput: the JVM prints "AOTConfiguration recorded" on stdout at exit regardless of -Xlog
-            launcher+=(-XX:AOTMode=record -XX:AOTConfiguration="$aot.$$.conf" -Xlog:aot=off -XX:+UnlockDiagnosticVMOptions -XX:-DisplayVMOutput)
+        # -t 1: only interactive runs record, so CI and containers with a fresh NXF_HOME don't pay for a profile they never use
+        elif [[ $cmd == run && -t 1 ]] && mkdir -p "$(dirname "$aot")" 2>/dev/null && [[ -w $(dirname "$aot") ]]; then
+            # nxf.aot.record: Launcher.main mutes the "AOTConfiguration recorded" line the JVM prints at exit
+            launcher+=(-XX:AOTMode=record -XX:AOTConfiguration="$aot.$$.conf" -Xlog:aot=off -Dnxf.aot.record=true)
         fi
     fi
     launcher+=("${cmd_tail[@]}")
