@@ -19,7 +19,7 @@ dependencies {
     api(project(':nf-lineage'))
     api "com.beust:jcommander:1.35"
 
-    testImplementation 'org.subethamail:subethasmtp:3.1.7'
+    testImplementation "org.subethamail:subethasmtp:${subethasmtpVersion}"
 
     // test configuration
     testImplementation(testFixtures(project(":nextflow")))

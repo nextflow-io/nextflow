@@ -48,11 +48,11 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.19'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.33"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
 }
 

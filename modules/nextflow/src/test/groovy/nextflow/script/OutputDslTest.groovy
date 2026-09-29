@@ -304,7 +304,7 @@ class OutputDslTest extends Specification {
         then:
         def e = thrown(ScriptRuntimeException)
         e.message.contains "Invalid `path` directive for workflow output 'foo'"
-        e.message.contains "expected a string or publish statements, but received: 42 [Integer]"
+        e.message.contains "expected a string, a map, or publish statements, but received: 42 [Integer]"
     }
 
     def 'should report error for invalid publish target' () {

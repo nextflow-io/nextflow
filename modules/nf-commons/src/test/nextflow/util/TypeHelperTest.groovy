@@ -15,6 +15,7 @@
  */
 package nextflow.util
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -125,6 +126,26 @@ class TypeHelperTest extends Specification {
         cleanup:
         inputFile?.delete()
     }
+
+    def 'should preserve a path from a non-default file system'() {
+        given:
+        def zip = Files.createTempFile('test', '.zip')
+        Files.delete(zip)
+        def fs = FileSystems.newFileSystem(zip, [create: 'true'])
+        def file = Files.writeString(fs.getPath('/data.txt'), 'hello')
+        def missing = fs.getPath('/missing.txt')
+
+        expect:
+        TypeHelper.asType(file, Path).is(file)
+        TypeHelper.asType([file], TypeHelperTest.getField('PATH_LIST').getGenericType())[0].is(file)
+        TypeHelper.asType(missing, Path).is(missing)
+
+        cleanup:
+        fs?.close()
+        zip?.delete()
+    }
+
+    public static List<Path> PATH_LIST
 
     def 'should convert raw data structure to lists and records'() {
         when:

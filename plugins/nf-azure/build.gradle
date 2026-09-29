@@ -54,8 +54,8 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.19'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
     api('com.azure:azure-storage-blob:12.33.4') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
@@ -74,9 +74,9 @@ dependencies {
     constraints {
         // jackson stays on the 2.18 line required by the Azure SDK; addresses GHSA-72hv-8253-57qq
         // (jackson-core DoS) and the jackson-databind deserialization advisories fixed in 2.18.9
-        api('com.fasterxml.jackson.core:jackson-databind:2.18.9') { because 'jackson-databind deserialization CVEs' }
-        api('com.fasterxml.jackson.core:jackson-core:2.18.9') { because 'GHSA-72hv-8253-57qq' }
-        api('com.fasterxml.jackson.core:jackson-annotations:2.18.9') { because 'keep jackson aligned' }
+        api("com.fasterxml.jackson.core:jackson-databind:${jacksonCloudSdkVersion}") { because 'jackson-databind deserialization CVEs' }
+        api("com.fasterxml.jackson.core:jackson-core:${jacksonCloudSdkVersion}") { because 'GHSA-72hv-8253-57qq' }
+        api("com.fasterxml.jackson.core:jackson-annotations:${jacksonCloudSdkVersion}") { because 'keep jackson aligned' }
     }
     // netty artifacts do not self-align: reactor-netty requests netty-codec-dns and
     // netty-resolver-dns independently and leaves them on 4.1.135.Final while the rest of the
@@ -88,6 +88,6 @@ dependencies {
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.33"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
 }
