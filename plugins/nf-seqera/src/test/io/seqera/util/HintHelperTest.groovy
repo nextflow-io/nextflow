@@ -186,13 +186,22 @@ class HintHelperTest extends Specification {
     }
 
     def 'should derive known keys from MachineRequirementOpts declared fields'() {
-        expect: 'KNOWN_KEYS covers every declared field of MachineRequirementOpts'
+        expect: 'KNOWN_KEYS covers every declared field of MachineRequirementOpts, except the run-only ones'
         HintHelper.KNOWN_KEYS.size() > 0
         for( final field : MachineRequirementOpts.declaredFields ) {
             if( field.synthetic || java.lang.reflect.Modifier.isStatic(field.modifiers) || field.name.startsWith('$') || field.name == 'metaClass' )
                 continue
-            assert HintHelper.KNOWN_KEYS.contains("machineRequirement.${field.name}".toString())
+            final key = "machineRequirement.${field.name}".toString()
+            assert HintHelper.KNOWN_KEYS.contains(key) != HintHelper.RUN_ONLY_KEYS.contains(key)
         }
+    }
+
+    def 'should reject a run-only option as a task hint'() {
+        when:
+        HintHelper.extractSeqeraHints(['seqera/machineRequirement.onDemandCostRatio': 2])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'seqera.executor.machineRequirement.onDemandCostRatio' config option")
     }
 
     def 'should error on unknown seqera hint'() {

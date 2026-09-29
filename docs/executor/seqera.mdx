@@ -71,6 +71,37 @@ process hello {
 
 See the [`seqera` scope][config-seqera] for the full config reference.
 
+## On-demand fallback cost limit
+
+<AddedInVersion version="26.10" />
+
+With `provisioning = 'spotFirst'`, the scheduler falls back to on-demand when spot capacity runs out, but only while on-demand is not too expensive. It compares the highest on-demand hourly price of the instance types selected for a task with their highest spot price. When on-demand exceeds the limit, the task is retried on spot instead, and fails if spot capacity stays unavailable. Its error message starts with `on-demand fallback refused`.
+
+The scheduler applies a default limit for each cloud provider. Use `onDemandCostRatio` to set a different limit for the whole run:
+
+```groovy
+seqera {
+    executor {
+        machineRequirement {
+            provisioning = 'spotFirst'
+            onDemandCostRatio = 2.5    // fall back only while on-demand costs at most 2.5x spot
+        }
+    }
+}
+```
+
+Leaving `onDemandCostRatio` unset and setting it to `0` are different:
+
+| `onDemandCostRatio` | Behavior |
+| --- | --- |
+| Not set | The scheduler's default limit for the cloud provider applies. |
+| `0` | No limit. Tasks always fall back to on-demand, whatever the price. |
+| Greater than `0` | The run's own limit, used instead of the scheduler's default. |
+
+`0` does not disable the fallback. To never fall back to on-demand, set `provisioning = 'spot'`.
+
+`onDemandCostRatio` applies to the whole run, so it isn't supported as a process hint. Setting it also stops the run from using the compute environment's warm pool.
+
 ## Disk support
 
 When a process specifies the [disk][process-disk] directive, the Seqera executor provisions storage for the task container. It supports two disk allocation strategies:

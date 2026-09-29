@@ -47,8 +47,11 @@ class HintHelper {
     /** Recognized top-level (non machineRequirement) task hint keys. */
     static final Set<String> TASK_KEYS = Set.of(PREDICTION_MODEL_KEY)
 
+    /** machineRequirement options the scheduler reads for the whole run only, so not valid as task hints. */
+    static final Set<String> RUN_ONLY_KEYS = Set.of(MR_PREFIX + 'onDemandCostRatio')
+
     static final Set<String> KNOWN_KEYS = Collections.unmodifiableSet(
-        (MR_FIELDS.collect { MR_PREFIX + it.name } + (TASK_KEYS as List<String>)).toSet()
+        (MR_FIELDS.collect { MR_PREFIX + it.name }.findAll { !RUN_ONLY_KEYS.contains(it) } + (TASK_KEYS as List<String>)).toSet()
     )
 
     private static final String SUPPORTED_KEYS_MSG =
@@ -83,6 +86,8 @@ class HintHelper {
 
             if( key.startsWith(PREFIX) ) {
                 final stripped = key.substring(PREFIX.length())
+                if( RUN_ONLY_KEYS.contains(stripped) )
+                    throw new IllegalArgumentException("Seqera Platform hint '${key}' is not supported — it applies to the whole run, set it with the 'seqera.executor.${stripped}' config option")
                 if( !KNOWN_KEYS.contains(stripped) )
                     throw new IllegalArgumentException("Unknown Seqera Platform hint: '${key}' — supported keys are: ${SUPPORTED_KEYS_MSG}")
                 prefixed.put(stripped, entry.value)

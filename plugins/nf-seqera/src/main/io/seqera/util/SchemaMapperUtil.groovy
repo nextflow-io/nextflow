@@ -64,11 +64,17 @@ class SchemaMapperUtil {
             return null
         final diskReq = toDiskRequirement(opts.diskSize, opts)
         final capacityMode = toEcsCapacityMode(opts.capacityMode)
-        if (!opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode)
+        // the cost ratio is read by the scheduler at run level only; null check rather than
+        // truthiness, because an explicit 0 (no limit) must be sent
+        final costRatio = opts.onDemandCostRatio
+        if (costRatio != null && costRatio < 0)
+            throw new IllegalArgumentException("Invalid onDemandCostRatio value: ${costRatio} -- the value must be zero or a positive number")
+        if (!opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode && costRatio == null)
             return null
         new MachineRequirement()
             .provisioning(toProvisioningModel(opts.provisioning))
             .maxSpotAttempts(opts.maxSpotAttempts)
+            .onDemandCostRatio(costRatio)
             .machineTypes(opts.machineTypes)
             .disk(diskReq)
             .capacityMode(capacityMode)
