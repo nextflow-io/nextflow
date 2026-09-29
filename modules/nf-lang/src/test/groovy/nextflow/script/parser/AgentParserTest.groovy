@@ -185,7 +185,8 @@ class AgentParserTest extends Specification {
 
         then:
         errors.size() == 1
-        errors[0].getOriginalMessage() == 'Invalid agent definition -- check for missing or out-of-order section labels'
+        errors[0].getStartLine() == 14
+        errors[0].getOriginalMessage() == "Unexpected input: '}'"
     }
 
     def 'should resolve an agent reference from a workflow'() {
