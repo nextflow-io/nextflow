@@ -66,10 +66,10 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
+import nextflow.script.types.Record
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
-import nextflow.script.types.Record
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
 import nextflow.util.RecordMap
@@ -636,9 +636,6 @@ class LinObserverTest extends Specification {
         Path.of("test")                                 | "Path"
         ["test"]                                        | "Collection"
         [key:"value"]                                   | "Map"
-        new ProcessInput('x', Path, false)              | "Path"
-        new ProcessInput('x', List, false)              | "List"
-        new ProcessOutput('x', Object, null)            | "?"
     }
 
     @Unroll

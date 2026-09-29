@@ -528,12 +528,6 @@ class LinObserver implements TraceObserverV2 {
     protected static String getParameterType(Object param) {
         if( param instanceof BaseParam )
             return taskParamToValue.get(param.class)
-        // typed (v2) process/agent params are not BaseParam, so without this they would be
-        // recorded as the literal type names 'ProcessInput'/'ProcessOutput'
-        if( param instanceof ProcessInput )
-            return getTypedParameterType(param.getType(), null)
-        if( param instanceof ProcessOutput )
-            return getTypedParameterType(param.getType(), null)
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
