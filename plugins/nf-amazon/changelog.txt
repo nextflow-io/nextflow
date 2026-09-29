@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.4.6 - 29 Sep 2026
+- Fix S3 directory upload skipping symbolic links (#7515) [6c1707e6a]
+- Fix S3 lookup unbounded pagination with double call (#6851) [5e88e9aea]
+
 3.4.5 - 3 June 2026
 - Fix S3FileSystemProvider.newInputStream() draining full object on close (#7046) [13cbdd8cd]
 
