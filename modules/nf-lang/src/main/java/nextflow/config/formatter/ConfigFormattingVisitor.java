@@ -27,10 +27,10 @@ import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.script.formatter.Comment;
 import nextflow.script.formatter.CommentAttacher;
+import nextflow.script.formatter.FmtDirectives;
 import nextflow.script.formatter.FormattingOptions;
 import nextflow.script.formatter.Formatter;
 import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.runtime.IOGroovyMethods;
 
 import static nextflow.script.ast.ASTUtils.*;
 
@@ -51,7 +51,9 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
         this.sourceUnit = sourceUnit;
         this.options = options;
         this.fmt = new Formatter(options);
-        this.fmt.setComments(CommentAttacher.of(sourceUnit.getAST()));
+        var commentAttacher = CommentAttacher.of(sourceUnit.getAST());
+        this.fmt.setComments(commentAttacher);
+        this.fmt.setFmtDirectives(FmtDirectives.of(sourceUnit.getAST(), () -> FmtDirectives.readSourceText(sourceUnit), commentAttacher));
     }
 
     /**
@@ -83,6 +85,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append(node.name);
@@ -102,12 +106,16 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigApply(ConfigApplyNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.visitDirective(node);
     }
 
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.emitWrappable(() -> {
             fmt.appendIndent();
@@ -132,6 +140,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigBlock(ConfigBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         if( node.kind != null ) {
@@ -179,6 +189,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigInclude(ConfigIncludeNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append("includeConfig ");
