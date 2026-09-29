@@ -242,4 +242,117 @@ class ConfigFormatterTest extends Specification {
         )
     }
 
+    // -- blank lines (issue #115)
+
+    def 'should normalize any number of blank lines between config blocks to exactly one' () {
+        expect:
+        checkFormat(
+            '''\
+            process {
+                cpus = 1
+            }
+            docker {
+                enabled = true
+            }
+            ''',
+            '''\
+            process {
+                cpus = 1
+            }
+
+            docker {
+                enabled = true
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            process {
+                cpus = 1
+            }
+
+
+
+            docker {
+                enabled = true
+            }
+            ''',
+            '''\
+            process {
+                cpus = 1
+            }
+
+            docker {
+                enabled = true
+            }
+            '''
+        )
+    }
+
+    def 'should keep grouped config assignments together and collapse a larger gap to one blank line' () {
+        expect:
+        checkFormat(
+            '''\
+            process.cpus = 1
+            process.memory = '2 GB'
+            '''
+        )
+        checkFormat(
+            '''\
+            process.cpus = 1
+            process.memory = '2 GB'
+
+
+
+            process.disk = '10 GB'
+            ''',
+            '''\
+            process.cpus = 1
+            process.memory = '2 GB'
+
+            process.disk = '10 GB'
+            '''
+        )
+    }
+
+    def 'should strip a blank line at the start of a config block' () {
+        expect:
+        checkFormat(
+            '''\
+            process {
+
+                cpus = 1
+            }
+            ''',
+            '''\
+            process {
+                cpus = 1
+            }
+            '''
+        )
+    }
+
+    def 'should be idempotent when formatting a mixed config file' () {
+        given:
+        def source =
+            '''\
+            includeConfig './base.config'
+
+            process.cpus = 1
+            process.memory = '2 GB'
+
+            process {
+                disk = '10 GB'
+            }
+
+            plugins {
+                id 'nf-hello'
+            }
+            '''.stripIndent()
+
+        expect:
+        format(source) == source
+        format(format(source)) == source
+    }
+
 }

@@ -282,7 +282,7 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should preserve multiple blank lines between include groups' () {
+    def 'should collapse multiple blank lines between include groups to one' () {
         expect:
         checkFormatSorted(
             '''\
@@ -296,7 +296,6 @@ class ScriptFormatterTest extends Specification {
             '''\
             include { bar } from './a.nf'
             include { foo } from './b.nf'
-
 
             include { yak } from './y.nf'
             include { zed } from './z.nf'
@@ -409,6 +408,7 @@ class ScriptFormatterTest extends Specification {
             '''\
             nextflow.enable.types = true
 
+
             workflow hello {
                 take:
                 x: Integer
@@ -463,6 +463,7 @@ class ScriptFormatterTest extends Specification {
             '''\
             nextflow.enable.types = true
 
+
             process hello {
                 debug true
 
@@ -493,6 +494,7 @@ class ScriptFormatterTest extends Specification {
             '''\
             nextflow.enable.types = true
 
+
             process hello {
                 input:
                 record(
@@ -515,6 +517,7 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             nextflow.enable.types = true
+
 
             agent reporter {
                 model 'openai/gpt-4o'
@@ -640,6 +643,7 @@ class ScriptFormatterTest extends Specification {
             workflow {
             }
 
+
             output {
                 foo {
                     path 'foo'
@@ -666,6 +670,7 @@ class ScriptFormatterTest extends Specification {
             workflow {
             }
 
+
             output {
                 foo: Path {
                     path 'foo'
@@ -689,16 +694,20 @@ class ScriptFormatterTest extends Specification {
 
             include { foo ; bar } from './foobar.nf'
 
+
             process hello {
                 script:
                 'echo true'
             }
 
+
             workflow hello {
             }
 
+
             workflow {
             }
+
 
             output {
             }
@@ -1219,6 +1228,7 @@ class ScriptFormatterTest extends Specification {
             '''\
             nextflow.enable.types = true
 
+
             agent reporter {
                 // a directive
                 model 'openai/gpt-4o'
@@ -1297,6 +1307,7 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             #!/usr/bin/env nextflow
+
             /*
              * Copyright 2013-2024, Seqera Labs
              */
@@ -1323,6 +1334,7 @@ class ScriptFormatterTest extends Specification {
                 // Whether to save intermediate outputs.
                 save_intermeds: Boolean = false
             }
+
 
             workflow {
                 println(params.input)
@@ -1708,6 +1720,7 @@ class ScriptFormatterTest extends Specification {
             '''\
             nextflow.enable.types = true
 
+
             process FOO {
                 input:
                 tuple(
@@ -1859,6 +1872,7 @@ class ScriptFormatterTest extends Specification {
             'echo hi'
             } // fmt: skip
 
+
             process bar {
                 script:
                 'echo bar'
@@ -1885,6 +1899,80 @@ class ScriptFormatterTest extends Specification {
             x=3
             // fmt: on
             y = 4
+            '''
+        )
+    }
+
+    def 'should not inject blank lines into a fmt: off region spanning multiple declarations' () {
+        expect:
+        checkFormat(
+            '''\
+            // fmt: off
+            process foo {
+                script:
+                'echo foo'
+            }
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            // fmt: on
+            params.x=1
+            ''',
+            '''\
+            // fmt: off
+            process foo {
+                script:
+                'echo foo'
+            }
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            // fmt: on
+
+
+            params.x = 1
+            '''
+        )
+    }
+
+    def 'should separate a process when section from the script section by one blank line' () {
+        expect:
+        checkFormat(
+            '''\
+            process foo {
+                when:
+                x > 1
+
+                script:
+                'echo'
+            }
+            '''
+        )
+    }
+
+    def 'should strip a blank line at the start of a closure body' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                channel.map { v ->
+
+                    foo(v)
+                    bar(v)
+                }
+            }
+            ''',
+            '''\
+            workflow {
+                channel.map { v ->
+                    foo(v)
+                    bar(v)
+                }
+            }
             '''
         )
     }
@@ -2001,6 +2089,324 @@ class ScriptFormatterTest extends Specification {
             include { yak } from './y.nf'
             '''
         )
+    }
+
+    /// BLANK LINES (issue #115 / #150)
+
+    def 'should normalize any number of blank lines between two processes to exactly two' () {
+        expect:
+        checkFormat(
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+            process bar {
+                script:
+                'echo bar'
+            }
+            ''',
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            ''',
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+
+
+
+
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            ''',
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            '''
+        )
+    }
+
+    def 'should separate a process and a following function by two blank lines' () {
+        expect:
+        checkFormat(
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+            def bar() {
+                return 1
+            }
+            ''',
+            '''\
+            process foo {
+                script:
+                'echo foo'
+            }
+
+
+            def bar() {
+                return 1
+            }
+            '''
+        )
+    }
+
+    def 'should separate an include block and a following workflow by two blank lines' () {
+        expect:
+        checkFormat(
+            '''\
+            include { foo } from './foo.nf'
+            workflow {
+            }
+            ''',
+            '''\
+            include { foo } from './foo.nf'
+
+
+            workflow {
+            }
+            '''
+        )
+    }
+
+    def 'should keep grouped includes together and collapse a larger gap to one blank line' () {
+        expect:
+        checkFormat(
+            '''\
+            include { foo } from './foo.nf'
+            include { bar } from './bar.nf'
+            '''
+        )
+        checkFormat(
+            '''\
+            include { foo } from './foo.nf'
+
+
+
+            include { bar } from './bar.nf'
+            ''',
+            '''\
+            include { foo } from './foo.nf'
+
+            include { bar } from './bar.nf'
+            '''
+        )
+    }
+
+    def 'should strip a blank line at the start of a process body and a section' () {
+        expect:
+        checkFormat(
+            '''\
+            process foo {
+
+                input:
+
+                val x
+
+                script:
+                'echo hi'
+            }
+            ''',
+            '''\
+            process foo {
+                input:
+                val x
+
+                script:
+                'echo hi'
+            }
+            '''
+        )
+    }
+
+    def 'should separate process and workflow sections by exactly one blank line regardless of source spacing' () {
+        expect:
+        checkFormat(
+            '''\
+            process foo {
+                input:
+                val x
+                output:
+                path 'out.txt'
+                script:
+                'echo hi'
+            }
+            ''',
+            '''\
+            process foo {
+                input:
+                val x
+
+                output:
+                path 'out.txt'
+
+                script:
+                'echo hi'
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow hello {
+                take:
+                x
+
+
+
+                main:
+                y = x
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x
+
+                main:
+                y = x
+            }
+            '''
+        )
+    }
+
+    def 'should collapse runs of blank lines inside a workflow body to one' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                a = 1
+
+
+
+                b = 2
+            }
+            ''',
+            '''\
+            workflow {
+                a = 1
+
+                b = 2
+            }
+            '''
+        )
+    }
+
+    def 'should follow a shebang with exactly one blank line regardless of source spacing' () {
+        expect:
+        checkFormat(
+            '''\
+            #!/usr/bin/env nextflow
+            workflow {
+            }
+            ''',
+            '''\
+            #!/usr/bin/env nextflow
+
+            workflow {
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            #!/usr/bin/env nextflow
+
+
+
+            workflow {
+            }
+            ''',
+            '''\
+            #!/usr/bin/env nextflow
+
+            workflow {
+            }
+            '''
+        )
+    }
+
+    def 'should be idempotent when formatting a mixed file of declaration kinds' () {
+        given:
+        def source =
+            '''\
+            #!/usr/bin/env nextflow
+
+            include { foo } from './foo.nf'
+            include { bar } from './bar.nf'
+
+            include { baz } from './baz.nf'
+
+            params.x = 1
+
+
+            process greet {
+                script:
+                'echo hi'
+            }
+
+
+            def helper() {
+                return 1
+            }
+
+
+            workflow {
+                greet()
+            }
+            '''.stripIndent()
+
+        expect:
+        format(source) == source
+        format(format(source)) == source
     }
 
 }
