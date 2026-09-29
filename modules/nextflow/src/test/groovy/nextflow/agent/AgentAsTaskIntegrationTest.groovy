@@ -930,7 +930,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                     name: String
 
                     output:
-                    greeting: String
+                    greeting: String = 'unreachable'
 
                     exec:
                     throw new IllegalStateException('tool failed')

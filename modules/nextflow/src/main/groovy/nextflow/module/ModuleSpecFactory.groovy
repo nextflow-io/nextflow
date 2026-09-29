@@ -28,6 +28,7 @@ import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.ScriptNode
 import nextflow.script.ast.WorkflowNode
 import nextflow.script.control.ScriptParser
+import nextflow.script.control.SeverityAware
 import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import org.yaml.snakeyaml.Yaml
 
@@ -247,7 +248,7 @@ class ModuleSpecFactory {
             throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
 
         final errors = sourceUnit.getErrorCollector().getErrors()
-        if( errors != null && !errors.isEmpty() )
+        if( errors != null && errors.any(e -> !SeverityAware.isSoftError(e)) )
             throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
 
         return (ScriptNode) scriptNode

@@ -111,7 +111,7 @@ class AgentPreviewWarnTest extends Dsl2Spec {
 
             process foo {
                 output:
-                out: String
+                out: String = stdout()
 
                 script:
                 """

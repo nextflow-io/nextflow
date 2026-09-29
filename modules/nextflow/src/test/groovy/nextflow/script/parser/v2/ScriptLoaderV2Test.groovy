@@ -24,13 +24,18 @@ import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowDef
+import org.junit.Rule
 import test.Dsl2Spec
 import test.MockExecutorFactory
+import test.OutputCapture
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class ScriptLoaderV2Test extends Dsl2Spec {
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def 'should run a file script' () {
 
@@ -428,6 +433,39 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         then: 'the agent is reported under its fully-qualified name, on the agent axis only'
         ScriptMeta.allAgentNames() == ['inner:critic'] as Set
         ScriptMeta.allProcessNames() == ['inner:greet'] as Set
+    }
+
+    def 'should report type errors in a script with includes' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('module.nf').text = '''
+            nextflow.enable.types = true
+
+            def hello() {
+                return 'hello'
+            }
+            '''
+        def file = folder.resolve('main.nf')
+        file.text = '''
+            nextflow.enable.types = true
+
+            include { hello } from './module.nf'
+
+            workflow {
+                def x: Integer = hello()
+            }
+            '''
+
+        when:
+        parser.parse(file)
+        then:
+        capture.toString().contains('Type checking found 1 error(s)')
+
+        cleanup:
+        folder.deleteDir()
     }
 
 }

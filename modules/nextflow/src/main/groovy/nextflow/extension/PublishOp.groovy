@@ -165,25 +165,34 @@ class PublishOp {
         cl.setDelegate(dsl)
         final resolvedPath = cl.call(value)
 
-        // if the closure contained publish statements, use
-        // the resulting mapping to create a saveAs closure
-        final mapping = dsl.build()
-        if( mapping instanceof Map<String,String> )
-            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]).normalize() : null }
-
         // if the resolved publish path is a string, resolve it
         // against the base output directory
         if( resolvedPath instanceof CharSequence )
             return outputDir.resolve(resolvedPath.toString()).normalize()
 
-        final invalid = mapping ?: resolvedPath
-        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
+        // if the closure returned a map of source -> target pairs,
+        // treat it the same as a set of publish statements
+        if( resolvedPath instanceof Map )
+            for( final entry : resolvedPath.entrySet() )
+                dsl.publish(entry.key, entry.value as String)
+
+        // if the closure contained publish statements, use
+        // the resulting mapping to create a saveAs closure
+        final mapping = dsl.build()
+        if( mapping != null )
+            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]).normalize() : null }
+
+        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string, a map, or publish statements, but received: ${resolvedPath} [${resolvedPath?.class?.simpleName}]")
     }
 
     private class PublishDsl {
         private Map<String,String> mapping = null
 
         void publish(Object source, String target) {
+            // a no-op publish statement should still publish nothing
+            // instead of falling back to the closure return value
+            if( mapping == null )
+                mapping = [:]
             if( source == null || target == null )
                 return
             if( source instanceof Path ) {
@@ -204,8 +213,6 @@ class PublishOp {
             if( source == null )
                 return
             log.trace "Publishing ${source} to ${target}"
-            if( mapping == null )
-                mapping = [:]
             final filename = getTaskDir(source).relativize(source).toString()
             final resolved = target.endsWith('/')
                 ? target + filename

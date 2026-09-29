@@ -50,6 +50,7 @@ import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
+import nextflow.script.dsl.Types
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultInParam
@@ -66,6 +67,7 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
+import nextflow.script.types.Record
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
@@ -228,7 +230,11 @@ class LinObserver implements TraceObserverV2 {
     private void manageTaskOutputParameter(OutParam key, LinkedList<Parameter> outputParams, value, TaskRun task, PathNormalizer normalizer) {
         if (key instanceof FileOutParam) {
             outputParams.add(new Parameter(getParameterType(key), key.name, manageFileOutParam(value, task)))
-        } else {
+        }
+        else if (key instanceof ProcessOutput) {
+            outputParams.add(new Parameter(getTypedParameterType(key.getType(), value), key.name, manageTypedOutput(value, task, normalizer)))
+        }
+        else {
             outputParams.add(new Parameter(getParameterType(key), key.name, normalizeValue(value, normalizer)))
         }
     }
@@ -240,6 +246,32 @@ class LinObserver implements TraceObserverV2 {
             return normalizer.normalizePath(value.toString())
         else
             return value
+    }
+
+    private Object manageTypedOutput(Object value, TaskRun task, PathNormalizer normalizer) {
+        return mapPaths(value) { Path path ->
+            getTaskRelative0(task, path.toAbsolutePath()) != null
+                ? asUriString(storeTaskOutput(task, path))
+                : manageInputPath(path, normalizer)
+        }
+    }
+
+    private Object manageInputPath(Path path, PathNormalizer normalizer) {
+        return getSourceReference(path) ?: new DataPath(normalizer.normalizePath(path), Checksum.ofNextflow(path))
+    }
+
+    /**
+     * Apply {@code fn} to every path in a typed value, recursing into collections, tuples and records.
+     */
+    private static Object mapPaths(Object value, Closure<Object> fn) {
+        if( value instanceof Path )
+            return fn.call(value)
+        if( value instanceof Collection )
+            return value.collect { el -> mapPaths(el, fn) }
+        // also covers records (RecordMap is a Map)
+        if( value instanceof Map )
+            return value.collectEntries { k, v -> [k, mapPaths(v, fn)] }
+        return value
     }
 
     private Object manageFileOutParam(Object value, TaskRun task) {
@@ -427,7 +459,7 @@ class LinObserver implements TraceObserverV2 {
             return workDirAbsolute.relativize(path).toString()
         }
         //If task output is not in the workDir check if output is stored in the task's storeDir
-        final storeDir = task.getConfig().getStoreDir().toAbsolutePath()
+        final storeDir = task.getConfig()?.getStoreDir()?.toAbsolutePath()
         if( storeDir && path.startsWith(storeDir) ) {
             final rel = storeDir.relativize(path)
             //If output stored in storeDir, keep the path in case it is used as workflow output
@@ -496,12 +528,6 @@ class LinObserver implements TraceObserverV2 {
     protected static String getParameterType(Object param) {
         if( param instanceof BaseParam )
             return taskParamToValue.get(param.class)
-        // typed (v2) process/agent params are not BaseParam, so without this they would be
-        // recorded as the literal type names 'ProcessInput'/'ProcessOutput'
-        if( param instanceof ProcessInput )
-            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
-        if( param instanceof ProcessOutput )
-            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
@@ -516,6 +542,15 @@ class LinObserver implements TraceObserverV2 {
             return null
         }
         return param.class.simpleName
+    }
+
+    /**
+     * Declared type name of a typed param, or the value type when it is declared as Object (e.g. an unnamed output).
+     */
+    protected static String getTypedParameterType(Class type, Object value) {
+        if( (type == null || type == Object) && value != null )
+            return value instanceof Record ? Types.getName(Record) : getParameterType(value)
+        return Types.getName(type ?: Object)
     }
 
     private Object convertPathsToLidReferences(Object value) {
@@ -572,6 +607,8 @@ class LinObserver implements TraceObserverV2 {
         inputs.forEach { param, value ->
             if( param instanceof FileInParam )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
+            else if( param instanceof ProcessInput )
+                managedInputs.add( new Parameter( getTypedParameterType(param.getType(), value), param.name, mapPaths(value) { Path p -> manageInputPath(p, normalizer) } ) )
             else if( !(param instanceof DefaultInParam) )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, value) )
         }
@@ -581,12 +618,7 @@ class LinObserver implements TraceObserverV2 {
     private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer) {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
-            final path = it.sourcePath ?: it.storePath
-            final ref = getSourceReference(path)
-            paths.add(ref ?: new DataPath(
-                normalizer.normalizePath(path),
-                Checksum.ofNextflow(path))
-            )
+            paths.add(manageInputPath(it.sourcePath ?: it.storePath, normalizer))
         }
         return paths
     }
