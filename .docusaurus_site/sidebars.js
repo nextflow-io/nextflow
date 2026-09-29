@@ -361,34 +361,7 @@ module.exports = {
             items: [
                 "developer/index",
                 "developer/diagram",
-                "developer/config-scopes",
-                {
-                    type: "category",
-                    label: "Packages",
-                    link: { type: "doc", id: "developer/packages" },
-                    items: [
-                        "developer/nextflow",
-                        "developer/nextflow.ast",
-                        "developer/nextflow.cache",
-                        "developer/nextflow.cli",
-                        "developer/nextflow.cloud.aws",
-                        "developer/nextflow.cloud.aws.nio",
-                        "developer/nextflow.cloud.azure",
-                        "developer/nextflow.cloud.google",
-                        "developer/nextflow.config",
-                        "developer/nextflow.container",
-                        "developer/nextflow.dag",
-                        "developer/nextflow.executor",
-                        "developer/nextflow.extension",
-                        "developer/nextflow.k8s",
-                        "developer/nextflow.plugin",
-                        "developer/nextflow.processor",
-                        "developer/nextflow.scm",
-                        "developer/nextflow.script",
-                        "developer/nextflow.secret",
-                        "developer/nextflow.trace"
-                    ]
-                }
+                "developer/config-scopes"
             ]
         },
         {
