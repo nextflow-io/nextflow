@@ -320,11 +320,15 @@ if [ ! -x "$JAVA_CMD" ] ; then
     fi
 fi
 
-# Retrieve the java version from a NF local file
-JAVA_KEY="$NXF_HOME/tmp/ver/$(resolve_link "$JAVA_CMD" | sed 's@/@.@g')"
-if [ -f "$JAVA_KEY" ]; then
-  JAVA_VER="$(cat "$JAVA_KEY")"
-else
+# Retrieve the java version from the JDK `release` file, falling back to `java -version`
+JAVA_VER=''
+JAVA_REAL="$(resolve_link "$JAVA_CMD")"
+if [[ $JAVA_REAL == */bin/java && -f ${JAVA_REAL%/bin/java}/release ]]; then
+  while IFS= read -r line || [[ $line ]]; do
+    [[ $line =~ ^JAVA_VERSION=\"?([^\"]+) ]] && JAVA_VER=${BASH_REMATCH[1]} && break
+  done < "${JAVA_REAL%/bin/java}/release"
+fi
+if [[ ! $JAVA_VER ]]; then
   JAVA_VER="$("$JAVA_CMD" $NXF_OPTS -version 2>&1)"
   if [ $? -ne 0 ]; then
       getstarted_web="https://www.nextflow.io/docs/latest/getstarted.html"
@@ -338,26 +342,24 @@ else
       exit 1
   fi
   JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
-  # check NF version
-  if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
-    echo_red "Not a valid Nextflow version: $NXF_VER"
+fi
+# check NF version
+if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
+  echo_red "Not a valid Nextflow version: $NXF_VER"
+  exit 1
+fi
+major=${BASH_REMATCH[1]}
+minor=${BASH_REMATCH[2]}
+version_check="^(17|18|19|20|21|22|23|24|25|26)"
+version_message="Java 17 or later (up to 26)"
+if [[ ! $JAVA_VER =~ $version_check ]]; then
+    echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
+    if [[ "$NXF_JAVA_HOME" ]]; then
+    echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_JAVA_HOME: $NXF_JAVA_HOME\n"
+    else
+    echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+    fi
     exit 1
-  fi
-  major=${BASH_REMATCH[1]}
-  minor=${BASH_REMATCH[2]}
-  version_check="^(17|18|19|20|21|22|23|24|25|26)"
-  version_message="Java 17 or later (up to 26)"
-  if [[ ! $JAVA_VER =~ $version_check ]]; then
-      echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
-      if [[ "$NXF_JAVA_HOME" ]]; then
-      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_JAVA_HOME: $NXF_JAVA_HOME\n"
-      else
-      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
-      fi
-      exit 1
-  fi
-  mkdir -p "$(dirname "$JAVA_KEY")"
-  [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
 fi
 
 # Verify nextflow jar is available
@@ -404,7 +406,7 @@ else MD5=''
 fi
 
 # when no md5 command is available fallback on default execution
-if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
+if [[ $NXF_LEGACY_LAUNCHER ]] && { [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; }; then
     launcher=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     launch_nextflow
     exit 1
@@ -427,7 +429,8 @@ EOF
 }
 
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
-LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+LAUNCH_FILE=''
+[[ $NXF_LEGACY_LAUNCHER ]] && LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"

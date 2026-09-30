@@ -106,8 +106,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
 
-    @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
-
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
     String getType() { 'workflow' }
@@ -128,7 +126,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() ) {
             final prefix = name ? "Workflow `$name`" : "Main workflow"
-            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were given")
+            final expected = declaredInputs.size()
+            final actual = params.size()
+            throw new IllegalArgumentException("$prefix declares ${expected} ${expected == 1 ? 'input' : 'inputs'} but was called with ${actual} ${actual == 1 ? 'argument' : 'arguments'}")
         }
 
         // attach declared inputs with the invocation arguments
@@ -204,15 +204,12 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         final result = closure.call()
-        if( name == null ) {
-            // return the last statement if entry workflow (used for testing)
-            return result
-        }
-        else {
-            // otherwise collect the outputs from the workflow binding
-            output = collectOutputs(declaredOutputs)
-            return output
-        }
+        // the outputs of an entry workflow are its published outputs
+        this.output = declaredOutputs
+            ? collectOutputs(declaredOutputs)
+            : new ChannelOut(binding.getPublished())
+        // return the last statement if entry workflow (used for testing)
+        return name == null ? result : output
     }
 
 }

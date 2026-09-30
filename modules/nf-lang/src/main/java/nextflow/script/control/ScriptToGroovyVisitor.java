@@ -16,11 +16,10 @@
 package nextflow.script.control;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AgentNode;
@@ -145,15 +144,26 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        var entries = (List<Expression>) node.entries.stream()
-            .map((entry) -> {
-                var name = constX(entry.name);
-                return entry.alias != null
-                    ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
-                    : createX("nextflow.script.IncludeDef.Module", args(name));
-            })
-            .collect(Collectors.toList());
+        // an included params block is only a type -- add it to this
+        // script so that it is compiled, and don't include it at runtime
+        var entries = new ArrayList<Expression>();
+        for( var entry : node.entries ) {
+            if( entry.getTarget() instanceof ClassNode cn && ScriptNode.isPipelineParams(cn) ) {
+                // the type is qualified by the including script, so that two
+                // scripts can include the same block
+                cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
+                addNullableAnnotations(cn);
+                moduleNode.addClass(cn);
+                continue;
+            }
+            var name = constX(entry.name);
+            entries.add(entry.alias != null
+                ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
+                : createX("nextflow.script.IncludeDef.Module", args(name)));
+        }
 
+        if( entries.isEmpty() )
+            return;
         var include = callThisX("include", args(createX("nextflow.script.IncludeDef", args(listX(entries)))));
         var from = callX(include, "from", args(node.source));
         var result = stmt(callX(from, "load0", args(varX("params"))));
@@ -255,13 +265,16 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitRecord(RecordNode node) {
+        addNullableAnnotations(node);
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    private static void addNullableAnnotations(ClassNode node) {
         for( var fn : node.getFields() ) {
             if( fn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
                 fn.addAnnotation(NULLABLE);
         }
-
-        var result = stmt(callThisX("declareType", args(classX(node))));
-        moduleNode.addStatement(result);
     }
 
     @Override

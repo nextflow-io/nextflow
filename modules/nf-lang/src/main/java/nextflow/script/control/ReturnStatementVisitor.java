@@ -22,6 +22,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.IfStatement;
@@ -52,6 +53,8 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
 
     private ClassNode inferredReturnType;
 
+    private boolean coerce;
+
     public ReturnStatementVisitor(SourceUnit sourceUnit, ErrorCollector errorCollector) {
         this.sourceUnit = sourceUnit;
         this.errorCollector = errorCollector;
@@ -63,7 +66,17 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
     }
 
     public void visit(ClassNode returnType, Statement code) {
+        visit(returnType, code, false);
+    }
+
+    /**
+     * @param returnType
+     * @param code
+     * @param coerce     accept any return value that can be coerced to the return type
+     */
+    public void visit(ClassNode returnType, Statement code, boolean coerce) {
         this.returnType = returnType;
+        this.coerce = coerce;
         visit(addReturnsIfNeeded(code));
         this.returnType = null;
     }
@@ -98,7 +111,17 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
 
     @Override
     public void visitReturnStatement(ReturnStatement node) {
-        var sourceType = getType(node.getExpression());
+        // a bare `return` yields no value, unlike `return null`
+        var expression = node.getExpression();
+        var sourceType = expression == ConstantExpression.EMPTY_EXPRESSION
+            ? ClassHelper.VOID_TYPE
+            : getType(expression);
+        if( coerce ) {
+            // a void expression has no value to coerce
+            if( ClassHelper.VOID_TYPE.equals(sourceType) )
+                addError(String.format("Return value with type void does not match the declared return type (%s)", Types.getName(returnType)), node);
+            return;
+        }
         if( inferredReturnType != null && !ClassHelper.isDynamicTyped(returnType) ) {
             if( !Types.isAssignableFrom(inferredReturnType, sourceType) )
                 addError(String.format("Return value with type %s does not match previous return type (%s)", Types.getName(sourceType), Types.getName(inferredReturnType)), node);

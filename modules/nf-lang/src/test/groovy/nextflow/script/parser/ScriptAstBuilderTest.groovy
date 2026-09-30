@@ -139,6 +139,57 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Unexpected input: ','"
     }
 
+    def 'should report the syntax error in an invalid definition' () {
+        when:
+        def errors = check(
+            '''\
+            process 'MY-PROC' {
+                script:
+                "echo hello"
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 9
+        errors[0].getOriginalMessage() == "Unexpected input: ''MY-PROC''"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                x = 1
+                y: Integer = 2
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected input: ':'"
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                output:
+                stdout
+
+                input:
+                val x
+
+                script:
+                "echo $x"
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+    }
+
     def 'should report an error for mixing script declarations with statements' () {
         when:
         def errors = check(
