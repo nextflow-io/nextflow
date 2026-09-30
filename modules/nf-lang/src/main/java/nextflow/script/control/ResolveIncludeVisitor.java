@@ -142,8 +142,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     }
 
     /**
-     * Synthesize a partial record type (all fields nullable) from
-     * the params block of an included pipeline.
+     * Synthesize a record type from the params block of an included
+     * pipeline. The type checker makes it partial (all fields nullable).
      */
     private static ClassNode paramsBlockType(ScriptNode sn, IncludeEntryNode entry) {
         var block = sn.getParams();
