@@ -23,7 +23,7 @@ The `self-update` command directs the `nextflow` CLI to update itself to the lat
 
 <AddedInVersion version="26.10" />
 
-Remove the files of all other Nextflow versions after updating. This deletes the framework JARs under `$NXF_HOME/framework` and the launcher caches under `$NXF_HOME/tmp`, keeping only the newly installed version. Plugins are not removed. A removed version is downloaded again the next time it is used, for example with `NXF_VER`.
+Remove the files of all other Nextflow versions after updating. This deletes the framework JARs under `$NXF_HOME/framework` and the launcher caches under `$NXF_HOME/tmp`, and keeps only the newly installed version. It does not remove plugins. Nextflow downloads a removed version again the next time you use it, for example with `NXF_VER`.
 
 ##### `-h, -help`
 
