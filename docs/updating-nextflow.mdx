@@ -33,7 +33,7 @@ NXF_EDGE=1 nextflow self-update
 When updating from an edge release to a stable release, you must explicitly set `NXF_EDGE=0`.
 :::
 
-Each Nextflow version you use keeps its own files under `$NXF_HOME`. To remove the files of all other versions after updating, add the `-clean` option:
+Nextflow keeps separate files under `$NXF_HOME` for each version you use. To remove the files of all other versions after updating, add the `-clean` option:
 
 ```bash
 nextflow self-update -clean
