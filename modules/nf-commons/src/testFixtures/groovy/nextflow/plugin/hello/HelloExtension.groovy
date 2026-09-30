@@ -144,6 +144,14 @@ class HelloExtension extends PluginExtensionPoint {
         return reverse(message)
     }
 
+    /**
+     * A @Function that takes a channel, i.e. an operator as a plain function
+     */
+    @Function
+    DataflowWriteChannel goodbyeFn(DataflowWriteChannel source) {
+        return goodbye(CH.getReadChannel(source))
+    }
+
     String aNonImportedFunction(){
         throw new IllegalAccessException("This function can't be imported")
     }

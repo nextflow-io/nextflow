@@ -563,4 +563,33 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         result.val == 'a string'.reverse()
     }
 
+    def 'should execute custom function taking a channel'() {
+        when:
+        def result = runScript('''
+            include { goodbyeFn } from 'plugin/nf-test-plugin-hello'
+            workflow {
+                goodbyeFn(channel.of('Bye bye folks'))
+            }
+            ''')
+        then:
+        result.val == 'Bye bye folks'
+        result.val == Channel.STOP
+    }
+
+    def 'should execute custom function taking a channel in typed script'() {
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            include { goodbyeFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                def ch = channel.of('Bye bye folks')
+                goodbyeFn(ch).map { s -> s.toUpperCase() }.collect()
+            }
+            ''')
+        then:
+        result.val as List == ['BYE BYE FOLKS']
+    }
+
 }
