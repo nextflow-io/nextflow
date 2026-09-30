@@ -512,26 +512,6 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         result.val == Channel.STOP
     }
 
-    def 'should wrap custom function channel as typed channel'() {
-        given:
-        def SCRIPT_TEXT = '''
-            nextflow.enable.types = true
-
-            include { reverseFn } from 'plugin/nf-test-plugin-hello'
-
-            workflow {
-                def ch = reverseFn('a string')
-                channel.value(ch.getClass().getName())
-            }
-            '''
-
-        when:
-        def result = runScript(SCRIPT_TEXT)
-
-        then:
-        result.val == 'nextflow.dataflow.ChannelImpl'
-    }
-
     def 'should apply typed operators to custom function channel'() {
         given:
         def SCRIPT_TEXT = '''
@@ -590,6 +570,26 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             ''')
         then:
         result.val as List == ['BYE BYE FOLKS']
+    }
+
+    def 'should compose channel functions with named args'() {
+        when:
+        def result = runScript("""
+            ${HEADER}
+
+            include { reverseFn; goodbyeFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                def rows = reverseFn('a string', upper: true)
+                goodbyeFn(rows, prefix: 'x-')
+            }
+            """)
+        then:
+        result.val == 'x-GNIRTS A'
+        result.val == Channel.STOP
+
+        where:
+        HEADER << ['', 'nextflow.enable.types = true']
     }
 
 }

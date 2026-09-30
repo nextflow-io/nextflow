@@ -398,33 +398,33 @@ channel
 The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory is included under the alias `fromTable`.
 :::
 
-<AddedInVersion version="26.10" />
+Before creating a custom operator, consider whether the operator can be composed from existing operators such as `map` or `subscribe`, using a function to implement the custom logic.
 
-Channel factories and operators can also be defined as [functions](#functions). Functions are easier to implement and easier to use, since they are called directly rather than through the `channel` namespace or as a method on a channel. Plugin factories and operators are not supported when [static typing][static-typing-page] is enabled, so plugins that are used in typed pipelines should provide them as functions.
-
-A factory function returns a channel:
+Plugin factories and operators are not supported when [static typing][static-typing-page] is enabled. Provide them as [functions](#functions) instead:
 
 ```groovy
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.plugin.extension.Function
-
-@Function
-DataflowWriteChannel fromQuery(Map opts, String query) {
-    // ...
-}
-```
-
-An operator function takes a channel as an argument. The channel is received as a `DataflowWriteChannel`, which can be converted into a channel for reading with `CH.getReadChannel()`. Named arguments are received as a `Map` in the first parameter:
-
-```groovy
-import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Session
 import nextflow.extension.CH
 import nextflow.plugin.extension.Function
+import nextflow.plugin.extension.PluginExtensionPoint
 
-@Function
-DataflowWriteChannel sqlInsert(Map opts, DataflowWriteChannel source) {
-    final input = CH.getReadChannel(source)
-    // ...
+class MyExtension extends PluginExtensionPoint {
+
+    @Override
+    void init(Session session) {}
+
+    @Function
+    DataflowWriteChannel fromQuery(Map opts, String query) {
+        // ...
+    }
+
+    @Function
+    DataflowWriteChannel sqlInsert(Map opts, DataflowWriteChannel source) {
+        final input = CH.getReadChannel(source)
+        // ...
+    }
+
 }
 ```
 
@@ -438,10 +438,6 @@ workflow {
     sqlInsert(rows, into: 'BAR', columns: 'id', db: 'test')
 }
 ```
-
-Before creating a custom operator, consider whether the operator can be composed from existing operators such as `map` or `subscribe`, using a function to implement the custom logic. This approach works in any pipeline, with or without static typing.
-
-A method cannot be annotated with both `Function` and `Factory` or `Operator`.
 
 ### Process directives
 

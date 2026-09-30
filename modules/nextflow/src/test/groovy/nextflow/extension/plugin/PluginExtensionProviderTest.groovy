@@ -22,9 +22,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
-import nextflow.plugin.extension.Factory
+import nextflow.Session
 import nextflow.plugin.extension.Function
-import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
@@ -69,19 +68,9 @@ class PluginExtensionProviderTest extends Specification {
     }
 
     static class ChannelFunctions extends PluginExtensionPoint {
-        @Override protected void init(nextflow.Session session) {}
+        @Override protected void init(Session session) {}
         @Function DataflowWriteChannel fromFoo(String value) { null }
-        @Function DataflowWriteChannel mapFoo(DataflowReadChannel source) { null }
-    }
-
-    static class FunctionAndFactory extends PluginExtensionPoint {
-        @Override protected void init(nextflow.Session session) {}
-        @Function @Factory DataflowWriteChannel fromFoo(String value) { null }
-    }
-
-    static class FunctionAndOperator extends PluginExtensionPoint {
-        @Override protected void init(nextflow.Session session) {}
-        @Function @Operator DataflowWriteChannel mapFoo(DataflowReadChannel source) { null }
+        @Function DataflowWriteChannel mapFoo(DataflowWriteChannel source) { null }
     }
 
     def 'should not detect channel functions as factories or operators' () {
@@ -89,16 +78,5 @@ class PluginExtensionProviderTest extends Specification {
         PluginExtensionProvider.getDeclaredFactoryExtensionMethods0(ChannelFunctions).isEmpty()
         PluginExtensionProvider.getDeclaredOperatorExtensionMethods0(ChannelFunctions).isEmpty()
         PluginExtensionProvider.getDeclaredFunctionsExtensionMethods0(ChannelFunctions) == ['fromFoo', 'mapFoo'] as Set
-    }
-
-    def 'should reject function that is also a factory or operator' () {
-        when:
-        PluginExtensionProvider.getDeclaredFunctionsExtensionMethods0(CLAZZ)
-        then:
-        def e = thrown(IllegalStateException)
-        e.message.contains('cannot also be declared as a factory or operator')
-
-        where:
-        CLAZZ << [FunctionAndFactory, FunctionAndOperator]
     }
 }
