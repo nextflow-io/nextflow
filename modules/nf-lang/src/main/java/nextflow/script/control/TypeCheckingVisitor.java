@@ -458,6 +458,11 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var targetType = getType(target);
         var sourceType = getType(source);
 
+        if( isRecordField(target) ) {
+            addError("Record fields cannot be assigned -- records are immutable", node);
+            return;
+        }
+
         // a call with no return value (e.g. a function with a void return type or a
         // process/workflow that declares no outputs) cannot be assigned to a variable
         if( ClassHelper.isPrimitiveVoid(sourceType) ) {
@@ -491,6 +496,10 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         else {
             addError("Assignment target with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), node);
         }
+    }
+
+    private static boolean isRecordField(Expression target) {
+        return target instanceof PropertyExpression pe && Types.isRecordType(getType(pe.getObjectExpression()));
     }
 
     /**
