@@ -210,10 +210,12 @@ class PublishOp {
         }
 
         private void publish0(Path source, String target) {
-            if( source == null )
+            // files external to the work directory are not published
+            final sourceDir = getTaskDir(source)
+            if( sourceDir == null )
                 return
             log.trace "Publishing ${source} to ${target}"
-            final filename = getTaskDir(source).relativize(source).toString()
+            final filename = sourceDir.relativize(source).toString()
             final resolved = target.endsWith('/')
                 ? target + filename
                 : target
