@@ -280,7 +280,7 @@ class WaveBuildConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
+        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `conda/micromamba:v3` (like `conda/micromamba:v2`, with the Conda environment split into multiple image layers, Docker only), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
     """)
     final String template
 
@@ -329,7 +329,7 @@ class WaveBuildCondaConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when `wave.build.template` is set to `conda/micromamba:v2` or `conda/pixi:v1`.
+        The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when `wave.build.template` is set to `conda/micromamba:v2`, `conda/micromamba:v3` or `conda/pixi:v1`.
     """)
     final String baseImage
 

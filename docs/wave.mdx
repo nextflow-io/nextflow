@@ -97,7 +97,7 @@ Packages from the [Python Package Index](https://pypi.org/) can also be added to
 
 Wave supports different build templates for creating container images from Conda packages. Build templates control how packages are installed and how the final container image is structured.
 
-Multi-stage build templates (`conda/pixi:v1` and `conda/micromamba:v2`) offer several advantages:
+Multi-stage build templates (`conda/pixi:v1`, `conda/micromamba:v2` and `conda/micromamba:v3`) offer several advantages:
 
 - **Smaller images**: Build tools and package managers are excluded from the final image (30-50% size reduction typical).
 - **Reproducibility**: Lock files are generated for exact package version tracking.
@@ -117,6 +117,7 @@ Available templates:
 |----------|-------------|
 | `conda/micromamba:v1` | Standard Micromamba 1.x single-stage build. The final image includes the package manager. Default when unspecified. |
 | `conda/micromamba:v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. |
+| `conda/micromamba:v3` | Like `conda/micromamba:v2`, with the Conda environment split into multiple image layers grouped by package, each at most 512 MB. Use it when a registry or proxy rejects large layers, or to speed up pulls. Docker images only. |
 | `conda/pixi:v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces smaller images with faster dependency resolution. |
 | `cran/installr:v1` | Build template for R/CRAN packages using installr. |
 
