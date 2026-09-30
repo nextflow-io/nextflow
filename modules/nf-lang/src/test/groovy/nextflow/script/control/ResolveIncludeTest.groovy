@@ -227,6 +227,30 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should not check arguments of a plugin function in a typed script' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { samplesheetToList } from 'plugin/nf-schema'
+
+            workflow {
+                def rows = samplesheetToList('s.csv', 'schema.json')
+                println rows
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
     // -- agent modules. An `agent` must bind through the ordinary include statement, in both the
     //    plain-file and the directory (`main.nf`) form. The directory form matters twice over
     //    because getLocalIncludeUri is duplicated verbatim in ResolveIncludeVisitor and

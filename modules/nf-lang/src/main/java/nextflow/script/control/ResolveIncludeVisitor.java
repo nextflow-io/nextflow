@@ -161,6 +161,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null ) {
                 var target = new FunctionNode(entry.getNameOrAlias());
+                target.setSynthetic(true);
                 entry.setTarget(target);
             }
         }
