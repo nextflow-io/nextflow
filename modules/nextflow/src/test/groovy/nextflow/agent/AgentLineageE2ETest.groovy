@@ -126,10 +126,10 @@ class AgentLineageE2ETest extends Dsl2Spec {
         and: 'the concrete model reported by the provider is captured'
         agentRun.resolvedModel == 'gpt-4o-2024-11-20'
 
-        and: 'the typed input is recorded as a value parameter, not as the literal class name'
+        and: 'the typed input is recorded with its declared type, not as the literal class name'
         agentRun.input.size() == 1
         agentRun.input[0].name == 'q'
-        agentRun.input[0].type == 'val'
+        agentRun.input[0].type == 'String'
         agentRun.input[0].value == 'what is the meaning of life'
 
         and: 'the agent output is recorded as a TaskOutput, exactly like a process'
