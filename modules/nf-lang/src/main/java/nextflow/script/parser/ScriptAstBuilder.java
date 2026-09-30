@@ -236,13 +236,16 @@ public class ScriptAstBuilder {
 
     private ModuleNode compilationUnit(CompilationUnitContext ctx) {
         var statements = new ArrayList<Statement>();
+        var statementContexts = new ArrayList<StatementContext>();
         boolean hasDeclarations = false;
 
         for( var declOrStmt : ctx.scriptDeclarationOrStatement() ) {
             if( declOrStmt.scriptDeclaration() != null )
                 hasDeclarations |= scriptDeclaration(declOrStmt.scriptDeclaration());
-            if( declOrStmt.statement() != null )
+            if( declOrStmt.statement() != null ) {
                 statements.add(statement(declOrStmt.statement()));
+                statementContexts.add(declOrStmt.statement());
+            }
         }
 
         for( int i = 0; i < statements.size(); i++ ) {
@@ -251,7 +254,8 @@ public class ScriptAstBuilder {
                 ? mce.getMethodAsString()
                 : null;
             if( defName != null && SCRIPT_DEF_NAMES.contains(defName) ) {
-                collectSyntaxError(new SyntaxException("Invalid " + defName + " definition -- check for missing or out-of-order section labels", stmt));
+                if( !reparseScriptDeclaration(statementContexts.get(i)) )
+                    collectSyntaxError(new SyntaxException("Invalid " + defName + " definition -- check for missing or out-of-order section labels", stmt));
                 statements.set(i, ast(new InvalidDeclaration(), stmt));
                 hasDeclarations = true;
             }
@@ -286,6 +290,31 @@ public class ScriptAstBuilder {
             throw createParsingFailedException(numberFormatError.getV2().getMessage(), numberFormatError.getV1());
 
         return moduleNode;
+    }
+
+    /**
+     * Re-parse a statement as a script declaration in order to
+     * report the syntax error that caused it to be parsed as a
+     * statement, e.g. `process foo { ... }` with an invalid body.
+     *
+     * Returns true if a syntax error was reported.
+     *
+     * @param ctx
+     */
+    private boolean reparseScriptDeclaration(StatementContext ctx) {
+        var parser = new ScriptParser(tokenStream);
+        parser.setErrorHandler(new DescriptiveErrorStrategy(tokenStream.getTokenSource().getInputStream()));
+        parser.getInterpreter().setPredictionMode(PredictionMode.LL);
+        parser.removeErrorListeners();
+        parser.addErrorListener(createANTLRErrorListener());
+        tokenStream.seek(ctx.getStart().getTokenIndex());
+        try {
+            parser.scriptDeclaration();
+            return false;
+        }
+        catch( ParseCancellationException e ) {
+            return true;
+        }
     }
 
     private boolean scriptDeclaration(ScriptDeclarationContext ctx) {

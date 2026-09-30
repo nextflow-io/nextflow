@@ -418,6 +418,31 @@ class TypeCheckingTest extends Specification {
         "def x = 1 ; x += 'a'"          | "The `+=` operator is not defined for operands with types Integer and String"
     }
 
+    def 'should report an error when assigning a record field' () {
+        expect:
+        check(
+            '''\
+            def person = record(name: 'Alice', age: 42)
+            person.age = 43
+            ''',
+            'Record fields cannot be assigned -- records are immutable'
+        )
+        check(
+            '''\
+            record Person {
+                name: String
+                age: Integer
+            }
+
+            workflow {
+                def person = record(name: 'Alice', age: 42) as Person
+                person.age += 1
+            }
+            ''',
+            'Record fields cannot be assigned -- records are immutable'
+        )
+    }
+
     def 'should infer the type of a variable declaration or assignment' () {
         when:
         def exp = parseExpression(
@@ -1081,6 +1106,35 @@ class TypeCheckingTest extends Specification {
             "['a', 'b', ''].findAll { s -> s }",
             null
         )
+    }
+
+    @Unroll
+    def 'should check a function that returns no value' () {
+        expect: 'a bare or implicit void return has no value to match the declared return type'
+        check(
+            """\
+            def hello() -> String {
+                ${BODY}
+            }
+            """,
+            'Return value with type void does not match the declared return type (String)'
+        )
+
+        where:
+        BODY << ['return', "println('Hello!')"]
+    }
+
+    @Unroll
+    def 'should check a closure that returns no value' () {
+        expect: 'a bare or implicit void return has no value to match the declared return type'
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                      | ERROR
+        "[1, 2].inject(0) { acc, v -> return }"     | 'Return value with type void does not match the declared return type (Integer)'
+        "[1, 2].inject(0) { acc, v -> println(v) }" | 'Return value with type void does not match the declared return type (Integer)'
+        "['a', 'b'].findAll { s -> return }"        | 'Return value with type void does not match the declared return type (Boolean)'
+        "['a', 'b'].findAll { s -> println(s) }"    | 'Return value with type void does not match the declared return type (Boolean)'
     }
 
     def 'should treat a wildcard type argument as unknown' () {

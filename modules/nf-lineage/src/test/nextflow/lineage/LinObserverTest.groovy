@@ -64,11 +64,15 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessOutput
+import nextflow.script.types.Record
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
+import nextflow.util.RecordMap
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -634,6 +638,21 @@ class LinObserverTest extends Specification {
         [key:"value"]                                   | "Map"
     }
 
+    @Unroll
+    def 'should get typed parameter type' () {
+        expect:
+        LinObserver.getTypedParameterType(TYPE, VALUE) == STRING
+        where:
+        TYPE    | VALUE             | STRING
+        String  | 'x'               | "String"
+        Record  | [id: 'x']         | "Record"
+        Object  | Path.of('x')      | "Path"
+        Object  | [id: 'x']         | "Map"
+        Object  | new RecordMap(id: 'x') | "Record"
+        Object  | ['x']             | "Collection"
+        Object  | null              | "?"
+    }
+
     def 'should save task run' () {
         given:
         def folder = Files.createTempDirectory('test').toRealPath()
@@ -751,6 +770,95 @@ class LinObserverTest extends Specification {
         taskOutputsResult.output.get(2).type == "val"
         taskOutputsResult.output.get(2).name == "id"
         taskOutputsResult.output.get(2).value == "value"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should convert paths to lid references for typed process inputs and outputs' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def workDir = folder.resolve("work")
+        def session = Mock(Session) {
+            getConfig()>>config
+            getUniqueId()>>UUID.randomUUID()
+            getWorkDir() >> workDir
+        }
+        def metadata = Mock(WorkflowMetadata){
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        and:
+        def store = new DefaultLinStore();
+        store.open(LineageConfig.create(session))
+        def observer = Spy(new LinObserver(session, store))
+        def normalizer = new PathNormalizer(metadata)
+        observer.executionHash = "hash"
+        observer.normalizer = normalizer
+        observer.getTaskGlobalVars(_) >> [:]
+        observer.getTaskBinEntries(_) >> []
+        and:
+        def hash = HashCode.fromString("1234567890")
+        def taskWd = workDir.resolve('12/34567890')
+        Files.createDirectories(taskWd)
+        def upstream = workDir.resolve('78/567890/file1.txt')
+        def local = folder.resolve("file2.txt")
+        local.text = "this is a test file"
+        def localHash = CacheHelper.hasher(local).hash().toString()
+        def outFile = taskWd.resolve('out.txt')
+        outFile.text = 'some data'
+        def outHash = CacheHelper.hasher(outFile).hash().toString()
+        def outAttrs = Files.readAttributes(outFile, BasicFileAttributes)
+        def storeDir = folder.resolve('store')
+        def stored = storeDir.resolve('stored.txt')
+        Files.createDirectories(storeDir)
+        stored.text = 'stored data'
+        and:
+        def inputs = new LinkedHashMap<InParam, Object>()
+        inputs.put(new ProcessInput('f', Path, false), upstream)
+        inputs.put(new ProcessInput('rec', Record, false), new RecordMap(id: 'x', file: local))
+        inputs.put(new ProcessInput('id', String, false), 'value')
+        def outputs = new LinkedHashMap<OutParam, Object>()
+        outputs.put(new ProcessOutput('$out', Object, null), outFile)
+        outputs.put(new ProcessOutput('files', List, null), [outFile, local])
+        outputs.put(new ProcessOutput('set', Set, null), [outFile] as Set)
+        outputs.put(new ProcessOutput('stored', Path, null), stored)
+        // an input sent out again keeps the reference to its producing task
+        outputs.put(new ProcessOutput('same', Path, null), upstream)
+        and:
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getHash() >> hash
+            getSource() >> 'echo task source'
+            getInputs() >> inputs
+            getOutputs() >> outputs
+            getWorkDir() >> taskWd
+            getConfig() >> Mock(TaskConfig) { getStoreDir() >> storeDir }
+        }
+        def localRef = [path: normalizer.normalizePath(local), checksum: [value: localHash, algorithm: "nextflow", mode: "standard"]]
+
+        when:
+        observer.onTaskComplete(new TaskEvent(Mock(TaskHandler) { getTask() >> task }, null))
+        def taskRun = store.load("$hash") as nextflow.lineage.model.v1beta1.TaskRun
+        def taskOutput = store.load("$hash#output") as TaskOutput
+        then:
+        taskRun.input == [
+            new Parameter("Path", "f", 'lid://78567890/file1.txt'),
+            new Parameter("Record", "rec", [id: 'x', file: localRef]),
+            new Parameter("String", "id", "value")
+        ]
+        taskOutput.output == [
+            new Parameter("Path", '$out', 'lid://1234567890/out.txt'),
+            new Parameter("List", "files", ['lid://1234567890/out.txt', localRef]),
+            new Parameter("Set", "set", ['lid://1234567890/out.txt']),
+            new Parameter("Path", "stored", 'lid://1234567890/stored.txt'),
+            new Parameter("Path", "same", 'lid://78567890/file1.txt')
+        ]
+        store.load("$hash/out.txt") == new FileOutput(outFile.toString(), new Checksum(outHash, "nextflow", "standard"),
+            "lid://1234567890", "lid://hash", "lid://1234567890", outAttrs.size(), LinUtils.toDate(outAttrs.creationTime()), LinUtils.toDate(outAttrs.lastModifiedTime()))
+        store.load("$hash/stored.txt") instanceof FileOutput
+        store.load("78567890/file1.txt") == null
 
         cleanup:
         folder?.deleteDir()
