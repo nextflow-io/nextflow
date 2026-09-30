@@ -1240,12 +1240,14 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         // resolve return type and check against declared return type. A closure
         // always returns its last expression, and a void signature discards it,
-        // so there is nothing to check against. Likewise, any value can be
-        // coerced to a boolean, so a predicate can return any type.
+        // so there is nothing to check against.
         var returnType = (ClassNode) node.getNodeMetaData(ASTNodeMarker.INFERRED_RETURN_TYPE);
-        if( returnType != null && !returnType.equals(ClassHelper.VOID_TYPE) && !Types.isEqual(returnType, ClassHelper.Boolean_TYPE) ) {
+        if( returnType != null && !returnType.equals(ClassHelper.VOID_TYPE) ) {
+            // any value can be coerced to a boolean, so a predicate can return any
+            // type, as long as it returns a value
+            var coerce = Types.isEqual(returnType, ClassHelper.Boolean_TYPE);
             var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-            visitor.visit(returnType, node.getCode());
+            visitor.visit(returnType, node.getCode(), coerce);
 
             var inferredReturnType = visitor.getInferredReturnType();
             if( inferredReturnType != null )
