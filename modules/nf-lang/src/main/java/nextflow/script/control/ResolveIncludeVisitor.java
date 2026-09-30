@@ -15,6 +15,7 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -22,12 +23,16 @@ import java.util.List;
 import java.util.Set;
 
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -111,18 +116,45 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             addError("Module could not be parsed: '" + includeUri.getPath() + "'", node);
             return;
         }
+        var scriptNode = (ScriptNode) includeUnit.getAST();
         var definitions = getDefinitions(includeUri);
+        var hasPipeline = false;
         for( var entry : node.entries ) {
             var includedName = entry.name;
-            var includedNode = definitions.stream()
+            // a `params` entry that doesn't match a definition of the module
+            // refers to the params block of the pipeline
+            var target = definitions.stream()
                 .filter(defNode -> includedName.equals(definitionName(defNode)))
-                .findFirst();
-            if( !includedNode.isPresent() ) {
+                .findFirst()
+                .orElseGet(() -> paramsBlockType(scriptNode, entry));
+            if( target == null ) {
                 addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
                 continue;
             }
-            entry.setTarget(includedNode.get());
+            hasPipeline |= target instanceof WorkflowNode wn && wn.isEntry()
+                || target instanceof ClassNode cn && ScriptNode.isPipelineParams(cn);
+            entry.setTarget(target);
         }
+        if( hasPipeline && !((ScriptNode) sourceUnit.getAST()).isTypingEnabled() )
+            addError("Including a pipeline requires `nextflow.enable.types = true` in the including script", node);
+        if( hasPipeline && !scriptNode.isTypingEnabled() )
+            addError("An included pipeline must enable static typing -- set `nextflow.enable.types = true` in '" + includeUri.getPath() + "'", node);
+    }
+
+    /**
+     * Synthesize a record type from the params block of an included
+     * pipeline. The type checker makes it partial (all fields nullable).
+     */
+    private static ClassNode paramsBlockType(ScriptNode sn, IncludeEntryNode entry) {
+        var block = sn.getParams();
+        if( !"params".equals(entry.name) || block == null )
+            return null;
+        var cn = new RecordNode(entry.getNameOrAlias());
+        ScriptNode.setPipelineParams(cn);
+        for( var declaration : block.declarations ) {
+            cn.addField(new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null));
+        }
+        return cn;
     }
 
     private static void setPlaceholderTargets(IncludeNode node) {
@@ -155,7 +187,14 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         return result;
     }
 
+    /**
+     * An entire pipeline -- the `params` / `workflow` / `output` trio of a
+     * script -- can be included as a named workflow, using the `workflow`
+     * keyword to refer to the entry workflow of the included script.
+     */
     private static String definitionName(AnnotatedNode node) {
+        if( node instanceof WorkflowNode wn && wn.isEntry() )
+            return "workflow";
         return
             node instanceof ClassNode cn ? cn.getNameWithoutPackage() :
             node instanceof MethodNode mn ? mn.getName() :
