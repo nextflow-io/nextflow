@@ -21,9 +21,6 @@ import java.lang.reflect.Type
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.exception.ScriptRuntimeException
-import nextflow.script.dsl.Types
-import nextflow.util.TypeHelper
 /**
  * Implements the DSL for defining workflow params
  *
@@ -48,41 +45,10 @@ class ParamsDsl {
         declarations[name] = new Param(name, type, optional, defaultValue)
     }
 
+    Map<String,Param> getDeclarations() { declarations }
+
     void apply(Session session) {
-        final cliParams = session.cliParams ?: [:]
-        final configParams = session.configParams ?: [:]
-
-        for( final name : cliParams.keySet() ) {
-            if( !declarations.containsKey(name) && !configParams.containsKey(name) )
-                throw new ScriptRuntimeException("Parameter `$name` was specified on the command line or params file but is not declared in the script or config")
-        }
-
-        final params = new HashMap<String,?>()
-        for( final name : declarations.keySet() ) {
-            final decl = declarations[name]
-            if( cliParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveFromCli(decl, cliParams[name])
-            }
-            else if( configParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveFromCode(decl, configParams[name])
-            }
-            else if( decl.defaultValue != null ) {
-                params[name] = ParamsHelper.resolveFromCode(decl, decl.defaultValue)
-            }
-            else {
-                params[name] = null
-            }
-
-            if( params[name] == null && !decl.optional ) {
-                throw new ScriptRuntimeException("Parameter `$name` is required but no value was provided")
-            }
-
-            final expectedType = TypeHelper.getRawType(decl.type)
-            final actualType = params[name]?.getClass()
-            if( actualType != null && !ParamsHelper.isAssignableFrom(expectedType, actualType) ) {
-                throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
-            }
-        }
+        final params = ParamsHelper.resolveParams(declarations.values(), session.cliParams ?: [:], session.configParams ?: [:])
 
         // propagate resolved params to all scripts for legacy compatibility
         if( !session.binding.getScriptPath() )

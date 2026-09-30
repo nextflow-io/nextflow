@@ -1108,6 +1108,35 @@ class TypeCheckingTest extends Specification {
         )
     }
 
+    @Unroll
+    def 'should check a function that returns no value' () {
+        expect: 'a bare or implicit void return has no value to match the declared return type'
+        check(
+            """\
+            def hello() -> String {
+                ${BODY}
+            }
+            """,
+            'Return value with type void does not match the declared return type (String)'
+        )
+
+        where:
+        BODY << ['return', "println('Hello!')"]
+    }
+
+    @Unroll
+    def 'should check a closure that returns no value' () {
+        expect: 'a bare or implicit void return has no value to match the declared return type'
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                      | ERROR
+        "[1, 2].inject(0) { acc, v -> return }"     | 'Return value with type void does not match the declared return type (Integer)'
+        "[1, 2].inject(0) { acc, v -> println(v) }" | 'Return value with type void does not match the declared return type (Integer)'
+        "['a', 'b'].findAll { s -> return }"        | 'Return value with type void does not match the declared return type (Boolean)'
+        "['a', 'b'].findAll { s -> println(s) }"    | 'Return value with type void does not match the declared return type (Boolean)'
+    }
+
     def 'should treat a wildcard type argument as unknown' () {
         expect: 'channel.topic() returns Channel<?>, so the element type is not known'
         check(

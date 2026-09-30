@@ -54,8 +54,15 @@ public enum ASTNodeMarker {
     // the MethodNode targeted by a variable expression (PropertyNode)
     METHOD_VARIABLE_TARGET,
 
+    // the Parameter targeted by a named argument (MapEntryExpression)
+    NAMED_PARAM,
+
     // denotes a nullable type annotation (ClassNode)
     NULLABLE,
+
+    // the ScriptNode that declares an entry workflow (WorkflowNode), so that
+    // the params and output blocks of a pipeline can be resolved from a call
+    PIPELINE_SCRIPT,
 
     // the FieldNode targeted by a PropertyExpression
     PROPERTY_TARGET,
