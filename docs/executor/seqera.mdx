@@ -76,9 +76,9 @@ See the [`seqera` scope][config-seqera] for the full config reference.
 
 <AddedInVersion version="26.10" />
 
-With `provisioning = 'spotFirst'`, the scheduler falls back to on-demand when spot capacity runs out, but only while on-demand is not too expensive. It compares the highest on-demand hourly price of the instance types selected for a task with their highest spot price. When on-demand exceeds the limit, the task is retried on spot instead, and fails if spot capacity stays unavailable. Its error message starts with `on-demand fallback refused`.
+With `provisioning = 'spotFirst'`, the scheduler falls back to on-demand instances when spot capacity runs out, as long as on-demand stays within a cost limit. The limit is the maximum ratio of the highest on-demand hourly price to the highest spot price, across the instance types selected for a task. If the ratio exceeds the limit, the scheduler retries the task on spot instead. If spot capacity stays unavailable, the task fails with an error message that starts with `on-demand fallback refused`.
 
-The scheduler applies a default limit for each cloud provider. Use `onDemandCostRatio` to set a different limit for all the tasks of the run:
+The scheduler applies a default limit for each cloud provider. To set a different limit for all tasks in the run, use `onDemandCostRatio`:
 
 ```groovy
 seqera {
@@ -91,17 +91,17 @@ seqera {
 }
 ```
 
-Leaving `onDemandCostRatio` unset and setting it to `0` are different:
+Leaving `onDemandCostRatio` unset is not the same as setting it to `0`:
 
 | `onDemandCostRatio` | Behavior |
 | --- | --- |
 | Not set | The scheduler's default limit for the cloud provider applies. |
-| `0` | No limit. Tasks always fall back to on-demand, whatever the price. |
-| Greater than `0` | This limit, used instead of the scheduler's default. |
+| `0` | No limit. Tasks always fall back to on-demand, regardless of price. |
+| Greater than `0` | The scheduler uses this value instead of its default limit. |
 
-`0` does not disable the fallback. To never fall back to on-demand, set `provisioning = 'spot'`.
+Setting `0` does not disable the fallback. To disable it, set `provisioning = 'spot'`.
 
-Like `provisioning`, the limit can be overridden for a single process with a hint. For example, to let a long-running process always fall back to on-demand:
+To override the limit for a single process, use a hint, as with `provisioning`. For example, to let a long-running process always fall back to on-demand:
 
 ```nextflow
 process align {
@@ -114,7 +114,7 @@ process align {
 }
 ```
 
-Tasks with different limits run on separate clusters. Tasks that set a limit, `0` included, do not use the compute environment's warm pool.
+Tasks with different limits run on separate clusters. Tasks that set a limit, including `0`, do not use the compute environment's warm pool.
 
 ## Disk support
 
