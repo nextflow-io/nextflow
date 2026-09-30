@@ -107,13 +107,13 @@ The maximum number of spot retry attempts before falling back to on-demand. Only
 
 <AddedInVersion version="26.10" />
 
-The cost limit on the spot to on-demand fallback. Only used when `provisioning` is `'spotFirst'`. A task falls back to on-demand only while the highest on-demand hourly price of the instance types selected for it is at most this multiple of their highest spot price. Otherwise the task is retried on spot and fails if spot capacity stays unavailable. For example, `onDemandCostRatio = 2.5`.
+The cost limit for falling back from spot to on-demand. Only used when `provisioning` is `'spotFirst'`. Across the instance types selected for a task, the scheduler compares the highest on-demand hourly price with the highest spot price. The task falls back to on-demand only while that ratio is at most this value. Otherwise, the scheduler retries the task on spot. If spot capacity stays unavailable, the task fails. For example, `onDemandCostRatio = 2.5`.
 
 - Not set (default): the scheduler's default limit for the cloud provider applies.
-- `0`: no limit. Tasks always fall back to on-demand, whatever the price. This does not disable the fallback; use `provisioning = 'spot'` to never fall back to on-demand.
-- Greater than `0`: this limit, used instead of the scheduler's default.
+- `0`: no limit. Tasks always fall back to on-demand, regardless of price. This does not disable the fallback. To never fall back to on-demand, set `provisioning = 'spot'`.
+- Greater than `0`: the scheduler uses this value instead of its default limit.
 
-The value must not be negative. It is the default for every task of the run; use the `machineRequirement.onDemandCostRatio` hint to override it for a single process. See [On-demand fallback cost limit][seqera-executor-cost-limit].
+The value must not be negative. It applies to every task in the run. To override it for a single process, use the `machineRequirement.onDemandCostRatio` hint. See [On-demand fallback cost limit][seqera-executor-cost-limit].
 
 ##### `seqera.executor.machineRequirement.provisioning`
 
