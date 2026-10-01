@@ -140,6 +140,71 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should require static typing in a script that includes a pipeline: #INCLUDE' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            """\
+            include { ${INCLUDE} } from './greet.nf'
+            """)
+        def module = tempFile(root, 'greet.nf',
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                greeting: String = 'Hello'
+            }
+
+            workflow {
+                println params.greeting
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == 'Including a pipeline requires `nextflow.enable.types = true` in the including script'
+
+        cleanup:
+        deleteDir(root)
+
+        where:
+        INCLUDE << [ 'workflow as GREET', 'params as GreetParams' ]
+    }
+
+    def 'should require static typing in an included pipeline' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { workflow as GREET } from './greet.nf'
+            ''')
+        def module = tempFile(root, 'greet.nf',
+            '''\
+            params {
+                greeting: String = 'Hello'
+            }
+
+            workflow {
+                println params.greeting
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == "An included pipeline must enable static typing -- set `nextflow.enable.types = true` in '${module}'"
+
+        cleanup:
+        deleteDir(root)
+    }
+
     def 'should resolve an include' () {
         given:
         def root = tempDir()

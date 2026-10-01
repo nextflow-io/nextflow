@@ -66,7 +66,7 @@ dependencies {
     // plugin package. A constraint would be a no-op here and silently drop both jars.
     // jackson-databind IS transitive (tower-api), so a constraint raises it across every
     // configuration - including testFixtures* - without a redundant dependency edge.
-    // Both at 2.21.5: GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm and later deserialization advisories.
+    // Both at 2.21.7: GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm and later deserialization advisories.
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jacksonVersion}"
     constraints {
         api("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}") { because 'jackson-databind deserialization CVEs' }

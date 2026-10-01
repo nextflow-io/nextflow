@@ -20,6 +20,7 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
@@ -48,6 +49,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private WorkflowDef entryFlow
 
+    private boolean moduleLoaded
+
     private OutputDef outputDef
 
     BaseScript() {
@@ -70,6 +73,32 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     boolean isTypingEnabled() {
         return typingEnabled
+    }
+
+    /**
+     * The declared params of this script, keyed by name.
+     */
+    Map<String,Param> getParamDeclarations() {
+        return paramsDef.getDeclarations()
+    }
+
+    /**
+     * The entry workflow of this script, or null if it doesn't have one.
+     */
+    WorkflowDef getEntryFlow() {
+        return entryFlow
+    }
+
+    /**
+     * Execute this script as an included module, only once
+     * no matter how many scripts include it.
+     */
+    @PackageScope
+    void runModule() {
+        if( moduleLoaded )
+            return
+        moduleLoaded = true
+        run()
     }
 
     /**
@@ -284,11 +313,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 // Execute a single named workflow directly
                 final handler = new WorkflowEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
             }
             else if( moduleRun && meta.hasExecutableProcesses() ) {
                 // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
             }
             else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() ) {
                 throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process or named workflow, or be a code snippet")
@@ -303,9 +334,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
         session.notifyBeforeWorkflowExecution()
         if( paramsDef )
             paramsDef.apply(session)
-        final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
+        final args = paramsDef
+            ? [ binding.getParams() ] as Object[]
+            : BaseScriptConsts.EMPTY_ARGS
+        final ret = entryFlow.run(args)
         if( outputDef )
-            outputDef.apply(session)
+            outputDef.apply(session, entryFlow.getBinding().getPublished())
         session.notifyAfterWorkflowExecution()
         return ret
     }

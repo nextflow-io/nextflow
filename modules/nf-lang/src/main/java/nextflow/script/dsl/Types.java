@@ -456,6 +456,8 @@ public class Types {
                 continue;
             if( STANDARD_TYPES.contains(c) )
                 return c;
+            if( TYPE_ALIASES.containsKey(c) )
+                return TYPE_ALIASES.get(c);
             queue.add(c.getSuperclass());
             for( var ic : c.getInterfaces() )
                 queue.add(ic);
