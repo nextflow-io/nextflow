@@ -200,7 +200,10 @@ class LinObserver implements TraceObserverV2 {
 
     @Override
     void onTaskComplete(TaskEvent event) {
-        storeTaskInfo(event.handler.task)
+        final task = event.handler.task
+        if( task.failed || task.aborted )
+            return
+        storeTaskInfo(task)
     }
 
     protected void storeTaskInfo(TaskRun task) {
