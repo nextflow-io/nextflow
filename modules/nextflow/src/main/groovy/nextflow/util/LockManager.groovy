@@ -19,7 +19,7 @@ package nextflow.util
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.Function
+import java.util.function.BiFunction
 
 import groovy.transform.CompileStatic
 /**
@@ -30,15 +30,9 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class LockManager {
 
-    private int MAX_SIZE = 200
-
     /**
-     * Maintain a pool of lock handler to reduce garbage collection
-     */
-    private List<LockHandle> pool = new ArrayList<>(MAX_SIZE)
-
-    /**
-     * Associate a lock handle for each key
+     * Associate a lock handle for each key. An entry lives as long as
+     * there is at least one thread holding or waiting for its lock
      */
     private ConcurrentHashMap<Object, LockHandle> entries = new ConcurrentHashMap<>()
 
@@ -58,67 +52,28 @@ class LockManager {
      * @return The lock handler
      */
     LockHandle acquire(key) {
-        while( true ) {
-            LockHandle result = entries.computeIfAbsent(key,newLock())
-            result.sync.lock()
-            // the handle may have been retired (and even recycled for another key)
-            // while this thread was waiting on the lock, in that case try again
-            if( entries.get(key).is(result) ) {
-                result.count++
-                return result
-            }
-            result.sync.unlock()
-        }
+        final handle = entries.compute(key, (k, h) -> {
+            h = h ?: new LockHandle(k)
+            h.count++
+            return h
+        } as BiFunction<Object, LockHandle, LockHandle>)
+        handle.sync.lock()
+        return handle
     }
-
-    private Function<Object, LockHandle> newLock() {
-        new Function<Object, LockHandle>() {
-            @Override
-            LockHandle apply(Object key) {
-                return getOrCreate0(key)
-            }
-        }
-    }
-
-
-    private synchronized LockHandle getOrCreate0(key) {
-        if( pool.size() ) {
-            def handle = pool.remove(pool.size()-1)
-            handle.key = key
-            return handle
-        }
-        new LockHandle(key)
-    }
-
-    private void release0(LockHandle handle) {
-        // must not hold the monitor while removing the entry, because `getOrCreate0`
-        // acquires it from within `computeIfAbsent` while holding the map bin lock
-        entries.remove(handle.key, handle)
-        recycle0(handle)
-    }
-
-    private synchronized void recycle0(LockHandle handle) {
-        handle.key = null
-        if( pool.size()<MAX_SIZE )
-            pool.add(handle)
-    }
-
 
     class LockHandle {
-        Lock sync
-        volatile Object key
-        volatile int count
+        final Lock sync = new ReentrantLock()
+        final Object key
+        // updated only inside the map `compute` functions
+        int count
 
         LockHandle(key) {
             this.key = key
-            this.sync = new ReentrantLock()
         }
 
         void release() {
-            if( --count == 0 ) {
-                release0(this)
-            }
             sync.unlock()
+            entries.computeIfPresent(key, (k, h) -> --h.count == 0 ? null : h)
         }
     }
 }
