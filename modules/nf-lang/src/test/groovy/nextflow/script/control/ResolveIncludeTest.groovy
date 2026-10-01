@@ -235,12 +235,11 @@ class ResolveIncludeTest extends Specification {
             nextflow.enable.types = true
 
             include { samplesheetToList } from 'plugin/nf-schema'
-            include { listTables } from 'plugin/nf-sqldb'
 
             workflow {
                 def rows = samplesheetToList('s.csv', 'schema.json')
                 println rows
-                println listTables().size()
+                println rows.size()
             }
             ''')
 
