@@ -338,6 +338,79 @@ class ScriptResolveTest extends Specification {
         errors[0].getOriginalMessage() == '`x` is not defined'
     }
 
+    def 'should report an error when a process or workflow is used as a variable in a typed script' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                exec:
+                true
+            }
+
+            workflow greet {
+            }
+
+            workflow {
+                channel.empty().mix(hello)
+                def x = greet
+            }
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 12
+        errors[0].getStartColumn() == 25
+        errors[0].getOriginalMessage() == 'Process `hello` cannot be used as a variable'
+        errors[1].getStartLine() == 13
+        errors[1].getStartColumn() == 13
+        errors[1].getOriginalMessage() == 'Workflow `greet` cannot be used as a variable'
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                exec:
+                true
+            }
+
+            workflow {
+                channel.empty().mix(hello)
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for process .out property in a typed script' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                stdout()
+
+                script:
+                ''
+            }
+
+            workflow {
+                hello()
+                hello.out
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 13
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == 'Process `hello` cannot be used as a variable'
+    }
+
     def 'should report an error for an undefined function' () {
         when:
         def errors = check(
