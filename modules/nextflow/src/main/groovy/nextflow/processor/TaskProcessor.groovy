@@ -68,6 +68,7 @@ import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
+import nextflow.plugin.Plugins
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -76,9 +77,8 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.dsl.Nullable
 import nextflow.script.dsl.Types
-import nextflow.script.params.BaseOutParam
-import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -101,8 +101,6 @@ import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
-import nextflow.util.HashBuilder
-import nextflow.util.LockManager
 import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -196,6 +194,31 @@ class TaskProcessor {
     private static final AtomicBoolean errorShown = new AtomicBoolean()
 
     /**
+     * The {@link TaskHasherFactory} extensions registered by plugins, in priority order --
+     * resolved once, on the first task hashed by this processor. See {@link #createTaskHasher}.
+     *
+     * <p>This and the three fields below are lazily initialised without a lock and read from every
+     * operator thread that submits a task, plus the retry executor -- so they must be {@code
+     * volatile}: without it a reader may see a non-null reference to a list whose contents are not
+     * yet visible, fall back to the default hasher, and give that ONE task a different cache key
+     * from the rest of the run (a silent miss, not a crash). With it the benign race is correct,
+     * since resolving twice is harmless.
+     */
+    @PackageScope volatile List<TaskHasherFactory> hasherFactories
+
+    /**
+     * The {@link TaskCacheStrategy} extensions registered by plugins, in priority order -- resolved
+     * once, on the first task resolved by this processor. See {@link #getCacheStrategy}.
+     */
+    @PackageScope volatile List<TaskCacheStrategy> cacheStrategies
+
+    /** The strategy chosen among {@link #cacheStrategies} for this run, else the default. */
+    private volatile TaskCacheStrategy cacheStrategy
+
+    /** The {@link TaskResolver} adapter over this processor, created on first use. */
+    private volatile TaskResolver taskResolver
+
+    /**
      * Flag set {@code true} when the processor termination has been invoked
      *
      * See {@code #checkProcessTermination}
@@ -234,7 +257,6 @@ class TaskProcessor {
 
     private static int processCount
 
-    private static LockManager lockManager = new LockManager()
 
     private List<TaskRun> fairBuffers = new ArrayList<>()
 
@@ -682,8 +704,32 @@ class TaskProcessor {
         // -- download foreign files
         session.filePorter.transfer(foreignFiles)
 
-        final hash = new TaskHasher(task).compute()
+        final hash = createTaskHasher(task).compute()
         checkCachedOrLaunchTask(task, hash, resumable)
+    }
+
+    /**
+     * Create the {@link TaskHasher} for the given task.
+     *
+     * The registered {@link TaskHasherFactory} extensions are asked in priority order and the
+     * first hasher returned is used; with none registered, or all abstaining, the default
+     * {@link TaskHasher} is used, exactly as when no plugin takes part in hashing.
+     *
+     * @param task The task to be hashed.
+     * @return The hasher computing the cache key of {@code task}.
+     */
+    @CompileStatic
+    protected TaskHasher createTaskHasher(TaskRun task) {
+        if( hasherFactories == null )
+            hasherFactories = Plugins.getPriorityExtensions(TaskHasherFactory) ?: Collections.<TaskHasherFactory>emptyList()
+        for( final factory : hasherFactories ) {
+            final hasher = factory.create(task)
+            if( hasher != null ) {
+                log.trace "Task: ${task.lazyName()} > Using task hasher: ${hasher.getClass().getName()}"
+                return hasher
+            }
+        }
+        return new TaskHasher(task)
     }
 
     /**
@@ -798,67 +844,82 @@ class TaskProcessor {
      * Try to check if exists a previously executed process result in the a cached folder. If it exists
      * use the that result and skip the process execution, otherwise the task is sumitted for execution.
      *
+     * The resolution is delegated to the {@link TaskCacheStrategy} in use for this run -- see
+     * {@link #getCacheStrategy} -- which drives it through the {@link TaskResolver} primitives of
+     * this processor: with no plugin strategy applying, the {@link DefaultTaskCacheStrategy} runs
+     * the per-run resolution loop exactly as before.
+     *
      * @param task
      *      The {@code TaskRun} instance to be executed
      * @param hash
      *      The unique {@code HashCode} for the given task inputs
-     * @param script
-     *      The script to be run (only when it's a merge task)
-     * @return
-     *      {@code false} when a cached result has been found and the execution has skipped,
-     *      or {@code true} if the task has been submitted for execution
-     *
+     * @param shouldTryCache
+     *      Whether a cached execution may be resumed
      */
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
+        getCacheStrategy().resolve(task, hash, shouldTryCache, getTaskResolver())
+    }
 
-        int tries = task.failCount +1
-        while( true ) {
-            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
-
-            Path resumeDir = null
-            boolean exists = false
-            try {
-                final entry = session.cache.getTaskEntry(hash, this)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
-
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
-                if( cached )
-                    break
+    /**
+     * The {@link TaskCacheStrategy} resolving the tasks of this run.
+     *
+     * The registered {@link TaskCacheStrategy} extensions are asked in priority order and the first
+     * one enabled for the session is used; with none registered, or none enabled, the
+     * {@link DefaultTaskCacheStrategy} is used, exactly as when no plugin takes part in the
+     * resolution. Resolved once, on the first task of this processor.
+     */
+    @CompileStatic
+    protected TaskCacheStrategy getCacheStrategy() {
+        if( cacheStrategy != null )
+            return cacheStrategy
+        if( cacheStrategies == null )
+            cacheStrategies = Plugins.getPriorityExtensions(TaskCacheStrategy) ?: Collections.<TaskCacheStrategy>emptyList()
+        for( final strategy : cacheStrategies ) {
+            if( strategy.isEnabled(session) ) {
+                log.trace "Process: ${name} > Using task cache strategy: ${strategy.getClass().getName()}"
+                return cacheStrategy = strategy
             }
-            catch (Throwable t) {
-                log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
-            }
+        }
+        return cacheStrategy = new DefaultTaskCacheStrategy()
+    }
 
-            if( exists ) {
-                tries++
-                continue
-            }
+    /**
+     * The {@link TaskResolver} a {@link TaskCacheStrategy} resolves the tasks of this processor with.
+     */
+    @CompileStatic
+    protected TaskResolver getTaskResolver() {
+        if( taskResolver == null )
+            taskResolver = new Resolver()
+        return taskResolver
+    }
 
-            final lock = lockManager.acquire(hash)
-            final workDir = task.getWorkDirFor(hash)
-            try {
-                if( resumeDir != workDir )
-                    exists = workDir.exists()
-                if( exists ) {
-                    tries++
-                    continue
-                }
-                else if( !workDir.mkdirs() )
-                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
-            }
-            finally {
-                lock.release()
-            }
+    /**
+     * Adapts the resume / launch primitives of this processor to the {@link TaskResolver} contract,
+     * so a strategy never touches the processor itself.
+     */
+    @CompileStatic
+    private class Resolver implements TaskResolver {
 
-            // submit task for execution
-            submitTask( task, hash, workDir )
-            break
+        @Override
+        TaskEntry entry(HashCode key) {
+            return session.cache.getTaskEntry(key, TaskProcessor.this)
         }
 
+        @Override
+        boolean resume(TaskRun task, HashCode key, Path workDir, TaskEntry entry) {
+            return checkCachedOutput(task.clone(), workDir, key, entry)
+        }
+
+        @Override
+        void launch(TaskRun task, HashCode key, Path workDir) {
+            submitTask(task, key, workDir)
+        }
+
+        @Override
+        Path workDirFor(HashCode key) {
+            return FileHelper.getWorkFolder(executor.getWorkDir(), key)
+        }
     }
 
     /**
@@ -1423,7 +1484,7 @@ class TaskProcessor {
         if( config instanceof ProcessConfigV2 )
             collectOutputsV2( task )
         else if( config instanceof ProcessConfigV1 )
-            collectOutputsV1( task, task.getTargetDir() )
+            collectOutputsV1( task )
     }
 
     @CompileStatic
@@ -1444,136 +1505,17 @@ class TaskProcessor {
         task.canBind = true
     }
 
-    final protected void collectOutputsV1( TaskRun task, Path workDir ) {
+    @CompileStatic
+    protected void collectOutputsV1( TaskRun task ) {
         log.trace "<$name> collecting output: ${task.outputs}"
 
-        for( OutParam param : task.outputs.keySet() ) {
+        final resolver = new TaskOutputResolverV1(task)
 
-            switch( param ) {
-                case StdOutParam:
-                    collectStdOut(task, (StdOutParam)param, task.@stdout)
-                    break
-
-                case FileOutParam:
-                    collectOutFiles(task, (FileOutParam)param, workDir)
-                    break
-
-                case ValueOutParam:
-                    collectOutValues(task, (ValueOutParam)param, task.context)
-                    break
-
-                case EnvOutParam:
-                    collectOutEnvParam(task, (EnvOutParam)param, workDir)
-                    break
-
-                case CmdEvalParam:
-                    collectOutEnvParam(task, (CmdEvalParam)param, workDir)
-                    break
-
-                case DefaultOutParam:
-                    task.setOutput(param, DefaultOutParam.Completion.DONE)
-                    break
-
-                default:
-                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
-            }
-        }
+        for( OutParam param : task.outputs.keySet() )
+            resolver.resolve(param)
 
         // mark ready for output binding
         task.canBind = true
-    }
-
-    protected void collectOutEnvParam(TaskRun task, BaseOutParam param, Path workDir) {
-
-        // fetch the output value
-        final outCmds =  param instanceof CmdEvalParam ? task.getOutputEvals() : null
-        final val = collectOutEnvMap(workDir,outCmds).get(param.name)
-        if( val == null && !param.optional )
-            throw new MissingValueException("Missing environment variable: $param.name")
-        // set into the output set
-        task.setOutput(param,val)
-        // trace the result
-        log.trace "Collecting param: ${param.name}; value: ${val}"
-
-    }
-
-    /**
-     * Parse the `.command.env` file which holds the value for `env` and `cmd`
-     * output types
-     *
-     * @param workDir
-     *      The task work directory that contains the `.command.env` file
-     * @param outEvals
-     *      A {@link Map} instance containing key-value pairs
-     * @return
-     */
-    @CompileStatic
-    @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir, Map<String,String> outEvals) {
-        return new TaskEnvCollector(workDir, outEvals).collect()
-    }
-
-    /**
-     * Collects the process 'std output'
-     *
-     * @param task The executed process instance
-     * @param param The declared {@link StdOutParam} object
-     * @param stdout The object holding the task produced std out object
-     */
-    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
-
-        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
-        }
-
-        if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
-        }
-
-        task.setOutput(param, stdout)
-    }
-
-    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
-
-        // type file parameter can contain a multiple files pattern separating them with a special character
-        final filePatterns = param.getFilePatterns(task.context, task.workDir)
-        final opts = [
-            followLinks: param.followLinks,
-            glob: param.glob,
-            hidden: param.hidden,
-            includeInputs: param.includeInputs,
-            maxDepth: param.maxDepth,
-            optional: param.optional || param.arity?.min == 0,
-            type: param.type,
-        ]
-        final allFiles = collectOutFiles0(task, filePatterns, opts)
-
-        if( !param.isValidArity(allFiles.size()) )
-            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
-
-        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
-
-    }
-
-    protected List<Path> collectOutFiles0(TaskRun task, List<String> filePatterns, Map opts) {
-        return new TaskFileCollector(filePatterns, opts, task).collect()
-    }
-
-    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
-
-        try {
-            // fetch the output value
-            final val = param.resolve(ctx)
-            // set into the output set
-            task.setOutput(param,val)
-            // trace the result
-            log.trace "Collecting param: ${param.name}; value: ${val}"
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
-        }
-
     }
 
     @Memoized
@@ -1885,17 +1827,32 @@ class TaskProcessor {
 
     @CompileStatic
     private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
-        if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
-        }
-        if( value != null ) {
-            final expectedType = param.type
-            final actualType = value.getClass()
-            if( expectedType != null && !isAssignableFrom(expectedType, actualType) )
-                log.warn "[${safeTaskName(task)}] invalid argument type at index ${index} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
-        }
+        checkTaskInput(task, param.type, param.optional, value, index, '')
         task.context.put(param.getName(), value)
         task.setInput(param, value)
+    }
+
+    @CompileStatic
+    private void checkTaskInput(TaskRun task, Class expectedType, boolean optional, Object value, int index, String field) {
+        final location = field ? "input field `${field}` at index ${index}" : "input at index ${index}"
+        if( value == null && !optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] ${location} cannot be null -- append `?` to the type annotation to mark it as nullable")
+        }
+        if( value == null || expectedType == null )
+            return
+        final actualType = value.getClass()
+        if( !isAssignableFrom(expectedType, actualType) )
+            log.warn "[${safeTaskName(task)}] invalid argument type for ${location} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
+        // record types are not validated by `nextflow run`, so check the fields of named record types here
+        if( expectedType != Record.class && Record.class.isAssignableFrom(expectedType) && value instanceof Map ) {
+            final record = value as Map
+            for( final fn : expectedType.getDeclaredFields() ) {
+                if( fn.isSynthetic() )
+                    continue
+                final name = field ? "${field}.${fn.getName()}".toString() : fn.getName()
+                checkTaskInput(task, fn.getType(), fn.isAnnotationPresent(Nullable.class), record[fn.getName()], index, name)
+            }
+        }
     }
 
     private static boolean isAssignableFrom(Class targetType, Class sourceType) {

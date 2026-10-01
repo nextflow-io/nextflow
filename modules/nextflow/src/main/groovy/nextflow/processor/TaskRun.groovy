@@ -38,7 +38,6 @@ import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfigV2
@@ -566,10 +565,6 @@ class TaskRun implements Cloneable {
         if( !workDir )
             return null
         return workDir.toUriString()
-    }
-
-    Path getWorkDirFor(HashCode hash) {
-        FileHelper.getWorkFolder(processor.executor.getWorkDir(), hash)
     }
 
     static final public String CMD_LOG = '.command.log'

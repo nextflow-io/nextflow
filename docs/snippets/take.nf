@@ -1,3 +1,3 @@
-channel.of( 1..10 )
+channel.fromList( 1..10 )
     .take( 3 )
     .view()

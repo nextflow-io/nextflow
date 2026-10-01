@@ -44,6 +44,32 @@ class MapperUtilTest extends Specification {
         SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([:])) == null
     }
 
+    def 'should send the on-demand cost ratio only when set, including zero' () {
+        when: 'mapped for the run (the default for its tasks) and for a task'
+        def opts = new MachineRequirementOpts([onDemandCostRatio: RATIO])
+        def runReq = SchemaMapperUtil.toMachineRequirement(opts)
+        def taskReq = SchemaMapperUtil.toMachineRequirement(opts, null, null, false, 0)
+
+        then:
+        runReq?.onDemandCostRatio == EXPECTED
+        taskReq?.onDemandCostRatio == EXPECTED
+
+        where:
+        RATIO   | EXPECTED
+        null    | null      // absent: the scheduler's per-cloud default applies
+        0       | 0d        // explicit zero: no limit, must not be dropped
+        2.5     | 2.5d
+    }
+
+    def 'should reject a negative on-demand cost ratio' () {
+        when:
+        SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([onDemandCostRatio: -1]))
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('onDemandCostRatio')
+    }
+
     def 'should map all fields' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([

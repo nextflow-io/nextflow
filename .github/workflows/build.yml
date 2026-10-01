@@ -268,9 +268,9 @@ jobs:
       contents: write
     steps:
       # Intentionally persists credentials: the `release` task in
-      # packing.gradle runs `git push` and `git push origin vX.Y.Z` against
-      # this repo; both rely on actions/checkout having written the token
-      # into .git/config as http.extraheader.
+      # packing.gradle runs `git push origin vX.Y.Z` against this repo,
+      # which relies on actions/checkout having written the token into
+      # .git/config as http.extraheader.
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:

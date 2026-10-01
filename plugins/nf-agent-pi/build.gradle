@@ -153,24 +153,24 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
     // Driver-side RPC broker for canonical agent tasks. Bundled with the runner
     // plugin (not core) so a distribution without an agent runner ships no gRPC.
-    api 'io.grpc:grpc-api:1.75.0'
-    api 'io.grpc:grpc-stub:1.75.0'
-    api 'io.grpc:grpc-netty-shaded:1.75.0'
+    api "io.grpc:grpc-api:${grpcVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
+    api "io.grpc:grpc-netty-shaded:${grpcVersion}"
 
     // Self-signed certificate construction for the broker's per-run TLS identity: the JDK has no
     // public API for it. Same pinned versions as nf-k8s -- PF4J isolates plugin classloaders, so
     // that copy is not visible here; bump the two together.
-    api 'org.bouncycastle:bcprov-jdk18on:1.84'
-    api 'org.bouncycastle:bcpkix-jdk18on:1.84'
+    api "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+    api "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
 
     testImplementation(testFixtures(project(':nextflow')))
-    testImplementation 'org.apache.groovy:groovy:4.0.33'
-    testImplementation 'org.apache.groovy:groovy-json:4.0.33'
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-json:${groovyVersion}"
 }
 
 // PiAgentPackagingTest asserts on the REAL artifacts - that the runtime is not vendored back into

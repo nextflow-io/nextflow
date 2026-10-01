@@ -34,6 +34,7 @@ import org.codehaus.groovy.ast.stmt.Statement
 
 import static nextflow.module.ModuleSpec.ModuleParam
 import static nextflow.script.ast.ASTUtils.*
+import static nextflow.script.types.TypeCheckingUtils.getType
 
 /**
  * AST visitor to extract inputs/outputs from a typed process.
@@ -187,8 +188,8 @@ class ModuleSpecVisitorV2 {
             output instanceof AssignmentExpression ? (VariableExpression) output.getLeftExpression() :
             output instanceof VariableExpression ? output : null
 
-        final name = target != null ? target.getName() : null
-        final type = target != null ? paramType(target.getType()) : paramType(output)
+        final name = target?.getName()
+        final type = paramType(target ?: output)
 
         return new ModuleParam(
             name: name ?: oldParam?.name,
@@ -266,21 +267,13 @@ class ModuleSpecVisitorV2 {
         return type.equals(RECORD_TYPE) || type.implementsInterface(RECORD_TYPE)
     }
 
+    /**
+     * The type of an output expression. Typed scripts are type checked before the
+     * spec is extracted, so an output without a type annotation still has an
+     * inferred type.
+     */
     private static String paramType(Expression node) {
-        if( node instanceof MethodCallExpression ) {
-            final name = node.getMethodAsString()
-            switch( name ) {
-                case 'env':
-                case 'eval':
-                case 'stdout':
-                    return 'string'
-                case 'file':
-                case 'files':
-                    return 'file'
-            }
-        }
-
-        return paramType(node.getType())
+        return paramType(getType(node))
     }
 
 }

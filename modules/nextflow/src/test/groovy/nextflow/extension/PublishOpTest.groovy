@@ -55,4 +55,56 @@ class PublishOpTest extends Specification {
         op.getTargetDir(null) == Path.of('/work/results')
     }
 
+    def 'should publish nothing when all publish statements are no-ops' () {
+        given:
+        def session = Mock(Session) { getOutputDir() >> Path.of('/work/results') }
+        def resolver = { v -> publish(v, null) }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        def saveAs = op.getTargetDir(Path.of('/work/ab/cdef/out.txt'))
+        then:
+        saveAs instanceof Closure
+        saveAs.call('out.txt') == null
+    }
+
+    def 'should map source files to target paths returned by a closure' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def foo = Path.of('/work/ab/cdef/foo.txt')
+        def bar = Path.of('/work/ab/cdef/bar.txt')
+        def resolver = { v -> [(foo): 'foo/', (bar): 'bar/renamed.txt'] }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        def saveAs = op.getTargetDir(null)
+        then:
+        saveAs instanceof Closure
+        saveAs.call('foo.txt') == Path.of('/work/results/foo/foo.txt')
+        saveAs.call('bar.txt') == Path.of('/work/results/bar/renamed.txt')
+        saveAs.call('baz.txt') == null
+    }
+
+    def 'should skip files outside the work directory in publish statements' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def input = Path.of('/data/input.txt')
+        def output = Path.of('/work/ab/cdef/out.txt')
+        def resolver = { v -> publish(input, 'txt/'); publish(output, 'txt/') }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        def saveAs = op.getTargetDir(null)
+        then:
+        saveAs instanceof Closure
+        saveAs.call('out.txt') == Path.of('/work/results/txt/out.txt')
+        saveAs.call('input.txt') == null
+    }
+
 }

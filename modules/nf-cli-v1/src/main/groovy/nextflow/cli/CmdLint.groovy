@@ -35,6 +35,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
 import nextflow.script.control.ParanoidWarning
 import nextflow.script.control.ScriptParser
+import nextflow.script.control.SeverityAware
 import nextflow.script.formatter.FormattingOptions
 import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
@@ -47,6 +48,7 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.control.messages.WarningMessage
 import org.codehaus.groovy.syntax.SyntaxException
+import org.codehaus.groovy.syntax.Token
 /**
  * CLI sub-command LINT
  *
@@ -237,12 +239,11 @@ class CmdLint extends CmdBase {
             .filter((source) -> !isExcludedSource(source))
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
-                final errorCollector = source.getErrorCollector()
-                final hasWarnings = (errorCollector.getWarnings() ?: []).stream()
-                    .anyMatch(warning -> warning !instanceof ParanoidWarning)
-                if( errorCollector.hasErrors() || hasWarnings )
+                final hasErrors = !errorsOf(source).isEmpty()
+                final hasWarnings = !warningsOf(source).isEmpty()
+                if( hasErrors || hasWarnings )
                     printErrors(source)
-                if( errorCollector.hasErrors() )
+                if( hasErrors )
                     summary.filesWithErrors += 1
                 else
                     summary.filesWithoutErrors += 1
@@ -287,19 +288,14 @@ class CmdLint extends CmdBase {
         errorListener.beforeErrors()
 
         final name = relativeName(source)
-        final errors = source.getErrorCollector().getErrors() ?: []
-        errors.stream()
-            .filter(message -> message instanceof SyntaxErrorMessage)
-            .map(message -> ((SyntaxErrorMessage) message).getCause())
+        errorsOf(source).stream()
             .sorted(ERROR_COMPARATOR)
             .forEach((cause) -> {
                 errorListener.onError(cause, name, source)
                 summary.errors += 1
             })
 
-        final warnings = source.getErrorCollector().getWarnings() ?: []
-        warnings.stream()
-            .filter(warning -> warning !instanceof ParanoidWarning)
+        warningsOf(source).stream()
             .sorted(WARNING_COMPARATOR)
             .forEach((warning) -> {
                 errorListener.onWarning(warning, name, source)
@@ -307,6 +303,57 @@ class CmdLint extends CmdBase {
             })
 
         errorListener.afterErrors()
+    }
+
+    /**
+     * Collect the errors that should fail the lint. Soft errors are excluded
+     * -- see {@link #warningsOf}.
+     *
+     * @param source
+     */
+    private static List<SyntaxException> errorsOf(SourceUnit source) {
+        return causesOf(source)
+            .findAll(cause -> !SeverityAware.isSoftError(cause))
+    }
+
+    /**
+     * Collect the warnings to report for a source file. Soft errors are
+     * reported as warnings.
+     *
+     * @param source
+     */
+    private static List<WarningMessage> warningsOf(SourceUnit source) {
+        final result = new ArrayList<WarningMessage>()
+        for( final warning : source.getErrorCollector().getWarnings() ?: [] ) {
+            if( warning !instanceof ParanoidWarning )
+                result.add(warning)
+        }
+        for( final cause : causesOf(source) ) {
+            if( SeverityAware.isSoftError(cause) )
+                result.add(asWarning(cause, source))
+        }
+        return result
+    }
+
+    private static List<SyntaxException> causesOf(SourceUnit source) {
+        return (source.getErrorCollector().getErrors() ?: [])
+            .findAll(message -> message instanceof SyntaxErrorMessage)
+            .collect(message -> ((SyntaxErrorMessage) message).getCause())
+    }
+
+    /**
+     * Convert a soft error into a warning. A warning carries only a start
+     * position and a token, so pad the token text to span the original error.
+     *
+     * @param cause
+     * @param source
+     */
+    private static WarningMessage asWarning(SyntaxException cause, SourceUnit source) {
+        final width = cause.getEndLine() == cause.getStartLine()
+            ? Math.max(cause.getEndColumn() - cause.getStartColumn(), 1)
+            : 1
+        final token = new Token(0, ' '.repeat(width), cause.getStartLine(), cause.getStartColumn())
+        return new WarningMessage(WarningMessage.POSSIBLE_ERRORS, cause.getOriginalMessage(), token, source)
     }
 
     /**
@@ -357,7 +404,7 @@ class CmdLint extends CmdBase {
 
     private String formatScript(File file) {
         final source = scriptParser.compiler().getSource(file.toURI())
-        if( source.getErrorCollector().hasErrors() ) {
+        if( !errorsOf(source).isEmpty() ) {
             printErrors(source)
             return null
         }
@@ -380,7 +427,7 @@ class CmdLint extends CmdBase {
 
     private String formatConfig(File file) {
         final source = configParser.compiler().getSource(file.toURI())
-        if( source.getErrorCollector().hasErrors() ) {
+        if( !errorsOf(source).isEmpty() ) {
             printErrors(source)
             return null
         }

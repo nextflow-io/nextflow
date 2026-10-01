@@ -52,13 +52,10 @@ public class ProcessToGroovyVisitorV2 {
 
     private SourceUnit sourceUnit;
 
-    private ScriptNode moduleNode;
-
     private ScriptToGroovyHelper sgh;
 
     public ProcessToGroovyVisitorV2(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
-        this.moduleNode = (ScriptNode) sourceUnit.getAST();
         this.sgh = new ScriptToGroovyHelper(sourceUnit);
     }
 

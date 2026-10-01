@@ -25,25 +25,25 @@ process assembly_stats {
     output:
     result: String
     exec:
-        def lengths = []
+        def lengths: List<Integer> = []
         def cur = 0
         // `file(...)`, not `new File(...)`: the assembler emits an `s3://`/`az://`/`gs://`
         // URI whenever the run has a remote work dir, and only Nextflow's `file()` resolves
         // those through the matching filesystem provider. `new File()` silently mangles a
         // URI into a relative local path and fails with FileNotFoundException.
-        file(contigs).eachLine { line, n ->
+        file(contigs).eachLine { line ->
             def s = line.trim()
             if( s.startsWith('>') ) {
-                if( cur > 0 ) { lengths.add(cur) }
+                if( cur > 0 ) { lengths = lengths + [cur] }
                 cur = 0
             }
             else {
                 cur = cur + s.length()
             }
         }
-        if( cur > 0 ) { lengths.add(cur) }
+        if( cur > 0 ) { lengths = lengths + [cur] }
 
-        def sorted = lengths.sort().reverse()          // descending
+        def sorted = lengths.toSorted().reverse()      // descending
         def total = 0
         sorted.each { L -> total = total + L }
 

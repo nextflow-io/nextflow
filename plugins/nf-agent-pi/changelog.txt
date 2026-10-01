@@ -1,5 +1,10 @@
 nf-agent-pi changelog
 =====================
+0.5.3 - 25 Sep 2026
+- Bump pi-coding-agent to 0.84.4 to fix npm advisories (#7659) [c8be9d3f9]
+- Bump Bouncy Castle to 1.85 to fix critical CVEs (#7658) [ad5cb26f5]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
 0.5.1 - 20 Aug 2026
 - Update google.golang.org/grpc to v1.82.1 to address a security advisory (#7513) [02ef7bb39]
 - Move the Go builder stage to golang:1.25-bookworm, which the grpc bump requires [02ef7bb39]
