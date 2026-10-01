@@ -487,7 +487,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             sourceType = resultType;
         }
 
-        if( Types.isAssignableFrom(targetType, sourceType, true) ) {
+        if( Types.isAssignableFrom(targetType, sourceType) ) {
             if( target instanceof VariableExpression ve && ve.isDynamicTyped() )
                 target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
             else if( target instanceof TupleExpression te )
