@@ -609,6 +609,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             checkWorkflowCall(node);
         }
         else if( node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET) instanceof MethodNode mn ) {
+            // plugin functions have no known signature
+            if( mn instanceof FunctionNode && mn.isSynthetic() )
+                return;
             var parameters = mn.getParameters();
             if( parameters.length != arguments.size() ) {
                 addError(String.format("%s `%s` expects %d argument(s) but received %d", methodType(mn), node.getMethodAsString(), parameters.length, arguments.size()), node.getMethod());

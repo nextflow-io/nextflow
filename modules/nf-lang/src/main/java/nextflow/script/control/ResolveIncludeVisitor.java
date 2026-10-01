@@ -31,6 +31,7 @@ import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -161,6 +162,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null ) {
                 var target = new FunctionNode(entry.getNameOrAlias());
+                target.setReturnType(ClassHelper.dynamicType());
+                target.setSynthetic(true);
                 entry.setTarget(target);
             }
         }
