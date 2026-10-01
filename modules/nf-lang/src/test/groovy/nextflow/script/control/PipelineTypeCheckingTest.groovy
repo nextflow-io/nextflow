@@ -155,6 +155,7 @@ class PipelineTypeCheckingTest extends Specification {
         "RNASEQ( record(input: channel.of('a'), fasta: file('x')) )"                            | []
         "RNASEQ( record(input: channel.of('a'), fasta: channel.value(file('x'))) )"             | ['Param `fasta` expects a Path but received a Value<Path>']
         "RNASEQ( record(input: channel.value('a'), fasta: file('x')) )"                         | ['Param `input` expects a Channel<String> but received a Value<String>']
+        "RNASEQ( record(input: channel.of(1), fasta: file('x')) )"                              | ['Param `input` expects a Channel<String> but received a Channel<Integer>']
         "RNASEQ( record(input: channel.of('a'), aligner: 42) )"                                 | ['Pipeline `RNASEQ` requires the following params: fasta', 'Param `aligner` expects a String but received a Integer']
         "RNASEQ( record(input: channel.of('a'), fasta: file('x'), foo: 1) )"                    | ['Param `foo` is not defined by pipeline `RNASEQ`']
         "RNASEQ( record(input: channel.of('a')) )"                                              | ['Pipeline `RNASEQ` requires the following params: fasta']

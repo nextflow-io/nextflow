@@ -175,7 +175,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             }
         }
 
-        new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n");
+        throw new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n")
     }
 
     @Override
