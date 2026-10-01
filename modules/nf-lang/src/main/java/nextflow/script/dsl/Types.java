@@ -121,7 +121,7 @@ public class Types {
     }
 
     public static boolean isAssignableFrom(ClassNode target, ClassNode source) {
-        return isAssignableFrom(target, source, false);
+        return isAssignableFrom(target, source, true);
     }
 
     private static boolean isAssignableFrom0(ClassNode target, ClassNode source) {
@@ -149,7 +149,7 @@ public class Types {
             // `E` in `List<E>`) matches any element type
             if( a[i].isWildcard() || b[i].isWildcard() || b[i].isPlaceholder() )
                 continue;
-            if( !isAssignableFrom(a[i].getType(), b[i].getType(), true) )
+            if( !isAssignableFrom(a[i].getType(), b[i].getType()) )
                 return false;
         }
         return true;

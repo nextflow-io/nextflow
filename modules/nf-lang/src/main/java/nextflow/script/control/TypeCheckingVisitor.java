@@ -487,7 +487,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             sourceType = resultType;
         }
 
-        if( Types.isAssignableFrom(targetType, sourceType, true) ) {
+        if( Types.isAssignableFrom(targetType, sourceType) ) {
             if( target instanceof VariableExpression ve && ve.isDynamicTyped() )
                 target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
             else if( target instanceof TupleExpression te )
@@ -609,6 +609,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             checkWorkflowCall(node);
         }
         else if( node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET) instanceof MethodNode mn ) {
+            // plugin functions have no known signature
+            if( mn instanceof FunctionNode && mn.isSynthetic() )
+                return;
             var parameters = mn.getParameters();
             if( parameters.length != arguments.size() ) {
                 addError(String.format("%s `%s` expects %d argument(s) but received %d", methodType(mn), node.getMethodAsString(), parameters.length, arguments.size()), node.getMethod());
