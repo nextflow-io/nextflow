@@ -551,9 +551,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
-        var classScope = ClassHelper.makeCached(OutputDsl.class);
+        var classScope = new ClassNode(OutputDsl.class);
         if( paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
