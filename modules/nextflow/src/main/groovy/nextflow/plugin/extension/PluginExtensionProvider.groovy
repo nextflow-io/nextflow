@@ -178,6 +178,9 @@ class PluginExtensionProvider implements ExtensionProvider {
                 continue
             }
 
+            // skip functions that take a channel
+            if( handle.isAnnotationPresent(Function) )
+                continue
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) )
                 continue
@@ -213,6 +216,8 @@ class PluginExtensionProvider implements ExtensionProvider {
                 result.add(handle.name)
                 continue
             }
+            // skip functions that return a channel
+            if( handle.isAnnotationPresent(Function) ) continue
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
             // skip static methods
@@ -238,6 +243,8 @@ class PluginExtensionProvider implements ExtensionProvider {
             // custom functions must to be annotated with @Function
             if( !handle.isAnnotationPresent(Function))
                 continue
+            if( handle.isAnnotationPresent(Factory) || handle.isAnnotationPresent(Operator) )
+                throw new IllegalStateException("Function extension '$handle.name' in `$clazz.name` cannot also be declared as a factory or operator")
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) )
                 throw new IllegalStateException("Function extension '$handle.name' in `$clazz.name` should be declared public")

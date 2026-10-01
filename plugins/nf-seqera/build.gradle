@@ -53,7 +53,7 @@ dependencies {
     compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
     // intelligent compute scheduler client
-    api 'io.seqera:sched-client:0.79.3'
+    api 'io.seqera:sched-client:0.96.0-SNAPSHOT'
     // Single lib-httpx declaration, kept in step with the version sched-client is built
     // against. SchedHxClient overrides shouldRetryOnException(HttpRequest, Throwable), an
     // overload added in 2.6.0: on an older lib-httpx the override binds to nothing and the

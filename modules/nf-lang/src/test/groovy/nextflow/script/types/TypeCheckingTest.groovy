@@ -418,6 +418,31 @@ class TypeCheckingTest extends Specification {
         "def x = 1 ; x += 'a'"          | "The `+=` operator is not defined for operands with types Integer and String"
     }
 
+    def 'should report an error when assigning a record field' () {
+        expect:
+        check(
+            '''\
+            def person = record(name: 'Alice', age: 42)
+            person.age = 43
+            ''',
+            'Record fields cannot be assigned -- records are immutable'
+        )
+        check(
+            '''\
+            record Person {
+                name: String
+                age: Integer
+            }
+
+            workflow {
+                def person = record(name: 'Alice', age: 42) as Person
+                person.age += 1
+            }
+            ''',
+            'Record fields cannot be assigned -- records are immutable'
+        )
+    }
+
     def 'should infer the type of a variable declaration or assignment' () {
         when:
         def exp = parseExpression(
