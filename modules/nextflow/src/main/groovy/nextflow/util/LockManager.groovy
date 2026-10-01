@@ -58,10 +58,17 @@ class LockManager {
      * @return The lock handler
      */
     LockHandle acquire(key) {
-        LockHandle result = entries.computeIfAbsent(key,newLock())
-        result.sync.lock()
-        result.count++
-        return result
+        while( true ) {
+            LockHandle result = entries.computeIfAbsent(key,newLock())
+            result.sync.lock()
+            // the handle may have been retired (and even recycled for another key)
+            // while this thread was waiting on the lock, in that case try again
+            if( entries.get(key).is(result) ) {
+                result.count++
+                return result
+            }
+            result.sync.unlock()
+        }
     }
 
     private Function<Object, LockHandle> newLock() {
@@ -83,8 +90,14 @@ class LockManager {
         new LockHandle(key)
     }
 
-    private synchronized void release0(LockHandle handle) {
-        entries.remove(handle.key)
+    private void release0(LockHandle handle) {
+        // must not hold the monitor while removing the entry, because `getOrCreate0`
+        // acquires it from within `computeIfAbsent` while holding the map bin lock
+        entries.remove(handle.key, handle)
+        recycle0(handle)
+    }
+
+    private synchronized void recycle0(LockHandle handle) {
         handle.key = null
         if( pool.size()<MAX_SIZE )
             pool.add(handle)
@@ -102,7 +115,7 @@ class LockManager {
         }
 
         void release() {
-            if( count-- == 0 ) {
+            if( --count == 0 ) {
                 release0(this)
             }
             sync.unlock()
