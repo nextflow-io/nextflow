@@ -71,7 +71,7 @@ dependencies {
     // to the consumer and testFixtures* classpaths.
     constraints {
         // jackson stays on the 2.18 line required by the Google SDK; addresses GHSA-72hv-8253-57qq
-        // (jackson-core DoS) and the jackson-databind deserialization advisories fixed in 2.18.9
+        // (jackson-core DoS) and the jackson-databind deserialization advisories fixed in 2.18.11
         api("com.fasterxml.jackson.core:jackson-databind:${jacksonCloudSdkVersion}") { because 'jackson-databind deserialization CVEs' }
         api("com.fasterxml.jackson.core:jackson-core:${jacksonCloudSdkVersion}") { because 'GHSA-72hv-8253-57qq' }
         api("com.fasterxml.jackson.core:jackson-annotations:${jacksonCloudSdkVersion}") { because 'keep jackson aligned' }
