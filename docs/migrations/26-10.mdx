@@ -9,11 +9,19 @@ description: Review new features, breaking changes, and deprecations introduced 
 
 ## New features
 
+### Global cache
+
+The global cache is a shared, content-addressable cache backed by cloud storage. It stores all task executions in a single work directory. Whereas `-resume` only reuses work from a previous run of the same pipeline, the global cache can reuse tasks across different runs.
+
+The global cache is available through Seqera Platform. It supports AWS, Google Cloud, and Azure.
+
 ### Static typing (out of preview)
 
-[Static typing][static-typing], introduced in Nextflow 25.10 as a preview feature, has been brought out of preview.
+[Static typing][static-typing], introduced in Nextflow 25.10 as a preview feature, has been brought out of preview. The syntax is unchanged since 26.04. This release brings type checking to the Nextflow CLI in addition to the language server.
 
-The `nextflow.enable.types` flag is still required in every script that uses typed processes or workflows. Nextflow (`nextflow lint` and `nextflow run`) now performs type checking on scripts that enable this flag.
+`nextflow lint` reports type errors for any script that enables `nextflow.enable.types`. `nextflow run` warns when type errors are found, but does not fail the run.
+
+The `nextflow.enable.types` flag is still required in every script that uses typed processes or typed workflows.
 
 ### Workflow modules
 
@@ -29,7 +37,7 @@ include { BWA_MEM } from 'nf-core/bwa/mem'
 include { FASTQ_ALIGN_STAR } from 'nf-core/fastq_align_star'
 ```
 
-A workflow module can depend on other modules by declaring them in the module spec and including them in the module script. When a workflow module is installed, it vendors its dependencies under its own `modules` directory, so two workflows can depend on different versions of the same module without conflict.
+A workflow module can depend on other modules by declaring them in the module spec and including them in the module script. When a workflow module is installed, it vendors its dependencies under its own `modules` directory, so two workflows can depend on different versions of the same module without conflict. Edit the declared versions in `meta.yml` and re-vendor them with `module install -update-deps`.
 
 A typed workflow module can be executed directly with `nextflow module run`:
 
@@ -41,20 +49,22 @@ nextflow module create -kind Workflow acme/hello
 nextflow module run acme/hello --greeting 'Hello world!'
 ```
 
-Each `take:` input becomes a param of the same name, and its declared type determines how the value is read. Each `emit:` output is reported as a workflow output.
+Each `take:` input becomes a param of the same name, and its declared type determines how the value is read. A `Channel<E>` input takes a samplesheet path, which Nextflow loads as a channel of records, validating and converting each row against the element type. The samplesheet can be CSV, JSON, or YAML. Each `emit:` output is reported as a workflow output.
 
-See [Modules][module-registry] for details.
+See [Modules][module-registry] and [Typed parameters][workflow-typed-params] for details.
 
 ### Pipeline composition
 
-A pipeline can now be included and called like a named workflow, allowing you to compose pipelines with regular dataflow logic.
+A pipeline -- the `params` block, entry workflow, and `output` block of a script -- can be included and called like a named workflow. The `params` block acts as the `take:` section and the `output` block acts as the `emit:` section. This way, you can compose pipelines with regular dataflow logic.
 
-Given a pipeline that declares a `params` block, an entry workflow, and an `output` block:
+Given a pipeline:
 
 ```nextflow
 // pipelines/rnaseq.nf
+nextflow.enable.types = true
+
 params {
-    input: Path
+    input: Channel<Sample>
     aligner: String = 'star_salmon'
     fasta: Path
 }
@@ -69,23 +79,30 @@ output {
 }
 ```
 
-Include it with the `workflow` keyword and call it by name:
+Include it with the `workflow` keyword, name it with an alias, and call it with a record of params:
 
 ```nextflow
 // main.nf
+nextflow.enable.types = true
+
 include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
 
 workflow {
-    rnaseq = RNASEQ(
-        input: file('input.csv'),
+    main:
+    rnaseq = RNASEQ(record(
+        input: channel.of( /* ... */ ),
         fasta: file('index.fasta')
-    )
+    ))
     rnaseq.bams.view()      // Channel<Path>
     rnaseq.multiqc.view()   // Value<Path>
 }
 ```
 
-The included pipeline runs in the same session, the same DAG, and the same work directory as the including pipeline. The `params` block becomes the `take:` section and the `output` block becomes the `emit:` section. Outputs are channels and dataflow values, so a downstream pipeline can process upstream outputs as they are emitted.
+The `rnaseq.nf` pipeline can be run directly from the CLI or included like a named workflow. When included, the pipeline can consume a channel from an upstream pipeline, allowing it to process each item as soon as it is emitted.
+
+Both the calling script and the included pipeline must enable static typing.
+
+See [Pipeline composition][pipeline-composition] for details.
 
 ### Agents (preview)
 
@@ -93,7 +110,7 @@ The included pipeline runs in the same session, the same DAG, and the same work 
 Agents are a preview feature. Their syntax and behavior may change in future releases.
 :::
 
-An agent is a process-shaped primitive that wraps an agent run. It declares typed inputs and outputs, renders a prompt, calls a language model, optionally lets the model call Nextflow modules as tools, and emits the result:
+An agent is a process-shaped primitive that wraps an agent run. It declares inputs and outputs, renders a prompt, calls a language model, and emits the result:
 
 ```groovy
 // nextflow.config
@@ -122,7 +139,7 @@ workflow {
 }
 ```
 
-Each invocation runs as an ordinary Nextflow task with a work directory, retries, parallelism, caching, and lineage. Agents require a runner plugin: `nf-agent` calls the model from the driver JVM, `nf-agent-pi` runs the agent in a container using [Pi](https://pi.dev/).
+Each invocation runs as an ordinary Nextflow task with a work directory, retries, parallelism, caching, and lineage. Agents can be composed like processes with regular dataflow logic.
 
 See [Agents][agent-page] for details.
 
@@ -148,6 +165,38 @@ See the [`logfile`][cli-logfile] command reference for details.
 ### Accelerator directive for local executor
 
 The local executor now allocates accelerators such as GPUs to tasks that request them with the `accelerator` directive. Set the environment variable for your accelerator type to declare which devices are available. See [Local executor][executor-local] for details.
+
+### Publish targets as a map
+
+The `path` directive of a workflow output can return a map of source files to publish targets, which is equivalent to using the `>>` operator for each pair:
+
+```nextflow
+output {
+    samples {
+        path { sample -> [
+            (sample.fastq_1): "fastq/${sample.id}/",
+            (sample.fastq_2): "fastq/${sample.id}/"
+        ] }
+    }
+}
+```
+
+This way, the publish mapping can be extracted to a shared function, e.g., for pipeline composition.
+
+See [Workflow outputs][workflow-output-def] for details.
+
+### Reports in the output directory
+
+The DAG, execution report, timeline, and trace file can be saved to the workflow output directory instead of the launch directory, using the new `directory` option in each scope:
+
+```groovy
+report {
+    enabled = true
+    directory = 'pipeline_info'
+}
+```
+
+The path is resolved against `outputDir` and must be a relative path within it.
 
 ### Configurable plugin registries
 
@@ -175,24 +224,48 @@ The hash function for `eval` commands was changed. This fixes a bug where tasks 
 
 - The `storeDir` process directive is deprecated. Use explicit workflow logic to reuse an intermediate output if it is present and compute it otherwise. See [`storeDir`][process-storeDir] for an example.
 
+- The [`seqera.executor.autoLabels`][config-seqera-executor-autoLabels] config option is deprecated. Use [`tower.autoLabels`][config-tower-autoLabels] instead, which applies to every executor that supports the `resourceLabels` directive.
+
+- Machine type selection for Google Batch through the Seqera Cloud Info service is deprecated, along with the [`NXF_CLOUDINFO_ENABLED`][env-vars-NXF_CLOUDINFO_ENABLED] environment variable.
+
 ## Miscellaneous
 
 - New config option: [`apptainer.resourceLimits`][config-apptainer-resourceLimits]
+- New config option: [`azure.batch.pools.<name>.allowUnverifiedImages`][config-azure-batch-pools-allowUnverifiedImages]
+- New config option: [`azure.batch.pools.<name>.virtualMachineImageId`][config-azure-batch-pools-virtualMachineImageId]
+- New config option: [`dag.directory`][config-dag-directory]
 - New config option: [`docker.cpuLimits`][config-docker-cpuLimits]
 - New config option: [`manifest.diagram`][config-manifest-diagram]
+- New config option: [`report.directory`][config-report-directory]
+- New config option: [`seqera.executor.machineRequirement.onDemandCostRatio`][config-seqera-executor-onDemandCostRatio]
 - New config option: [`singularity.resourceLimits`][config-singularity-resourceLimits]
+- New config option: [`timeline.directory`][config-timeline-directory]
+- New config option: [`tower.autoLabels`][config-tower-autoLabels]
+- New config option: [`trace.directory`][config-trace-directory]
 
 [agent-page]: ../agent
 [cli-logfile]: ../reference/cli/logfile
 [config-apptainer-resourceLimits]: ../reference/config/apptainer#apptainerresourcelimits
+[config-azure-batch-pools-allowUnverifiedImages]: ../reference/config/azure#azurebatchpoolsnameallowunverifiedimages
+[config-azure-batch-pools-virtualMachineImageId]: ../reference/config/azure#azurebatchpoolsnamevirtualmachineimageid
+[config-dag-directory]: ../reference/config/dag#dagdirectory
 [config-docker-cpuLimits]: ../reference/config/docker#dockercpulimits
-[config-globalcache]: ../reference/config/globalcache
 [config-k8s-computeResourceType]: ../reference/config/k8s#k8scomputeresourcetype
 [config-manifest-diagram]: ../reference/config/manifest#manifestdiagram
+[config-report-directory]: ../reference/config/report#reportdirectory
+[config-seqera-executor-autoLabels]: ../reference/config/seqera#seqeraexecutorautolabels
+[config-seqera-executor-onDemandCostRatio]: ../reference/config/seqera#seqeraexecutormachinerequirementondemandcostratio
 [config-singularity-resourceLimits]: ../reference/config/singularity#singularityresourcelimits
+[config-timeline-directory]: ../reference/config/timeline#timelinedirectory
+[config-tower-autoLabels]: ../reference/config/tower#towerautolabels
+[config-trace-directory]: ../reference/config/trace#tracedirectory
 [container-smolvm]: ../container/smolvm
+[env-vars-NXF_CLOUDINFO_ENABLED]: ../reference/env-vars#nxf_cloudinfo_enabled
 [executor-local]: ../executor/local#accelerators
 [module-registry]: ../modules
+[pipeline-composition]: ../workflow-typed#pipeline-composition
 [plugin-registry]: ../plugins/plugin-registry#configuring-plugin-registries
 [process-storeDir]: ../reference/process/directives/store-dir
 [static-typing]: ../static-typing
+[workflow-output-def]: ../workflow#outputs
+[workflow-typed-params]: ../typed-parameters
