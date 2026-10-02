@@ -62,6 +62,11 @@ class VersionedTaskHasher extends TaskHasher {
         return spec
     }
 
+    @Override
+    String getHashVersion() {
+        return spec.id
+    }
+
     /** The flat, ordered value list the spec produces for this task. */
     List<Object> collectKeys() {
         final keys = new ArrayList<Object>()

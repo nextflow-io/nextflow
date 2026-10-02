@@ -87,4 +87,10 @@ class TaskRun implements LinSerializable {
      * the process is not defined in a remote module (e.g. local include or main script).
      */
     String moduleId
+    /**
+     * Id of the task hash version used to compute the task hash, e.g. {@code std/v1.7}.
+     * A consumer comparing this record against a cache key needs it to know which
+     * hashing rules produced that key.
+     */
+    String hashVersion
 }

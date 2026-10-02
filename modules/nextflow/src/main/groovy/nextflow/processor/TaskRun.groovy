@@ -83,6 +83,11 @@ class TaskRun implements Cloneable {
      */
     HashCode hash
 
+    /**
+     * Id of the task hash version that produced {@link #hash}
+     */
+    String hashVersion
+
     /*
      * The processor that creates this 'task'
      */

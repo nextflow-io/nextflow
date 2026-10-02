@@ -226,6 +226,16 @@ class VersionedTaskHasherTest extends Specification {
         ]
     }
 
+    def 'the hash version is the spec id, not the latest one'() {
+        given:
+        def f = fixture()
+        def ctx = new HashContext(f.task as TaskRun, f.helper as TaskHasher)
+
+        expect:
+        new VersionedTaskHasher(ctx, StdSpecs.STD_V1_3).getHashVersion() == 'std/v1.3'
+        new VersionedTaskHasher(ctx, StdSpecs.latest()).getHashVersion() == (f.helper as TaskHasher).getHashVersion()
+    }
+
     def 'byId resolves known specs and rejects unknown ones'() {
         expect:
         StdSpecs.byId('std/v1.7').is(StdSpecs.STD_V1_7)

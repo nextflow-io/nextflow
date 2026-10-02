@@ -33,6 +33,7 @@ import nextflow.executor.Executor
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
+import nextflow.processor.hash.StdSpecs
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -111,6 +112,16 @@ class TaskProcessorTest extends Specification {
         processor.hasherFactories = []
         then:
         processor.createTaskHasher(task).getClass() == TaskHasher
+    }
+
+    def 'the default hasher reports the latest published hash version'() {
+        given:
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        def task = hashableTask()
+        processor.hasherFactories = []
+
+        expect:
+        processor.createTaskHasher(task).getHashVersion() == StdSpecs.latest().id
     }
 
     def 'resolves the hasher factories lazily and defaults to TaskHasher when none is registered'() {

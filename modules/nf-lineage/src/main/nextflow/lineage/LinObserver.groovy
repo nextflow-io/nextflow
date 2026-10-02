@@ -331,7 +331,8 @@ class LinObserver implements TraceObserverV2 {
             task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             asUriString(executionHash),
-            getTaskModuleId(task)
+            getTaskModuleId(task),
+            task.hashVersion
         )
     }
 
@@ -354,7 +355,8 @@ class LinObserver implements TraceObserverV2 {
                 Checksum.ofNextflow(p) )
             },
             asUriString(executionHash),
-            getTaskModuleId(task)
+            getTaskModuleId(task),
+            task.hashVersion
         )
     }
 
