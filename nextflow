@@ -181,6 +181,16 @@ function install() {
     echo ''
 }
 
+# remove the framework jars and launcher caches of every version except the one installed at $1
+function clean_old_versions() {
+    local keep=$(sed -n "s/^NXF_VER=\${NXF_VER:-'\(.*\)'}$/\1/p" "$1")
+    [[ $keep ]] || { echo_yellow "Cannot determine the installed Nextflow version -- skipping clean"; return; }
+    local dir
+    for dir in "$NXF_DIST"/* "$NXF_HOME"/tmp/launcher/nextflow-*_* "$NXF_HOME"/tmp/aot/* "$NXF_HOME"/tmp/ver; do
+        [[ -e $dir && $dir != *[/_]"$keep" ]] && rm -rf "$dir" && echo "Removed $dir"
+    done
+}
+
 function check_latest() {
     [[ $cmd != run ]] && return 0
     [[ $NXF_OFFLINE == true || $NXF_DISABLE_CHECK_LATEST == true ]] && return 0
@@ -267,6 +277,7 @@ while [[ $# != 0 ]]; do
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
+      [[ " ${args[*]} " == *" -clean "* ]] && clean_old_versions "$0"
       exit 0
       fi
       ;;
