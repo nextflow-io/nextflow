@@ -194,9 +194,9 @@ record Sample {
 }
 ```
 
-In the above, `Sample` is a *record type* based on the samplesheet structure. When a file path is supplied to a channel-type parameter (e.g., `Channel<Sample>`), the file is automatically loaded and each row is validated against and converted to the element type.
+In this example, `Sample` is a *record type* that matches the samplesheet structure. When you supply a file path to a channel-type parameter (e.g., `Channel<Sample>`), Nextflow loads the file and validates and converts each row against the element type.
 
-Nextflow now loads the samplesheet automatically, so `params.reads` completely replaces `read_pairs_ch`.
+Because Nextflow loads the samplesheet automatically, `params.reads` replaces `read_pairs_ch`.
 
 :::note
 Channel params can also be loaded from JSON and YAML samplesheets. See [Typed parameters][typed-parameters-page] for more information.

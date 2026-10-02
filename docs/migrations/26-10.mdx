@@ -17,17 +17,17 @@ The global cache is available through Seqera Platform. It supports AWS, Google C
 
 ### Static typing (out of preview)
 
-[Static typing][static-typing], introduced in Nextflow 25.10 as a preview feature, has been brought out of preview. The syntax is unchanged since 26.04. This release brings type checking to the Nextflow CLI in addition to the language server.
+[Static typing][static-typing], introduced as a preview feature in Nextflow 25.10, is no longer in preview. The syntax has not changed since 26.04. Type checking is now available in the Nextflow CLI as well as the language server.
 
-`nextflow lint` reports type errors for any script that enables `nextflow.enable.types`. `nextflow run` warns when type errors are found, but does not fail the run.
+`nextflow lint` reports type errors for any script that enables `nextflow.enable.types`. `nextflow run` warns about type errors but does not fail the run.
 
-The `nextflow.enable.types` flag is still required in every script that uses typed processes or typed workflows.
+Every script that uses typed processes or typed workflows must still enable `nextflow.enable.types`.
 
 ### Workflow modules
 
 The [module system][module-registry] now supports workflows as well as processes.
 
-A module is a standalone process or a standalone workflow. A workflow module can be published to the Nextflow registry, installed, and included using the same commands and include syntax:
+A module is a standalone process or workflow. You publish workflow modules to the Nextflow registry, install them, and include them with the same commands and include syntax as process modules:
 
 ```nextflow
 // process module
@@ -37,9 +37,9 @@ include { BWA_MEM } from 'nf-core/bwa/mem'
 include { FASTQ_ALIGN_STAR } from 'nf-core/fastq_align_star'
 ```
 
-A workflow module can depend on other modules by declaring them in the module spec and including them in the module script. When a workflow module is installed, it vendors its dependencies under its own `modules` directory, so two workflows can depend on different versions of the same module without conflict. Edit the declared versions in `meta.yml` and re-vendor them with `module install -update-deps`.
+To depend on other modules, a workflow module declares them in the module spec and includes them in the module script. Installing a workflow module vendors its dependencies under its own `modules` directory. Two workflows can therefore depend on different versions of the same module without conflict. To change a dependency version, edit it in `meta.yml` and re-vendor the dependencies with `module install -update-deps`.
 
-A typed workflow module can be executed directly with `nextflow module run`:
+Run a typed workflow module directly with `nextflow module run`:
 
 ```bash
 # create a typed workflow module
@@ -49,13 +49,13 @@ nextflow module create -kind Workflow acme/hello
 nextflow module run acme/hello --greeting 'Hello world!'
 ```
 
-Each `take:` input becomes a param of the same name, and its declared type determines how the value is read. A `Channel<E>` input takes a samplesheet path, which Nextflow loads as a channel of records, validating and converting each row against the element type. The samplesheet can be CSV, JSON, or YAML. Each `emit:` output is reported as a workflow output.
+Each `take:` input becomes a param of the same name. Its declared type determines how Nextflow reads the value. A `Channel<E>` input takes a CSV, JSON, or YAML samplesheet. Nextflow loads the samplesheet as a channel of records and validates and converts each row against the element type. Nextflow reports each `emit:` output as a workflow output.
 
 See [Modules][module-registry] and [Typed parameters][workflow-typed-params] for details.
 
 ### Pipeline composition
 
-A pipeline -- the `params` block, entry workflow, and `output` block of a script -- can be included and called like a named workflow. The `params` block acts as the `take:` section and the `output` block acts as the `emit:` section. This way, you can compose pipelines with regular dataflow logic.
+You can include a pipeline and call it like a named workflow. Here, a pipeline is the `params` block, entry workflow, and `output` block of a script. The `params` block acts as the `take:` section and the `output` block acts as the `emit:` section. Use this to compose pipelines with regular dataflow logic.
 
 Given a pipeline:
 
@@ -98,7 +98,7 @@ workflow {
 }
 ```
 
-The `rnaseq.nf` pipeline can be run directly from the CLI or included like a named workflow. When included, the pipeline can consume a channel from an upstream pipeline, allowing it to process each item as soon as it is emitted.
+You can run `rnaseq.nf` directly from the CLI or include it like a named workflow. When included, it can consume a channel from an upstream pipeline and process each item as soon as the upstream pipeline emits it.
 
 Both the calling script and the included pipeline must enable static typing.
 
@@ -139,7 +139,7 @@ workflow {
 }
 ```
 
-Each invocation runs as an ordinary Nextflow task with a work directory, retries, parallelism, caching, and lineage. Agents can be composed like processes with regular dataflow logic.
+Each agent call runs as a regular Nextflow task, with its own work directory, retries, parallelism, caching, and lineage. You can compose agents with regular dataflow logic, like processes.
 
 See [Agents][agent-page] for details.
 
@@ -147,7 +147,7 @@ See [Agents][agent-page] for details.
 
 ### Formatter preserves comments
 
-The Nextflow formatter (`nextflow lint -format`) now preserves all comments in scripts and config files. Previously, comments were preserved only in specific locations, otherwise they were discarded.
+The Nextflow formatter (`nextflow lint -format`) now preserves all comments in scripts and config files. Previously, the formatter discarded comments outside of specific locations.
 
 ### `logfile` command
 
@@ -158,7 +158,7 @@ $ nextflow logfile kickass_rutherford -level ERROR
 $ nextflow logfile last -f
 ```
 
-The argument can be a run name, a session id or a unique prefix of one, the literal `last`, or a path to a log file.
+The argument can be a run name, a session ID or a unique prefix of one, `last`, or a log file.
 
 See the [`logfile`][cli-logfile] command reference for details.
 
@@ -168,7 +168,7 @@ The local executor now allocates accelerators such as GPUs to tasks that request
 
 ### Publish targets as a map
 
-The `path` directive of a workflow output can return a map of source files to publish targets, which is equivalent to using the `>>` operator for each pair:
+The `path` directive of a workflow output can return a map of source files to publish targets. This is equivalent to using the `>>` operator for each pair:
 
 ```nextflow
 output {
@@ -181,13 +181,13 @@ output {
 }
 ```
 
-This way, the publish mapping can be extracted to a shared function, e.g., for pipeline composition.
+You can extract the publish mapping to a shared function, e.g., to reuse it when composing pipelines.
 
 See [Workflow outputs][workflow-output-def] for details.
 
 ### Reports in the output directory
 
-The DAG, execution report, timeline, and trace file can be saved to the workflow output directory instead of the launch directory, using the new `directory` option in each scope:
+Use the new `directory` option in the `dag`, `report`, `timeline`, and `trace` scopes to save built-in reports to the workflow output directory instead of the launch directory:
 
 ```groovy
 report {
@@ -200,7 +200,7 @@ The path is resolved against `outputDir` and must be a relative path within it.
 
 ### Configurable plugin registries
 
-Nextflow resolves plugins from the public registry at `https://registry.nextflow.io` by default. Additional registries can now be configured through the `registry` config scope, and are tried in order. See [Plugin registry][plugin-registry] for details.
+Nextflow resolves plugins from the public registry at `https://registry.nextflow.io` by default. Use the `registry` config scope to configure additional registries. Nextflow tries them in order. See [Plugin registry][plugin-registry] for details.
 
 ### smolvm container engine
 
@@ -214,11 +214,11 @@ Nextflow can run tasks in [smolvm](https://github.com/smol-machines/smolvm) micr
 
 - The Kubernetes executor uses Jobs by default instead of Pods. Set [`k8s.computeResourceType`][config-k8s-computeResourceType] to `Pod` to keep the previous behavior.
 
-- Nextflow console output is written to standard error instead of standard output, so that the output of commands such as `nextflow inspect` and `nextflow run -output-format json` is not mixed with log messages.
+- Nextflow writes console output to standard error instead of standard output. This separates log messages from the output of commands such as `nextflow config` and `nextflow run -output-format json`.
 
 ### Cache-breaking changes
 
-The hash function for `eval` commands was changed. This fixes a bug where tasks with `eval` outputs did not have a stable hash across runs. However, every process with an `eval` output will be re-executed on the first resume after upgrading.
+The hash of `eval` commands has changed. This fixes a bug where tasks with `eval` outputs did not have a stable hash across runs. As a result, every process with an `eval` output re-executes on the first resume after upgrading.
 
 ## Deprecations
 
