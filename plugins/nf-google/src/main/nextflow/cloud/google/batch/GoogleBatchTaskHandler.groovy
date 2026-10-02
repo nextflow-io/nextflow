@@ -42,7 +42,9 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import com.google.api.gax.rpc.NotFoundException
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
@@ -127,6 +129,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * A flag to indicate that the job has failed without launching any tasks
      */
     private volatile boolean noTaskJobfailure
+
+    /**
+     * A flag to indicate that the job was deleted by Nextflow while this task was waiting on it
+     */
+    private volatile boolean jobDeleted
 
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
@@ -629,9 +636,28 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        return isArrayChild
-            ? getStateFromTaskStatus()
-            : getStateFromJobStatus()
+        // the job of an array is shared by all its tasks: when one of them is killed, e.g.
+        // because it exceeded `maxSubmitAwait`, the job is deleted and the other tasks
+        // must be finalized instead of aborting the execution on the missing job
+        try {
+            final state = isArrayChild
+                ? getStateFromTaskStatus()
+                : getStateFromJobStatus()
+            if( state == 'DELETION_IN_PROGRESS' && isDeletedByNextflow() )
+                jobDeleted = true
+            return state
+        }
+        catch( NotFoundException e ) {
+            if( !isDeletedByNextflow() )
+                throw e
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job=$jobId was deleted by Nextflow"
+            jobDeleted = true
+            return taskState
+        }
+    }
+
+    protected boolean isDeletedByNextflow() {
+        return jobId && executor?.isJobDeleted(jobId)
     }
 
     protected String getStateFromTaskStatus() {
@@ -700,8 +726,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     boolean checkIfRunning() {
         if(isSubmitted()) {
+            final state = getTaskState()
+            // a job deleted by Nextflow before the task started is finalized by `checkIfCompleted`
+            // as a submit timeout, therefore it must not be reported as running
+            if( jobDeleted )
+                return false
             // include `terminated` state to allow the handler status to progress
-            if( getTaskState() in RUNNING_OR_COMPLETED ) {
+            if( state in RUNNING_OR_COMPLETED ) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -712,6 +743,21 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     boolean checkIfCompleted() {
         final state = getTaskState()
+        if( jobDeleted ) {
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job=$jobId deleted; task=$taskId; last state=$state"
+            task.exitStatus = Integer.MAX_VALUE
+            // a task that never started is re-submitted as a submit timeout, which lets it
+            // move on the same way the task that caused the job deletion did
+            task.error = status == TaskStatus.RUNNING
+                ? new ProcessException("Google Batch job $jobId was deleted before the task completed")
+                : new ProcessSubmitTimeoutException("Task '${task.lazyName()}' could not be started because its Google Batch job $jobId was deleted after another task of the same job array exceeded the 'maxAwait' time")
+            task.stdout = outputFile
+            task.stderr = errorFile
+            status = TaskStatus.COMPLETED
+            if( isArrayChild )
+                client.removeFromArrayTasks(jobId, taskId)
+            return true
+        }
         if( state in COMPLETED ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; task=$taskId; state=$state"
             // finalize the task
