@@ -207,4 +207,32 @@ class FilePublisherTest extends Specification {
         [mode: 'copyNoFollow']  | FilePublisher.Mode.COPY_NO_FOLLOW
     }
 
+    def 'should detect a publish mode mismatch'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def realFile = folder.resolve('real.txt'); realFile.text = 'Hello'
+        def symlink = folder.resolve('link.txt')
+        Files.createSymbolicLink(symlink, realFile)
+        def target = TARGET == 'symlink' ? symlink : realFile
+
+        expect:
+        new FilePublisher(mockSession(), 'foo', [:]).checkPublishModeMismatch(target, FilePublisher.Mode.valueOf(MODE)) == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE        | TARGET    | EXPECTED
+        'COPY'      | 'symlink' | true
+        'MOVE'      | 'symlink' | true
+        'SYMLINK'   | 'file'    | true
+        'RELLINK'   | 'file'    | true
+        'COPY'      | 'file'    | false
+        'SYMLINK'   | 'symlink' | false
+        'RELLINK'   | 'symlink' | false
+        // a hard link is a regular file, not a symlink
+        'LINK'      | 'file'    | false
+        'LINK'      | 'symlink' | true
+    }
+
 }

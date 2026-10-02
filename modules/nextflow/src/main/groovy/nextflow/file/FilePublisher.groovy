@@ -67,6 +67,8 @@ class FilePublisher {
 
     private static final List<Mode> LINK_MODES = [Mode.SYMLINK, Mode.LINK, Mode.RELLINK]
 
+    private static final List<Mode> SYMLINK_MODES = [Mode.SYMLINK, Mode.RELLINK]
+
     private final Session session
 
     /**
@@ -338,7 +340,7 @@ class FilePublisher {
     }
 
     protected boolean checkIsSameRealPath(Path source, Path target, Mode mode) {
-        if( mode !in LINK_MODES || source.fileSystem != target.fileSystem )
+        if( mode !in SYMLINK_MODES || source.fileSystem != target.fileSystem )
             return false
         final result = realPath(source) == realPath(target)
         if( result )
@@ -366,7 +368,7 @@ class FilePublisher {
     protected boolean checkPublishModeMismatch(Path target, Mode mode) {
         if( target.fileSystem != FileSystems.default )
             return false
-        return Files.isSymbolicLink(target) != (mode in LINK_MODES)
+        return Files.isSymbolicLink(target) != (mode in SYMLINK_MODES)
     }
 
     private String realPath(Path path) {
