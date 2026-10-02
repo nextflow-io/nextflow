@@ -16,8 +16,11 @@
 
 package nextflow.file
 
+import java.nio.file.CopyOption
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -26,6 +29,7 @@ import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.event.FilePublishEvent
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -64,13 +68,11 @@ class FilePublisherTest extends Specification {
         def outputDir = root.resolve('results')
         and:
         def session = mockSession()
-        def publisher = new FilePublisher(session, 'foo', [mode: 'copy'])
+        def publisher = new FilePublisher(session, [mode: 'copy'])
 
         when:
-        publisher.publish([
-            (file1): outputDir.resolve('alpha.txt'),
-            (file2): outputDir.resolve('beta.txt')
-        ])
+        publisher.publish(file1, outputDir.resolve('alpha.txt'))
+        publisher.publish(file2, outputDir.resolve('beta.txt'))
         awaitPublish()
 
         then:
@@ -92,7 +94,7 @@ class FilePublisherTest extends Specification {
         def outputDir = root.resolve('results')
         and:
         def session = mockSession()
-        def publisher = new FilePublisher(session, 'foo', [mode: 'copy'])
+        def publisher = new FilePublisher(session, [mode: 'copy'])
 
         when:
         publisher.publish(file1, outputDir.resolve('copied.txt'))
@@ -100,33 +102,6 @@ class FilePublisherTest extends Specification {
 
         then:
         outputDir.resolve('copied.txt').text == 'Hello'
-
-        cleanup:
-        root?.deleteDir()
-    }
-
-    def 'should report two files published to the same target'() {
-        given:
-        def root = Files.createTempDirectory('test')
-        def work1 = root.resolve('work/ab/1234'); Files.createDirectories(work1)
-        def work2 = root.resolve('work/cd/5678'); Files.createDirectories(work2)
-        def file1 = work1.resolve('report.txt'); file1.text = 'Hello'
-        def file2 = work2.resolve('report.txt'); file2.text = 'world'
-        def outputDir = root.resolve('results')
-        def target = outputDir.resolve('report.txt')
-        and:
-        def session = mockSession()
-        def publisher = new FilePublisher(session, 'foo', [mode: 'copy'])
-
-        when:
-        publisher.publish([(file1): target, (file2): target])
-        awaitPublish()
-
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message.contains "Publish target '${target.toUriString()}' for workflow output 'foo' is used by more than one file"
-        and: 'nothing is published when a conflict is detected'
-        !Files.exists(target)
 
         cleanup:
         root?.deleteDir()
@@ -140,11 +115,11 @@ class FilePublisherTest extends Specification {
         def outputDir = root.resolve('results')
         and:
         def session = mockSession()
-        def publisher = new FilePublisher(session, 'foo', [mode: 'copy'])
+        def publisher = new FilePublisher(session, [mode: 'copy'])
 
         when:
-        publisher.publish([(file1): outputDir.resolve('one.txt')])
-        publisher.publish([(file1): outputDir.resolve('two.txt')])
+        publisher.publish(file1, outputDir.resolve('one.txt'))
+        publisher.publish(file1, outputDir.resolve('two.txt'))
         awaitPublish()
 
         then:
@@ -163,7 +138,7 @@ class FilePublisherTest extends Specification {
         def outputDir = root.resolve('results')
         and:
         def session = mockSession()
-        def publisher = new FilePublisher(session, 'foo', [:])
+        def publisher = new FilePublisher(session, [:])
 
         when:
         publisher.publish(file1, outputDir.resolve('report.txt'))
@@ -182,11 +157,11 @@ class FilePublisherTest extends Specification {
         def session = mockSession()
 
         when:
-        new FilePublisher(session, 'foo', [mode: 'nope'])
+        new FilePublisher(session, [mode: 'nope'])
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message == "Invalid publish mode 'nope' for workflow output 'foo'"
+        e.message.startsWith "Invalid publish mode 'nope'"
     }
 
     def 'should resolve the publish mode'() {
@@ -196,15 +171,16 @@ class FilePublisherTest extends Specification {
         def target = Path.of('/results/file.txt')
 
         expect:
-        new FilePublisher(session, 'foo', OPTS).resolveMode(source, target) == EXPECTED
+        new FilePublisher(session, OPTS).resolveMode(source, target) == EXPECTED
 
         where:
-        OPTS                    | EXPECTED
-        [:]                     | FilePublisher.Mode.SYMLINK
-        [mode: 'copy']          | FilePublisher.Mode.COPY
-        [mode: 'move']          | FilePublisher.Mode.MOVE
-        [mode: 'rellink']       | FilePublisher.Mode.RELLINK
-        [mode: 'copyNoFollow']  | FilePublisher.Mode.COPY_NO_FOLLOW
+        OPTS                        | EXPECTED
+        [:]                         | FilePublisher.Mode.SYMLINK
+        [defaultMode: 'rellink']    | FilePublisher.Mode.RELLINK
+        [mode: 'copy']              | FilePublisher.Mode.COPY
+        [mode: 'move']              | FilePublisher.Mode.MOVE
+        [mode: 'rellink']           | FilePublisher.Mode.RELLINK
+        [mode: 'copyNoFollow']      | FilePublisher.Mode.COPY_NO_FOLLOW
     }
 
     def 'should detect a publish mode mismatch'() {
@@ -216,7 +192,7 @@ class FilePublisherTest extends Specification {
         def target = TARGET == 'symlink' ? symlink : realFile
 
         expect:
-        new FilePublisher(mockSession(), 'foo', [:]).checkPublishModeMismatch(target, FilePublisher.Mode.valueOf(MODE)) == EXPECTED
+        new FilePublisher(mockSession(), [:]).checkPublishModeMismatch(target, FilePublisher.Mode.valueOf(MODE)) == EXPECTED
 
         cleanup:
         folder?.deleteDir()
@@ -233,6 +209,118 @@ class FilePublisherTest extends Specification {
         // a hard link is a regular file, not a symlink
         'LINK'      | 'file'    | false
         'LINK'      | 'symlink' | true
+    }
+
+    def 'should change mode to copy when the target is a foreign file system'() {
+        given:
+        def source = TestHelper.createInMemTempDir().resolve('file.txt')
+        def target = TestHelper.createInMemTempDir().resolve('file.txt')
+
+        expect:
+        new FilePublisher(mockSession(), OPTS).resolveMode(source, target) == FilePublisher.Mode.COPY
+
+        where:
+        OPTS << [ [:], [mode: 'symlink'], [mode: 'link'], [mode: 'rellink'], [defaultMode: 'rellink'] ]
+    }
+
+    def 'should check same real path'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        def foo = workDir.resolve('foo.txt'); foo.text = 'This is foo'
+        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
+        def linkToBar = Files.createSymbolicLink(pubDir.resolve('link-to-bar'), bar)
+        def publisher = new FilePublisher(mockSession(), [:])
+
+        expect:
+        publisher.checkIsSameRealPath(bar, linkToBar, FilePublisher.Mode.SYMLINK)
+        !publisher.checkIsSameRealPath(bar, foo, FilePublisher.Mode.SYMLINK)
+        !publisher.checkIsSameRealPath(bar, linkToBar, FilePublisher.Mode.COPY)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should detect targets that overlap with the source directory'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        def publisher = new FilePublisher(mockSession(), [sourceDir: workDir])
+        def symlink = FilePublisher.Mode.SYMLINK
+
+        when:
+        def foo = pubDir.resolve('foo.txt'); foo.text = 'This is foo'
+        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
+        then:
+        !publisher.checkSourcePathConflicts(foo, symlink)
+        publisher.checkSourcePathConflicts(bar, symlink)
+        !publisher.checkSourcePathConflicts(bar, FilePublisher.Mode.COPY)
+        !new FilePublisher(mockSession(), [:]).checkSourcePathConflicts(bar, symlink)
+
+        when:
+        def linkOK = Files.createSymbolicLink(pubDir.resolve('link1.txt'), foo)
+        then:
+        !publisher.checkSourcePathConflicts(linkOK, symlink)
+
+        when:
+        def linkNotOK = Files.createSymbolicLink(pubDir.resolve('link2.txt'), bar)
+        then:
+        publisher.checkSourcePathConflicts(linkNotOK, symlink)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should re-publish when the publish mode of an existing target changes'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        def source = workDir.resolve('foo.txt'); source.text = 'Hello'
+        def target = pubDir.resolve('foo.txt')
+        def session = mockSession()
+        def opts = [sourceDir: workDir, overwrite: 'standard']
+
+        when:
+        new FilePublisher(session, opts).publishFile(source, target, FilePublisher.Mode.RELLINK)
+        then:
+        Files.isSymbolicLink(target)
+
+        when:
+        new FilePublisher(session, opts).publishFile(source, target, FilePublisher.Mode.COPY)
+        then:
+        !Files.isSymbolicLink(target)
+        target.text == 'Hello'
+
+        when:
+        new FilePublisher(session, opts).publishFile(source, target, FilePublisher.Mode.RELLINK)
+        then:
+        Files.isSymbolicLink(target)
+
+        when: 'an explicit `overwrite false` is honored even on a mode mismatch'
+        new FilePublisher(session, opts + [overwrite: false]).publishFile(source, target, FilePublisher.Mode.COPY)
+        then:
+        Files.isSymbolicLink(target)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should return copy options'() {
+        given:
+        def session = Mock(Session) { getConfig() >> CONFIG }
+        def publisher = new FilePublisher(session, [:])
+
+        expect:
+        publisher.copyOpts() == EXPECTED as CopyOption[]
+        publisher.copyOpts(LinkOption.NOFOLLOW_LINKS) == ([LinkOption.NOFOLLOW_LINKS] + EXPECTED) as CopyOption[]
+
+        where:
+        CONFIG                                          | EXPECTED
+        [:]                                             | []
+        [workflow: [output: [copyAttributes: true]]]    | [StandardCopyOption.COPY_ATTRIBUTES]
     }
 
 }

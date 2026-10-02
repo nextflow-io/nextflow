@@ -46,16 +46,12 @@ import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.RetryConfig
 /**
- * Publish files to the workflow output directory.
+ * Publish files from a source path to a target path.
  *
- * Where {@link nextflow.processor.PublishDir} publishes the contents of a task
- * directory and derives each target from a relative filename, this class publishes
- * an explicit source to target mapping. A workflow output resolves every source file
- * to its own target, so a relative filename is never used to identify a file. Two
- * files with the same name from different task directories are therefore distinct,
- * and a source outside the work directory is publishable like any other.
- *
- * One instance serves a single workflow output for the lifetime of the run.
+ * The caller decides where each file goes: {@link nextflow.extension.PublishOp}
+ * for workflow outputs and {@link nextflow.processor.PublishDir} for the
+ * `publishDir` directive. This class handles the publish mode, overwriting,
+ * retries, error handling, and file attributes.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -72,14 +68,14 @@ class FilePublisher {
     private final Session session
 
     /**
-     * Name of the workflow output being published, used in error messages.
-     */
-    private final String name
-
-    /**
      * The publish mode. When null, it is inferred from the source and target.
      */
     private Mode mode
+
+    /**
+     * The publish mode to use when no mode is given and links are supported.
+     */
+    private Mode defaultMode = Mode.SYMLINK
 
     /**
      * Whether to overwrite an existing target. Either a boolean or the name of a
@@ -113,27 +109,33 @@ class FilePublisher {
      */
     private List<String> labels
 
+    /**
+     * Directory containing the source files. An existing target whose real path
+     * is inside this directory is never overwritten.
+     */
+    private Path sourceDir
+
+    /**
+     * Name of the task whose files are published, used in warning messages.
+     */
+    private String taskName
+
     private final RetryConfig retryConfig
 
     private final Map<Path,Boolean> makeCache = new ConcurrentHashMap<>()
-
-    /**
-     * Targets already published by this output, used to report two source files
-     * being published to the same target.
-     */
-    private final Map<Path,Path> publishedTargets = new ConcurrentHashMap<>()
 
     @Lazy
     private ExecutorService threadPool = { session.publishDirExecutorService() }()
 
     @CompileDynamic
-    FilePublisher(Session session, String name, Map opts) {
+    FilePublisher(Session session, Map opts) {
         this.session = session
-        this.name = name
         this.retryConfig = RetryConfig.config(session.config)
 
         if( opts.mode )
             this.mode = parseMode(opts.mode)
+        if( opts.defaultMode )
+            this.defaultMode = parseMode(opts.defaultMode)
         if( opts.overwrite != null )
             this.overwrite = opts.overwrite
         if( opts.failOnError != null )
@@ -148,9 +150,13 @@ class FilePublisher {
             this.storageClass = opts.storageClass as String
         if( opts.labels != null )
             this.labels = opts.labels as List<String>
+        if( opts.sourceDir )
+            this.sourceDir = opts.sourceDir as Path
+        if( opts.taskName )
+            this.taskName = opts.taskName as String
     }
 
-    protected Mode parseMode(value) {
+    static Mode parseMode(value) {
         if( value instanceof Mode )
             return (Mode)value
         final str = value.toString()
@@ -160,26 +166,12 @@ class FilePublisher {
             return str.toUpperCase() as Mode
         }
         catch( IllegalArgumentException e ) {
-            throw new ScriptRuntimeException("Invalid publish mode '${str}' for workflow output '${name}'")
+            throw new ScriptRuntimeException("Invalid publish mode '${str}' -- should be one of: symlink, rellink, link, copy, copyNoFollow, move")
         }
     }
 
     /**
-     * Publish a set of files.
-     *
-     * @param mapping Source file to absolute target path
-     */
-    void publish(Map<Path,Path> mapping) {
-        // check every target before publishing anything, so that a conflict
-        // does not leave the output directory partially published
-        for( final entry : mapping )
-            checkTargetConflict(entry.key, entry.value.normalize())
-        for( final entry : mapping )
-            publish0(entry.key, entry.value.normalize())
-    }
-
-    /**
-     * Publish a single file.
+     * Publish a file.
      *
      * @param source
      * @param target Absolute target path
@@ -187,12 +179,7 @@ class FilePublisher {
     void publish(Path source, Path target) {
         if( source == null || target == null )
             return
-        final normalized = target.normalize()
-        checkTargetConflict(source, normalized)
-        publish0(source, normalized)
-    }
-
-    private void publish0(Path source, Path target) {
+        target = target.normalize()
         final resolved = resolveMode(source, target)
         applyFileAttributes(source, target)
 
@@ -205,16 +192,6 @@ class FilePublisher {
     }
 
     /**
-     * Report two different source files being published to the same target, which
-     * would otherwise silently publish whichever file happens to be written first.
-     */
-    protected void checkTargetConflict(Path source, Path target) {
-        final previous = publishedTargets.putIfAbsent(target, source)
-        if( previous != null && previous != source )
-            throw new ScriptRuntimeException("Publish target '${target.toUriString()}' for workflow output '${name}' is used by more than one file -- offending files: ${previous.toUriString()}, ${source.toUriString()}")
-    }
-
-    /**
      * Determine the publish mode for a given source and target. Links cannot be
      * created across file systems, so they fall back to a copy.
      */
@@ -224,7 +201,7 @@ class FilePublisher {
             && !target.toString().startsWith('/fusion/s3/')
 
         if( sameFileSystem )
-            return mode ?: Mode.SYMLINK
+            return mode ?: defaultMode
 
         if( !mode )
             return Mode.COPY
@@ -255,7 +232,7 @@ class FilePublisher {
         final result = tags instanceof Closure ? tags.call() : tags
         if( result instanceof Map<String,String> )
             return result
-        throw new ScriptRuntimeException("Invalid publish tags for workflow output '${name}': ${tags}")
+        throw new ScriptRuntimeException("Invalid publish tags: ${tags}")
     }
 
     protected void safePublishFile(Path source, Path target, Mode mode) {
@@ -304,6 +281,11 @@ class FilePublisher {
             // but still report it as published
             final sameRealPath = checkIsSameRealPath(source, target, mode)
 
+            // make sure the target does not overlap with the source directory
+            // see https://github.com/nextflow-io/nextflow/issues/2177
+            if( !sameRealPath && checkSourcePathConflicts(target, mode) )
+                return
+
             if( !sameRealPath && shouldOverwrite(source, target, mode) ) {
                 FileHelper.deletePath(target)
                 writeFile(source, target, mode)
@@ -348,6 +330,26 @@ class FilePublisher {
         return result
     }
 
+    protected boolean checkSourcePathConflicts(Path target, Mode mode) {
+        if( sourceDir == null || mode !in SYMLINK_MODES || sourceDir.fileSystem != target.fileSystem )
+            return false
+
+        final t1 = realPath(target)
+        final s1 = realPath(sourceDir)
+        if( !t1.startsWith(s1) )
+            return false
+
+        def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
+        if( taskName )
+            msg += "\n- offending task  : $taskName"
+        msg += "\n- offending file  : $target"
+        if( t1 != target.toString() )
+            msg += "\n- real destination: $t1"
+        msg += "\n- task directory  : $s1"
+        log.warn1(msg)
+        return true
+    }
+
     protected boolean shouldOverwrite(Path source, Path target, Mode mode) {
         if( overwrite instanceof Boolean )
             return overwrite
@@ -386,7 +388,7 @@ class FilePublisher {
         }
     }
 
-    protected void makeDirs(Path dir) {
+    void makeDirs(Path dir) {
         // nameCount==0 means a filesystem root e.g. an S3 bucket, which
         // always exists and cannot be created
         if( !dir || dir.nameCount == 0 || makeCache.containsKey(dir) )

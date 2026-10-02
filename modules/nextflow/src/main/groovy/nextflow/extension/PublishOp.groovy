@@ -58,8 +58,14 @@ class PublishOp {
 
     private DataflowVariable target
 
+    /**
+     * Targets already published by this output, used to report two source files
+     * being published to the same target.
+     */
+    private Map<Path,Path> publishedTargets = [:]
+
     @Lazy
-    private FilePublisher publisher = { new FilePublisher(session, name, publishOpts) }()
+    private FilePublisher publisher = { new FilePublisher(session, publishOpts) }()
 
     PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
@@ -125,13 +131,34 @@ class PublishOp {
         final targets = resolveTargets(value)
 
         // publish the files
-        publisher.publish(targets)
+        checkTargetConflicts(targets)
+        for( final entry : targets )
+            publisher.publish(entry.key, entry.value)
 
         // publish value to workflow output
         final normalizedValue = normalizeValue(value, targets)
 
         log.trace "Published value to workflow output '${name}': ${normalizedValue}"
         publishedValues << normalizedValue
+    }
+
+    /**
+     * Report two different source files being published to the same target, which
+     * would otherwise silently publish whichever file happens to be written first.
+     *
+     * Every target in a value is checked before any file is published, so that a
+     * conflict does not leave the output directory partially published.
+     *
+     * @param targets
+     */
+    protected void checkTargetConflicts(Map<Path,Path> targets) {
+        for( final entry : targets ) {
+            final source = entry.key
+            final target = entry.value
+            final previous = publishedTargets.putIfAbsent(target, source)
+            if( previous != null && previous != source )
+                throw new ScriptRuntimeException("Publish target '${target.toUriString()}' for workflow output '${name}' is used by more than one file -- offending files: ${previous.toUriString()}, ${source.toUriString()}")
+        }
     }
 
     /**

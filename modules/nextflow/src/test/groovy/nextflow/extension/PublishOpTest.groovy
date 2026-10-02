@@ -19,6 +19,7 @@ package nextflow.extension
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
 /**
  *
@@ -171,6 +172,27 @@ class PublishOpTest extends Specification {
             (input): Path.of('/work/results/txt/input.txt'),
             (output): Path.of('/work/results/txt/out.txt')
         ]
+    }
+
+    def 'should report two files published to the same target' () {
+        given:
+        def session = Mock(Session) { getOutputDir() >> Path.of('/work/results') }
+        def file1 = Path.of('/work/ab/1234/report.txt')
+        def file2 = Path.of('/work/cd/5678/report.txt')
+        def target = Path.of('/work/results/report.txt')
+        def op = new PublishOp(session, 'foo', null, [path: '.'])
+
+        when: 'the same file is published to the same target more than once'
+        op.checkTargetConflicts([(file1): target])
+        op.checkTargetConflicts([(file1): target])
+        then:
+        noExceptionThrown()
+
+        when: 'a different file is published to the same target'
+        op.checkTargetConflicts([(file2): target])
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == "Publish target '${target.toUriString()}' for workflow output 'foo' is used by more than one file -- offending files: ${file1.toUriString()}, ${file2.toUriString()}"
     }
 
 }

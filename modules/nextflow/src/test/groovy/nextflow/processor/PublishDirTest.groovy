@@ -16,18 +16,15 @@
 
 package nextflow.processor
 
-import java.nio.file.CopyOption
-import java.nio.file.FileSystems
 import java.nio.file.Files
-import java.nio.file.LinkOption
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.ScriptRuntimeException
+import nextflow.file.FilePublisher
 import spock.lang.Specification
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -61,7 +58,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
         then:
         publish.path == Paths.get('/some/dir')
-        publish.mode == PublishDir.Mode.LINK
+        publish.mode == FilePublisher.Mode.LINK
         publish.pattern == '*.bam'
         publish.overwrite
         publish.enabled
@@ -70,7 +67,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
         then:
         publish.path == Paths.get('/some/data')
-        publish.mode == PublishDir.Mode.COPY
+        publish.mode == FilePublisher.Mode.COPY
         publish.pattern == null
         publish.overwrite == null
         !publish.enabled
@@ -79,7 +76,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
         then:
         publish.path == Paths.get('/some/data')
-        publish.mode == PublishDir.Mode.COPY
+        publish.mode == FilePublisher.Mode.COPY
         publish.pattern == null
         publish.overwrite == null
         !publish.enabled
@@ -88,7 +85,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
-        publish.mode == PublishDir.Mode.COPY
+        publish.mode == FilePublisher.Mode.COPY
         publish.pattern == '*.txt'
         publish.overwrite == false
 
@@ -267,32 +264,6 @@ class PublishDirTest extends Specification {
 
     }
 
-    def 'should default mode to `symlink`' () {
-
-        given:
-        def targetDir = Paths.get('/scratch/dir')
-        def publisher = new PublishDir(path: targetDir, sourceFileSystem: FileSystems.default)
-
-        when:
-        publisher.validatePublishMode()
-        then:
-        publisher.mode == PublishDir.Mode.SYMLINK
-    }
-
-
-    def 'should change mode to `copy` when the target is a foreign file system' () {
-
-        given:
-        def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
-        def targetDir = TestHelper.createInMemTempDir()
-        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
-
-        when:
-        publisher.validatePublishMode()
-        then:
-        publisher.mode == PublishDir.Mode.COPY
-    }
-
     def 'should check null path' () {
         given:
         def pub = new PublishDir()
@@ -344,127 +315,6 @@ class PublishDirTest extends Specification {
         ['/foo/x1','/foo/x1/y', '/bar/x2']                  | ['/foo/x1','/bar/x2']
     }
 
-    def 'should detected overlapping paths' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
-        def workDir = folder.resolve('work-dir'); workDir.mkdir()
-        and:
-        def publisher = new PublishDir(sourceDir: workDir)
-
-        when:
-        def foo = pubDir.resolve('foo.txt'); foo.text = 'This is foo'
-        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
-        then:
-        !publisher.checkSourcePathConflicts(foo)
-        publisher.checkSourcePathConflicts(bar)
-
-        when:
-        def linkOK = Files.createSymbolicLink(pubDir.resolve("link1.txt"), foo)
-        then:
-        !publisher.checkSourcePathConflicts(linkOK)
-
-        when:
-        def linkNotOK = Files.createSymbolicLink(pubDir.resolve("link2.txt"), bar)
-        then:
-        publisher.checkSourcePathConflicts(linkNotOK)
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should check same path' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
-        def workDir = folder.resolve('work-dir'); workDir.mkdir()
-        and:
-        def foo = workDir.resolve('foo.txt'); foo.text = 'This is bar'
-        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
-        and:
-        def linkToFoo = Files.createSymbolicLink(pubDir.resolve("link-to-foo"), foo)
-        def linkToBar = Files.createSymbolicLink(pubDir.resolve("link-to-bar"), bar)
-        and:
-        def publisher = new PublishDir()
-
-        expect:
-        publisher.checkIsSameRealPath(bar, linkToBar)
-        !publisher.checkIsSameRealPath(bar, foo)
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should detect publish mode mismatch' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
-        def workDir = folder.resolve('work-dir'); workDir.mkdir()
-        and:
-        def source = workDir.resolve('foo.txt'); source.text = 'Hello'
-        def realFile = pubDir.resolve('real.txt'); realFile.text = 'Hello'
-        def symlink = Files.createSymbolicLink(pubDir.resolve('link.txt'), source)
-
-        expect:
-        // requested mode produces a real file but destination is a symlink -> mismatch
-        new PublishDir(mode: 'copy').checkPublishModeMismatch(symlink)
-        new PublishDir(mode: 'move').checkPublishModeMismatch(symlink)
-        // requested mode produces a symlink but destination is a real file -> mismatch
-        new PublishDir(mode: 'symlink').checkPublishModeMismatch(realFile)
-        new PublishDir(mode: 'rellink').checkPublishModeMismatch(realFile)
-        new PublishDir().checkPublishModeMismatch(realFile)
-        and:
-        // matching type -> no mismatch
-        !new PublishDir(mode: 'copy').checkPublishModeMismatch(realFile)
-        !new PublishDir(mode: 'symlink').checkPublishModeMismatch(symlink)
-        !new PublishDir(mode: 'rellink').checkPublishModeMismatch(symlink)
-        !new PublishDir().checkPublishModeMismatch(symlink)
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should re-publish as copy when an existing symlink mode changes' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
-        def workDir = folder.resolve('work-dir'); workDir.mkdir()
-        def source = workDir.resolve('foo.txt'); source.text = 'Hello'
-        def destination = pubDir.resolve('foo.txt')
-
-        when:
-        // first publish: rellink -> destination is a symbolic link
-        new PublishDir(mode: 'rellink', sourceDir: workDir).processFile(source, destination)
-        then:
-        Files.isSymbolicLink(destination)
-
-        when:
-        // re-publish the same file with mode 'copy' (mirrors a -resume run after adding mode 'copy')
-        new PublishDir(mode: 'copy', sourceDir: workDir).processFile(source, destination)
-        then:
-        !Files.isSymbolicLink(destination)
-        destination.text == 'Hello'
-
-        when:
-        // re-publish again back to rellink -> destination becomes a symbolic link again
-        new PublishDir(mode: 'rellink', sourceDir: workDir).processFile(source, destination)
-        then:
-        Files.isSymbolicLink(destination)
-
-        when:
-        // explicit `overwrite false` is honored even on a mode mismatch
-        new PublishDir(mode: 'copy', overwrite: false, sourceDir: workDir).processFile(source, destination)
-        then:
-        Files.isSymbolicLink(destination)
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
     def 'should set failOnError via env variable' () {
         given:
         SysEnv.push(ENV)
@@ -483,21 +333,32 @@ class PublishDirTest extends Specification {
         [NXF_PUBLISH_FAIL_ON_ERROR: 'false']        | false
     }
 
-    def 'should return copy attributes' () {
-        expect:
-        new PublishDir().copyOpts() == [] as CopyOption[]
-        and:
-        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS] as CopyOption[]
+
+    def 'should use rellink as default mode when the stage in mode is rellink' () {
+        given:
+        def folder = Files.createTempDirectory('nxf')
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        workDir.resolve('file1.txt').text = 'aaa'
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig(stageInMode: 'rellink'), name: 'foo')
 
         when:
-        Global.session = Mock(Session) { getConfig()>>[workflow:[output:[copyAttributes: true]]] }
+        new PublishDir(path: publishDir).apply([workDir.resolve('file1.txt')] as Set, task)
         then:
-        new PublishDir().copyOpts() == [StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
-        and:
-        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS,StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+        Files.isSymbolicLink(publishDir.resolve('file1.txt'))
+        !Files.readSymbolicLink(publishDir.resolve('file1.txt')).isAbsolute()
+        publishDir.resolve('file1.txt').text == 'aaa'
 
         cleanup:
-        Global.session = null
+        folder?.deleteDir()
+    }
+
+    def 'should reject an invalid publish mode' () {
+        when:
+        PublishDir.create(path: '/data', mode: 'nope')
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.startsWith "Invalid publish mode 'nope'"
     }
 
 }
