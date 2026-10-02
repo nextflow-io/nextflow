@@ -147,7 +147,11 @@ class VersionedTaskHasher extends TaskHasher {
         final buffer = new StringBuilder()
         buffer.append("[${ctx.task.lazyName()}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( final entry : keys ) {
-            buffer.append("  ${CacheHelper.hasher(entry, mode).hash()} [${entry?.getClass()?.getName()}] $entry \n")
+            final digest = spec.encoding
+                .apply(new HashBuilder().withHasher(HashBuilder.defaultHasher()).withMode(mode))
+                .with(entry)
+                .build()
+            buffer.append("  ${digest} [${entry?.getClass()?.getName()}] $entry \n")
         }
         return buffer.toString()
     }
