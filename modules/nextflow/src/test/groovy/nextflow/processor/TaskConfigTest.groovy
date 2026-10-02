@@ -20,6 +20,7 @@ import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.file.FilePublisher
 import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
@@ -500,7 +501,7 @@ class TaskConfigTest extends Specification {
         publish.path == Paths.get('/data').complete()
         publish.pattern == '*.txt'
         publish.overwrite == false
-        publish.mode == PublishDir.Mode.COPY
+        publish.mode == FilePublisher.Mode.COPY
 
         when:
         process = new ProcessConfig(script)
@@ -509,7 +510,7 @@ class TaskConfigTest extends Specification {
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('//my/data').complete()
-        publish.mode == PublishDir.Mode.COPY_NO_FOLLOW
+        publish.mode == FilePublisher.Mode.COPY_NO_FOLLOW
 
         when:
         process = new ProcessConfig(script)

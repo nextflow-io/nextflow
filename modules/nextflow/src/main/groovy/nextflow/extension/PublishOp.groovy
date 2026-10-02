@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.processor.PublishDir
+import nextflow.file.FilePublisher
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.CsvWriter
@@ -52,9 +52,20 @@ class PublishOp {
 
     private IndexOpts indexOpts
 
+    private boolean includeInputs
+
     private List publishedValues = []
 
     private DataflowVariable target
+
+    /**
+     * Targets already published by this output, used to report two source files
+     * being published to the same target.
+     */
+    private Map<Path,Path> publishedTargets = [:]
+
+    @Lazy
+    private FilePublisher publisher = { new FilePublisher(session, publishOpts) }()
 
     PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
@@ -66,6 +77,7 @@ class PublishOp {
             this.pathResolver = opts.pathResolver as Closure
         if( opts.index )
             this.indexOpts = new IndexOpts(opts.index as Map)
+        this.includeInputs = opts.includeInputs as boolean
     }
 
     DataflowVariable apply() {
@@ -115,50 +127,53 @@ class PublishOp {
             return
         }
 
-        // evaluate dynamic path
-        final targetResolver = getTargetDir(value)
-        if( targetResolver == null )
-            return
+        // resolve the target path of every file in the value
+        final targets = resolveTargets(value)
 
-        // create publisher
-        final overrides = new LinkedHashMap()
-        if( targetResolver instanceof Closure )
-            overrides.saveAs = targetResolver
-        else
-            overrides.path = targetResolver
-
-        final publisher = PublishDir.create(publishOpts + overrides)
-
-        // publish files
-        final result = collectFiles([:], value)
-        for( final entry : result ) {
-            final sourceDir = entry.key
-            final files = entry.value
-            publisher.apply(files, sourceDir)
-        }
+        // publish the files
+        checkTargetConflicts(targets)
+        for( final entry : targets )
+            publisher.publish(entry.key, entry.value)
 
         // publish value to workflow output
-        final normalizedValue = normalizeValue(value, targetResolver)
+        final normalizedValue = normalizeValue(value, targets)
 
         log.trace "Published value to workflow output '${name}': ${normalizedValue}"
         publishedValues << normalizedValue
     }
 
     /**
-     * Compute the target directory for a published value.
+     * Report two different source files being published to the same target, which
+     * would otherwise silently publish whichever file happens to be written first.
+     *
+     * Every target in a value is checked before any file is published, so that a
+     * conflict does not leave the output directory partially published.
+     *
+     * @param targets
+     */
+    protected void checkTargetConflicts(Map<Path,Path> targets) {
+        for( final entry : targets ) {
+            final source = entry.key
+            final target = entry.value
+            final previous = publishedTargets.putIfAbsent(target, source)
+            if( previous != null && previous != source )
+                throw new ScriptRuntimeException("Publish target '${target.toUriString()}' for workflow output '${name}' is used by more than one file -- offending files: ${previous.toUriString()}, ${source.toUriString()}")
+        }
+    }
+
+    /**
+     * Resolve the target path of every file in a published value.
      *
      * @param value
-     * @return Path | Closure<Path>
+     * @return Mapping of source file to absolute target path
      */
-    protected Object getTargetDir(value) {
-        // if the publish path is a string, resolve it against
-        // the base output directory
-        final outputDir = session.outputDir
+    protected Map<Path,Path> resolveTargets(value) {
+        // if the publish path is a string, resolve every file in the value
+        // against it
         if( pathResolver == null )
-            return outputDir.resolve(path).normalize()
+            return collectTargets(value, getTargetDir(path))
 
-        // if the publish path is a closure, invoke it on the
-        // published value
+        // if the publish path is a closure, invoke it on the published value
         final dsl = new PublishDsl()
         final cl = (Closure)pathResolver.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
@@ -168,7 +183,7 @@ class PublishOp {
         // if the resolved publish path is a string, resolve it
         // against the base output directory
         if( resolvedPath instanceof CharSequence )
-            return outputDir.resolve(resolvedPath.toString()).normalize()
+            return collectTargets(value, getTargetDir(resolvedPath.toString()))
 
         // if the closure returned a map of source -> target pairs,
         // treat it the same as a set of publish statements
@@ -176,17 +191,75 @@ class PublishOp {
             for( final entry : resolvedPath.entrySet() )
                 dsl.publish(entry.key, entry.value as String)
 
-        // if the closure contained publish statements, use
-        // the resulting mapping to create a saveAs closure
+        // if the closure contained publish statements, resolve each declared
+        // target against the base output directory
         final mapping = dsl.build()
-        if( mapping != null )
-            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]).normalize() : null }
+        if( mapping != null ) {
+            final result = new LinkedHashMap<Path,Path>(mapping.size())
+            for( final entry : mapping )
+                result.put(entry.key, getTargetDir(entry.value))
+            return result
+        }
 
         throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string, a map, or publish statements, but received: ${resolvedPath} [${resolvedPath?.class?.simpleName}]")
     }
 
+    /**
+     * Resolve a publish path against the base output directory.
+     *
+     * @param path
+     */
+    protected Path getTargetDir(String path) {
+        return session.outputDir.resolve(path).normalize()
+    }
+
+    /**
+     * Map every file in a value to its target path in a given directory.
+     *
+     * @param value
+     * @param targetDir
+     */
+    protected Map<Path,Path> collectTargets(value, Path targetDir) {
+        final result = new LinkedHashMap<Path,Path>()
+        for( final file : collectFiles(new LinkedHashSet<Path>(), value) )
+            result.put(file, targetDir.resolve(relativePath(file)).normalize())
+        return result
+    }
+
+    /**
+     * Determine whether a file should be published. Files that do not
+     * originate from the work directory are published only when
+     * `includeInputs` is enabled.
+     *
+     * @param file
+     */
+    protected boolean shouldPublish(Path file) {
+        return includeInputs || getTaskDir(file) != null
+    }
+
+    /**
+     * Get the path of a file relative to its task directory, or the
+     * file name if the file is not in the work directory.
+     *
+     * The path is returned as a string to prevent a ProviderMismatchException
+     * when the source and target use different path providers.
+     *
+     * @param file
+     */
+    protected String relativePath(Path file) {
+        final sourceDir = getTaskDir(file)
+        return sourceDir != null
+            ? sourceDir.relativize(file).toString()
+            : file.getFileName().toString()
+    }
+
     private class PublishDsl {
-        private Map<String,String> mapping = null
+        /**
+         * Mapping of source file to target path, relative to the output directory.
+         * It is keyed by the full source path because the same relative filename
+         * can be published from multiple task directories.
+         */
+        private Map<Path,String> mapping = null
 
         void publish(Object source, String target) {
             // a no-op publish statement should still publish nothing
@@ -210,19 +283,16 @@ class PublishOp {
         }
 
         private void publish0(Path source, String target) {
-            // files external to the work directory are not published
-            final sourceDir = getTaskDir(source)
-            if( sourceDir == null )
+            if( !shouldPublish(source) )
                 return
             log.trace "Publishing ${source} to ${target}"
-            final filename = sourceDir.relativize(source).toString()
             final resolved = target.endsWith('/')
-                ? target + filename
+                ? target + relativePath(source)
                 : target
-            mapping[filename] = resolved
+            mapping[source] = resolved
         }
 
-        Map<String,String> build() {
+        Map<Path,String> build() {
             return mapping
         }
     }
@@ -269,19 +339,14 @@ class PublishOp {
 
     /**
      * Extract files from a received value for publishing.
-     * Files external to the work directory are not published.
      *
      * @param result
      * @param value
      */
-    protected Map<Path,Set<Path>> collectFiles(Map<Path,Set<Path>> result, value) {
+    protected Set<Path> collectFiles(Set<Path> result, value) {
         if( value instanceof Path ) {
-            final sourceDir = getTaskDir(value)
-            if( sourceDir != null ) {
-                if( sourceDir !in result )
-                    result[sourceDir] = new HashSet(10)
-                result[sourceDir] << value
-            }
+            if( shouldPublish(value) )
+                result << value
         }
         else if( value instanceof Collection ) {
             for( final el : value )
@@ -299,17 +364,17 @@ class PublishOp {
      * normalizing any paths within the value.
      *
      * @param value
-     * @param targetResolver
+     * @param targets
      */
-    protected Object normalizeValue(value, targetResolver) {
+    protected Object normalizeValue(value, Map<Path,Path> targets) {
         if( value instanceof Path ) {
-            return normalizePath(value, targetResolver)
+            return normalizePath(value, targets)
         }
         if( value instanceof Collection ) {
-            return value.collect { el -> normalizeValue(el, targetResolver) }
+            return value.collect { el -> normalizeValue(el, targets) }
         }
         if( value instanceof Map ) {
-            return value.collectEntries { k, v -> [k, normalizeValue(v, targetResolver)] }
+            return value.collectEntries { k, v -> [k, normalizeValue(v, targets)] }
         }
         return value
     }
@@ -319,36 +384,21 @@ class PublishOp {
      * publish destination.
      *
      * @param path
-     * @param targetResolver
+     * @param targets
      */
-    private Path normalizePath(Path path, targetResolver) {
-        // if the source file does not reside in the work directory,
-        // return it directly without any normalization
-        final sourceDir = getTaskDir(path)
-        if( sourceDir == null )
+    private Path normalizePath(Path path, Map<Path,Path> targets) {
+        // a published file is reported by its target path
+        final target = targets[path]
+        if( target != null )
+            return target
+
+        // an unpublished file outside the work directory is still
+        // valid, so it is reported as-is
+        if( getTaskDir(path) == null )
             return path
 
-        // if the target resolver is a closure, use it to transform
-        // the source filename to the target path
-        if( targetResolver instanceof Closure<Path> ) {
-            // note: the closure can return null to e.g. not
-            // publish specific files
-            final relPath = sourceDir.relativize(path).toString()
-            final resolvedPath = targetResolver.call(relPath) as Path
-            return resolvedPath?.normalize()
-        }
-
-        // if the target resolver is a directory, resolve the source
-        // filename against it
-        if( targetResolver instanceof Path ) {
-            // note: make sure to convert the relative path to as a string to prevent
-            // an exception when mixing different path providers e.g. local fs and remove cloud
-            // thrown by {@link Path#resolve) method
-            final relPath = sourceDir.relativize(path).toString()
-            return targetResolver.resolve(relPath).normalize()
-        }
-
-        throw new IllegalStateException("Unexpected targetResolver argument: ${targetResolver}")
+        // note: a `path` closure can omit a file in order to not publish it
+        return null
     }
 
     /**
