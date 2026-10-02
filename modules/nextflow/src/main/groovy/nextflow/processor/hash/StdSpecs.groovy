@@ -44,6 +44,11 @@ class StdSpecs {
     static TaskHashSpec getSTD_V1_6() { byId('std/v1.6') }
     static TaskHashSpec getSTD_V1_7() { byId('std/v1.7') }
 
+    /** The newest spec, the one the default hashing path must agree with. */
+    static TaskHashSpec latest() {
+        return byId(IDS.last())
+    }
+
     @Memoized
     static List<TaskHashSpec> all() {
         return IDS.collect { String id -> load(id) }

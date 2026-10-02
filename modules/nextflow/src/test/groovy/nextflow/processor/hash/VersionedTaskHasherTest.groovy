@@ -129,6 +129,9 @@ class VersionedTaskHasherTest extends Specification {
             getStubRun() >> false
         }
         def bundle = Mock(ResourcesBundle) {
+            // the bundle is tested for Groovy truth first, and an unstubbed
+            // asBoolean() on a mock is false -- without this MODULE_BUNDLE stays dark
+            asBoolean() >> true
             hasEntries() >> true
             fingerprint() >> 'bundle-fingerprint'
         }

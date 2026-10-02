@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 /**
  * The canonical vocabulary of task hash keys.
  *
- * Names are load-bearing data: a consumer comparing two runs aligns them by key
+ * Names are part of the data: a consumer comparing two runs aligns them by key
  * name, so a rename is a semantic change and must move the spec fingerprint.
  * The set is closed — a new key requires a constant here, which is what makes
  * the exhaustiveness check in TaskHashSpecTest possible.
