@@ -30,12 +30,18 @@ class StdSpecs {
 
     static final String RESOURCE_DIR = '/nextflow/processor/hash'
 
-    static final List<String> IDS = ['std/v1', 'std/v2', 'std/v3', 'std/v4']
+    /**
+     * Ids are {@code std/<major>.<minor>}: the major moves only when a hash change cannot be
+     * reproduced from today's code, the minor for every other hash change. v1.1, v1.2 and v1.4
+     * are not implemented yet — each needs a mechanism that does not exist (a narrow
+     * asset-detection flag, a {@code task.ext.*} filter, a {@code params.*} filter).
+     */
+    static final List<String> IDS = ['std/v1.3', 'std/v1.5', 'std/v1.6', 'std/v1.7']
 
-    static TaskHashSpec getSTD_V1() { byId('std/v1') }
-    static TaskHashSpec getSTD_V2() { byId('std/v2') }
-    static TaskHashSpec getSTD_V3() { byId('std/v3') }
-    static TaskHashSpec getSTD_V4() { byId('std/v4') }
+    static TaskHashSpec getSTD_V1_3() { byId('std/v1.3') }
+    static TaskHashSpec getSTD_V1_5() { byId('std/v1.5') }
+    static TaskHashSpec getSTD_V1_6() { byId('std/v1.6') }
+    static TaskHashSpec getSTD_V1_7() { byId('std/v1.7') }
 
     @Memoized
     static List<TaskHashSpec> all() {

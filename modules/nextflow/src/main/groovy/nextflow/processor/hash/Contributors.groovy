@@ -151,6 +151,19 @@ class Contributors {
         return [vars.entrySet()] as List<Object>
     }
 
+    /**
+     * Script vars as collected before #7165 (785e801ad, 2026-05-21), which began folding
+     * referenced {@code params.*} into the task global vars. The added refs carry a prefix, so
+     * dropping them recovers the earlier value exactly.
+     */
+    static final Contributor SCRIPT_VARS_NO_PARAMS = of('scriptVars.noParams') { HashContext ctx ->
+        final vars = ctx.globalVars().findAll { k, v -> !k.toString().startsWith('params.') }
+        if( !vars ) {
+            return [] as List<Object>
+        }
+        return [vars.entrySet()] as List<Object>
+    }
+
     static final Contributor BIN_ENTRIES = of('binEntries') { HashContext ctx ->
         final entries = ctx.binEntries()
         if( !entries ) {

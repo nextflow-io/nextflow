@@ -171,7 +171,7 @@ class VersionedTaskHasherTest extends Specification {
 
         when:
         def expected = legacy.compute()
-        def actual = new VersionedTaskHasher(ctx, StdSpecs.STD_V4).compute()
+        def actual = new VersionedTaskHasher(ctx, StdSpecs.STD_V1_7).compute()
 
         then:
         actual == expected
@@ -185,7 +185,7 @@ class VersionedTaskHasherTest extends Specification {
 
         when:
         def expected = legacy.compute()
-        def actual = new VersionedTaskHasher(ctx, StdSpecs.STD_V4).compute()
+        def actual = new VersionedTaskHasher(ctx, StdSpecs.STD_V1_7).compute()
 
         then:
         actual == expected
@@ -199,7 +199,7 @@ class VersionedTaskHasherTest extends Specification {
 
         when:
         def expected = legacy.compute()
-        def actual = new VersionedTaskHasher(ctx, StdSpecs.STD_V4).compute()
+        def actual = new VersionedTaskHasher(ctx, StdSpecs.STD_V1_7).compute()
 
         then:
         actual == expected
@@ -211,7 +211,7 @@ class VersionedTaskHasherTest extends Specification {
         def ctx = new HashContext(f.task as TaskRun, f.helper as TaskHasher)
 
         expect:
-        new VersionedTaskHasher(ctx, StdSpecs.STD_V4).collectKeys() == [
+        new VersionedTaskHasher(ctx, StdSpecs.STD_V1_7).collectKeys() == [
             UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c'),
             'PIPE:FOO',
             'echo hello',
@@ -225,7 +225,7 @@ class VersionedTaskHasherTest extends Specification {
 
     def 'byId resolves known specs and rejects unknown ones'() {
         expect:
-        StdSpecs.byId('std/v4').is(StdSpecs.STD_V4)
+        StdSpecs.byId('std/v1.7').is(StdSpecs.STD_V1_7)
 
         when:
         StdSpecs.byId('std/nope')
