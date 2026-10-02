@@ -547,7 +547,7 @@ class AssetManager implements Closeable {
     }
 
     String getGitRepositoryUrl() {
-        return strategy?.getGitRepositoryUrl() ?: provider.getCloneUrl()
+        return strategy?.getGitRepositoryUrl() ?: provider.getConfiguredCloneUrl()
     }
 
     File getLocalPath() {

@@ -243,6 +243,43 @@ abstract class RepositoryProvider {
     abstract String getCloneUrl()
 
     /**
+     * The repository clone URL rewritten to use the Git server host declared in the SCM configuration.
+     *
+     * Provider APIs report the host the server knows itself by, which is not the host Nextflow was
+     * asked to use when the latter is a DNS alias of the former. Cloning from the configured host
+     * keeps the remote URL in the local Git config consistent with the SCM configuration, so that
+     * the provider can still be resolved when the project is reused on a subsequent run.
+     *
+     * @return The clone URL with the configured host in place of the one reported by the provider
+     */
+    String getConfiguredCloneUrl() {
+        final url = getCloneUrl()
+        final domain = config?.domain
+        // local repositories are addressed by path, there is no host to replace
+        if( !url || !domain || domain.startsWith('/') )
+            return url
+
+        final parsed = tryParse(url)
+        if( !parsed || parsed.protocol == 'file' || !parsed.domain || parsed.domain == domain )
+            return url
+
+        final p = url.indexOf(parsed.domain)
+        final result = url.substring(0, p) + domain + url.substring(p + parsed.domain.length())
+        log.debug "Rewriting clone URL to the configured Git server host: $url -> $result"
+        return result
+    }
+
+    private GitUrl tryParse(String url) {
+        try {
+            return new GitUrl(url)
+        }
+        catch( IllegalArgumentException e ) {
+            log.debug "Unable to parse clone URL: $url -- cause: ${e.message}"
+            return null
+        }
+    }
+
+    /**
      * @return The project home page e.g. https://github.com/nextflow-io/hello
      */
     abstract String getRepositoryUrl()
