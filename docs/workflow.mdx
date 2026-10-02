@@ -157,7 +157,7 @@ workflow {
 ```
 
 :::note
-Files that do not originate from the work directory are not published.
+Files that do not originate from the work directory are not published by default. Set the `includeInputs` directive (or the [`workflow.output.includeInputs`](./reference/config/workflow#workflowoutputincludeinputs) config option) to `true` to publish them by file name. For example, `/data/1.txt` is published to `results/1.txt`.
 :::
 
 **Dynamic publish path**
@@ -289,10 +289,6 @@ This example produces the following index file:
 "3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
 
-:::note
-Files that do not originate from the work directory are not published, but are included in the index file.
-:::
-
 See [Output directives](#output-directives) for the list of available index directives.
 
 ### Labels
@@ -347,6 +343,7 @@ Additionally, the following options from the [workflow][config-workflow] config 
 - `contentType`
 - `enabled`
 - `ignoreErrors`
+- `includeInputs`
 - `mode`
 - `overwrite`
 - `storageClass`
