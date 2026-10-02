@@ -88,4 +88,23 @@ class PublishOpTest extends Specification {
         saveAs.call('baz.txt') == null
     }
 
+    def 'should skip files outside the work directory in publish statements' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def input = Path.of('/data/input.txt')
+        def output = Path.of('/work/ab/cdef/out.txt')
+        def resolver = { v -> publish(input, 'txt/'); publish(output, 'txt/') }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        def saveAs = op.getTargetDir(null)
+        then:
+        saveAs instanceof Closure
+        saveAs.call('out.txt') == Path.of('/work/results/txt/out.txt')
+        saveAs.call('input.txt') == null
+    }
+
 }

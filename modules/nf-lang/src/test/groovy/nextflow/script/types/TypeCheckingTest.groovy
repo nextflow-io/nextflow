@@ -191,6 +191,33 @@ class TypeCheckingTest extends Specification {
         cn.getField('input') != null
     }
 
+    def 'should check a parameter reference in the output block' () {
+        when:
+        def errors = getErrors(
+            '''\
+            params {
+                outdir: String = 'results'
+            }
+
+            workflow {
+                main:
+                ch = channel.of('a')
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples: Channel<String> {
+                    path params.outdir
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should check a workflow emit' () {
         when:
         def errors = getErrors(
@@ -560,6 +587,64 @@ class TypeCheckingTest extends Specification {
             ''',
             null
         )
+    }
+
+    @Unroll
+    def 'should check the type arguments of call arguments' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            def f(xs: List<String>) {
+            }
+
+            def g(n: Names) {
+            }
+
+            process P {
+                input:
+                xs: List<String>
+
+                script:
+                "echo ${xs}"
+            }
+
+            workflow W {
+                take:
+                s: Channel<Sample>
+
+                main:
+                s.view()
+            }
+
+            record Sample {
+                id: String
+                n: Integer
+            }
+
+            record Names {
+                xs: List<String>
+            }
+
+            workflow {
+            ''' + SOURCE + '''
+            }
+            ''',
+            ERROR
+        )
+
+        where:
+        SOURCE                                      | ERROR
+        "f( [1, 2] )"                               | "Argument with type List<Integer> is not compatible with parameter of type List<String>"
+        "f( ['a', 'b'] )"                           | null
+        "f( [] )"                                   | null
+        "W( channel.of(record(id: 'a')) )"          | "Argument with type Channel<Record {\n    id: String\n}> is not compatible with parameter of type Channel<Sample>"
+        "W( channel.of(record(id: 'a', n: 1)) )"    | null
+        "P( channel.of([1, 2]) )"                   | "Argument with type List<Integer> is not compatible with process input of type List<String>"
+        "P( channel.of(['a']) )"                    | null
+        "g( record(xs: [1, 2]) )"                   | "Argument with type Record {\n    xs: List<Integer>\n} is not compatible with parameter of type Names"
+        "g( record(xs: ['a']) )"                    | null
     }
 
     @Unroll
