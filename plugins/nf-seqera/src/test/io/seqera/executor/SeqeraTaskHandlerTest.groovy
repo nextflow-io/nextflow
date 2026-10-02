@@ -16,6 +16,8 @@
 
 package io.seqera.executor
 
+import java.nio.file.Path
+
 import com.google.common.hash.HashCode
 import io.seqera.config.ExecutorOpts
 import io.seqera.config.MachineRequirementOpts
@@ -56,6 +58,15 @@ import java.nio.file.Paths
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class SeqeraTaskHandlerTest extends Specification {
+
+    def 'should put the uploaded bin dir on the task PATH'() {
+        expect:
+        SeqeraTaskHandler.binDirScript(Path.of('/fusion/s3/bucket/work/tmp/ab/cd/bin')) == '''\
+            cp -r /fusion/s3/bucket/work/tmp/ab/cd/bin $HOME/.nextflow-bin
+            chmod +x $HOME/.nextflow-bin/*
+            export PATH=$HOME/.nextflow-bin:$PATH
+            '''.stripIndent()
+    }
 
     def 'should return null for getMachineInfo when cachedTaskState is null'() {
         given:

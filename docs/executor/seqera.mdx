@@ -15,6 +15,8 @@ The `seqera` executor runs pipeline tasks using [Seqera Intelligent Compute](htt
 
 To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
 
+The executor requires [Fusion](https://docs.seqera.io/fusion) (`fusion.enabled = true`). [Wave](https://docs.seqera.io/wave) is optional: the compute hosts provide the Fusion client, so Wave never adds the Fusion layer to the task containers of this executor. When Wave is enabled, it still provisions the containers, for example to build Conda environments or to bundle the project `bin` directory. When Wave is disabled, Nextflow uploads the project `bin` directory to the work directory and adds it to the task `PATH`.
+
 Use the following process directives to control resource requests and other job characteristics:
 
 - [arch][process-arch]
