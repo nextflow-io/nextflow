@@ -134,6 +134,27 @@ process my_task {
 }
 ```
 
+<AddedInVersion version="26.10" />
+
+When the `google.batch.instanceFlexibility` config option is enabled and the `machineType` directive specifies two or more explicit machine types, i.e. without any `*` or `?` wildcard, Nextflow uses [instance flexibility](https://cloud.google.com/batch/docs/create-run-job-instance-flexibility), which allows Google Batch to launch the task with any of the given machine types, depending on the available capacity. This can improve the obtainability of the task VM, particularly when using spot instances.
+
+```groovy
+google.batch.instanceFlexibility = true
+```
+
+```nextflow
+process my_task {
+    cpus 8
+    memory '20 GB'
+    machineType 'n2-standard-8,n2d-standard-8,c3-standard-8'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
 <AddedInVersion version="24.04" />
 
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),

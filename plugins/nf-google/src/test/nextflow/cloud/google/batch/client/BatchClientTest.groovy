@@ -15,6 +15,8 @@
  */
 package nextflow.cloud.google.batch.client
 
+import com.google.cloud.batch.v1.AllocationPolicy
+import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskName
 import com.google.cloud.batch.v1.TaskStatus
@@ -63,6 +65,32 @@ class BatchClientTest extends Specification{
         client.getTaskInArrayStatus(job2, task2).state == TaskStatus.State.FAILED
         // no cached task
         client.getTaskInArrayStatus(job3, task3).state == TaskStatus.State.SUCCEEDED
+    }
+
+    def 'should convert a job adding the instance flexibility policy' () {
+        given:
+        def client = new BatchClient()
+        def job = Job.newBuilder()
+            .putLabels('foo','bar')
+            .setAllocationPolicy(AllocationPolicy.newBuilder()
+                .addInstances(AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
+                    .setPolicy(AllocationPolicy.InstancePolicy.newBuilder()
+                        .setProvisioningModel(AllocationPolicy.ProvisioningModel.SPOT)))
+                .addTags('my-tag'))
+            .build()
+
+        when:
+        def result = client.toAlphaJob(job, ['n2-standard-4','c3-standard-4'])
+
+        then:
+        def selections = result.getAllocationPolicy().getInstanceFlexibilityPolicy().getInstanceSelectionsMap()
+        selections.size() == 1
+        selections.get('nextflow').getMachineTypesList() == ['n2-standard-4','c3-standard-4']
+        and:
+        // the other job settings are preserved
+        result.getLabelsMap() == [foo: 'bar']
+        result.getAllocationPolicy().getTagsList() == ['my-tag']
+        result.getAllocationPolicy().getInstances(0).getPolicy().getProvisioningModel().toString() == 'SPOT'
     }
 
     TaskStatusRecord makeTaskStatusRecord(TaskStatus.State state, long timestamp) {
