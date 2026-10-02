@@ -7,18 +7,13 @@ A cache hit on `-resume` is byte-exact hash equality, proven through `CacheDB` a
 Run everything from `specs/260916-task-hash-spec/pipeline/`. `$PROTO` is the
 prototype launcher (`../../../launch.sh`).
 
-**Verification status of this document:** sections 1 and 3 depend on historical
-Nextflow releases (`NXF_VER=26.02.0-edge` etc.) that download old distributions —
-an agent cannot fetch those, so those rows are written for a human to run and are
-marked accordingly below. Everything that does not require a historical release —
-the `std/v4` self-resume in section 1, all three negative controls in section 2,
-and the stub marker in section 4 — was run against this build with `$PROTO` and
-its actual output is quoted inline. Docker and conda were BOTH available on re-verification
-(2026-09-22), so the runs below used the full `-profile withtooling`: `P_CONTAINER`
-exercised the `CONTAINER` key against a real image and `P_CONDA` the `CONDA` key
-against a resolved environment. Note conda lives at `~/miniconda3/bin` and is not on
-`PATH` in a non-interactive shell — prepend it before running, or `P_CONDA` silently
-runs without the conda key ever firing.
+**Verification status of this document:** every section below was executed on
+2026-10-02 against genuine released Nextflow distributions, and the quoted output is
+the actual output. Docker and conda were both available, so the runs used the full
+`-profile withtooling`: `P_CONTAINER` exercised the `CONTAINER` key against a real
+image and `P_CONDA` the `CONDA` key against a resolved environment. Note conda lives
+at `~/miniconda3/bin` and is not on `PATH` in a non-interactive shell — prepend it
+before running, or `P_CONDA` silently runs without the conda key ever firing.
 
 Keys exercised end to end: SESSION_ID, PROCESS_NAME, TASK_SOURCE, INPUTS,
 EVAL_OUTPUTS, SCRIPT_VARS, BIN_ENTRIES, MODULE_BUNDLE, CONTAINER, CONDA, STUB_MARKER.
@@ -27,32 +22,32 @@ infrastructure); both are covered by unit oracles instead.
 
 ## 1. Positive: each spec reproduces its release
 
-> **Ids in this runbook are the flat ones the code uses today** (`std/v1`…`std/v4`). `spec.md` has
-> since renumbered to seven semantic ids (`std/v1.1`…`std/v1.7`), where today's `std/v1` is
-> `std/v1.3`, `std/v2` is `std/v1.5`, `std/v3` is `std/v1.6` and `std/v4` is `std/v1.7`. Commands
-> below work as written until the code is renumbered; results already recorded stay valid, since
-> only the name changes.
-
-
-
 > **Check the baseline is a real release before trusting it.** Run
 > `NXF_VER=<version> nextflow -version` and look at the build number. A genuine
 > release has a real one (26.04.6 = `build 12646`); a locally installed snapshot
-> reports `build 0`. On this machine `~/.nextflow/framework/26.08.0-edge` and
-> `26.02.0-edge` are both `build 0` and contain code that does NOT match the tags
-> of those names — the "26.08.0-edge" binary hashes eval outputs as a raw map,
-> which is post-#7575 behaviour, while the v26.08.0-edge tag predates #7575. A
-> baseline like that produces an apparent spec failure that is really a mislabelled
+> reports `build 0`. Three distributions on this machine were such snapshots and had
+> to be moved aside and re-downloaded: `26.08.0-edge`, `26.02.0-edge` and `25.10.0`.
+> A baseline like that produces an apparent spec failure that is really a mislabelled
 > binary. Delete or ignore such distributions when validating.
 
 
 
-| Spec | Baseline | Verified here? |
+| Spec | Baseline | Result (2026-10-02) |
 | --- | --- | --- |
-| `std/v1` | `NXF_VER=26.02.0-edge` — 7/8, `P_BASIC` misses by design, see note below | No — human run required |
-| `std/v2` | `NXF_VER=26.04.6` — VERIFIED 2026-09-22, 8/8 CACHED | No — human run required |
-| `std/v3` | `NXF_VER=26.08.0-edge` — VERIFIED 2026-09-22, 8/8 CACHED (build 13213) | No — human run required |
-| `std/v4` | the prototype itself, no env var | **Yes** — see below |
+| `std/v1.1` | `NXF_VER=25.10.0` (build 10289) | 8/8 CACHED |
+| `std/v1.2` | `NXF_VER=25.11.0-edge` (build 10558) | 8/8 CACHED |
+| `std/v1.3` | `NXF_VER=26.02.0-edge` (build 11371) | 8/8 CACHED |
+| `std/v1.4` | `NXF_VER=26.04.1` (build 12112) | 8/8 CACHED |
+| `std/v1.5` | `NXF_VER=26.04.6` (build 12646) | 8/8 CACHED |
+| `std/v1.6` | `NXF_VER=26.08.0-edge` (build 13213) | 8/8 CACHED |
+| `std/v1.7` | `NXF_VER=26.09.0-edge` (build 13644) | 8/8 CACHED |
+| default path (no env var) | `NXF_VER=26.09.0-edge` | 8/8 CACHED |
+
+The last row is the default-unchanged guarantee: a run laid down by a released
+Nextflow still resumes under the prototype with no spec selected.
+
+`std/v1.1` additionally needs the asset-root fixture of section 1c — the main
+pipeline cannot trigger the behaviour it restores.
 
 For each row:
 
@@ -64,7 +59,7 @@ NXF_TASK_HASH_VER=<spec> $PROTO run main.nf -profile withtooling -resume
 
 **Pass:** every process reports `CACHED` in the second run.
 
-### std/v4 row — verified
+### Self-resume — verified
 
 ```
 $ $PROTO run main.nf
@@ -73,32 +68,17 @@ $ $PROTO run main.nf -resume
 [SUCCESS] completed=0 failed=0 cached=8
 ```
 
-All 8 processes cached on the second run with no env var (std/v4 is the default
-spec) — this is the default-unchanged guarantee.
-
-
-> **`std/v1` expected result is 7/8, not 8/8.** `P_BASIC` re-executes against
-> `26.02.0-edge`, and this is correct behaviour rather than a spec defect. Commit
-> `785e801ad` (#7165, 2026-05-21) made the strict parser fold referenced `params.*`
-> into the task global vars, so `SCRIPT_VARS` today hashes
-> `[params.greeting=hello, task.ext.flavour=vanilla]` where February hashed
-> `[task.ext.flavour=vanilla]`. Every other entry of `P_BASIC` is byte-identical.
-> A spec fixes which keys are hashed and how they are encoded; it cannot restore how
-> an era *derived* a value, because contributors call today's helpers. Treat a
-> `P_BASIC`-only miss under `std/v1` as a pass; any OTHER process missing is a real
-> failure.
-
 ## 1b. Cross-spec discrimination WITHOUT historical releases
 
 Section 3 below needs old Nextflow distributions. This variant needs none, and was
-run on 2026-09-22 against the prototype: lay down a `std/v4` baseline, then resume
+run on 2026-09-22 against the prototype: lay down a `std/v1.7` baseline, then resume
 under each older spec. Each step back must miss exactly the key the corresponding
 upstream commit changed.
 
 ```bash
-for spec in std/v3 std/v2 std/v1; do
+for spec in std/v1.6 std/v1.5 std/v1.3; do
   rm -rf work .nextflow*
-  $PROTO run main.nf -profile withtooling                       # std/v4 baseline
+  $PROTO run main.nf -profile withtooling                       # std/v1.7 baseline
   NXF_TASK_HASH_VER=$spec $PROTO run main.nf -profile withtooling -resume
 done
 ```
@@ -107,13 +87,70 @@ done
 
 | resumed under | processes that missed | maps to |
 | --- | --- | --- |
-| `std/v3` | `P_EVAL` | #7575, eval-output form |
-| `std/v2` | + `P_MODULE_BUNDLE` | #6914, module-bundle key |
-| `std/v1` | + `P_MAP_INPUT` | #6679, `orderIndependentMaps` |
+| `std/v1.6` | `P_EVAL` | #7575, eval-output form |
+| `std/v1.5` | + `P_MODULE_BUNDLE` | #6914, module-bundle key |
+| `std/v1.3` | + `P_MAP_INPUT` | #6679, `orderIndependentMaps` |
 
-This proves the four specs are mutually distinct in exactly the predicted places. It
+This proves those specs are mutually distinct in exactly the predicted places. It
 does NOT replace section 1: only a run against a real released Nextflow shows a spec
 reproduces that *release* rather than merely differing correctly from its siblings.
+
+## 1c. Asset-root fixture — the only way to test `std/v1.1`
+
+`std/v1.1` restores the pre-#6605 `isAssetFile`, which looked at `baseDir` alone.
+The main pipeline cannot trigger it: every file it hashes is already under `baseDir`.
+The difference only appears for a file inside the project repository but outside
+`baseDir`, which needs the main script to live in a subdirectory.
+
+Build the fixture once:
+
+```bash
+R=~/.nextflow/assets/testorg/hashv11
+mkdir -p $R/sub $R/shared
+echo "manifest.mainScript = 'sub/main.nf'" > $R/nextflow.config
+echo "asset payload" > $R/shared/data.txt
+cat > $R/sub/main.nf <<'NF'
+process P_ASSET {
+  input:
+  path x
+  output:
+  stdout
+  script:
+  "cat $x"
+}
+
+workflow {
+  P_ASSET( file("${projectDir}/../shared/data.txt") ) | view
+}
+NF
+( cd $R && git init -q && git add -A && git -c user.email=t@t -c user.name=t commit -qm init \
+  && git remote add origin https://github.com/testorg/hashv11.git )
+```
+
+A git repository and a remote are both required: `isAssetFile` returns false when
+`session.commitId` is null. Run everything with `NXF_OFFLINE=true` so Nextflow does
+not try to reach the fake remote.
+
+```bash
+rm -rf work .nextflow*
+NXF_OFFLINE=true NXF_VER=<baseline> nextflow run testorg/hashv11
+NXF_OFFLINE=true NXF_TASK_HASH_VER=<spec> $PROTO run testorg/hashv11 -resume
+```
+
+**Pass:** a two-way split — each spec reproduces its own era and misses the other.
+Observed 2026-10-02:
+
+| Baseline | `std/v1.1` | `std/v1.2` |
+| --- | --- | --- |
+| 25.10.0 | CACHED | re-runs |
+| 25.11.0-edge | re-runs | CACHED |
+| 25.12.0-edge | re-runs | CACHED |
+| 26.01.1-edge | re-runs | CACHED |
+
+A run where both specs cache means the flag is not reaching the file — see the
+`nested()` propagation in `HashBuilder`. Confirm by touching `shared/data.txt`:
+`std/v1.1` hashes metadata so the digest must move, `std/v1.2` hashes content so it
+must not.
 
 ## 2. Negative controls
 
@@ -132,7 +169,7 @@ sed -i 's/P_BIN/P_BIN_RENAMED/g' main.nf                          # P_BIN re-run
 Revert each change before the next.
 
 **Pass:** the named process reports as executed (not `CACHED`) and every other
-process stays `CACHED`. All three were run against std/v4 self-resume and matched
+process stays `CACHED`. All three were run against std/v1.7 self-resume and matched
 exactly:
 
 ```
@@ -181,36 +218,36 @@ untested by this pipeline; see "Known limitation" below.
 
 ```bash
 rm -rf work .nextflow*
-NXF_VER=26.08.0-edge nextflow run main.nf -profile withtooling      # H3
-NXF_TASK_HASH_VER=std/v4 $PROTO run main.nf -profile withtooling -resume
+NXF_VER=26.08.0-edge nextflow run main.nf -profile withtooling
+NXF_TASK_HASH_VER=std/v1.7 $PROTO run main.nf -profile withtooling -resume
 ```
 
 **Pass:** everything `CACHED` **except `P_EVAL`**, which re-runs.
 
 ```bash
 rm -rf work .nextflow*
-NXF_VER=26.07.0-edge nextflow run main.nf -profile withtooling      # H2
-NXF_TASK_HASH_VER=std/v3 $PROTO run main.nf -profile withtooling -resume
+NXF_VER=26.04.6 nextflow run main.nf -profile withtooling
+NXF_TASK_HASH_VER=std/v1.6 $PROTO run main.nf -profile withtooling -resume
 ```
 
 **Pass:** only `P_MODULE_BUNDLE` re-runs.
 
 ```bash
 rm -rf work .nextflow*
-NXF_VER=26.02.0-edge nextflow run main.nf -profile withtooling      # H1
-NXF_TASK_HASH_VER=std/v2 $PROTO run main.nf -profile withtooling -resume
+NXF_VER=26.02.0-edge nextflow run main.nf -profile withtooling
+NXF_TASK_HASH_VER=std/v1.5 $PROTO run main.nf -profile withtooling -resume
 ```
 
 **Pass:** `P_MAP_INPUT` re-runs. If *nothing* re-runs, the Map never reached the
 hasher and the encoding dimension is untested — fix the fixture before trusting
-`std/v1`.
+`std/v1.3`.
 
 ## 4. Stub marker
 
 ```bash
 rm -rf work .nextflow*
 NXF_VER=26.08.0-edge nextflow run main.nf -profile withtooling -stub-run
-NXF_TASK_HASH_VER=std/v3 $PROTO run main.nf -profile withtooling -stub-run -resume
+NXF_TASK_HASH_VER=std/v1.6 $PROTO run main.nf -profile withtooling -stub-run -resume
 ```
 
 **Pass:** `P_STUB` reports `CACHED`.
@@ -250,8 +287,8 @@ fingerprint, and one entry per contributing key) against the current build:
 
 ```
 $ $PROTO run main.nf -dump-hashes json
-[P_BASIC] cache hash: 100ecab06f46de7badf101d2818a692e; spec: std/v4; entries: [
-    { "spec": "std/v4", "fingerprint": "7bbb059fc53596d9e06281d53275d3ed" },
+[P_BASIC] cache hash: 100ecab06f46de7badf101d2818a692e; spec: std/v1.7; entries: [
+    { "spec": "std/v1.7", "fingerprint": "7bbb059fc53596d9e06281d53275d3ed" },
     { "key": "SESSION_ID", "hash": "a0907d420d6a705c6278c11daed8d36a" },
     { "key": "PROCESS_NAME", "hash": "3cd9d61e7555804d3902059aa1d57e78" },
     { "key": "TASK_SOURCE", "hash": "6341d19c030e8f7796cf7d8416f09b4c" },

@@ -24,29 +24,34 @@ package nextflow.util;
 public class EncodingRules {
 
     /** Behaviour introduced by #6679 "Record types" (2026-03-09) — current master. */
-    public static final EncodingRules RECORD_TYPES = new EncodingRules(true, true);
+    public static final EncodingRules RECORD_TYPES = new EncodingRules(true, true, true);
 
     /** Behaviour before #6679. */
-    public static final EncodingRules LEGACY = new EncodingRules(false, false);
+    public static final EncodingRules LEGACY = new EncodingRules(false, false, true);
 
     private final boolean orderIndependentMaps;
 
     private final boolean cacheFunnelFirst;
 
-    public EncodingRules(boolean orderIndependentMaps, boolean cacheFunnelFirst) {
+    private final boolean assetRootDetection;
+
+    public EncodingRules(boolean orderIndependentMaps, boolean cacheFunnelFirst, boolean assetRootDetection) {
         this.orderIndependentMaps = orderIndependentMaps;
         this.cacheFunnelFirst = cacheFunnelFirst;
+        this.assetRootDetection = assetRootDetection;
     }
 
     public HashBuilder apply(HashBuilder builder) {
         return builder
             .withOrderIndependentMaps(orderIndependentMaps)
-            .withCacheFunnelFirst(cacheFunnelFirst);
+            .withCacheFunnelFirst(cacheFunnelFirst)
+            .withAssetRootDetection(assetRootDetection);
     }
 
     /** Stable text form, contributing to the spec fingerprint. Never reformat this. */
     public String canonicalForm() {
         return "orderIndependentMaps=" + orderIndependentMaps
-            + ";cacheFunnelFirst=" + cacheFunnelFirst;
+            + ";cacheFunnelFirst=" + cacheFunnelFirst
+            + ";assetRootDetection=" + assetRootDetection;
     }
 }

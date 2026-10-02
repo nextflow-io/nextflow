@@ -43,7 +43,7 @@ class TaskHashSpecTest extends Specification {
 id=std/test
 key=SESSION_ID:sessionId
 key=TASK_SOURCE:taskSource
-encoding=orderIndependentMaps=true;cacheFunnelFirst=true
+encoding=orderIndependentMaps=true;cacheFunnelFirst=true;assetRootDetection=true
 function=murmur3_128
 '''
     }

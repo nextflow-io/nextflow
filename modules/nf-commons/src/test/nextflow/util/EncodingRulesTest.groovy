@@ -64,8 +64,8 @@ class EncodingRulesTest extends Specification {
 
     def 'canonical form is stable and distinguishes the rule sets'() {
         expect:
-        EncodingRules.LEGACY.canonicalForm() == 'orderIndependentMaps=false;cacheFunnelFirst=false'
+        EncodingRules.LEGACY.canonicalForm() == 'orderIndependentMaps=false;cacheFunnelFirst=false;assetRootDetection=true'
         and:
-        EncodingRules.RECORD_TYPES.canonicalForm() == 'orderIndependentMaps=true;cacheFunnelFirst=true'
+        EncodingRules.RECORD_TYPES.canonicalForm() == 'orderIndependentMaps=true;cacheFunnelFirst=true;assetRootDetection=true'
     }
 }

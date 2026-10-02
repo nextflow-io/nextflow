@@ -24,7 +24,7 @@ class TaskHashSpecFromJsonTest extends Specification {
         return """{
           "id": "test/v1",
           "function": "${function}",
-          "encoding": { "orderIndependentMaps": true, "cacheFunnelFirst": true },
+          "encoding": { "orderIndependentMaps": true, "cacheFunnelFirst": true, "assetRootDetection": true },
           "keys": ${keys}
         }"""
     }
@@ -38,7 +38,7 @@ class TaskHashSpecFromJsonTest extends Specification {
         then:
         result.id == 'test/v1'
         result.keys() == [HashKey.SESSION_ID, HashKey.CONDA]
-        result.encoding.canonicalForm() == 'orderIndependentMaps=true;cacheFunnelFirst=true'
+        result.encoding.canonicalForm() == 'orderIndependentMaps=true;cacheFunnelFirst=true;assetRootDetection=true'
     }
 
     @Unroll

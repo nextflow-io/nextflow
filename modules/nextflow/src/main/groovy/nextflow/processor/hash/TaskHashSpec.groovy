@@ -103,7 +103,8 @@ class TaskHashSpec {
         }
         final encoding = new EncodingRules(
                 boolAt(encodingNode as Map, 'orderIndependentMaps', id),
-                boolAt(encodingNode as Map, 'cacheFunnelFirst', id))
+                boolAt(encodingNode as Map, 'cacheFunnelFirst', id),
+                boolAt(encodingNode as Map, 'assetRootDetection', id))
 
         final keysNode = root.get('keys')
         if( !(keysNode instanceof List) || !keysNode ) {

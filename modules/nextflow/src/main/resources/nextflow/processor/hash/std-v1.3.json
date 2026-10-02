@@ -4,7 +4,8 @@
   "function": "murmur3_128",
   "encoding": {
     "orderIndependentMaps": false,
-    "cacheFunnelFirst": false
+    "cacheFunnelFirst": false,
+    "assetRootDetection": true
   },
   "keys": [
     {
