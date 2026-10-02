@@ -740,7 +740,7 @@ class TaskRun implements Cloneable {
         final info = containerResolver().resolveImage(this, configImage as String)
         // track the key of the container used
         if( info!=null )
-            this.containerKey = info.hashKey
+            this.containerKey = info.requestKey ?: info.hashKey
         // return the info
         return info
     }
