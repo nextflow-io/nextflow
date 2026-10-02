@@ -266,8 +266,10 @@ class LoggerHelper {
             filter.start()
 
             result.setContext(loggerContext)
-            if( result instanceof ConsoleAppender )
+            if( result instanceof ConsoleAppender ) {
+                result.setTarget('System.err')
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            }
             (result as FilterAttachable).addFilter(filter)
             (result as LifeCycle).start()
         }
