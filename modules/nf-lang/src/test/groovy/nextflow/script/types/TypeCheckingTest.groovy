@@ -103,29 +103,6 @@ class TypeCheckingTest extends Specification {
         return true
     }
 
-    def 'should warn about a process `when` section' () {
-        when:
-        def errors = getErrors(
-            '''\
-            nextflow.enable.types = true
-
-            process hello {
-                when:
-                task.ext.when
-
-                exec:
-                println 'hello!'
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 4
-        errors[0].getStartColumn() == 5
-        errors[0].isSoftError()
-        errors[0].getOriginalMessage() == "Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead"
-    }
-
     @Unroll
     def 'should report legacy type annotations' () {
         expect:
