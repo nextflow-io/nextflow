@@ -18,8 +18,6 @@ package nextflow.processor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.container.ContainerConfig
-import nextflow.executor.TaskArrayExecutor
 
 /**
  * Models a task array, which submits a collection of independent
@@ -35,17 +33,6 @@ class TaskArrayRun extends TaskRun {
 
     int getArraySize() {
         children.size()
-    }
-
-    @Override
-    ContainerConfig getContainerConfig() {
-        final config = super.getContainerConfig()
-        final envWhitelist = config.getEnvWhitelist()
-        if( envWhitelist != null ) {
-            final executor = (TaskArrayExecutor)processor.getExecutor()
-            envWhitelist.add(executor.getArrayIndexName())
-        }
-        return config
     }
 
     @Override

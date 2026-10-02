@@ -209,9 +209,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected BashWrapperBuilder createTaskWrapper(TaskRun task) {
-        return fusionEnabled()
-            ? fusionLauncher()
-            : executor.createBashWrapperBuilder(task)
+        if( fusionEnabled() )
+            return fusionLauncher()
+        final builder = executor.createBashWrapperBuilder(task)
+        // for a containerised array child, the container is built from the child task bean
+        // (which does not carry the array index variable); expose the scheduler array-index
+        // variable (e.g. SLURM_ARRAY_TASK_ID) inside the task container
+        if( isArrayChild && executor instanceof TaskArrayExecutor )
+            builder.arrayIndexName = ((TaskArrayExecutor) executor).getArrayIndexName()
+        return builder
     }
 
     protected String stdinLauncherScript() {
