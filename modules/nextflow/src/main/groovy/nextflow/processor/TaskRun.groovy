@@ -1080,5 +1080,9 @@ class TaskRun implements Cloneable {
     String getStubSource() {
         return config?.getStubBlock()?.getSource()
     }
+
+    boolean hasStubBlock() {
+        return config?.getStubBlock() != null
+    }
 }
 

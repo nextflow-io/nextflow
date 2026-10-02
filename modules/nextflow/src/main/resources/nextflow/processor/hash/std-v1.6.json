@@ -1,0 +1,63 @@
+{
+  "id": "std/v1.6",
+  "note": "From 26.08.0-edge until #7575 (9e7a492a3, 2026-09-03): module-bundle key present, eval still the derived string.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "contributor": "sessionId"
+    },
+    {
+      "key": "PROCESS_NAME",
+      "contributor": "processName"
+    },
+    {
+      "key": "TASK_SOURCE",
+      "contributor": "taskSource"
+    },
+    {
+      "key": "CONTAINER",
+      "contributor": "containerFingerprint"
+    },
+    {
+      "key": "INPUTS",
+      "contributor": "inputs.raw"
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "contributor": "evalOutputs.derivedString"
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "contributor": "scriptVars"
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "contributor": "binEntries"
+    },
+    {
+      "key": "MODULE_BUNDLE",
+      "contributor": "moduleBundleFingerprint"
+    },
+    {
+      "key": "ENV_MODULES",
+      "contributor": "envModules"
+    },
+    {
+      "key": "CONDA",
+      "contributor": "condaEnv"
+    },
+    {
+      "key": "SPACK",
+      "contributor": "spackEnvAndArch"
+    },
+    {
+      "key": "STUB_MARKER",
+      "contributor": "stubMarker"
+    }
+  ]
+}
