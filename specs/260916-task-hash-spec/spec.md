@@ -50,6 +50,7 @@ are even comparable.
 | D8 | **Opt-in only**, through master's merged `TaskHasherFactory`. No version requested → the factory abstains → the stock `TaskHasher` runs, untouched. | Removes the design's largest risk outright: if the default path cannot change, it cannot invalidate anyone's cache. Also retires the `TaskHashSpecFactory` SPI and every `TaskProcessor` change this spec previously required. Added 2026-09-23 after master landed the hook. |
 | D9 | **Specs are JSON resources**, resolved against a `ContributorRegistry`; the loader validates strictly and never falls back. | Composition is data, extraction is code. A version that only reorders or re-includes keys ships as a file, and the file doubles as the ADR's hash-relevant field list. Strict validation because a mis-resolved spec produces cache keys nobody can account for. Added 2026-09-23. |
 | D10 | **25.10.0 is the oldest supported version**, giving seven THVs. | Lineage shipped in 25.04 and no record predates it, so there is nothing older to explain; 25.10.0 is a stable release inside that window. Added 2026-10-02 after sweeping 25.10.0→master, which found three boundaries the earlier four-version map had missed. |
+| D11 | **Version ids are `std/<major>.<minor>`.** The major changes only when a hash change cannot be reproduced from today's code; every reproducible change bumps the minor. All seven known versions are reproducible, so they are `std/v1.1` … `std/v1.7`. | Puts the only question that matters for cache recovery — *can I get these hashes back at all?* — into the id itself, so it travels in the lineage record and the env var with no lookup. Added 2026-10-02. |
 
 ## Architecture
 
@@ -77,7 +78,7 @@ interface Contributor {
 class KeyBinding { HashKey key; Contributor contributor }
 
 class TaskHashSpec {
-    String id                              // 'std/v4', 'global/v1'
+    String id                              // 'std/v1.7', 'global/v1.1'
     List<KeyBinding> bindings              // ordered
     EncodingRules encoding
     HashFunction function
@@ -144,13 +145,41 @@ helpers, and the parser. Six boundaries, so **seven versions**:
 
 | Ver | First release | Boundary that ends it | Hash differs only when |
 | --- | --- | --- | --- |
-| `std/v1` | 25.10.0 | `1ca327c80` #6605 | a hashed file sits under the asset root but not under `baseDir` — running from a repo subdirectory or with `-main-script` |
-| `std/v2` | 25.11.0-edge | `b5278c75a` #6696 | the script references `task.ext.*` |
-| `std/v3` | 26.01.1-edge | `d54ff29af` #6679 | a hashed value is a `Map` |
-| `std/v4` | 26.03.0-edge | `785e801ad` #7165 | the script references `params.*` in a process body |
-| `std/v5` | 26.04.2 | `029e52eef` #6914 | module binaries enabled **and** the bundle has entries |
-| `std/v6` | 26.08.0-edge | `9e7a492a3` #7575 | the process declares `eval` outputs |
-| `std/v7` | 26.09.0-edge | — (current) | — |
+| `std/v1.1` | 25.10.0 | `1ca327c80` #6605 | a hashed file sits under the asset root but not under `baseDir` — running from a repo subdirectory or with `-main-script` |
+| `std/v1.2` | 25.11.0-edge | `b5278c75a` #6696 | the script references `task.ext.*` |
+| `std/v1.3` | 26.01.1-edge | `d54ff29af` #6679 | a hashed value is a `Map` |
+| `std/v1.4` | 26.03.0-edge | `785e801ad` #7165 | the script references `params.*` in a process body |
+| `std/v1.5` | 26.04.2 | `029e52eef` #6914 | module binaries enabled **and** the bundle has entries |
+| `std/v1.6` | 26.08.0-edge | `9e7a492a3` #7575 | the process declares `eval` outputs |
+| `std/v1.7` | 26.09.0-edge | — (current) | — |
+
+#### What the version number means
+
+`std/<major>.<minor>`.
+
+- **The major changes only when a hash change cannot be reproduced from today's code.** A change is
+  reproducible when it *adds entries that carry an identifying marker* — an older spec recovers the
+  old value by filtering them out. It is not reproducible when it changes the *content* of a value,
+  because nothing can invert that. All six known boundaries are the first kind, so every version so
+  far is `v1.x`.
+- **The minor changes for every other hash change.**
+
+Two things this does **not** mean, and both will be misread if left unsaid:
+
+- **A shared major does not mean caches interchange.** `v1.3` and `v1.4` produce different hashes. A
+  cache written by one does not match the other. The major says only that you can *ask* for `v1.3`
+  and get its hashes back.
+- **A major is a claim about our code, not about the change.** It is only true once the reproduction
+  is built and demonstrated against a genuine release. Allocate the major after that proof, never
+  before — `v1.1` and `v1.2` are provisional on exactly this ground, since neither the
+  asset-detection flag nor the `task.ext.*` filter exists yet.
+
+Published ids are never renumbered. If a major turns out to be wrong, the correction is a new
+version going forward plus a note here, not a rename — a stamped record must keep meaning what it
+meant when it was written.
+
+Today the major is always 1, so it carries no information yet. It is insurance against a change of
+the second kind, which may never arrive.
 
 Most pipelines cross most boundaries with no hash change. A pipeline with no evals, no map inputs,
 no `params.*` or `task.ext.*` in a process body, no module bundle, run from the repo root, hashes
@@ -159,7 +188,7 @@ identically from 25.10.0 to today.
 Two boundaries are **not** key-set or encoding changes. #6696 and #7165 change what a helper
 *returns* — the value, not the key list. They are still cache boundaries, and both are reproducible
 because each one *adds entries carrying an identifying prefix*, so an older spec recovers the old
-value by filtering: drop `task.ext.*` for `std/v1`, drop `params.*` for `std/v1`–`std/v4`.
+value by filtering: drop `task.ext.*` for `std/v1.1`–`std/v1.2`, drop `params.*` for `std/v1.1`–`std/v1.4`.
 
 ### Measured and rejected as a boundary: #6789
 
@@ -188,20 +217,20 @@ Four of the seven exist. The current ids are off by the renumbering above:
 
 | New id | Current id | State |
 | --- | --- | --- |
-| `std/v1` | — | not implemented; needs an asset-detection encoding flag and a `task.ext.*` filter |
-| `std/v2` | — | not implemented; needs a `task.ext.*` filter |
-| `std/v3` | `std/v1` | implemented, validated 8/8 against 26.02.0-edge |
-| `std/v4` | — | not implemented; needs a `params.*` filter |
-| `std/v5` | `std/v2` | implemented, validated 8/8 against 26.04.6 |
-| `std/v6` | `std/v3` | implemented, validated 8/8 against 26.08.0-edge |
-| `std/v7` | `std/v4` | implemented, equals current master |
+| `std/v1.1` | — | not implemented; needs an asset-detection encoding flag and a `task.ext.*` filter |
+| `std/v1.2` | — | not implemented; needs a `task.ext.*` filter |
+| `std/v1.3` | `std/v1` | implemented, validated 8/8 against 26.02.0-edge |
+| `std/v1.4` | — | not implemented; needs a `params.*` filter |
+| `std/v1.5` | `std/v2` | implemented, validated 8/8 against 26.04.6 |
+| `std/v1.6` | `std/v3` | implemented, validated 8/8 against 26.08.0-edge |
+| `std/v1.7` | `std/v4` | implemented, equals current master |
 
 Renumbering changes every spec id, and therefore every fingerprint. Nothing persists a fingerprint
 yet, so the cost is editing four JSON files and their tests.
 
-The `7/8` result previously recorded for `std/v1` against 26.02.0-edge was this gap: that release
+The `7/8` result previously recorded for `std/v1.1` against 26.02.0-edge was this gap: that release
 predates #7165, and the spec had no `params.*` filter. Under the new numbering that spec is
-`std/v3`, and the missing filter belongs to `std/v4` and below.
+`std/v1.3`, and the missing filter belongs to `std/v1.4` and below.
 
 ### Finding: #6927's versions do not map onto history
 
@@ -222,11 +251,11 @@ invalidates the cache for every pipeline using eval outputs. Both points should 
 
 ### Specs to implement
 
-Seven `std` specs plus the plugin's `global/v1`. `SESSION_ID`, `PROCESS_NAME`, `TASK_SOURCE`,
+Seven `std` specs plus the plugin's `global/v1.1`. `SESSION_ID`, `PROCESS_NAME`, `TASK_SOURCE`,
 `CONTAINER`, `SCRIPT_VARS`, `BIN_ENTRIES`, `ENV_MODULES`, `CONDA`, `SPACK` and `STUB_MARKER` are
 present in every `std` spec and are omitted from the table — only the cells that move are shown.
 
-| | `v1` | `v2` | `v3` | `v4` | `v5` | `v6` | `v7` | `global/v1` |
+| | `v1.1` | `v1.2` | `v1.3` | `v1.4` | `v1.5` | `v1.6` | `v1.7` | `global/v1.1` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SESSION_ID` / `PROCESS_NAME` | yes | yes | yes | yes | yes | yes | yes | **no** |
 | `INPUTS` | raw | raw | raw | raw | raw | raw | raw | **file identity** |
@@ -241,10 +270,10 @@ run resumed one version back must miss only the process that exercises that row.
 
 Three new mechanisms are needed beyond what is built:
 
-- **`task.ext.*` filter** on `SCRIPT_VARS`, for `v1`–`v2` — #6696 ends `v2`, so neither collects
+- **`task.ext.*` filter** on `SCRIPT_VARS`, for `v1.1`–`v1.2` — #6696 ends `v1.2`, so neither collects
   `task.ext.*`. Same shape as the `params.*` filter.
-- **`params.*` filter** on `SCRIPT_VARS`, for `v1`–`v4`.
-- **Asset-detection flag** in `EncodingRules`, for `v1` only — the narrow `isAssetFile` that checked
+- **`params.*` filter** on `SCRIPT_VARS`, for `v1.1`–`v1.4`.
+- **Asset-detection flag** in `EncodingRules`, for `v1.1` only — the narrow `isAssetFile` that checked
   `baseDir` alone, before #6605 widened it to the asset root.
 
 The first two are contributors. The third is a third `HashBuilder` flag, which also means
@@ -285,7 +314,7 @@ that mattered most:
 - **The default path is untouched.** With no version requested the factory abstains and the stock
   `TaskHasher` runs. Opting in is the only way to change a cache key, so the design carries no risk
   of invalidating anyone's cache — which was the single largest objection to it.
-- **`std/v4` becomes a permanent equivalence oracle** rather than the production path. The test
+- **`std/v1.4` becomes a permanent equivalence oracle** rather than the production path. The test
   asserting `VersionedTaskHasher(STD_V4) == TaskHasher` on fixtures is now the drift guard (A2) the ADR
   asks for, with a standing reason to exist.
 - What the old seam bought — that a plugin cannot bypass `explain()` — is given up. A plugin can
@@ -333,9 +362,9 @@ a silent fallback.
 | `nf-commons` | `EncodingRules`; the two `HashBuilder` flags, defaults preserving master |
 | `nextflow.processor.hash` | `HashKey`, `Contributor`, `KeyBinding`, `HashContext`, `TaskHashSpec`, `TaskHashSpecLoader`, `ContributorRegistry`, `Contributors`, `VersionedTaskHasher`, `VersionedTaskHasherFactory`, `TaskHashSpecResolver`, `StdSpecs` |
 | `nextflow` resources | `nextflow/processor/hash/std-v{1..4}.json`, plus the factory line in `META-INF/extensions.idx` |
-| `nf-cloudcache-global` | the `global/v1` spec |
+| `nf-cloudcache-global` | the `global/v1.1` spec |
 
-Reproducing `std/v1` and `std/v2` requires the `HashBuilder` encoding flags, which exist only in
+Reproducing `std/v1.1` and `std/v1.2` requires the `HashBuilder` encoding flags, which exist only in
 #6927. The prototype ports that change itself, defaulting to current behaviour so master is
 unaffected — deliberate overlap that demonstrates how the two reconcile.
 
@@ -349,12 +378,12 @@ every run without touching the lineage model — which stays the ADR's undecided
 
 Since D8 this is structural rather than demonstrated: with no version requested, no spec is
 constructed and `TaskProcessor` runs the stock `TaskHasher`. The byte-exactness evidence below is
-still what makes `std/v4` trustworthy *as an oracle*, but it is no longer what protects the default
+still what makes `std/v1.4` trustworthy *as an oracle*, but it is no longer what protects the default
 path.
 
 #### Historical note
 
-No env var and no plugin → `std/v4` → byte-identical to master. This is test 1 of the runbook.
+No env var and no plugin → `std/v1.4` → byte-identical to master. This is test 1 of the runbook.
 
 ## Validation
 
@@ -366,17 +395,17 @@ build will produce a wrong result (see Risks).
 
 | Spec | Baseline | Build | Status |
 | --- | --- | --- | --- |
-| `std/v1` | 25.10.0 … 25.10.2 | — | not implemented, not run |
-| `std/v2` | 25.12.0-edge | `build 0` locally — needs a clean download | not implemented, not run |
-| `std/v3` | 26.02.0-edge | 11371 | **8/8 cached** (run as the old `std/v1`) |
-| `std/v4` | 26.03.x … 26.04.1 | — | not implemented, not run |
-| `std/v5` | 26.04.6 | 12646 | **8/8 cached** (run as the old `std/v2`) |
-| `std/v6` | 26.08.0-edge | 13213 | **8/8 cached** (run as the old `std/v3`) |
-| `std/v7` | master, or 26.09.1-edge | — | matches master; not yet run against a real release |
-| `global/v1` | seqeralabs#47 build | — | not implemented |
+| `std/v1.1` | 25.10.0 … 25.10.2 | — | not implemented, not run |
+| `std/v1.2` | 25.12.0-edge | `build 0` locally — needs a clean download | not implemented, not run |
+| `std/v1.3` | 26.02.0-edge | 11371 | **8/8 cached** (run as the old `std/v1.1`) |
+| `std/v1.4` | 26.03.x … 26.04.1 | — | not implemented, not run |
+| `std/v1.5` | 26.04.6 | 12646 | **8/8 cached** (run as the old `std/v1.2`) |
+| `std/v1.6` | 26.08.0-edge | 13213 | **8/8 cached** (run as the old `std/v1.3`) |
+| `std/v1.7` | master, or 26.09.1-edge | — | matches master; not yet run against a real release |
+| `global/v1.1` | seqeralabs#47 build | — | not implemented |
 
-Two gaps worth naming: `std/v7` has never been checked against a genuine release — 26.09.1-edge
-would do it — and `std/v2`'s nearest baseline, 25.12.0-edge, is a `build 0` copy locally.
+Two gaps worth naming: `std/v1.7` has never been checked against a genuine release — 26.09.1-edge
+would do it — and `std/v1.2`'s nearest baseline, 25.12.0-edge, is a `build 0` copy locally.
 
 ### Pipeline
 
@@ -385,14 +414,14 @@ would do it — and `std/v2`'s nearest baseline, 25.12.0-edge, is a `build 0` co
 | Process | Exercises | Note |
 | --- | --- | --- |
 | `P_BASIC` | `TASK_SOURCE`, `INPUTS` (value + file), `SCRIPT_VARS` (global var + `task.ext`) | |
-| `P_MAP_INPUT` | encoding | **`v3`↔`v4` discriminator** — needs a genuine `Map` input |
-| `P_EVAL` | `EVAL_OUTPUTS` | **`v6`↔`v7` discriminator** |
-| `P_MODULE_BUNDLE` | `MODULE_BUNDLE` | **`v5`↔`v6` discriminator** — needs module binaries enabled |
+| `P_MAP_INPUT` | encoding | **`v1.3`↔`v1.4` discriminator** — needs a genuine `Map` input |
+| `P_EVAL` | `EVAL_OUTPUTS` | **`v1.6`↔`v1.7` discriminator** |
+| `P_MODULE_BUNDLE` | `MODULE_BUNDLE` | **`v1.5`↔`v1.6` discriminator** — needs module binaries enabled |
 | `P_BIN` | `BIN_ENTRIES` | calls a `bin/` script |
 | `P_CONTAINER` | `CONTAINER` | image pinned by digest |
 | `P_CONDA` | `CONDA` | env pinned |
 | `P_STUB` | `STUB_MARKER` | run with `-stub-run` |
-| `P_PRODUCER` → `P_CONSUMER`, plus an external file | file identity | `global/v1` only; includes a nested list input for `contributeInput` recursion |
+| `P_PRODUCER` → `P_CONSUMER`, plus an external file | file identity | `global/v1.1` only; includes a nested list input for `contributeInput` recursion |
 
 `SESSION_ID` and `PROCESS_NAME` are exercised implicitly — resume restores the session id, and the
 negative controls cover the rest. `ENV_MODULES` and `SPACK` are unit-oracle only.
@@ -404,8 +433,8 @@ negative controls cover the rest. `ENV_MODULES` and `SPACK` are unit-oracle only
 2. **Negative controls** — change a script body, rename a process, change a value input: those tasks
    must re-execute. Without these, a run where everything caches for unrelated reasons reads as a
    pass.
-3. **Cross-spec discrimination** — resume an H3 baseline with `std/v4` and everything caches
-   **except `P_EVAL`**; resume an H2 baseline with `std/v3` and only `P_MODULE_BUNDLE` misses. This
+3. **Cross-spec discrimination** — resume an H3 baseline with `std/v1.4` and everything caches
+   **except `P_EVAL`**; resume an H2 baseline with `std/v1.3` and only `P_MODULE_BUNDLE` misses. This
    proves the specs are genuinely distinct in exactly the predicted place, not merely
    self-consistent.
 
@@ -430,8 +459,8 @@ reference copied read-only into test sources.
   not hypothetical.** Validation against genuine releases (2026-09-22) found a fourth boundary:
   `785e801ad` #7165 "Fix strict parser to include params refs in task hash" (2026-05-21), which lives
   in the parser/nf-lang layer. It makes `getTaskGlobalVars()` fold referenced `params.*` into
-  `SCRIPT_VARS`. `std/v2` and `std/v3` reproduce their releases 8/8 because both post-date it;
-  `std/v1` misses exactly the one process that reads `params`, because `26.02.0-edge` predates it.
+  `SCRIPT_VARS`. `std/v1.2` and `std/v1.3` reproduce their releases 8/8 because both post-date it;
+  `std/v1.1` misses exactly the one process that reads `params`, because `26.02.0-edge` predates it.
 
 - **A derivation change is reversible only when it ADDS identifiable entries.** #6696 and #7165 both
   add variable refs carrying a prefix (`task.ext.`, `params.`), so an older spec recovers the old
@@ -449,9 +478,9 @@ reference copied read-only into test sources.
   era-appropriate *helpers*, not just an era-appropriate key list — a strictly larger design.
   Practical consequence: specs reproduce eras reliably only back to the most recent input-derivation
   change, which bounds how far back the cache-miss explanation can honestly reach.
-- **`std/v1` and `std/v2` composition is a hypothesis** until the resume test confirms it.
+- **`std/v1.1` and `std/v1.2` composition is a hypothesis** until the resume test confirms it.
 - **Fingerprint canonical form must be frozen carefully.** It has to include extraction identity —
-  `global/v1` with `SampleFileIdentity` and with `ProvenanceFileIdentity` must not share a
+  `global/v1.1` with `SampleFileIdentity` and with `ProvenanceFileIdentity` must not share a
   fingerprint — while excluding implementation detail, so historical ids stay stable.
 - **Relationship to #6927 is unresolved.** If it lands, the two must be reconciled rather than
   coexisting as separate identifiers. The findings above should be raised on that PR first.

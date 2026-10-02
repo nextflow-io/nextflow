@@ -27,6 +27,14 @@ infrastructure); both are covered by unit oracles instead.
 
 ## 1. Positive: each spec reproduces its release
 
+> **Ids in this runbook are the flat ones the code uses today** (`std/v1`…`std/v4`). `spec.md` has
+> since renumbered to seven semantic ids (`std/v1.1`…`std/v1.7`), where today's `std/v1` is
+> `std/v1.3`, `std/v2` is `std/v1.5`, `std/v3` is `std/v1.6` and `std/v4` is `std/v1.7`. Commands
+> below work as written until the code is renumbered; results already recorded stay valid, since
+> only the name changes.
+
+
+
 > **Check the baseline is a real release before trusting it.** Run
 > `NXF_VER=<version> nextflow -version` and look at the build number. A genuine
 > release has a real one (26.04.6 = `build 12646`); a locally installed snapshot
