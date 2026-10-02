@@ -191,6 +191,33 @@ class TypeCheckingTest extends Specification {
         cn.getField('input') != null
     }
 
+    def 'should check a parameter reference in the output block' () {
+        when:
+        def errors = getErrors(
+            '''\
+            params {
+                outdir: String = 'results'
+            }
+
+            workflow {
+                main:
+                ch = channel.of('a')
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples: Channel<String> {
+                    path params.outdir
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should check a workflow emit' () {
         when:
         def errors = getErrors(

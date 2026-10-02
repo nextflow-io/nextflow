@@ -638,4 +638,21 @@ class ScriptResolveTest extends Specification {
         errors.size() == 0
     }
 
+    def 'should resolve piped operators in the entry workflow with a params block' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                greeting: String = 'hello'
+            }
+
+            workflow {
+                channel.of(1, 2) | view
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
 }
