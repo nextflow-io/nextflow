@@ -1,6 +1,6 @@
 {
-  "id": "std/v4",
-  "note": "#7575 (2026-09-03) onwards: eval outputs hashed as the raw map. Matches current master.",
+  "id": "std/v1.7",
+  "note": "From 26.09.0-edge onwards: eval hashed as the raw map. Matches current master.",
   "function": "murmur3_128",
   "encoding": {
     "orderIndependentMaps": true,

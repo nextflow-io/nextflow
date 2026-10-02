@@ -1,10 +1,10 @@
 {
-  "id": "std/v2",
-  "note": "#6679 (2026-03-09) to #6914 (029e52eef, 2026-07-17): record-types encoding, still no module-bundle key.",
+  "id": "std/v1.3",
+  "note": "From 26.01.1-edge until #6679 (d54ff29af, 2026-03-09): legacy encoding, no module-bundle key, eval as the derived string.",
   "function": "murmur3_128",
   "encoding": {
-    "orderIndependentMaps": true,
-    "cacheFunnelFirst": true
+    "orderIndependentMaps": false,
+    "cacheFunnelFirst": false
   },
   "keys": [
     {
@@ -33,7 +33,7 @@
     },
     {
       "key": "SCRIPT_VARS",
-      "contributor": "scriptVars"
+      "contributor": "scriptVars.noParams"
     },
     {
       "key": "BIN_ENTRIES",

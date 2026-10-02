@@ -1,6 +1,6 @@
 {
-  "id": "std/v3",
-  "note": "#6914 (2026-07-17) to #7575 (9e7a492a3, 2026-09-03): module-bundle key added.",
+  "id": "std/v1.5",
+  "note": "From 26.04.2 until #6914 (029e52eef, 2026-07-17): record-types encoding, no module-bundle key.",
   "function": "murmur3_128",
   "encoding": {
     "orderIndependentMaps": true,
@@ -38,10 +38,6 @@
     {
       "key": "BIN_ENTRIES",
       "contributor": "binEntries"
-    },
-    {
-      "key": "MODULE_BUNDLE",
-      "contributor": "moduleBundleFingerprint"
     },
     {
       "key": "ENV_MODULES",

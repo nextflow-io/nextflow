@@ -1,10 +1,10 @@
 {
-  "id": "std/v1",
-  "note": "Before #6679 'Record types' (d54ff29af, 2026-03-09): legacy encoding, no module-bundle key.",
+  "id": "std/v1.6",
+  "note": "From 26.08.0-edge until #7575 (9e7a492a3, 2026-09-03): module-bundle key present, eval still the derived string.",
   "function": "murmur3_128",
   "encoding": {
-    "orderIndependentMaps": false,
-    "cacheFunnelFirst": false
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true
   },
   "keys": [
     {
@@ -38,6 +38,10 @@
     {
       "key": "BIN_ENTRIES",
       "contributor": "binEntries"
+    },
+    {
+      "key": "MODULE_BUNDLE",
+      "contributor": "moduleBundleFingerprint"
     },
     {
       "key": "ENV_MODULES",

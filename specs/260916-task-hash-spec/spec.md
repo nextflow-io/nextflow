@@ -213,24 +213,28 @@ in that window.
 
 ### What is implemented today
 
-Four of the seven exist. The current ids are off by the renumbering above:
+Four of the seven exist, under the new ids. All four validated 8/8 against a genuine release, so all
+four are confirmed major 1.
 
-| New id | Current id | State |
+| Id | Baseline | Result |
 | --- | --- | --- |
-| `std/v1.1` | — | not implemented; needs an asset-detection encoding flag and a `task.ext.*` filter |
-| `std/v1.2` | — | not implemented; needs a `task.ext.*` filter |
-| `std/v1.3` | `std/v1` | implemented, validated 8/8 against 26.02.0-edge |
-| `std/v1.4` | — | not implemented; needs a `params.*` filter |
-| `std/v1.5` | `std/v2` | implemented, validated 8/8 against 26.04.6 |
-| `std/v1.6` | `std/v3` | implemented, validated 8/8 against 26.08.0-edge |
-| `std/v1.7` | `std/v4` | implemented, equals current master |
+| `std/v1.1` | 25.10.0 … 25.10.2 | not implemented — needs a narrow asset-detection flag **and** `task.ext.*` + `params.*` filters |
+| `std/v1.2` | 25.11.0-edge … 25.12.x | not implemented — needs `task.ext.*` + `params.*` filters |
+| `std/v1.3` | 26.02.0-edge (build 11371) | **8/8 cached** |
+| `std/v1.4` | 26.03.x … 26.04.1 | not implemented — needs a `params.*` filter |
+| `std/v1.5` | 26.04.6 (12646) | **8/8 cached** |
+| `std/v1.6` | 26.08.0-edge (13213) | **8/8 cached** |
+| `std/v1.7` | master | default path 8/8; not yet run against 26.09.1-edge |
+| `global/v1.1` | seqeralabs#47 | not implemented |
 
-Renumbering changes every spec id, and therefore every fingerprint. Nothing persists a fingerprint
-yet, so the cost is editing four JSON files and their tests.
+`std/v1.3` needed the `params.*` filter to reach 8/8 — 26.02.0-edge predates #7165, so it has no
+`params.*` in its global vars while today's parser collects them. That filter is the first
+*derivation* change shown to be reversible by a contributor rather than argued to be. It is the
+evidence the major-version rule rests on.
 
-The `7/8` result previously recorded for `std/v1.1` against 26.02.0-edge was this gap: that release
-predates #7165, and the spec had no `params.*` filter. Under the new numbering that spec is
-`std/v1.3`, and the missing filter belongs to `std/v1.4` and below.
+`std/v1.4` reuses the same filter, so it is cheap. `std/v1.1` and `std/v1.2` additionally need a
+`task.ext.*` filter, and `std/v1.1` a narrow `isAssetFile`. Until those are built and validated,
+their place in major 1 is a design claim, not a measured one.
 
 ### Finding: #6927's versions do not map onto history
 

@@ -22,20 +22,20 @@ class StdSpecsTest extends Specification {
 
     def 'adjacent specs differ in exactly the documented place'() {
         expect: 'v1 to v2 differs only in encoding'
-        StdSpecs.STD_V1.keys() == StdSpecs.STD_V2.keys()
-        StdSpecs.STD_V1.encoding.canonicalForm() == EncodingRules.LEGACY.canonicalForm()
-        StdSpecs.STD_V2.encoding.canonicalForm() == EncodingRules.RECORD_TYPES.canonicalForm()
+        StdSpecs.STD_V1_3.keys() == StdSpecs.STD_V1_5.keys()
+        StdSpecs.STD_V1_3.encoding.canonicalForm() == EncodingRules.LEGACY.canonicalForm()
+        StdSpecs.STD_V1_5.encoding.canonicalForm() == EncodingRules.RECORD_TYPES.canonicalForm()
 
         and: 'v2 to v3 differs only by the module bundle key'
-        StdSpecs.STD_V3.keys() - StdSpecs.STD_V2.keys() == [HashKey.MODULE_BUNDLE]
-        StdSpecs.STD_V2.keys() - StdSpecs.STD_V3.keys() == []
-        StdSpecs.STD_V3.encoding.canonicalForm() == StdSpecs.STD_V2.encoding.canonicalForm()
+        StdSpecs.STD_V1_6.keys() - StdSpecs.STD_V1_5.keys() == [HashKey.MODULE_BUNDLE]
+        StdSpecs.STD_V1_5.keys() - StdSpecs.STD_V1_6.keys() == []
+        StdSpecs.STD_V1_6.encoding.canonicalForm() == StdSpecs.STD_V1_5.encoding.canonicalForm()
 
         and: 'v3 to v4 differs only in the eval extraction'
-        StdSpecs.STD_V3.keys() == StdSpecs.STD_V4.keys()
-        StdSpecs.STD_V3.bindings[HashKey.EVAL_OUTPUTS].canonicalName() ==
+        StdSpecs.STD_V1_6.keys() == StdSpecs.STD_V1_7.keys()
+        StdSpecs.STD_V1_6.bindings[HashKey.EVAL_OUTPUTS].canonicalName() ==
             'evalOutputs.derivedString'
-        StdSpecs.STD_V4.bindings[HashKey.EVAL_OUTPUTS].canonicalName() ==
+        StdSpecs.STD_V1_7.bindings[HashKey.EVAL_OUTPUTS].canonicalName() ==
             'evalOutputs.rawMap'
     }
 
@@ -47,10 +47,10 @@ class StdSpecsTest extends Specification {
     def 'every spec accounts for every key in the vocabulary'() {
         given: 'keys a spec may legitimately omit, with the reason'
         def permittedOmissions = [
-            'std/v1': [HashKey.MODULE_BUNDLE] as Set,   // added by #6914, 2026-07-17
-            'std/v2': [HashKey.MODULE_BUNDLE] as Set,
-            'std/v3': [] as Set,
-            'std/v4': [] as Set
+            'std/v1.3': [HashKey.MODULE_BUNDLE] as Set,   // #6914 (2026-07-17) ends v1.5
+            'std/v1.5': [HashKey.MODULE_BUNDLE] as Set,
+            'std/v1.6': [] as Set,
+            'std/v1.7': [] as Set
         ]
 
         expect:

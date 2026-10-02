@@ -62,11 +62,11 @@ class VersionedTaskHasherDumpTest extends Specification {
 
         when:
         def json = new JsonSlurper().parseText(
-            new VersionedTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4).dumpJson()) as List
+            new VersionedTaskHasher(new HashContext(task, helper), StdSpecs.STD_V1_7).dumpJson()) as List
 
         then:
-        json[0].spec == 'std/v4'
-        json[0].fingerprint == StdSpecs.STD_V4.fingerprint()
+        json[0].spec == 'std/v1.7'
+        json[0].fingerprint == StdSpecs.STD_V1_7.fingerprint()
         and:
         json[1..-1]*.key == ['SESSION_ID', 'PROCESS_NAME', 'TASK_SOURCE']
         and:
@@ -108,7 +108,7 @@ class VersionedTaskHasherDumpTest extends Specification {
         helper.getTaskBinEntries(_) >> []
 
         when:
-        def hasher = new VersionedTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4)
+        def hasher = new VersionedTaskHasher(new HashContext(task, helper), StdSpecs.STD_V1_7)
         def hash = hasher.compute()
         def output = hasher.dumpLegacy(hash)
 

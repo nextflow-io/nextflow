@@ -34,10 +34,10 @@ class VersionedTaskHasherFactoryTest extends Specification {
 
     def 'a requested version resolves to its spec'() {
         given:
-        SysEnv.push([NXF_TASK_HASH_VER: 'std/v2'])
+        SysEnv.push([NXF_TASK_HASH_VER: 'std/v1.5'])
 
         expect:
-        VersionedTaskHasherFactory.requestedSpec().is(StdSpecs.STD_V2)
+        VersionedTaskHasherFactory.requestedSpec().is(StdSpecs.STD_V1_5)
     }
 
     def 'an unknown version fails loudly rather than falling back'() {
