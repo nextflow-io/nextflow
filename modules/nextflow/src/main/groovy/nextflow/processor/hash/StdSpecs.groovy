@@ -36,8 +36,9 @@ class StdSpecs {
      * implemented yet — each needs a mechanism that does not exist (a narrow
      * asset-detection flag, a {@code task.ext.*} filter).
      */
-    static final List<String> IDS = ['std/v1.3', 'std/v1.4', 'std/v1.5', 'std/v1.6', 'std/v1.7']
+    static final List<String> IDS = ['std/v1.2', 'std/v1.3', 'std/v1.4', 'std/v1.5', 'std/v1.6', 'std/v1.7']
 
+    static TaskHashSpec getSTD_V1_2() { byId('std/v1.2') }
     static TaskHashSpec getSTD_V1_3() { byId('std/v1.3') }
     static TaskHashSpec getSTD_V1_4() { byId('std/v1.4') }
     static TaskHashSpec getSTD_V1_5() { byId('std/v1.5') }
