@@ -102,6 +102,19 @@ class GoogleBatchMachineTypeSelector {
      */
     private static final List<String> PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES = ['c3-*', 'c3a-*', 'c3d-*', 'c4-*', 'c4a-*', 'c4d-*', 'h4d-*', 'z3-*']
 
+    /*
+     * Number of built-in 375 GB Local SSD partitions by machine family and vCPU
+     * count. Batch still needs the full disk declaration to mount these at /tmp.
+     * https://cloud.google.com/compute/docs/disks/local-ssd#choose_number_local_ssds
+     */
+    private static final Map<String, Map<Integer, Integer>> BUILT_IN_LOCAL_SSD_PARTITIONS = [
+        c3:  [4:1, 8:2, 22:4, 44:8, 88:16, 176:32],
+        c3d: [8:1, 16:1, 30:2, 60:4, 90:8, 180:16, 360:32],
+        c4:  [4:1, 8:1, 16:2, 24:4, 32:5, 48:8, 96:16, 144:24, 192:32, 288:48],
+        c4a: [4:1, 8:2, 16:4, 32:6, 48:10, 64:14, 72:16],
+        c4d: [8:1, 16:1, 32:2, 48:4, 64:6, 96:8, 192:16, 384:32],
+    ]
+
     private CloudInfoClient cloudInfo
 
     GoogleBatchMachineTypeSelector(){
@@ -200,7 +213,7 @@ class GoogleBatchMachineTypeSelector {
      *
      * @param requested Amount of disk requested
      * @param machineType Machine type
-     * @return Next greater multiple of 375 GB that is a valid size for the given machine type
+     * @return A valid configurable size, or the fixed built-in capacity for supported -lssd machines
      */
     protected MemoryUnit findValidLocalSSDSize(MemoryUnit requested, MachineType machineType) {
 
@@ -277,6 +290,18 @@ class GoogleBatchMachineTypeSelector {
                 return findFirstValidSize(requested, [4])
             if( machineType.type == 'g2-standard-96' )
                 return findFirstValidSize(requested, [8])
+        }
+
+        if( machineType.type.endsWith('-lssd') && BUILT_IN_LOCAL_SSD_PARTITIONS.containsKey(machineType.family) ) {
+            final partitions = BUILT_IN_LOCAL_SSD_PARTITIONS.get(machineType.family).get(machineType.cpusPerVm)
+            if( partitions == null )
+                throw new IllegalArgumentException("Unknown built-in Local SSD capacity for machine type '${machineType.type}'")
+            final capacity = new MemoryUnit(partitions * 375L * (1L << 30))
+            if( requested > capacity )
+                throw new IllegalArgumentException("Machine type '${machineType.type}' has ${capacity} of built-in Local SSD, but ${requested} was requested; select a larger machine type")
+            // Do not return zero: that removes both the disk declaration and
+            // the scratch volume from the Batch job, leaving /tmp on the boot disk.
+            return capacity
         }
 
         if( notConfigurableLocalSSD(machineType) )
