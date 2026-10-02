@@ -213,15 +213,15 @@ in that window.
 
 ### What is implemented today
 
-Four of the seven exist, under the new ids. All four validated 8/8 against a genuine release, so all
-four are confirmed major 1.
+Five of the seven exist. All five validated 8/8 against a genuine release, so all five are
+confirmed major 1.
 
 | Id | Baseline | Result |
 | --- | --- | --- |
 | `std/v1.1` | 25.10.0 … 25.10.2 | not implemented — needs a narrow asset-detection flag **and** `task.ext.*` + `params.*` filters |
 | `std/v1.2` | 25.11.0-edge … 25.12.x | not implemented — needs `task.ext.*` + `params.*` filters |
 | `std/v1.3` | 26.02.0-edge (build 11371) | **8/8 cached** |
-| `std/v1.4` | 26.03.x … 26.04.1 | not implemented — needs a `params.*` filter |
+| `std/v1.4` | 26.04.1 (build 12112) | **8/8 cached** |
 | `std/v1.5` | 26.04.6 (12646) | **8/8 cached** |
 | `std/v1.6` | 26.08.0-edge (13213) | **8/8 cached** |
 | `std/v1.7` | master | default path 8/8; not yet run against 26.09.1-edge |
@@ -232,9 +232,13 @@ four are confirmed major 1.
 *derivation* change shown to be reversible by a contributor rather than argued to be. It is the
 evidence the major-version rule rests on.
 
-`std/v1.4` reuses the same filter, so it is cheap. `std/v1.1` and `std/v1.2` additionally need a
-`task.ext.*` filter, and `std/v1.1` a narrow `isAssetFile`. Until those are built and validated,
-their place in major 1 is a design claim, not a measured one.
+`std/v1.4` reuses the same filter and validated 8/8 against 26.04.1 — a release that has #6679,
+and predates both #7165 and #6914, so it sits exactly in the v1.4 era. It also discriminates in the
+predicted place: that baseline resumed under `v1.5` misses only `P_BASIC` (the params filter), and
+under `v1.3` misses only `P_MAP_INPUT` (the encoding).
+
+`std/v1.1` and `std/v1.2` still need a `task.ext.*` filter, and `std/v1.1` a narrow `isAssetFile`.
+Until those are built and validated, their place in major 1 is a design claim, not a measured one.
 
 ### Finding: #6927's versions do not map onto history
 

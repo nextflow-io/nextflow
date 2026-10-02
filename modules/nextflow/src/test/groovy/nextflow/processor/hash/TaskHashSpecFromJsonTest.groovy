@@ -62,7 +62,7 @@ class TaskHashSpecFromJsonTest extends Specification {
 
     def 'every shipped std spec loads and every contributor it names is registered'() {
         expect:
-        StdSpecs.all().size() == 4
+        StdSpecs.all().size() == StdSpecs.IDS.size()
         and:
         StdSpecs.all().every { s -> s.bindings.values().every { c -> c.canonicalName() in Contributors.names() } }
     }

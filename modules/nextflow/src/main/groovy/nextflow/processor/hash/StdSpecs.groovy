@@ -32,13 +32,14 @@ class StdSpecs {
 
     /**
      * Ids are {@code std/<major>.<minor>}: the major moves only when a hash change cannot be
-     * reproduced from today's code, the minor for every other hash change. v1.1, v1.2 and v1.4
-     * are not implemented yet — each needs a mechanism that does not exist (a narrow
-     * asset-detection flag, a {@code task.ext.*} filter, a {@code params.*} filter).
+     * reproduced from today's code, the minor for every other hash change. v1.1 and v1.2 are not
+     * implemented yet — each needs a mechanism that does not exist (a narrow
+     * asset-detection flag, a {@code task.ext.*} filter).
      */
-    static final List<String> IDS = ['std/v1.3', 'std/v1.5', 'std/v1.6', 'std/v1.7']
+    static final List<String> IDS = ['std/v1.3', 'std/v1.4', 'std/v1.5', 'std/v1.6', 'std/v1.7']
 
     static TaskHashSpec getSTD_V1_3() { byId('std/v1.3') }
+    static TaskHashSpec getSTD_V1_4() { byId('std/v1.4') }
     static TaskHashSpec getSTD_V1_5() { byId('std/v1.5') }
     static TaskHashSpec getSTD_V1_6() { byId('std/v1.6') }
     static TaskHashSpec getSTD_V1_7() { byId('std/v1.7') }

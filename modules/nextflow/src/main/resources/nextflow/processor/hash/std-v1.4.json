@@ -1,0 +1,59 @@
+{
+  "id": "std/v1.4",
+  "note": "From 26.03.0-edge until #7165 (785e801ad, 2026-05-21): as v1.5, but params.* refs are not yet folded into the task global vars.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "contributor": "sessionId"
+    },
+    {
+      "key": "PROCESS_NAME",
+      "contributor": "processName"
+    },
+    {
+      "key": "TASK_SOURCE",
+      "contributor": "taskSource"
+    },
+    {
+      "key": "CONTAINER",
+      "contributor": "containerFingerprint"
+    },
+    {
+      "key": "INPUTS",
+      "contributor": "inputs.raw"
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "contributor": "evalOutputs.derivedString"
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "contributor": "scriptVars.noParams"
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "contributor": "binEntries"
+    },
+    {
+      "key": "ENV_MODULES",
+      "contributor": "envModules"
+    },
+    {
+      "key": "CONDA",
+      "contributor": "condaEnv"
+    },
+    {
+      "key": "SPACK",
+      "contributor": "spackEnvAndArch"
+    },
+    {
+      "key": "STUB_MARKER",
+      "contributor": "stubMarker"
+    }
+  ]
+}

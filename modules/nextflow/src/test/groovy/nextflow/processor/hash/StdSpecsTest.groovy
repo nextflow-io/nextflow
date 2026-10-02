@@ -48,6 +48,7 @@ class StdSpecsTest extends Specification {
         given: 'keys a spec may legitimately omit, with the reason'
         def permittedOmissions = [
             'std/v1.3': [HashKey.MODULE_BUNDLE] as Set,   // #6914 (2026-07-17) ends v1.5
+            'std/v1.4': [HashKey.MODULE_BUNDLE] as Set,
             'std/v1.5': [HashKey.MODULE_BUNDLE] as Set,
             'std/v1.6': [] as Set,
             'std/v1.7': [] as Set
