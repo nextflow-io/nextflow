@@ -62,7 +62,7 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
 
     private boolean coerce;
 
-    private List<Statement> missingReturns = new ArrayList<>();
+    private List<ASTNode> missingReturns = new ArrayList<>();
 
     public ReturnStatementVisitor(SourceUnit sourceUnit, ErrorCollector errorCollector) {
         this.sourceUnit = sourceUnit;
@@ -74,28 +74,25 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
         return sourceUnit;
     }
 
-    public void visit(ClassNode returnType, Statement code) {
-        visit(returnType, code, false);
+    public void visit(ASTNode owner, ClassNode returnType, Statement code) {
+        visit(owner, returnType, code, false);
     }
 
     /**
+     * @param owner      function or closure that contains the code
      * @param returnType
      * @param code
      * @param coerce     accept any return value that can be coerced to the return type
      */
-    public void visit(ClassNode returnType, Statement code, boolean coerce) {
+    public void visit(ASTNode owner, ClassNode returnType, Statement code, boolean coerce) {
         this.returnType = returnType;
         this.coerce = coerce;
-        visit(addReturnsIfNeeded(code));
+        visit(addReturnsIfNeeded(code, owner));
         if( returnsValue() ) {
             for( var node : missingReturns )
                 addError("Missing return statement", node);
         }
         this.returnType = null;
-    }
-
-    private Statement addReturnsIfNeeded(Statement node) {
-        return addReturnsIfNeeded(node, node);
     }
 
     /**
@@ -105,7 +102,7 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
      * @param node
      * @param parent  node to report if the statement has no source position
      */
-    private Statement addReturnsIfNeeded(Statement node, Statement parent) {
+    private Statement addReturnsIfNeeded(Statement node, ASTNode parent) {
         if( node instanceof BlockStatement block && !block.isEmpty() ) {
             var statements = new ArrayList<>(block.getStatements());
             int lastIndex = statements.size() - 1;

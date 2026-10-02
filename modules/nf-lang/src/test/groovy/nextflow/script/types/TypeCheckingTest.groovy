@@ -421,6 +421,24 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getOriginalMessage() == "Missing return statement"
+
+        when: 'the body is empty'
+        errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String { }
+
+            workflow {
+                channel.of(1).map { x -> }
+            }
+            '''
+        )
+        then: 'the error is reported against the function or closure'
+        errors.size() == 2
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[1].getStartLine() == 4
+        errors[1].getStartColumn() == 23
+        errors.every { it.getOriginalMessage() == "Missing return statement" }
     }
 
     @Unroll
