@@ -1117,9 +1117,9 @@ See also: [Multiple inputs][process-multiple-inputs].
 
 ## When
 
-:::note
-As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or [`filter`][operator-filter] operator) instead of the process definition.
-:::
+<DeprecatedInVersion version="26.10">
+Implement conditional logic in the calling workflow (e.g. using an `if` statement or [`filter`][operator-filter] operator), or use the [`process.when`][config-process-when] config setting to disable a process at runtime.
+</DeprecatedInVersion>
 
 The `when` section allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
 
@@ -1320,6 +1320,7 @@ process hello {
 
 [cache-nondeterministic-inputs]: ./cache-and-resume#non-deterministic-process-inputs
 [channel-value]: ./reference/stdlib-namespaces/channel#value
+[config-process-when]: ./config#disabling-processes
 [executor-page]: ./executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html.mdx#glob
 [operator-combine]: ./reference/operator#combine
