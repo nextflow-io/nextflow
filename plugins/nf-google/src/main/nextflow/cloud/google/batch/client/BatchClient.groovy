@@ -22,6 +22,7 @@ import java.util.concurrent.TimeoutException
 import dev.failsafe.function.CheckedPredicate
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.api.gax.rpc.NotFoundException
@@ -102,7 +103,21 @@ class BatchClient {
 
     Job submitJob(String jobId, Job job) {
         final parent = LocationName.of(projectId, location)
-        return apply(()-> batchServiceClient.createJob(parent, job, jobId))
+        return apply(()-> {
+            try {
+                return batchServiceClient.createJob(parent, job, jobId)
+            }
+            catch( AlreadyExistsException e ) {
+                // the create request is retried when the response is lost e.g. due to a 502 error
+                // or a client-side deadline, therefore an ALREADY_EXISTS error means a previous
+                // attempt did create the job -- fetch it instead of failing the submission.
+                // note: this is nested within the retry policy on purpose, so that a NOT_FOUND
+                // from the lookup retries the create instead of aborting the task
+                // see https://github.com/nextflow-io/nextflow/issues/6916
+                log.debug "[GOOGLE BATCH] Job $jobId already exists - retrieving the job created by a previous submit attempt"
+                return batchServiceClient.getJob(JobName.of(projectId, location, jobId))
+            }
+        })
     }
 
     Job describeJob(String jobId) {
