@@ -21,8 +21,10 @@ import nextflow.Session
 import nextflow.cloud.aws.nio.util.S3MultipartOptions
 import nextflow.file.FileHelper
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CompletedPart
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse
+import software.amazon.awssdk.services.s3.model.S3Exception
 import software.amazon.awssdk.services.s3.model.UploadPartResponse
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -157,5 +159,105 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         capturedParts[1].partNumber() == 1
         capturedParts[2].partNumber() == 2
 
+    }
+
+    def 'should resume a multipart upload'() {
+        given:
+        final path = s3path("s3://test/file.txt")
+        def multipart = new S3MultipartOptions()
+        def client = Mock(S3Client)
+        def recovered = [
+            CompletedPart.builder().partNumber(1).eTag('etag1').build(),
+            CompletedPart.builder().partNumber(2).eTag('etag2').build(),
+        ]
+
+        def writer = new S3OutputStream(client, path.toS3ObjectId(), multipart, 'upload-id', recovered)
+
+        when: 'continue uploading from the recovered state'
+        writer.uploadPart(InputStream.nullInputStream(), 25, 'checksum'.bytes, 3, true)
+        writer.completeMultipartUpload()
+
+        then: 'no new upload is initiated and the recovered parts are included'
+        0 * client.createMultipartUpload(_)
+        1 * client.uploadPart(_, _) >> { UploadPartResponse.builder().eTag('etag3').build() }
+        1 * client.completeMultipartUpload(_) >> { CompleteMultipartUploadRequest req ->
+            assert req.uploadId() == 'upload-id'
+            assert req.multipartUpload().parts()*.eTag() == ['etag1', 'etag2', 'etag3']
+            return null
+        }
+    }
+
+    def 'should leave a sub-minimum buffer uncommitted on abandon'() {
+        given:
+        final path = s3path('s3://test/file.txt')
+        def multipart = new S3MultipartOptions()
+        def client = Mock(S3Client)
+        def writer = new S3OutputStream(client, path.toS3ObjectId(), multipart)
+
+        when:
+        writer.init()
+        writer.write(new byte[1024])
+        writer.abandon()
+
+        then:
+        1 * client.createMultipartUpload(_) >> CreateMultipartUploadResponse.builder().uploadId('upload-id').build()
+        writer.partsCount == 0
+        0 * client.uploadPart(_, _)
+    }
+
+    def 'should not fail to abandon a resumed stream with no new bytes'() {
+        given:
+        final path = s3path('s3://test/file.txt')
+        def multipart = new S3MultipartOptions()
+        def client = Mock(S3Client)
+        def recovered = [CompletedPart.builder().partNumber(1).eTag('etag1').build()]
+        def writer = new S3OutputStream(client, path.toS3ObjectId(), multipart, 'upload-id', recovered)
+
+        when:
+        writer.abandon()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should not fail to close a resumed stream with no new bytes'() {
+        given:
+        final path = s3path('s3://test/file.txt')
+        def multipart = new S3MultipartOptions()
+        def client = Mock(S3Client)
+        def recovered = [CompletedPart.builder().partNumber(1).eTag('etag1').build()]
+        def writer = new S3OutputStream(client, path.toS3ObjectId(), multipart, 'upload-id', recovered)
+
+        when:
+        writer.close()
+
+        then:
+        1 * client.completeMultipartUpload(_)
+    }
+
+    def 'should not re-upload the tail when abandoning after a failed close'() {
+        given:
+        final path = s3path('s3://test/file.txt')
+        def multipart = new S3MultipartOptions()
+        multipart.setBufferSize(5 * 1024 * 1024)
+        def client = Mock(S3Client)
+        def writer = new S3OutputStream(client, path.toS3ObjectId(), multipart)
+
+        when:
+        writer.write(new byte[5 * 1024 * 1024])
+        writer.flush()
+        writer.write(new byte[5 * 1024 * 1024])
+        try {
+            writer.close()
+        }
+        catch( IOException e ) {
+            writer.abandon()
+        }
+
+        then:
+        1 * client.createMultipartUpload(_) >> CreateMultipartUploadResponse.builder().uploadId('upload-id').build()
+        2 * client.uploadPart(_, _) >> { UploadPartResponse.builder().eTag('etag').build() }
+        1 * client.completeMultipartUpload(_) >> { throw S3Exception.builder().statusCode(500).build() }
+        0 * client.abortMultipartUpload(_)
     }
 }
