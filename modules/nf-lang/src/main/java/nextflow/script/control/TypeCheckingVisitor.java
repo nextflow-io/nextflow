@@ -341,7 +341,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         // check return statements against declared return type
         var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-        visitor.visit(node.getReturnType(), node.getCode());
+        visitor.visit(node, node.getReturnType(), node.getCode());
 
         var inferredReturnType = visitor.getInferredReturnType();
         if( inferredReturnType != null && ClassHelper.isDynamicTyped(node.getReturnType()) )
@@ -1367,7 +1367,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             // type, as long as it returns a value
             var coerce = Types.isEqual(returnType, ClassHelper.Boolean_TYPE);
             var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-            visitor.visit(returnType, node.getCode(), coerce);
+            visitor.visit(node, returnType, node.getCode(), coerce);
 
             var inferredReturnType = visitor.getInferredReturnType();
             if( inferredReturnType != null )
