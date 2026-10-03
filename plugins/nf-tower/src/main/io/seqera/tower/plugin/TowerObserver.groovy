@@ -88,7 +88,29 @@ class TowerObserver implements TraceObserverV2 {
 
     private LinkedBlockingQueue<ProcessEvent> events = new LinkedBlockingQueue()
 
-    private Thread sender
+    private volatile Thread sender
+
+    /**
+     * Guards the start/stop lifecycle of the {@link #sender} thread. {@code onFlowBegin}
+     * (main thread) and {@code onFlowComplete} (invoked by {@code Session.abort()} from the
+     * signal handler or a task-monitor thread) must not race on {@link #sender}, otherwise
+     * a sender started after completion is never told to stop and heartbeats forever.
+     */
+    private final Object senderLock = new Object()
+
+    /**
+     * Set once the flow has completed/aborted. Prevents {@code onFlowBegin} from starting a
+     * sender thread when completion has already been processed (see workflow 3fCcx5lf7bgOtp).
+     */
+    private boolean terminated
+
+    /**
+     * Set when {@code onFlowBegin} has been invoked. Gates the completion trace: a workflow
+     * that failed before {@code onFlowBegin} must not send {@code /complete} (Platform returns
+     * 403, see #6816), whereas one that began - even if the sender thread was never started
+     * because completion raced begin - should still be closed with a {@code /complete}.
+     */
+    private volatile boolean beginInvoked
 
     private Duration requestInterval = REQUEST_INTERVAL
 
@@ -242,11 +264,18 @@ class TowerObserver implements TraceObserverV2 {
     @Override
     void onFlowBegin() {
         // configure error retry
-
+        this.beginInvoked = true
         final payload = client.traceBegin(makeBeginReq(session), workspaceId, workflowId)
         this.watchUrl ?= payload.watchUrl
         session.workflowMetadata.platform.workflowUrl ?= watchUrl
-        this.sender = Threads.start('Tower-thread', this.&sendTasks0)
+        synchronized (senderLock) {
+            // if the flow already completed/aborted while the begin request was in-flight,
+            // do not start the sender: it would never receive the `completed` event and
+            // would keep sending heartbeats forever (see workflow 3fCcx5lf7bgOtp)
+            if( terminated )
+                return
+            this.sender = Threads.start('Tower-thread', this.&sendTasks0)
+        }
         final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
@@ -258,17 +287,23 @@ class TowerObserver implements TraceObserverV2 {
     void onFlowComplete() {
         // publish runtime reports
         reports.publishRuntimeReports()
-        // submit the completion record
-        if( sender ) {
-            events << new ProcessEvent(completed: true)
-            // wait the submission of pending events
-            sender.join()
+        // mark the flow as terminated and queue the stop event: a concurrent onFlowBegin
+        // either observes `terminated` and skips starting the thread, or has already
+        // started it and gets stopped here via the `completed` event
+        synchronized (senderLock) {
+            terminated = true
+            if( sender )
+                events << new ProcessEvent(completed: true)
         }
+        // wait the submission of pending events (outside the lock - join() blocks)
+        sender?.join()
         // wait and flush reports content
         reports.flowComplete()
         // notify the workflow completion
-        // note: only send complete if onFlowBegin was invoked (sender is set there)
-        if( workflowId && sender ) {
+        // note: send complete only if onFlowBegin was invoked - sending it for a workflow
+        // that never began yields a 403 from Platform (see #6816). It is NOT gated on the
+        // sender thread, so a completion that raced begin still closes the run.
+        if( workflowId && beginInvoked ) {
             client.traceComplete(makeCompleteReq(session), workspaceId, workflowId)
         }
     }
