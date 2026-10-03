@@ -49,11 +49,17 @@ public sealed interface SpecNode {
         // derive `process` and `agent` config options from process directives: an agent
         // task accepts the same task directives, in its own independent scope.
         // NOTE: the descriptions are inlined because an interface cannot declare private fields.
-        result.children().put("process", directiveScope("""
+        var processScope = directiveScope("""
             The `process` scope allows you to specify default directives for processes in your pipeline.
 
             [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
-        """));
+        """);
+        processScope.children().put("when", new Option("""
+            When `false`, the process is not executed. Can be a closure to evaluate the condition for each task.
+
+            [Read more](https://docs.seqera.io/nextflow/config#disabling-processes)
+        """, List.of(Boolean.class)));
+        result.children().put("process", processScope);
         result.children().put("agent", directiveScope("""
             The `agent` scope allows you to specify default directives for agents in your pipeline. An
             agent task accepts the same task directives as a process, in its own independent scope.
@@ -98,7 +104,7 @@ public sealed interface SpecNode {
      *
      * @param description
      */
-    private static SpecNode directiveScope(String description) {
+    private static Scope directiveScope(String description) {
         var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             if( method.getParameters().length != 1 )

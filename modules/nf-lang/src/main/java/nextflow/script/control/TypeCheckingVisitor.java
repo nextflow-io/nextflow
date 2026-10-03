@@ -279,8 +279,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
