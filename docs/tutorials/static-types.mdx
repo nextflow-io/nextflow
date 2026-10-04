@@ -1,11 +1,11 @@
 ---
 title: Migrating to static typing
-description: Migrate Nextflow pipelines to static typing using records, type annotations, and typed processes.
+description: Migrate Nextflow pipelines to typed processes, typed workflows, and records.
 ---
 
 # Migrating to static typing
 
-Nextflow 26.04 brings full support for *static typing* in Nextflow code. This tutorial demonstrates how to migrate to static typing using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+Nextflow 26.10 brings full support for [static typing][static-typing] in Nextflow code. This tutorial demonstrates how to migrate to static typing using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
 
 :::note
 Static typing is optional. All existing code will continue to work.
@@ -15,33 +15,23 @@ Static typing is optional. All existing code will continue to work.
 
 Static typing allows you to precisely model and validate the structure of your data as it flows through your pipeline. It consists of several new language features:
 
-- **Type annotations** can be added to inputs and outputs at every level of a pipeline, from pipeline parameters to process inputs and outputs, using the [standard Nextflow types][stdlib-types]. These annotations make your code easier to understand and are used by the Nextflow language server to identify type-related errors during development.
+- **Type annotations** can be added to inputs and outputs at every level of a pipeline, from pipeline parameters to process inputs and outputs, using the [standard Nextflow types][stdlib-types]. These annotations make your code easier to understand, and Nextflow uses them to identify type-related errors at compile-time.
 
-- **Records** are a new data structure for modeling composite data. They serve as an alternative to tuples -- whereas tuple elements must be accessed by index, record fields are accessed by name. This allows you to model data with meaningful names instead of keeping track of how tuple elements are ordered.
+- **Records** are a new data structure for modeling composite data. They serve as an alternative to tuples -- whereas tuple elements are accessed by index, record fields are accessed by name. This allows you to model data with meaningful names instead of keeping track of how tuple elements are ordered.
 
-- **Record types** are custom type definitions that can be used to guarantee a minimum set of requirements for a record in a particular context. Records are *duck-typed*, which means that a record can be used as an input as long as it meets the minimum requirements of that input (given by a record type).
+- **Record types** are custom type definitions that are used to guarantee a minimum set of requirements for a record in a particular context. Records are *duck-typed*, which means that a record can be used as an input as long as it meets the minimum requirements of that input (given by a record type).
 
 ## Developer tooling
 
-Static typing works best with the [Nextflow language server](https://github.com/nextflow-io/language-server) and [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow).
-
-:::tip
-See [Environment setup][devenv-page] for instructions on how to setup VS Code and the Nextflow extension.
-:::
-
 ### Type checking
 
-When using static typing, the language server can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when it is passed as input to a process.
+When using static typing, Nextflow can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when it is passed as input to a process.
 
-The language server performs type checking on every script that enables the `nextflow.enable.types` feature flag.
+Nextflow performs type checking on every script that enables the `nextflow.enable.types` feature flag. Use `nextflow lint` or the [Nextflow language server][vscode] to type-check your code during development.
 
 ### Automatic migration
 
-The Nextflow VS Code extension provides a command for automatically migrating Nextflow pipelines to static types. To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
-
-:::note
-Automatic migration is an experimental feature and may not be able to convert an entire pipeline to static types. Always review generated code for correctness.
-:::
+The [Nextflow agent skills](https://github.com/nextflow-io/agent-skills) include a `migrate-nextflow-code` skill that can migrate a pipeline to static typing using a coding agent such as Claude Code, Codex, or Cursor. See the repository README for installation instructions.
 
 ## Example: rnaseq-nf
 
@@ -759,7 +749,6 @@ See the following links to learn more about static typing:
 - [Record type syntax][syntax-record-type]
 
 [config-params]: ../config#parameters
-[devenv-page]: ../developer-env
 [migrating-static-types-operators]: ./static-types-operators
 [migrating-workflow-outputs]: ./workflow-outputs
 [operator-combine]: ../reference/operator#combine
@@ -770,11 +759,13 @@ See the following links to learn more about static typing:
 [process-typed-page]: ../process-typed
 [rnaseq-nf-page]: ./rnaseq-nf
 [script-records]: ../script#records-and-tuples
+[static-typing]: ../static-typing
 [strict-syntax-deprecated]: ../strict-syntax#deprecated-syntax
 [strict-syntax-page]: ../strict-syntax
 [stdlib-types]: ../reference/stdlib-types
 [stdlib-types-path]: ../reference/stdlib-types/path
 [syntax-record-type]: ../reference/syntax#record-type
 [typed-parameters-page]: ../typed-parameters
+[vscode]: ../vscode
 [workflow-special-operators]: ../workflow#dataflow
 [workflow-typed-page]: ../workflow-typed

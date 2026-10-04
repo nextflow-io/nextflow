@@ -22,12 +22,8 @@ The extension highlights source code in red for errors and yellow for warnings.
 To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
 :::note
-The language server parses scripts and config files according to the [Nextflow language specification][syntax-page], which is more strict than the Nextflow CLI. See [Preparing for strict syntax][strict-syntax-page] for more information.
+The language server parses scripts and config files according to the [Nextflow language specification][syntax-page]. See [Preparing for strict syntax][strict-syntax-page] for more information.
 :::
-
-<AddedInVersion version="25.10" />
-
-The extension can perform static type checking. Enable it using the **Nextflow > Type Checking** extension setting. See [Migrating to static types][migrating-static-types] for more information about migrating to static types.
 
 ### Hover hints
 
@@ -86,12 +82,6 @@ The DAG preview is similar to the [workflow diagram][workflow-diagram] that can 
 
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
 
-### Automatic code migration
-
-The extension can automatically migrate scripts to static types. See [Migrating to static types][migrating-static-types] for details.
-
-To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
-
 ## Troubleshooting
 
 In the event of a language server error, you can use the **Nextflow: Restart language server** command in the command palette to restart the language server.
@@ -123,7 +113,6 @@ The Nextflow language server implements the [Language Server Protocol (LSP)](htt
 Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome. Visit the [GitHub issues](https://github.com/nextflow-io/language-server/issues) page for the latest updates on community-led integrations.
 
 [gradle-plugin-page]: ./guides/gradle-plugin
-[migrating-static-types]: ./tutorials/static-types
 [syntax-page]: ./reference/syntax
 [strict-syntax-page]: ./strict-syntax
 [workflow-diagram]: ./reports#workflow-diagram
