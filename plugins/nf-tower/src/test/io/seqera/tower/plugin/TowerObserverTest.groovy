@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
@@ -36,8 +37,10 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.Duration
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -483,6 +486,29 @@ class TowerObserverTest extends Specification {
         0 * towerClient.traceComplete(_, _, _)
     }
 
+    def 'should send complete request when onFlowBegin was invoked even if the sender raced and was not started' () {
+        given:
+        def session = Mock(Session)
+        def towerClient = Mock(TowerClient)
+        def observer = Spy(new TowerObserver(session, towerClient, null, [:]))
+        def reports = Mock(TowerReports)
+        observer.@reports = reports
+        observer.@workflowId = 'xyz-123'
+        // begin was invoked (so the run is "running" on Platform) but the sender thread
+        // was never started because completion raced onFlowBegin
+        observer.@beginInvoked = true
+        observer.@sender = null
+        observer.makeCompleteReq(_) >> [:]
+
+        when:
+        observer.onFlowComplete()
+
+        then:
+        1 * reports.publishRuntimeReports()
+        1 * reports.flowComplete()
+        1 * towerClient.traceComplete(_, _, _)
+    }
+
     def 'should apply platform metadata from trace create response'() {
         given:
         def metadata = new WorkflowMetadata()
@@ -749,5 +775,46 @@ class TowerObserverTest extends Specification {
         thrown(AbortRunException)
     }
 
+    @Timeout(15)
+    def 'onFlowComplete before onFlowBegin must not leave an orphaned heartbeat sender'() {
+        given: 'onFlowComplete is driven by abort() from a different thread than onFlowBegin'
+        def session = Mock(Session)
+        def meta = Mock(WorkflowMetadata)
+        def platform = Mock(PlatformMetadata)
+        session.getWorkflowMetadata() >> meta
+        meta.getPlatform() >> platform
+
+        def heartbeats = new AtomicInteger()
+        def client = Mock(TowerClient)
+        client.traceBegin(_, _, _) >> [watchUrl: 'http://localhost/watch/1']
+        client.traceHeartbeat(_, _, _) >> { heartbeats.incrementAndGet() }
+
+        def observer = Spy(new TowerObserver(session, client, null, [:]))
+        observer.@reports = Mock(TowerReports)
+        observer.@workflowId = 'wf-123'
+        // short intervals so an orphan sender would heartbeat quickly
+        observer.setAliveInterval(Duration.of('50ms'))
+        observer.setRequestInterval(Duration.of('50ms'))
+        observer.makeBeginReq(_) >> [:]
+        observer.makeHeartbeatReq() >> [:]
+
+        when: 'an abort drives onFlowComplete BEFORE onFlowBegin started the sender ...'
+        observer.onFlowComplete()
+        and: '... and onFlowBegin runs afterwards (its traceBegin had been in-flight)'
+        observer.onFlowBegin()
+        and: 'a would-be orphan is given time to heartbeat'
+        sleep 300
+
+        then: 'no orphaned Tower-thread is started, so no heartbeat is ever sent'
+        observer.@sender == null
+        heartbeats.get() == 0
+
+        cleanup: 'stop the thread if the code orphaned one, so the JVM can exit'
+        final t = observer.@sender
+        if( t ) {
+            observer.@events << new TowerObserver.ProcessEvent(completed: true)
+            t.join(3000)
+        }
+    }
 
 }
