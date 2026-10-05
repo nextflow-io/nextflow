@@ -765,6 +765,19 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a record method call' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                      | ERROR
+        "record(id: '1', n: 1).subMap(['id'])"                      | null
+        "record(id: '1', n: 1).subMap('id')"                        | "Argument with type String is not compatible with parameter of type Iterable<String>"
+        "def r: Record = record(id: '1'); r.subMap(['id'])"         | null
+        "record Sample { id: String }\ndef f(s: Sample) { s.subMap(['id']) }" | null
+    }
+
+    @Unroll
     def 'should check a binary expression' () {
         expect:
         check(SOURCE, ERROR)
@@ -1492,29 +1505,6 @@ class TypeCheckingTest extends Specification {
         type = getType(exp)
         then:
         Types.getName(type) == 'Value<Record {\n    target: String\n    message: String\n}>'
-    }
-
-    def 'should report error for process .out property' () {
-        expect:
-        check(
-            '''
-            nextflow.enable.types = true
-
-            process hello {
-                output:
-                stdout()
-
-                script:
-                ''
-            }
-
-            workflow {
-                hello()
-                hello.out
-            }
-            ''',
-            'Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead'
-        )
     }
 
     def 'should not allow a void call result to be assigned to a variable' () {

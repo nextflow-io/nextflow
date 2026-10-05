@@ -142,7 +142,11 @@ builds on this shape.
   `plugins/nf-agent-pi/VERSION` and published by the Nextflow release;
   `plugins/nf-agent-pi/build-image.sh ref` prints it. Set `agent.container` only to override
   that — with a locally built image, for instance, which is what
-  `plugins/nf-agent-pi/build-image.sh build -l` prints. Using another engine is a one-line swap
+  `plugins/nf-agent-pi/build-image.sh build -l` prints. Note that the plugin `VERSION` is bumped
+  only at release, so after a change to the image build context the declared image is the
+  *previous* build until the next release: CI publishes every build context it tests to
+  `public.cr.stage-seqera.io/nextflow/nf-agent-pi:<context-tag>` (`build-image.sh context-tag`
+  prints the tag), and `validate.sh -i <image>` runs the examples against it. Using another engine is a one-line swap
   of `docker.enabled` for `podman.enabled`, `singularity.enabled`, and so on.
 - The tool examples that use `nf-core/*` modules (`07_module-as-tool/`, `09_goal-directed/`,
   `11_contig-filter/`, `12_isolate-triage/`) additionally need Wave (enabled in their configs) to

@@ -28,6 +28,7 @@
 #   plugins/nf-agent-pi/build-image.sh build -l           # host arch only, into local docker
 #   plugins/nf-agent-pi/build-image.sh push -r <registry> # build, push, verify the manifest
 #   plugins/nf-agent-pi/build-image.sh ref                # print the reference; no docker needed
+#   plugins/nf-agent-pi/build-image.sh context-tag        # print the build-context checksum tag
 #
 # A single-arch image is the failure this script exists to prevent: pulling one on the other
 # architecture fails with `no matching manifest for linux/amd64 in the manifest list entries`.
@@ -63,6 +64,11 @@ commands:
   build     build every platform locally; publishes nothing
   push      build every platform, push it, then verify the pushed manifest
   ref       print the fully resolved image reference and exit; needs no docker
+  context-tag
+            print a tag derived from the checksum of the image build context and exit;
+            needs no docker. The CI publishes every build context it tests under this tag
+            to the staging registry, so a tested image is named by its content, not by a
+            VERSION that is bumped only at release
 
 options (every command):
   -r  registry/namespace; default public.cr.seqera.io/nextflow, the coordinate the
@@ -102,7 +108,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 CMD=${1:-}
 case $CMD in
-  build|push|ref) shift ;;
+  build|push|ref|context-tag) shift ;;
   help|-h|--help) usage 0 ;;
   '')           echo "Missing command" >&2; usage 2 ;;
   *)            echo "Unknown command: $CMD" >&2; usage 2 ;;
@@ -139,6 +145,37 @@ fi
 if [[ -n ${DOCKER_DEFAULT_PLATFORM:-} ]]; then
   echo "note: ignoring DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM for this build" >&2
   unset DOCKER_DEFAULT_PLATFORM
+fi
+
+# The build context as validateAgentImageVersion in the root build.gradle defines it: the `!`
+# allowlist in .dockerignore, which is the single statement of what enters the image, plus the
+# Dockerfile and the allowlist itself. Paths are relative to SCRIPT_DIR.
+context_files() {
+  local line
+  echo Dockerfile
+  echo .dockerignore
+  while IFS= read -r line; do
+    line=$(tr -d '[:space:]' <<< "$line")
+    [[ $line == '!'* ]] && echo "${line#!}"
+  done < "$SCRIPT_DIR/.dockerignore"
+}
+
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+
+# The checksum hashes each file's CONTENT, with its path, in a fixed order, so it is the same on
+# any machine and any checkout of the same tree, and moves only when something entering the image
+# moves - a test-only or unrelated change leaves it, and the tag, untouched. It reads the working
+# tree, not the git index, so an uncommitted edit changes it too.
+if [[ $CMD == context-tag ]]; then
+  [[ -f $SCRIPT_DIR/.dockerignore ]] || die "no .dockerignore beside $0"
+  files=()
+  while IFS= read -r f; do files+=( "$f" ); done < <(context_files | LC_ALL=C sort -u)
+  (( ${#files[@]} > 2 )) || die "$SCRIPT_DIR/.dockerignore admits no \`!\` allowlist entry - cannot derive the build context"
+  for f in "${files[@]}"; do
+    [[ -f $SCRIPT_DIR/$f ]] || die "build context file not found: $SCRIPT_DIR/$f"
+  done
+  echo "ctx-$(cd "$SCRIPT_DIR" && sha256 "${files[@]}" | sha256 | cut -c1-16)"
+  exit 0
 fi
 
 [[ -f $SCRIPT_DIR/VERSION ]] || die "no VERSION file beside $0"

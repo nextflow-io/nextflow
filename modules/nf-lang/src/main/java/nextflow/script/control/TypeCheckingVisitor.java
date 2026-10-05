@@ -1040,16 +1040,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return null;
     }
 
-    private static String methodType(MethodNode node) {
-        if( node instanceof ProcessNode )
-            return "Process";
-        if( node instanceof AgentNode )
-            return "Agent";
-        if( node instanceof WorkflowNode )
-            return "Workflow";
-        return "Function";
-    }
-
     private static String className(Expression node) {
         var receiverType = getType(node);
         return receiverType != null && receiverType.implementsInterface(ClassHelper.makeCached(Namespace.class))
@@ -1526,12 +1516,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     @Override
     public void visitPropertyExpression(PropertyExpression node) {
         super.visitPropertyExpression(node);
-
-        var mn = asMethodOutput(node);
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode ) {
-            addError("Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead", node);
-            return;
-        }
 
         var receiver = node.getObjectExpression();
         var receiverType = getType(receiver);
