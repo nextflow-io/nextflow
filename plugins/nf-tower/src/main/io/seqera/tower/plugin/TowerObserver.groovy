@@ -380,7 +380,7 @@ class TowerObserver implements TraceObserverV2 {
 
     protected Map makeBeginReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
-        workflow.params = session.getParams()
+        workflow.params = session.getParams().toPlainMap()
         workflow.id = getWorkflowId()
         workflow.remove('stats')
 
@@ -437,7 +437,7 @@ class TowerObserver implements TraceObserverV2 {
         if( workflow.platform )
             workflow.remove('platform')
 
-        workflow.params = session.getParams()
+        workflow.params = session.getParams().toPlainMap()
         workflow.id = getWorkflowId()
         // render as a string
         workflow.container = mapToString(workflow.container)
