@@ -23,7 +23,7 @@
 # the examples against that. The tag is content-addressed, so `push` is a no-op for a build
 # context that an earlier run already published.
 #
-# Requires OPENAI_API_KEY, a Docker login to the staging registry, and QEMU for the arm64 leg.
+# Requires OPENAI_API_KEY and a Docker login to the staging registry.
 set -e
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -33,8 +33,9 @@ tag=$("$ROOT/plugins/nf-agent-pi/build-image.sh" context-tag)
 image=$STAGE/nf-agent-pi:$tag
 echo "Agent runner image: $image"
 
-# both architectures, as the release builds it: developers on arm64 pull the same tag
-"$ROOT/plugins/nf-agent-pi/build-image.sh" push -r "$STAGE" -t "$tag"
+# amd64 only: it is what this runner executes the examples on, and building it natively needs no
+# QEMU. The release still builds both architectures
+"$ROOT/plugins/nf-agent-pi/build-image.sh" push -r "$STAGE" -t "$tag" -P linux/amd64
 
 # validate.sh runs the development launcher, which needs the exported classpath
 make -C "$ROOT" compile
