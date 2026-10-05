@@ -19,9 +19,11 @@ package nextflow.cloud.google.batch.client
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 import dev.failsafe.function.CheckedPredicate
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.api.gax.rpc.NotFoundException
@@ -102,7 +104,22 @@ class BatchClient {
 
     Job submitJob(String jobId, Job job) {
         final parent = LocationName.of(projectId, location)
-        return apply(()-> batchServiceClient.createJob(parent, job, jobId))
+        final attempts = new AtomicInteger()
+        return apply(()-> {
+            try {
+                attempts.incrementAndGet()
+                return batchServiceClient.createJob(parent, job, jobId)
+            }
+            catch( AlreadyExistsException e ) {
+                // an earlier attempt can create the job and still fail on the client side,
+                // e.g. with DEADLINE_EXCEEDED, so the retry finds the job it submitted itself.
+                // On the first attempt the job ID is genuinely taken: report it
+                if( attempts.get() == 1 )
+                    throw e
+                log.debug "[GOOGLE BATCH] Job $jobId already created by a previous submit attempt"
+                return batchServiceClient.getJob(JobName.of(projectId, location, jobId))
+            }
+        })
     }
 
     Job describeJob(String jobId) {
