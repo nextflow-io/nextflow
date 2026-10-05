@@ -45,6 +45,12 @@ Enable or disable publishing (default: `true`).
 
 When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
 
+##### `workflow.output.includeInputs`
+
+<AddedInVersion version="26.10" />
+
+When `true`, files that do not originate from the work directory, such as input files, are also published (default: `false`). Files that are not published are included in the index file with their original path.
+
 ##### `workflow.output.mode`
 
 The file publishing method (default: `'symlink'`).

@@ -173,6 +173,10 @@ class OutputDsl {
             setOption('ignoreErrors', value)
         }
 
+        void includeInputs(boolean value) {
+            setOption('includeInputs', value)
+        }
+
         void index(Closure closure) {
             final dsl = new IndexDsl()
             final cl = (Closure)closure.clone()
