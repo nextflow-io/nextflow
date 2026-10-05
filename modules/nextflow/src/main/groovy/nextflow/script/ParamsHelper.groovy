@@ -84,8 +84,8 @@ class ParamsHelper {
      * Each param is resolved as in {@link #resolveParams(Collection,Map,Map)},
      * except that a {@code Channel<E>} param is resolved to its samplesheet
      * and a {@code Value<V>} param to its value of type {@code V}, instead
-     * of a dataflow value (see {@link #toPlainValue}). The params are assumed
-     * to be valid, i.e. already resolved by {@link #resolveParams(Collection,Map,Map)}.
+     * of a dataflow value. The params are assumed to be valid, i.e. already
+     * resolved by {@link #resolveParams(Collection,Map,Map)}.
      *
      * @param declarations
      * @param cliParams
@@ -97,8 +97,8 @@ class ParamsHelper {
         for( final decl : declarations ) {
             final name = decl.name
             final value = given.containsKey(name)
-                ? resolveParam0(decl, given.get(name), cliParams.containsKey(name), false)
-                : resolveDefault0(decl, false)
+                ? resolveParam(decl, given.get(name), cliParams.containsKey(name), true)
+                : resolveDefault(decl, true)
             result.put(name, value)
         }
         return result
@@ -175,33 +175,6 @@ class ParamsHelper {
     }
 
     /**
-     * Replace each dataflow value in a resolved param with the
-     * corresponding plain value (see {@link #resolvePlainParams}),
-     * including the fields of a record. A value that is not and does
-     * not contain a dataflow value is returned as is.
-     *
-     * @param value the resolved value
-     * @param plainValue the plain value
-     */
-    static Object toPlainValue(Object value, Object plainValue) {
-        if( isDataflow(value) )
-            return plainValue
-        if( value !instanceof RecordMap || plainValue !instanceof Map )
-            return value
-        final record = (RecordMap)value
-        Map<String,Object> result = null
-        for( final entry : record.entrySet() ) {
-            final plainField = toPlainValue(entry.value, ((Map)plainValue).get(entry.key))
-            if( plainField.is(entry.value) )
-                continue
-            if( result == null )
-                result = new LinkedHashMap<String,Object>(record)
-            result.put(entry.key, plainField)
-        }
-        return result != null ? new RecordMap(result) : value
-    }
-
-    /**
      * Resolve a param value against its declared type.
      *
      * A {@code Channel<E>} param is loaded from a samplesheet file, with each
@@ -213,37 +186,26 @@ class ParamsHelper {
      * @param value
      * @param fromCli whether the value came from the command line (and is
      *                therefore a string that may need to be parsed)
+     * @param plain whether to give the plain value of a {@code Channel<E>}
+     *              or {@code Value<V>} param instead of a dataflow value
+     *              (see {@link #resolvePlainParams})
      */
-    static Object resolveParam(Param decl, Object value, boolean fromCli) {
-        return resolveParam0(decl, value, fromCli, true)
-    }
-
-    /**
-     * Resolve a param value against its declared type, either as a
-     * dataflow value (see {@link #resolveParam(Param,Object,boolean)}) or
-     * as a plain value (see {@link #resolvePlainParams}).
-     *
-     * @param decl
-     * @param value
-     * @param fromCli
-     * @param dataflow
-     */
-    private static Object resolveParam0(Param decl, Object value, boolean fromCli, boolean dataflow) {
+    static Object resolveParam(Param decl, Object value, boolean fromCli, boolean plain=false) {
         if( value == null )
             return null
 
         final rawType = TypeHelper.getRawType(decl.type)
 
         if( rawType == Channel )
-            return dataflow ? ChannelNamespace.fromList(loadChannelInput(decl, value)) : value
+            return plain ? value : ChannelNamespace.fromList(loadChannelInput(decl, value))
 
         if( rawType == Value ) {
-            final result = resolveParam0(elementDecl(decl), value, fromCli, dataflow)
-            return dataflow ? ChannelNamespace.value(result) : result
+            final result = resolveParam(elementDecl(decl), value, fromCli, plain)
+            return plain ? result : ChannelNamespace.value(result)
         }
 
         if( TypeHelper.isRecordType(decl.type) && value instanceof Map )
-            return resolveRecord(decl, (Map)value, fromCli, dataflow)
+            return resolveRecord(decl, (Map)value, fromCli, plain)
 
         final result = fromCli
             ? resolveFromCli(decl, value)
@@ -252,7 +214,7 @@ class ParamsHelper {
         return result
     }
 
-    private static RecordMap resolveRecord(Param decl, Map value, boolean fromCli, boolean dataflow) {
+    private static RecordMap resolveRecord(Param decl, Map value, boolean fromCli, boolean plain) {
         final type = (Class)decl.type
         final result = new LinkedHashMap<String,Object>(value)
         for( final field : type.getDeclaredFields() ) {
@@ -267,7 +229,7 @@ class ParamsHelper {
                 continue
             }
             final fieldDecl = new Param("${decl.name}.${name}", field.getGenericType(), optional, null)
-            result.put(name, resolveParam0(fieldDecl, fieldValue, fromCli, dataflow))
+            result.put(name, resolveParam(fieldDecl, fieldValue, fromCli, plain))
         }
         return new RecordMap(result)
     }
@@ -525,14 +487,11 @@ class ParamsHelper {
      * the pipeline is called.
      *
      * @param decl
+     * @param plain see {@link #resolveParam}
      */
-    static Object resolveDefault(Param decl) {
-        return resolveDefault0(decl, true)
-    }
-
-    private static Object resolveDefault0(Param decl, boolean dataflow) {
+    static Object resolveDefault(Param decl, boolean plain=false) {
         if( decl.defaultValue != null )
-            return resolveParam0(decl, decl.defaultValue, false, dataflow)
+            return resolveParam(decl, decl.defaultValue, false, plain)
         final type = TypeHelper.getRawType(decl.type)
         return type.isAnnotationPresent(PipelineParams)
             ? new RecordMap([:])

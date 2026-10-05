@@ -411,7 +411,7 @@ class ParamsDslTest extends Specification {
         def plain = params.toPlainMap()
         params.inputs.samples instanceof ChannelImpl
         plain.inputs.samples == samplesheet.toString()
-        plain.inputs.reference.is(params.inputs.reference)
+        plain.inputs.reference == params.inputs.reference
 
         cleanup:
         samplesheet?.delete()
@@ -448,7 +448,6 @@ class ParamsDslTest extends Specification {
         then:
         def plain = params.toPlainMap()
         plain == params
-        plain.every { k, v -> v.is(params[k]) }
 
         cleanup:
         inputFile?.delete()

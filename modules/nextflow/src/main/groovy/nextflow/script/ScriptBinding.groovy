@@ -256,17 +256,9 @@ class ScriptBinding extends WorkflowBinding {
          * (e.g. a {@code Channel<E>} param, or a field of a record param)
          * replaced by the plain value it was resolved from, so that the
          * params can be serialized before the dataflow network has started.
-         * Any other param value is the original object.
          */
         Map<String,Object> toPlainMap() {
-            if( !plainValues )
-                return this
-            final result = new LinkedHashMap<String,Object>(target)
-            for( final entry : plainValues.entrySet() ) {
-                if( result.containsKey(entry.key) )
-                    result.put(entry.key, ParamsHelper.toPlainValue(result.get(entry.key), entry.value))
-            }
-            return result
+            return plainValues ? target + plainValues : this
         }
 
         @Override
