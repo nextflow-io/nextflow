@@ -765,6 +765,19 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a record method call' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                      | ERROR
+        "record(id: '1', n: 1).subMap(['id'])"                      | null
+        "record(id: '1', n: 1).subMap('id')"                        | "Argument with type String is not compatible with parameter of type Iterable<String>"
+        "def r: Record = record(id: '1'); r.subMap(['id'])"         | null
+        "record Sample { id: String }\ndef f(s: Sample) { s.subMap(['id']) }" | null
+    }
+
+    @Unroll
     def 'should check a binary expression' () {
         expect:
         check(SOURCE, ERROR)
