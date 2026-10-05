@@ -544,6 +544,32 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
+     * Re-anchor the trace on the attempt that produced it. Sched retries a spot-reclaimed or
+     * OOM-killed task internally, in the same work dir, so Nextflow's {@code start} is the first
+     * attempt's while {@code realtime} (from {@code .command.trace}) is the last one's: every lost
+     * attempt would otherwise land in the gap between them, read as staging (sched#1074).
+     * Moves {@code start} to the last attempt's start and reports that lost time as {@code retryTime}.
+     *
+     * @param record the trace record to update in place
+     */
+    protected void applyAttemptTiming(TraceRecord record) {
+        final attempts = cachedTaskState?.getAttempts()
+        if( !attempts )
+            return
+        record.numAttempts = attempts.size()
+        final lastStart = attempts.get(attempts.size() - 1).getStartedAt()?.toInstant()?.toEpochMilli()
+        if( attempts.size() < 2 || lastStart == null || !startTimeMillis || lastStart <= startTimeMillis )
+            return
+        // clamp to completion: the attempt timestamps come from the scheduler's clock
+        final newStart = completeTimeMillis ? Math.min(lastStart, completeTimeMillis) : lastStart
+        record.retryTime = newStart - startTimeMillis
+        record.put('start', newStart)
+        // the fallback realtime (no trace file) was computed from the first attempt's start
+        if( completeTimeMillis && (record.get('realtime') as Long) == completeTimeMillis - startTimeMillis )
+            record.put('realtime', completeTimeMillis - newStart)
+    }
+
+    /**
      * Get the trace record for this task, including machine info and spot interruptions metadata.
      *
      * @return the trace record with additional metadata fields
@@ -556,6 +582,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.numSpotInterruptions = getNumSpotInterruptions()
         result.logStreamId = getLogStreamId()
         result.resourceAllocation = getResourceAllocation()
+        applyAttemptTiming(result)
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
         return result

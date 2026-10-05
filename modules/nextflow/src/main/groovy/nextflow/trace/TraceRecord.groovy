@@ -130,6 +130,8 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
+    transient private Integer numAttempts
+    transient private Long retryTime
     transient private String logStreamId
     transient private Map<String,Object> resourceAllocation
     transient private Map<String,Object> gpuMetrics
@@ -672,6 +674,28 @@ class TraceRecord implements Serializable {
 
     void setNumSpotInterruptions(Integer numSpotInterruptions) {
         this.numSpotInterruptions = numSpotInterruptions
+    }
+
+    /**
+     * @return The number of executor-level attempts made to run the task, or {@code null} when the executor does not retry internally
+     */
+    Integer getNumAttempts() {
+        return numAttempts
+    }
+
+    void setNumAttempts(Integer numAttempts) {
+        this.numAttempts = numAttempts
+    }
+
+    /**
+     * @return Milliseconds lost to executor-level retries before the final attempt started, or {@code null} when not available
+     */
+    Long getRetryTime() {
+        return retryTime
+    }
+
+    void setRetryTime(Long retryTime) {
+        this.retryTime = retryTime
     }
 
     String getLogStreamId() {
