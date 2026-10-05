@@ -23,7 +23,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.ScriptRuntimeException
-import nextflow.file.FilePublisher
 import spock.lang.Specification
 /**
  *
@@ -58,7 +57,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
         then:
         publish.path == Paths.get('/some/dir')
-        publish.mode == FilePublisher.Mode.LINK
+        publish.mode == PublishDir.Mode.LINK
         publish.pattern == '*.bam'
         publish.overwrite
         publish.enabled
@@ -67,7 +66,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
         then:
         publish.path == Paths.get('/some/data')
-        publish.mode == FilePublisher.Mode.COPY
+        publish.mode == PublishDir.Mode.COPY
         publish.pattern == null
         publish.overwrite == null
         !publish.enabled
@@ -76,7 +75,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
         then:
         publish.path == Paths.get('/some/data')
-        publish.mode == FilePublisher.Mode.COPY
+        publish.mode == PublishDir.Mode.COPY
         publish.pattern == null
         publish.overwrite == null
         !publish.enabled
@@ -85,7 +84,7 @@ class PublishDirTest extends Specification {
         publish = PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
-        publish.mode == FilePublisher.Mode.COPY
+        publish.mode == PublishDir.Mode.COPY
         publish.pattern == '*.txt'
         publish.overwrite == false
 

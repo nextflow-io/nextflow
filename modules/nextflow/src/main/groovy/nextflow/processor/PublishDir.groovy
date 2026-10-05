@@ -31,7 +31,6 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.file.FileHelper
 import nextflow.file.FilePublisher
-import nextflow.file.FilePublisher.Mode
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -46,6 +45,12 @@ import nextflow.util.PathTrie
 @EqualsAndHashCode
 @CompileStatic
 class PublishDir {
+
+    /**
+     * Kept for plugins that use the publish mode of a `publishDir` directive.
+     * Each value maps to the {@link FilePublisher.Mode} of the same name.
+     */
+    enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
     private Session session = Global.session as Session
 
@@ -130,7 +135,7 @@ class PublishDir {
     }
 
     void setMode( String str ) {
-        this.mode = FilePublisher.parseMode(str)
+        this.mode = Mode.valueOf(FilePublisher.parseMode(str).name())
     }
 
     void setMode( Mode mode )  {
@@ -214,8 +219,8 @@ class PublishDir {
 
     protected FilePublisher createPublisher() {
         final opts = [
-            mode: mode,
-            defaultMode: stageInMode == 'rellink' ? Mode.RELLINK : null,
+            mode: mode ? FilePublisher.Mode.valueOf(mode.name()) : null,
+            defaultMode: stageInMode == 'rellink' ? FilePublisher.Mode.RELLINK : null,
             overwrite: overwrite,
             failOnError: failOnError,
             tags: tags,
