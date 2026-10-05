@@ -139,7 +139,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         then:
         meta.definitions.size() == 2
         meta.getWorkflow('hello').declaredInputs*.name == ['foo', 'bar']
-        meta.getWorkflow('hello').declaredOutputs == ['result']
+        meta.getWorkflow('hello').declaredOutputs*.name == ['result']
     }
 
     def 'should register fully-qualified process names' () {

@@ -225,6 +225,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
         else {
             checkSingleNamedOutput(node.emits, "emit");
+            checkWorkflowEmitTypes(node.emits);
             visit(node.emits);
         }
 
@@ -305,6 +306,18 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
             visit(call);
         });
+    }
+
+    private void checkWorkflowEmitTypes(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
+            if( target == null )
+                continue;
+            var type = target.getType();
+            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+                continue;
+            addError("Workflow emit '" + target.getName() + "' must be declared as a Channel or Value, not " + Types.getName(type), target);
+        }
     }
 
     private void checkSingleNamedOutput(Statement block, String section) {
