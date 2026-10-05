@@ -10,51 +10,63 @@
   "keys": [
     {
       "key": "SESSION_ID",
-      "contributor": "sessionId"
+      "contributor": "sessionId",
+      "lineage": ["sessionId"]
     },
     {
       "key": "PROCESS_NAME",
-      "contributor": "processName"
+      "contributor": "processName",
+      "lineage": ["name"]
     },
     {
       "key": "TASK_SOURCE",
-      "contributor": "taskSource"
+      "contributor": "taskSource",
+      "lineage": ["codeChecksum"]
     },
     {
       "key": "CONTAINER",
-      "contributor": "containerFingerprint"
+      "contributor": "containerFingerprint",
+      "lineage": ["container"]
     },
     {
       "key": "INPUTS",
-      "contributor": "inputs.raw"
+      "contributor": "inputs.raw",
+      "lineage": ["input"]
     },
     {
       "key": "EVAL_OUTPUTS",
-      "contributor": "evalOutputs.derivedString"
+      "contributor": "evalOutputs.derivedString",
+      "lineage": ["eval"]
     },
     {
       "key": "SCRIPT_VARS",
-      "contributor": "scriptVars"
+      "contributor": "scriptVars",
+      "lineage": ["globalVars"]
     },
     {
       "key": "BIN_ENTRIES",
-      "contributor": "binEntries"
+      "contributor": "binEntries",
+      "lineage": ["binEntries"]
     },
     {
       "key": "ENV_MODULES",
-      "contributor": "envModules"
+      "contributor": "envModules",
+      "lineage": ["envModules"]
     },
     {
       "key": "CONDA",
-      "contributor": "condaEnv"
+      "contributor": "condaEnv",
+      "lineage": ["conda"]
     },
     {
       "key": "SPACK",
-      "contributor": "spackEnvAndArch"
+      "contributor": "spackEnvAndArch",
+      "lineage": ["spack", "architecture"]
     },
     {
       "key": "STUB_MARKER",
-      "contributor": "stubMarker"
+      "contributor": "stubMarker",
+      "lineage": ["codeChecksum"]
     }
   ]
 }
