@@ -93,4 +93,14 @@ class TaskRun implements LinSerializable {
      * hashing rules produced that key.
      */
     String hashVersion
+    /**
+     * Fingerprint of the module resources bundle. The bundle files are not staged
+     * individually like the project bin directory, so the fingerprint is the only
+     * record of them.
+     */
+    String resourcesBundle
+    /**
+     * Environment modules required by the task run (`module` directive)
+     */
+    List<String> envModules
 }

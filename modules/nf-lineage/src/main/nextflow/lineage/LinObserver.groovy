@@ -356,8 +356,16 @@ class LinObserver implements TraceObserverV2 {
             },
             asUriString(executionHash),
             getTaskModuleId(task),
-            task.hashVersion
+            task.hashVersion,
+            getTaskResourcesBundle(task),
+            task.config?.getModule() ?: null
         )
+    }
+
+    /** Mirrors the module bundle key of {@link TaskHasher}: absent unless module binaries are on. */
+    protected String getTaskResourcesBundle(TaskRun task) {
+        final bundle = session.enableModuleBinaries() ? task.processor?.getModuleBundle() : null
+        return bundle?.hasEntries() ? bundle.fingerprint() : null
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
