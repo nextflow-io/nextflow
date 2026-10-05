@@ -85,6 +85,12 @@ public class HashBuilder {
 
     private Path basePath;
 
+    private boolean orderIndependentMaps = true;
+
+    private boolean cacheFunnelFirst = true;
+
+    private boolean assetRootDetection = true;
+
     public HashBuilder() {}
 
     public HashBuilder withHasher(Hasher hasher) {
@@ -99,6 +105,26 @@ public class HashBuilder {
 
     public HashBuilder withBasePath(Path basePath) {
         this.basePath = basePath;
+        return this;
+    }
+
+    public HashBuilder withOrderIndependentMaps(boolean value) {
+        this.orderIndependentMaps = value;
+        return this;
+    }
+
+    public HashBuilder withCacheFunnelFirst(boolean value) {
+        this.cacheFunnelFirst = value;
+        return this;
+    }
+
+    /**
+     * When {@code true} (default), a file under the assets root counts as a repository
+     * asset even outside the base directory. When {@code false}, only the base directory
+     * is checked (pre-#6605 behaviour).
+     */
+    public HashBuilder withAssetRootDetection(boolean value) {
+        this.assetRootDetection = value;
         return this;
     }
 
@@ -146,11 +172,20 @@ public class HashBuilder {
                 with(item);
         }
 
-        else if( value instanceof CacheFunnel )
-            ((CacheFunnel)value).funnel(hasher, mode);
+        else if( cacheFunnelFirst && value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(this);
 
-        else if( value instanceof Map )
-            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+        else if( value instanceof Map ) {
+            if( orderIndependentMaps ) {
+                hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+            }
+            else {
+                // note: pre-#6679 behaviour — the map contributes its values only
+                for( Object item : ((Map)value).values() ) {
+                    with(item);
+                }
+            }
+        }
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -166,10 +201,10 @@ public class HashBuilder {
                 with(item);
 
         else if( value instanceof Path )
-            hashFile(hasher, (Path)value, mode, basePath);
+            hashFile(hasher, (Path)value, mode, basePath, assetRootDetection);
 
         else if( value instanceof java.io.File )
-            hashFile(hasher, (java.io.File)value, mode, basePath);
+            hashFile(hasher, (java.io.File)value, mode, basePath, assetRootDetection);
 
         else if( value instanceof UUID ) {
             UUID uuid = (UUID)value;
@@ -181,6 +216,9 @@ public class HashBuilder {
 
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
+
+        else if( !cacheFunnelFirst && value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(this);
 
         else if( value instanceof Enum )
             hasher.putUnencodedChars( value.getClass().getName() + "." + value );
@@ -195,6 +233,11 @@ public class HashBuilder {
 
     public Hasher getHasher() {
         return hasher;
+    }
+
+    /** The hashing mode, needed by {@link CacheFunnel} implementations that recurse. */
+    public HashMode getMode() {
+        return mode;
     }
 
     public HashCode build() {
@@ -230,10 +273,11 @@ public class HashBuilder {
      * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
+     * @param assetRootDetection Whether the assets root counts when deciding if the file is a repository asset
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFile( Hasher hasher, java.io.File file, HashMode mode, Path basePath ) {
-        return hashFile(hasher, file.toPath(), mode, basePath);
+    static private Hasher hashFile( Hasher hasher, java.io.File file, HashMode mode, Path basePath, boolean assetRootDetection ) {
+        return hashFile(hasher, file.toPath(), mode, basePath, assetRootDetection);
     }
 
     /**
@@ -244,9 +288,10 @@ public class HashBuilder {
      * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
+     * @param assetRootDetection Whether the assets root counts when deciding if the file is a repository asset
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFile( Hasher hasher, Path path, HashMode mode, Path basePath ) {
+    static private Hasher hashFile( Hasher hasher, Path path, HashMode mode, Path basePath, boolean assetRootDetection ) {
         BasicFileAttributes attrs=null;
         try {
             attrs = Files.readAttributes(path, BasicFileAttributes.class);
@@ -262,7 +307,7 @@ public class HashBuilder {
             log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
-        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path, DEFAULT_ROOT) ) {
+        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path, assetRootDetection ? DEFAULT_ROOT : null) ) {
             if( attrs==null ) {
                 // when file attributes are not avail, or it's a directory
                 // hash the file using the file name path and the repository
@@ -461,11 +506,16 @@ public class HashBuilder {
         return hashFileContent(hasher, file).hash();
     }
 
-    static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
+    /**
+     * Hashes a collection so that the result does not depend on the iteration order.
+     *
+     * Instance method rather than static: each item is hashed under this builder's rules.
+     */
+    private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
         byte[] resultBytes = new byte[HASH_BYTES];
         for (Object item : collection) {
             // hash ghe collection item
-            byte[] nextBytes = hashBytes(item, mode);
+            byte[] nextBytes = nestedHashBytes(item, mode);
             // sum the hash bytes to the "resultBytes" accumulator
             // since the sum is a commutative operation the order does not matter
             sumBytes(resultBytes, nextBytes);
@@ -474,8 +524,32 @@ public class HashBuilder {
         return hasher.putBytes(resultBytes);
     }
 
+    /** Hashes a plain value (a string, a map entry) that no encoding rule can affect. */
     static private byte[] hashBytes(Object item, HashMode mode) {
         return hasher(defaultHasher(), item, mode).hash().asBytes();
+    }
+
+    /**
+     * Hashes a value nested in a collection, keeping this builder's encoding rules.
+     *
+     * Without this a historical rule set would stop applying as soon as the value sits
+     * inside a bag or a set, because the nested hashing would start from the defaults.
+     */
+    private byte[] nestedHashBytes(Object item, HashMode mode) {
+        return nested().withHasher(defaultHasher()).withMode(mode).with(item).build().asBytes();
+    }
+
+    /**
+     * A builder carrying this one's encoding rules, but neither its hasher nor its base path.
+     *
+     * The base path is left out on purpose: propagating it would change how a file nested in a
+     * collection is named, which is current behaviour no rule set is allowed to alter.
+     */
+    private HashBuilder nested() {
+        return new HashBuilder()
+            .withOrderIndependentMaps(orderIndependentMaps)
+            .withCacheFunnelFirst(cacheFunnelFirst)
+            .withAssetRootDetection(assetRootDetection);
     }
 
     /**
@@ -525,7 +599,8 @@ public class HashBuilder {
      * @param path
      *      The item to check.
      * @param assetRoot
-     *      Location where assets are being stored (the repository root).
+     *      Location where assets are being stored (the repository root), or {@code null}
+     *      to check the base directory alone (pre-#6605 behaviour).
      * @return
      *      {@code true} if the path is included in the pipeline Git repository,
      *      {@code false} otherwise.
@@ -547,7 +622,9 @@ public class HashBuilder {
         // This handles cases where a workflow is executed from a subdirectory
         // (using the main-script parameter) but references assets elsewhere in the repo.
         // The assetRoot check ensures these non-sibling assets are still recognized.
-        return path.startsWith(session.getBaseDir()) || path.startsWith(assetRoot.toPath());
+        // a null assetRoot restores the pre-#6605 check, which looked at baseDir alone
+        return path.startsWith(session.getBaseDir())
+            || (assetRoot != null && path.startsWith(assetRoot.toPath()));
     }
 
 }

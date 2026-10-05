@@ -1,0 +1,72 @@
+{
+  "id": "std/v1.1",
+  "note": "From 25.10.0 until #6605 (1ca327c80, 2025-11-28), which widened isAssetFile to also match the asset root. Before it, only files under baseDir were hashed by content.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": false,
+    "cacheFunnelFirst": false,
+    "assetRootDetection": false
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "contributor": "sessionId",
+      "lineage": ["sessionId"]
+    },
+    {
+      "key": "PROCESS_NAME",
+      "contributor": "processName",
+      "lineage": ["name"]
+    },
+    {
+      "key": "TASK_SOURCE",
+      "contributor": "taskSource",
+      "lineage": ["codeChecksum"]
+    },
+    {
+      "key": "CONTAINER",
+      "contributor": "containerFingerprint",
+      "lineage": ["container"]
+    },
+    {
+      "key": "INPUTS",
+      "contributor": "inputs.raw",
+      "lineage": ["input"]
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "contributor": "evalOutputs.derivedString",
+      "lineage": ["eval"]
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "contributor": "scriptVars",
+      "lineage": ["globalVars"]
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "contributor": "binEntries",
+      "lineage": ["binEntries"]
+    },
+    {
+      "key": "ENV_MODULES",
+      "contributor": "envModules",
+      "lineage": ["envModules"]
+    },
+    {
+      "key": "CONDA",
+      "contributor": "condaEnv",
+      "lineage": ["conda"]
+    },
+    {
+      "key": "SPACK",
+      "contributor": "spackEnvAndArch",
+      "lineage": ["spack", "architecture"]
+    },
+    {
+      "key": "STUB_MARKER",
+      "contributor": "stubMarker",
+      "lineage": ["codeChecksum"]
+    }
+  ]
+}

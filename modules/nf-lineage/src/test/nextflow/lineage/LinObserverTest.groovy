@@ -911,6 +911,52 @@ class LinObserverTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should store the task hash version in the task run record' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def workDir = folder.resolve("work")
+        def session = Mock(Session) {
+            getConfig() >> config
+            getUniqueId() >> UUID.randomUUID()
+            getRunName() >> "test_run"
+            getWorkDir() >> workDir
+        }
+        def metadata = Mock(WorkflowMetadata) {
+            getProjectDir() >> workDir.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        and:
+        def store = new DefaultLinStore()
+        store.open(LineageConfig.create(session))
+        and:
+        def observer = Spy(new LinObserver(session, store))
+        observer.executionHash = "hash"
+        observer.normalizer = new PathNormalizer(metadata)
+        observer.getTaskGlobalVars(_) >> [:]
+        observer.getTaskBinEntries(_) >> []
+        and:
+        def hash = HashCode.fromString("1234567890")
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getHash() >> hash
+            getHashVersion() >> 'std/v1.3'
+            getSource() >> 'echo task source'
+            getScript() >> 'this is the script'
+            getInputs() >> [:]
+            getWorkDir() >> workDir
+        }
+
+        when:
+        observer.storeTaskRun(task, observer.normalizer)
+        def result = store.load(hash.toString()) as nextflow.lineage.model.v1beta1.TaskRun
+        then:
+        result.hashVersion == 'std/v1.3'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'onTaskComplete records a completed task but not a failed or aborted one'() {
         given:
         def folder = Files.createTempDirectory('test').toRealPath()

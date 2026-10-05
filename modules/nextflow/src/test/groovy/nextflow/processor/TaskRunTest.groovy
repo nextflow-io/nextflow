@@ -983,6 +983,19 @@ class TaskRunTest extends Specification {
         task.getStubSource() == null
     }
 
+    def 'hasStubBlock should track getStubBlock() presence exactly' () {
+        given:
+        def stub = new TaskClosure({ -> 'echo hello' }, 'echo stub source')
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> (hasStub ? stub : null) }
+
+        expect:
+        task.hasStubBlock() == hasStub
+
+        where:
+        hasStub << [true, false]
+    }
+
     def 'should get container info & meta' () {
         given:
         def image = 'my/container:latest'

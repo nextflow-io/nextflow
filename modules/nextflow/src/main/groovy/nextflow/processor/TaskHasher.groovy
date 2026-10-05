@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.UnexpectedException
+import nextflow.processor.hash.StdSpecs
 import nextflow.util.CacheHelper
 /**
  * Implement task hash computation
@@ -44,6 +45,17 @@ class TaskHasher {
         this.task = task
         this.processor = task.processor
         this.session = task.processor.session
+    }
+
+    /**
+     * The task hash version this hasher computes.
+     *
+     * The default path is, by definition, the newest published version — StdSpecsGoldenTest
+     * fails the build if the two ever drift apart. A hasher implementing a different version
+     * overrides this.
+     */
+    String getHashVersion() {
+        return StdSpecs.latest().id
     }
 
     public HashCode compute() {
