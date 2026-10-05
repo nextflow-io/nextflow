@@ -267,7 +267,7 @@ class LoggerHelper {
 
             result.setContext(loggerContext)
             if( result instanceof ConsoleAppender ) {
-                result.setTarget('System.err')
+                result.setTarget(opts.background ? 'System.out' : 'System.err')
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
             }
             (result as FilterAttachable).addFilter(filter)
