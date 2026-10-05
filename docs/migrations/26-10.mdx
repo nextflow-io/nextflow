@@ -185,21 +185,6 @@ You can extract the publish mapping to a shared function, e.g., to reuse it when
 
 See [Workflow outputs][workflow-output-def] for details.
 
-### Publish input files
-
-Workflow outputs can publish files that don't come from the work directory, such as input files, when the new `includeInputs` directive is enabled:
-
-```nextflow
-output {
-    samples {
-        path 'samples'
-        includeInputs true
-    }
-}
-```
-
-These files are published by file name, e.g., `/data/1.fastq` is published to `samples/1.fastq`. Set [`workflow.output.includeInputs`][config-workflow-output-includeInputs] to enable it for every output.
-
 ### Reports in the output directory
 
 Use the new `directory` option in the `dag`, `report`, `timeline`, and `trace` scopes to save built-in reports to the workflow output directory instead of the launch directory:
@@ -231,18 +216,6 @@ Nextflow can run tasks in [smolvm](https://github.com/smol-machines/smolvm) micr
 
 - Nextflow writes console output to standard error instead of standard output. This separates log messages from the output of commands such as `nextflow config` and `nextflow run -output-format json`.
 
-- A workflow output fails the run when two different files in the same channel value are published to the same target. Previously, one of the files was silently dropped. Files from different values can still be published to the same target, and the last file wins. For example, this output publishes the `versions.yml` file of every task to `info/versions.yml`:
-
-  ```nextflow
-  output {
-      versions {
-          path 'info'
-      }
-  }
-  ```
-
-- An error in a workflow output, such as an invalid `path` directive, fails the run with a non-zero exit status. Previously, the run reported success and the error was only reported as `Failed to invoke workflow.onComplete event handler`.
-
 ### Cache-breaking changes
 
 The hash of `eval` commands has changed. This fixes a bug where tasks with `eval` outputs did not have a stable hash across runs. As a result, every process with an `eval` output re-executes on the first resume after upgrading.
@@ -269,6 +242,7 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 - New config option: [`timeline.directory`][config-timeline-directory]
 - New config option: [`tower.autoLabels`][config-tower-autoLabels]
 - New config option: [`trace.directory`][config-trace-directory]
+- New config option: [`workflow.output.includeInputs`][config-workflow-output-includeInputs]
 
 [agent-page]: ../agent
 [cli-logfile]: ../reference/cli/logfile

@@ -156,9 +156,7 @@ workflow {
 }
 ```
 
-:::note
-Files that do not originate from the work directory are not published by default. Set the `includeInputs` directive (or the [`workflow.output.includeInputs`](./reference/config/workflow#workflowoutputincludeinputs) config option) to `true` to publish them by file name. For example, `/data/1.txt` is published to `results/1.txt`.
-:::
+Files that do not originate from the work directory are not published by default. Set [`workflow.output.includeInputs`](./reference/config/workflow#workflowoutputincludeinputs)  to `true` to publish them by file name. For example, `/data/1.txt` is published to `results/1.txt`.
 
 **Dynamic publish path**
 
