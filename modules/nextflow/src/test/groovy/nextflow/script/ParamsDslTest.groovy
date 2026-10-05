@@ -344,6 +344,38 @@ class ParamsDslTest extends Specification {
         samplesheet?.delete()
     }
 
+    def 'should give a channel param set to a path in the config as that path'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id\na\n'
+        def configParams = [samples: samplesheet]
+
+        when:
+        def params = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+            }
+
+            record Sample {
+                id: String
+            }
+
+            workflow { params }
+            ''',
+            config: [params: configParams],
+            configParams: configParams
+        )
+        then:
+        params.samples instanceof ChannelImpl
+        params.toPlainMap().samples.is(samplesheet)
+
+        cleanup:
+        samplesheet?.delete()
+    }
+
     def 'should keep the non-dataflow fields of a record param'() {
         given:
         def samplesheet = Files.createTempFile('test', '.csv')
