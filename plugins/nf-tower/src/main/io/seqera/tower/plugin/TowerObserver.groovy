@@ -530,6 +530,8 @@ class TowerObserver implements TraceObserverV2 {
         record.machineType = trace.getMachineInfo()?.type
         record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
         record.numSpotInterruptions = trace.getNumSpotInterruptions()
+        record.numAttempts = trace.getNumAttempts()
+        record.retryTime = trace.getRetryTime()
         record.logStreamId = trace.getLogStreamId()
         record.resourceAllocation = trace.getResourceAllocation()
         record.gpuMetrics = trace.getGpuMetrics()
