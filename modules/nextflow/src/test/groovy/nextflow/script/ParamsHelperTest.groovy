@@ -20,11 +20,14 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Channel
+import nextflow.script.types.Value
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RecordMap
 import nextflow.util.VersionNumber
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Tests for {@link ParamsHelper}.
@@ -233,6 +236,60 @@ class ParamsHelperTest extends Specification {
 
         cleanup:
         jsonFile?.delete()
+    }
+
+    @Unroll
+    def 'should resolve dataflow params to plain values: #CLI #CONFIG'() {
+        given:
+        def declarations = [
+            declaredParam('samples', 'default.csv'),
+            declaredParam('limit', 3),
+            declaredParam('label', 'demo')
+        ]
+
+        when:
+        def result = ParamsHelper.resolvePlainParams(declarations, CLI, CONFIG)
+        then:
+        result == EXPECTED
+        result.limit.getClass() == Integer
+
+        where:
+        CLI                                 | CONFIG                                | EXPECTED
+        [:]                                 | [:]                                   | [samples: 'default.csv', limit: 3, label: 'demo']
+        [:]                                 | [samples: 'config.csv', limit: 7]     | [samples: 'config.csv', limit: 7, label: 'demo']
+        // the config params include the command line values (see ConfigDsl)
+        [samples: 'cli.csv', limit: '5']    | [samples: 'cli.csv', limit: '5']      | [samples: 'cli.csv', limit: 5, label: 'demo']
+        [limit: '5']                        | [samples: 'config.csv', limit: 5]     | [samples: 'config.csv', limit: 5, label: 'demo']
+    }
+
+    def 'should resolve the dataflow fields of a record param to plain values'() {
+        given:
+        def declarations = [ declaredParam('pipeline') ]
+        def cliParams = [pipeline: [samples: 'cli.csv', limit: '5']]
+        def configParams = [pipeline: [samples: 'cli.csv', limit: '5', label: 'config']]
+
+        when:
+        def result = ParamsHelper.resolvePlainParams(declarations, cliParams, configParams)
+        then:
+        result == [pipeline: [samples: 'cli.csv', limit: 5, label: 'config']]
+        result.pipeline instanceof RecordMap
+    }
+
+    private static Param declaredParam(String name, Object defaultValue = null) {
+        new Param(name, TypedParams.getField(name).getGenericType(), false, defaultValue)
+    }
+
+    static class TypedParams {
+        public Channel<Map> samples
+        public Value<Integer> limit
+        public String label
+        public PipelineRec pipeline
+    }
+
+    static class PipelineRec implements nextflow.script.types.Record {
+        Channel<Map> samples
+        Value<Integer> limit
+        String label
     }
 
     static class SampleRec implements nextflow.script.types.Record {

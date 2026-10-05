@@ -179,7 +179,7 @@ class LinObserver implements TraceObserverV2 {
             workflow,
             session.uniqueId.toString(),
             session.runName,
-            getNormalizedParams(session.params, normalizer),
+            getNormalizedParams(session.params.toPlainMap(), normalizer),
             SecretHelper.hideSecrets(session.config.deepClone()) as Map,
             collectWorkflowMetadata(normalizer)
         )

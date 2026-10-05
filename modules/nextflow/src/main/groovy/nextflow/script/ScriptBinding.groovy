@@ -216,6 +216,8 @@ class ScriptBinding extends WorkflowBinding {
 
         private List<String> scriptAssignment = []
 
+        private Map<String,Object> plainValues
+
         @Delegate
         private Map<String,Object> target
 
@@ -237,6 +239,34 @@ class ScriptBinding extends WorkflowBinding {
 
         ParamsMap copyWith(Map<String,?> overrides) {
             return new ParamsMap(this, overrides)
+        }
+
+        /**
+         * Set the plain values of the params declared in the params
+         * block (see {@link ParamsHelper#resolvePlainParams}).
+         *
+         * @param values
+         */
+        void setPlainValues(Map<String,Object> values) {
+            plainValues = values
+        }
+
+        /**
+         * Get the params with each dataflow value of a declared param
+         * (e.g. a {@code Channel<E>} param, or a field of a record param)
+         * replaced by the plain value it was resolved from, so that the
+         * params can be serialized before the dataflow network has started.
+         * Any other param value is the original object.
+         */
+        Map<String,Object> toPlainMap() {
+            if( !plainValues )
+                return this
+            final result = new LinkedHashMap<String,Object>(target)
+            for( final entry : plainValues.entrySet() ) {
+                if( result.containsKey(entry.key) )
+                    result.put(entry.key, ParamsHelper.toPlainValue(result.get(entry.key), entry.value))
+            }
+            return result
         }
 
         @Override
