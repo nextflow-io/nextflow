@@ -1,9 +1,10 @@
 # Recording the task hash key fields to explain cache misses from lineage
 
 - Authors: Jorge Ejarque
-- Status: draft
-- Deciders: Jorge Ejarque, Paolo Di Tommaso
+- Status: proposed
+- Deciders: Ben Sherman, Paolo Di Tommaso
 - Date: 2026-09-02
+- Updated: 2026-10-05
 - Tags: lineage, task-hash, cache, resume, platform, nf-lineage
 
 ## Summary
@@ -11,8 +12,12 @@
 Seqera Platform wants to answer "why was this task not cached?" by diffing two lineage `TaskRun`
 records. That only works if the consumer knows which fields of the record actually feed the task
 hash, and that set changes over time. This ADR frames how that field list could be produced,
-versioned, and made available to the consumer, and records the options and their interactions. **No
-option is selected yet** — see [Solution or decision outcome](#solution-or-decision-outcome).
+versioned, and made available to the consumer, and records the options and their interactions.
+
+**The proposal is A2 + B4**: each published hash version is a declarative spec file pinned by guard
+tests, every `TaskRun` record carries the id of the version that hashed it, and the specs are served
+from a central registry that also maps each key to the record fields a consumer should diff. See
+[Solution or decision outcome](#solution-or-decision-outcome).
 
 ## Problem Statement
 
@@ -73,31 +78,22 @@ to serve as one:
 
 #### A candidate identifier exists in an open PR, but cannot be assumed
 
-PR #6927 (`task-hasher-strategy`) would supply something very close to a THV: `TaskHasher` split into
-an interface plus `TaskHasherV1`/`V2`/`V3` behind a `TaskHasherFactory.Version` enum whose values are
-the strings `std/v1`, `std/v2`, `std/v3`, resolved once per session from `NXF_TASK_HASH_VER` and
-cached on `Session.hashStrategy`. **It is an old PR — opened March 2026, last touched August 2026 —
-and there is no guarantee it lands, so nothing below depends on it.** It is recorded here because it
-would change the shape of several options, and because its existence is evidence about the problem
-independently of whether it merges:
+PR #6927 (`task-hasher-strategy`) would supply something close to a THV: `TaskHasher` split behind a
+`TaskHasherFactory.Version` enum whose values are `std/v1`, `std/v2`, `std/v3`. **It has been open
+since March 2026 and may never land, so nothing below depends on it.** It is recorded because it is
+evidence about the problem regardless of whether it merges:
 
-- Its versions **already disagree about the key set**: V3 hashes project `bin/` entries, V1 and V2 do
-  not. So `binEntries` would be a hash-relevant field under one version and not another. A per-THV
-  field list is not a hypothetical need.
-- It would place the **per-key encoding** under the same version, via two new `HashBuilder` flags
-  (`withOrderIndependentMaps`, `withCacheFunnelFirst`) configured by the strategy — narrowing, though
-  not closing, the cross-module ownership question below. The hash function itself would stay an
-  unversioned `nf-commons` constant.
-- It would make the THV a **runtime choice rather than a build property**: `NXF_TASK_HASH_VER` lets
-  two runs of the same Nextflow build hash under different versions. Any approach that infers the key
-  set from the Nextflow version stops being sound at that point, which is one of the reasons it is
-  not among the options.
-- It would **not** supply the field list: keys are still collected into an anonymous `List<Object>`
-  (`AbstractTaskHasher.collectKeys()`), so axis 1 remains open either way. A per-version
-  `collectKeys()` override is, however, a natural shape for a per-THV list.
+- Its versions **already disagree about the key set** — V3 hashes project `bin/` entries, V1 and V2
+  do not — so a per-THV field list is not a hypothetical need.
+- Its V1 and V2 have an **identical key set and still hash differently**, because the strategy
+  configures `HashBuilder` flags. A field list alone cannot express that, which is the basis of the
+  "two payloads" argument below.
+- It would **not** supply the field list: keys are still collected into an anonymous `List<Object>`,
+  so axis 1 stays open either way.
 
-If it does not land, the THV has to be introduced by this work instead; if it lands later, the two
-must be reconciled rather than coexisting as separate identifiers.
+The `TaskHasherFactory` extension point has since landed on master on its own, in #7638
+(`631ed9734`), and carries no version identifier. So a versioned hasher plugs in without #6927, and
+the decision below introduces the THV rather than inheriting it.
 
 ### Current drift between `TaskHasher` and the lineage record
 
@@ -245,7 +241,12 @@ so a patched or vendored Nextflow reports a version whose key set may not be the
 edge and snapshot builds do not map onto version ranges, and those are disproportionately the builds
 whose users are debugging a cache miss after an upgrade; and a version-keyed lookup always returns
 *some* row, so it fails confidently rather than admitting a gap, which the honesty driver rules out.
-Records written before any stamp exists are covered instead by B4's `null` → THV_0 entry.
+
+It returns in the decision below, but only in a narrowed form and only where no stamp can ever exist:
+as an explicitly *inferred* answer for records already written, drawn from a table of exact release
+tags rather than open version ranges, returning no answer at all for a release not in the table. That
+is a different claim from the one rejected here. The rejection stands for every record a stamped
+Nextflow writes, which is every record from now on.
 
 ## Pros and Cons of the Options
 
@@ -394,13 +395,14 @@ corrected once for every record ever written.
 - Good, because it stores the fact once, no matter how many runs or records exist.
 - Good, because it can carry richer per-THV information later (deprecation notes, per-key
   descriptions, human-readable explanations) without touching the record model.
-- Good, because **an absent THV is itself a usable key**: the registry can hold a `null` entry
-  pointing at a designated legacy THV_0, so every record written before the stamp existed resolves
-  through the same lookup as any other, with no new record field and no version arithmetic. This is
-  the only mechanism among the options that addresses records already written, and it is why B4
-  cannot simply be dropped in favour of embedding. Note the limit — one default collapses every
-  historical key set into a single answer, so it is honest only if THV_0's list is the conservative
-  intersection of the key sets that window spans, or is explicitly marked "best effort, unverified".
+- Good, because **an absent THV can still be resolved**: the registry can serve a second small
+  artifact mapping Nextflow releases to THVs, so a record written before the stamp existed is
+  answered without any new record field. This is the only mechanism among the options that addresses
+  records already written, and it is why B4 cannot simply be dropped in favour of embedding. Note the
+  limit — the answer is an inference about the build rather than a statement by it, so it has to be
+  presented as one, and releases older than the first reconstructed THV must resolve to nothing. The
+  decision below takes this shape; an earlier draft used a single `null` → legacy entry instead,
+  which collapsed all of history into one answer and was dropped.
 - Bad, because it makes every lookup a dependency on an artifact Platform must have, for a THV it may
   never have seen — dev builds, edge releases, and any Nextflow newer than the deployed Platform all
   land in the unresolvable case. Under the honesty driver that degrades to "I don't know", which is
@@ -439,90 +441,294 @@ Four concrete dependencies behind that table:
    — roughly double the size and itself a hand-maintained artifact, which is the very thing this ADR
    exists to stop creating. The ~200 byte figure quoted in B1/B2 assumes A3.
 4. **Axis 1 cannot help records already written.** Whatever mechanism is adopted, it starts working
-   on the day it ships; every record in the store today predates it. Only B4's `null` → THV_0 entry
-   addresses those, and populating it is archaeology of `TaskHasher`'s git history (and of
-   `HashBuilder`'s, for the encoding component) rather than anything a forward-looking mechanism can
-   derive. That work is the same size whichever axis-1 option is chosen, and it is worth scoping
+   on the day it ships; every record in the store today predates it. Only B4 addresses those, through
+   a release → THV table served beside the specs, and populating it is archaeology of `TaskHasher`'s
+   git history (and of `HashBuilder`'s, for the encoding component) rather than anything a
+   forward-looking mechanism can derive. That work is the same size whichever axis-1 option is chosen, and it is worth scoping
    separately from the rest.
 
 ## Solution or decision outcome
 
-**Not decided yet.** This ADR is a draft: the options and their interactions are recorded above so
-the choice can be made deliberately, not reached by default.
+**Proposed: A2 + B4.**
 
-What still has to be settled, in rough dependency order:
+- **A2** — each hash version is a declarative spec file in the Nextflow jar, pinned by guard tests
+  that compare real hashes rather than key names. A3 was not chosen: deriving the list from
+  `TaskHasher` cannot express the per-key encoding or the hash function, which the "two payloads"
+  analysis above shows is the half that fails silently.
+- **B4** — the specs are served from a central registry, keyed by an identifier stamped on every
+  `TaskRun` record. The field mapping travels inside the spec file, so a consumer holding a stamp
+  fetches exactly one document.
 
-1. **Axis 1** — whether the field list is derived from `TaskHasher` (A3), pinned by a guard test over
-   a hand-written list (A2), left to convention (A1), or some combination. A3 is a refactor of a
-   cache-critical class, so it cannot be committed to until a test has demonstrated that the hash
-   produced for a fixture task is byte-identical before and after the rename.
-2. **Axis 2** — where the field list lives, bearing in mind that the entries are positions on a
-   ladder rather than exclusive alternatives, that B3 and B4 both need a stamp to be usable at all,
-   and that only B4 addresses records already written.
-3. **Whether the THV is introduced by this work or inherited.** If PR #6927 lands it supplies one;
-   if it does not, this work has to define it. The two must not both happen.
-4. **The record-completeness prerequisites** below, which are needed under every combination and are
-   the part that can start independently of the rest.
+### 1. A hash version is a spec file
 
-Whatever is chosen has to satisfy the drivers above — in particular it must never report "no
-differences" for two tasks whose hashes differ, and it must produce an answer when the two runs were
-hashed under different THVs, since that is the common case rather than an edge one.
+A **task hash version** (THV) is a `TaskHashSpec`: an ordered list of keys with the contributor that
+produces each key's value, a set of encoding rules, and a hash function. It is loaded from a JSON
+resource rather than written in Groovy, so a version is data that can be published, diffed and served
+unchanged, not code that has to be kept compiling.
 
-## Prerequisites, whichever options are chosen
+Identifiers are `std/<major>.<minor>`. The minor number moves when the current code can still
+reproduce the older version; the major number moves only when it cannot, which is the honest signal
+that an old cache has become unexplainable. Seven versions are published, covering every release from
+25.10.0 to today:
 
-None of the options above fixes the drift; they only describe it. Under the honesty driver, the
-following must land alongside this work, or the diff will report "no differences" on tasks with
-different hashes:
+| THV | First release | Ended by | What changed |
+| --- | --- | --- | --- |
+| `std/v1.1` | 25.10.0 | #6605 `1ca327c80` | `isAssetFile` widened to match the asset root, not only `baseDir` |
+| `std/v1.2` | 25.11.0-edge | #6643 `295f17307` | the v2 parser became the default and stopped collecting `params.*` refs |
+| `std/v1.3` | 26.01.1-edge | #6679 `d54ff29af` | record-types encoding: order-independent maps, funnel first |
+| `std/v1.4` | 26.03.0-edge | #7165 `785e801ad` | `params.*` refs folded back into the task global vars |
+| `std/v1.5` | 26.04.2 | #6914 `029e52eef` | the module resources bundle became a key |
+| `std/v1.6` | 26.08.0-edge | #7575 `9e7a492a3` | eval outputs hashed as the raw map, not the derived string |
+| `std/v1.7` | 26.09.0-edge | — | current master |
 
-1. Add the missing hash inputs to the lineage `TaskRun` record: the `module` directive values, the
-   module resources bundle fingerprint, and the `stub-run` marker. For `HashMode`, record the
-   *effective per-process* mode (`task.processor.getConfig().getHashMode()`) as a field of the task
-   run — the existing `Checksum.mode` is the global `NXF_CACHE_MODE` default and describes the
-   checksum it sits on, not the task hash, so it cannot stand in for it.
-2. Record the fully-qualified process name used by the hasher, distinctly from the tagged task
-   `name` — or exclude `name` from the field list, since it is not a hash input.
-3. Ensure a new hash key cannot be added silently: every key the hasher feeds must be either present
-   in the field list or explicitly declared unrepresented. Under A2 or A3 the guard test is the place
-   to assert this; under A1 there is no such place, which is itself an argument on axis 1.
+Two findings from building this are worth recording, because both contradict what the option analysis
+assumed:
 
-`HashMode` deserves emphasis: it is a *runtime* choice, not part of the THV. Two runs can share a THV
-and an identical field list and still hash differently because one ran under `DEEP` or `SHA256`, and
-any mode added later widens that gap rather than closing it. The `mode` already present on
-every `Checksum` does not cover this — it is the global default rather than the per-process effective
-mode, and it describes a checksum rather than the task hash — and in records written before #7582 it
-is mislabelled as well. The cost of doing it properly is one enum-valued field per `TaskRun`, which
-is the cheapest item on this list and guards a whole class of otherwise invisible miss.
+1. **Three encoding rules, not two.** PR #6927 carries `withOrderIndependentMaps` and
+   `withCacheFunnelFirst`. Reproducing 25.10.0 needs a third, `withAssetRootDetection`, because #6605
+   changed which files are hashed by content rather than by metadata. Nothing about that change is
+   visible in the key set, which is the "two payloads" argument meeting a real case.
+2. **The encoding rules leaked.** `HashBuilder` applied them to top-level values only. A value nested
+   in a collection, or reached through a `CacheFunnel`, was hashed by a fresh builder carrying the
+   defaults, so a historical rule set stopped applying exactly where it mattered. `std/v1.1` and
+   `std/v1.2` produced identical hashes until this was fixed. The same leak is present in #6927.
+
+### 2. Keeping the versions honest (A2)
+
+`StdSpecsGoldenTest` holds the whole of axis 1. It builds one task that fires all thirteen keys and
+asserts three things:
+
+1. **The newest spec reproduces the default hashing path.** This is the drift guard the ADR asked
+   for. The moment someone changes what master hashes, the newest spec stops describing it and the
+   build fails, which is precisely when a new spec is due. The test also asserts that no key is
+   silently empty, otherwise the comparison would pass vacuously.
+2. **Every published spec still produces the hash it was published with.** The expected values are
+   frozen. A moved value means an already published version changed, so every cache written under it
+   has stopped resolving.
+3. **Every published spec still has its published fingerprint** — a hash of its id, ordered keys,
+   contributor names, encoding rules and hash function. This catches a changed definition that the
+   task hash cannot see: `std/v1.1` and `std/v1.2` differ only in asset detection, which needs a file
+   inside a Git repository and so hashes identically in a unit fixture.
+
+Guard tests alone would only prove the specs are self-consistent. Each version was therefore also run
+against the genuine release it claims to describe: a pipeline exercising all thirteen keys was run on
+that release, then resumed under the matching THV. All seven resumed 8 of 8 tasks
+`CACHED`, and the default path did the same against 26.09.0-edge. A cross-check confirmed the specs
+are mutually distinct in the predicted places rather than accidentally equal.
+
+### 3. The stamp
+
+`TaskRun.hashVersion` records the id of the version that produced `TaskRun.hash`. `AgentRun` carries
+the same field. A hasher reports its own version; the default path reports `StdSpecs.latest().id`,
+which is sound precisely because guard 1 above fails the build if the two ever diverge.
+
+This is the B1-in-miniature that B4 requires. It is one short string per task, and it is the only
+witness to the encoding rules and the hash function, neither of which any list of field names can
+express.
+
+### 4. The field mapping lives in the spec file
+
+Each key in a spec gains a `lineage` list naming the `TaskRun` fields a consumer should diff for that
+key. An empty list means the key is not recorded, and the consumer must say so rather than report no
+difference.
+
+```json
+{ "key": "SPACK", "contributor": "spackEnvAndArch", "lineage": ["spack", "architecture"] }
+```
+
+Putting the mapping in the spec rather than in a second document means a consumer holding a stamp
+makes exactly one request and gets everything that stamp implies — what was hashed, in what order,
+under which encoding, and where to look for each key in the record. It also means the mapping is
+versioned with the thing it describes, by construction.
+
+The full mapping, as of `std/v1.7`:
+
+| Hash key | Lineage field(s) | Note |
+| --- | --- | --- |
+| `SESSION_ID` | `sessionId` | |
+| `PROCESS_NAME` | `name` | superset, see below |
+| `TASK_SOURCE` | `codeChecksum` | |
+| `CONTAINER` | `container` | |
+| `INPUTS` | `input` | |
+| `EVAL_OUTPUTS` | `eval` | |
+| `SCRIPT_VARS` | `globalVars` | |
+| `BIN_ENTRIES` | `binEntries` | |
+| `RESOURCES_BUNDLE` | `resourcesBundle` | **new field** |
+| `ENV_MODULES` | `envModules` | **new field** |
+| `CONDA` | `conda` | |
+| `SPACK` | `spack`, `architecture` | one key, two fields |
+| `STUB_MARKER` | `codeChecksum` | shares a field with `TASK_SOURCE` |
+
+Only two lineage fields are added: `resourcesBundle` (String, the bundle fingerprint) and
+`envModules` (`List<String>`, the `module` directive values). The ADR's prerequisite list asked for a
+third, a separate field for the stub-run marker; it is not needed, because a stub run already changes
+`codeChecksum` — the stub block is the source that gets hashed. Pointing `STUB_MARKER` at
+`codeChecksum` is therefore accurate and costs nothing.
+
+`PROCESS_NAME` → `name` needs a caveat in the consumer. The hasher uses the fully-qualified process
+name; `name` is the tagged task name, which contains it plus the tag. So `name` differing does not
+prove `PROCESS_NAME` differed, but `name` being equal does prove it did not. The diff may over-report
+this key and can never under-report it, which is the direction the honesty driver allows. The earlier
+prerequisite to add a separate process-name field is dropped: a second field would be cheaper to read
+but is not worth a per-task cost for a key that practically never differs between two records being
+compared.
+
+The key for the resources bundle is named `RESOURCES_BUNDLE`, not `MODULE_BUNDLE`, because three
+unrelated things around it are already called "module": the remote Nextflow module in `moduleId`, the
+environment modules in `ENV_MODULES`, and the `resources/` bundle itself. `ResourcesBundle` is also
+the class name in the code. Key names are part of the published contract once a spec reaches the
+registry, so they cannot be corrected afterwards without a new version.
+
+### 5. The registry (B4)
+
+Published under `nextflow-io/schemas`, beside the other Nextflow schemas and reachable the same way:
+
+```
+task-hash/v1/
+  schema.json              # the shape of a spec file
+  legacy-releases.json     # Nextflow release -> THV, for records with no stamp
+  specs/std-v1.1.json      # byte-identical to the jar resource
+  ...
+  specs/std-v1.7.json
+```
+
+There is no index of available specs, because nothing needs one: a stamped record names its spec, so
+the consumer fetches `specs/std-v1.7.json` by that name. A spec file is immutable once published and
+can be cached forever.
+
+Two guards keep the registry and the jar in step, and they are the part that makes B4 safe rather
+than merely convenient:
+
+1. **At release time**, publishing a new spec copies the jar resource byte for byte. The release
+   fails if a spec file that already exists in the registry differs from the jar.
+2. **On a schedule**, a CI job compares every published spec against the jar resource of the same id
+   and fails on any difference. This catches an edit made directly in the registry, which is the one
+   failure mode B4 adds over the embedding options: records claiming a THV whose content silently
+   moved, answered confidently and wrongly.
+
+### 6. Records written before the stamp
+
+Every record in existence today has no `hashVersion`, and nothing can be added to them retroactively.
+They are resolved from the Nextflow version already present in the run, reached via
+`TaskRun.workflowRun` → `WorkflowRun.metadata.nextflow.version`, against `legacy-releases.json`:
+
+```json
+{
+  "formatVersion": "task-hash/v1",
+  "unidentifiableBefore": "25.10.0",
+  "versions": [
+    { "id": "std/v1.1", "nextflow": ["25.10.0", "25.10.1", "...", "25.10.8"] },
+    { "id": "std/v1.7", "nextflow": ["26.09.0-edge", "26.09.1-edge"] }
+  ]
+}
+```
+
+Four properties make this acceptable where the rejected fifth option was not:
+
+- **It applies only where no stamp can exist.** A record written by any Nextflow that carries the
+  stamp is resolved from the stamp. This table never overrides one.
+- **The answer is labelled inferred, not asserted.** The objection that a patched or vendored build
+  reports a version whose hasher may not be the one it used is not answered, only accepted, and the
+  consumer must present the result as an inference about the build.
+- **It lists exact release tags, not version ranges.** A tag that is not listed returns no answer, so
+  a dev or snapshot build fails to resolve rather than resolving to a neighbour. String equality is
+  enough; the consumer needs no version-comparison rules.
+- **It admits the gap.** Anything before 25.10.0 is unidentifiable and resolves to nothing at all.
+  This replaces the `null` → THV_0 entry sketched earlier in this ADR, which would have claimed one
+  answer for all of history and been wrong for most of it.
+
+The table is generated, not written by hand. For each of the six boundary commits above, the releases
+that contain it are computed with `git tag --contains`, so a change backported into an older
+maintenance line produces a correct table rather than one inferred from version ordering. Run today,
+no boundary commit has been backported, and every release maps to exactly one THV:
+
+| THV | Releases |
+| --- | --- |
+| `std/v1.1` | 25.10.0 … 25.10.8 |
+| `std/v1.2` | 25.11.0-edge, 25.12.0-edge |
+| `std/v1.3` | 26.01.1-edge, 26.02.0-edge |
+| `std/v1.4` | 26.03.0-edge … 26.03.4-edge, 26.04.0, 26.04.1 |
+| `std/v1.5` | 26.04.2 … 26.04.6, 26.05.0-edge … 26.07.0-edge |
+| `std/v1.6` | 26.08.0-edge |
+| `std/v1.7` | 26.09.0-edge, 26.09.1-edge |
+
+The generator must run against a full tag fetch. A release it does not see is simply absent, and an
+absent release resolves to nothing, which is the correct failure.
+
+### 7. What this does not cover
+
+- **`HashMode`.** It is a runtime choice, not part of a THV. Two runs can share a THV and an
+  identical field list and still hash differently because one ran under `DEEP` or `SHA256`. It
+  remains a prerequisite below, unaddressed by this decision.
+- **Patched and vendored builds.** They stamp correctly from now on; before the stamp they cannot be
+  resolved honestly and must not be guessed.
+- **Completeness of the diff.** Unchanged from the non-goals: the result explains, it does not prove.
+
+### How the pieces land
+
+In dependency order, each step standing on its own:
+
+1. The `HashBuilder` encoding-rule fix. It is a bug on master independent of this ADR.
+2. The spec files, `TaskHashSpec`, and the guard tests.
+3. `TaskRun.hashVersion` and `AgentRun.hashVersion`, plus the two new lineage fields.
+4. The `lineage` lists in the spec files.
+5. The registry and its two sync guards.
+
+## Prerequisites
+
+The options above only describe the drift; they do not fix it. Three prerequisites were listed when
+this ADR was a draft. The decision settles two of them and leaves one open.
+
+**Settled by the decision:**
+
+1. *Add the missing hash inputs to the lineage record.* Done with two fields, `resourcesBundle` and
+   `envModules`. The stub-run marker needs no field of its own — a stub run already changes
+   `codeChecksum`. The separate process-name field is dropped: `name` is a superset of the hashed
+   process name, so the diff may over-report that key and can never under-report it.
+2. *Ensure a new hash key cannot be added silently.* `StdSpecsGoldenTest` is that place. A key added
+   to the hasher without a new spec makes the newest spec stop reproducing the default path, and the
+   build fails. A key present in a spec but never populated fails the same test.
+
+**Still open:**
+
+3. **`HashMode` is not recorded.** It is a *runtime* choice, not part of a THV. Two runs can share a
+   THV and an identical field list and still hash differently because one ran under `DEEP` or
+   `SHA256`, and any mode added later widens that gap rather than closing it. What is needed is the
+   *effective per-process* mode (`task.processor.getConfig().getHashMode()`), recorded as a field of
+   the task run. The `mode` already present on every `Checksum` does not cover this: it is the global
+   `NXF_CACHE_MODE` default, it describes the checksum it sits on rather than the task hash, and in
+   records written before #7582 it is mislabelled as well. The cost is one enum-valued field per
+   `TaskRun`, which is the cheapest item in this ADR and guards a whole class of otherwise invisible
+   miss.
 
 ## Open questions
 
-- **Lineage model version.** Adding fields to `TaskRun`/`WorkflowRun` is read-compatible in both
-  directions with Gson (new readers see `null`, old readers ignore unknown fields), and
-  `LinTypeAdapterFactory` gates on strict equality of `version` (`lineage/v1beta1`). So no bump is
-  strictly required — but whether growing the model without a bump is acceptable practice should be
-  settled, since `WorkflowRun` also feeds the execution hash
-  (`CacheHelper.hasher(value).hash()` in `LinObserver.storeWorkflowRun()`) and new fields will change
-  that hash.
-- **THV form.** A monotonic integer is friendlier in a UI; a content-derived short hash cannot be
-  forgotten or collide. A hybrid (integer, with the guard test asserting it was bumped when the
-  derived content hash changed) gets both. If PR #6927 lands, its `std/vN` enum value is the obvious
-  candidate and this question is answered for us — but it is a *name*, and names can be rebound: an
-  edited `std/v1` would stamp a version string that no longer means what it did, so it would still
-  need fixture tests pinning each strategy.
-- **THV ownership across modules.** Because the THV covers encoding and the hash function as well as
-  the key list, it cannot be derived from `TaskHasher` alone — `HashBuilder` lives in `nf-commons`,
-  which has no visibility of `TaskHasher`. Options: derive the key-list part in `nextflow` and fold
-  in an encoding/function component declared in `nf-commons`; or keep a single hand-bumped THV
-  constant in `nf-commons` guarded by fixture tests on both sides. PR #6927 would narrow this by
-  having each strategy configure `HashBuilder` itself, leaving only the hash function
-  (`DEFAULT_HASHING`) unversioned — but only if it lands, and the residue would still need pinning.
-- **Whether to wait on PR #6927 at all.** It has been open since March 2026. Building on it risks
-  blocking indefinitely; building beside it risks two competing hash-version identifiers that then
-  have to be merged. Worth resolving with its author before any implementation starts, since it
-  determines whether the THV is this ADR's to define.
-- **Whether Platform can read the lineage store directly.** It determines whether B3 is feasible at
-  all; worth confirming so the option can be closed on evidence rather than left open.
+- **Lineage model version.** This work adds three fields to `TaskRun` (`hashVersion`,
+  `resourcesBundle`, `envModules`) and one to `AgentRun`. That is read-compatible in both directions
+  with Gson (new readers see `null`, old readers ignore unknown fields), and `LinTypeAdapterFactory`
+  gates on strict equality of `version` (`lineage/v1beta1`), so no bump is strictly required. Whether
+  growing the model without a bump is acceptable practice still needs settling, since `WorkflowRun`
+  also feeds the execution hash (`CacheHelper.hasher(value).hash()` in `LinObserver.storeWorkflowRun()`)
+  and new fields change that hash. Tracked by PR #7171.
+- **Who generates `legacy-releases.json`, and when.** It must be regenerated on every release, from a
+  full tag fetch, and a release missing from it resolves to nothing. Whether that belongs in the
+  Nextflow release workflow or in a job owned by the schemas repository is not decided.
 - **`-dump-hashes` alignment.** Whether the named-key output should be promoted to a documented,
-  stable format consumable by tooling, or remain a debug aid.
+  stable format consumable by tooling, or remain a debug aid. This design makes the two agree, since
+  `-dump-hashes` prints the contributor names from the spec, which makes the question easier to answer
+  either way.
+
+Three questions from the draft are now answered:
+
+- **THV form** — a semantic id, `std/<major>.<minor>`. The minor moves when the current code can
+  still reproduce the older version, the major only when it cannot. The objection that "names can be
+  rebound" is answered by the frozen fingerprint table: an edited spec changes its fingerprint and
+  fails the build, so an id cannot quietly come to mean something else.
+- **THV ownership across modules** — the encoding rules live in `nf-commons` as `EncodingRules`,
+  next to the `HashBuilder` they configure; the key list lives in `nextflow`. A spec file names both,
+  so one identifier covers both modules without either depending on the other.
+- **Whether to wait on PR #6927** — no. The `TaskHasherFactory` extension point it needed landed on
+  master independently (#7638), so this design builds on it directly.
 
 ## Links
 
@@ -531,6 +737,9 @@ is the cheapest item on this list and guards a whole class of otherwise invisibl
   **not assumed to land**) — would introduce `TaskHasherFactory.Version` (`std/v1..v3`) and
   `NXF_TASK_HASH_VER`, and carries the module resources bundle fingerprint into the hash (#6914, closes
   #6128)
+- Merged: #7638 (`631ed9734`) "Add extension points for task caching and object-storage access" —
+  supplies the `TaskHasherFactory` extension point a versioned hasher needs, independently of #6927
+- Proposed registry home: `nextflow-io/schemas`, under `task-hash/v1/`
 - Related PR #7171 "ADR: lineage record version compatibility" (open) — covers the lineage model
   version question raised in the open questions above
 - Fixed upstream: #7582 (`2c68fa1c9`) "Fix lineage checksum computed in standard mode regardless of
