@@ -35,7 +35,7 @@ enum HashKey {
     EVAL_OUTPUTS,
     SCRIPT_VARS,
     BIN_ENTRIES,
-    MODULE_BUNDLE,
+    RESOURCES_BUNDLE,
     ENV_MODULES,
     CONDA,
     SPACK,

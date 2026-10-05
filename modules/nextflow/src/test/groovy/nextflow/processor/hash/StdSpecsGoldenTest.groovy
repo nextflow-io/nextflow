@@ -79,8 +79,8 @@ class StdSpecsGoldenTest extends Specification {
         'std/v1.3': '50bd45e81b4298655d904551cd560fd2',
         'std/v1.4': '73e826e78755090c4adbb64adb3f0a9c',
         'std/v1.5': 'ee3c4b658453611f640f8e6eda403d25',
-        'std/v1.6': 'f2c07c2766554d26e4b898e06e54b284',
-        'std/v1.7': '1932dea96cad03c568e98df49d436322',
+        'std/v1.6': '51d8389f196c44fdaeb70cc05d9a7ac9',
+        'std/v1.7': '90c55a194828689835ec580d12e73057',
     ]
 
     def setup() {
@@ -95,7 +95,7 @@ class StdSpecsGoldenTest extends Specification {
 
     /**
      * A task firing every key: container, inputs, eval outputs, script vars, bin
-     * entries, module bundle, env modules, conda, spack with architecture, and the
+     * entries, resources bundle, env modules, conda, spack with architecture, and the
      * stub marker.
      *
      * Every path is absolute. A relative path is resolved against the working

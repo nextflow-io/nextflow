@@ -55,7 +55,7 @@ class HashContextTest extends Specification {
         expect:
         HashKey.values()*.name() as Set == [
             'SESSION_ID', 'PROCESS_NAME', 'TASK_SOURCE', 'CONTAINER', 'INPUTS',
-            'EVAL_OUTPUTS', 'SCRIPT_VARS', 'BIN_ENTRIES', 'MODULE_BUNDLE',
+            'EVAL_OUTPUTS', 'SCRIPT_VARS', 'BIN_ENTRIES', 'RESOURCES_BUNDLE',
             'ENV_MODULES', 'CONDA', 'SPACK', 'STUB_MARKER'
         ] as Set
     }

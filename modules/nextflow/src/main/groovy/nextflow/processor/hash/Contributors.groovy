@@ -172,7 +172,7 @@ class Contributors {
         return new ArrayList<Object>(entries)
     }
 
-    static final Contributor MODULE_BUNDLE = of('moduleBundleFingerprint') { HashContext ctx ->
+    static final Contributor RESOURCES_BUNDLE = of('resourcesBundleFingerprint') { HashContext ctx ->
         final ResourcesBundle bundle = ctx.session.enableModuleBinaries()
             ? ctx.processor.getModuleBundle()
             : null

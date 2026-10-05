@@ -16,7 +16,7 @@ at `~/miniconda3/bin` and is not on `PATH` in a non-interactive shell — prepen
 before running, or `P_CONDA` silently runs without the conda key ever firing.
 
 Keys exercised end to end: SESSION_ID, PROCESS_NAME, TASK_SOURCE, INPUTS,
-EVAL_OUTPUTS, SCRIPT_VARS, BIN_ENTRIES, MODULE_BUNDLE, CONTAINER, CONDA, STUB_MARKER.
+EVAL_OUTPUTS, SCRIPT_VARS, BIN_ENTRIES, RESOURCES_BUNDLE, CONTAINER, CONDA, STUB_MARKER.
 Still unexercised by the pipeline, by design: ENV_MODULES and SPACK (need HPC/spack
 infrastructure); both are covered by unit oracles instead.
 

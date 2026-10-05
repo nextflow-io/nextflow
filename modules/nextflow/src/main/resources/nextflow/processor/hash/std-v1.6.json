@@ -41,8 +41,8 @@
       "contributor": "binEntries"
     },
     {
-      "key": "MODULE_BUNDLE",
-      "contributor": "moduleBundleFingerprint"
+      "key": "RESOURCES_BUNDLE",
+      "contributor": "resourcesBundleFingerprint"
     },
     {
       "key": "ENV_MODULES",

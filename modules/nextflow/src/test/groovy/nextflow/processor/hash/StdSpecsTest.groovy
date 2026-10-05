@@ -27,7 +27,7 @@ class StdSpecsTest extends Specification {
         StdSpecs.STD_V1_5.encoding.canonicalForm() == EncodingRules.RECORD_TYPES.canonicalForm()
 
         and: 'v2 to v3 differs only by the module bundle key'
-        StdSpecs.STD_V1_6.keys() - StdSpecs.STD_V1_5.keys() == [HashKey.MODULE_BUNDLE]
+        StdSpecs.STD_V1_6.keys() - StdSpecs.STD_V1_5.keys() == [HashKey.RESOURCES_BUNDLE]
         StdSpecs.STD_V1_5.keys() - StdSpecs.STD_V1_6.keys() == []
         StdSpecs.STD_V1_6.encoding.canonicalForm() == StdSpecs.STD_V1_5.encoding.canonicalForm()
 
@@ -47,11 +47,11 @@ class StdSpecsTest extends Specification {
     def 'every spec accounts for every key in the vocabulary'() {
         given: 'keys a spec may legitimately omit, with the reason'
         def permittedOmissions = [
-            'std/v1.1': [HashKey.MODULE_BUNDLE] as Set,
-            'std/v1.2': [HashKey.MODULE_BUNDLE] as Set,
-            'std/v1.3': [HashKey.MODULE_BUNDLE] as Set,   // #6914 (2026-07-17) ends v1.5
-            'std/v1.4': [HashKey.MODULE_BUNDLE] as Set,
-            'std/v1.5': [HashKey.MODULE_BUNDLE] as Set,
+            'std/v1.1': [HashKey.RESOURCES_BUNDLE] as Set,
+            'std/v1.2': [HashKey.RESOURCES_BUNDLE] as Set,
+            'std/v1.3': [HashKey.RESOURCES_BUNDLE] as Set,   // #6914 (2026-07-17) ends v1.5
+            'std/v1.4': [HashKey.RESOURCES_BUNDLE] as Set,
+            'std/v1.5': [HashKey.RESOURCES_BUNDLE] as Set,
             'std/v1.6': [] as Set,
             'std/v1.7': [] as Set
         ]

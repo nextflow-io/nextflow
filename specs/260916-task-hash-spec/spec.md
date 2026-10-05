@@ -68,7 +68,7 @@ class EncodingRules {
 // nextflow.processor.hash — the key half
 enum HashKey {
     SESSION_ID, PROCESS_NAME, TASK_SOURCE, CONTAINER, INPUTS, EVAL_OUTPUTS,
-    SCRIPT_VARS, BIN_ENTRIES, MODULE_BUNDLE, ENV_MODULES, CONDA, SPACK, STUB_MARKER
+    SCRIPT_VARS, BIN_ENTRIES, RESOURCES_BUNDLE, ENV_MODULES, CONDA, SPACK, STUB_MARKER
 }
 
 interface Contributor {
@@ -124,7 +124,7 @@ All of them live in the contributors:
 - **`SPACK` emits `[spack]` or `[spack, arch]`.** `arch` sits inside the `spack` conditional in the
   current code, so it is not an independent key. (Note for the ADR: the drift table lists
   `architecture` as a record field, but it only contributes when spack is set.)
-- **`MODULE_BUNDLE` is doubly conditional** — `session.enableModuleBinaries()` *and*
+- **`RESOURCES_BUNDLE` is doubly conditional** — `session.enableModuleBinaries()` *and*
   `bundle.hasEntries()`.
 - **`HashMode` is resolved at compute time, not held on the spec.** `compute()` takes no arguments
   (matching the existing `TaskHasher` interface) and reads
@@ -289,7 +289,7 @@ present in every `std` spec and are omitted from the table — only the cells th
 | `SESSION_ID` / `PROCESS_NAME` | yes | yes | yes | yes | yes | yes | yes | **no** |
 | `INPUTS` | raw | raw | raw | raw | raw | raw | raw | **file identity** |
 | `EVAL_OUTPUTS` | derived | derived | derived | derived | derived | derived | **raw map** | raw map |
-| `MODULE_BUNDLE` | no | no | no | no | no | **yes** | yes | yes |
+| `RESOURCES_BUNDLE` | no | no | no | no | no | **yes** | yes | yes |
 | `orderIndependentMaps` / `cacheFunnelFirst` | false | false | false | **true** | true | true | true | true |
 | `SCRIPT_VARS` filter | `task.ext.*` + `params.*` | `task.ext.*` + `params.*` | `params.*` | `params.*` | none | none | none | none |
 | asset detection | narrow | wide | wide | wide | wide | wide | wide | wide |
@@ -445,7 +445,7 @@ would do it — and `std/v1.2`'s nearest baseline, 25.12.0-edge, is a `build 0` 
 | `P_BASIC` | `TASK_SOURCE`, `INPUTS` (value + file), `SCRIPT_VARS` (global var + `task.ext`) | |
 | `P_MAP_INPUT` | encoding | **`v1.3`↔`v1.4` discriminator** — needs a genuine `Map` input |
 | `P_EVAL` | `EVAL_OUTPUTS` | **`v1.6`↔`v1.7` discriminator** |
-| `P_MODULE_BUNDLE` | `MODULE_BUNDLE` | **`v1.5`↔`v1.6` discriminator** — needs module binaries enabled |
+| `P_MODULE_BUNDLE` | `RESOURCES_BUNDLE` | **`v1.5`↔`v1.6` discriminator** — needs module binaries enabled |
 | `P_BIN` | `BIN_ENTRIES` | calls a `bin/` script |
 | `P_CONTAINER` | `CONTAINER` | image pinned by digest |
 | `P_CONDA` | `CONDA` | env pinned |

@@ -120,7 +120,7 @@ class VersionedTaskHasherTest extends Specification {
     /**
      * Same as {@link #fixture()} but exercises the three keys that never fire there:
      * CONTAINER, BIN_ENTRIES (with more than one entry, so a wrong-arity contributor
-     * -- one value instead of N -- would be caught), and MODULE_BUNDLE.
+     * -- one value instead of N -- would be caught), and RESOURCES_BUNDLE.
      */
     private Map richFixture() {
         def session = Mock(Session) {
@@ -130,7 +130,7 @@ class VersionedTaskHasherTest extends Specification {
         }
         def bundle = Mock(ResourcesBundle) {
             // the bundle is tested for Groovy truth first, and an unstubbed
-            // asBoolean() on a mock is false -- without this MODULE_BUNDLE stays dark
+            // asBoolean() on a mock is false -- without this RESOURCES_BUNDLE stays dark
             asBoolean() >> true
             hasEntries() >> true
             fingerprint() >> 'bundle-fingerprint'

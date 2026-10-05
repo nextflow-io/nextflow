@@ -146,7 +146,7 @@ class ContributorsTest extends Specification {
             Contributors.SESSION_ID, Contributors.PROCESS_NAME, Contributors.TASK_SOURCE,
             Contributors.CONTAINER, Contributors.INPUTS_RAW, Contributors.EVAL_OUTPUTS_RAW_MAP,
             Contributors.EVAL_OUTPUTS_DERIVED_STRING, Contributors.SCRIPT_VARS,
-            Contributors.BIN_ENTRIES, Contributors.MODULE_BUNDLE, Contributors.ENV_MODULES,
+            Contributors.BIN_ENTRIES, Contributors.RESOURCES_BUNDLE, Contributors.ENV_MODULES,
             Contributors.CONDA, Contributors.SPACK_AND_ARCH, Contributors.STUB_MARKER
         ]
 
