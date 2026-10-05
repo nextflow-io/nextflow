@@ -533,7 +533,7 @@ public class HashBuilder {
      * @see <a href="https://github.com/nextflow-io/nextflow/issues/6604">Issue #6604</a>
      * @see <a href="https://github.com/nextflow-io/nextflow/pull/6605">PR #6605</a>
      */
-    static protected boolean isAssetFile(Path path, File assetRoot) {
+    static public boolean isAssetFile(Path path, File assetRoot) {
         final ISession session = Global.getSession();
         if( session==null )
             return false;

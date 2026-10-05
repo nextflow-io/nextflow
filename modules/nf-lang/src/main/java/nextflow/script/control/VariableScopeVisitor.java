@@ -277,7 +277,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         var classScope = workflowDsl(node.isEntry());
         if( node.isEntry() && paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
@@ -552,9 +551,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
-        var classScope = ClassHelper.makeCached(OutputDsl.class);
+        var classScope = new ClassNode(OutputDsl.class);
         if( paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
@@ -874,8 +872,17 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         if( variable != null ) {
             checkGlobalVariableInProcess(variable, node);
+            checkDataflowMethodAsVariable(variable, node);
             node.setAccessedVariable(variable);
         }
+    }
+
+    private void checkDataflowMethodAsVariable(Variable variable, ASTNode context) {
+        if( !typingEnabled )
+            return;
+        var mn = asMethodVariable(variable);
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode )
+            vsc.addError(methodType(mn) + " `" + variable.getName() + "` cannot be used as a variable", context);
     }
 
     private boolean isStdinStdout(String name) {
