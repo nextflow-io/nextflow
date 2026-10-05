@@ -341,7 +341,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         // check return statements against declared return type
         var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-        visitor.visit(node.getReturnType(), node.getCode());
+        visitor.visit(node, node.getReturnType(), node.getCode());
 
         var inferredReturnType = visitor.getInferredReturnType();
         if( inferredReturnType != null && ClassHelper.isDynamicTyped(node.getReturnType()) )
@@ -1040,16 +1040,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return null;
     }
 
-    private static String methodType(MethodNode node) {
-        if( node instanceof ProcessNode )
-            return "Process";
-        if( node instanceof AgentNode )
-            return "Agent";
-        if( node instanceof WorkflowNode )
-            return "Workflow";
-        return "Function";
-    }
-
     private static String className(Expression node) {
         var receiverType = getType(node);
         return receiverType != null && receiverType.implementsInterface(ClassHelper.makeCached(Namespace.class))
@@ -1377,7 +1367,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             // type, as long as it returns a value
             var coerce = Types.isEqual(returnType, ClassHelper.Boolean_TYPE);
             var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-            visitor.visit(returnType, node.getCode(), coerce);
+            visitor.visit(node, returnType, node.getCode(), coerce);
 
             var inferredReturnType = visitor.getInferredReturnType();
             if( inferredReturnType != null )
@@ -1526,12 +1516,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     @Override
     public void visitPropertyExpression(PropertyExpression node) {
         super.visitPropertyExpression(node);
-
-        var mn = asMethodOutput(node);
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode ) {
-            addError("Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead", node);
-            return;
-        }
 
         var receiver = node.getObjectExpression();
         var receiverType = getType(receiver);

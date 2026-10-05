@@ -17,11 +17,14 @@
 package io.seqera.tower.plugin
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import groovy.json.JsonSlurper
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
@@ -30,14 +33,19 @@ import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.dag.DAG
 import nextflow.exception.AbortRunException
+import nextflow.script.Param
+import nextflow.script.ParamsHelper
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
+import nextflow.script.types.Channel
+import nextflow.script.types.Value
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -749,5 +757,73 @@ class TowerObserverTest extends Specification {
         thrown(AbortRunException)
     }
 
+    @Timeout(10)
+    def 'should send the plain values of dataflow params in the begin and complete requests' () {
+        given:
+        // the dataflow network is never started, so the params are never bound
+        Global.session = Mock(Session)
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id\na\n'
+        def cliParams = [input: samplesheet.toString(), factor: '5']
+        def params = resolveParams([param('input'), param('factor'), param('label', 'demo')], cliParams)
+        and:
+        def session = Mock(Session)
+        session.getParams() >> params
+        session.getWorkflowMetadata() >> Mock(WorkflowMetadata) { toMap() >> [:] }
+        def observer = Spy(newObserver(session))
+        observer.getMetricsList() >> []
+        observer.getWorkflowProgress(false) >> new WorkflowProgress()
+        def generator = TowerJsonGenerator.create([:])
+
+        when:
+        def begin = new JsonSlurper().parseText(generator.toJson(observer.makeBeginReq(session).workflow))
+        def complete = new JsonSlurper().parseText(generator.toJson(observer.makeCompleteReq(session).workflow))
+        then:
+        begin.params == [input: samplesheet.toString(), factor: 5, label: 'demo']
+        complete.params == [input: samplesheet.toString(), factor: 5, label: 'demo']
+
+        cleanup:
+        Global.session = null
+        samplesheet?.delete()
+    }
+
+    def 'should serialize non-dataflow params identically to the session params' () {
+        given:
+        def outdir = Files.createTempDirectory('test')
+        def cliParams = [outdir: outdir.toString(), chunks: '3']
+        def params = resolveParams([param('outdir'), param('chunks'), param('label', 'demo')], cliParams)
+        and:
+        def session = Mock(Session)
+        session.getParams() >> params
+        session.getWorkflowMetadata() >> Mock(WorkflowMetadata) { toMap() >> [:] }
+        def observer = Spy(newObserver(session))
+        def generator = TowerJsonGenerator.create([:])
+
+        when:
+        def req = observer.makeBeginReq(session)
+        then:
+        generator.toJson(req.workflow.params) == generator.toJson(params)
+
+        cleanup:
+        outdir?.deleteDir()
+    }
+
+    private static Param param(String name, Object defaultValue = null) {
+        new Param(name, TypedParams.getField(name).getGenericType(), false, defaultValue)
+    }
+
+    private static ScriptBinding.ParamsMap resolveParams(List<Param> declarations, Map cliParams) {
+        final result = new ScriptBinding.ParamsMap(ParamsHelper.resolveParams(declarations, cliParams, cliParams))
+        result.setPlainValues(ParamsHelper.resolvePlainParams(declarations, cliParams, cliParams))
+        return result
+    }
+
+    static class TypedParams {
+        public Channel<Map> input
+        public Value<Integer> factor
+        public String label
+        public Path outdir
+        public Integer chunks
+    }
 
 }

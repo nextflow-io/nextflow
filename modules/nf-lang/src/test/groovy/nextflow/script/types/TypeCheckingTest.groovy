@@ -416,6 +416,82 @@ class TypeCheckingTest extends Specification {
         errors[0].getOriginalMessage() == "Return value with type void does not match the declared return type (String)"
     }
 
+    def 'should report the position of a missing return statement' () {
+        when:
+        def errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String {
+                if( x > 1 ) {
+                    return 'big'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getOriginalMessage() == "Missing return statement"
+
+        when:
+        errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String {
+                if( x > 1 ) {
+                    def y = 'big'
+                } else {
+                    return 'small'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getOriginalMessage() == "Missing return statement"
+
+        when: 'the body is empty'
+        errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String { }
+
+            workflow {
+                channel.of(1).map { x -> }
+            }
+            '''
+        )
+        then: 'the error is reported against the function or closure'
+        errors.size() == 2
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[1].getStartLine() == 4
+        errors[1].getStartColumn() == 23
+        errors.every { it.getOriginalMessage() == "Missing return statement" }
+    }
+
+    @Unroll
+    def 'should check for a missing return statement' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                                                  | ERROR
+        "def f(x: Integer) -> String { if( x > 1 ) { return 'a' } }"                            | "Missing return statement"
+        "def f(x: Integer) -> String { if( x > 1 ) { } else { return 'a' } }"                   | "Missing return statement"
+        "def f(x: Integer) -> String { if( x > 1 ) { def y = 'a' } else { return 'b' } }"       | "Missing return statement"
+        "def f(x: Integer) -> String { def y = 'a' ; if( x > 1 ) { y = 'b' } else { 'c' } }"    | "Missing return statement"
+        "def f(x: Integer) -> String { def y = 'a' }"                                           | "Missing return statement"
+        "def f(x: Integer) -> String { try { 'a' } catch( e: Exception ) { def y = 'b' } }"     | "Missing return statement"
+        "def f(x: Integer) -> String { if( x > 1 ) { return 'a' } ; return 'b' }"               | null
+        "def f(x: Integer) -> String { if( x > 1 ) { 'a' } else if( x > 0 ) { 'b' } else { 'c' } }" | null
+        "def f(x: Integer) -> String { if( x > 1 ) { return 'a' } else { throw new Exception() } }" | null
+        "def f(x: Integer) -> String { try { 'a' } catch( e: Exception ) { 'b' } }"             | null
+        "def f(x: Integer) { if( x > 1 ) { println 'a' } }"                                     | null
+        "def f(x: Integer) { if( x > 1 ) { def y = 'a' } }"                                     | null
+        "channel.of(1).map { x -> if( x > 1 ) { x } }"                                          | "Missing return statement"
+        "channel.of(1).map { x -> if( x > 1 ) { x } else { def y = 0 } }"                       | "Missing return statement"
+        "channel.of(1).map { x -> if( x > 1 ) { x } else { 0 } }"                               | null
+    }
+
     def 'should check an assignment' () {
         expect:
         check(SOURCE, ERROR)
@@ -686,6 +762,19 @@ class TypeCheckingTest extends Specification {
         'workflow.outputDir.name()'             | "Unrecognized method `name` for type Path"
         'workflow.outputDir.resolve()'          | "Function `resolve` expects 1 argument(s) but received 0"
         "workflow.outputDir.resolve('hello')"   | null
+    }
+
+    @Unroll
+    def 'should check a record method call' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                      | ERROR
+        "record(id: '1', n: 1).subMap(['id'])"                      | null
+        "record(id: '1', n: 1).subMap('id')"                        | "Argument with type String is not compatible with parameter of type Iterable<String>"
+        "def r: Record = record(id: '1'); r.subMap(['id'])"         | null
+        "record Sample { id: String }\ndef f(s: Sample) { s.subMap(['id']) }" | null
     }
 
     @Unroll
@@ -1416,29 +1505,6 @@ class TypeCheckingTest extends Specification {
         type = getType(exp)
         then:
         Types.getName(type) == 'Value<Record {\n    target: String\n    message: String\n}>'
-    }
-
-    def 'should report error for process .out property' () {
-        expect:
-        check(
-            '''
-            nextflow.enable.types = true
-
-            process hello {
-                output:
-                stdout()
-
-                script:
-                ''
-            }
-
-            workflow {
-                hello()
-                hello.out
-            }
-            ''',
-            'Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead'
-        )
     }
 
     def 'should not allow a void call result to be assigned to a variable' () {
