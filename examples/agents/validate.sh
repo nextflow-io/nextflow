@@ -180,6 +180,12 @@ if [[ -n $IMAGE ]]; then
   echo "agent.container = '$IMAGE'" > "$IMAGE_CONFIG"
 fi
 
+# The reports below parse the agent-mode console output - the `[SUCCESS] completed=N ...` summary
+# and the `[WARN]`/`[PROCESS]` prefixes `answer_of` strips. Nextflow enables that mode on its own
+# when it detects a coding agent (CLAUDECODE, AGENT), so set it explicitly: a plain shell or a CI
+# runner would otherwise get the regular console and every -resume check would fail to parse.
+export NXF_AGENT_MODE=1
+
 # One run, in its own directory: concurrent runs must not share .nextflow.log,
 # .nextflow/cache or work/. With -r the pair runs SEQUENTIALLY inside this function --
 # the resume run must see the cache the fresh run just wrote -- while different
