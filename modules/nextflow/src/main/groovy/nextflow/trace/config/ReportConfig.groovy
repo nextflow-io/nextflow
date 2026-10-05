@@ -33,6 +33,12 @@ class ReportConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The directory where the report file should be saved, relative to the workflow output directory.
+    """)
+    final String directory
+
+    @ConfigOption
+    @Description("""
         Create the execution report on workflow completion (default: `false`).
     """)
     final boolean enabled
@@ -58,6 +64,7 @@ class ReportConfig implements ConfigScope {
     ReportConfig() {}
 
     ReportConfig(Map opts) {
+        directory = opts.directory
         enabled = opts.enabled as boolean
         file = opts.file ?: defaultFileName()
         maxTasks = opts.maxTasks != null ? opts.maxTasks as int : DEF_MAX_TASKS

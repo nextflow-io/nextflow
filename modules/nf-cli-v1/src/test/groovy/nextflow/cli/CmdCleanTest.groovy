@@ -17,7 +17,9 @@
 package nextflow.cli
 
 import spock.lang.Specification
+
 import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  *
@@ -91,8 +93,16 @@ class CmdCleanTest extends Specification {
             folder?.deleteDir()
     }
 
+    def 'should not report a work dir as removed when it cannot be visited' () {
+        given:
+        def cleaner = new CmdClean(quiet: true)
 
+        when:
+        // a missing work dir reaches visitFileFailed, which must record the failure
+        def result = cleaner.deleteFolder(Path.of('/missing/work/dir'), false)
 
-
+        then:
+        !result
+    }
 
 }

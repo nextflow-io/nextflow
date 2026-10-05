@@ -201,6 +201,21 @@ Each `>>` specifies a *source file* and *publish target*. The source file should
 
 When using this syntax, only files captured with the `>>` operator are saved to the output directory.
 
+<AddedInVersion version="26.10" />
+
+The closure can also return a map of source files to publish targets, which is equivalent to the `>>` syntax:
+
+```nextflow
+output {
+    samples {
+        path { sample -> [
+            (sample.fastq_1): "fastq/${sample.id}/",
+            (sample.fastq_2): "fastq/${sample.id}/"
+        ] }
+    }
+}
+```
+
 **Conditional publishing**
 
 Outputs can be conditionally published using pipeline parameters:
@@ -250,9 +265,9 @@ output {
 The above example writes the following CSV file to `results/samples.csv`:
 
 ```
-"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
-"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq",""
+1,sample 1,results/fastq/1a.fastq,results/fastq/1b.fastq
+2,sample 2,results/fastq/2a.fastq,results/fastq/2b.fastq
+3,sample 3,results/fastq/3a.fastq,
 ```
 
 You can customize the index file with additional directives, for example:
@@ -307,7 +322,7 @@ The following directives are available in an index definition:
 
 ###### `header`
 
-When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
+When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names (e.g., `header 'id', 'fastq_1', 'fastq_2'`). Only used for CSV files.
 
 ###### `path`
 

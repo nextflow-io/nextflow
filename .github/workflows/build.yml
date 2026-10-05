@@ -131,7 +131,11 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [17, 25]
-        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
+        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave", "test_agent"]
+        exclude:
+          # the agent examples call a real model: once per run is enough
+          - java_version: 25
+            test_mode: test_agent
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -156,6 +160,25 @@ jobs:
           architecture: x64
           cache: gradle
 
+      # test_agent publishes the nf-agent-pi runner image built from this tree to the staging
+      # registry (see validation/agent.sh). Docker Hub because the image build pulls its base
+      # images from there, and an anonymous pull from a shared runner IP hits `toomanyrequests`.
+      # Fork PRs get no secrets, so these are skipped and so are the tests.
+      - name: Docker Login to Docker Hub
+        if: ${{ matrix.test_mode == 'test_agent' && vars.DOCKERHUB_USERNAME != '' && github.event.pull_request.head.repo.fork != true }}
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker Login to Seqera stage CR
+        if: ${{ matrix.test_mode == 'test_agent' && vars.SEQERA_STAGE_CR_USERNAME != '' && github.event.pull_request.head.repo.fork != true }}
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: "public.cr.stage-seqera.io"
+          username: ${{ vars.SEQERA_STAGE_CR_USERNAME }}
+          password: ${{ secrets.SEQERA_STAGE_CR_PASSWORD }}
+
       - name: Run tests
         run: |
           # configure test env
@@ -170,6 +193,8 @@ jobs:
           TEST_MODE: ${{ matrix.test_mode }}
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SEQERA_STAGE_CR_PASSWORD: ${{ secrets.SEQERA_STAGE_CR_PASSWORD }}
           AWS_DEFAULT_REGION: eu-west-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -268,9 +293,9 @@ jobs:
       contents: write
     steps:
       # Intentionally persists credentials: the `release` task in
-      # packing.gradle runs `git push` and `git push origin vX.Y.Z` against
-      # this repo; both rely on actions/checkout having written the token
-      # into .git/config as http.extraheader.
+      # packing.gradle runs `git push origin vX.Y.Z` against this repo,
+      # which relies on actions/checkout having written the token into
+      # .git/config as http.extraheader.
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:

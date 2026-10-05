@@ -46,8 +46,8 @@ import java.nio.file.Path
 class DefaultRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    Path resolve(String moduleName, Path projectDir) {
-        final baseDir = projectDir ?: Path.of('.').toAbsolutePath()
+    Path resolve(String moduleName, Path baseDir0) {
+        final baseDir = baseDir0 ?: Path.of('.').toAbsolutePath()
         final config = Global.config ?: buildConfig(baseDir)
         final registryConfig = config.navigate('registry') as RegistryConfig
 
@@ -60,8 +60,11 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             // Parse module reference
             def reference = ModuleReference.parse(moduleName)
 
+            // Honor the version pinned by the including module's `requires.modules`
+            def version = ModuleResolver.pinnedVersion(baseDir, reference)
+
             // Resolve module (will auto-install if missing or version mismatch)
-            def mainFile = resolver.resolve(reference, null, true)
+            def mainFile = resolver.resolve(reference, version, true)
 
             log.debug "Module ${reference} resolved to ${mainFile}"
             return mainFile

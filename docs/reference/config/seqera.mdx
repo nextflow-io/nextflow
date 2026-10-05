@@ -103,6 +103,18 @@ List of acceptable EC2 instance families. For example, `['m5', 'c5', 'r5']`.
 
 The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
 
+##### `seqera.executor.machineRequirement.onDemandCostRatio`
+
+<AddedInVersion version="26.10" />
+
+The cost limit for falling back from spot to on-demand. Only used when `provisioning` is `'spotFirst'`. Across the instance types selected for a task, the scheduler compares the highest on-demand hourly price with the highest spot price. The task falls back to on-demand only while that ratio is at most this value. Otherwise, the scheduler retries the task on spot. If spot capacity stays unavailable, the task fails. For example, `onDemandCostRatio = 2.5`.
+
+- Not set (default): the scheduler's default limit for the cloud provider applies.
+- `0`: no limit. Tasks always fall back to on-demand, regardless of price. This does not disable the fallback. To never fall back to on-demand, set `provisioning = 'spot'`.
+- Greater than `0`: the scheduler uses this value instead of its default limit.
+
+The value must not be negative. It applies to every task in the run. To override it for a single process, use the `machineRequirement.onDemandCostRatio` hint. See [On-demand fallback cost limit][seqera-executor-cost-limit].
+
 ##### `seqera.executor.machineRequirement.provisioning`
 
 The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
@@ -142,3 +154,4 @@ The multiplier for exponential backoff (default: `2.0`).
 [config-tower-autoLabels]: ./tower#towerautolabels
 [process-resource-labels]: ../process/directives/resource-labels
 [seqera-executor]: ../../executor/seqera
+[seqera-executor-cost-limit]: ../../executor/seqera#on-demand-fallback-cost-limit

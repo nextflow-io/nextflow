@@ -24,6 +24,7 @@ import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
@@ -41,6 +42,7 @@ import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 
 import static nextflow.script.ast.ASTUtils.*;
+import static nextflow.script.types.TypeCheckingUtils.getType;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
@@ -52,13 +54,10 @@ public class ProcessToGroovyVisitorV2 {
 
     private SourceUnit sourceUnit;
 
-    private ScriptNode moduleNode;
-
     private ScriptToGroovyHelper sgh;
 
     public ProcessToGroovyVisitorV2(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
-        this.moduleNode = (ScriptNode) sourceUnit.getAST();
         this.sgh = new ScriptToGroovyHelper(sourceUnit);
     }
 
@@ -263,11 +262,25 @@ public class ProcessToGroovyVisitorV2 {
                     return stmt(callThisX("_output_", args(constX(target.getName()), classX(target.getType()), closureX(stmt(ae.getRightExpression())))));
                 }
                 else {
-                    return stmt(callThisX("_output_", args(constX("$out"), classX(ClassHelper.dynamicType()), closureX(stmt(output)))));
+                    return stmt(callThisX("_output_", args(constX("$out"), classX(outputType(output)), closureX(stmt(output)))));
                 }
             })
             .toList();
         return block(null, statements);
+    }
+
+    /**
+     * The type of an output declared without a name, such as a bare `stdout()`.
+     * It carries no type annotation, so use the type inferred by the type checker
+     * to make it available at runtime, or the dynamic type if none can be inferred.
+     *
+     * @param output
+     */
+    private static ClassNode outputType(Expression output) {
+        var type = getType(output);
+        if( type == null || type.isGenericsPlaceHolder() )
+            return ClassHelper.dynamicType();
+        return type.getPlainNodeReference();
     }
 
     private Statement processTopics(Statement topics) {

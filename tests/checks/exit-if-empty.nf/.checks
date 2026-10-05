@@ -3,7 +3,7 @@ set -o pipefail
 
 echo ''
 echo \$ $NXF_RUN
-$NXF_RUN | tee stdout
+$NXF_RUN 2>&1 | tee stdout
 
 # must return a non-zero exit status 
 [[ $? == 0 ]] && exit 1

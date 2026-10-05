@@ -18,6 +18,10 @@ package nextflow.cache
 
 import java.nio.file.Files
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.google.common.hash.HashCode
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
@@ -26,11 +30,13 @@ import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+import nextflow.util.KryoHelper
 import spock.lang.Specification
 /**
  *
@@ -171,6 +177,77 @@ class CacheDBTest extends Specification {
         cleanup:
         folder?.deleteDir()
 
+    }
+
+    def 'the refcount read-modify-write goes through updateEntry, a new entry through putEntry' () {
+        given:
+        def hash = CacheHelper.hasher('x').hash()
+        def record = [new TraceRecord([task_id:1]).serialize(), null, 1]
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+
+        when: 'the reference count of an existing entry is bumped'
+        cache.incTaskEntry(hash)
+        then: 'it is an update of the record just read -- a composite store must not treat it as new'
+        1 * store.getEntry(hash) >> KryoHelper.serialize(record)
+        1 * store.updateEntry(hash, _)
+        0 * store.putEntry(_, _)
+
+        when: 'the reference count is decremented but the entry survives'
+        cache.removeTaskEntry(hash)
+        then:
+        1 * store.getEntry(hash) >> KryoHelper.serialize([record[0], null, 2])
+        1 * store.updateEntry(hash, _)
+        0 * store.putEntry(_, _)
+
+        when: 'a brand new entry is recorded'
+        def proc = Mock(TaskProcessor) { getConfig() >> new ProcessConfig([:]) }
+        def task = Mock(TaskRun) { getProcessor() >> proc; getHash() >> hash }
+        cache.writeTaskEntry0(new CachedTaskHandler(task, new TraceRecord()), new TraceRecord([task_id:1]))
+        then: 'it must go to the writable store, so it is a plain putEntry'
+        1 * store.putEntry(hash, _)
+        0 * store.updateEntry(_, _)
+    }
+
+    def 'updateEntry defaults to putEntry for a store that does not override it' () {
+        given:
+        def store = Spy(DefaultCacheStore, constructorArgs: [UUID.randomUUID(), 'r', Files.createTempDirectory('test')])
+        def hash = CacheHelper.hasher('x').hash()
+
+        when:
+        store.open()
+        store.updateEntry(hash, 'hello'.bytes)
+        then:
+        1 * store.putEntry(hash, _)
+        and:
+        new String(store.getEntry(hash)) == 'hello'
+
+        cleanup:
+        store?.close()
+    }
+
+
+    def 'a failed async cache write is logged, not silently swallowed' () {
+        given: 'a store whose write throws (e.g. a transient cloud error)'
+        def store = Stub(CacheStore) {
+            writeIndex(_, _) >> { throw new RuntimeException('s3 boom') }
+        }
+        def cache = new CacheDB(store)
+        and: 'capture CacheDB logs'
+        def logger = (Logger) org.slf4j.LoggerFactory.getLogger(CacheDB)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+
+        when:
+        cache.putIndexAsync(Mock(TaskHandler) { getTask() >> new TaskRun(hash: HashCode.fromInt(1)) })
+        cache.close()   // close() awaits the writer agent, so the failing write has already run
+
+        then: 'the failure surfaced as a WARN instead of being swallowed by the agent'
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Unable to persist cache record') }
+
+        cleanup:
+        logger.detachAppender(appender)
     }
 
 }

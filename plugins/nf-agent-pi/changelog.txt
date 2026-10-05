@@ -1,5 +1,22 @@
 nf-agent-pi changelog
 =====================
+0.5.4 - 4 Oct 2026
+- Bump pi-coding-agent to 1.0.2 so the bundled catalog includes GPT-6 Luna [266f648b7].
+  OpenAI `gpt-6-luna`: context 272000, max tokens 128000, input 0.1 / output 0.5 /
+  cache read 0.01 / cache write 0.125 per million, and a long-context tier above 272000
+  input tokens (input 0.2 / output 0.75 / cache read 0.02 / cache write 0.25).
+  OpenRouter `openai/gpt-6-luna`: context 1050000, max tokens 128000, input 0.1 /
+  output 0.5 / cache read 0.01 / cache write 0.125 per million.
+  The published 0.5.3 image pins pi-coding-agent 0.84.4, which has neither entry.
+  1.0.2 also pins brace-expansion 5.0.12, clearing the advisory 0.86.1 could not override.
+- Bump pi-coding-agent to 0.86.1 to fix undici advisories (#7733) [6b72f92f4]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+
+0.5.3 - 25 Sep 2026
+- Bump pi-coding-agent to 0.84.4 to fix npm advisories (#7659) [c8be9d3f9]
+- Bump Bouncy Castle to 1.85 to fix critical CVEs (#7658) [ad5cb26f5]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
 0.5.1 - 20 Aug 2026
 - Update google.golang.org/grpc to v1.82.1 to address a security advisory (#7513) [02ef7bb39]
 - Move the Go builder stage to golang:1.25-bookworm, which the grpc bump requires [02ef7bb39]

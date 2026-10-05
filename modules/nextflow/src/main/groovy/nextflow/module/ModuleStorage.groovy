@@ -48,6 +48,8 @@ import static nextflow.module.ModuleInfo.MODULE_INFO_FILE
 class ModuleStorage {
     public static final String MODULE_MANIFEST_FILE = "meta.yml"
     public static final String MODULE_README_FILE = "README.md"
+    public static final String MODULES_DIR = "modules"
+    public static final String MODULE_TESTS_DIR = "tests"
     private final Path modulesDir
 
     /**
@@ -56,7 +58,7 @@ class ModuleStorage {
      * @param baseDir The base directory (usually project root)
      */
     ModuleStorage(Path baseDir) {
-        this.modulesDir = baseDir.resolve('modules')
+        this.modulesDir = baseDir.resolve(MODULES_DIR)
     }
 
     /**
@@ -79,6 +81,18 @@ class ModuleStorage {
     }
 
     /**
+     * Get a storage rooted at the given module's own directory, so that the
+     * module's vendored dependencies are installed/resolved under its nested
+     * {@code modules/} directory (nested per-module vendoring).
+     *
+     * @param reference the parent module
+     * @return a storage whose base directory is the parent module's directory
+     */
+    ModuleStorage nestedFor(ModuleReference reference) {
+        return new ModuleStorage(getModuleDir(reference))
+    }
+
+    /**
      * Get the module info path for a specific module
      *
      * @param reference The module reference
@@ -97,6 +111,20 @@ class ModuleStorage {
     boolean isInstalled(ModuleReference reference) {
         def moduleDir = getModuleDir(reference)
         return Files.exists(moduleDir) && Files.isDirectory(moduleDir)
+    }
+
+    /**
+     * Recompute and persist a module's integrity checksum after its nested dependencies have
+     * been vendored, so the stored checksum covers the module's full installed subtree (its own
+     * files plus vendored deps). The registry origin is preserved. This makes a freshly installed
+     * module read as VALID, while any later edit -- to the module's own files or to a vendored
+     * dependency -- is detected as a modification.
+     *
+     * @param reference The module reference
+     */
+    void refreshChecksum(ModuleReference reference) {
+        final moduleDir = getModuleDir(reference)
+        ModuleInfo.save(moduleDir, 'checksum', ModuleChecksum.compute(moduleDir))
     }
 
     /**
@@ -123,7 +151,15 @@ class ModuleStorage {
         Map infoProps = ModuleInfo.load(moduleDir)
         installed.expectedChecksum = infoProps?.checksum
         installed.registryUrl = infoProps?.registryUrl
-        installed.installedVersion = ModuleSpecFactory.fromYaml(installed.manifestFile).version
+
+        // a directory without a readable spec is a module folder that is corrupted or was never
+        // installed from a registry -- report it as such via the integrity status, instead of
+        // failing here and taking down the recovery paths that would otherwise handle it
+        if( Files.exists(installed.manifestFile) ) {
+            final spec = ModuleSpecFactory.fromYaml(installed.manifestFile)
+            installed.installedVersion = spec.version
+            installed.kind = spec.kind ?: ModuleSpec.KIND_PROCESS
+        }
         return installed
     }
 
@@ -271,6 +307,10 @@ class ModuleStorage {
             new ZipInputStream(fis).withCloseable { zis ->
                 ZipEntry entry
                 while ((entry = zis.nextEntry) != null) {
+                    if( isExcludedEntry(entry.name) ) {
+                        zis.closeEntry()
+                        continue
+                    }
                     def targetPath = targetDir.resolve(entry.name)
 
                     // Security check: prevent zip slip
@@ -308,6 +348,8 @@ class ModuleStorage {
                 new TarArchiveInputStream(gzis).withCloseable { tis ->
                     TarArchiveEntry entry
                     while ((entry = tis.nextTarEntry) != null) {
+                        if( isExcludedEntry(entry.name) )
+                            continue
                         def targetPath = targetDir.resolve(entry.name)
 
                         // Security check: prevent tar slip
@@ -330,6 +372,26 @@ class ModuleStorage {
                 }
             }
         }
+    }
+
+    /**
+     * Whether an archive entry should be skipped when installing a module bundle.
+     *
+     * The {@code tests/} directory holds the module's nf-test suite, which belongs to the module
+     * author and not to the consuming project: it is not executed by the pipeline, and with
+     * workflow modules vendoring their own dependencies it would be duplicated at every level of
+     * the tree. Likewise a bundle must never carry vendored dependencies -- they are re-resolved
+     * from the registry at install time.
+     *
+     * @param entryName The archive entry name
+     * @return true if the entry must not be extracted
+     */
+    private static boolean isExcludedEntry(String entryName) {
+        final name = entryName.startsWith('./') ? entryName.substring(2) : entryName
+        for( String dir : [MODULE_TESTS_DIR, MODULES_DIR] )
+            if( name == dir || name.startsWith(dir + '/') )
+                return true
+        return false
     }
 
     /**
@@ -413,6 +475,13 @@ class ModuleStorage {
             tarStream.each { Path path ->
                 // Skip .module-info file when creating bundle
                 if (path.fileName.toString() == MODULE_INFO_FILE) {
+                    return
+                }
+
+                // Skip the nested vendored dependencies directory (modules/) at the module root:
+                // a module's requires.modules dependencies are re-resolved from the registry at
+                // install time, so they must not be shipped inside the parent module's bundle
+                if (Files.isDirectory(path) && path == sourceDir.resolve(MODULES_DIR)) {
                     return
                 }
 

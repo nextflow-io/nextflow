@@ -135,7 +135,7 @@ class WorkflowDefTest extends Dsl2Spec {
         loadScript(SCRIPT)
         then:
         def e = thrown(ScriptCompilationException)
-        e.cause.message.contains('Invalid workflow definition')
+        e.cause.message.contains("Unexpected input: ':' @ line 6, column 19")
 
     }
 

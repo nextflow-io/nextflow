@@ -136,6 +136,27 @@ class HelloExtension extends PluginExtensionPoint {
         return functions.sayHello(lang)
     }
 
+    /**
+     * A @Function that returns a channel, i.e. a factory as a plain function
+     */
+    @Function
+    DataflowWriteChannel reverseFn(Map opts = [:], String message) {
+        return reverse(opts.upper ? message.toUpperCase() : message)
+    }
+
+    /**
+     * A @Function that takes a channel, i.e. an operator as a plain function
+     */
+    @Function
+    DataflowWriteChannel goodbyeFn(Map opts = [:], DataflowWriteChannel source) {
+        final prefix = opts.prefix ?: ''
+        final target = CH.create()
+        final next = { target.bind(prefix + it) }
+        final done = { target.bind(Channel.STOP) }
+        DataflowHelper.subscribeImpl(CH.getReadChannel(source), [onNext: next, onComplete: done])
+        return target
+    }
+
     String aNonImportedFunction(){
         throw new IllegalAccessException("This function can't be imported")
     }

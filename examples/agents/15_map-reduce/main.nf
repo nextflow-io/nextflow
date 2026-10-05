@@ -78,7 +78,7 @@ agent reducer {
     """
     Synthesise ONE report from these findings:
 
-    ${findings.collect { "- (${it.shardId}) ${it.summary}" }.join('\n')}
+    ${findings.collect { f -> "- (${f.shardId}) ${f.summary}" }.join('\n')}
     """
 }
 
@@ -88,7 +88,7 @@ workflow {
     // A single-output agent auto-unwraps to its output channel under the typed DSL,
     // so `planner(...)` IS the channel of Plan records (no `.plan` accessor needed).
     def plan     = planner(channel.of(brief))       // PLAN   (agentic -> channel<Plan>)
-    def shards   = plan.flatMap { it.shards }        // SHARD  (deterministic work queue -> channel<Shard>)
+    def shards   = plan.flatMap { p -> p.shards }        // SHARD  (deterministic work queue -> channel<Shard>)
     def findings = mapper(shards)                    // MAP    (one TaskRun per shard, parallel -> channel<Finding>)
 
     reducer(findings.collect())                      // REDUCE (collect() -> one value -> single TaskRun)
