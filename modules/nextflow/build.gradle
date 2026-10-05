@@ -69,7 +69,7 @@ dependencies {
     testFixturesApi ("org.apache.groovy:groovy-test:${groovyVersion}") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
-    testFixturesApi ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.spockframework:spock-core:2.4-groovy-5.0") { exclude group: 'org.apache.groovy' }
     testFixturesApi ('org.spockframework:spock-junit4:2.4-groovy-4.0') { exclude group: 'org.apache.groovy' }
     testFixturesApi "com.google.jimfs:jimfs:${jimfsVersion}"
 }
