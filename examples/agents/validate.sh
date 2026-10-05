@@ -98,6 +98,8 @@ shift $((OPTIND-1))
 AGENTS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BASE_DIR=$(cd "$AGENTS_DIR/../.." && pwd)
 RESULTS=${RESULTS:-$BASE_DIR/build/agent-validation}
+# absolute, since each run passes paths under it from its own example dir
+[[ $RESULTS == /* ]] || RESULTS=$PWD/$RESULTS
 
 # `timeout` is GNU coreutils; on macOS it arrives as gtimeout with brew.
 TIMEOUT_BIN=$(command -v timeout || command -v gtimeout) || {
@@ -179,6 +181,11 @@ if [[ -n $IMAGE ]]; then
   IMAGE_CONFIG=$RESULTS/agent-image.config
   echo "agent.container = '$IMAGE'" > "$IMAGE_CONFIG"
 fi
+# The image as a task wrapper names it, without the registry host: Wave serves the image
+# as `wave.seqera.io/wt/<token>/<repository>:<tag>`, so match on the repository and tag.
+IMAGE_REF=$IMAGE
+host=${IMAGE%%/*}
+[[ $IMAGE == */* && ( $host == *.* || $host == *:* || $host == localhost ) ]] && IMAGE_REF=${IMAGE#*/}
 
 # The reports below parse the agent-mode console output - the `[SUCCESS] completed=N ...` summary
 # and the `[WARN]`/`[PROCESS]` prefixes `answer_of` strips. Nextflow enables that mode on its own
@@ -263,7 +270,7 @@ for ex in "${EXAMPLES[@]}"; do
     other=0
     if [[ -n $IMAGE && $mode == local ]]; then
       for f in "$dir"/work/*/*/.command.run; do
-        [[ -f $f ]] && grep -q 'nf-agent-pi:' "$f" && ! grep -q -F "$IMAGE" "$f" && other=$((other+1))
+        [[ -f $f ]] && grep -q 'nf-agent-pi:' "$f" && ! grep -q -F "$IMAGE_REF" "$f" && other=$((other+1))
       done
     fi
     [[ $rc == 0 && $rej == 0 && $other == 0 ]] || failed=$((failed+1))
