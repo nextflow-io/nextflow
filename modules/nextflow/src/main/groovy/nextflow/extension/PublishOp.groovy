@@ -58,12 +58,6 @@ class PublishOp {
 
     private DataflowVariable target
 
-    /**
-     * Targets already published by this output, used to report two source files
-     * being published to the same target.
-     */
-    private Map<Path,Path> publishedTargets = [:]
-
     @Lazy
     private FilePublisher publisher = { new FilePublisher(session, publishOpts) }()
 
@@ -94,8 +88,8 @@ class PublishOp {
     }
 
     /**
-     * Perform an action. If an exception is raised, bind the
-     * exception to the target and don't perform any more actions.
+     * Perform an action. If an exception is raised, bind the exception
+     * to the target, abort the run, and don't perform any more actions.
      *
      * @param action
      */
@@ -105,7 +99,11 @@ class PublishOp {
         try {
             action.run()
         } catch( Throwable e ) {
+            // bind the error before aborting, since the abort
+            // can interrupt the current thread
             target.bindError(e)
+            log.error("@unknown", e)
+            session.abort(e)
         }
     }
 
@@ -143,21 +141,22 @@ class PublishOp {
     }
 
     /**
-     * Report two different source files being published to the same target, which
-     * would otherwise silently publish whichever file happens to be written first.
+     * Report two different files in the same value being published to the same
+     * target, which would otherwise silently publish whichever file is written first.
      *
-     * Every target in a value is checked before any file is published, so that a
-     * conflict does not leave the output directory partially published.
+     * Files from different values can be published to the same target, in which
+     * case the last file wins (e.g. a `versions.yml` file emitted by every task).
      *
      * @param targets
      */
     protected void checkTargetConflicts(Map<Path,Path> targets) {
+        final sources = new HashMap<Path,Path>(targets.size())
         for( final entry : targets ) {
             final source = entry.key
-            final target = entry.value
-            final previous = publishedTargets.putIfAbsent(target, source)
-            if( previous != null && previous != source )
-                throw new ScriptRuntimeException("Publish target '${target.toUriString()}' for workflow output '${name}' is used by more than one file -- offending files: ${previous.toUriString()}, ${source.toUriString()}")
+            final targetPath = entry.value
+            final previous = sources.putIfAbsent(targetPath, source)
+            if( previous != null )
+                throw new ScriptRuntimeException("Publish target '${targetPath.toUriString()}' for workflow output '${name}' is used by more than one file -- offending files: ${previous.toUriString()}, ${source.toUriString()}")
         }
     }
 

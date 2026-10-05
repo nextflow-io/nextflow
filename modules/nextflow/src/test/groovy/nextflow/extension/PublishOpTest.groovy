@@ -174,7 +174,7 @@ class PublishOpTest extends Specification {
         ]
     }
 
-    def 'should report two files published to the same target' () {
+    def 'should report two files in the same value published to the same target' () {
         given:
         def session = Mock(Session) { getOutputDir() >> Path.of('/work/results') }
         def file1 = Path.of('/work/ab/1234/report.txt')
@@ -182,14 +182,14 @@ class PublishOpTest extends Specification {
         def target = Path.of('/work/results/report.txt')
         def op = new PublishOp(session, 'foo', null, [path: '.'])
 
-        when: 'the same file is published to the same target more than once'
+        when: 'files from different values are published to the same target'
         op.checkTargetConflicts([(file1): target])
-        op.checkTargetConflicts([(file1): target])
+        op.checkTargetConflicts([(file2): target])
         then:
         noExceptionThrown()
 
-        when: 'a different file is published to the same target'
-        op.checkTargetConflicts([(file2): target])
+        when: 'files from the same value are published to the same target'
+        op.checkTargetConflicts([(file1): target, (file2): target])
         then:
         def e = thrown(ScriptRuntimeException)
         e.message == "Publish target '${target.toUriString()}' for workflow output 'foo' is used by more than one file -- offending files: ${file1.toUriString()}, ${file2.toUriString()}"
