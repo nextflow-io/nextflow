@@ -289,10 +289,12 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getRetryTime() == retry
 
         where:
-        desc                        | starts               || start     | realtime | attempts | retry
-        'single attempt'            | [100_000L]           || 100_000L  | 900_000L | 1        | null
-        'reclaimed, then succeeded' | [100_000L, 700_000L] || 700_000L  | 300_000L | 2        | 600_000L
-        'last attempt never ran'    | [100_000L, null]     || 100_000L  | 900_000L | 2        | null
+        desc                        | starts                 || start      | realtime | attempts | retry
+        'single attempt'            | [100_000L]             || 100_000L   | 900_000L | 1        | null
+        'reclaimed, then succeeded' | [100_000L, 700_000L]   || 700_000L   | 300_000L | 2        | 600_000L
+        'last attempt never ran'    | [100_000L, null]       || 100_000L   | 900_000L | 2        | null
+        'last start after complete' | [100_000L, 1_200_000L] || 1_000_000L | 0L       | 2        | 900_000L
+        'last start not after seen' | [50_000L, 100_000L]    || 100_000L   | 900_000L | 2        | null
     }
 
     def 'should detect completion when batch submission fails'() {
