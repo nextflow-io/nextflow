@@ -1,0 +1,114 @@
+---
+title: Deprecations
+description: Track discouraged, deprecated, and removed Nextflow features.
+---
+
+# Deprecations
+
+This page lists Nextflow features that are discouraged, deprecated, or recently removed. Use it to find out what you need to change before a feature goes away.
+
+- **Discouraged** features still work, but better alternatives are available. They may be deprecated in the future.
+- **Deprecated** features still work, but will be removed in a future release.
+- **Removed** features are no longer supported. Migrate away from them before upgrading your Nextflow version.
+
+See [Migration notes][migrations-page] for the full list of changes in each release.
+
+## Discouraged
+
+| Feature | Alternative |
+|---|---|
+| `kuberun` command | [Launch with Fusion][k8s-fusion] |
+| [Using params outside the entry workflow][strict-params-outside] | Explicit inputs |
+| [Legacy parameter declarations][strict-legacy-params] (`params.foo = ...`) | `params` block |
+| Workflow `\|` and `&` operators | Method calls and assignments |
+| `.out` to access process/workflow outputs | Assignments |
+| [Legacy operators][operator-page] | [Core operators][operator-typed-page] |
+| [Process `when` section][strict-process-when] | Conditional logic in the calling workflow |
+| Using global variables in a process | Process inputs |
+| [`publishDir`][process-publishDir] directive | [Workflow outputs][workflow-outputs] |
+
+## Deprecated
+
+### Language
+
+| Feature | Deprecated | Replacement |
+|---|---|---|
+| `Channel.from()` | 19.10 | `channel.of()` or `channel.fromList()` |
+| `file` process input and output qualifier | 19.10 | `path` |
+| `baseDir` | 20.04 | `projectDir` |
+| `addParams` and `params` clauses in include declarations | 24.10 | [Explicit inputs][strict-include] |
+| Process `shell` section | 25.04 | [Process `script` section][strict-shell] |
+| `Channel` to access channel factories | 25.10 | [`channel`][strict-channel] |
+| Legacy syntax parser (`NXF_SYNTAX_PARSER=v1`) | 26.04 | [Strict syntax][strict-syntax-page] |
+| `channel.fromSRA()` | 26.04 | [Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/) |
+
+### Process directives
+
+| Feature | Deprecated | Replacement |
+|---|---|---|
+| [`storeDir`][process-storeDir] | 26.10 | [Explicit workflow logic][process-storeDir-alt] |
+
+### Configuration
+
+| Feature | Deprecated | Replacement |
+|---|---|---|
+| `aws.client.uploadStorageClass` | 23.10 | `aws.client.storageClass` |
+| `https://api.tower.nf` as the Seqera Platform endpoint | 24.04 | `https://api.cloud.seqera.io` |
+| [`manifest.author`][config-manifest] | 24.10 | `manifest.contributors` |
+| [Workflow handlers][config-workflow-handlers] in config files | 25.10 | Trace observer in a plugin |
+| [`manifest.defaultBranch`][config-manifest] | 26.04 | Automatic detection of the default branch |
+| [`seqera.executor.autoLabels`][config-seqera-executor-autoLabels] | 26.10 | [`tower.autoLabels`][config-tower-autoLabels] |
+
+### Command line
+
+| Feature | Deprecated | Replacement |
+|---|---|---|
+| `-entry` option of `run` | 24.10 | Params in the entry workflow |
+
+### Feature flags and environment variables
+
+| Feature | Deprecated | Replacement |
+|---|---|---|
+| `NXF_CONTAINER_ENTRYPOINT_OVERRIDE` | 22.10 | None |
+| [`nextflow.enable.dsl`][feature-flags-page] and `NXF_DEFAULT_DSL` | 25.04 | None (DSL2 is the only DSL) |
+| [`nextflow.enable.configProcessNamesValidation`][feature-flags-page] | 25.10 | [Strict syntax][strict-syntax-page] |
+| [`nextflow.enable.strict`][feature-flags-page] and `NXF_ENABLE_STRICT` | 26.04 | [Strict syntax][strict-syntax-page] |
+| Google Batch machine type selection via Cloud Info, and [`NXF_CLOUDINFO_ENABLED`][env-vars-NXF_CLOUDINFO_ENABLED] | 26.10 | `machineType` directive |
+
+## Removed
+
+| Feature | Deprecated | Removed | Replacement |
+|---|---|---|---|
+| [DSL1][dsl1-page] | 22.04 | 23.04 | DSL2 |
+| `docker.userEmulation` | | 24.04 | None |
+| Glacier auto-retrieval (`aws.client.glacierAutoRetrieval`) | | 24.04 | Restore objects with the AWS CLI |
+| `@Grab` annotation | | 24.10 | Plugins |
+| Spack support in Wave | 24.10 | 25.04 | Conda |
+| `google-lifesciences` executor | 24.10 | 25.10 | `google-batch` |
+| `aws.client.protocol`, `signerOverride`, `socketRecvBufferSizeHint`, `socketSendBufferSizeHint`, and `userAgent` | | 25.10 | None |
+| `aws.client.uploadChunkSize`, `uploadMaxAttempts`, `uploadMaxThreads`, and `uploadRetrySleep` | | 25.10 | `aws.client.minimumPartSize` and `aws.client.multipartThreshold` |
+| `-with-weblog` option of `run` | 25.04 | 26.10 | [nf-weblog](https://github.com/nextflow-io/nf-weblog) plugin |
+| `echo` directive | 22.04 | 26.10 | `debug` |
+
+[config-manifest]: ./reference/config/manifest
+[config-seqera-executor-autoLabels]: ./reference/config/seqera#seqeraexecutorautolabels
+[config-tower-autoLabels]: ./reference/config/tower#towerautolabels
+[config-workflow-handlers]: ./config#workflow-handlers
+[dsl1-page]: ./migrations/dsl1
+[env-vars-NXF_CLOUDINFO_ENABLED]: ./reference/env-vars#nxf_cloudinfo_enabled
+[feature-flags-page]: ./reference/feature-flags
+[k8s-fusion]: ./kubernetes#launch-with-fusion
+[migrations-page]: ./migrations
+[operator-page]: ./reference/operator
+[operator-typed-page]: ./reference/stdlib-types/channel
+[process-publishDir]: ./reference/process/directives/publish-dir
+[process-storeDir]: ./reference/process/directives/store-dir
+[process-storeDir-alt]: ./reference/process/directives/store-dir#alternative-explicit-workflow-logic
+[strict-channel]: ./strict-syntax#channel-vs-channel
+[strict-include]: ./strict-syntax#include-declarations
+[strict-legacy-params]: ./strict-syntax#using-legacy-parameter-declarations
+[strict-params-outside]: ./strict-syntax#using-params-outside-the-entry-workflow
+[strict-process-when]: ./strict-syntax#process-when-section
+[strict-shell]: ./strict-syntax#process-shell-section
+[strict-syntax-page]: ./strict-syntax
+[workflow-outputs]: ./workflow#outputs

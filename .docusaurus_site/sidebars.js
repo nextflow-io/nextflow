@@ -338,6 +338,7 @@ module.exports = {
             collapsed: true,
             items: [
                 "updating-nextflow",
+                "deprecations",
                 "strict-syntax",
                 {
                     type: "category",
