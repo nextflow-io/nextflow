@@ -500,26 +500,33 @@ class BashWrapperBuilder {
         return false
     }
 
+    /**
+     * Escape line breaks so that each metadata value is kept on a single comment line
+     */
+    private static String metaValue(Object value) {
+        value != null ? Escape.blanks(value.toString()) : null
+    }
+
     protected String getTaskMetadata() {
         final lines = new StringBuilder()
         lines << '### ---\n'
-        lines << "### name: '${bean.name}'\n"
+        lines << "### name: '${metaValue(bean.name)}'\n"
         if( bean.arrayIndexName ) {
             lines << '### array:\n'
-            lines << "###   index-name: ${bean.arrayIndexName}\n"
+            lines << "###   index-name: ${metaValue(bean.arrayIndexName)}\n"
             lines << "###   index-start: ${bean.arrayIndexStart}\n"
             lines << "###   work-dirs:\n"
             for( Path it : bean.arrayWorkDirs )
-                lines << "###   - ${Escape.path(FilesEx.toUriString(it))}\n"
+                lines << "###   - ${metaValue(Escape.path(FilesEx.toUriString(it)))}\n"
         }
 
         if( containerConfig?.isEnabled() )
-            lines << "### container: '${bean.containerImage}'\n"
+            lines << "### container: '${metaValue(bean.containerImage)}'\n"
 
         if( outputFiles.size() > 0 ) {
             lines << '### outputs:\n'
             for( final output : bean.outputFiles )
-                lines << "### - '${output}'\n"
+                lines << "### - '${metaValue(output)}'\n"
         }
 
         lines << '### ...\n'

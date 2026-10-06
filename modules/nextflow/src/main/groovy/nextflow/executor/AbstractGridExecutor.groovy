@@ -41,7 +41,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\n", "\t", "\r", "=" ]
 
     private Map lastQueueStatus
 
@@ -165,7 +165,7 @@ abstract class AbstractGridExecutor extends Executor {
         // -- check for a custom `jobName` defined in the nextflow config file
         def customName = resolveCustomJobName(task)
         if( customName )
-            return sanitizeJobName(customName)
+            return sanitizeJobName(removeControlChars(customName))
 
         // -- if not available fallback on the custom naming strategy
 
@@ -176,6 +176,13 @@ abstract class AbstractGridExecutor extends Executor {
             result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
         }
         return sanitizeJobName(result.toString())
+    }
+
+    /**
+     * Replace control characters (e.g. newlines) so that the job name is kept on a single directive line
+     */
+    private static String removeControlChars(String name) {
+        name.replaceAll(/\p{Cntrl}/, '_')
     }
 
     protected String sanitizeJobName(String name) {

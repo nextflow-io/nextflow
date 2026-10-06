@@ -423,6 +423,30 @@ class BashWrapperBuilderTest extends Specification {
             '''.stripIndent()
     }
 
+    def 'should escape line breaks in task metadata' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo (a\nb)',
+            containerConfig: new DockerConfig(enabled: true),
+            containerImage: 'ubuntu\nlatest',
+            outputFiles: ['out\r\nfile']
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: 'foo (a\\nb)'
+            ### container: 'ubuntu\\nlatest'
+            ### outputs:
+            ### - 'out\\r\\nfile'
+            ### ...
+            '''.stripIndent()
+        and:
+        meta.readLines().every { it.startsWith('###') }
+    }
+
     def 'should copy control files' () {
         when:
         def binding = newBashWrapperBuilder(scratch: false).makeBinding()
