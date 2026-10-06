@@ -15,10 +15,29 @@
  */
 package nextflow.cloud.google.batch.client
 
+import java.util.concurrent.TimeUnit
+
+import com.google.api.core.ApiFuture
+import com.google.api.core.ApiFutures
+import com.google.api.gax.grpc.GrpcCallContext
+import com.google.api.gax.rpc.ApiCallContext
+import com.google.api.gax.rpc.ApiException
+import com.google.api.gax.rpc.ApiExceptionFactory
+import com.google.api.gax.rpc.Callables
+import com.google.api.gax.rpc.StatusCode
+import com.google.api.gax.rpc.UnaryCallable
+import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.ListTasksRequest
+import com.google.cloud.batch.v1.ListTasksResponse
 import com.google.cloud.batch.v1.Task
+import com.google.cloud.batch.v1.TaskGroupName
 import com.google.cloud.batch.v1.TaskName
 import com.google.cloud.batch.v1.TaskStatus
+import com.google.cloud.batch.v1.stub.BatchServiceStub
+import com.google.cloud.batch.v1.stub.BatchServiceStubSettings
+import nextflow.cloud.google.GoogleOpts
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -63,6 +82,110 @@ class BatchClientTest extends Specification{
         client.getTaskInArrayStatus(job2, task2).state == TaskStatus.State.FAILED
         // no cached task
         client.getTaskInArrayStatus(job3, task3).state == TaskStatus.State.SUCCEEDED
+    }
+
+    @Unroll
+    def 'should list all tasks of a job with #COUNT tasks' () {
+        given:
+        def project = 'project-id'
+        def location = 'location-id'
+        def jobId = 'job-id'
+        def stub = new FakeBatchServiceStub(TaskGroupName.of(project, location, jobId, 'group0'), COUNT)
+        def client = new BatchClient(projectId: project, location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
+
+        when:
+        def tasks = client.listTasks(jobId).toList()
+
+        then:
+        tasks.size() == COUNT
+        tasks*.name.toSet().size() == COUNT
+        stub.requests.size() == PAGES
+
+        where:
+        COUNT | PAGES
+        1     | 1
+        499   | 1
+        500   | 2
+        501   | 2
+        1500  | 4
+    }
+
+    /**
+     * Emulates the paging behaviour of the Google Batch ListTasks API: a request with no page
+     * size gets the server default of 500, the page size is encoded in the returned page token,
+     * and a follow-up request whose page size does not match its token is rejected
+     */
+    static class FakeBatchServiceStub extends BatchServiceStub {
+        static final int DEFAULT_PAGE_SIZE = 500
+
+        final List<ListTasksRequest> requests = []
+        private final TaskGroupName parent
+        private final int count
+
+        FakeBatchServiceStub(TaskGroupName parent, int count) {
+            this.parent = parent
+            this.count = count
+        }
+
+        @Override
+        UnaryCallable<ListTasksRequest, ListTasksResponse> listTasksCallable() {
+            return new UnaryCallable<ListTasksRequest, ListTasksResponse>() {
+                @Override
+                ApiFuture<ListTasksResponse> futureCall(ListTasksRequest request, ApiCallContext context) {
+                    try {
+                        return ApiFutures.immediateFuture(listTasks(request))
+                    }
+                    catch( ApiException e ) {
+                        return ApiFutures.immediateFailedFuture(e)
+                    }
+                }
+            }
+        }
+
+        @Override
+        UnaryCallable<ListTasksRequest, BatchServiceClient.ListTasksPagedResponse> listTasksPagedCallable() {
+            return Callables
+                .paged(listTasksCallable(), BatchServiceStubSettings.newBuilder().build().listTasksSettings())
+                .withDefaultCallContext(GrpcCallContext.createDefault())
+        }
+
+        private ListTasksResponse listTasks(ListTasksRequest request) {
+            requests.add(request)
+            int offset = 0
+            int pageSize = request.pageSize ?: DEFAULT_PAGE_SIZE
+            if( request.pageToken ) {
+                final token = request.pageToken.tokenize(':')
+                offset = token[0] as int
+                final tokenPageSize = token[1] as int
+                if( request.pageSize != tokenPageSize )
+                    throw invalidArgument("pagesize field is invalid. mismatching token page size error: request page size (${request.pageSize}) != token page size (${tokenPageSize})")
+            }
+            final end = Math.min(offset + pageSize, count)
+            final result = ListTasksResponse.newBuilder()
+            for( int i = offset; i < end; i++ )
+                result.addTasks(Task.newBuilder().setName("${parent}/tasks/${i}"))
+            // like the real API, a full page always returns a next page token, even when no tasks remain
+            if( end - offset == pageSize )
+                result.setNextPageToken("${end}:${pageSize}")
+            return result.build()
+        }
+
+        private static ApiException invalidArgument(String message) {
+            final code = new StatusCode() {
+                @Override
+                StatusCode.Code getCode() { StatusCode.Code.INVALID_ARGUMENT }
+                @Override
+                Object getTransportCode() { StatusCode.Code.INVALID_ARGUMENT }
+            }
+            return ApiExceptionFactory.createException(message, null, code, false)
+        }
+
+        @Override void close() {}
+        @Override void shutdown() {}
+        @Override boolean isShutdown() { true }
+        @Override boolean isTerminated() { true }
+        @Override void shutdownNow() {}
+        @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
     }
 
     TaskStatusRecord makeTaskStatusRecord(TaskStatus.State state, long timestamp) {
