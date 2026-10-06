@@ -221,6 +221,11 @@ class Nextflow {
      * @param message The message that will be reported in the log file (optional)
      */
     static void exit(int exitCode, String message = null) {
+        // nothing left to stop once the session is terminating (e.g. `onComplete` / `onError` handlers)
+        if( session.aborted || session.terminated ) {
+            log.warn "Ignoring `exit()` because the pipeline execution is already terminating -- exitCode=$exitCode; message=$message"
+            return
+        }
         if( exitCode && message )
             log.error message
         else if( message )
