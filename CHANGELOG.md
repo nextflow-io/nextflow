@@ -2,7 +2,6 @@
 
 ## [Version 26.09.2-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.2-edge) - 6 Oct 2026
 
-- Add 26.10 migration notes (#7739) [8a506cef1]
 - Add conda/micromamba:v2-fast and conda/pixi:v1-fast to the wave.build.template docs (#7727) [cbf790221]
 - Add seqera.executor.machineRequirement.onDemandCostRatio option (#7710) [5272797c4]
 - Allow any return type for a closure with a boolean signature (#7688) [fd118488e]
@@ -14,12 +13,6 @@
 - Bump slf4j to 2.0.20 (#7703) [38d88911f]
 - Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
 - Check type arguments of call arguments (#7728) [910a4b8ea]
-- chore: pin dependencies (#7699) [ff55f18ab]
-- chore: update anthropics/claude-code-action action to v1.0.231 (#7700) [bcaf4e66a]
-- chore: update anthropics/claude-code-action action to v1.0.237 (#7751) [94698d384]
-- chore: update dependency node to v22.23.3 (#7752) [d09c3c166]
-- chore: update dependency serialize-javascript to v7.1.2 [security] (#7731) [0c4e0816e]
-- docs: Remove developer package pages and class diagrams (#7707) [ddc1e3003]
 - Fix ANSI log stale lines when COLUMNS does not match terminal width (#7705) [c96a8ada9]
 - Fix formatting of directives with a list argument (#7679) [edd02e08e]
 - Fix launcher Java version cache and md5 fallback (#7695) [659c5ccad]
@@ -27,7 +20,6 @@
 - Fix LsfExecutor.parseJobId() swallowing submit failures (#7730) [fc95208db]
 - Fix NPE when all publish statements in a workflow output are no-ops (#7674) [bbf6ff031]
 - Fix NPE when publishing an external file with a publish statement (#7721) [6bfe4b55c]
-- Fix npm advisories in the docs site dependencies (#7735) [29bcf40ce]
 - Fix plugin functions that return or take a channel (#7715) [c569b04b0]
 - Fix record cast of non-local Path values (#7684) [68287836a]
 - Fix serialization of dataflow params (#7759) [3e6b01d35]
