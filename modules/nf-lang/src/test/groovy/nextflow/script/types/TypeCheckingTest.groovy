@@ -273,7 +273,7 @@ class TypeCheckingTest extends Specification {
         errors[0].getOriginalMessage() == "Workflow emit 'a' must be declared as a Channel or Value, not Integer"
     }
 
-    def 'should warn about a single named output' () {
+    def 'should allow a single named output' () {
         expect:
         check(
             '''\
@@ -283,14 +283,8 @@ class TypeCheckingTest extends Specification {
                 emit:
                 result = 42
             }
-            ''',
-            "Name should be omitted for a single emit"
-        )
-        check(
-            '''\
-            nextflow.enable.types = true
 
-            process hello {
+            process bye {
                 output:
                 sample: String = 'hi'
 
@@ -298,7 +292,67 @@ class TypeCheckingTest extends Specification {
                 ''
             }
             ''',
-            "Name should be omitted for a single output"
+            null
+        )
+    }
+
+    def 'should check a typed output name against the body variable' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                main:
+                x = channel.of('a')
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            "Workflow emit `x` with type Channel<Integer> cannot be assigned to value with type Channel<String>"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                take:
+                x: Channel<String>
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            "Workflow emit `x` with type Channel<Integer> cannot be assigned to value with type Channel<String>"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                x: Integer
+
+                exec:
+                x = 'a'
+            }
+            ''',
+            "Process output `x` with type Integer cannot be assigned to value with type String"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                main:
+                x = channel.of(1)
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            null
         )
     }
 

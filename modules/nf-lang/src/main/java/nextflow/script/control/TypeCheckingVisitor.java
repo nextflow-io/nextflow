@@ -224,9 +224,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             visitWorkflowOutputs(node);
         }
         else {
-            checkSingleNamedOutput(node.emits, "emit");
             checkWorkflowEmitTypes(node.emits);
             visit(node.emits);
+            checkOutputSources(node.emits, "Workflow emit");
         }
 
         visit(node.onComplete);
@@ -285,8 +285,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
-        checkSingleNamedOutput(node.outputs, "output");
         visit(node.outputs);
+        checkOutputSources(node.outputs, "Process output");
         visitProcessTopics(node.topics);
     }
 
@@ -320,13 +320,25 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void checkSingleNamedOutput(Statement block, String section) {
-        var outputs = asBlockStatements(block);
-        if( outputs.size() != 1 )
-            return;
-        var output = ((ExpressionStatement) outputs.get(0)).getExpression();
-        if( output instanceof AssignmentExpression ae )
-            addError("Name should be omitted for a single " + section, ae);
+    /**
+     * Check each typed output name (e.g. `x: T`) against the body
+     * variable that it refers to, as if it were `x: T = x`.
+     *
+     * @param block
+     * @param typeLabel
+     */
+    private void checkOutputSources(Statement block, String typeLabel) {
+        for( var stmt : asBlockStatements(block) ) {
+            var output = ((ExpressionStatement) stmt).getExpression();
+            if( !(output instanceof VariableExpression ve) )
+                continue;
+            if( !(ve.getNodeMetaData(ASTNodeMarker.OUTPUT_SOURCE) instanceof Variable source) )
+                continue;
+            var targetType = ve.getOriginType();
+            var sourceType = getType(source);
+            if( !Types.isAssignableFrom(targetType, sourceType) )
+                addError(typeLabel + " `" + ve.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ve);
+        }
     }
 
     private void visitProcessTopics(Statement block) {

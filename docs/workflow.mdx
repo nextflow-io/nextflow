@@ -418,18 +418,15 @@ workflow {
 }
 ```
 
-The name should be omitted when only one output is declared:
+The name can be omitted when only one output is declared:
 
 ```nextflow
 workflow my_workflow {
     take:
     data
 
-    main:
-    ch_bye = bye(hello(data))
-
     emit:
-    ch_bye
+    bye(hello(data))
 }
 
 workflow {
