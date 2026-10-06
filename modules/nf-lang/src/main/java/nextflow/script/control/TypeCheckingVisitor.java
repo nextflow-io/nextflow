@@ -276,6 +276,18 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return type;
     }
 
+    private void checkWorkflowEmitTypes(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
+            if( target == null )
+                continue;
+            var type = target.getType();
+            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+                continue;
+            addError("Workflow emit '" + target.getName() + "' must be declared as a Channel or Value, not " + Types.getName(type), target);
+        }
+    }
+
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
@@ -306,18 +318,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
             visit(call);
         });
-    }
-
-    private void checkWorkflowEmitTypes(Statement block) {
-        for( var stmt : asBlockStatements(block) ) {
-            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
-            if( target == null )
-                continue;
-            var type = target.getType();
-            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
-                continue;
-            addError("Workflow emit '" + target.getName() + "' must be declared as a Channel or Value, not " + Types.getName(type), target);
-        }
     }
 
     /**
