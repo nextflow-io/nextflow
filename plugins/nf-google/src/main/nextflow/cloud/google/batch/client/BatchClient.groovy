@@ -30,6 +30,7 @@ import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.BatchServiceClient.ListTasksPage
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
@@ -133,7 +134,7 @@ class BatchClient {
         return apply(()-> batchServiceClient.getJob(name))
     }
 
-    Iterable<Task> listTasks(String jobId) {
+    List<Task> listTasks(String jobId) {
         // the page size must be set explicitly: the pager copies it from the first request into
         // each following page request, and the API rejects a page size of 0 (i.e. unset) combined
         // with a page token issued for its default page size of 500
@@ -141,7 +142,18 @@ class BatchClient {
             .setParent(TaskGroupName.of(projectId, location, jobId, 'group0').toString())
             .setPageSize(LIST_TASKS_PAGE_SIZE)
             .build()
-        return apply(()-> batchServiceClient.listTasks(request).iterateAll())
+        // fetch each page in its own retry block: iterateAll() loads pages after the first one
+        // lazily, so iterating it would leave those requests without a retry, and retrying the
+        // whole listing would restart it from the first page
+        final List<Task> result = []
+        ListTasksPage page = apply(()-> batchServiceClient.listTasks(request).getPage())
+        result.addAll(page.getValues())
+        while( page.hasNextPage() ) {
+            final current = page
+            page = apply(()-> current.getNextPage())
+            result.addAll(page.getValues())
+        }
+        return result
     }
 
     Task describeTask(String jobId, String taskId) {

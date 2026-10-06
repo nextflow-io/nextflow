@@ -23,6 +23,7 @@ import com.google.api.gax.grpc.GrpcCallContext
 import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.ApiCallContext
+import com.google.api.gax.rpc.ApiException
 import com.google.api.gax.rpc.Callables
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.InvalidArgumentException
@@ -187,7 +188,7 @@ class BatchClientTest extends Specification{
         def client = new BatchClient(projectId: project, location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
 
         when:
-        def tasks = client.listTasks(jobId).toList()
+        def tasks = client.listTasks(jobId)
 
         then:
         tasks.size() == COUNT
@@ -203,6 +204,28 @@ class BatchClientTest extends Specification{
         1500  | 4
     }
 
+    def 'should retry a transient error on a later page of tasks' () {
+        given:
+        def project = 'project-id'
+        def location = 'location-id'
+        def jobId = 'job-id'
+        def stub = new FakeBatchServiceStub(TaskGroupName.of(project, location, jobId, 'group0'), 1200)
+        // fail the second page request once, with an error the client library itself does not retry
+        stub.failRequests.put(2, new DeadlineExceededException('request 2 failed', null, GrpcStatusCode.of(Status.Code.DEADLINE_EXCEEDED), false))
+        def config = new GoogleOpts([batch: [retryPolicy: [delay: '10ms', maxDelay: '50ms']]])
+        def client = new BatchClient(projectId: project, location: location, config: config, batchServiceClient: BatchServiceClient.create(stub))
+
+        when:
+        def tasks = client.listTasks(jobId)
+
+        then:
+        tasks.size() == 1200
+        tasks*.name.toSet().size() == 1200
+        // pages 1, 2 (failed), 2 (retried) and 3
+        stub.requests.size() == 4
+        stub.requests*.pageToken == ['', '500:500', '500:500', '1000:500']
+    }
+
     /**
      * Emulates the paging behaviour of the Google Batch ListTasks API: a request with no page
      * size gets the server default of 500, the page size is encoded in the returned page token,
@@ -212,6 +235,8 @@ class BatchClientTest extends Specification{
         static final int DEFAULT_PAGE_SIZE = 500
 
         final List<ListTasksRequest> requests = []
+        // request number (starting at 1) mapped to the exception that request fails with
+        final Map<Integer, ApiException> failRequests = [:]
         private final TaskGroupName parent
         private final int count
 
@@ -239,6 +264,9 @@ class BatchClientTest extends Specification{
 
         private ListTasksResponse listTasks(ListTasksRequest request) {
             requests.add(request)
+            final failure = failRequests.get(requests.size())
+            if( failure )
+                throw failure
             int offset = 0
             int pageSize = request.pageSize ?: DEFAULT_PAGE_SIZE
             if( request.pageToken ) {
