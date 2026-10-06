@@ -179,7 +179,7 @@ class CmdModuleCreate extends CmdBase {
                 message = GREET(greeting)
 
                 emit:
-                result: String = message
+                message
             }
             """.stripIndent()
         }
@@ -271,8 +271,8 @@ class CmdModuleCreate extends CmdBase {
                 type: string
                 description: A greeting string
             output:
-              - name: result
-                type: string
+              - name: message
+                type: value
                 description: The greeting message
             """.stripIndent()
         }

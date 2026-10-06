@@ -133,12 +133,12 @@ public class WorkflowToGroovyVisitor {
             var es = (ExpressionStatement)stmt;
             var emit = es.getExpression();
             if( emit instanceof VariableExpression ve ) {
-                es.setExpression(callThisX("_emit_", args(constX(ve.getName()))));
+                es.setExpression(callThisX("_emit_", args(constX(ve.getName()), constX(isNullable(ve)))));
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
                 main.addStatement(assignS(target, emit));
-                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
+                es.setExpression(callThisX("_emit_", args(constX(target.getName()), constX(isNullable(target)))));
                 main.addStatement(es);
             }
             else {
@@ -148,6 +148,10 @@ public class WorkflowToGroovyVisitor {
                 main.addStatement(es);
             }
         }
+    }
+
+    private static boolean isNullable(VariableExpression ve) {
+        return ve.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
     }
 
     private void visitWorkflowPublishers(Statement publishers, BlockStatement main) {

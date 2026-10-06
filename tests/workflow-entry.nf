@@ -34,5 +34,5 @@ workflow SAY_HELLO {
 
     emit:
     greetings: Channel<String> = greetings
-    info: String = "prefix=${prefix} limit=${limit}"
+    info: Value<String> = channel.value("prefix=${prefix} limit=${limit}")
 }
