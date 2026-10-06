@@ -468,4 +468,35 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         folder.deleteDir()
     }
 
+    def 'should return null for a nullable workflow emit' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            nextflow.enable.types = true
+
+            workflow HELLO {
+                main:
+                v = null
+
+                emit:
+                result: Value<String>? = v
+                other: Value<String> = channel.value('x')
+            }
+
+            workflow {
+                HELLO().result
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
+    }
+
 }
