@@ -352,7 +352,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         meta == '''\
             ### ---
-            ### name: 'foo'
+            ### name: "foo"
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
             ###   index-start: 0
@@ -360,11 +360,11 @@ class BashWrapperBuilderTest extends Specification {
             ###   - /work/01
             ###   - /work/02
             ###   - /work/03
-            ### container: 'quay.io/nextflow:bash'
+            ### container: "quay.io/nextflow:bash"
             ### outputs:
-            ### - 'foo.txt'
-            ### - '*.bar'
-            ### - '**/baz'
+            ### - "foo.txt"
+            ### - "*.bar"
+            ### - "**/baz"
             ### ...
             '''.stripIndent()
 
@@ -389,7 +389,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.makeBinding().containsKey('task_metadata')
         bash.makeBinding().task_metadata == '''\
             ### ---
-            ### name: 'task1'
+            ### name: "task1"
             ### ...
             '''.stripIndent()
 
@@ -406,7 +406,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         bash.makeBinding().task_metadata == '''\
             ### ---
-            ### name: 'task2'
+            ### name: "task2"
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
             ###   index-start: 0
@@ -414,22 +414,25 @@ class BashWrapperBuilderTest extends Specification {
             ###   - /work/01
             ###   - /work/02
             ###   - /work/03
-            ### container: 'quay.io/nextflow:bash'
+            ### container: "quay.io/nextflow:bash"
             ### outputs:
-            ### - 'foo.txt'
-            ### - '*.bar'
-            ### - '**/baz'
+            ### - "foo.txt"
+            ### - "*.bar"
+            ### - "**/baz"
             ### ...
             '''.stripIndent()
     }
 
-    def 'should escape line breaks in task metadata' () {
+    def 'should escape special characters in task metadata' () {
         given:
+        def NAME = 'foo (it\'s a\nb a\\nb "c")'
+        def IMAGE = 'ubuntu\tlatest'
+        def OUTPUTS = ['out\r\nfile', 'x\u0000\u000by z']
         def builder = newBashWrapperBuilder(
-            name: 'foo (a\nb)',
+            name: NAME,
             containerConfig: new DockerConfig(enabled: true),
-            containerImage: 'ubuntu\nlatest',
-            outputFiles: ['out\r\nfile']
+            containerImage: IMAGE,
+            outputFiles: OUTPUTS
         )
 
         when:
@@ -437,14 +440,39 @@ class BashWrapperBuilderTest extends Specification {
         then:
         meta == '''\
             ### ---
-            ### name: 'foo (a\\nb)'
-            ### container: 'ubuntu\\nlatest'
+            ### name: "foo (it's a\\nb a\\\\nb \\"c\\")"
+            ### container: "ubuntu\\tlatest"
             ### outputs:
-            ### - 'out\\r\\nfile'
+            ### - "out\\r\\nfile"
+            ### - "x\\u0000\\u000by\\u2028z"
             ### ...
             '''.stripIndent()
         and:
         meta.readLines().every { it.startsWith('###') }
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == NAME
+        obj.container == IMAGE
+        obj.outputs == OUTPUTS
+    }
+
+    def 'should render yaml string' () {
+        expect:
+        BashWrapperBuilder.yamlString(VALUE) == EXPECTED
+
+        where:
+        VALUE           | EXPECTED
+        null            | 'null'
+        'foo'           | '"foo"'
+        'a b'           | '"a b"'
+        "it's"          | '"it\'s"'
+        'a"b'           | '"a\\"b"'
+        'a\\b'          | '"a\\\\b"'
+        'a\nb'          | '"a\\nb"'
+        'a\u007fb'      | '"a\\u007fb"'
     }
 
     def 'should copy control files' () {

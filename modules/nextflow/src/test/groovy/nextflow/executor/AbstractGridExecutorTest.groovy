@@ -40,7 +40,7 @@ class AbstractGridExecutorTest extends Specification {
 
     }
 
-    def 'should remove line breaks from job name' () {
+    def 'should remove control characters from job name' () {
         given:
         def exec = Spy(AbstractGridExecutor)
 
@@ -48,6 +48,7 @@ class AbstractGridExecutorTest extends Specification {
         exec.config = new ExecutorConfig([:])
         then:
         exec.getJobNameFor(new TaskRun(name: 'foo (a\nb)\r\t')) == 'nf-foo_(a_b)__'
+        exec.getJobNameFor(new TaskRun(name: 'a\fb\u0000c\u000bd\u001be\u007f')) == 'nf-a_b_c_d_e_'
 
         when:
         exec.config = new ExecutorConfig(jobName: { task.name })

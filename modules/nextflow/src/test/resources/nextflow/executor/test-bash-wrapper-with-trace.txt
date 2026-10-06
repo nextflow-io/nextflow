@@ -1,6 +1,6 @@
 #!/bin/bash
 ### ---
-### name: 'Hello 2'
+### name: "Hello 2"
 ### ...
 set -e
 set -u
