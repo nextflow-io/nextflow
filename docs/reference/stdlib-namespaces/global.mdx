@@ -65,7 +65,7 @@ The run now exits gracefully instead of exiting immediately.
 Stop the pipeline execution and return an exit code and optional error message.
 
 :::note
-As a best practice, only call `exit()` from the workflow body. Use `error()` to fail the pipeline from a process or operator.
+Call `exit()` only from the workflow body. To fail the pipeline from a process or operator, use `error()`.
 :::
 
 ##### `file( filePattern: String, [options] ) -> Path | List<Path>`
