@@ -1483,6 +1483,31 @@ class TypeCheckingTest extends Specification {
 
             process hello {
                 input:
+                target: String?
+
+                output:
+                "Hello, $target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( null )
+            }
+            '''
+        )
+        type = getType(exp)
+        then:
+        Types.getName(type) == 'Value<String>'
+
+        when:
+        exp = parseExpression(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
                 target: String
 
                 output:
