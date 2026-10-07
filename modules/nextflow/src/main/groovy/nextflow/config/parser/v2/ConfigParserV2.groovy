@@ -53,6 +53,10 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
+    private boolean deferProfiles
+
+    private Map<String,Map> profileConfigs = [:]
+
     private Set<String> declaredProfiles = []
 
     private Map<String,Object> declaredParams = [:]
@@ -63,6 +67,21 @@ class ConfigParserV2 implements ConfigParser {
     ConfigParserV2 setProfiles(List<String> profiles) {
         this.appliedProfiles = profiles
         return this
+    }
+
+    /**
+     * Collect the selected profiles without applying them, so that
+     * an including config can apply them after the rest of its config.
+     *
+     * @param value
+     */
+    ConfigParserV2 setDeferProfiles(boolean value) {
+        this.deferProfiles = value
+        return this
+    }
+
+    Map<String,Map> getProfileConfigs() {
+        return profileConfigs
     }
 
     @Override
@@ -150,7 +169,10 @@ class ConfigParserV2 implements ConfigParser {
             script.setConfigParams(configParams)
             script.setProfiles(appliedProfiles)
             script.run()
+            if( !deferProfiles )
+                script.applyProfiles()
 
+            profileConfigs = script.getProfileTargets()
             final target = script.getTarget()
             declaredProfiles.addAll(script.getDeclaredProfiles())
             declaredParams.putAll(script.getDeclaredParams())

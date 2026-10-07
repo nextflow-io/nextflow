@@ -324,6 +324,10 @@ Nextflow applies config profiles in the order in which they were defined in the 
 When using the [strict parser][strict-syntax-page], Nextflow applies profiles in the order you specify them on the command line.
 </AddedInVersion>
 
+<ChangedInVersion version="26.10">
+When using the strict parser, Nextflow applies profiles after the rest of the config, including profiles defined in included config files. Profile params are also applied where the profile is defined, so that config after the `profiles` block can reference them.
+</ChangedInVersion>
+
 ## Workflow handlers
 
 <DeprecatedInVersion version="25.10">
