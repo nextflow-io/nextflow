@@ -20,11 +20,10 @@ import java.util.concurrent.TimeUnit
 import com.google.api.core.ApiFuture
 import com.google.api.core.ApiFutures
 import com.google.api.gax.grpc.GrpcCallContext
+import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.ApiCallContext
-import com.google.api.gax.rpc.ApiException
-import com.google.api.gax.rpc.ApiExceptionFactory
 import com.google.api.gax.rpc.Callables
-import com.google.api.gax.rpc.StatusCode
+import com.google.api.gax.rpc.InvalidArgumentException
 import com.google.api.gax.rpc.UnaryCallable
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.ListTasksRequest
@@ -35,6 +34,7 @@ import com.google.cloud.batch.v1.TaskName
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.stub.BatchServiceStub
 import com.google.cloud.batch.v1.stub.BatchServiceStubSettings
+import io.grpc.Status
 import nextflow.cloud.google.GoogleOpts
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -132,12 +132,7 @@ class BatchClientTest extends Specification{
             return new UnaryCallable<ListTasksRequest, ListTasksResponse>() {
                 @Override
                 ApiFuture<ListTasksResponse> futureCall(ListTasksRequest request, ApiCallContext context) {
-                    try {
-                        return ApiFutures.immediateFuture(listTasks(request))
-                    }
-                    catch( ApiException e ) {
-                        return ApiFutures.immediateFailedFuture(e)
-                    }
+                    return ApiFutures.immediateFuture(listTasks(request))
                 }
             }
         }
@@ -158,7 +153,7 @@ class BatchClientTest extends Specification{
                 offset = token[0] as int
                 final tokenPageSize = token[1] as int
                 if( request.pageSize != tokenPageSize )
-                    throw invalidArgument("pagesize field is invalid. mismatching token page size error: request page size (${request.pageSize}) != token page size (${tokenPageSize})")
+                    throw new InvalidArgumentException("pagesize field is invalid. mismatching token page size error: request page size (${request.pageSize}) != token page size (${tokenPageSize})", null, GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT), false)
             }
             final end = Math.min(offset + pageSize, count)
             final result = ListTasksResponse.newBuilder()
@@ -168,16 +163,6 @@ class BatchClientTest extends Specification{
             if( end - offset == pageSize )
                 result.setNextPageToken("${end}:${pageSize}")
             return result.build()
-        }
-
-        private static ApiException invalidArgument(String message) {
-            final code = new StatusCode() {
-                @Override
-                StatusCode.Code getCode() { StatusCode.Code.INVALID_ARGUMENT }
-                @Override
-                Object getTransportCode() { StatusCode.Code.INVALID_ARGUMENT }
-            }
-            return ApiExceptionFactory.createException(message, null, code, false)
         }
 
         @Override void close() {}
