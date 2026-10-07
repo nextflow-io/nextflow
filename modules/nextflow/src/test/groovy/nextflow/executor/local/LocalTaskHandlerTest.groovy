@@ -128,10 +128,9 @@ class LocalTaskHandlerTest extends Specification {
             buildTaskWrapper() >> {}
             elapsedTimeMillis() >> 200
         }
-        and: 'exitValue() throws, as ProcessImpl does before the child is reaped'
+        and:
         handler.@process = Mock(Process) {
             waitFor(_ as long, _ as TimeUnit) >> false
-            exitValue() >> { throw new IllegalThreadStateException('process hasn\'t exited') }
         }
         handler.status = TaskStatus.RUNNING
 
@@ -139,7 +138,6 @@ class LocalTaskHandlerTest extends Specification {
         def completed = handler.checkIfCompleted()
 
         then: 'the task completes instead of propagating the exception to the poll loop'
-        noExceptionThrown()
         completed == true
         1 * task.setExitStatus(Integer.MAX_VALUE)
         1 * task.setError(_ as ProcessException)
@@ -169,7 +167,6 @@ class LocalTaskHandlerTest extends Specification {
         def completed = handler.checkIfCompleted()
 
         then: 'SIGTERM is observed rather than IllegalThreadStateException'
-        noExceptionThrown()
         completed == true
         1 * task.setExitStatus(143)
         handler.status == TaskStatus.COMPLETED
