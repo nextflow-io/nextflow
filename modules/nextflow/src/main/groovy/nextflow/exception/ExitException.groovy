@@ -14,33 +14,29 @@
  * limitations under the License.
  */
 
-package nextflow.script
+package nextflow.exception
 
-import java.lang.reflect.Type
-
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+
 /**
- * Models a declared parameter -- either a param declaration in the
- * `params` block or a `take:` input of a named workflow, which is
- * mapped from a pipeline parameter when the workflow is executed
- * directly.
+ * Exception thrown by the `exit()` function to stop the pipeline
+ * execution with the given exit code, without killing the JVM.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Canonical
 @CompileStatic
-class Param {
+class ExitException extends RuntimeException {
 
-    String name
+    private final int exitCode
 
-    /** The declared type, or null if the param is untyped. */
-    Type type
+    ExitException(int exitCode, String message=null) {
+        super(message)
+        this.exitCode = exitCode
+    }
 
-    /** Whether the declared type is nullable. */
-    boolean optional
+    int getExitCode() { exitCode }
 
-    /** The declared default value, or null. */
-    Object defaultValue
+    @Override
+    synchronized Throwable fillInStackTrace() { this }
 
 }

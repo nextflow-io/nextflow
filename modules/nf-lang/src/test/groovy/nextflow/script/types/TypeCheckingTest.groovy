@@ -226,8 +226,8 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                a: String = 42
-                b: Integer = 1
+                a: Value<String> = channel.value(42)
+                b: Value<Integer> = channel.value(1)
             }
             '''
         )
@@ -235,7 +235,24 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 5
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Assignment target with type String cannot be assigned to value with type Integer"
+        errors[0].getOriginalMessage() == "Assignment target with type Value<String> cannot be assigned to value with type Value<Integer>"
+
+        when:
+        errors = getErrors(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                emit:
+                a: Value<Integer> = channel.value(42)
+                b: Channel<Integer> = channel.of(1)
+                c: Value<Integer>? = null
+                d = 1
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
 
         when:
         errors = getErrors(
@@ -245,12 +262,15 @@ class TypeCheckingTest extends Specification {
             workflow hello {
                 emit:
                 a: Integer = 42
-                b: Integer = 1
+                b: Value<Integer> = channel.value(1)
             }
             '''
         )
         then:
-        errors.size() == 0
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Workflow emit 'a' must be declared as a Channel or Value, not Integer"
     }
 
     def 'should warn about a single named output' () {
@@ -261,7 +281,7 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                result: Integer = 42
+                result = 42
             }
             ''',
             "Name should be omitted for a single emit"
@@ -1156,8 +1176,8 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                foo: String = 'hello'
-                bar: Integer = 42
+                foo = 'hello'
+                bar = 42
             }
 
             workflow {

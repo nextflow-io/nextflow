@@ -98,6 +98,12 @@ class WorkflowOutputConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        When `true`, files that do not originate from the work directory, such as input files, are also published (default: `false`).
+    """)
+    final boolean includeInputs
+
+    @ConfigOption
+    @Description("""
         The file publishing method (default: `'symlink'`).
     """)
     final String mode
@@ -132,6 +138,7 @@ class WorkflowOutputConfig implements ConfigScope {
         copyAttributes = opts.copyAttributes as boolean
         enabled = opts.enabled as boolean
         ignoreErrors = opts.ignoreErrors as boolean
+        includeInputs = opts.includeInputs as boolean
         mode = opts.mode
         overwrite = opts.overwrite
         storageClass = opts.storageClass

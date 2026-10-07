@@ -94,7 +94,7 @@ class WorkflowEntryHandler {
     }
 
     private void assignOutputs(WorkflowBinding dsl, ChannelOut output) {
-        final outputNames = workflowDef.getDeclaredOutputs()
+        final outputNames = workflowDef.getDeclaredOutputs()*.name
         if( output.size() == 1 && outputNames.size() == 1 ) {
             dsl._publish_(outputNames.first(), output[0])
         }
@@ -109,7 +109,7 @@ class WorkflowEntryHandler {
      * entry workflow, without creating an output directory.
      */
     OutputDef createOutputDef() {
-        final outputNames = workflowDef.getDeclaredOutputs()
+        final outputNames = workflowDef.getDeclaredOutputs()*.name
         // disable the output directory -- report output files by
         // their work directory path instead of publishing them
         session.outputDir = null

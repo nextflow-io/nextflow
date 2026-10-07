@@ -163,7 +163,7 @@ class CmdModuleCreateTest extends Specification {
         content.contains("nextflow.enable.types = true")
         content.contains("workflow HELLO")
         content.contains("greeting: String")            // typed take
-        content.contains("result: String = message")    // typed emit
+        content.contains("emit:\n    message\n")         // single unnamed emit
         !content.contains("process ")
 
         and: 'the meta.yml derives input/output from the take/emit'
@@ -172,7 +172,8 @@ class CmdModuleCreateTest extends Specification {
         meta.contains("input:")
         meta.contains("name: greeting")
         meta.contains("output:")
-        meta.contains("name: result")
+        meta.contains("name: message")
+        meta.contains("type: value")
 
         and: 'typed workflows require Nextflow >=26.04'
         meta.contains('nextflow: ">=26.04.0"')
