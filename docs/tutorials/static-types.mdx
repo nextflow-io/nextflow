@@ -54,7 +54,7 @@ The approach is as follows:
 3. Convert each process to static typing
 4. Convert each workflow to static typing
 
-The completed migration is available in the [preview-26-04](https://github.com/nextflow-io/rnaseq-nf/tree/preview-26-04) branch.
+The completed migration is available in the [static-typing](https://github.com/nextflow-io/rnaseq-nf/tree/static-typing) branch.
 
 ### Migrating pipeline parameters
 
@@ -100,28 +100,29 @@ To migrate the pipeline parameters, use the schema and legacy parameters to defi
 ```nextflow
 params {
     // The input read-pair files
-    reads: String = "${projectDir}/data/ggal/ggal_gut_{1,2}.fq"
+    reads: String
 
     // The input transcriptome file
-    transcriptome: Path = "${projectDir}/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa"
+    transcriptome: Path
 
     // The output directory where the results will be saved
-    outdir: Path = 'results'
+    outdir: String = 'results'
 
     // Directory containing the configuration for MultiQC
     multiqc: Path = "${projectDir}/multiqc"
 }
 ```
 
-See [Parameters][workflow-typed-params] for more information about the `params` block.
+Specify the test data defaults in the config file:
 
-:::note
-Parameters used only in the config file should be declared in the config, not in the script. Since rnaseq-nf has no such parameters, all parameters are declared in the script. See [Parameters][config-params] for more information.
-:::
+```groovy
+params.reads = "${projectDir}/data/ggal/ggal_gut_{1,2}.fq"
+params.transcriptome = "${projectDir}/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa"
+```
 
-:::tip
-The rnaseq-nf pipeline initializes the `reads` and `transcriptome` parameters to a test dataset by default, as it is designed as a toy example. In practice, defaults for test data should be defined in a config profile (e.g., `test`).
-:::
+The config file should declare parameters that are only used by the config. It can also specify overrides for script parameters, ideally in a config profile (e.g., `test`). Since rnaseq-nf is a toy example, it uses the test data by default.
+
+See [Typed parameters][typed-parameters-page] and [Config parameters][config-params] for more information.
 
 ### Loading a samplesheet input
 
@@ -151,21 +152,55 @@ Refactor `params.reads` to refer to the samplesheet file path instead of a glob 
 ```nextflow
 params {
     // The input samplesheet of paired-end reads
-    reads: Path = "${projectDir}/data/allreads.csv"
+    reads: Path
 
     // ...
 }
+```
+
+```groovy
+params.reads = "${projectDir}/data/allreads.csv"
+params.transcriptome = // ...
 ```
 
 Refactor the `read_pairs_ch` to load the samplesheet as a channel of records:
 
 ```nextflow
 read_pairs_ch = channel.of(params.reads)
-    .flatMap { csv -> csv.splitCsv() }
+    .flatMap { csv -> csv.splitCsv(header: true) }
     .map { row ->
-        record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
+        record(id: row.id, fastq_1: file(row.fastq_1), fastq_2: file(row.fastq_2))
     }
 ```
+
+<AddedInVersion version="26.10" />
+
+A samplesheet input can be modeled as a channel of records instead of a file path. This approach simplifies the pipeline code and supports [pipeline composition][pipeline-composition], where a calling pipeline supplies the input from dataflow logic instead of a file.
+
+Refactor `params.reads` as a channel of records:
+
+```nextflow
+params {
+    // The input samplesheet of paired-end reads
+    reads: Channel<Sample>
+
+    // ...
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
+
+In this example, `Sample` is a *record type* that matches the samplesheet structure. When you supply a file path to a channel-type parameter (e.g., `Channel<Sample>`), Nextflow loads the file and validates and converts each row against the element type.
+
+Because Nextflow loads the samplesheet automatically, `params.reads` replaces `read_pairs_ch`.
+
+:::note
+Channel params can also be loaded from JSON and YAML samplesheets. See [Typed parameters][typed-parameters-page] for more information.
+:::
 
 ### Migrating processes
 
@@ -390,13 +425,7 @@ You can infer the type of each workflow input by examining how the workflow is c
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.of(params.reads)
-        .flatMap { csv -> csv.splitCsv() }
-        .map { row ->
-            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
-        }
-
-    RNASEQ(read_pairs_ch, params.transcriptome)
+    RNASEQ(params.reads, params.transcriptome)
 
     // ...
 }
@@ -404,9 +433,9 @@ workflow {
 
 You can determine the type of each input as follows:
 
-- The channel `read_pairs_ch` has type `Channel<Record>`, where each record contains the fields `id`, `fastq_1`, `fastq_2`.
+- The parameter `params.reads` is declared in the `params` block as `Channel<Sample>`.
 
-- The parameter `params.transcriptome` has type `Path` as defined in the `params` block.
+- The parameter `params.transcriptome` is declared in the `params` block as `Path`.
 
 Specify the workflow input types as follows:
 
@@ -419,12 +448,6 @@ workflow RNASEQ {
     transcriptome: Path
 
     // ...
-}
-
-record Sample {
-    id: String
-    fastq_1: Path
-    fastq_2: Path
 }
 ```
 
@@ -515,11 +538,7 @@ The entry workflow is defined as follows:
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.of(params.reads)
-        .flatMap { csv -> csv.splitCsv() }
-        .map { row ->
-            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
-        }
+    read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
 
     (fastqc_ch, quant_ch) = RNASEQ(read_pairs_ch, params.transcriptome)
 
@@ -535,13 +554,7 @@ Rewrite this workflow based on the updated params, processes, and subworkflows:
 nextflow.enable.types = true
 
 workflow {
-    read_pairs_ch = channel.of(params.reads)
-        .flatMap { csv -> csv.splitCsv() }
-        .map { row ->
-            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
-        }
-
-    samples_ch = RNASEQ(read_pairs_ch, params.transcriptome)
+    samples_ch = RNASEQ(params.reads, params.transcriptome)
 
     multiqc_files_ch = samples_ch
         .flatMap { id, fastqc, quant -> [fastqc, quant] }
@@ -551,7 +564,7 @@ workflow {
 }
 ```
 
-The `reads` param was refactored as a `Path`, so it is loaded into a channel of records using `splitCsv`. It is compatible with the records expected by `RNASEQ`.
+The `reads` param was refactored as a channel of records, so it can be passed directly to `RNASEQ`. It is compatible with the records expected by `RNASEQ`.
 
 The `RNASEQ` workflow now returns a single combined channel, so the `mix` operation is no longer needed. The `flatMap` operator is used to extract the files from each record in `samples_ch`.
 
@@ -718,16 +731,17 @@ See the following links to learn more about static typing:
 [migrating-workflow-outputs]: ./workflow-outputs
 [operator-combine]: ../reference/operator#combine
 [operator-page]: ../reference/operator
+[pipeline-composition]: ../workflow-typed#pipeline-composition
 [process-input-each]: ../process#input-repeaters-each
 [process-reference-typed]: ../reference/process/inputs-outputs-typed
 [process-typed-page]: ../process-typed
 [rnaseq-nf-page]: ./rnaseq-nf
-[script-records]: ../script#records
+[script-records]: ../script#records-and-tuples
 [strict-syntax-deprecated]: ../strict-syntax#deprecated-syntax
 [strict-syntax-page]: ../strict-syntax
 [stdlib-types]: ../reference/stdlib-types
 [stdlib-types-path]: ../reference/stdlib-types/path
 [syntax-record-type]: ../reference/syntax#record-type
+[typed-parameters-page]: ../typed-parameters
 [workflow-special-operators]: ../workflow#dataflow
 [workflow-typed-page]: ../workflow-typed
-[workflow-typed-params]: ../workflow#parameters

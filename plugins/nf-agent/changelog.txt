@@ -1,0 +1,7 @@
+nf-agent changelog
+===================
+0.1.2 - 6 Oct 2026
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]

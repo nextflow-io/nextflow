@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.cli.CmdBase
+import nextflow.cli.ConsoleInput
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleInfo
 import nextflow.module.ModuleReference
@@ -54,6 +55,8 @@ class CmdModuleCreate extends CmdBase {
     void run() {
         String namespace
         String name
+        // the same reader must be used for all the prompts of the interactive mode
+        final input = new ConsoleInput()
 
         if( args && args.size() == 1 && args[0].contains('/') ) {
             // non-interactive: namespace/name passed as argument
@@ -69,12 +72,12 @@ class CmdModuleCreate extends CmdBase {
         else {
             // interactive mode
             print "Enter module namespace: "
-            namespace = readLine()?.trim()
+            namespace = input.readLine()?.trim()
             if( !namespace )
                 throw new AbortOperationException("Module namespace cannot be empty")
 
             print "Enter module name: "
-            name = readLine()?.trim()
+            name = input.readLine()?.trim()
             if( !name )
                 throw new AbortOperationException("Module name cannot be empty")
         }
@@ -90,7 +93,7 @@ class CmdModuleCreate extends CmdBase {
             println "  Directory        : ./modules/$namespace/$name"
             println ""
             print "Are you OK to continue [y/N]? "
-            final confirm = readLine()
+            final confirm = input.readLine()
             if( confirm?.toLowerCase() != 'y' ) {
                 println "Module creation aborted."
                 return
@@ -149,13 +152,6 @@ class CmdModuleCreate extends CmdBase {
         }
     }
 
-    static private String readLine() {
-        final console = System.console()
-        return console != null
-            ? console.readLine()
-            : new BufferedReader(new InputStreamReader(System.in)).readLine()
-    }
-
     static String mainNf(String namespace, String name, String kind = 'Process', boolean typed = true) {
         final defName = name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()
 
@@ -179,7 +175,7 @@ class CmdModuleCreate extends CmdBase {
                 message = GREET(greeting)
 
                 emit:
-                result: String = message
+                message
             }
             """.stripIndent()
         }
@@ -271,8 +267,8 @@ class CmdModuleCreate extends CmdBase {
                 type: string
                 description: A greeting string
             output:
-              - name: result
-                type: string
+              - name: message
+                type: value
                 description: The greeting message
             """.stripIndent()
         }

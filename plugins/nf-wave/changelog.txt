@@ -1,5 +1,15 @@
 nf-wave changelog
 ==================
+1.22.2 - 6 Oct 2026
+- Add conda/micromamba:v2-fast and conda/pixi:v1-fast to the wave.build.template docs (#7727) [cbf790221]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
+1.22.1 - 22 Sep 2026
+- Retry request timeouts in the Tower and Wave HTTP clients (#7604) [c5f88057c]
+- Adopt shared io.seqera:lib-util-net ProxyConfig for egress proxy handling (#7587) [8b07422b2]
+
 1.22.0 - 20 Aug 2026
 - Add smolvm container engine support (#7386) [5b23a4e97]
 - Fix spurious 'Unrecognized config option' warning for wave.build.compression and wave.build.conda (#7355) [37da32c7f]

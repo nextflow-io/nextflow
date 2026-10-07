@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.28.2 - 6 Oct 2026
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+
 1.28.1 - 25 Sep 2026
 - Deprecate Google Batch machine type selection via Cloud Info (#7677) [28afbfded]
 - Propagate machine info to array-child tasks in Google Batch executor (#7629) [fc8d42fc6]

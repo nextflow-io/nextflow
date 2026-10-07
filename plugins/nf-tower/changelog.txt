@@ -1,5 +1,19 @@
 nf-tower changelog
 ===================
+1.31.0 - 6 Oct 2026
+- Report sched multi-attempt tasks with the final attempt's start time (#7755) [ab6f7c60a]
+- Fix serialization of dataflow params (#7759) [3e6b01d35]
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
+1.30.0 - 22 Sep 2026
+- Retry request timeouts in the Tower and Wave HTTP clients (#7604) [c5f88057c]
+- Add automatic resource labels for any executor (#7528) [1d7b6655a]
+- Fix jackson, netty and grpc CVEs via api-scoped dependency constraints (#7329) [7ea2029ac]
+- Adopt shared io.seqera:lib-util-net ProxyConfig for egress proxy handling (#7587) [8b07422b2]
+
 1.29.2 - 20 Aug 2026
 - Fix independently-verified findings from a security audit (#7503) [5400da660]
 - Separate CLI from runtime (#5971) [1dc8cf68f]

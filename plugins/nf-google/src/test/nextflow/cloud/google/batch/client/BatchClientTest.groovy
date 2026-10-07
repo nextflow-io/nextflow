@@ -21,11 +21,18 @@ import com.google.api.core.ApiFuture
 import com.google.api.core.ApiFutures
 import com.google.api.gax.grpc.GrpcCallContext
 import com.google.api.gax.grpc.GrpcStatusCode
+import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.ApiCallContext
 import com.google.api.gax.rpc.Callables
+import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.InvalidArgumentException
+import com.google.api.gax.rpc.StatusCode
 import com.google.api.gax.rpc.UnaryCallable
 import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.CreateJobRequest
+import com.google.cloud.batch.v1.GetJobRequest
+import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.ListTasksRequest
 import com.google.cloud.batch.v1.ListTasksResponse
 import com.google.cloud.batch.v1.Task
@@ -44,6 +51,92 @@ import spock.lang.Unroll
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 class BatchClientTest extends Specification{
+
+    /**
+     * A real {@link BatchServiceClient} over a stub transport: its RPC methods are final, so
+     * they cannot be mocked, but the stub it delegates to can
+     */
+    private BatchServiceClient createService(List<Closure> createJob, Map<String,Job> jobs, List<String> getJobCalls) {
+        def stub = new BatchServiceStub() {
+            @Override
+            UnaryCallable<CreateJobRequest, Job> createJobCallable() {
+                return new UnaryCallable<CreateJobRequest, Job>() {
+                    @Override
+                    ApiFuture<Job> futureCall(CreateJobRequest request, ApiCallContext context) {
+                        try {
+                            return ApiFutures.immediateFuture((Job) createJob.remove(0).call(request))
+                        }
+                        catch( Throwable t ) {
+                            return ApiFutures.<Job>immediateFailedFuture(t)
+                        }
+                    }
+                }
+            }
+            @Override
+            UnaryCallable<GetJobRequest, Job> getJobCallable() {
+                return new UnaryCallable<GetJobRequest, Job>() {
+                    @Override
+                    ApiFuture<Job> futureCall(GetJobRequest request, ApiCallContext context) {
+                        getJobCalls << request.getName()
+                        return ApiFutures.immediateFuture(jobs.get(request.getName()))
+                    }
+                }
+            }
+            @Override void close() {}
+            @Override void shutdown() {}
+            @Override boolean isShutdown() { false }
+            @Override boolean isTerminated() { false }
+            @Override void shutdownNow() {}
+            @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
+        }
+        return BatchServiceClient.create(stub)
+    }
+
+    private BatchClient createClient(BatchServiceClient service) {
+        def client = new BatchClient()
+        client.projectId = 'project-id'
+        client.location = 'location-id'
+        client.config = new GoogleOpts([project: 'project-id', location: 'location-id', batch: [retryPolicy: [delay: '1ms', maxDelay: '10ms', maxAttempts: 3]]])
+        client.batchServiceClient = service
+        return client
+    }
+
+    def 'should reuse the job created by a previous submit attempt' () {
+        given:
+        def name = JobName.of('project-id', 'location-id', 'job-1').toString()
+        def created = Job.newBuilder().setName(name).build()
+        def getJobCalls = []
+        def service = createService([
+                // the first attempt creates the job server-side but the response is lost
+                { throw new DeadlineExceededException(new RuntimeException('deadline'), Stub(StatusCode), true) },
+                // the retry finds the job it submitted itself
+                { throw new AlreadyExistsException(new RuntimeException('exists'), Stub(StatusCode), false) } ],
+                [(name): created], getJobCalls)
+        def client = createClient(service)
+
+        when:
+        def result = client.submitJob('job-1', Job.newBuilder().build())
+
+        then:
+        result == created
+        getJobCalls == [name]
+    }
+
+    def 'should fail when the job already exists on the first submit attempt' () {
+        given:
+        def getJobCalls = []
+        def service = createService([
+                { throw new AlreadyExistsException(new RuntimeException('exists'), Stub(StatusCode), false) } ],
+                [:], getJobCalls)
+        def client = createClient(service)
+
+        when:
+        client.submitJob('job-1', Job.newBuilder().build())
+
+        then:
+        thrown(AlreadyExistsException)
+        getJobCalls == []
+    }
 
     def 'should return task status with getTaskInArray' () {
         given:

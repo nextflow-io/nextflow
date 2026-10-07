@@ -596,6 +596,8 @@ def sayHello(name) {
 }
 ```
 
+A return statement can only be used in a [function](#function) or [closure](#closure). It cannot be used in a [workflow](#workflow) body.
+
 ### throw
 
 A throw statement consists of the `throw` keyword followed by an expression that returns an error type:
@@ -1006,16 +1008,6 @@ Compound expressions are evaluated in the following order:
 - `||`
 - `?:` (ternary)
 - `?:` (elvis)
-
-## Deprecations
-
-The following legacy features were excluded from this page because they are deprecated:
-
-- The `addParams` and `params` clauses of include declarations.
-- The `when:` section of a process definition.
-- The `shell:` section of a process definition.
-
-See [strict syntax][strict-syntax-page] for more information.
 
 [agent-page]: ../agent
 [config-feature-flags]: ./feature-flags

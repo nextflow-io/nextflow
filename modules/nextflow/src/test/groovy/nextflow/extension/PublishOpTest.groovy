@@ -19,6 +19,7 @@ package nextflow.extension
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
 /**
  *
@@ -33,7 +34,7 @@ class PublishOpTest extends Specification {
         when:
         def op = new PublishOp(session, 'foo', null, [path: PATH])
         then:
-        op.getTargetDir(null) == Path.of(EXPECTED)
+        op.getTargetDir(PATH) == Path.of(EXPECTED)
 
         where:
         PATH        | EXPECTED
@@ -46,13 +47,39 @@ class PublishOpTest extends Specification {
 
     def 'should normalize the target directory returned by a closure' () {
         given:
-        def session = Mock(Session) { getOutputDir() >> Path.of('/work/results') }
-        def resolver = { v -> '.' }
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def file = Path.of('/work/ab/1234/file.txt')
+        def resolver = { v -> './bam/../bam' }
 
         when:
         def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
         then:
-        op.getTargetDir(null) == Path.of('/work/results')
+        op.resolveTargets(file) == [(file): Path.of('/work/results/bam/file.txt')]
+    }
+
+    def 'should resolve the target of each file declared by a publish statement' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def file1 = Path.of('/work/ab/1234/report.txt')
+        def file2 = Path.of('/work/cd/5678/report.txt')
+        def resolver = { v ->
+            publish(v.alpha, 'reports/alpha.txt')
+            publish(v.beta, 'reports/./beta.txt')
+        }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        then:
+        op.resolveTargets([alpha: file1, beta: file2]) == [
+            (file1): Path.of('/work/results/reports/alpha.txt'),
+            (file2): Path.of('/work/results/reports/beta.txt')
+        ]
     }
 
     def 'should publish nothing when all publish statements are no-ops' () {
@@ -62,10 +89,8 @@ class PublishOpTest extends Specification {
 
         when:
         def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
-        def saveAs = op.getTargetDir(Path.of('/work/ab/cdef/out.txt'))
         then:
-        saveAs instanceof Closure
-        saveAs.call('out.txt') == null
+        op.resolveTargets(Path.of('/work/ab/cdef/out.txt')) == [:]
     }
 
     def 'should map source files to target paths returned by a closure' () {
@@ -80,15 +105,57 @@ class PublishOpTest extends Specification {
 
         when:
         def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
-        def saveAs = op.getTargetDir(null)
         then:
-        saveAs instanceof Closure
-        saveAs.call('foo.txt') == Path.of('/work/results/foo/foo.txt')
-        saveAs.call('bar.txt') == Path.of('/work/results/bar/renamed.txt')
-        saveAs.call('baz.txt') == null
+        op.resolveTargets(null) == [
+            (foo): Path.of('/work/results/foo/foo.txt'),
+            (bar): Path.of('/work/results/bar/renamed.txt')
+        ]
     }
 
-    def 'should skip files outside the work directory in publish statements' () {
+    def 'should publish files outside the work directory' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def input = Path.of('/data/input.txt')
+        def output = Path.of('/work/ab/cdef/sub/out.txt')
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: 'txt', includeInputs: true])
+        then:
+        op.resolveTargets([input, output]) == [
+            (input): Path.of('/work/results/txt/input.txt'),
+            (output): Path.of('/work/results/txt/sub/out.txt')
+        ]
+    }
+
+    def 'should not publish files outside the work directory by default' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def input = Path.of('/data/input.txt')
+        def output = Path.of('/work/ab/cdef/out.txt')
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: 'txt'])
+        then:
+        op.resolveTargets([input, output]) == [
+            (output): Path.of('/work/results/txt/out.txt')
+        ]
+
+        when:
+        def resolver = { v -> publish(input, 'txt/'); publish(output, 'txt/') }
+        op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        then:
+        op.resolveTargets(null) == [
+            (output): Path.of('/work/results/txt/out.txt')
+        ]
+    }
+
+    def 'should publish files outside the work directory in publish statements' () {
         given:
         def session = Mock(Session) {
             getOutputDir() >> Path.of('/work/results')
@@ -99,12 +166,33 @@ class PublishOpTest extends Specification {
         def resolver = { v -> publish(input, 'txt/'); publish(output, 'txt/') }
 
         when:
-        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
-        def saveAs = op.getTargetDir(null)
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver, includeInputs: true])
         then:
-        saveAs instanceof Closure
-        saveAs.call('out.txt') == Path.of('/work/results/txt/out.txt')
-        saveAs.call('input.txt') == null
+        op.resolveTargets(null) == [
+            (input): Path.of('/work/results/txt/input.txt'),
+            (output): Path.of('/work/results/txt/out.txt')
+        ]
+    }
+
+    def 'should report two files in the same value published to the same target' () {
+        given:
+        def session = Mock(Session) { getOutputDir() >> Path.of('/work/results') }
+        def file1 = Path.of('/work/ab/1234/report.txt')
+        def file2 = Path.of('/work/cd/5678/report.txt')
+        def target = Path.of('/work/results/report.txt')
+        def op = new PublishOp(session, 'foo', null, [path: '.'])
+
+        when: 'files from different values are published to the same target'
+        op.checkTargetConflicts([(file1): target])
+        op.checkTargetConflicts([(file2): target])
+        then:
+        noExceptionThrown()
+
+        when: 'files from the same value are published to the same target'
+        op.checkTargetConflicts([(file1): target, (file2): target])
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == "Publish target '${target.toUriString()}' for workflow output 'foo' is used by more than one file -- offending files: ${file1.toUriString()}, ${file2.toUriString()}"
     }
 
 }

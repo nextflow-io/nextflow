@@ -139,7 +139,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         then:
         meta.definitions.size() == 2
         meta.getWorkflow('hello').declaredInputs*.name == ['foo', 'bar']
-        meta.getWorkflow('hello').declaredOutputs == ['result']
+        meta.getWorkflow('hello').declaredOutputs*.name == ['result']
     }
 
     def 'should register fully-qualified process names' () {
@@ -466,6 +466,37 @@ class ScriptLoaderV2Test extends Dsl2Spec {
 
         cleanup:
         folder.deleteDir()
+    }
+
+    def 'should return null for a nullable workflow emit' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            nextflow.enable.types = true
+
+            workflow HELLO {
+                main:
+                v = null
+
+                emit:
+                result: Value<String>? = v
+                other: Value<String> = channel.value('x')
+            }
+
+            workflow {
+                HELLO().result
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
     }
 
 }

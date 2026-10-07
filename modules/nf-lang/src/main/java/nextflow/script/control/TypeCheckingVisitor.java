@@ -225,6 +225,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
         else {
             checkSingleNamedOutput(node.emits, "emit");
+            checkWorkflowEmitTypes(node.emits);
             visit(node.emits);
         }
 
@@ -307,6 +308,18 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         });
     }
 
+    private void checkWorkflowEmitTypes(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
+            if( target == null )
+                continue;
+            var type = target.getType();
+            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+                continue;
+            addError("Workflow emit '" + target.getName() + "' must be declared as a Channel or Value, not " + Types.getName(type), target);
+        }
+    }
+
     private void checkSingleNamedOutput(Statement block, String section) {
         var outputs = asBlockStatements(block);
         if( outputs.size() != 1 )
@@ -341,7 +354,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         // check return statements against declared return type
         var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-        visitor.visit(node.getReturnType(), node.getCode());
+        visitor.visit(node, node.getReturnType(), node.getCode());
 
         var inferredReturnType = visitor.getInferredReturnType();
         if( inferredReturnType != null && ClassHelper.isDynamicTyped(node.getReturnType()) )
@@ -1040,16 +1053,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return null;
     }
 
-    private static String methodType(MethodNode node) {
-        if( node instanceof ProcessNode )
-            return "Process";
-        if( node instanceof AgentNode )
-            return "Agent";
-        if( node instanceof WorkflowNode )
-            return "Workflow";
-        return "Function";
-    }
-
     private static String className(Expression node) {
         var receiverType = getType(node);
         return receiverType != null && receiverType.implementsInterface(ClassHelper.makeCached(Namespace.class))
@@ -1377,7 +1380,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             // type, as long as it returns a value
             var coerce = Types.isEqual(returnType, ClassHelper.Boolean_TYPE);
             var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-            visitor.visit(returnType, node.getCode(), coerce);
+            visitor.visit(node, returnType, node.getCode(), coerce);
 
             var inferredReturnType = visitor.getInferredReturnType();
             if( inferredReturnType != null )
@@ -1526,12 +1529,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     @Override
     public void visitPropertyExpression(PropertyExpression node) {
         super.visitPropertyExpression(node);
-
-        var mn = asMethodOutput(node);
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode ) {
-            addError("Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead", node);
-            return;
-        }
 
         var receiver = node.getObjectExpression();
         var receiverType = getType(receiver);

@@ -228,11 +228,11 @@ The workflow produces the following index file:
 
 ```console
 $ cat results/fastqc.csv
-"id","fastqc"
-"lung","results/fastqc/lung"
-"spleen","results/fastqc/spleen"
-"gut","results/fastqc/gut"
-"liver","results/fastqc/liver"
+id,fastqc
+lung,results/fastqc/lung
+spleen,results/fastqc/spleen
+gut,results/fastqc/gut
+liver,results/fastqc/liver
 ```
 
 The index file mirrors the structure of the published channel, and it provides a structured view of the output directory. Index files are equivalent to samplesheets, and can be used as inputs to downstream pipelines.
@@ -292,11 +292,11 @@ Run the pipeline, then verify the index file:
 ```console
 $ nextflow run . -profile conda,all-reads -resume
 $ cat results/samples.csv
-"id","fastqc","quant"
-"lung","results/fastqc/lung","results/quant/lung"
-"gut","results/fastqc/gut","results/quant/gut"
-"liver","results/fastqc/liver","results/quant/liver"
-"spleen","results/fastqc/spleen","results/quant/spleen"
+id,fastqc,quant
+lung,results/fastqc/lung,results/quant/lung
+gut,results/fastqc/gut,results/quant/gut
+liver,results/fastqc/liver,results/quant/liver
+spleen,results/fastqc/spleen,results/quant/spleen
 ```
 
 In the future, if you add a tool with per-sample outputs, you only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps the output definition concise as you add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.

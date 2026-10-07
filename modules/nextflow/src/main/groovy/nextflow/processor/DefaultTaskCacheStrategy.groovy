@@ -17,13 +17,14 @@
 package nextflow.processor
 
 import java.nio.file.Path
+import java.util.concurrent.locks.Lock
 
 import com.google.common.hash.HashCode
+import com.google.common.util.concurrent.Striped
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.util.HashBuilder
-import nextflow.util.LockManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -55,7 +56,11 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
      */
     private static final Logger log = LoggerFactory.getLogger(TaskProcessor)
 
-    private static LockManager lockManager = new LockManager()
+    /**
+     * Serializes the work directory check-and-create of tasks with the same hash. A fixed set
+     * of stripes keeps memory bounded: distinct hashes sharing a stripe merely contend briefly
+     */
+    private static final Striped<Lock> locks = Striped.lock(1024)
 
     @Override
     boolean isEnabled(Session session) { return true }
@@ -89,8 +94,9 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
                 continue
             }
 
-            final lock = lockManager.acquire(hash)
             final workDir = resolver.workDirFor(hash)
+            final lock = locks.get(hash)
+            lock.lock()
             try {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
@@ -102,7 +108,7 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
                     throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
-                lock.release()
+                lock.unlock()
             }
 
             // submit task for execution

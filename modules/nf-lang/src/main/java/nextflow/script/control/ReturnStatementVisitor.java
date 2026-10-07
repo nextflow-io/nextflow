@@ -16,18 +16,25 @@
 package nextflow.script.control;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.dsl.Types;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.DeclarationExpression;
+import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.IfStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.ast.stmt.ThrowStatement;
+import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 import org.codehaus.groovy.control.ErrorCollector;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -55,6 +62,8 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
 
     private boolean coerce;
 
+    private List<ASTNode> missingReturns = new ArrayList<>();
+
     public ReturnStatementVisitor(SourceUnit sourceUnit, ErrorCollector errorCollector) {
         this.sourceUnit = sourceUnit;
         this.errorCollector = errorCollector;
@@ -65,46 +74,78 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
         return sourceUnit;
     }
 
-    public void visit(ClassNode returnType, Statement code) {
-        visit(returnType, code, false);
+    public void visit(ASTNode owner, ClassNode returnType, Statement code) {
+        visit(owner, returnType, code, false);
     }
 
     /**
+     * @param owner      function or closure that contains the code
      * @param returnType
      * @param code
      * @param coerce     accept any return value that can be coerced to the return type
      */
-    public void visit(ClassNode returnType, Statement code, boolean coerce) {
+    public void visit(ASTNode owner, ClassNode returnType, Statement code, boolean coerce) {
         this.returnType = returnType;
         this.coerce = coerce;
-        visit(addReturnsIfNeeded(code));
+        visit(addReturnsIfNeeded(code, owner));
+        if( returnsValue() ) {
+            for( var node : missingReturns )
+                addError("Missing return statement", node);
+        }
         this.returnType = null;
     }
 
-    private Statement addReturnsIfNeeded(Statement node) {
+    /**
+     * Convert trailing expression statements into return statements,
+     * and record any code path that ends without a return value.
+     *
+     * @param node
+     * @param parent  node to report if the statement has no source position
+     */
+    private Statement addReturnsIfNeeded(Statement node, ASTNode parent) {
         if( node instanceof BlockStatement block && !block.isEmpty() ) {
             var statements = new ArrayList<>(block.getStatements());
             int lastIndex = statements.size() - 1;
-            var last = addReturnsIfNeeded(statements.get(lastIndex));
+            var last = addReturnsIfNeeded(statements.get(lastIndex), block);
             statements.set(lastIndex, last);
             return withSourcePosition(new BlockStatement(statements, block.getVariableScope()), block);
         }
 
-        if( node instanceof ExpressionStatement es ) {
+        if( node instanceof ExpressionStatement es && !isAssignment(es.getExpression()) ) {
             return withSourcePosition(new ReturnStatement(es.getExpression()), es);
         }
 
         if( node instanceof IfStatement ies ) {
             return withSourcePosition(new IfStatement(
                 ies.getBooleanExpression(),
-                addReturnsIfNeeded(ies.getIfBlock()),
-                addReturnsIfNeeded(ies.getElseBlock()) ), ies);
+                addReturnsIfNeeded(ies.getIfBlock(), ies),
+                addReturnsIfNeeded(ies.getElseBlock(), ies) ), ies);
         }
+
+        if( node instanceof TryCatchStatement tcs ) {
+            var result = new TryCatchStatement(addReturnsIfNeeded(tcs.getTryStatement(), tcs), tcs.getFinallyStatement());
+            for( var cs : tcs.getCatchStatements() )
+                result.addCatch(withSourcePosition(new CatchStatement(cs.getVariable(), addReturnsIfNeeded(cs.getCode(), cs)), cs));
+            return withSourcePosition(result, tcs);
+        }
+
+        if( !(node instanceof ReturnStatement) && !(node instanceof ThrowStatement) )
+            missingReturns.add(node.getLineNumber() != -1 && !(node instanceof BlockStatement) ? node : parent);
 
         return node;
     }
 
-    private static Statement withSourcePosition(Statement node, Statement source) {
+    private static boolean isAssignment(Expression node) {
+        return node instanceof DeclarationExpression || node instanceof AssignmentExpression;
+    }
+
+    private boolean returnsValue() {
+        if( !ClassHelper.isDynamicTyped(returnType) )
+            return !ClassHelper.VOID_TYPE.equals(returnType);
+        return inferredReturnType != null && !ClassHelper.VOID_TYPE.equals(inferredReturnType);
+    }
+
+    private static <T extends Statement> T withSourcePosition(T node, Statement source) {
         node.setSourcePosition(source);
         return node;
     }

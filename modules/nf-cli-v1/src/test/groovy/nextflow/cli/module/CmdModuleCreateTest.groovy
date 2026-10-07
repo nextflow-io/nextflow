@@ -163,7 +163,7 @@ class CmdModuleCreateTest extends Specification {
         content.contains("nextflow.enable.types = true")
         content.contains("workflow HELLO")
         content.contains("greeting: String")            // typed take
-        content.contains("result: String = message")    // typed emit
+        content.contains("emit:\n    message\n")         // single unnamed emit
         !content.contains("process ")
 
         and: 'the meta.yml derives input/output from the take/emit'
@@ -172,7 +172,8 @@ class CmdModuleCreateTest extends Specification {
         meta.contains("input:")
         meta.contains("name: greeting")
         meta.contains("output:")
-        meta.contains("name: result")
+        meta.contains("name: message")
+        meta.contains("type: value")
 
         and: 'typed workflows require Nextflow >=26.04'
         meta.contains('nextflow: ">=26.04.0"')
@@ -322,6 +323,44 @@ class CmdModuleCreateTest extends Specification {
         moduleDir.resolve('README.md').text.contains('# testorg/testmod')
         moduleDir.resolve('meta.yml').text.contains('name: testorg/testmod')
         moduleDir.resolve('meta.yml').text.contains('version: 1.0.0')
+    }
+
+    def 'should prompt for namespace and name when no args are given'() {
+        given:
+        def cmd = Spy(CmdModuleCreate) {
+            modulesBase() >> tempDir.resolve('modules')
+        }
+        and:
+        def stdin = System.in
+        System.setIn(new ByteArrayInputStream('myorg\nhello\ny\n'.bytes))
+
+        when:
+        cmd.run()
+
+        then:
+        Files.exists(tempDir.resolve('modules/myorg/hello/main.nf'))
+
+        cleanup:
+        System.setIn(stdin)
+    }
+
+    def 'should not create the module when the prompt is not confirmed'() {
+        given:
+        def cmd = Spy(CmdModuleCreate) {
+            modulesBase() >> tempDir.resolve('modules')
+        }
+        and:
+        def stdin = System.in
+        System.setIn(new ByteArrayInputStream('myorg\nhello\nn\n'.bytes))
+
+        when:
+        cmd.run()
+
+        then:
+        !Files.exists(tempDir.resolve('modules/myorg/hello'))
+
+        cleanup:
+        System.setIn(stdin)
     }
 
     def 'should create .module-info file'() {
