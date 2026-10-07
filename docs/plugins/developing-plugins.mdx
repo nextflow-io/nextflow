@@ -398,9 +398,46 @@ channel
 The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory is included under the alias `fromTable`.
 :::
 
-:::tip
-Before creating a custom operator, consider whether the operator can be defined as a [function](#functions) that can be composed with existing operators such as `map` or `subscribe`. Functions are easier to implement and can be used anywhere in your pipeline, not just channel logic.
-:::
+Before creating a custom operator, consider whether the operator can be composed from existing operators such as `map` or `subscribe`, using a function to implement the custom logic.
+
+Plugin factories and operators are not supported when [static typing][static-typing-page] is enabled. Provide them as [functions](#functions) instead:
+
+```groovy
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Session
+import nextflow.extension.CH
+import nextflow.plugin.extension.Function
+import nextflow.plugin.extension.PluginExtensionPoint
+
+class MyExtension extends PluginExtensionPoint {
+
+    @Override
+    void init(Session session) {}
+
+    @Function
+    DataflowWriteChannel fromQuery(Map opts, String query) {
+        // ...
+    }
+
+    @Function
+    DataflowWriteChannel sqlInsert(Map opts, DataflowWriteChannel source) {
+        final input = CH.getReadChannel(source)
+        // ...
+    }
+
+}
+```
+
+These functions can be used in your pipeline like any other function:
+
+```nextflow
+include { fromQuery; sqlInsert } from 'plugin/nf-sqldb'
+
+workflow {
+    def rows = fromQuery('select * from FOO', db: 'test')
+    sqlInsert(rows, into: 'BAR', columns: 'id', db: 'test')
+}
+```
 
 ### Process directives
 
@@ -432,7 +469,7 @@ class MyExecutor extends Executor {
 ### Trace observers
 
 <ChangedInVersion version="25.04">
-The `TraceObserver` interface is now deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
+The `TraceObserver` interface is deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
 </ChangedInVersion>
 
 A *trace observer* is an entity that can listen and react to workflow events, such as when a workflow starts, a task is completed, or a file is published. Several components in Nextflow, such as the execution report and DAG visualization, are implemented as trace observers.
@@ -537,3 +574,4 @@ This variable is useful for testing a plugin release before publishing it to the
 [process-directives]: ../process#directives
 [process-ext]: ../reference/process/directives/ext
 [remote-files]: ../working-with-files#remote-files
+[static-typing-page]: ../static-typing

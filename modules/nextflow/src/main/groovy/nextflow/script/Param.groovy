@@ -40,7 +40,7 @@ class Param {
     /** Whether the declared type is nullable. */
     boolean optional
 
-    /** The declared default value, or null. Workflow takes cannot declare a default. */
+    /** The declared default value, or null. */
     Object defaultValue
 
 }

@@ -1,0 +1,2 @@
+id,fastq_1,fastq_2,strandedness
+SRR1553606,data/fastq/SRR1553606_1.fastq,data/fastq/SRR1553606_2.fastq,auto

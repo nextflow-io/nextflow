@@ -38,6 +38,7 @@ The following [hints][process-hints] are supported:
 - `machineRequirement.diskType`
 - `machineRequirement.machineTypes`
 - `machineRequirement.maxSpotAttempts`
+- `machineRequirement.onDemandCostRatio`
 - `machineRequirement.provisioning`
 - `predictionModel`
 
@@ -70,6 +71,50 @@ process hello {
 ```
 
 See the [`seqera` scope][config-seqera] for the full config reference.
+
+## On-demand fallback cost limit
+
+<AddedInVersion version="26.10" />
+
+With `provisioning = 'spotFirst'`, the scheduler falls back to on-demand instances when spot capacity runs out, as long as on-demand stays within a cost limit. The limit is the maximum ratio of the highest on-demand hourly price to the highest spot price, across the instance types selected for a task. If the ratio exceeds the limit, the scheduler retries the task on spot instead. If spot capacity stays unavailable, the task fails with an error message that starts with `on-demand fallback refused`.
+
+The scheduler applies a default limit for each cloud provider. To set a different limit for all tasks in the run, use `onDemandCostRatio`:
+
+```groovy
+seqera {
+    executor {
+        machineRequirement {
+            provisioning = 'spotFirst'
+            onDemandCostRatio = 2.5    // fall back only while on-demand costs at most 2.5x spot
+        }
+    }
+}
+```
+
+Leaving `onDemandCostRatio` unset is not the same as setting it to `0`:
+
+| `onDemandCostRatio` | Behavior |
+| --- | --- |
+| Not set | The scheduler's default limit for the cloud provider applies. |
+| `0` | No limit. Tasks always fall back to on-demand, regardless of price. |
+| Greater than `0` | The scheduler uses this value instead of its default limit. |
+
+Setting `0` does not disable the fallback. To disable it, set `provisioning = 'spot'`.
+
+To override the limit for a single process, use a hint, as with `provisioning`. For example, to let a long-running process always fall back to on-demand:
+
+```nextflow
+process align {
+    hints 'seqera/machineRequirement.onDemandCostRatio': 0
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Tasks with different limits run on separate clusters. Tasks that set a limit, including `0`, do not use the compute environment's warm pool.
 
 ## Disk support
 

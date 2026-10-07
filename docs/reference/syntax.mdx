@@ -88,7 +88,7 @@ include { hello as sayHello } from './some/module'
 The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hello` is included under the alias `sayHello`.
 
 :::note
-[Enum](#enum-type) and [record](#record-type) types cannot be aliased. They must be included under their original name.
+[Enum](#enum-type) and [record](#record-type) types cannot be aliased. They must be included under their original name. The `params` block of an included pipeline is the exception -- it is a type created for the include, so it must be aliased.
 :::
 
 Include clauses can be separated by semi-colons or newlines:
@@ -110,6 +110,19 @@ Include clauses can also be specified as separate includes:
 include { hello } from './some/module'
 include { bye as goodbye } from './some/module'
 ```
+
+<AddedInVersion version="26.10" />
+
+The `workflow` name refers to the entire pipeline defined by the included script, i.e., its params block, entry workflow, and output block. The `params` name refers to the params block as a record type. Each of these names must be given an alias:
+
+```nextflow
+include {
+    params as RnaseqParams ;
+    workflow as RNASEQ
+} from './pipelines/rnaseq.nf'
+```
+
+See [pipeline composition][pipeline-composition] for more information.
 
 ### Params block
 
@@ -583,6 +596,8 @@ def sayHello(name) {
 }
 ```
 
+A return statement can only be used in a [function](#function) or [closure](#closure). It cannot be used in a [workflow](#workflow) body.
+
 ### throw
 
 A throw statement consists of the `throw` keyword followed by an expression that returns an error type:
@@ -994,16 +1009,6 @@ Compound expressions are evaluated in the following order:
 - `?:` (ternary)
 - `?:` (elvis)
 
-## Deprecations
-
-The following legacy features were excluded from this page because they are deprecated:
-
-- The `addParams` and `params` clauses of include declarations.
-- The `when:` section of a process definition.
-- The `shell:` section of a process definition.
-
-See [strict syntax][strict-syntax-page] for more information.
-
 [agent-page]: ../agent
 [config-feature-flags]: ./feature-flags
 [operator-page]: ./operator
@@ -1015,3 +1020,4 @@ See [strict syntax][strict-syntax-page] for more information.
 [strict-syntax-page]: ../strict-syntax
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-page]: ../workflow-typed
+[pipeline-composition]: ../workflow-typed#pipeline-composition

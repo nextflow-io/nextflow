@@ -25,6 +25,8 @@ import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
@@ -49,11 +51,20 @@ public class WorkflowToGroovyVisitor {
 
     private ScriptNode moduleNode;
 
+    private static final ClassNode PARAMS_HELPER = ClassHelper.makeWithoutCaching("nextflow.script.ParamsHelper");
+
     public WorkflowToGroovyVisitor(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
         this.moduleNode = (ScriptNode) sourceUnit.getAST();
     }
 
+    /**
+     * Transform a workflow definition. The entry workflow of a script
+     * with a params block takes the params as input, so that the
+     * pipeline can be called like a named workflow.
+     *
+     * @param node
+     */
     public Statement transform(WorkflowNode node) {
         var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
         visitWorkflowEmits(node.emits, main);
@@ -61,6 +72,13 @@ public class WorkflowToGroovyVisitor {
         visitWorkflowHandler(node.onComplete, "setOnComplete", main);
         visitWorkflowHandler(node.onError, "setOnError", main);
 
+        var takes = node.getParameters();
+        if( node.isEntry() && moduleNode.getParams() != null ) {
+            takes = new Parameter[] { new Parameter(ClassHelper.dynamicType(), "params") };
+            var params = varX("params");
+            var stmt = assignS(params, callX(PARAMS_HELPER, "resolveArguments", args(varX("this"), params)));
+            main.getStatements().add(0, stmt);
+        }
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
             args(
@@ -70,7 +88,7 @@ public class WorkflowToGroovyVisitor {
             )
         ));
         var closure = closureX(null, block(new VariableScope(), List.of(
-            workflowTakes(node.getParameters(), node.isEntry() ? null : node.getName()),
+            workflowTakes(takes, node.isEntry() ? null : node.getName()),
             node.emits,
             bodyDef
         )));
@@ -115,12 +133,12 @@ public class WorkflowToGroovyVisitor {
             var es = (ExpressionStatement)stmt;
             var emit = es.getExpression();
             if( emit instanceof VariableExpression ve ) {
-                es.setExpression(callThisX("_emit_", args(constX(ve.getName()))));
+                es.setExpression(callThisX("_emit_", args(constX(ve.getName()), constX(isNullable(ve)))));
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
                 main.addStatement(assignS(target, emit));
-                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
+                es.setExpression(callThisX("_emit_", args(constX(target.getName()), constX(isNullable(target)))));
                 main.addStatement(es);
             }
             else {
@@ -130,6 +148,10 @@ public class WorkflowToGroovyVisitor {
                 main.addStatement(es);
             }
         }
+    }
+
+    private static boolean isNullable(VariableExpression ve) {
+        return ve.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
     }
 
     private void visitWorkflowPublishers(Statement publishers, BlockStatement main) {

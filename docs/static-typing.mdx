@@ -5,6 +5,10 @@ description: Overview of static typing in Nextflow, including typed processes, t
 
 # Static typing
 
+<AddedInVersion version="26.10">
+Static typing is available as a preview in Nextflow [25.10][static-typing-first-preview] and [26.04][static-typing-second-preview].
+</AddedInVersion>
+
 Static typing lets you model and validate the structure of your data as it flows through a pipeline. You add [standard Nextflow types][stdlib-types] to inputs and outputs at every level, from pipeline parameters to process and workflow outputs. Nextflow uses those annotations to catch type-related errors at compile-time.
 
 :::note
@@ -68,6 +72,8 @@ Static typing builds on functionality documented in other sections:
 [migrating-static-types-operators]: ./tutorials/static-types-operators
 [preparing-static-types]: ./tutorials/static-types#preparing-for-static-typing
 [process-typed-page]: ./process-typed
+[static-typing-first-preview]: ./migrations/25-10#static-typing-preview
+[static-typing-second-preview]: ./migrations/26-04#static-typing-preview
 [stdlib-types]: ./reference/stdlib-types
 [strict-syntax-page]: ./strict-syntax
 [syntax-output-block]: ./reference/syntax#output-block

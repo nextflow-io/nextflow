@@ -883,7 +883,7 @@ public class TypeCheckingUtils {
 
     private static boolean isAssignableFrom(Parameter parameter, ClassNode sourceType, Map<GenericsTypeName, GenericsType> resolvedPlaceholders) {
         var paramType = applyGenericsContext(resolvedPlaceholders, parameter.getType());
-        return Types.isAssignableFrom(paramType, sourceType, true);
+        return Types.isAssignableFrom(paramType, sourceType);
     }
 
     /**

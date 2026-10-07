@@ -114,7 +114,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         workflow.declaredInputs*.name == ['foo']
-        workflow.declaredOutputs == ['bar', 'baz']
+        workflow.declaredOutputs*.name == ['bar', 'baz']
 
     }
 
@@ -165,11 +165,11 @@ class WorkflowDefTest extends Dsl2Spec {
         def ch1 = new DataflowQueue(); ch1 << 'blah blah'
         def ch2 = new DataflowQueue(); ch2 << 'xxx'
 
-        def binding = new WorkflowBinding(foo: 'Hello', bar: 'world', ch1: ch1, ch2: new ChannelOut([ch2]))
+        def binding = new WorkflowBinding(foo: 'Hello', bar: 'world', ch1: ch1, ch2: new ChannelOut([ch2]), nil: null)
         def workflow = new WorkflowDef(binding: binding)
 
         when:
-        def result = workflow.collectOutputs(['foo'])
+        def result = workflow.collectOutputs([new Param('foo')])
         then:
         result instanceof ChannelOut
         result.size()==1
@@ -178,7 +178,7 @@ class WorkflowDefTest extends Dsl2Spec {
         result.foo.val == 'Hello'
 
         when:
-        result = workflow.collectOutputs(['foo', 'bar'])
+        result = workflow.collectOutputs([new Param('foo'), new Param('bar')])
         then:
         result instanceof ChannelOut
         result.size()==2
@@ -188,7 +188,7 @@ class WorkflowDefTest extends Dsl2Spec {
         result.bar.val == 'world'
 
         when:
-        result = workflow.collectOutputs(['ch1'])
+        result = workflow.collectOutputs([new Param('ch1')])
         then:
         result instanceof ChannelOut
         result.size()==1
@@ -197,12 +197,24 @@ class WorkflowDefTest extends Dsl2Spec {
 
 
         when:
-        result = workflow.collectOutputs(['ch2'])
+        result = workflow.collectOutputs([new Param('ch2')])
         then:
         result instanceof ChannelOut
         result.size()==1
         result[0] instanceof DataflowQueue
         result[0].val == 'xxx'
+
+        when:
+        result = workflow.collectOutputs([new Param('nil', null, true)])
+        then:
+        result.size()==1
+        result.nil == null
+
+        when:
+        result = workflow.collectOutputs([new Param('nil')])
+        then:
+        result.nil instanceof DataflowVariable
+        result.nil.val == null
 
     }
 

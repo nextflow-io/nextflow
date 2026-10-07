@@ -19,9 +19,11 @@ package nextflow.cloud.google.batch.client
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 import dev.failsafe.function.CheckedPredicate
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.api.gax.rpc.NotFoundException
@@ -32,6 +34,7 @@ import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.ListTasksRequest
 import com.google.cloud.batch.v1.LocationName
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
@@ -55,6 +58,7 @@ import nextflow.util.TestOnly
 @CompileStatic
 class BatchClient {
     private final static long TASK_STATE_INVALID_TIME = 1_000
+    private final static int LIST_TASKS_PAGE_SIZE = 500
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
@@ -102,7 +106,26 @@ class BatchClient {
 
     Job submitJob(String jobId, Job job) {
         final parent = LocationName.of(projectId, location)
-        return apply(()-> batchServiceClient.createJob(parent, job, jobId))
+        final attempts = new AtomicInteger()
+        return apply(()-> createJob(parent, jobId, job, attempts.incrementAndGet()==1))
+    }
+
+    /**
+     * Create the job, or fetch it when a previous submit attempt already created it.
+     * An earlier attempt can create the job and still fail on the client side, e.g. with
+     * DEADLINE_EXCEEDED, so the retry finds the job it submitted itself. On the first
+     * attempt the job ID is genuinely taken: report it
+     */
+    private Job createJob(LocationName parent, String jobId, Job job, boolean firstAttempt) {
+        try {
+            return batchServiceClient.createJob(parent, job, jobId)
+        }
+        catch( AlreadyExistsException e ) {
+            if( firstAttempt )
+                throw e
+            log.debug "[GOOGLE BATCH] Job $jobId already created by a previous submit attempt"
+            return batchServiceClient.getJob(JobName.of(projectId, location, jobId))
+        }
     }
 
     Job describeJob(String jobId) {
@@ -111,8 +134,14 @@ class BatchClient {
     }
 
     Iterable<Task> listTasks(String jobId) {
-        final parent = TaskGroupName.of(projectId, location, jobId, 'group0')
-        return apply(()-> batchServiceClient.listTasks(parent).iterateAll())
+        // the page size must be set explicitly: the pager copies it from the first request into
+        // each following page request, and the API rejects a page size of 0 (i.e. unset) combined
+        // with a page token issued for its default page size of 500
+        final request = ListTasksRequest.newBuilder()
+            .setParent(TaskGroupName.of(projectId, location, jobId, 'group0').toString())
+            .setPageSize(LIST_TASKS_PAGE_SIZE)
+            .build()
+        return apply(()-> batchServiceClient.listTasks(request).iterateAll())
     }
 
     Task describeTask(String jobId, String taskId) {

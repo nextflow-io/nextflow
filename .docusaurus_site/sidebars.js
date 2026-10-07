@@ -338,12 +338,14 @@ module.exports = {
             collapsed: true,
             items: [
                 "updating-nextflow",
+                "deprecations",
                 "strict-syntax",
                 {
                     type: "category",
                     label: "Migration notes",
                     link: { type: "doc", id: "migrations/index" },
                     items: [
+                        "migrations/26-10",
                         "migrations/26-04",
                         "migrations/25-10",
                         "migrations/25-04",

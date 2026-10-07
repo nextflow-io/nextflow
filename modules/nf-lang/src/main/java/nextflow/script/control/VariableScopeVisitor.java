@@ -71,6 +71,7 @@ import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -131,7 +132,16 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null )
                 continue;
-            if( entry.getTarget() instanceof ClassNode && entry.alias != null ) {
+            // the parts of an included pipeline must be aliased, whereas other
+            // types cannot be aliased
+            var target = entry.getTarget();
+            var isPipelinePart = target instanceof WorkflowNode wn && wn.isEntry()
+                || target instanceof ClassNode cn && ScriptNode.isPipelineParams(cn);
+            if( isPipelinePart && entry.alias == null ) {
+                vsc.addError("An included pipeline must be aliased, e.g. `" + entry.name + " as MY_PIPELINE`", entry);
+                continue;
+            }
+            if( !isPipelinePart && target instanceof ClassNode && entry.alias != null ) {
                 vsc.addError("Included types cannot be aliased", entry);
                 continue;
             }
@@ -268,7 +278,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         var classScope = workflowDsl(node.isEntry());
         if( node.isEntry() && paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
@@ -543,9 +552,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
-        var classScope = ClassHelper.makeCached(OutputDsl.class);
+        var classScope = new ClassNode(OutputDsl.class);
         if( paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
@@ -711,6 +719,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             vsc.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target.getName(), target);
     }
 
+    @Override
+    public void visitReturnStatement(ReturnStatement node) {
+        if( currentDefinition instanceof WorkflowNode && currentClosure == null )
+            vsc.addError("Return statement cannot be used in a workflow body -- use `exit()` instead", node);
+        super.visitReturnStatement(node);
+    }
+
     // expressions
 
     private static final List<String> KEYWORDS = List.of(
@@ -850,11 +865,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "args".equals(name) ) {
-                vsc.addParanoidWarning("The use of `args` outside the entry workflow will not be supported in a future version", node);
-            }
-            else if( "params".equals(name) ) {
-                vsc.addParanoidWarning("The use of `params` outside the entry workflow will not be supported in a future version", node);
+            if( "args".equals(name) || "params".equals(name) ) {
+                vsc.addParanoidWarning("The use of `" + name + "` outside the entry workflow is discouraged", name, node);
             }
             else if( isStdinStdout(name) ) {
                 // stdin, stdout can be declared without parentheses
@@ -868,8 +880,17 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         if( variable != null ) {
             checkGlobalVariableInProcess(variable, node);
+            checkDataflowMethodAsVariable(variable, node);
             node.setAccessedVariable(variable);
         }
+    }
+
+    private void checkDataflowMethodAsVariable(Variable variable, ASTNode context) {
+        if( !typingEnabled )
+            return;
+        var mn = asMethodVariable(variable);
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode )
+            vsc.addError(methodType(mn) + " `" + variable.getName() + "` cannot be used as a variable", context);
     }
 
     private boolean isStdinStdout(String name) {

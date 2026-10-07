@@ -156,9 +156,7 @@ workflow {
 }
 ```
 
-:::note
-Files that do not originate from the work directory are not published.
-:::
+Files that do not originate from the work directory are not published by default. Set [`workflow.output.includeInputs`](./reference/config/workflow#workflowoutputincludeinputs)  to `true` to publish them by file name. For example, `/data/1.txt` is published to `results/1.txt`.
 
 **Dynamic publish path**
 
@@ -265,9 +263,9 @@ output {
 The above example writes the following CSV file to `results/samples.csv`:
 
 ```
-"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
-"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq",""
+1,sample 1,results/fastq/1a.fastq,results/fastq/1b.fastq
+2,sample 2,results/fastq/2a.fastq,results/fastq/2b.fastq
+3,sample 3,results/fastq/3a.fastq,
 ```
 
 You can customize the index file with additional directives, for example:
@@ -288,10 +286,6 @@ This example produces the following index file:
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
 "3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
-
-:::note
-Files that do not originate from the work directory are not published, but are included in the index file.
-:::
 
 See [Output directives](#output-directives) for the list of available index directives.
 
@@ -347,6 +341,7 @@ Additionally, the following options from the [workflow][config-workflow] config 
 - `contentType`
 - `enabled`
 - `ignoreErrors`
+- `includeInputs`
 - `mode`
 - `overwrite`
 - `storageClass`
@@ -673,9 +668,9 @@ The fully qualified process name can be used as a [process selector][config-proc
 
 ### Special operators (`|` and `&`)
 
-<DeprecatedInVersion version="26.04">
+:::note
 These operators are not supported when [static typing][preparing-static-types] is enabled. Use standard method calls and assignments instead.
-</DeprecatedInVersion>
+:::
 
 The following operators have a special meaning when used with process and workflow calls in a workflow:
 

@@ -32,7 +32,6 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
@@ -120,8 +119,6 @@ class Session implements ISession {
      * been consumed.
      */
     private volatile boolean dataflowNetworkFired
-
-    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors
@@ -1421,10 +1418,6 @@ class Session implements ISession {
             config.process.each { String name, value ->
                 if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
-                }
-                else if( name.startsWith('$') ) {
-                    name = name.substring(1)
-                    log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
                 }
 
                 if( value instanceof Map && value.container ) {
