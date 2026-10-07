@@ -105,7 +105,7 @@ Emits the relational join of two channels of records, using a matching key given
 ```console file=../../snippets/join-record.out
 ```
 
-Each pair of matching records is combined by record addition (`left + right`). When a field other than the matching key is present in both records, the right-hand value takes precedence.
+Each pair of matching records is combined by record addition (`left + right`). When a field other than the matching key is present in both records, the right-hand value takes precedence. The type checker reports an error when it can determine that both records share such a field. Rename or remove the field on one side to resolve it.
 
 Duplicate matching keys are handled by emitting each matching combination (like a relational join):
 

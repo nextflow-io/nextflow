@@ -1869,4 +1869,19 @@ class TypeCheckingTest extends Specification {
         errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
     }
 
+    def 'should report a soft error for a `join` that overwrites left-hand fields' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello', alive: false) )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: 'id')
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
+    }
+
 }
