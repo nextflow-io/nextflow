@@ -286,8 +286,6 @@ The same selector syntax and the same priority order apply in the `agent` scope,
 
 ### Disabling processes
 
-<AddedInVersion version="26.10" />
-
 You can use the `when` setting to disable a process at runtime. When `when` is `false`, the process does not execute any tasks:
 
 ```groovy
@@ -308,14 +306,14 @@ process {
 }
 ```
 
+The `when` setting overrides the `when` section of a process, if it has one.
+
 A disabled process emits no outputs, so downstream processes that depend on it will not execute either.
 
-:::warning
-Disabling a process that emits dataflow values (i.e., all of its inputs are dataflow values) produces empty dataflow values, which will likely cause the pipeline to fail or hang. Only disable processes that emit channels, or ensure that their outputs are not used downstream.
-:::
-
-:::note
 The `when` setting is intended for temporarily disabling a process. Conditional logic that is part of the pipeline should be implemented in the calling workflow (e.g., using an `if` statement or [`filter`][operator-filter] operator).
+
+:::warning
+Disabling a process that emits dataflow values (i.e., all of its inputs are dataflow values) produces empty dataflow values, which will likely cause the pipeline to fail or hang. Only disable processes that emit channels.
 :::
 
 ## Config profiles
