@@ -33,10 +33,7 @@ import spock.lang.Specification
 class OutputDslTest extends Specification {
 
     Session createSession(Map config) {
-        def session = new Session(config) {
-            @Override
-            void abort(Throwable cause) { throw cause }
-        }
+        def session = new Session(config)
         session.init(null)
         return session
     }

@@ -1002,7 +1002,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         var numChannelArgs = arguments.stream().filter((arg) -> CHANNEL_TYPE.equals(getType(arg))).count();
-        var numDynamicArgs = arguments.stream().filter((arg) -> ClassHelper.isDynamicTyped(getType(arg))).count();
+        var numDynamicArgs = arguments.stream().filter((arg) -> !isNullConstant(arg) && ClassHelper.isDynamicTyped(getType(arg))).count();
         if( numChannelArgs > 1 )
             addError(label + " `" + mn.getName() + "` was called with multiple channel arguments which can lead to non-deterministic behavior -- make sure that at most one argument is a channel and that all other arguments are dataflow values", node);
 

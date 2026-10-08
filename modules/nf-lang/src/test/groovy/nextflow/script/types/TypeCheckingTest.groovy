@@ -1537,6 +1537,31 @@ class TypeCheckingTest extends Specification {
 
             process hello {
                 input:
+                target: String?
+
+                output:
+                "Hello, $target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( null )
+            }
+            '''
+        )
+        type = getType(exp)
+        then:
+        Types.getName(type) == 'Value<String>'
+
+        when:
+        exp = parseExpression(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
                 target: String
 
                 output:
@@ -1579,6 +1604,40 @@ class TypeCheckingTest extends Specification {
         type = getType(exp)
         then:
         Types.getName(type) == 'Value<Record {\n    target: String\n    message: String\n}>'
+    }
+
+    @Unroll
+    def 'should recognize process output type with a null argument' () {
+        when:
+        def exp = parseExpression(
+            """\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                greeting: String
+                target: String?
+
+                output:
+                "\$greeting, \$target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( ${ARG}, null )
+            }
+            """
+        )
+        def type = getType(exp)
+        then:
+        Types.getName(type) == TYPE
+
+        where:
+        ARG                 | TYPE
+        "'foo'"             | 'Value<String>'
+        "channel.of('foo')" | 'Channel<String>'
     }
 
     def 'should not allow a void call result to be assigned to a variable' () {
@@ -1896,6 +1955,21 @@ class TypeCheckingTest extends Specification {
         errors.size() == 2
         errors[0].getOriginalMessage() == 'Join field `sample_id` is not present in left-hand side'
         errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
+    }
+
+    def 'should report a soft error for a `join` that overwrites left-hand fields' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello', alive: false) )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: 'id')
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
 }
