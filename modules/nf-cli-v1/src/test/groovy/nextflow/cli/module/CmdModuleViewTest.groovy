@@ -587,6 +587,23 @@ class CmdModuleViewTest extends Specification {
         thrown(AbortOperationException)
     }
 
+    def 'should fail with local module path'() {
+        given:
+        def cmd = new CmdModuleView()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['./modules/nf-core/fastqc']
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('only supports registry modules')
+    }
+
     def 'should display minimal info when metadata is sparse'() {
         given:
         def metadata = new ModuleMetadata(
