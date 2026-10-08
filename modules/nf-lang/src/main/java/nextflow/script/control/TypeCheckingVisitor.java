@@ -189,7 +189,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var expectedType = fn.getType();
         var actualType = node.value.getType();
         if( !Types.isAssignableFrom(expectedType, actualType) )
-            addError("Feature flag '" + node.name + "' expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
+            addError("Feature flag `" + node.name + "` expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
     }
 
     private boolean hasParamsBlock;
@@ -209,7 +209,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         if( allowPathCoercion && Types.isEqual(expectedType, PATH_TYPE) && Types.isEqual(actualType, ClassHelper.STRING_TYPE) )
             return;
-        addError("Parameter '" + node.getName() + "' with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
+        addError("Parameter `" + node.getName() + "` with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
     }
 
     private WorkflowNode currentWorkflow;
@@ -254,7 +254,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 .filter(output -> output.getName().equals(target.getName()))
                 .findFirst().orElse(null);
             if( decl == null ) {
-                addError("Workflow output '" + target.getName() + "' was assigned in the entry workflow but not declared in the output block", publisher);
+                addError("Workflow output `" + target.getName() + "` was assigned in the entry workflow but not declared in the output block", publisher);
                 continue;
             }
             target.setAccessedVariable(decl);
@@ -264,7 +264,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var sourceType = getType(source);
             var targetType = asDataflowType(target.getType(), sourceType);
             if( !Types.isAssignableFrom(targetType, sourceType) )
-                addError("Workflow output '" + target.getName() + "' with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
+                addError("Workflow output `" + target.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
         }
     }
 
@@ -284,7 +284,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var type = target.getType();
             if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
                 continue;
-            addError("Workflow emit '" + target.getName() + "' must be declared as a Channel or Value, not " + Types.getName(type), target);
+            addError("Workflow emit `" + target.getName() + "` must be declared as a Channel or Value, not " + Types.getName(type), target);
         }
     }
 

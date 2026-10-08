@@ -171,7 +171,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Parameter 'input' with type String cannot be assigned to default value with type Float"
+        errors[0].getOriginalMessage() == "Parameter `input` with type String cannot be assigned to default value with type Float"
 
         when:
         def exp = parseExpression(
@@ -270,7 +270,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 5
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Workflow emit 'a' must be declared as a Channel or Value, not Integer"
+        errors[0].getOriginalMessage() == "Workflow emit `a` must be declared as a Channel or Value, not Integer"
     }
 
     def 'should allow a single named output' () {
