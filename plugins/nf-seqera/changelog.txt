@@ -1,5 +1,8 @@
 nf-seqera changelog
 ====================
+0.21.2 - 8 Oct 2026
+- Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
+
 0.21.1 - 9 Jul 2026
 - Bump sched-client@0.71.0 [22ae24804]
 - Propagate Seqera Intelligent Compute scheduler run identifier to Platform (#7228) [6c7547c5a]
