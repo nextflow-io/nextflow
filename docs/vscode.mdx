@@ -82,6 +82,14 @@ The DAG preview is similar to the [workflow diagram][workflow-diagram] that can 
 
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
 
+### Config preview for processes
+
+The extension can show the configuration settings that apply to a process, based on the pipeline config files. The config preview is displayed in a new panel to the side.
+
+For each process directive, the config preview shows the setting that takes effect according to the [selector priority][config-selector-priority]. You can toggle profiles, toggle overridden settings, and filter for specific entries.
+
+To preview the config of a process, select the **Preview config** CodeLens above the process definition. Alternatively, select a process call and use the **Preview config** code action to preview the config for the fully qualified process name (e.g., `SUB:ALIGN`). This way, the preview includes any `withName` selectors that match the fully qualified name.
+
 ## Troubleshooting
 
 In the event of a language server error, you can use the **Nextflow: Restart language server** command in the command palette to restart the language server.
@@ -112,6 +120,7 @@ The Nextflow language server implements the [Language Server Protocol (LSP)](htt
 
 Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome. Visit the [GitHub issues](https://github.com/nextflow-io/language-server/issues) page for the latest updates on community-led integrations.
 
+[config-selector-priority]: ./config#selector-priority
 [gradle-plugin-page]: ./guides/gradle-plugin
 [syntax-page]: ./reference/syntax
 [strict-syntax-page]: ./strict-syntax

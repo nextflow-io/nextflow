@@ -13,111 +13,92 @@ The Nextflow runtime integrates with popular execution platforms (i.e., HPC sche
 
 ## Processes and dataflow
 
-A Nextflow pipeline script is made by joining together different processes. Each process can be written in any scripting language that can be executed by the Linux platform (Bash, Perl, Ruby, Python, etc.).
+A Nextflow pipeline consists of processes connected by dataflow logic. Each process can be written in any scripting language (Bash, Perl, Python, R, etc.).
 
-A process can define one or more *inputs* and *outputs*. Data flows from process to process through asynchronous dataflow structures, known as *channels* and *values*. The data dependencies between these processes implicitly determines the flow of execution. For example:
+Each process has *inputs* and *outputs*. Data flows from process to process through *dataflow channels* and *dataflow values*. The data dependencies between these processes implicitly determine the flow of execution. For example:
 
 ```nextflow
-// Script parameters
-params.query = "/some/data/sample.fa"
-params.db = "/some/path/pdb"
+// Enable static typing (Nextflow 26.10 or later)
+nextflow.enable.types = true
 
-// Define the blast_search process
-process blast_search {
-  input:
-  path query
-  path db
-
-  output:
-  path "top_hits.txt"
-
-  script:
-  """
-  blastp -db $db -query $query -outfmt 6 > blast_result
-  cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
-  """
-}
-
-// Define the extract_top_hits process
-process extract_top_hits {
-  input:
-  path top_hits
-  path db
-
-  output:
-  path "sequences.txt"
-
-  script:
-  """
-  blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
-  """
+// Pipeline parameters
+params {
+    query: Path = '/some/data/sample.fa'
+    db: Path = '/some/path/pdb'
 }
 
 // Define the workflow
 workflow {
-  def query_ch = channel.fromPath(params.query)
-  blast_search(query_ch, params.db)
-  extract_top_hits(blast_search.out, params.db).view()
+    query_ch = channel.of(params.query)
+    hits_ch = blast_search(query_ch, params.db)
+    extract_top_hits(hits_ch, params.db).view()
+}
+
+// Define the blast_search process
+process blast_search {
+    input:
+    query: Path
+    db: Path
+
+    output:
+    file('top_hits.txt')
+
+    script:
+    """
+    blastp -db $db -query $query -outfmt 6 > blast_result
+    cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
+    """
+}
+
+// Define the extract_top_hits process
+process extract_top_hits {
+    input:
+    top_hits: Path
+    db: Path
+    
+    output:
+    file('sequences.txt')
+    
+    script:
+    """
+    blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
+    """
 }
 ```
 
-The above example defines two processes. Their execution order is not determined by the `blast_search` process comes before `extract_top_hits` in the script (it could be written the other way around).
-Instead, execution order is determined by their _dependencies_ — `extract_top_hits` depends on the output of `blast_search`, so `blast_search` will be executed first, and then `extract_top_hits`.
+The above example defines two processes. Their execution order is determined not by the order in which they are called, but by their dependencies: `extract_top_hits` depends on the output of `blast_search`, so `blast_search` is executed first, then `extract_top_hits`.
 
-When the workflow is executed, it creates two processes (`blast_search` and `extract_top_hits`) that are connected by the `query_ch` channel. Each process executes a task and emits a value for each input that it receives. Whenever `blast_search` emits a value, `extract_top_hits` receives it through the `query_ch` channel.
+When the workflow is executed, it creates two processes (`blast_search` and `extract_top_hits`) that are connected by the `hits_ch` channel. Each process executes a *task* and emits a value for each input that it receives. Whenever `blast_search` emits a value, `extract_top_hits` receives it through the `hits_ch` channel.
 
 See [Dataflow][dataflow-page] to learn more.
 
 ## Execution abstraction
 
-While a process defines *what* command or script has to be executed, the *executor* determines *how* that script is run on the target system.
+Nextflow abstracts the pipeline logic from the underlying execution environment. While a process defines *what* task is executed, the *executor* determines *how* that task is executed in the target environment. You write a pipeline once and seamlessly run it on your computer, an HPC cluster, or the cloud, by selecting a different executor in your configuration.
 
-If not otherwise specified, processes are executed on the local computer. The local executor is useful for pipeline development and testing purposes, but for real world computational pipelines an HPC or cloud platform is often required.
-
-Nextflow provides an abstraction between the pipeline's functional logic and the underlying execution system. Thus, it is possible to write a pipeline once and to seamlessly run it on your computer, a grid platform, or the cloud, by defining the target execution platform in the configuration file.
-
-The following batch schedulers are supported:
-
-- [Open Grid Engine](http://gridscheduler.sourceforge.net/)
-- [Univa Grid Engine](http://www.univa.com/)
-- [Platform LSF](http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/)
-- [SLURM](https://computing.llnl.gov/linux/slurm/)
-- [Flux Framework](https://flux-framework.org/)
-- [PBS](http://www.pbsworks.com/gridengine/)
-- [Torque](http://www.adaptivecomputing.com/products/open-source/torque/)
-- [HTCondor](https://research.cs.wisc.edu/htcondor/)
-
-The following cloud platforms are supported:
-
-- [Amazon Web Services (AWS)](https://aws.amazon.com/)
-- [Microsoft Azure](https://azure.microsoft.com/)
-- [Google Cloud Platform (GCP)](https://cloud.google.com/)
-- [Kubernetes](https://kubernetes.io/)
+By default, tasks are executed on the local computer. The local executor is useful for development and testing, but real-world computational pipelines usually require an HPC or cloud environment. Nextflow supports a wide variety of HPC and cloud executors, including [SLURM](https://computing.llnl.gov/linux/slurm/), [IBM Spectrum LSF](https://www.ibm.com/products/spectrum-LSF), [AWS Batch](https://aws.amazon.com/batch/), and [Google Cloud Batch](https://cloud.google.com/batch).
 
 See [Executors][executors-page] to learn more.
 
 ## Scripting language
 
-Nextflow is a workflow language based on [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) and [Groovy](https://groovy-lang.org/). It is designed to simplify writing scalable and reproducible pipelines. In most cases, you can leverage your existing programming skills to develop Nextflow pipelines without the steep learning curve that usually comes with a new programming language.
+Nextflow is a workflow language for writing scalable and reproducible pipelines. It is based on [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) and [Groovy](https://groovy-lang.org/), but it is easy to learn for anyone coming from other scripting languages such as Python and R.
 
-See [Scripts][scripts-page] for more information about the Nextflow scripting language.
+See [Scripts][scripts-page] to learn more.
 
 ## Configuration options
 
-Pipeline configuration properties are defined in a file named `nextflow.config` in the pipeline execution directory.
-
-This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. For example:
+Pipeline configuration settings are defined in a `nextflow.config` file in the launch directory. The configuration file specifies how the pipeline is executed. It includes settings such as the executor and other process directives. For example:
 
 ```groovy
 process {
-  executor = 'sge'
-  queue = 'cn-el6'
+    executor = 'sge'
+    queue = 'cn-el6'
 }
 ```
 
 See [Configuration][configuration-page] to learn more.
 
-[channels-page]: ./workflow
 [configuration-page]: ./config
 [executors-page]: ./executor
 [dataflow-page]: ./process
