@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.9.3 - 8 Oct 2026
+- Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
+- Fix S3 directory upload skipping symbolic links (#7515) [d4f4ee6a7]
+
 3.9.2 - 17 Jun 2026
 - Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ef830e951]
 
