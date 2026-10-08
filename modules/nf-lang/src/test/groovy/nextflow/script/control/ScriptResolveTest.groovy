@@ -306,7 +306,7 @@ class ScriptResolveTest extends Specification {
                 result = foo()
 
                 emit:
-                result: Channel<String>
+                result: Value<String>
             }
             '''
         when:

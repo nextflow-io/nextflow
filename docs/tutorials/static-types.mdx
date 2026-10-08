@@ -644,6 +644,39 @@ my_out.foo.view()
 my_out.bar.view()
 ```
 
+### Use single outputs directly
+
+In a legacy workflow, a process or workflow with a single named output can be used directly or by name. For example, given a workflow with a single named emit:
+
+```nextflow
+workflow MY_WORKFLOW {
+    main:
+    ch_foo = channel.of(1, 2, 3)
+
+    emit:
+    foo = ch_foo
+}
+```
+
+A legacy workflow can use the output either way:
+
+```nextflow
+my_out = MY_WORKFLOW()
+my_out.view()
+my_out.foo.view()
+```
+
+However, a typed workflow always receives a single output directly, even if it is named. Use the output directly instead:
+
+```nextflow
+foo = MY_WORKFLOW()
+foo.view()
+```
+
+:::warning
+The type checker reports `my_out.foo` as an error when `MY_WORKFLOW` is a typed workflow. When `MY_WORKFLOW` is a legacy workflow, the error is only reported at runtime, since legacy outputs are not typed.
+:::
+
 ### Avoid `each` input qualifier
 
 The [each][process-input-each] input qualifier is not supported in typed processes. Use the [combine][operator-combine] operator to create a single tuple channel instead.
