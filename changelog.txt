@@ -1,5 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.7 - 8 Oct 2026
+- Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
+- Fix config rendering of nested closures (#7375) [47019b752]
+- Fix error checking in workflow emits (#7058) [c610e023d]
+- Fix S3 directory upload skipping symbolic links (#7515) [d4f4ee6a7]
+- Preserve `main:` label when onComplete/onError is present (#7346) [2e6029ffe]
+- Bump nf-amazon@3.9.3
+- Bump nf-azure@1.22.7
+- Bump nf-codecommit@0.5.4
+- Bump nf-google@1.27.4
+- Bump nf-k8s@1.5.5
+- Bump nf-seqera@0.21.2
+- Bump nf-tower@1.28.3
+
 26.04.6 - 9 Jul 2026
 - Bump nf-seqera@0.21.1
 - Bump nf-tower@1.28.2
