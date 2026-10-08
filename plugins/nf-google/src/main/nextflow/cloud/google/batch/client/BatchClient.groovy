@@ -30,10 +30,12 @@ import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.BatchServiceClient.ListTasksPage
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.ListTasksRequest
 import com.google.cloud.batch.v1.LocationName
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
@@ -57,6 +59,7 @@ import nextflow.util.TestOnly
 @CompileStatic
 class BatchClient {
     private final static long TASK_STATE_INVALID_TIME = 1_000
+    private final static int LIST_TASKS_PAGE_SIZE = 500
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
@@ -131,9 +134,26 @@ class BatchClient {
         return apply(()-> batchServiceClient.getJob(name))
     }
 
-    Iterable<Task> listTasks(String jobId) {
-        final parent = TaskGroupName.of(projectId, location, jobId, 'group0')
-        return apply(()-> batchServiceClient.listTasks(parent).iterateAll())
+    List<Task> listTasks(String jobId) {
+        // the page size must be set explicitly: the pager copies it from the first request into
+        // each following page request, and the API rejects a page size of 0 (i.e. unset) combined
+        // with a page token issued for its default page size of 500
+        final request = ListTasksRequest.newBuilder()
+            .setParent(TaskGroupName.of(projectId, location, jobId, 'group0').toString())
+            .setPageSize(LIST_TASKS_PAGE_SIZE)
+            .build()
+        // fetch each page in its own retry block: iterateAll() loads pages after the first one
+        // lazily, so iterating it would leave those requests without a retry, and retrying the
+        // whole listing would restart it from the first page
+        final List<Task> result = []
+        ListTasksPage page = apply(()-> batchServiceClient.listTasks(request).getPage())
+        result.addAll(page.getValues())
+        while( page.hasNextPage() ) {
+            final current = page
+            page = apply(()-> current.getNextPage())
+            result.addAll(page.getValues())
+        }
+        return result
     }
 
     Task describeTask(String jobId, String taskId) {

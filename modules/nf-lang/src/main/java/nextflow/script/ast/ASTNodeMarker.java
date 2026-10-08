@@ -60,6 +60,9 @@ public enum ASTNodeMarker {
     // denotes a nullable type annotation (ClassNode)
     NULLABLE,
 
+    // the body variable referenced by a typed output name, e.g. `x: T` (VariableExpression)
+    OUTPUT_SOURCE,
+
     // the ScriptNode that declares an entry workflow (WorkflowNode), so that
     // the params and output blocks of a pipeline can be resolved from a call
     PIPELINE_SCRIPT,

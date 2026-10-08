@@ -192,7 +192,7 @@ None of these constraints are absolute. Each of them can be circumvented by repl
 
 ## Validation
 
-The language server validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as an error before the pipeline runs.
+Nextflow validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as a type error.
 
 ## See also
 
