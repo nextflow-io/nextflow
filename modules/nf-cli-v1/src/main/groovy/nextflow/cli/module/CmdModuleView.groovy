@@ -35,7 +35,6 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.RegistryClientFactory
-import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
 
 import java.nio.file.Path
@@ -95,10 +94,6 @@ class CmdModuleView extends CmdBase {
     void run() {
         if( !args || args.size() != 1 ) {
             throw new AbortOperationException("Incorrect number of arguments")
-        }
-
-        if( ScriptModuleResolver.isLocalModule(args[0]) ) {
-            throw new AbortOperationException("Module view only supports registry modules (scope/name) -- for a local module, see its meta.yml")
         }
 
         def reference = ModuleReference.parse(args[0])

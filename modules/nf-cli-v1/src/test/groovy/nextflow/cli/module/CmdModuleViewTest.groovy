@@ -601,7 +601,7 @@ class CmdModuleViewTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('only supports registry modules')
+        e.message.contains('not a local path')
     }
 
     def 'should display minimal info when metadata is sparse'() {
