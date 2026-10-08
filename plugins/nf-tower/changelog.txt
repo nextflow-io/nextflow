@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.28.3 - 8 Oct 2026
+- Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
+
 1.28.2 - 9 Jul 2026
 - Propagate Seqera Intelligent Compute scheduler run identifier to Platform (#7228) [6c7547c5a]
 
