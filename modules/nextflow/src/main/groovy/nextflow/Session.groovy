@@ -1419,10 +1419,6 @@ class Session implements ISession {
                 if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
                 }
-                else if( name.startsWith('$') ) {
-                    name = name.substring(1)
-                    log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
-                }
 
                 if( value instanceof Map && value.container ) {
                     result[name] = resolveClosure(value.container)

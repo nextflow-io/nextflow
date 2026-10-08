@@ -545,61 +545,6 @@ class K8sDriverLauncherTest extends Specification {
         l.makeConfig( "/bar").get('plugins') == [ 'nf-cws@1.0.0' ]
     }
 
-    def 'should make config - deprecated' () {
-
-        given:
-        Map config
-        def driver = Spy(K8sDriverLauncher)
-        def NAME = 'somePipelineName'
-        def CFG_EMPTY = new ConfigObject()
-        def CFG_WITH_MOUNTS = new ConfigObject()
-        CFG_WITH_MOUNTS.k8s.volumeClaims = [ pvc: [mountPath:'/foo'] ]
-
-        when:
-        driver.@cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_EMPTY
-        config.process.executor == 'k8s'
-
-        when:
-        driver.@cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
-        config.process.executor == 'k8s'
-        config.k8s.storageClaimName == 'pvc'
-        config.k8s.storageMountPath == '/foo'
-
-        when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_EMPTY
-        config.process.executor == 'k8s'
-        config.k8s.storageClaimName == 'pvc-1'
-        config.k8s.storageMountPath == '/this'
-        config.k8s.pod == [ [volumeClaim: 'pvc-2', mountPath: '/that'] ]
-
-
-        when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
-        config.process.executor == 'k8s'
-        config.k8s.storageClaimName == 'xyz'
-        config.k8s.storageMountPath == '/this'
-        config.k8s.pod == null
-        and:
-        new K8sConfig(config.k8s).getStorageClaimName() == 'xyz'
-        new K8sConfig(config.k8s).getStorageMountPath() == '/this'
-        new K8sConfig(config.k8s).getPodOptions() == new PodOptions([
-                [volumeClaim:'xyz', mountPath: '/this']
-        ])
-
-    }
-
     def 'should return pod exit status' () {
         given:
         def POD_NAME = 'pod-x'
