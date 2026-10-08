@@ -20,8 +20,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
@@ -289,6 +291,12 @@ class Session implements ISession {
     private volatile Throwable error
 
     private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
+
+    private static final long SHUTDOWN_TIMEOUT_SECS = 60
+
+    private final CountDownLatch shutdownCompleted = new CountDownLatch(1)
+
+    private volatile Thread shutdownThread
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -875,21 +883,47 @@ class Session implements ISession {
 
     final protected void shutdown0() {
         // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
-        if( !shutdownInitiated.compareAndSet(false, true) )
+        if( !shutdownInitiated.compareAndSet(false, true) ) {
+            awaitShutdown()
             return
-        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
-        while( shutdownCallbacks.size() ) {
-            final hook = shutdownCallbacks.poll()
-            try {
-                hook.run()
-            }
-            catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
-            }
         }
+        shutdownThread = Thread.currentThread()
+        try {
+            log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
+            while( shutdownCallbacks.size() ) {
+                final hook = shutdownCallbacks.poll()
+                try {
+                    hook.run()
+                }
+                catch( Exception e ) {
+                    log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
+                }
+            }
 
-        // -- invoke observers completion handlers
-        notifyFlowComplete()
+            // -- invoke observers completion handlers
+            notifyFlowComplete()
+        }
+        finally {
+            shutdownCompleted.countDown()
+        }
+    }
+
+    /**
+     * Wait for a shutdown started by another thread (e.g. an abort raised by an operator
+     * or a task finalizer) to complete, so the caller does not let the JVM exit while the
+     * shutdown callbacks and the observers completion handlers are still running
+     */
+    private void awaitShutdown() {
+        // the thread running the shutdown may re-enter it (e.g. abort from a shutdown callback)
+        if( Thread.currentThread() == shutdownThread )
+            return
+        try {
+            if( !shutdownCompleted.await(SHUTDOWN_TIMEOUT_SECS, TimeUnit.SECONDS) )
+                log.warn "Timed out after ${SHUTDOWN_TIMEOUT_SECS}s waiting for the session shutdown to complete"
+        }
+        catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     /**

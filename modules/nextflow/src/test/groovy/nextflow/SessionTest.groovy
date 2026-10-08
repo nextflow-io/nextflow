@@ -22,6 +22,7 @@ import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
@@ -722,6 +723,46 @@ class SessionTest extends Specification {
 
         then:
         1 * observer.onFlowComplete()
+    }
+
+    def 'destroy should wait for flow complete started by abort on another thread' () {
+        given:
+        def started = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); sleep 2_000; finished.set(true) }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // an error on a non-main thread aborts the session, which runs notifyFlowComplete() there
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+        // the main thread winds the session down (ScriptRunner.shutdown) and then the JVM exits
+        session.destroy()
+        def completedWhenDestroyReturned = finished.get()
+
+        then:
+        completedWhenDestroyReturned
+
+        cleanup:
+        t1?.join()
+    }
+
+    def 'should not wait when shutdown is re-entered by the thread running it' () {
+        given:
+        def session = new Session()
+        // a shutdown callback that triggers the shutdown again on the same thread
+        session.onShutdown { session.shutdown0() }
+
+        when:
+        def start = System.currentTimeMillis()
+        session.destroy()
+
+        then:
+        System.currentTimeMillis() - start < 5_000
     }
 
     private void writeCacheEntry(CacheDB cache, String key, String workDir) {
