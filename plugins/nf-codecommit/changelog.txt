@@ -1,5 +1,8 @@
 nf-codecommit changelog
 =======================
+0.5.4 - 8 Oct 2026
+- Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
+
 0.5.3 - 17 Jun 2026
 - Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ef830e951]
 
