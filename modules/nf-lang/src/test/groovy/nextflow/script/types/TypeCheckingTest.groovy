@@ -1552,6 +1552,40 @@ class TypeCheckingTest extends Specification {
         Types.getName(type) == 'Value<Record {\n    target: String\n    message: String\n}>'
     }
 
+    @Unroll
+    def 'should recognize process output type with a null argument' () {
+        when:
+        def exp = parseExpression(
+            """\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                greeting: String
+                target: String?
+
+                output:
+                "\$greeting, \$target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( ${ARG}, null )
+            }
+            """
+        )
+        def type = getType(exp)
+        then:
+        Types.getName(type) == TYPE
+
+        where:
+        ARG                 | TYPE
+        "'foo'"             | 'Value<String>'
+        "channel.of('foo')" | 'Channel<String>'
+    }
+
     def 'should not allow a void call result to be assigned to a variable' () {
         expect:
         check(
