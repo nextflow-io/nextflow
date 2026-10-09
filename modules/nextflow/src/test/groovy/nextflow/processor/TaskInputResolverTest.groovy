@@ -188,6 +188,22 @@ class TaskInputResolverTest extends Specification {
         Files.deleteIfExists(file)
     }
 
+    def 'should normalize typed path input to staged path for agent prompts'() {
+        given:
+        def file = Files.createTempFile('test', '.txt')
+        def holder = new FileHolder(file).withName('staged.txt')
+        def resolver = new TaskInputResolver(new TaskRun(type: ScriptType.PROMPT), Mock(FilePorter.Batch), Mock(Executor))
+
+        when:
+        def result = resolver.normalizeValue(file, [(file): holder])
+        then:
+        result instanceof TaskPath
+        result.toString() == 'staged.txt'
+
+        cleanup:
+        Files.deleteIfExists(file)
+    }
+
     def 'should return single item or collection'() {
 
         setup:

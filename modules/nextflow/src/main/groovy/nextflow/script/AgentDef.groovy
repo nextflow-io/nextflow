@@ -902,7 +902,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             canonicalAgentSource(settings.model, settings.maxIterations, outputPlan.schema, skillDescriptors, selected.name,
                 toolsFingerprint(resolvedTools.toolSpecs, resolvedTools.bridge?.toolSources(), nativeToolRefs, runnerIdentity),
                 settings.baseUrl, agentConfig.apiProvider),
-            launchSpec != null ? 'script' : 'exec',
+            launchSpec != null ? 'script' : 'prompt',
             promptDef.valRefs)
     }
 

@@ -81,6 +81,10 @@ class BodyDef implements Cloneable {
                 isShell = false
                 break
 
+            case 'prompt':
+                type = ScriptType.PROMPT
+                isShell = false
+                break
             case 'script':
                 type = ScriptType.SCRIPTLET
                 isShell = false
