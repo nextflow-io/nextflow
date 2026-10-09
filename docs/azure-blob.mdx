@@ -10,7 +10,7 @@ Azure Storage provides several services for storing and accessing data in Azure.
 Nextflow uses the `az://` URI scheme to enable transparent access to files stored in Azure Blob Storage. Once Azure Storage is configured, you can use this scheme to reference files in any blob container as if they were local. For example, the path `/path/to/file.txt` in a container named `my-container` can be accessed as follows:
 
 ```groovy
-file('az://<container-path>/file.txt')
+file('az://my-container/path/to/file.txt')
 ```
 
 The storage account name must be provided in the Nextflow configuration file as shown below:
@@ -165,7 +165,7 @@ azure {
 ```
 
 :::tip
-Nextflow uses the following environment variables if storage settings are not set in the Nextflow config file:
+Nextflow uses the following environment variables if service principal settings are not set in the Nextflow config file:
 
 - `AZURE_CLIENT_ID`: your Azure service principal application ID
 - `AZURE_CLIENT_SECRET`: your Azure service principal secret

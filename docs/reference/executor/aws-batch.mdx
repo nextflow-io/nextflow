@@ -55,7 +55,9 @@ which automatically creates the required AWS infrastructure for you with minimal
 
 5. Make sure that all of your container images are published in a Docker registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
 
-6. Add the following settings to your Nextflow configuration:
+6. Configure your AWS credentials. See [Credentials][amazons3-credentials] for details.
+
+7. Add the following settings to your Nextflow configuration:
 
     - Set `process.executor` to `awsbatch`.
     - Set the AWS Batch job queue with the [queue][process-queue] directive.
@@ -317,6 +319,7 @@ There are multiple reasons why this can happen. They are mainly related to the C
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
 
+[amazons3-credentials]: ../../amazons3#credentials
 [amazons3-iam]: ../../amazons3#iam-policies
 [amazons3-page]: ../../amazons3
 [aws-custom-ami]: ../../guides/aws-custom-ami

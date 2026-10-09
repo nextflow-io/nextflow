@@ -34,25 +34,23 @@ When using the `k8s` executor, Nextflow submits each task as a Kubernetes job (o
 
 ## Getting started
 
-At least a [Persistent Volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistent-volumes) with `ReadWriteMany` access mode has to be defined in the Kubernetes cluster (check the supported storage systems at [this link](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)).
+1. Create a [Persistent Volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistent-volumes) with `ReadWriteMany` [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) in the Kubernetes cluster, and a [Persistent Volume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) to access it. Nextflow uses this volume for the work directory and pipeline outputs.
 
-Such volume needs to be accessible through a [Persistent Volume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims), which will be used by Nextflow to run the application and store the scratch data and the pipeline final result.
+    :::tip
+    When using [Wave][wave-page] and [Fusion][fusion-page], a shared file system and persistent volume claim are not needed. See [Launch with Fusion](#launch-with-fusion) for more information.
+    :::
 
-:::tip
-When using [Wave][wave-page] and [Fusion][fusion-page], a shared file system and persistent volume claim are not needed. See [Launch with Fusion](#launch-with-fusion) for more information.
-:::
+2. Make sure Nextflow can connect to the Kubernetes cluster. Nextflow uses the Kubernetes configuration file at `$HOME/.kube/config` or the file specified by the `KUBECONFIG` environment variable. You can verify the configuration with the following command:
 
-Nextflow must be launched from a computer or pod that can connect to the Kubernetes cluster.
+    ```console
+    $ kubectl cluster-info
+    Kubernetes master is running at https://your-host:6443
+    KubeDNS is running at https://your-host:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+    ```
 
-Nextflow uses the Kubernetes configuration file available at the path `$HOME/.kube/config` or the file specified by the environment variable `KUBECONFIG`.
+3. Make sure that every process in your pipeline specifies a container with the [container][process-container] directive.
 
-You can verify such configuration with the following command:
-
-```console
-$ kubectl cluster-info
-Kubernetes master is running at https://your-host:6443
-KubeDNS is running at https://your-host:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
-```
+4. Launch Nextflow from a pod in the cluster that mounts the persistent volume claim. See [Running in a pod](#running-in-a-pod) for the required configuration.
 
 ## Running in a pod
 

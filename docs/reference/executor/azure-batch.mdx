@@ -49,7 +49,7 @@ To run pipelines with Azure Batch:
 
 2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of pools, CPUs, and jobs you can create.
 
-3. Create a storage account and Azure Blob Storage in the same region as the Batch account.
+3. Create a storage account and a blob container in the same region as the Batch account.
 
 4. Add the following settings to your Nextflow configuration file:
 
@@ -124,7 +124,7 @@ Clean up the Batch pools or use auto-scaling to avoid additional charges in the 
 
 When using the `autoPoolMode` mode, Nextflow automatically creates pools of compute nodes appropriate for your pipeline.
 
-The `cpus` and `memory` directives are used to find the smallest machine type in the Azure machine family, specified by the `machineType` directive, that satisfies the requested resources. If memory is not specified, 1 GB of memory is requested per CPU. When no options are specified, it uses one compute node of type *Standard_D4a_v4*.
+The `cpus` and `memory` directives are used to find the smallest machine type in the Azure machine family, specified by the `machineType` directive, that satisfies the requested resources. When no options are specified, it uses one compute node of type *Standard_D4a_v4*.
 
 To use `autoPoolMode`, enable it in the `azure.batch` config scope:
 

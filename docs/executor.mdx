@@ -31,15 +31,15 @@ Executors fall into the following categories:
 
 - **Local**: The [local][executor-local] executor runs tasks as processes on the machine where Nextflow is launched. It is useful for development and for small pipelines.
 
-- **HPC schedulers**: Grid executors such as [SLURM][executor-slurm], [LSF][executor-lsf], and [SGE][executor-sge] submit each task as a job to a cluster resource manager. Launch the pipeline from a node that can submit jobs, typically the cluster login node, and use a work directory on a shared file system that is accessible from all compute nodes (or in object storage when using [Fusion][fusion-page]).
-
 - **Cloud**: Cloud executors submit each task to a managed compute service or container platform. Every process must specify a container.
 
   - The [AWS Batch][executor-aws-batch], [Azure Batch][executor-azure-batch], and [Google Cloud Batch][executor-google-batch] executors require the work directory to be located in object storage, such as [Amazon S3][amazons3-page], [Azure Blob Storage][azure-blob-page], or [Google Cloud Storage][google-storage-page]. See the corresponding storage page for how to configure credentials.
 
   - The [Kubernetes][executor-kubernetes] executor requires the work directory to be located in a shared persistent volume, or in object storage when using [Fusion][fusion-page].
 
-  - The [Seqera][executor-seqera] executor submits tasks to Seqera Intelligent Compute.
+  - The [Seqera][executor-seqera] executor submits tasks to Seqera Intelligent Compute, and requires the work directory to be located in Amazon S3.
+
+- **HPC schedulers**: Grid executors such as [SLURM][executor-slurm], [LSF][executor-lsf], and [SGE][executor-sge] submit each task as a job to a cluster resource manager. Launch the pipeline from a node that can submit jobs, typically the cluster login node, and use a work directory on a shared file system that is accessible from all compute nodes (or in object storage when using [Fusion][fusion-page]).
 
 ## Configuring executors
 

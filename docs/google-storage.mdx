@@ -9,7 +9,7 @@ Nextflow includes support for [Google Cloud Storage](https://cloud.google.com/st
 
 ## Cloud Storage path
 
-To access a Cloud Storage file, prefix the file path with the `gs` schema and the name of the bucket where it is stored.
+To access a Cloud Storage file, prefix the file path with the `gs://` scheme and the name of the bucket where it is stored.
 
 For example, if you need to access the file `/data/sequences.fa` stored in a bucket named `my-bucket`, that file can be accessed using the following fully qualified path:
 
@@ -43,16 +43,7 @@ See the [Application Default Credentials](https://github.com/googleapis/google-a
 
 Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify location of the Google credentials file.
 
-If you don't have it, the credentials file can be downloaded from the Google Cloud Console following these steps:
-
-- Open the [Google Cloud Console](https://console.cloud.google.com)
-- Go to APIs & Services → Credentials
-- Click on the *Create credentials* (blue) drop-down and choose *Service account key*, in the following page
-- Select an existing *Service account* or create a new one if needed
-- Select JSON as *Key type*
-- Click the *Create* button and download the JSON file giving a name of your choice e.g. `creds.json`.
-
-Then, define the following variable replacing the path in the example with the one of your credentials file just downloaded:
+To create a service account key file, see [Create and delete service account keys](https://cloud.google.com/iam/docs/keys-create-delete) in the Google Cloud documentation. Then set the following variable, replacing the path in the example with the path of your key file:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
