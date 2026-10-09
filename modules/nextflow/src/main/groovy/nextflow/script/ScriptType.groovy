@@ -26,6 +26,9 @@ enum ScriptType {
     /** the process executed a piece of native groovy code */
     GROOVY,
 
+    /** The agent executes a prompt in the JVM */
+    PROMPT,
+
     /** The process executes an external system command represented by a string */
     SCRIPTLET
 }

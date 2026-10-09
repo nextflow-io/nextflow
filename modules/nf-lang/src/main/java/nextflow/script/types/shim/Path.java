@@ -326,6 +326,6 @@ interface PathOps {
 
     Path div(Path a, String b);
 
-    void leftShift(Path a, String b);
+    Path leftShift(Path a, String b);
 
 }

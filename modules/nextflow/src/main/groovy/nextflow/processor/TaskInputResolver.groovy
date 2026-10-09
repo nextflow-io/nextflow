@@ -130,7 +130,7 @@ class TaskInputResolver {
 
     private Path normalizePath(Path value, Map<Path,FileHolder> holders) {
         return holders.containsKey(value)
-            ? new TaskPath(holders[value])
+            ? makePath(holders[value], task.type)
             : value
     }
 
@@ -319,7 +319,8 @@ class TaskInputResolver {
     }
 
     private static Path makePath( FileHolder holder, ScriptType type ) {
-        if( type == ScriptType.SCRIPTLET ) {
+        // agents refer to inputs by their staged name, since they are staged into the task work dir
+        if( type == ScriptType.SCRIPTLET || type == ScriptType.PROMPT ) {
             return new TaskPath(holder)
         }
         if( type == ScriptType.GROOVY ) {
