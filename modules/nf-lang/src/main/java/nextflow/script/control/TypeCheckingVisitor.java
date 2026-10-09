@@ -292,8 +292,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
@@ -1002,7 +1000,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         var numChannelArgs = arguments.stream().filter((arg) -> CHANNEL_TYPE.equals(getType(arg))).count();
-        var numDynamicArgs = arguments.stream().filter((arg) -> ClassHelper.isDynamicTyped(getType(arg))).count();
+        var numDynamicArgs = arguments.stream().filter((arg) -> !isNullConstant(arg) && ClassHelper.isDynamicTyped(getType(arg))).count();
         if( numChannelArgs > 1 )
             addError(label + " `" + mn.getName() + "` was called with multiple channel arguments which can lead to non-deterministic behavior -- make sure that at most one argument is a channel and that all other arguments are dataflow values", node);
 
