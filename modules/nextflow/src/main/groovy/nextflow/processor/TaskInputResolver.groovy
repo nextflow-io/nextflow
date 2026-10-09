@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Nextflow
+import nextflow.agent.AgentTaskScript
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
@@ -129,9 +130,12 @@ class TaskInputResolver {
     }
 
     private Path normalizePath(Path value, Map<Path,FileHolder> holders) {
-        return holders.containsKey(value)
-            ? makePath(holders[value], task.type)
-            : value
+        if( !holders.containsKey(value) )
+            return value
+        // agents run in-JVM but refer to inputs by their staged name in the task work dir
+        return AgentTaskScript.isAgentTask(task.config)
+            ? new TaskPath(holders[value])
+            : makePath(holders[value], task.type)
     }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath ) {
