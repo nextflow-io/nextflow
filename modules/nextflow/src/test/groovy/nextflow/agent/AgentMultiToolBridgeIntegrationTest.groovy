@@ -107,7 +107,7 @@ class AgentMultiToolBridgeIntegrationTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -171,7 +171,7 @@ class AgentMultiToolBridgeIntegrationTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -254,7 +254,7 @@ class AgentMultiToolBridgeIntegrationTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
                 prompt: "${request}"
             }
 
@@ -301,7 +301,7 @@ class AgentMultiToolBridgeIntegrationTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
                 prompt: "${request}"
             }
 

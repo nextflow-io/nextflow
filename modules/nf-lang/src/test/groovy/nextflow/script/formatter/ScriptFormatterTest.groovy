@@ -284,7 +284,7 @@ class ScriptFormatterTest extends Specification {
                 depth: Integer
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 """
