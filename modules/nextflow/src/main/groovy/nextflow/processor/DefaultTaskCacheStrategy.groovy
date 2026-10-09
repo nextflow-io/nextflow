@@ -68,7 +68,12 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
     @Override
     void resolve(TaskRun task, HashCode hash, boolean shouldTryCache, TaskResolver resolver) {
 
-        int tries = task.failCount +1
+        // a retry continues the walk after the attempt it retries, which is where a later -resume looks
+        // for it: from failCount alone it would restart at the walk's second attempt, and when that
+        // attempt had been launched past leftover work dirs (a failed attempt of an earlier run, or the
+        // dir of a task that never ran) its retry would land where no resume reaches, so every resume
+        // would re-execute it
+        int tries = Math.max(task.failCount, task.cacheTry) +1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
@@ -112,6 +117,7 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
             }
 
             // submit task for execution
+            task.cacheTry = tries
             resolver.launch( task, hash, workDir )
             break
         }
