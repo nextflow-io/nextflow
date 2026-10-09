@@ -339,6 +339,12 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
+     * The attempt number ({@code tries}) under which {@link DefaultTaskCacheStrategy} launched this task;
+     * a retry continues from the next one, as a later -resume does
+     */
+    volatile int cacheTry
+
+    /**
      * The number of times the submit of the task has been retried
      */
     volatile int submitRetries

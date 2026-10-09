@@ -190,6 +190,60 @@ class DefaultTaskCacheStrategyTest extends Specification {
         1 * resolver.launch(task, attempt(hash, 3, 2), workDir)
     }
 
+    def 'records the attempt the task is launched at'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def task = task()
+        def hash = HashCode.fromInt(100)
+        def usedDir = Files.createDirectories(root.resolve('ab').resolve('cdef'))
+        def freeDir = root.resolve('gh').resolve('ijkl')
+
+        when:
+        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
+
+        then: 'launched past an existing dir, at attempt 2'
+        1 * resolver.entry(attempt(hash, 1)) >> entryIn(usedDir, false)
+        1 * resolver.entry(attempt(hash, 2)) >> null
+        1 * resolver.workDirFor(attempt(hash, 2)) >> freeDir
+        1 * task.setCacheTry(2)
+        1 * resolver.launch(task, attempt(hash, 2), freeDir)
+    }
+
+    def 'a retry continues from the attempt its task was launched at, where a resume looks for it'() {
+        given: 'attempt 2 failed, having been launched past a leftover dir at attempt 1'
+        def resolver = Mock(TaskResolver)
+        def hash = HashCode.fromInt(100)
+        def failed = attempt(hash, 2)
+        def retry = Mock(TaskRun) { getFailCount() >> 1; getCacheTry() >> 2 }
+        def workDir = root.resolve('ab').resolve('cdef')
+
+        when: 'the retry is resolved from the failed attempt, as TaskProcessor does with task.hash'
+        new DefaultTaskCacheStrategy().resolve(retry, failed, false, resolver)
+
+        then: 'it runs at attempt 3 of the chain -- the next attempt a resume walks to -- not at H(failed, 2)'
+        1 * resolver.entry(attempt(hash, 3)) >> null
+        1 * resolver.workDirFor(attempt(hash, 3)) >> workDir
+        1 * retry.setCacheTry(3)
+        1 * resolver.launch(retry, attempt(hash, 3), workDir)
+        0 * resolver.entry(HashBuilder.defaultHasher().putBytes(failed.asBytes()).putInt(2).hash())
+    }
+
+    def 'a retry of a task launched at the first attempt hashes as before'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def hash = HashCode.fromInt(100)
+        def retry = Mock(TaskRun) { getFailCount() >> 1; getCacheTry() >> 1 }
+        def workDir = root.resolve('ab').resolve('cdef')
+
+        when:
+        new DefaultTaskCacheStrategy().resolve(retry, attempt(hash, 1), false, resolver)
+
+        then: 'H(H(hash,1),2), what a retry has always used, so existing caches still resume'
+        1 * resolver.entry(attempt(hash, 2)) >> null
+        1 * resolver.workDirFor(attempt(hash, 2)) >> workDir
+        1 * resolver.launch(retry, attempt(hash, 2), workDir)
+    }
+
     def 'fails when the work dir cannot be created'() {
         given:
         def resolver = Mock(TaskResolver)
