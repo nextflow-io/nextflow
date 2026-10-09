@@ -83,7 +83,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 contigs: Path
                 output:
-                answer: String
+                stdout()
                 prompt: "Inspect \${contigs}"
             }
 
@@ -135,7 +135,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 contigs: Path
                 output:
-                answer: String
+                stdout()
                 prompt: "Inspect \${contigs}"
             }
 
@@ -150,6 +150,41 @@ class AgentPathIoTest extends Specification {
         and: 'and one it can SEE -- not an opaque `link` entry with no size'
         listResult.contains('"name":"contigs.txt"')
         listResult.contains('"type":"file"')
+    }
+
+    def 'should let an in-JVM agent OPEN a Path field of a destructured record input'() {
+        given:
+        final input = tempDir.resolve('contigs.txt')
+        input.text = '>chr1\nACGT\n'
+        and:
+        String readResult = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            readResult = req.dispatch.call('read', '{"path":"contigs.txt"}')
+            'ok'
+        } as AgentRunner
+
+        when:
+        runWithObserver(taskProbe().probe, """
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-4o'
+                tools 'fs:read'
+                input:
+                record(id: String, contigs: Path)
+                output:
+                stdout()
+                prompt: "Inspect \${contigs} for \${id}"
+            }
+
+            workflow {
+                qa(channel.of(record(id: 's1', contigs: file('${input}'))))
+            }
+            """)
+
+        then:
+        !readResult.contains('outside sandbox')
+        readResult.contains('ACGT')
     }
 
     def 'should stage an agent Path input under the same name a process stages it'() {
@@ -179,7 +214,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 contigs: Path
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
 
@@ -241,7 +276,7 @@ class AgentPathIoTest extends Specification {
                 extras: List<Path>
                 tag: String
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
 
@@ -295,7 +330,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 sample: Sample
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
 
@@ -328,7 +363,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 contigs: Path?
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
 
@@ -356,7 +391,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 contigs: Path
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
 
@@ -394,7 +429,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 q: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 prompt: "write the report to report.md"
             }
 
@@ -415,47 +450,6 @@ class AgentPathIoTest extends Specification {
         session.error == null
     }
 
-    def 'should keep a work-dir output out of the schema the model is asked to fill'() {
-        given:
-        AgentRunnerRequest captured = null
-        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
-            captured = req
-            Path.of(req.workDir).resolve('report.md').text = 'body'
-            '{"answer":"42","score":7}'
-        } as AgentRunner
-        and:
-        final tasks = taskProbe()
-
-        when:
-        runWithObserver(tasks.probe, '''
-            nextflow.enable.types = true
-
-            agent qa {
-                model 'openai/gpt-4o'
-                input:
-                q: String
-                output:
-                answer: String
-                score: Long
-                report: Path = file('report.md')
-                prompt: "answer, and write report.md"
-            }
-
-            workflow {
-                qa(channel.of('hello'))
-            }
-            ''')
-
-        then: 'only the model-answered outputs are in the contract the model is given'
-        // if the file output reached buildWrapperSchema it would raise "unsupported type Path",
-        // so this also pins that the partition happens BEFORE the schema is built
-        captured.outputSchema.properties.keySet() == ['answer', 'score'] as Set
-        captured.outputSchema.required == ['answer', 'score']
-        and: 'the file output is still collected'
-        final task = tasks.completed[0]
-        task.outputFiles.toList() == [task.workDir.resolve('report.md')]
-    }
-
     def 'should surface an arity error when the agent writes a different file name'() {
         given: 'a runner that writes the WRONG name'
         AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
@@ -472,7 +466,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 q: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 prompt: "write the report to report.md"
             }
 
@@ -507,7 +501,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 q: String
                 output:
-                notes: Set<Path> = files('*.txt')
+                files('*.txt')
                 prompt: "write notes as .txt files"
             }
 
@@ -536,7 +530,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 q: String
                 output:
-                report: Path = file(optional: true, 'report.md')
+                file(optional: true, 'report.md')
                 prompt: "write report.md only if there is something to say"
             }
 
@@ -571,7 +565,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 q: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 prompt: "write the report to report.md"
             }
 
@@ -597,7 +591,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 q: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 prompt: "write the report to report.md"
             }
 
@@ -633,7 +627,7 @@ class AgentPathIoTest extends Specification {
                 input:
                 contigs: Path
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
 

@@ -405,7 +405,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
                 q: String
 
                 output:
-                a: String
+                stdout()
 
                 prompt:
                 """

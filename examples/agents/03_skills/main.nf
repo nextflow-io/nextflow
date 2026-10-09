@@ -22,7 +22,7 @@ agent reporter {
     input:
     request: String
     output:
-    answer: String
+    stdout()
 
     prompt:
     """

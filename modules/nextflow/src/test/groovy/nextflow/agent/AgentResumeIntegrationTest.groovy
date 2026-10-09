@@ -26,6 +26,7 @@ import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.processor.TaskStartParams
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
@@ -105,7 +106,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
     private AgentDef newAgent(Map directives = [model: 'openai/gpt-4o']) {
         final owner = Mock(BaseScript) { getBinding() >> new ScriptBinding() }
         return new AgentDef(owner, 'qa', directives as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String, { AgentOutputPlan.answer(stdout()) }),
             new PromptDef({ -> 'Q' }, 'Q'))
     }
 
@@ -120,7 +121,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         final meta = ScriptMeta.register(owner)
         meta.setScriptPath(modDir.resolve('main.nf'))
         return new AgentDef(owner, 'qa', directives as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String, { AgentOutputPlan.answer(stdout()) }),
             new PromptDef({ -> 'Q' }, 'Q'))
     }
 
@@ -268,18 +269,39 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
      * feed a TaskEntry whose context holds the output under `outName`, and assert the
      * replay binds the stored value with zero runner calls.
      */
-    private Map replay(TaskProcessor processor, String outName, Object storedValue, AtomicInteger runnerCalls, List<TaskEvent> cachedEvents) {
+    private Map replay(TaskProcessor processor, Map storedContext, String storedStdout, AtomicInteger runnerCalls, List<TaskEvent> cachedEvents) {
         processor.createStateObj()
         final task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
 
-        final ctx = new TaskContext(processor, [(outName): storedValue])
+        final ctx = new TaskContext(processor, storedContext)
         final entry = new TaskEntry(new TraceRecord(), ctx)
         final folder = Files.createTempDirectory('nxf-resume')
+        if( storedStdout != null )
+            folder.resolve(TaskRun.CMD_OUTFILE).text = storedStdout
         final hash = CacheHelper.hasher('agent-resume').hash()
 
         final hit = processor.checkCachedOutput(task, folder, hash, entry)
         final bound = processor.getConfig().getOutputs().getParams()[0].getChannel().val
         return [hit: hit, bound: bound, runnerCalls: runnerCalls.get(), cachedEvents: cachedEvents.size(), task: task]
+    }
+
+    def 'a cache hit exposes the work dir to the output closure'() {
+        given:
+        def runnerCalls = new AtomicInteger()
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> runnerCalls.incrementAndGet(); 'FRESH' } as AgentRunner
+        newSession()
+        final owner = Mock(BaseScript) { getBinding() >> new ScriptBinding() }
+        def agent = new AgentDef(owner, 'qa', [model: 'openai/gpt-4o'] as Map<String,Object>,
+            [new AgentInput('q', String)], new AgentOutput('dir', Path, { get('task').workDir }),
+            new PromptDef({ -> 'Q' }, 'Q'))
+        def processor = agent.buildAgentTask(['hello'])
+
+        when:
+        def r = replay(processor, [q: 'hello'], '{"type":"complete","output":"STORED"}', runnerCalls, [])
+
+        then:
+        r.hit == true
+        r.bound == r.task.workDir
     }
 
     // -- T7a: a cache hit replays the stored generation through collectOutputsV2,
@@ -296,7 +318,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         def processor = newAgent().buildAgentTask(['hello'])
 
         when:
-        def r = replay(processor, 'answer', 'STORED', runnerCalls, cached)
+        def r = replay(processor, [q: 'hello'], '{"type":"complete","output":"STORED"}', runnerCalls, cached)
 
         then: 'checkCachedOutput reports a hit'
         r.hit == true
@@ -352,10 +374,10 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         def body = ((Closure) processor.getTaskBody().closure.clone())
         def ctx = new TaskContext(processor, [q: 'hello'])
         body.setDelegate(ctx)
-        body.call()
+        def stdout = body.call()
 
-        then: 'the declared output landed in the context (CacheDB would persist it) and the runner ran once'
-        ctx.get('answer') == 'ANSWER'
+        then: 'the answer is returned as the task stdout and the runner ran once'
+        AgentOutputPlan.answer(stdout) == 'ANSWER'
         runnerCalls.get() == 1
         and: 'the write-side gate operand hasCacheableValues() is true for the exec agent body'
         task.hasCacheableValues() == true
@@ -393,7 +415,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         def processor = ProcessDef.createTaskProcessor(session, owner, 'plain', 'plain', 'plain', config, body)
 
         when:
-        def r = replay(processor, 'x', 'hello', new AtomicInteger(), cached)
+        def r = replay(processor, [x: 'hello'], null, new AtomicInteger(), cached)
 
         then:
         r.hit == true
@@ -409,7 +431,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         def owner = Mock(BaseScript) { getBinding() >> new ScriptBinding() }
         def refs = [new nextflow.script.TokenValRef('params.threshold')]
         def agent = new AgentDef(owner, 'qa', [model: 'openai/gpt-4o'] as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String, { AgentOutputPlan.answer(stdout()) }),
             new PromptDef({ -> 'Q' }, 'Q', refs))
 
         when:
@@ -648,7 +670,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         config.getOutputs().addParam('result', String, { getProperty('result') })
         meta.addDefinition(new ProcessDef(owner, 'uppercase', config, new BodyDef({ -> toolScript }, toolScript, 'script')))
         return new AgentDef(owner, 'qa', [model: 'openai/gpt-4o', tools: 'nf:module_run:uppercase'] as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String, { AgentOutputPlan.answer(stdout()) }),
             new PromptDef({ -> 'Q' }, 'Q'))
     }
 

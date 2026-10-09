@@ -895,7 +895,12 @@ public class ScriptAstBuilder {
             .map(this::processOutput)
             .filter(stmt -> stmt != null)
             .toList();
-        return ast( block(null, statements), ctx );
+        var result = ast( block(null, statements), ctx );
+        if( statements.size() > 1 ) {
+            collectSyntaxError(new SyntaxException("Agent should have only one output -- combine outputs into a record", result));
+            return null;
+        }
+        return result;
     }
 
     private Statement agentPrompt(AgentPromptContext ctx) {

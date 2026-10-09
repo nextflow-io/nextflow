@@ -1462,7 +1462,7 @@ class TypeCheckingTest extends Specification {
                 message: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 "say ${message}"
@@ -1484,7 +1484,7 @@ class TypeCheckingTest extends Specification {
                 message: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 "say ${message}"

@@ -147,7 +147,7 @@ class AgentCacheKeyPinTest extends Specification {
             'qc_agent',
             [instruction: INSTRUCTION, goal: GOAL] as Map<String,Object>,
             [],
-            [],
+            null,
             new PromptDef({ -> 'p' }, PROMPT_SOURCE))
     }
 

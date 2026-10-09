@@ -105,7 +105,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -168,6 +168,91 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
         Files.exists(Path.of(outAssert.outfile as String))
     }
 
+    def 'should pass the source of a staged agent input to a tool called with its relative name'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final work = dir.resolve('work'); Files.createDirectories(work)
+        final reads = dir.resolve('reads.txt'); reads.text = 'hello'
+
+        // the tool records what its staged input links to
+        dir.resolve('mod.nf').text = '''
+            process echo_tool {
+                input:
+                tuple val(meta), path(reads)
+
+                output:
+                tuple val(meta), path("out.dat"), emit: report
+
+                script:
+                """
+                readlink ${reads} > out.dat
+                """
+            }
+            '''.stripIndent()
+
+        dir.resolve('meta.yml').text = '''\
+            name: echo_tool
+            input:
+              - - name: meta
+                  type: map
+                - name: reads
+                  type: file
+            output:
+              - - name: meta
+                  type: map
+                - name: outfile
+                  type: file
+            '''.stripIndent()
+
+        final main = dir.resolve('main.nf')
+        main.text = '''
+            nextflow.enable.types = true
+
+            include { echo_tool } from './mod.nf'
+
+            agent a {
+                model 'm'
+                instruction 'i'
+                tools 'nf:module_run:echo_tool'
+
+                input:
+                reads: Path
+
+                output:
+                stdout()
+
+                prompt:
+                "Process ${reads}"
+            }
+
+            workflow {
+                a(channel.of(file(params.reads))).view { it }
+            }
+            '''.stripIndent()
+
+        and:
+        String linkTarget = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            // on a remote work dir, the stage-in symlink of the agent task is not visible
+            // to other tasks until the agent completes, so take it away from the tool
+            Files.delete(Path.of(req.workDir).resolve('reads.txt'))
+            // the model refers to the staged input by the name it sees in the work dir
+            final result = new JsonSlurper().parseText(req.dispatch.call('echo_tool', JsonOutput.toJson([meta: [id: 's1'], reads: 'reads.txt']))) as Map
+            linkTarget = Path.of((result.report as Map).outfile as String).text.trim()
+            return 'done'
+        } as AgentRunner
+
+        when:
+        final runner = new ScriptRunner([process: [executor: 'local'], workDir: work.toString(), params: [reads: reads.toString()]])
+        runner.setScript(new ScriptFile(main))
+        runner.execute()
+
+        then:
+        // the tool stages the input source, not the stage-in symlink in the agent
+        // work dir, which on a remote work dir is not visible until the agent task completes
+        linkTarget == reads.toRealPath().toString()
+    }
+
     def 'should inline a small structured json tool output to the LLM instead of a path handle'() {
         given:
         final dir = Files.createTempDirectory('test')
@@ -226,7 +311,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -334,7 +419,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -439,7 +524,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
