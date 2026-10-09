@@ -18,8 +18,10 @@ package nextflow.processor
 
 
 import nextflow.Session
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.ExecutorConfig
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -221,6 +223,145 @@ class TaskPollingMonitorTest extends Specification {
         0        | 5             | 10         | true     | true     | true             | true      // Unlimited capacity
         10       | 5             | 3          | false    | true     | false            | false     // Cannot fork
         10       | 5             | 3          | true     | false    | false            | false     // Not ready
+    }
+
+
+    def 'should create a resource account from executor config'() {
+        when:
+        def config = new ExecutorConfig([:])
+        then:
+        TaskPollingMonitor.resourceAccount(config, 'slurm').isUnlimited()
+
+        when:
+        config = new ExecutorConfig(cpus: 8, memory: '16GB')
+        def account = TaskPollingMonitor.resourceAccount(config, 'slurm')
+        then:
+        account.maxCpus == 8
+        account.maxMemory == MemoryUnit.of('16GB').toBytes()
+
+        when: 'the setting is scoped to a specific executor'
+        config = new ExecutorConfig(cpus: 8, '$slurm': [cpus: 4])
+        account = TaskPollingMonitor.resourceAccount(config, 'slurm')
+        then:
+        account.maxCpus == 4
+
+        when: 'a negative value is specified'
+        TaskPollingMonitor.resourceAccount(new ExecutorConfig(cpus: -1), 'slurm')
+        then:
+        thrown(AssertionError)
+
+        when: 'a negative memory value is specified'
+        TaskPollingMonitor.resourceAccount(new ExecutorConfig(memory: -1), 'slurm')
+        then:
+        thrown(AssertionError)
+    }
+
+    def 'should limit the submission based on executor cpus and memory'() {
+        given:
+        def session = Mock(Session)
+        def account = new ResourceAccount(8, MemoryUnit.of('16GB').toBytes())
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceAccount: account))
+        and:
+        def handler = Mock(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB')))
+            canForkProcess() >> true
+            isReady() >> true
+        }
+
+        expect:
+        monitor.canSubmit(handler)
+
+        when: 'a first task is submitted'
+        monitor.submit(handler)
+        then:
+        1 * handler.prepareLauncher()
+        1 * handler.submit()
+        account.availableCpus() == 4
+        account.availableMemory() == MemoryUnit.of('8GB').toBytes()
+
+        when: 'a second task is requested'
+        then:
+        monitor.canSubmit(handler)
+
+        when: 'the second task is submitted'
+        monitor.submit(handler)
+        then:
+        account.availableCpus() == 0
+        account.availableMemory() == 0
+
+        when: 'a third task is requested'
+        then:
+        !monitor.canSubmit(handler)
+
+        when: 'a task completes'
+        monitor.remove(handler)
+        then:
+        account.availableCpus() == 4
+        account.availableMemory() == MemoryUnit.of('8GB').toBytes()
+        monitor.canSubmit(handler)
+    }
+
+    @Unroll
+    def 'should fail when a task requirement exceeds the executor resources'() {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceAccount: new ResourceAccount(8, MemoryUnit.of('16GB').toBytes())))
+        and:
+        def handler = Mock(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: CPUS, memory: MemoryUnit.of(MEMORY)))
+            canForkProcess() >> true
+            isReady() >> true
+        }
+
+        when:
+        monitor.canSubmit(handler)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message.contains(EXPECTED)
+
+        where:
+        CPUS | MEMORY  | EXPECTED
+        10   | '8GB'   | 'Process requirement exceeds available CPUs -- req: 10; avail: 8'
+        4    | '20GB'  | 'Process requirement exceeds available memory -- req: 20 GB; avail: 16 GB'
+    }
+
+    def 'should reserve the total resources of a job array'() {
+        given:
+        def session = Mock(Session)
+        def account = new ResourceAccount(8, MemoryUnit.of('16GB').toBytes())
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceAccount: account))
+        and:
+        def children = (1..3).collect {
+            Mock(TaskHandler) {
+                getTask() >> new TaskRun(config: new TaskConfig(cpus: 2, memory: MemoryUnit.of('2GB')))
+            }
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) { getChildren() >> children }
+            canForkProcess() >> true
+            isReady() >> true
+        }
+
+        when:
+        monitor.submit(arrayHandler)
+        then:
+        1 * arrayHandler.prepareLauncher()
+        1 * arrayHandler.submit()
+        account.availableCpus() == 2
+        account.availableMemory() == MemoryUnit.of('10GB').toBytes()
+
+        when: 'one child completes'
+        monitor.remove(children[0])
+        then: 'the resources are still reserved'
+        account.availableCpus() == 2
+        account.availableMemory() == MemoryUnit.of('10GB').toBytes()
+
+        when: 'all children complete'
+        monitor.remove(children[1])
+        monitor.remove(children[2])
+        then:
+        account.availableCpus() == 8
+        account.availableMemory() == MemoryUnit.of('16GB').toBytes()
     }
 
 }
