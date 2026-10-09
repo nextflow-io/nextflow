@@ -7,7 +7,7 @@ description: Reference for the awsbatch executor, which submits tasks to AWS Bat
 
 The `awsbatch` executor runs pipeline tasks using [AWS Batch](https://aws.amazon.com/batch/), a managed compute service that runs containerized workloads in AWS. It submits each task as an AWS Batch job.
 
-To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an EC2 instance. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
+To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an EC2 instance. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
 
 Use the following process directives to control resource requests and other job characteristics:
 
@@ -19,7 +19,7 @@ Use the following process directives to control resource requests and other job 
 - [disk][process-disk] (only when using Fargate platform type for AWS Batch)
 - [memory][process-memory]
 - [queue][process-queue]
-- [resourcelabels][process-resourcelabels]
+- [resourceLabels][process-resourcelabels]
 - [time][process-time]
 
 The following [hints][process-hints] are supported:
@@ -33,9 +33,7 @@ The following [hints][process-hints] are supported:
 See [Amazon S3][amazons3-page] for how to configure AWS credentials and S3 access. See the [aws][config-aws] config scope for the full list of configuration options.
 
 :::tip
-This page describes how to manually set up and use AWS Batch with Nextflow.
-You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/aws-batch) in [Seqera Platform](https://seqera.io/platform/),
-which automatically creates the required AWS infrastructure for you with minimal intervention.
+For automated AWS infrastructure setup, consider using [Seqera Platform](https://seqera.io/platform/), which can create [AWS Batch compute environments](https://docs.seqera.io/platform/latest/compute-envs/aws-batch) for you.
 :::
 
 ## Getting started
@@ -51,7 +49,7 @@ which automatically creates the required AWS infrastructure for you with minimal
 
 3. In the AWS Console, create an S3 bucket for the work directory. You can also create separate buckets for input data and results, as needed.
 
-4. Make sure that every process in your pipeline specifies a Docker container with the [container][process-container] directive.
+4. Make sure that every process in your pipeline specifies a container with the [container][process-container] directive.
 
 5. Make sure that all of your container images are published in a Docker registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
 
@@ -63,6 +61,12 @@ which automatically creates the required AWS infrastructure for you with minimal
     - Set the AWS Batch job queue with the [queue][process-queue] directive.
     - Set `aws.region` to the region of your AWS Batch environment.
     - Set `workDir` to an S3 path, e.g., `s3://<bucket>/work`.
+
+8. Launch your pipeline with the above configuration:
+
+    ```bash
+    nextflow run <pipeline-name>
+    ```
 
 For example:
 
@@ -77,6 +81,10 @@ workDir = 's3://<bucket>/work'
 
 aws.region = 'us-east-1'
 ```
+
+:::warning
+The work directory must contain at least one subdirectory. Do not use only the bucket name, e.g., `s3://<bucket>`.
+:::
 
 :::tip
 Each process can be configured with its own queue by using the [queue][process-queue] directive in the process definition or via [Process selectors][config-process-selectors] in your Nextflow configuration.
@@ -318,6 +326,12 @@ It may happen that the pipeline execution hangs indefinitely because one of the 
 There are multiple reasons why this can happen. They are mainly related to the Compute Environment workload/configuration, the docker service or container configuration, network status, etc.
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
+
+## Fusion file system
+
+The AWS Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Amazon S3 as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations. When using Fusion, the AWS CLI is not required in the container images or the AMI.
+
+See [AWS Batch](https://docs.seqera.io/fusion/guide/aws-batch) for more information about configuring Fusion for AWS Batch.
 
 [amazons3-credentials]: ../../amazons3#authentication
 [amazons3-iam]: ../../amazons3#required-permissions

@@ -13,7 +13,7 @@ Preview feature: may change in a future release.
 
 The `seqera` executor runs pipeline tasks using [Seqera Intelligent Compute](https://seqera.io/blog/intelligent-compute-launch/). It submits each task to the Seqera scheduler service.
 
-To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
+To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
 
 Use the following process directives to control resource requests and other job characteristics:
 
@@ -70,7 +70,7 @@ process hello {
 }
 ```
 
-See the [`seqera` scope][config-seqera] for the full config reference.
+See [Amazon S3][amazons3-page] for how to configure AWS credentials and S3 access for the work directory. See the [`seqera` scope][config-seqera] for the full config reference.
 
 ## On-demand fallback cost limit
 
@@ -163,6 +163,7 @@ seqera {
 The EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) do not apply to `node` allocation. Specifying them causes an error.
 :::
 
+[amazons3-page]: ../../amazons3
 [config-seqera]: ../config/seqera
 [process-arch]: ../process/directives/arch
 [process-container]: ../process/directives/container

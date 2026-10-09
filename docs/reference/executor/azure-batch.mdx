@@ -7,9 +7,9 @@ description: Reference for the azurebatch executor, which submits tasks to Azure
 
 The `azurebatch` executor runs pipeline tasks using [Azure Batch](https://azure.microsoft.com/en-us/services/batch/), a managed compute service that runs containerized workloads in Azure. It submits each task as an Azure Batch task.
 
-To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an Azure VM. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an Azure Blob Storage container.
+To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an Azure VM. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be located in an Azure Blob Storage container.
 
-Use the following process directives to control resource requests and other job characteristics:
+Use the following process directives to control resource requests and other task characteristics:
 
 - [container][process-container]
 - [containerOptions][process-containeroptions]
@@ -18,13 +18,13 @@ Use the following process directives to control resource requests and other job 
 - [machineType][process-machinetype]
 - [memory][process-memory]
 - [queue][process-queue]
-- [resourcelabels][process-resourcelabels]
+- [resourceLabels][process-resourcelabels]
 - [time][process-time]
 
 See [Azure Blob Storage][azure-blob-page] for how to configure Azure credentials and storage access. See the [azure][config-azure] config scope for the full list of configuration options.
 
 :::tip
-For automated Azure infrastructure setup, consider using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/).
+For automated Azure infrastructure setup, consider using [Seqera Platform](https://seqera.io/platform/), which can create [Azure Batch compute environments](https://docs.seqera.io/platform/latest/compute-envs/azure-batch) for you.
 :::
 
 ## Overview
@@ -51,21 +51,24 @@ To run pipelines with Azure Batch:
 
 3. Create a storage account and a blob container in the same region as the Batch account.
 
-4. Add the following settings to your Nextflow configuration file:
+4. Make sure that every process in your pipeline specifies a container with the [container][process-container] directive.
 
-    - Add authentication and account details. See [Authentication][azure-blob-auth] for configuration examples.
+5. Configure your Azure credentials. See [Authentication][azure-blob-auth] for details.
 
-    - Set `process.executor` to `azurebatch` to make Nextflow submit tasks to Azure Batch.
+6. Add the following settings to your Nextflow configuration:
 
-    - Set `workDir` to a working directory on Azure Blob Storage. For example, `az://<blob-container>/work`, where `blob-container` is a blob container in your storage account.
+    - Set `process.executor` to `azurebatch`.
+    - Set `azure.storage.accountName` to your storage account name.
+    - Set `azure.batch.accountName` and `azure.batch.location` to your Batch account name and location.
+    - Set `workDir` to a Blob Storage path, e.g., `az://<blob-container>/work`.
 
-5. Launch your pipeline with the above configuration:
+7. Launch your pipeline with the above configuration:
 
     ```bash
     nextflow run <pipeline-name>
     ```
 
-The following example shows a minimal configuration (in addition to authentication settings):
+For example (in addition to authentication settings):
 
 ```groovy
 process {
@@ -88,8 +91,8 @@ azure {
 }
 ```
 
-:::note
-The work directory must be a subdirectory, for example, `az://container/work`, not `az://container`.
+:::warning
+The work directory must contain at least one subdirectory. Do not use only the container name, e.g., `az://<blob-container>`.
 :::
 
 :::tip
@@ -385,9 +388,7 @@ azure {
 Custom images require Microsoft Entra authentication (service principal or managed identity). The **Azure Batch account identity** must have read access to the gallery image.
 :::
 
-## Advanced features
-
-### Image verification
+## Image verification
 
 By default, Nextflow selects only images that Azure Batch has verified. Set `allowUnverifiedImages` to `true` to also allow images that Azure Batch lists but has not verified. Ignored when `virtualMachineImageId` is set.
 
@@ -403,7 +404,7 @@ azure {
 }
 ```
 
-### Virtual networks
+## Virtual networks
 
 Pools can be configured to use virtual networks to connect to your existing network infrastructure.
 
@@ -423,7 +424,7 @@ Nextflow can submit tasks to existing pools that are already attached to a virtu
 Virtual networks require Microsoft Entra authentication (service principal or managed identity).
 :::
 
-### Start tasks
+## Start tasks
 
 Start tasks are optional commands that run when a node joins the pool. They are useful for setting up the node environment or for running other commands that need to be executed when the node is created.
 
@@ -442,7 +443,7 @@ azure {
 }
 ```
 
-### Azure file shares
+## Azure file shares
 
 Azure file shares provide fully managed file shares that can be mounted to compute nodes. Files become immediately available in the file system and can be accessed as local files within processes.
 
@@ -466,6 +467,12 @@ azure {
 :::warning
 File shares must be authenticated using a storage account key. Managed identity and service principal are not supported.
 :::
+
+## Fusion file system
+
+The Azure Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Azure Blob Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations. When using Fusion, tasks can also authenticate to Azure Storage with a [managed identity](#managed-identity).
+
+See [Azure Batch](https://docs.seqera.io/fusion/guide/azure-batch) for more information about configuring Fusion for Azure Batch.
 
 [azure-blob-auth]: ../../azure-blob#authentication
 [azure-blob-page]: ../../azure-blob
