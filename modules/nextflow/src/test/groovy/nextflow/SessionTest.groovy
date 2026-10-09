@@ -805,6 +805,83 @@ class SessionTest extends Specification {
         t1?.join()
     }
 
+    def 'destroy should not interrupt an abort running on a task finalizer thread' () {
+        given:
+        def started = new CountDownLatch(1)
+        def interrupted = new AtomicBoolean(false)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() {
+                started.countDown()
+                // Thread.sleep, unlike Groovy sleep, is interrupted when the pool is shut down hard
+                try { Thread.sleep(2_000); finished.set(true) }
+                catch( InterruptedException e ) { interrupted.set(true) }
+            }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // with the default `terminate` error strategy, a task error aborts the session on a finalizer thread
+        session.taskFinalizerExecutorService().submit { session.abort(new Exception('task error')) }
+        assert started.await(5, TimeUnit.SECONDS)
+        session.destroy()
+
+        then:
+        !interrupted.get()
+        finished.get()
+    }
+
+    def 'should wait for an abort that has not initiated the shutdown yet' () {
+        given:
+        def inAbort = new CountDownLatch(1)
+        def proceed = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def session = new Session() {
+            @Override
+            String dumpNetworkStatus() { inAbort.countDown(); proceed.await(); return null }
+        }
+        session.onShutdown { finished.set(true) }
+
+        when:
+        // hold the abort on another thread after `aborted` is set, before the shutdown is initiated
+        def t1 = Thread.start { session.abort(new Exception('operator error')) }
+        assert inAbort.await(5, TimeUnit.SECONDS)
+        // the main thread fails at the same moment: abort() returns at once, as the session is already aborted
+        session.abort(new Exception('script error'))
+        def t2 = Thread.start { session.awaitShutdown() }
+        t2.join(500)
+        def waiting = t2.isAlive()
+        proceed.countDown()
+        t2.join(5_000)
+
+        then:
+        waiting
+        !t2.isAlive()
+        finished.get()
+
+        cleanup:
+        proceed.countDown()
+        t1?.join()
+    }
+
+    def 'should run the shutdown when the abort diagnostics fail' () {
+        given:
+        def session = new Session() {
+            @Override
+            String dumpNetworkStatus() { throw new IllegalStateException('cannot dump the network status') }
+        }
+        def ran = new AtomicBoolean(false)
+        session.onShutdown { ran.set(true) }
+
+        when:
+        session.abort()
+
+        then:
+        ran.get()
+    }
+
     def 'observer joining a thread that aborts the session should not stall'() {
         given:
         def session = new Session()

@@ -850,6 +850,13 @@ class Session implements ISession {
         boolean interrupted = false
         try {
             log.trace "Session > destroying"
+            // wait for a shutdown started by another thread (e.g. an abort) to complete before
+            // shutting down the thread pools: when the session is aborted they are shut down hard,
+            // which interrupts their threads, and the abort may be running on one of them
+            awaitShutdown()
+            // clear the interrupt flag, if any, so the cleanup below does not fail with
+            // ClosedByInterruptException - it is restored once the session is destroyed
+            interrupted = Thread.interrupted()
             // shutdown thread pools
             finalizePoolManager?.shutdownOrAbort(aborted,this)
             publishPoolManager?.shutdownOrAbort(aborted,this)
@@ -860,11 +867,11 @@ class Session implements ISession {
             finally {
                 releaseShutdown()
             }
-            // wait for a shutdown started by another thread (e.g. an abort) to complete
-            awaitShutdown()
-            // clear the interrupt flag, if any, so the cleanup below does not fail with
-            // ClosedByInterruptException - it is restored once the session is destroyed
-            interrupted = Thread.interrupted()
+            // wait for a shutdown started by another thread in the meantime, unless interrupted already
+            if( !interrupted ) {
+                awaitShutdown()
+                interrupted = Thread.interrupted()
+            }
             log.trace "Session > after cleanup"
             // shutdown executors
             executorFactory?.shutdown()
@@ -951,8 +958,9 @@ class Session implements ISession {
      * interrupt flag is restored and the method returns without waiting further.
      */
     void awaitShutdown() {
-        // nothing to wait for, or this thread is the one running the shutdown (e.g. re-entrant call)
-        if( !shutdownInitiated.get() || Thread.currentThread() == shutdownThread )
+        // nothing to wait for, or this thread is the one running the shutdown (e.g. re-entrant call).
+        // An abort sets `aborted` before initiating the shutdown, and always gets to release it
+        if( !(aborted || shutdownInitiated.get()) || Thread.currentThread() == shutdownThread )
             return
         try {
             if( !shutdownCompleted.await(shutdownTimeout.millis, TimeUnit.MILLISECONDS) )
@@ -966,11 +974,13 @@ class Session implements ISession {
 
     static private Duration shutdownTimeout0() {
         final value = SysEnv.get('NXF_SHUTDOWN_TIMEOUT')
-        if( value ) try {
-            return Duration.of(value)
-        }
-        catch( IllegalArgumentException e ) {
-            log.warn "Invalid value for NXF_SHUTDOWN_TIMEOUT variable: '$value' -- using default: 5m"
+        if( value ) {
+            try {
+                return Duration.of(value)
+            }
+            catch( IllegalArgumentException e ) {
+                log.warn "Invalid value for NXF_SHUTDOWN_TIMEOUT variable: '$value' -- using default: 5m"
+            }
         }
         return Duration.of('5m')
     }
@@ -1019,13 +1029,18 @@ class Session implements ISession {
         error = cause
         LoggerHelper.aborted = true
         try {
-            // log the dataflow network status
-            def status = dumpNetworkStatus()
-            if( status )
-                log.debug(status)
-            // dump threads status
-            if( log.isTraceEnabled() )
-                log.trace(SysHelper.dumpThreads())
+            // log the dataflow network status and dump the threads status. These are only
+            // diagnostics: an error must not skip the shutdown, which awaitShutdown() waits for
+            try {
+                def status = dumpNetworkStatus()
+                if( status )
+                    log.debug(status)
+                if( log.isTraceEnabled() )
+                    log.trace(SysHelper.dumpThreads())
+            }
+            catch( Throwable e ) {
+                log.debug "Unable to dump the execution status", e
+            }
             // invoke shutdown callbacks and notify the error, then release the main thread
             // waiting in awaitShutdown() - see #7780
             try {
