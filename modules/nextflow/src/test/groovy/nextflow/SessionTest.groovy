@@ -50,6 +50,7 @@ import nextflow.trace.TraceHelper
 import nextflow.trace.TraceRecord
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.TaskEvent
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
@@ -751,11 +752,72 @@ class SessionTest extends Specification {
         t1?.join()
     }
 
-    def 'should not wait when shutdown is re-entered by the thread running it' () {
+    def 'destroy should wait for the error notification of an abort on another thread' () {
+        given:
+        def started = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown() }
+            @Override
+            void onFlowError(TaskEvent event) { sleep 2_000; finished.set(true) }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+        session.destroy()
+        def completedWhenDestroyReturned = finished.get()
+
+        then:
+        completedWhenDestroyReturned
+
+        cleanup:
+        t1?.join()
+    }
+
+    def 'should wait for an abort on another thread when the main thread aborts too' () {
+        given:
+        def started = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); sleep 2_000; finished.set(true) }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        def t1 = Thread.start { session.abort(new Exception('operator error')) }
+        assert started.await(5, TimeUnit.SECONDS)
+        // what ScriptRunner does on the main thread when the script execution throws:
+        // abort() returns at once because the session is already aborted
+        session.abort(new Exception('script error'))
+        session.awaitShutdown()
+        def completedWhenAwaitReturned = finished.get()
+
+        then:
+        completedWhenAwaitReturned
+
+        cleanup:
+        t1?.join()
+    }
+
+    def 'observer joining a thread that aborts the session should not stall'() {
         given:
         def session = new Session()
-        // a shutdown callback that triggers the shutdown again on the same thread
-        session.onShutdown { session.shutdown0() }
+        // a regression would wait for the whole timeout
+        session.shutdownTimeout = Duration.of('10s')
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() {
+                // like TowerObserver, whose sender thread aborts the session when a request fails
+                Thread.start { session.abort(new Exception('send failed')) }.join()
+            }
+        }
+        session.@observersV2 = [observer]
 
         when:
         def start = System.currentTimeMillis()
@@ -763,6 +825,121 @@ class SessionTest extends Specification {
 
         then:
         System.currentTimeMillis() - start < 5_000
+    }
+
+    def 'should not block a late abort once the main thread has shut down the session' () {
+        given:
+        def session = new Session()
+        session.destroy()
+
+        when:
+        def t1 = Thread.start { session.abort(new Exception('late error')) }
+        t1.join(5_000)
+
+        then:
+        !t1.isAlive()
+    }
+
+    def 'should not wait when the thread running the shutdown awaits it' () {
+        given:
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        and:
+        def session = new Session()
+        session.shutdownTimeout = Duration.of('1s')
+
+        when:
+        // the thread that ran the shutdown would never be released if it waited for itself
+        session.abort()
+        session.awaitShutdown()
+
+        then:
+        !appender.list.any { it.formattedMessage.contains('waiting for the session shutdown') }
+
+        cleanup:
+        logger.detachAppender(appender)
+    }
+
+    def 'should give up waiting after the shutdown timeout' () {
+        given:
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        and:
+        def started = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); release.await() }
+        }
+        def session = new Session()
+        session.shutdownTimeout = Duration.of('200ms')
+        session.@observersV2 = [observer]
+
+        when:
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+        session.destroy()
+
+        then:
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('NXF_SHUTDOWN_TIMEOUT') }
+
+        cleanup:
+        release.countDown()
+        t1?.join()
+        logger.detachAppender(appender)
+    }
+
+    def 'should restore the interrupt flag when interrupted while waiting for the shutdown' () {
+        given:
+        def started = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); release.await() }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+
+        when:
+        def interrupted = new AtomicBoolean(false)
+        def t2 = Thread.start {
+            Thread.currentThread().interrupt()
+            session.destroy()
+            interrupted.set(Thread.currentThread().isInterrupted())
+        }
+        t2.join(5_000)
+
+        then:
+        !t2.isAlive()
+        interrupted.get()
+
+        cleanup:
+        release.countDown()
+        t1?.join()
+    }
+
+    @Unroll
+    def 'should resolve the shutdown timeout from NXF_SHUTDOWN_TIMEOUT=#VALUE' () {
+        given:
+        SysEnv.push(VALUE ? [NXF_SHUTDOWN_TIMEOUT: VALUE] : [:])
+
+        expect:
+        new Session().shutdownTimeout == Duration.of(EXPECTED)
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        VALUE   | EXPECTED
+        null    | '5m'
+        '30s'   | '30s'
+        'foo'   | '5m'
     }
 
     private void writeCacheEntry(CacheDB cache, String key, String workDir) {

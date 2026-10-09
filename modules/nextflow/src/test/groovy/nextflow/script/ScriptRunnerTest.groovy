@@ -17,6 +17,7 @@
 package nextflow.script
 
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.Session
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.Bolts
 import nextflow.processor.TaskProcessor
@@ -634,5 +635,22 @@ class ScriptRunnerTest extends Dsl2Spec {
         result instanceof DataflowVariable
         result.val == "echo foo"
 
+    }
+
+    def 'should wait for the session shutdown after aborting it' () {
+        given:
+        def session = Mock(Session)
+        def runner = new ScriptRunner(session)
+        def error = new Exception('script error')
+
+        when:
+        runner.abort(error)
+
+        then:
+        1 * session.abort(error)
+
+        then:
+        // another thread may have aborted the session already and be running the observers
+        1 * session.awaitShutdown()
     }
 }

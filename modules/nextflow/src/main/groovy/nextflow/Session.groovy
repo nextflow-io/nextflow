@@ -89,6 +89,7 @@ import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ClassLoaderFactory
 import nextflow.util.CustomThreadFactory
+import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -292,11 +293,25 @@ class Session implements ISession {
 
     private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
 
-    private static final long SHUTDOWN_TIMEOUT_SECS = 60
-
+    /**
+     * Released by the thread running the shutdown once it has completed, including the error
+     * notification when the shutdown is triggered by {@link #abort(java.lang.Throwable)}
+     */
     private final CountDownLatch shutdownCompleted = new CountDownLatch(1)
 
+    /**
+     * The thread running the shutdown i.e. the one that won the {@link #shutdownInitiated} race
+     */
     private volatile Thread shutdownThread
+
+    /**
+     * Max time the main thread waits for a shutdown running on another thread before letting the
+     * JVM exit. The default covers the Seqera Platform completion request, which is retried with
+     * backoff and can take minutes on a slow network, while still bounding the wait when an
+     * observer is stuck. Configurable via {@code NXF_SHUTDOWN_TIMEOUT}
+     */
+    @PackageScope
+    Duration shutdownTimeout = shutdownTimeout0()
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -832,13 +847,24 @@ class Session implements ISession {
     }
 
     void destroy() {
+        boolean interrupted = false
         try {
             log.trace "Session > destroying"
             // shutdown thread pools
             finalizePoolManager?.shutdownOrAbort(aborted,this)
             publishPoolManager?.shutdownOrAbort(aborted,this)
             // invoke shutdown callbacks
-            shutdown0()
+            try {
+                shutdown0()
+            }
+            finally {
+                releaseShutdown()
+            }
+            // wait for a shutdown started by another thread (e.g. an abort) to complete
+            awaitShutdown()
+            // clear the interrupt flag, if any, so the cleanup below does not fail with
+            // ClosedByInterruptException - it is restored once the session is destroyed
+            interrupted = Thread.interrupted()
             log.trace "Session > after cleanup"
             // shutdown executors
             executorFactory?.shutdown()
@@ -862,6 +888,8 @@ class Session implements ISession {
                 HistoryFile.DEFAULT.update(runName,isSuccess())
             }
             log.trace "Session destroyed"
+            if( interrupted )
+                Thread.currentThread().interrupt()
         }
     }
 
@@ -883,47 +911,68 @@ class Session implements ISession {
 
     final protected void shutdown0() {
         // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
-        if( !shutdownInitiated.compareAndSet(false, true) ) {
-            awaitShutdown()
+        if( !shutdownInitiated.compareAndSet(false, true) )
             return
-        }
         shutdownThread = Thread.currentThread()
-        try {
-            log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
-            while( shutdownCallbacks.size() ) {
-                final hook = shutdownCallbacks.poll()
-                try {
-                    hook.run()
-                }
-                catch( Exception e ) {
-                    log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
-                }
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
+        while( shutdownCallbacks.size() ) {
+            final hook = shutdownCallbacks.poll()
+            try {
+                hook.run()
             }
+            catch( Exception e ) {
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
+            }
+        }
 
-            // -- invoke observers completion handlers
-            notifyFlowComplete()
-        }
-        finally {
-            shutdownCompleted.countDown()
-        }
+        // -- invoke observers completion handlers
+        notifyFlowComplete()
     }
 
     /**
-     * Wait for a shutdown started by another thread (e.g. an abort raised by an operator
-     * or a task finalizer) to complete, so the caller does not let the JVM exit while the
-     * shutdown callbacks and the observers completion handlers are still running
+     * Release the threads waiting in {@link #awaitShutdown()}. Only the thread that ran the
+     * shutdown can release it
      */
-    private void awaitShutdown() {
-        // the thread running the shutdown may re-enter it (e.g. abort from a shutdown callback)
+    private void releaseShutdown() {
         if( Thread.currentThread() == shutdownThread )
+            shutdownCompleted.countDown()
+    }
+
+    /**
+     * Wait for a shutdown started by another thread to complete. The session can be aborted
+     * on any thread (e.g. by an operator, a task finalizer or an observer error), which then
+     * runs the shutdown callbacks and the observers completion handlers. The main thread must
+     * call this before letting the JVM exit, otherwise those handlers are cut off.
+     * <p>
+     * Only the main thread should wait: other threads gain nothing by blocking, and an observer
+     * completion handler may be joining the very thread that calls {@link #abort(java.lang.Throwable)}.
+     * <p>
+     * The wait is bounded by {@link #shutdownTimeout}. When the thread is interrupted, the
+     * interrupt flag is restored and the method returns without waiting further.
+     */
+    void awaitShutdown() {
+        // nothing to wait for, or this thread is the one running the shutdown (e.g. re-entrant call)
+        if( !shutdownInitiated.get() || Thread.currentThread() == shutdownThread )
             return
         try {
-            if( !shutdownCompleted.await(SHUTDOWN_TIMEOUT_SECS, TimeUnit.SECONDS) )
-                log.warn "Timed out after ${SHUTDOWN_TIMEOUT_SECS}s waiting for the session shutdown to complete"
+            if( !shutdownCompleted.await(shutdownTimeout.millis, TimeUnit.MILLISECONDS) )
+                log.warn "Timed out after ${shutdownTimeout} waiting for the session shutdown to complete -- increase it setting the variable NXF_SHUTDOWN_TIMEOUT"
         }
         catch( InterruptedException e ) {
+            log.debug "Interrupted while waiting for the session shutdown to complete"
             Thread.currentThread().interrupt()
         }
+    }
+
+    static private Duration shutdownTimeout0() {
+        final value = SysEnv.get('NXF_SHUTDOWN_TIMEOUT')
+        if( value ) try {
+            return Duration.of(value)
+        }
+        catch( IllegalArgumentException e ) {
+            log.warn "Invalid value for NXF_SHUTDOWN_TIMEOUT variable: '$value' -- using default: 5m"
+        }
+        return Duration.of('5m')
     }
 
     /**
@@ -977,9 +1026,15 @@ class Session implements ISession {
             // dump threads status
             if( log.isTraceEnabled() )
                 log.trace(SysHelper.dumpThreads())
-            // invoke shutdown callbacks
-            shutdown0()
-            notifyError(null)
+            // invoke shutdown callbacks and notify the error, then release the main thread
+            // waiting in awaitShutdown() - see #7780
+            try {
+                shutdown0()
+                notifyError(null)
+            }
+            finally {
+                releaseShutdown()
+            }
             // force termination
             logObserver?.forceTermination()
             executorFactory?.signalExecutors()
