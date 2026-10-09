@@ -30,6 +30,15 @@
 # mode additionally needs the cluster, Wave and S3 access that
 # examples/agents/k8s-local.config describes.
 #
+# k8s mode with AWS SSO: Fusion forwards only static AWS_* keys to the tasks, not an SSO
+# profile, so export the session keys before running (they expire with the SSO session):
+#
+#   eval "$(aws configure export-credentials --profile <profile> --format env)"
+#
+# The `workDir` bucket in k8s-local.config must be writable with those keys; point it at
+# one you can reach if needed. The config pins `k8s.context`, so the active kubectl
+# context is not used.
+#
 # `-r` adds the companion check: a second run, with -resume, in the SAME directory,
 # which must replay from cache rather than call the model again. It costs one extra
 # run per example rather than two, because the fresh run above IS the first half of
