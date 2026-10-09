@@ -770,6 +770,7 @@ class TypeCheckingTest extends Specification {
         "W( channel.of(record(id: 'a', n: 1)) )"    | null
         "P( channel.of([1, 2]) )"                   | "Argument with type List<Integer> is not compatible with process input of type List<String>"
         "P( channel.of(['a']) )"                    | null
+        "P( channel.empty() )"                      | null
         "g( record(xs: [1, 2]) )"                   | "Argument with type Record {\n    xs: List<Integer>\n} is not compatible with parameter of type Names"
         "g( record(xs: ['a']) )"                    | null
     }
@@ -904,7 +905,7 @@ class TypeCheckingTest extends Specification {
         where:
         SOURCE                  | ERROR
         "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
-        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map"
+        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map<K, V>"
         "true ? 42 : null"      | null
     }
 
@@ -1373,6 +1374,63 @@ class TypeCheckingTest extends Specification {
             "channel.of('a').view { v -> v.name }",
             'Unrecognized property `name` for type String'
         )
+    }
+
+    @Unroll
+    def 'should infer the element type of an empty channel' () {
+        expect:
+        check(
+            """\
+            def flag = true
+            ${SOURCE}
+            ch.map { r -> r.${FIELD} }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                                                          | FIELD     | ERROR
+        "def ch = flag ? channel.of(record(id: '1')) : channel.empty()" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = flag ? channel.empty() : channel.of(record(id: '1'))" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty().mix(channel.of(record(id: '1')))"    | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty().mix(channel.value(record(id: '1')))" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; ch = ch.mix(channel.of(record(id: '1')))"                      | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; if( flag ) { ch = channel.of(record(id: '1')) }"               | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "if( !flag ) { ch = channel.empty() } else { ch = channel.of(record(id: '1')) }"           | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "if( flag ) { ch = channel.of(record(id: '1')) } else { ch = channel.empty() }"            | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; ch = channel.of(record(id: '1')) ; ch = channel.of('a')"       | 'id'      | 'Assignment target with type Channel<Record {\n    id: String\n}> cannot be assigned to value with type Channel<String>'
+        "def ch = channel.empty() ; ch = null ; ch = 42"                                           | 'id'      | 'Assignment target with type Channel<E> cannot be assigned to value with type Integer'
+    }
+
+    @Unroll
+    def 'should infer the type of an empty value' () {
+        expect:
+        check(
+            """\
+            def flag = true
+            ${SOURCE}
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                                                  | ERROR
+        "def xs = [] ; xs.each { s -> s.length() }"             | null
+        "def m = [:] ; m.each { k, v -> v.length() }"           | null
+        "def xs = [] ; if( flag ) { xs = ['a'] } ; xs.each { s -> s.missing }"         | 'Unrecognized property `missing` for type String'
+        "def m = [:] ; if( flag ) { m = [k: 'v'] } ; m.each { k, v -> v.missing }"     | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs = ['a'] ; xs = [1]"                                          | 'Assignment target with type List<String> cannot be assigned to value with type List<Integer>'
+        "def xs = [] ; xs = xs + ['a'] ; xs.each { s -> s.missing }"                   | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs += ['a'] ; xs.each { s -> s.missing }"                       | 'Unrecognized property `missing` for type String'
+        "def e = [] ; def xs = flag ? ['a'] : e ; xs.each { s -> s.missing }"          | 'Unrecognized property `missing` for type String'
+        "def xs = [[]] ; xs = [['a']] ; xs.each { ys -> ys.each { s -> s.missing } }"  | 'Unrecognized property `missing` for type String'
+        "def xs = flag ? [['a']] : [[]] ; xs.each { ys -> ys.each { s -> s.missing } }" | 'Unrecognized property `missing` for type String'
+        "def t = flag ? tuple(1, []) : tuple(1, ['a']) ; t[1].each { s -> s.missing }" | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs = null ; xs = 'abc'"                                         | 'Assignment target with type List<E> cannot be assigned to value with type String'
+        "def xs = [] ; xs = [].first() ; xs = 'abc'"                                   | 'Assignment target with type List<E> cannot be assigned to value with type String'
+        "def ys = [] ; def zs = ys[[0]] ; zs.each { z -> z.length() }"                 | null
+        "channel.empty().mix(channel.of(1)).mix(channel.of('a'))"                      | 'Function `mix` (with multiple signatures) was called with incorrect number of arguments and/or incorrect argument types'
+        "channel.topic('x').mix(channel.of(1)).mix(channel.of('a'))"                   | null
     }
 
     @Unroll
