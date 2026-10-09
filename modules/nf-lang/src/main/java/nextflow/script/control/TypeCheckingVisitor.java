@@ -292,8 +292,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
@@ -513,10 +511,15 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         if( Types.isAssignableFrom(targetType, sourceType) ) {
-            if( target instanceof VariableExpression ve && ve.isDynamicTyped() )
+            if( target instanceof VariableExpression ve && ve.isDynamicTyped() ) {
                 target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
-            else if( target instanceof TupleExpression te )
+                // a variable declared with an empty value (e.g. `[]`) takes the type of its next assignment
+                if( hasUnboundTypeArguments(targetType) && !ClassHelper.isDynamicTyped(sourceType) && ve.getAccessedVariable() instanceof VariableExpression decl )
+                    decl.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
+            }
+            else if( target instanceof TupleExpression te ) {
                 applyTupleAssignment(te, sourceType);
+            }
         }
         else {
             addError("Assignment target with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), node);
@@ -1347,11 +1350,11 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             resultType = trueType;
             nullable = isNullable(trueType) || isNullable(falseType);
         }
-        else if( isEmptyListOrMap(falseExpr) && Types.isAssignableFrom(trueType, falseType) ) {
+        else if( hasUnboundTypeArguments(falseType) && Types.isAssignableFrom(trueType, falseType) ) {
             resultType = trueType;
             nullable = isNullable(trueType);
         }
-        else if( isEmptyListOrMap(trueExpr) && Types.isAssignableFrom(falseType, trueType) ) {
+        else if( hasUnboundTypeArguments(trueType) && Types.isAssignableFrom(falseType, trueType) ) {
             resultType = falseType;
             nullable = isNullable(falseType);
         }
@@ -1365,14 +1368,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             resultType.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
         }
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
-    }
-
-    private static boolean isEmptyListOrMap(Expression node) {
-        if( node instanceof ListExpression le )
-            return le.getExpressions().isEmpty();
-        if( node instanceof MapExpression me )
-            return me.getMapEntryExpressions().isEmpty();
-        return false;
     }
 
     private static boolean isNullable(ClassNode cn) {
@@ -1427,10 +1422,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         super.visitMapExpression(node);
 
         var entries = node.getMapEntryExpressions();
-        if( entries.isEmpty() ) {
-            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.MAP_TYPE.getPlainNodeReference());
+        if( entries.isEmpty() )
             return;
-        }
 
         // infer key and value type args, falling back to `?` when heterogeneous
         var keyType = commonType(entries.stream().map(e -> getType(e.getKeyExpression())));
