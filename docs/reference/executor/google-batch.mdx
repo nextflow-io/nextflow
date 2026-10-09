@@ -5,7 +5,7 @@ description: Reference for the google-batch executor, which submits tasks to Goo
 
 # Google Cloud Batch
 
-The `google-batch` executor runs pipeline tasks using [Google Cloud Batch](https://cloud.google.com/batch), a managed compute service that runs containerized workloads in Google Cloud. It submits each task as a Cloud Batch job.
+The `google-batch` executor runs pipeline tasks using [Google Cloud Batch](https://cloud.google.com/batch), a managed compute service that runs containerized workloads in Google Cloud. It submits each task as a Google Cloud Batch job.
 
 To enable this executor, set `process.executor = 'google-batch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or a Google Compute Engine VM. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be located in a Google Cloud Storage bucket.
 
@@ -33,15 +33,15 @@ For automated Google Cloud infrastructure setup, consider using [Seqera Platform
 
 2. Create a Google Cloud Storage bucket for the work directory.
 
-3. Make sure that every process in your pipeline specifies a container with the [container][process-container] directive. You can use a different container for each process using [process selectors][config-process-selectors].
+3. Make sure that every process in your pipeline specifies a container image with the [container][process-container] directive.
 
-4. Configure your Google Cloud credentials. See [Authentication][google-credentials] for details.
+4. Configure your Google Cloud credentials. See [Authentication][google-storage-auth] for details.
 
 5. Add the following settings to your Nextflow configuration:
 
     - Set `process.executor` to `google-batch`.
     - Set `google.project` to your Google Cloud project ID (not the project name).
-    - Set `google.location` to a location where Google Batch is available. See the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
+    - Set `google.location` to a location where Google Cloud Batch is available. See the [Google Cloud Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
     - Set `workDir` to a Cloud Storage path, e.g., `gs://<bucket>/work`.
 
 6. Launch your pipeline with the above configuration:
@@ -71,7 +71,7 @@ The work directory must contain at least one subdirectory. Do not use only the b
 :::
 
 :::tip
-Any input data **not** stored in a Google Cloud Storage bucket will automatically be transferred to the pipeline work bucket. Use this feature with caution to avoid unnecessary data transfers.
+Any input data **not** stored in a Google Cloud Storage bucket will automatically be transferred to the pipeline work directory. Use this feature with caution to avoid unnecessary data transfers.
 :::
 
 ## Required permissions
@@ -96,11 +96,9 @@ Compute resources in Google Cloud are subject to [resource quotas](https://cloud
 
 ## Machine types and disks
 
-By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current
-location and that fits the requested resources. If `memory` is not specified, 1 GB is used when selecting the machine type.
+By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current location and that fits the requested resources. If `memory` is not specified, 1 GB is used when selecting the machine type.
 
-The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute
-Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
+The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute Engine [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
 ```nextflow
 process my_task {
@@ -123,10 +121,11 @@ process other_task {
 }
 ```
 
+### Machine type patterns
+
 <AddedInVersion version="23.04" />
 
-The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
-number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
 ```nextflow
 process my_task {
@@ -141,10 +140,11 @@ process my_task {
 }
 ```
 
+### Instance templates
+
 <AddedInVersion version="24.04" />
 
-The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
-specified as `template://<instance-template>`. For example:
+The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates), specified as `template://<instance-template>`. For example:
 
 ```nextflow
 process my_task {
@@ -159,19 +159,17 @@ process my_task {
 }
 ```
 
-:::note
-Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
-config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
-:::
+Using an instance template overwrites the `accelerator` and `disk` directives, as well as the following Google Cloud Batch config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
 
 To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
 
-To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB.
-See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
+To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB. See the [Compute Engine documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
+
+### Disks
 
 <AddedInVersion version="23.10" />
 
-The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
+The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Compute Engine documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
 
 Examples:
 
@@ -188,37 +186,38 @@ disk 375.GB, type: 'local-ssd'
 
 ## Spot instances
 
-Spot Instances are supported by adding the following setting in the Nextflow config file:
+To use [Spot VMs](https://cloud.google.com/compute/docs/instances/spot), set `google.batch.spot = true` in the Nextflow configuration:
 
 ```groovy
-google {
-    batch.spot = true
-}
+google.batch.spot = true
 ```
 
-<AddedInVersion version="24.04" />
+Spot VMs can be reclaimed by Google Cloud before the task completes. Set `google.batch.maxSpotAttempts` to instruct Google Cloud Batch to automatically retry a task when its VM is reclaimed:
 
-Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
+```groovy
+google.batch.maxSpotAttempts = 3
+```
+
+The default is `0` (no automatic retry), or `5` when Fusion snapshots are enabled. The exit codes that are retried can be customized with `google.batch.autoRetryExitCodes` (default: `[50001]`).
+
+Alternatively, you can use the [errorStrategy][process-errorstrategy] directive to retry tasks that were terminated by a spot reclaim:
 
 ```groovy
 process {
-    errorStrategy = { task.exitStatus==50001 ? 'retry' : 'terminate' }
+    errorStrategy = { task.exitStatus == 50001 ? 'retry' : 'terminate' }
     maxRetries = 5
 }
 ```
 
 ## Fusion file system
 
-<AddedInVersion version="23.04" />
-
-The Google Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
+The Google Cloud Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most task I/O operations.
 
 See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more information about configuring Fusion for Google Cloud Batch.
 
 [config-google]: ../config/google
-[config-process-selectors]: ../../config#process-selectors
 [fusion-page]: ../../fusion
-[google-credentials]: ../../google-storage#authentication
+[google-storage-auth]: ../../google-storage#authentication
 [google-storage-page]: ../../google-storage
 [google-storage-permissions]: ../../google-storage#required-permissions
 [process-accelerator]: ../process/directives/accelerator
@@ -226,6 +225,7 @@ See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more
 [process-containeroptions]: ../process/directives/container-options
 [process-cpus]: ../process/directives/cpus
 [process-disk]: ../process/directives/disk
+[process-errorstrategy]: ../process/directives/error-strategy
 [process-machinetype]: ../process/directives/machine-type
 [process-memory]: ../process/directives/memory
 [process-resourcelabels]: ../process/directives/resource-labels

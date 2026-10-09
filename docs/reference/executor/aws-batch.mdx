@@ -12,11 +12,11 @@ To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.co
 Use the following process directives to control resource requests and other job characteristics:
 
 - [accelerator][process-accelerator]
-- [arch][process-arch] (only when using Fargate platform type for AWS Batch)
+- [arch][process-arch] (Fargate only)
 - [container][process-container]
 - [containerOptions][process-containeroptions]
 - [cpus][process-cpus]
-- [disk][process-disk] (only when using Fargate platform type for AWS Batch)
+- [disk][process-disk] (Fargate only)
 - [memory][process-memory]
 - [queue][process-queue]
 - [resourceLabels][process-resourcelabels]
@@ -38,22 +38,22 @@ For automated AWS infrastructure setup, consider using [Seqera Platform](https:/
 
 ## Getting started
 
-1. In the AWS Console, navigate to **AWS Batch** and create a [Compute environment](http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html) (CE).
+1. In the AWS Console, navigate to **AWS Batch** and create a [Compute environment](https://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html) (CE).
 
-   1. If you are using a [custom AMI][aws-custom-ami], the AMI ID must be specified in the CE configuration
-   2. Make sure to select an AMI (either custom or existing) with Docker installed
-   3. Make sure the policy `AmazonS3FullAccess` (granting access to S3 buckets) is attached to the instance role configured for the CE
-   4. If you plan to use Docker images from Amazon ECS container, make sure the `AmazonEC2ContainerServiceforEC2Role` policy is also attached to the instance role
+   1. If you are using a [custom AMI][aws-custom-ami], the AMI ID must be specified in the CE configuration.
+   2. Make sure to select an AMI (either custom or existing) with Docker installed.
+   3. Make sure the policy `AmazonS3FullAccess` (granting access to S3 buckets) is attached to the instance role configured for the CE.
+   4. If you plan to use Docker images from Amazon ECS container, make sure the `AmazonEC2ContainerServiceforEC2Role` policy is also attached to the instance role.
 
 2. In the AWS Console, create (at least) one [Job Queue](https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html) and bind it to the Compute environment.
 
 3. In the AWS Console, create an S3 bucket for the work directory. You can also create separate buckets for input data and results, as needed.
 
-4. Make sure that every process in your pipeline specifies a container with the [container][process-container] directive.
+4. Make sure that every process in your pipeline specifies a container image with the [container][process-container] directive.
 
-5. Make sure that all of your container images are published in a Docker registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
+5. Make sure that all of your container images are published in a container registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
 
-6. Configure your AWS credentials. See [Authentication][amazons3-credentials] for details.
+6. Configure your AWS credentials. See [Authentication][amazons3-auth] for details.
 
 7. Add the following settings to your Nextflow configuration:
 
@@ -73,7 +73,7 @@ For example:
 ```groovy
 process {
     executor = 'awsbatch'
-    queue = 'my-batch-queue'
+    queue = '<queue-name>'
     container = 'quay.io/biocontainers/salmon'
 }
 
@@ -87,14 +87,18 @@ The work directory must contain at least one subdirectory. Do not use only the b
 :::
 
 :::tip
+Any input data **not** stored in an S3 bucket will automatically be transferred to the pipeline work directory. Use this feature with caution to avoid unnecessary data transfers.
+:::
+
+:::tip
 Each process can be configured with its own queue by using the [queue][process-queue] directive in the process definition or via [Process selectors][config-process-selectors] in your Nextflow configuration.
 :::
 
 ## Required permissions
 
-[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
+[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. To access certain AWS services, the proper policies must be attached to the identity associated with the AWS credentials.
 
-The following permissions are required to use AWS Batch, in addition to the S3 permissions described in [Amazon S3][amazons3-iam]:
+The following permissions are required to use AWS Batch, in addition to the S3 permissions described in [Amazon S3][amazons3-permissions]:
 
 - To submit and manage Batch jobs:
 
@@ -177,11 +181,11 @@ The grandparent directory of the `aws` tool will be mounted into the container a
 
 ## Container options
 
-The [containerOptions][process-containeroptions] directive can be used to control the properties of the container execution associated with each Batch job.
+Use the [containerOptions][process-containeroptions] directive to control the properties of the container execution associated with each Batch job.
 
 The following container options are currently supported:
 
-```
+```text
 -e, --env string
     Set environment variables (format: <name> or <name>=<value>)
 --init
@@ -204,9 +208,9 @@ The following container options are currently supported:
     Ulimit options (format: <type>=<soft limit>[:<hard limit>])
 ```
 
-Container options may be passed in long form (e.g `--option value`) or short form (e.g. `-o value`) where available.
+Container options may be passed in long form (e.g., `--option value`) or short form (e.g., `-o value`) where available.
 
-Few examples:
+For example:
 
 ```groovy
 process.containerOptions = '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
@@ -224,11 +228,11 @@ Check the [AWS documentation](https://docs.aws.amazon.com/batch/latest/APIRefere
 
 ## Custom job definition
 
-Nextflow automatically creates the Batch [Job definitions](http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html) needed to execute tasks in your pipeline, so you don't need to define them beforehand.
+Nextflow automatically creates the Batch [job definitions](https://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html) needed to execute tasks in your pipeline, so you don't need to define them beforehand.
 
-However, sometimes you may still need to specify a custom **Job Definition** to fine tune the configuration of a specific job, for example to define custom mount paths.
+However, sometimes you may still need to specify a custom job definition to fine tune the configuration of a specific job, for example to define custom mount paths.
 
-To do that, first create a **Job Definition** in the AWS Console (or by other means). Note the name of the Job definition you created. You can then associate a process execution with this Job definition by using the [container][process-container] directive and specifying, in place of the container image name, the Job definition name prefixed by `job-definition://`, as shown below:
+To do that, first create a job definition in the AWS Console (or by other means). Note the name of the job definition you created. You can then associate a process execution with this job definition by using the [container][process-container] directive and specifying, in place of the container image name, the job definition name prefixed by `job-definition://`, as shown below:
 
 ```groovy
 process.container = 'job-definition://your-job-definition-name'
@@ -236,7 +240,7 @@ process.container = 'job-definition://your-job-definition-name'
 
 ## Volume mounts
 
-User provided container volume mounts can be provided as shown below:
+Use the `aws.batch.volumes` config option to mount host paths into task containers:
 
 ```groovy
 aws {
@@ -266,8 +270,7 @@ The above snippet defines two volume mounts for the jobs executed in your pipeli
 
 Nextflow provides experimental support for the execution of [AWS Batch jobs with Fargate resources](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html).
 
-AWS Fargate is a technology that you can use with AWS Batch to run containers without having to manage servers or  EC2 instances.
-With AWS Fargate, you no longer have to provision, configure, or scale clusters of virtual machines to run containers.
+AWS Fargate is a technology that you can use with AWS Batch to run containers without having to manage servers or EC2 instances. With AWS Fargate, you no longer have to provision, configure, or scale clusters of virtual machines to run containers.
 
 To enable the use of AWS Fargate in your pipeline use the following settings in your `nextflow.config` file:
 
@@ -276,31 +279,48 @@ process.executor = 'awsbatch'
 process.queue = '<aws-batch-queue>'
 aws.region = '<aws-region>'
 aws.batch.platformType = 'fargate'
-aws.batch.jobRole = 'JOB ROLE ARN'
-aws.batch.executionRole = 'EXECUTION ROLE ARN'
+aws.batch.jobRole = '<job-role-arn>'
+aws.batch.executionRole = '<execution-role-arn>'
 wave.enabled = true
 ```
 
-See the AWS documentation for details how to create the required AWS Batch queue for Fargate, the Batch Job Role
-and the Batch Execution Role.
+See the AWS documentation for details how to create the required AWS Batch queue for Fargate, the Batch Job Role and the Batch Execution Role.
 
 :::note
-Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
-To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See [Wave][wave-page] for more details.
+Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs. To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See [Wave][wave-page] for more details.
 :::
+
+## Spot instances
+
+To use [Spot Instances](https://aws.amazon.com/ec2/spot/), create an AWS Batch compute environment with the `SPOT` provisioning model and bind it to the job queue used by your pipeline. No additional Nextflow configuration is required.
+
+Spot Instances can be reclaimed by AWS before the job completes. Set `aws.batch.maxSpotAttempts` to instruct AWS Batch to automatically retry a job when its instance is reclaimed:
+
+```groovy
+aws.batch.maxSpotAttempts = 3
+```
+
+The default is `0` (no automatic retry), or `5` when Fusion snapshots are enabled. Jobs that fail for other reasons are not retried by AWS Batch and are handled by the Nextflow [errorStrategy][process-errorstrategy] directive.
+
+## Fusion file system
+
+The AWS Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Amazon S3 as a virtual distributed file system, optimizing the data transfer and speeding up most task I/O operations. When using Fusion, the AWS CLI is not required in the container images or the AMI.
+
+See [AWS Batch](https://docs.seqera.io/fusion/guide/aws-batch) for more information about configuring Fusion for AWS Batch.
 
 ## Troubleshooting
 
-**Problem**: The Pipeline execution terminates with an AWS error message similar to the one shown below:
+**Problem**: The pipeline execution terminates with an AWS error message similar to the one shown below:
 
-```
+```text
 JobQueue <queue> not found
 ```
-Make sure you have defined a AWS region in the Nextflow configuration file and it matches the region in which your Batch environment has been created.
+
+Make sure you have defined an AWS region in the Nextflow configuration file and it matches the region in which your Batch environment has been created.
 
 **Problem**: A process execution fails reporting the following error message:
 
-```
+```text
 Process <task> terminated for an unknown reason -- Likely it has been terminated by the external system
 ```
 
@@ -316,7 +336,7 @@ Other places to check for error information:
 
 **Problem**: A process execution is stalled in the `RUNNABLE` status and the pipeline output is similar to the one below:
 
-```
+```text
 executor >  awsbatch (1)
 process > <process> (1) [  0%] 0 of ....
 ```
@@ -327,15 +347,9 @@ There are multiple reasons why this can happen. They are mainly related to the C
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
 
-## Fusion file system
-
-The AWS Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Amazon S3 as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations. When using Fusion, the AWS CLI is not required in the container images or the AMI.
-
-See [AWS Batch](https://docs.seqera.io/fusion/guide/aws-batch) for more information about configuring Fusion for AWS Batch.
-
-[amazons3-credentials]: ../../amazons3#authentication
-[amazons3-iam]: ../../amazons3#required-permissions
+[amazons3-auth]: ../../amazons3#authentication
 [amazons3-page]: ../../amazons3
+[amazons3-permissions]: ../../amazons3#required-permissions
 [aws-custom-ami]: ../../guides/aws-custom-ami
 [config-aws]: ../config/aws
 [config-process-selectors]: ../../config#process-selectors
@@ -346,6 +360,7 @@ See [AWS Batch](https://docs.seqera.io/fusion/guide/aws-batch) for more informat
 [process-containeroptions]: ../process/directives/container-options
 [process-cpus]: ../process/directives/cpus
 [process-disk]: ../process/directives/disk
+[process-errorstrategy]: ../process/directives/error-strategy
 [process-hints]: ../process/directives/hints
 [process-memory]: ../process/directives/memory
 [process-queue]: ../process/directives/queue
