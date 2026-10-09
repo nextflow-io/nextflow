@@ -278,7 +278,7 @@ public class ProcessToGroovyVisitorV2 {
      */
     private static ClassNode outputType(Expression output) {
         var type = getType(output);
-        if( type == null || type.isGenericsPlaceHolder() )
+        if( type == null )
             return ClassHelper.dynamicType();
         return type.getPlainNodeReference();
     }

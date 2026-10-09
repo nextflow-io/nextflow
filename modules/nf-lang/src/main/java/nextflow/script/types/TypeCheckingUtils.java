@@ -948,9 +948,9 @@ public class TypeCheckingUtils {
         var gts = type.getGenericsTypes();
         if( gts == null || gts.length != 1 )
             return ClassHelper.dynamicType();
-        // a wildcard element type is unknown, not Object -- `Channel<?>` should
-        // disable downstream checking the same way a raw `Channel` does
-        if( gts[0].isWildcard() )
+        // a wildcard or unbound element type is unknown, not Object -- `Channel<?>`
+        // and `channel.empty()` should disable downstream checking like a raw `Channel`
+        if( gts[0].isWildcard() || gts[0].isPlaceholder() )
             return ClassHelper.dynamicType();
         return gts[0].getType();
     }

@@ -739,6 +739,7 @@ class TypeCheckingTest extends Specification {
         "W( channel.of(record(id: 'a', n: 1)) )"    | null
         "P( channel.of([1, 2]) )"                   | "Argument with type List<Integer> is not compatible with process input of type List<String>"
         "P( channel.of(['a']) )"                    | null
+        "P( channel.empty() )"                      | null
         "g( record(xs: [1, 2]) )"                   | "Argument with type Record {\n    xs: List<Integer>\n} is not compatible with parameter of type Names"
         "g( record(xs: ['a']) )"                    | null
     }
