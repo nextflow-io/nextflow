@@ -1,6 +1,6 @@
 ---
 title: Executors
-description: Reference for the Nextflow executors, which run pipeline tasks on local machines, HPC schedulers, and cloud platforms.
+description: Use executors to run pipeline tasks on local machines, HPC schedulers, and cloud platforms.
 ---
 
 # Executors
@@ -9,59 +9,126 @@ In Nextflow, the *executor* is the component that runs the tasks submitted by a 
 
 The executor provides an abstraction between the pipeline definition (*what it computes*) and the underlying execution system (*how it runs*). You can write a pipeline once and run it on your local machine, a high-performance computing (HPC) cluster, or in the cloud by changing the executor in the Nextflow configuration.
 
-Use [`process.executor`][process-executor] to set the executor, e.g. `process.executor = 'slurm'`. Nextflow uses the `local` executor by default.
+This page explains the key concepts and common usage patterns for executors. For the complete list of executors and their supported directives, see [Executor reference][executor-reference].
 
-## Local
+## Selecting an executor
 
-| Page | Name | Description |
-| ---- | ---- | ----------- |
-| [Local][executor-local] | `local` | Runs tasks as operating system processes on the local machine. |
+Use [`process.executor`][process-executor] to set the executor. Nextflow uses the `local` executor by default.
 
-## Cloud
+```groovy
+process.executor = 'slurm'
+```
 
-| Page | Name | Description |
-| ---- | ---- | ----------- |
-| [AWS Batch][executor-aws-batch] | `awsbatch` | Submits tasks to AWS Batch. |
-| [Azure Batch][executor-azure-batch] | `azurebatch` | Submits tasks to Azure Batch. |
-| [Google Cloud Batch][executor-google-batch] | `google-batch` | Submits tasks to Google Cloud Batch. |
-| [Kubernetes][executor-kubernetes] | `k8s` | Submits tasks to a Kubernetes cluster. |
-| [Seqera][executor-seqera] | `seqera` | Submits tasks to Seqera Intelligent Compute. |
+The executor is a process directive, so you can use [process selectors][config-process-selectors] to run different processes with different executors.
 
-## HPC schedulers
+## How tasks are executed
 
-| Page | Name | Description |
-| ---- | ---- | ----------- |
-| [Bridge][executor-bridge] | `bridge` | Submits tasks through the Bridge abstraction layer. |
-| [Flux][executor-flux] | `flux` | Submits tasks to the Flux Framework. |
-| [HTCondor][executor-htcondor] | `condor` | Submits tasks to the HTCondor resource manager. |
-| [HyperQueue][executor-hyperqueue] | `hq` | Submits tasks to the HyperQueue job scheduler. |
-| [LSF][executor-lsf] | `lsf` | Submits tasks to a Platform LSF cluster. |
-| [Moab][executor-moab] | `moab` | Submits tasks to the Moab resource manager. |
-| [NQSII][executor-nqsii] | `nqsii` | Submits tasks to the NQSII resource manager. |
-| [OAR][executor-oar] | `oar` | Submits tasks to the OAR resource manager. |
-| [PBS/Torque][executor-pbs] | `pbs` | Submits tasks to a PBS/Torque scheduler. |
-| [PBS Pro][executor-pbspro] | `pbspro` | Submits tasks to the PBS Pro resource manager. |
-| [SGE][executor-sge] | `sge` | Submits tasks to an SGE cluster or compatible platform. |
-| [SLURM][executor-slurm] | `slurm` | Submits tasks to the SLURM resource manager. |
-| [TCS][executor-tcs] | `tcs` | Submits tasks to a Fujitsu TCS cluster. |
+For each task, Nextflow creates a task directory in the work directory and writes the task script (`.command.sh`) along with a wrapper script (`.command.run`) that stages the input files, runs the task script, and saves the outputs and exit status. The executor submits the wrapper script to the underlying execution system, and Nextflow periodically polls the status of each submitted task (see `executor.pollInterval`) until it completes.
 
-[executor-aws-batch]: ./executor/aws-batch
-[executor-azure-batch]: ./executor/azure-batch
-[executor-bridge]: ./executor/bridge
-[executor-flux]: ./executor/flux
-[executor-google-batch]: ./executor/google-batch
-[executor-htcondor]: ./executor/htcondor
-[executor-hyperqueue]: ./executor/hyperqueue
-[executor-kubernetes]: ./executor/kubernetes
-[executor-local]: ./executor/local
-[executor-lsf]: ./executor/lsf
-[executor-moab]: ./executor/moab
-[executor-nqsii]: ./executor/nqsii
-[executor-oar]: ./executor/oar
-[executor-pbs]: ./executor/pbs
-[executor-pbspro]: ./executor/pbspro
-[executor-seqera]: ./executor/seqera
-[executor-sge]: ./executor/sge
-[executor-slurm]: ./executor/slurm
-[executor-tcs]: ./executor/tcs
+## Types of executors
+
+Executors fall into the following categories:
+
+- **Local**: The [local][executor-local] executor runs tasks as processes on the machine where Nextflow is launched. It is useful for development and for small pipelines.
+
+- **Cloud**: Cloud executors submit each task to a managed compute service or container platform. Every process must specify a container.
+
+  - The [AWS Batch][executor-aws-batch], [Azure Batch][executor-azure-batch], and [Google Cloud Batch][executor-google-batch] executors require the work directory to be located in object storage, such as [Amazon S3][amazons3-page], [Azure Blob Storage][azure-blob-page], or [Google Cloud Storage][google-storage-page]. See the corresponding storage page for how to configure credentials.
+
+  - The [Kubernetes][executor-kubernetes] executor requires the work directory to be located in a shared persistent volume, or in object storage when using [Fusion][fusion-page].
+
+  - The [Seqera][executor-seqera] executor submits tasks to Seqera Intelligent Compute, and requires the work directory to be located in Amazon S3.
+
+- **HPC schedulers**: Grid executors such as [SLURM][executor-slurm], [LSF][executor-lsf], and [SGE][executor-sge] submit each task as a job to a cluster resource manager. Launch the pipeline from a node that can submit jobs, typically the cluster login node, and use a work directory on a shared file system that is accessible from all compute nodes (or in object storage when using [Fusion][fusion-page]).
+
+## Configuring executors
+
+Use the [`executor`][config-executor] config scope to control executor behavior, such as how many tasks can be queued in parallel and how often to poll for task status:
+
+```groovy
+executor {
+    queueSize = 100
+    pollInterval = '30sec'
+}
+```
+
+Executor config settings can be applied to specific executors by prefixing the executor name with `$` and using it as special scope. For example:
+
+```groovy
+executor {
+    $sge {
+        queueSize = 100
+        pollInterval = '30sec'
+    }
+
+    $local {
+        cpus = 8
+        memory = '32 GB'
+    }
+}
+```
+
+Settings that are not prefixed with an executor name apply to all executors. Some settings have different default values for each executor. See [`executor`][config-executor] for the list of available settings and their defaults.
+
+Many executors also have a dedicated config scope for platform-specific settings, such as [`aws`][config-aws], [`azure`][config-azure], [`google`][config-google], and [`k8s`][config-k8s].
+
+## Hybrid workloads
+
+Nextflow can use multiple executors in the same pipeline. This feature enables hybrid workloads, in which some tasks run locally or on an HPC cluster, and other tasks are offloaded to the cloud.
+
+Use [process selectors][config-process-selectors] to apply a cloud executor to the processes that you want to offload. For example:
+
+```groovy
+process {
+    withLabel: bigTask {
+        executor = 'awsbatch'
+        queue = 'my-batch-queue'
+        container = 'my/image:tag'
+    }
+}
+
+aws.region = 'eu-west-1'
+```
+
+With the above configuration, processes with the `bigTask` [label][process-label] run on AWS Batch, while the remaining processes run with the local executor.
+
+Use the [`-bucket-dir`][cli-run] option (or the [`bucketDir`][config-unscoped] config option) to specify a remote work directory for the cloud tasks and, optionally, `-work-dir` to specify a local work directory for the local tasks:
+
+```bash
+nextflow run <pipeline> -bucket-dir s3://<bucket>/work
+```
+
+Nextflow automatically transfers input and output files between the local and remote work directories.
+
+:::warning
+The remote work directory must contain at least one subdirectory (e.g., `s3://<bucket>/work` rather than `s3://<bucket>`).
+:::
+
+:::note
+When using [Fusion][fusion-page], all tasks use the remote work directory, so `bucketDir` is not needed. Specify `workDir` instead.
+:::
+
+[amazons3-page]: ./amazons3
+[azure-blob-page]: ./azure-blob
+[cli-run]: ./reference/cli/run
+[config-aws]: ./reference/config/aws
+[config-azure]: ./reference/config/azure
+[config-executor]: ./reference/config/executor
+[config-google]: ./reference/config/google
+[config-k8s]: ./reference/config/k8s
+[config-process-selectors]: ./config#process-selectors
+[config-unscoped]: ./reference/config/unscoped
+[executor-aws-batch]: ./reference/executor/aws-batch
+[executor-azure-batch]: ./reference/executor/azure-batch
+[executor-kubernetes]: ./reference/executor/kubernetes
+[executor-google-batch]: ./reference/executor/google-batch
+[executor-local]: ./reference/executor/local
+[executor-lsf]: ./reference/executor/lsf
+[executor-reference]: ./reference/executor
+[executor-seqera]: ./reference/executor/seqera
+[executor-sge]: ./reference/executor/sge
+[executor-slurm]: ./reference/executor/slurm
+[fusion-page]: ./fusion
+[google-storage-page]: ./google-storage
 [process-executor]: ./reference/process/directives/executor
+[process-label]: ./reference/process/directives/label

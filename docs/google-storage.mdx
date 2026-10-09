@@ -1,0 +1,76 @@
+---
+title: Google Cloud Storage
+description: Use Google Cloud Storage buckets as a file system in Nextflow pipelines.
+---
+
+# Google Cloud Storage
+
+Nextflow includes support for [Google Cloud Storage](https://cloud.google.com/storage). Files stored in a Cloud Storage bucket can be accessed transparently in your pipeline script like any other file in the local file system.
+
+## Cloud Storage paths
+
+To access a Cloud Storage file, prefix the file path with the `gs://` scheme and the name of the bucket where it is stored.
+
+For example, if you need to access the file `/data/sequences.fa` stored in a bucket named `my-bucket`, that file can be accessed using the following fully qualified path:
+
+```
+gs://my-bucket/data/sequences.fa
+```
+
+The usual file operations can be applied to a path handle with the above notation. For example, the content of a Cloud Storage file can be printed as follows:
+
+```nextflow
+println file('gs://my-bucket/data/sequences.fa').text
+```
+
+See [Working with files][working-with-files] and the [Path][stdlib-types-path] reference to learn more about available file operations.
+
+## Authentication
+
+Credentials for Google Cloud services, such as Cloud Storage and Cloud Batch, are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
+
+The most common case will be to pick up your end-user Google credentials from your workstation. You can create these by running the following command and running through the authentication flow:
+
+```bash
+gcloud auth application-default login
+```
+
+This will write a credential file to your gcloud configuration directory that will be used for any tool you run on your workstation that picks up default credentials.
+
+The next most common case would be when running on a Compute Engine VM. In this case, Application Default Credentials will pick up the Compute Engine Service Account credentials for that VM.
+
+Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify the location of a service account key file. To create a key file, see [Create and delete service account keys](https://cloud.google.com/iam/docs/keys-create-delete) in the Google Cloud documentation. Then set the following variable, replacing the path in the example with the path of your key file:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
+```
+
+When using a key file, Nextflow uses the project ID in the key file as the default value of `google.project`. If `google.project` is also specified in the Nextflow configuration, it must match the project ID in the key file.
+
+See the [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http) documentation for how to enable other use cases.
+
+## Required permissions
+
+The identity associated with your credentials must be able to read and write objects in the buckets used by the pipeline, such as the work directory, input data, and published outputs. The [Storage Object User](https://cloud.google.com/storage/docs/access-control/iam-roles) role (`roles/storage.objectUser`) grants the required permissions. For buckets that are only read by the pipeline, the Storage Object Viewer role (`roles/storage.objectViewer`) is sufficient.
+
+See [Google Cloud Batch][google-batch-executor] for the additional roles required by the Google Batch executor.
+
+## Requester pays buckets
+
+To access data in [requester pays](https://cloud.google.com/storage/docs/requester-pays) buckets, specify the project to be billed and enable requester pays in the Nextflow configuration:
+
+```groovy
+google {
+    project = '<project-id>'
+    enableRequesterPaysBuckets = true
+}
+```
+
+## Advanced configuration
+
+See the [google][config-google] config scope for all available options.
+
+[config-google]: ./reference/config/google
+[google-batch-executor]: ./reference/executor/google-batch#required-permissions
+[stdlib-types-path]: ./reference/stdlib-types/path
+[working-with-files]: ./working-with-files
