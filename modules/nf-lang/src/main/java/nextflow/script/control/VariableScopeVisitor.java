@@ -61,7 +61,6 @@ import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
-import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
@@ -329,15 +328,24 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
-                // a bare name refers to a variable assigned in the body -- `x: T` lowers
-                // to the same code as `x = x`. A typed name is resolved here rather than
-                // visited because setting its accessed variable would replace the declared
-                // output type with the variable's own. An agent has no body and the model
-                // answers a typed name, so there it is only a declaration.
-                if( ClassHelper.isDynamicTyped(ve.getOriginType()) )
+                // a bare name is a named output that implies `x = x`, so it is
+                // visited as a variable reference and takes the inferred type
+                if( ClassHelper.isDynamicTyped(ve.getOriginType()) ) {
                     visit(ve);
-                else if( hasBody && vsc.findVariableDeclaration(ve.getName(), ve) == null )
-                    vsc.addError("`" + ve.getName() + "` is not defined", ve);
+                }
+                // a name-type pair is implicitly assigned to a variable in the body,
+                // e.g. `x: T` implies `x: T = x`. it is resolved here rather than
+                // visited because the accessed variable would override the declared
+                // type, so the variable is saved for the type checker instead.
+                // agent outputs are not defined in the agent body, so there is no
+                // assignment to resolve
+                else if( hasBody ) {
+                    var variable = vsc.findVariableDeclaration(ve.getName(), ve);
+                    if( variable != null )
+                        ve.putNodeMetaData(ASTNodeMarker.OUTPUT_SOURCE, variable);
+                    else
+                        vsc.addError("`" + ve.getName() + "` is not defined", ve);
+                }
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
@@ -434,8 +442,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.inputs, "process input qualifier", false);
         vsc.popScope();
 
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addParanoidWarning("Process `when` section will not be supported in a future version", node.when);
         visit(node.when);
 
         visit(node.exec);

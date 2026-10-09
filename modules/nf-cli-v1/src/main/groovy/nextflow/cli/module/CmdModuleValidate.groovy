@@ -29,6 +29,7 @@ import nextflow.module.ModuleReference
 import nextflow.module.ModuleSchemaValidator
 import nextflow.module.ModuleStorage
 import nextflow.module.ModuleValidator
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
 
 /**
@@ -81,6 +82,8 @@ class CmdModuleValidate extends CmdBase {
         final path = Paths.get(module)
         if( path.exists() )
             return path.toAbsolutePath().normalize()
+        if( ScriptModuleResolver.isLocalModule(module) )
+            throw new AbortOperationException("Module path not found: $module")
 
         final ref = ModuleReference.parse(module)
         final storage = new ModuleStorage(root ?: Paths.get('.').toAbsolutePath().normalize())

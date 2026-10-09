@@ -267,6 +267,30 @@ class ScriptResolveTest extends Specification {
         errors[1].getOriginalMessage() == '`y` is not defined'
     }
 
+    def 'should warn about a process `when` section' () {
+        given:
+        def source = '''\
+            nextflow.enable.types = true
+
+            process hello {
+                when:
+                task.ext.when
+
+                exec:
+                println 'hello!'
+            }
+            '''
+        when:
+        def result = scriptParser.parse('main.nf', source.stripIndent())
+        scriptParser.analyze()
+        def errors = TestUtils.getErrors(result)
+        def warnings = TestUtils.getWarnings(result)
+        then:
+        errors.size() == 0
+        warnings.size() == 1
+        warnings[0].contains('The `when` section is deprecated')
+    }
+
     def 'should not warn when a workflow emits a channel by name' () {
         given:
         def source = '''\
@@ -306,7 +330,7 @@ class ScriptResolveTest extends Specification {
                 result = foo()
 
                 emit:
-                result: Channel<String>
+                result: Value<String>
             }
             '''
         when:

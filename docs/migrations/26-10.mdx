@@ -222,6 +222,8 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 
 ## Deprecations
 
+- The process `when` section is deprecated. Use explicit workflow logic, or use the [`process.when`][config-process-when] config setting to disable a process at runtime. See [Process when section][strict-syntax-process-when] for more information.
+
 - The `storeDir` process directive is deprecated. Use explicit workflow logic to reuse an intermediate output if it is present and compute it otherwise. See [`storeDir`][process-storeDir] for an example.
 
 - The [`seqera.executor.autoLabels`][config-seqera-executor-autoLabels] config option is deprecated. Use [`tower.autoLabels`][config-tower-autoLabels] instead, which applies to every executor that supports the `resourceLabels` directive.
@@ -252,6 +254,7 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 [config-dag-directory]: ../reference/config/dag#dagdirectory
 [config-docker-cpuLimits]: ../reference/config/docker#dockercpulimits
 [config-k8s-computeResourceType]: ../reference/config/k8s#k8scomputeresourcetype
+[config-process-when]: ../config#disabling-processes
 [config-manifest-diagram]: ../reference/config/manifest#manifestdiagram
 [config-report-directory]: ../reference/config/report#reportdirectory
 [config-seqera-executor-autoLabels]: ../reference/config/seqera#seqeraexecutorautolabels
@@ -269,5 +272,6 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 [plugin-registry]: ../plugins/plugin-registry#configuring-plugin-registries
 [process-storeDir]: ../reference/process/directives/store-dir
 [static-typing]: ../static-typing
+[strict-syntax-process-when]: ../strict-syntax#process-when-section
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-params]: ../typed-parameters

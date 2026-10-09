@@ -189,7 +189,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var expectedType = fn.getType();
         var actualType = node.value.getType();
         if( !Types.isAssignableFrom(expectedType, actualType) )
-            addError("Feature flag '" + node.name + "' expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
+            addError("Feature flag `" + node.name + "` expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
     }
 
     private boolean hasParamsBlock;
@@ -209,7 +209,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         if( allowPathCoercion && Types.isEqual(expectedType, PATH_TYPE) && Types.isEqual(actualType, ClassHelper.STRING_TYPE) )
             return;
-        addError("Parameter '" + node.getName() + "' with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
+        addError("Parameter `" + node.getName() + "` with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
     }
 
     private WorkflowNode currentWorkflow;
@@ -224,9 +224,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             visitWorkflowOutputs(node);
         }
         else {
-            checkSingleNamedOutput(node.emits, "emit");
             checkWorkflowEmitTypes(node.emits);
             visit(node.emits);
+            checkOutputSources(node.emits, "Workflow emit");
         }
 
         visit(node.onComplete);
@@ -254,7 +254,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 .filter(output -> output.getName().equals(target.getName()))
                 .findFirst().orElse(null);
             if( decl == null ) {
-                addError("Workflow output '" + target.getName() + "' was assigned in the entry workflow but not declared in the output block", publisher);
+                addError("Workflow output `" + target.getName() + "` was assigned in the entry workflow but not declared in the output block", publisher);
                 continue;
             }
             target.setAccessedVariable(decl);
@@ -264,7 +264,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var sourceType = getType(source);
             var targetType = asDataflowType(target.getType(), sourceType);
             if( !Types.isAssignableFrom(targetType, sourceType) )
-                addError("Workflow output '" + target.getName() + "' with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
+                addError("Workflow output `" + target.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
         }
     }
 
@@ -276,17 +276,27 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return type;
     }
 
+    private void checkWorkflowEmitTypes(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
+            if( target == null )
+                continue;
+            var type = target.getType();
+            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+                continue;
+            addError("Workflow emit `" + target.getName() + "` must be declared as a Channel or Value, not " + Types.getName(type), target);
+        }
+    }
+
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
-        checkSingleNamedOutput(node.outputs, "output");
         visit(node.outputs);
+        checkOutputSources(node.outputs, "Process output");
         visitProcessTopics(node.topics);
     }
 
@@ -308,25 +318,25 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         });
     }
 
-    private void checkWorkflowEmitTypes(Statement block) {
+    /**
+     * Check each typed output name (e.g. `x: T`) against the body
+     * variable that it refers to, as if it were `x: T = x`.
+     *
+     * @param block
+     * @param typeLabel
+     */
+    private void checkOutputSources(Statement block, String typeLabel) {
         for( var stmt : asBlockStatements(block) ) {
-            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
-            if( target == null )
+            var output = ((ExpressionStatement) stmt).getExpression();
+            if( !(output instanceof VariableExpression ve) )
                 continue;
-            var type = target.getType();
-            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+            if( !(ve.getNodeMetaData(ASTNodeMarker.OUTPUT_SOURCE) instanceof Variable source) )
                 continue;
-            addError("Workflow emit '" + target.getName() + "' must be declared as a Channel or Value, not " + Types.getName(type), target);
+            var targetType = ve.getOriginType();
+            var sourceType = getType(source);
+            if( !Types.isAssignableFrom(targetType, sourceType) )
+                addError(typeLabel + " `" + ve.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ve);
         }
-    }
-
-    private void checkSingleNamedOutput(Statement block, String section) {
-        var outputs = asBlockStatements(block);
-        if( outputs.size() != 1 )
-            return;
-        var output = ((ExpressionStatement) outputs.get(0)).getExpression();
-        if( output instanceof AssignmentExpression ae )
-            addError("Name should be omitted for a single " + section, ae);
     }
 
     private void visitProcessTopics(Statement block) {
@@ -995,7 +1005,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         var numChannelArgs = arguments.stream().filter((arg) -> CHANNEL_TYPE.equals(getType(arg))).count();
-        var numDynamicArgs = arguments.stream().filter((arg) -> ClassHelper.isDynamicTyped(getType(arg))).count();
+        var numDynamicArgs = arguments.stream().filter((arg) -> !isNullConstant(arg) && ClassHelper.isDynamicTyped(getType(arg))).count();
         if( numChannelArgs > 1 )
             addError(label + " `" + mn.getName() + "` was called with multiple channel arguments which can lead to non-deterministic behavior -- make sure that at most one argument is a channel and that all other arguments are dataflow values", node);
 

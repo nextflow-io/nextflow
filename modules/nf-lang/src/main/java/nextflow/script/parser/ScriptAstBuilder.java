@@ -821,6 +821,7 @@ public class ScriptAstBuilder {
     private Expression processWhen(ProcessWhenContext ctx) {
         if( ctx == null )
             return EmptyExpression.INSTANCE;
+        collectWarning("The `when` section is deprecated -- use conditional logic in the calling workflow, or the `process.when` config option to disable a process at runtime", ctx.WHEN().getText(), ast( new EmptyStatement(), ctx.WHEN() ));
         return ast( expression(ctx.expression()), ctx );
     }
 

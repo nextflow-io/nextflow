@@ -101,6 +101,8 @@ output {
 It can be included and called as follows:
 
 ```nextflow
+nextflow.enable.types = true
+
 include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
 
 workflow {
@@ -142,6 +144,8 @@ Note the following:
 Redeclaring every param of an included pipeline gets tedious. The `params` block can be imported as a record type instead:
 
 ```nextflow
+nextflow.enable.types = true
+
 include {
     params as RnaseqParams ;
     workflow as NFCORE_RNASEQ
@@ -188,7 +192,7 @@ None of these constraints are absolute. Each of them can be circumvented by repl
 
 ## Validation
 
-The language server validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as an error before the pipeline runs.
+Nextflow validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as a type error.
 
 ## See also
 
