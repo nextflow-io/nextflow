@@ -62,8 +62,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         super(params)
         final cpus = params.cpus as int
         final memory = params.memory as long
-        assert cpus>0, "Local avail `cpus` attribute cannot be zero"
-        assert memory>0, "Local avail `memory` attribute cannot zero"
+        assert cpus>0, "Executor `cpus` setting must be greater than zero"
+        assert memory>0, "Executor `memory` setting must be greater than zero"
         this.resourceTracker = new ResourceTracker(cpus, memory)
         this.acceleratorTracker = AcceleratorTracker.create()
     }

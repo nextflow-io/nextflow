@@ -43,7 +43,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         *Used only by the local executor and grid executors.*
 
-        The maximum number of CPUs that can be requested by submitted tasks. Pending tasks are not submitted until enough CPUs are available, and a task that requests more CPUs than this limit fails. A job array counts the CPUs of all its tasks. For the local executor, the default is the number of CPUs on the system. For grid executors, there is no limit by default, and only CPUs requested with the `cpus` directive are counted (not `clusterOptions`).
+        The maximum number of CPUs that can be requested by submitted tasks. Pending tasks are not submitted until enough CPUs are available, and a task that requests more CPUs than this limit fails. A job array counts the CPUs of all its tasks. Only CPUs requested with the `cpus` directive are counted (not `clusterOptions`), and a task without it counts as 1 CPU. For the local executor, the default is the number of CPUs on the system. For grid executors, there is no limit by default.
     """)
     final Integer cpus
 

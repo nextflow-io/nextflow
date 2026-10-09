@@ -124,7 +124,9 @@ class TaskPollingMonitor implements TaskMonitor {
 
     /**
      * Tracks the cpus and memory of running tasks when the executor
-     * limits them, {@code null} otherwise
+     * limits them, {@code null} otherwise. Resources must be acquired in
+     * the same thread as {@link #canSubmit}, i.e. not asynchronously as in
+     * {@link ParallelPollingMonitor}, otherwise tasks can oversubscribe.
      */
     protected ResourceTracker resourceTracker
 
