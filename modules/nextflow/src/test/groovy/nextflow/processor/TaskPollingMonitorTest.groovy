@@ -273,7 +273,7 @@ class TaskPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e = thrown(ProcessUnrecoverableException)
-        e.message == 'Process requirement exceeds available CPUs -- req: 10; avail: 8'
+        e.message == 'Task requirement exceeds available CPUs -- req: 10; avail: 8'
     }
 
     def 'should release job array resources as each child completes'() {

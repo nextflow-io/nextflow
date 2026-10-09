@@ -89,8 +89,23 @@ class ResourceTrackerTest extends Specification {
 
         where:
         CPUS | MEMORY  | EXPECTED
-        10   | '8GB'   | 'Process requirement exceeds available CPUs -- req: 10; avail: 8'
-        4    | '20GB'  | 'Process requirement exceeds available memory -- req: 20 GB; avail: 16 GB'
+        10   | '8GB'   | 'Task requirement exceeds available CPUs -- req: 10; avail: 8'
+        4    | '20GB'  | 'Task requirement exceeds available memory -- req: 20 GB; avail: 16 GB'
+    }
+
+    def 'should fail when a job array exceeds the total'() {
+        given:
+        def tracker = new ResourceTracker(32, 0)
+        def children = (1..100).collect { handler(1, null) }
+        def array = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) { getChildren() >> children }
+        }
+
+        when:
+        tracker.validate(array)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Array requirement exceeds available CPUs -- req: 100 (array size: 100); avail: 32'
     }
 
     def 'should not fail when a task is within the total'() {

@@ -277,12 +277,12 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.prepareLauncher()
             handler.submit()
             resourceTracker?.acquire(handler)
-            // add each child task to the running queue
+            // add each child task to the running queue before notifying,
+            // so that every child releases its resources on completion
             final task = handler.task as TaskArrayRun
-            for( TaskHandler it : task.children ) {
-                runningQueue.add(it)
+            runningQueue.addAll(task.children)
+            for( TaskHandler it : task.children )
                 session.notifyTaskSubmit(it)
-            }
         }
         else {
             // submit the job execution -- throws a ProcessException when submit operation fail

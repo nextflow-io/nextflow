@@ -218,7 +218,7 @@ Nextflow can run tasks in [smolvm](https://github.com/smol-machines/smolvm) micr
 
 - The Kubernetes executor uses Jobs by default instead of Pods. Set [`k8s.computeResourceType`][config-k8s-computeResourceType] to `Pod` to keep the previous behavior.
 
-- The `executor.cpus` and `executor.memory` settings now apply to grid executors. Use `executor.$local.cpus` and `executor.$local.memory` to limit only the local executor.
+- The `executor.cpus` and `executor.memory` settings now apply to grid executors, and tasks that request more than these limits fail. Use `executor.$local.cpus` and `executor.$local.memory` to limit only the local executor.
 
 - Nextflow writes console output to standard error instead of standard output. This separates log messages from the output of commands such as `nextflow config` and `nextflow run -output-format json`. To save the full console output to a file, redirect both streams, e.g. `nextflow run main.nf > out.log 2>&1`. Background runs (`-bg`) are not affected and still write console output to standard output.
 
@@ -258,9 +258,9 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 [config-azure-batch-pools-allowUnverifiedImages]: ../reference/config/azure#azurebatchpoolsnameallowunverifiedimages
 [config-azure-batch-pools-virtualMachineImageId]: ../reference/config/azure#azurebatchpoolsnamevirtualmachineimageid
 [config-dag-directory]: ../reference/config/dag#dagdirectory
+[config-docker-cpuLimits]: ../reference/config/docker#dockercpulimits
 [config-executor-cpus]: ../reference/config/executor#executorcpus
 [config-executor-memory]: ../reference/config/executor#executormemory
-[config-docker-cpuLimits]: ../reference/config/docker#dockercpulimits
 [config-k8s-computeResourceType]: ../reference/config/k8s#k8scomputeresourcetype
 [config-process-when]: ../config#disabling-processes
 [config-manifest-diagram]: ../reference/config/manifest#manifestdiagram

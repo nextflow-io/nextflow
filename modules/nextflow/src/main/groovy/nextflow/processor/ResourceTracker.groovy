@@ -90,13 +90,17 @@ class ResourceTracker {
      * @param handler
      */
     void validate(TaskHandler handler) {
+        final array = handler.task instanceof TaskArrayRun
+        final prefix = array ? 'Array' : 'Task'
+        final suffix = array ? " (array size: ${((TaskArrayRun)handler.task).children.size()})" : ''
+
         final taskCpus = cpus(handler)
         if( totalCpus && taskCpus > totalCpus )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available CPUs -- req: $taskCpus; avail: $totalCpus")
+            throw new ProcessUnrecoverableException("$prefix requirement exceeds available CPUs -- req: $taskCpus$suffix; avail: $totalCpus")
 
         final taskMemory = memory(handler)
         if( totalMemory && taskMemory > totalMemory )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(totalMemory)}")
+            throw new ProcessUnrecoverableException("$prefix requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}$suffix; avail: ${new MemoryUnit(totalMemory)}")
     }
 
     boolean canAcquire(TaskHandler handler) {

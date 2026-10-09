@@ -149,7 +149,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     protected boolean canSubmit(TaskHandler handler) {
         final taskAccelerators = accelerators(handler)
         if( acceleratorTracker.name() != null && taskAccelerators > acceleratorTracker.total() )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
+            throw new ProcessUnrecoverableException("Task requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
 
         final accelOk = acceleratorTracker.name() == null || taskAccelerators <= acceleratorTracker.available()
         final result = super.canSubmit(handler) && accelOk
