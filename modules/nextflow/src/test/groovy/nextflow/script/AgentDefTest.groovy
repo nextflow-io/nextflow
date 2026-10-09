@@ -97,6 +97,21 @@ class AgentDefTest extends Specification {
         AgentDef.toJson([id: 's1', seq: staged]) == '{"id":"s1","seq":"contigs.fa"}'
     }
 
+    def 'should record the source of each staged input in the dispatch context'() {
+        given:
+        final workDir = Path.of('/work/ab/cdef')
+        final source = Path.of('/work/stage-1234/ef/abcd/sample.fq')
+        final ctx = [task: [workDir: workDir], s: [id: 's1', reads: new TaskPath(new FileHolder(source))]]
+
+        when:
+        final sandbox = AgentDef.createSandboxContext([new AgentBuilder.AgentInput('s', Map)], ctx)
+
+        then:
+        sandbox.workDir == workDir
+        sandbox.stagedInputs == ['sample.fq': source]
+        sandbox.readablePaths == [workDir, source] as Set
+    }
+
     def 'should fail on run() when a tool-free agent declares zero outputs (task path)'() {
         given:
         // no tools/skills -> task path, where the one-input guard is gone; a

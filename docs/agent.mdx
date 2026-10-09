@@ -268,6 +268,8 @@ When `shouty` calls `uppercase` as a tool, Nextflow runs an `uppercase` task and
 
 Processes must either have a module spec or be typed in order to be called as tools.
 
+A file argument passed to a tool by its name in the agent's work directory is resolved to the corresponding staged input, or to the work directory for any other file. A file written by the agent can only be passed to a tool when the work directory is on a shared file system, because files in a remote work directory, such as S3, are uploaded only when the agent task completes.
+
 The `fs:` tools are limited to the agent runner's sandbox:
 
 - On `langchain4j` the tools run in the driver JVM. The agent can read its work directory, its staged `Path` inputs, and output files returned by module tool calls. It can only write to its work directory.
