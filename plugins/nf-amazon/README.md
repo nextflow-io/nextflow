@@ -81,7 +81,7 @@ aws {
 
 ## Resources
 
-- [AWS Batch Executor Documentation](https://docs.seqera.io/nextflow/aws)
+- [AWS Batch Executor Documentation](https://docs.seqera.io/nextflow/reference/executor/aws-batch)
 - [Amazon S3 Storage Documentation](https://docs.seqera.io/nextflow/amazons3)
 
 ## License

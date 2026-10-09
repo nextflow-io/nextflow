@@ -19,33 +19,7 @@ module.exports = {
             items: [
                 "cli",
                 "config",
-                {
-                    type: "category",
-                    label: "Executors",
-                    collapsed: true,
-                    link: { type: "doc", id: "executor" },
-                    items: [
-                        "executor/local",
-                        "executor/aws-batch",
-                        "executor/azure-batch",
-                        "executor/google-batch",
-                        "executor/kubernetes",
-                        "executor/seqera",
-                        "executor/bridge",
-                        "executor/flux",
-                        "executor/htcondor",
-                        "executor/hyperqueue",
-                        "executor/lsf",
-                        "executor/moab",
-                        "executor/nqsii",
-                        "executor/oar",
-                        "executor/pbs",
-                        "executor/pbspro",
-                        "executor/sge",
-                        "executor/slurm",
-                        "executor/tcs"
-                    ]
-                },
+                "executor",
                 "cache-and-resume",
                 "reports"
             ]
@@ -118,14 +92,12 @@ module.exports = {
         },
         {
             type: "category",
-            label: "Compute and storage",
+            label: "Storage",
             collapsed: true,
             items: [
-                "aws",
                 "amazons3",
-                "azure",
-                "google",
-                "kubernetes",
+                "azure-blob",
+                "google-storage",
                 "fusion"
             ]
         },
@@ -327,6 +299,32 @@ module.exports = {
                         "reference/config/trace",
                         "reference/config/wave",
                         "reference/config/workflow"
+                    ]
+                },
+                {
+                    type: "category",
+                    label: "Executors",
+                    link: { type: "doc", id: "reference/executor" },
+                    items: [
+                        "reference/executor/local",
+                        "reference/executor/aws-batch",
+                        "reference/executor/azure-batch",
+                        "reference/executor/google-batch",
+                        "reference/executor/kubernetes",
+                        "reference/executor/seqera",
+                        "reference/executor/bridge",
+                        "reference/executor/flux",
+                        "reference/executor/htcondor",
+                        "reference/executor/hyperqueue",
+                        "reference/executor/lsf",
+                        "reference/executor/moab",
+                        "reference/executor/nqsii",
+                        "reference/executor/oar",
+                        "reference/executor/pbs",
+                        "reference/executor/pbspro",
+                        "reference/executor/sge",
+                        "reference/executor/slurm",
+                        "reference/executor/tcs"
                     ]
                 },
                 "reference/env-vars"

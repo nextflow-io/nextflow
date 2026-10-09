@@ -1,0 +1,227 @@
+---
+title: Azure Blob Storage
+description: Use Azure Blob Storage as a file system in Nextflow pipelines.
+---
+
+# Azure Blob Storage
+
+Azure Storage provides several services for storing and accessing data in Azure. Nextflow primarily supports Azure Blob Storage for most workloads. Limited support is available for [Azure file shares][azure-file-shares] when using the Azure Batch executor.
+
+Nextflow uses the `az://` URI scheme to enable transparent access to files stored in Azure Blob Storage. Once Azure Storage is configured, you can use this scheme to reference files in any blob container as if they were local. For example, the path `/path/to/file.txt` in a container named `my-container` can be accessed as follows:
+
+```groovy
+file('az://<container-path>/file.txt')
+```
+
+The storage account name must be provided in the Nextflow configuration file as shown below:
+
+```groovy
+azure {
+    storage {
+        accountName = '<blob-account-name>'
+    }
+}
+```
+
+See [Working with files][working-with-files] and the [Path][stdlib-types-path] reference to learn more about available file operations.
+
+## Authentication
+
+Nextflow supports three authentication methods for Azure services, listed in order of security and recommended usage:
+
+- [Managed identities](#managed-identities): The most secure option, available only within Azure. Uses Azure-managed credentials without storing secrets.
+
+- [Service principals](#service-principals): A secure and flexible method that works across environments. Uses Microsoft Entra credentials for authentication.
+
+- [Access keys](#access-keys): The most basic and least secure method. Relies on direct access keys for authentication.
+
+### Required roles
+
+The following role assignments are required to use Azure services:
+
+For Azure Storage:
+
+- Storage Blob Data Reader
+- Storage Blob Data Contributor
+
+For Azure Batch:
+
+- Batch Data Contributor
+
+To assign roles to a managed identity or service principal, see the [Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
+
+### Managed identities
+
+<AddedInVersion version="24.10" />
+
+
+[Managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
+
+When using a managed identity, an Azure resource can authenticate based on what it is rather than using access keys. For example, Nextflow can submit jobs to Azure Batch and access private storage accounts without additional credentials if it is running on Azure Virtual Machines with a managed identity and the necessary permissions.
+
+There are two types of managed identities:
+
+- System-assigned managed identity
+- User-assigned managed identity
+
+**System-assigned managed identity**
+
+A system-assigned identity is tied to a specific Azure resource. To use it:
+
+1. Enable [system-assigned managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity) on your Azure resource.
+
+2. Configure the required role assignments. See [Required roles](#required-roles) for more information.
+
+3. Add the following configuration:
+
+```groovy
+azure {
+    managedIdentity {
+        system = true
+    }
+    storage {
+        accountName = '<storage-account-name>'
+    }
+    batch {
+        accountName = '<batch-account-name>'
+        location = '<batch-account-location>'
+    }
+}
+```
+
+Replace the following:
+
+- `storage-account-name`: your Azure storage account name
+- `batch-account-name`: your Azure Batch account name
+- `batch-account-location`: your Azure Batch account location
+
+:::tip
+Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. Set this to `true` to enable a system-assigned managed identity.
+:::
+
+**User-assigned managed identity**
+
+A user-assigned identity can be shared across multiple Azure resources and its lifecycle is not tied to any specific resource. See the [Azure documentation](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identity-best-practice-recommendations#choosing-system-or-user-assigned-managed-identities) for more information.
+
+To use user-assigned managed identity:
+
+1. Create a [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities?pivots=identity-mi-methods-azp#create-a-user-assigned-managed-identity).
+
+2. Configure the required role assignments.
+
+3. [Assign the identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#user-assigned-managed-identity) to your Azure resource.
+
+4. Add the following configuration:
+
+```groovy
+azure {
+    managedIdentity {
+        clientId = '<user-assigned-managed-identity-client-id>'
+    }
+    storage {
+        accountName = '<storage-account-name>'
+    }
+    batch {
+        accountName = '<batch-account-name>'
+        location = '<batch-account-location>'
+    }
+}
+```
+
+Replace the following:
+
+- `user-assigned-managed-identity-client-id`: your user assigned managed identity client ID
+- `storage-account-name`: your Azure Storage account name
+- `batch-account-name`: your Azure Batch account name
+- `batch-account-location`: your Azure Batch account location
+
+:::tip
+Nextflow uses the `AZURE_MANAGED_IDENTITY_USER` environment variable if the managed identity client ID is not provided in the Nextflow configuration file.
+:::
+
+### Service principals
+
+[Service principal](https://learn.microsoft.com/en-us/entra/identity-platform/app-objects-and-service-principals) credentials can be used to access Azure Batch and Storage accounts.
+
+Similar to a managed identity, a service principal is an application identity that can have specific permissions and role-based access. Unlike managed identities, service principals require a secret key for authentication. The secret key is less secure, but it allows you to authenticate with Azure resources when operating outside of the Azure environment, such as from your local machine or a non-Azure cloud.
+
+To create a service principal, follow the steps in the [Register a Microsoft Entra app and create a service principal](https://learn.microsoft.com/en-us/entra/identity-platform/howto-create-service-principal-portal) guide and add the credentials to your Nextflow configuration file. For example:
+
+```groovy
+azure {
+    activeDirectory {
+        servicePrincipalId = '<service-principal-client-id>'
+        servicePrincipalSecret = '<service-principal-client-secret>'
+        tenantId = '<tenant-id>'
+    }
+    storage {
+        accountName = '<storage-account-name>'
+    }
+    batch {
+        accountName = '<batch-account-name>'
+        location = '<batch-account-location>'
+    }
+}
+```
+
+:::tip
+Nextflow uses the following environment variables if storage settings are not set in the Nextflow config file:
+
+- `AZURE_CLIENT_ID`: your Azure service principal application ID
+- `AZURE_CLIENT_SECRET`: your Azure service principal secret
+- `AZURE_TENANT_ID`: your Azure Entra account tenant ID
+:::
+
+### Access keys
+
+The basic authentication method uses direct access keys. While easy to set up, it's less secure than managed identities or service principals because it provides full access to your resources. This approach requires you to obtain and manage the access keys for your Azure Batch and Storage accounts.
+
+You can find your access keys in the Azure portal:
+
+- For Storage accounts, navigate to your Storage account and select **Access keys** in the left-hand navigation menu.
+- For Batch accounts, navigate to your Batch account and select **Keys** in the left-hand navigation menu.
+
+Keep access keys secure and rotate them regularly. Use environment variables instead of hardcoding keys in configuration files, especially in shared or version-controlled environments:
+
+```groovy
+azure {
+    storage {
+        accountName = '<storage-account-name>'
+        accountKey = '<storage-account-key>'
+    }
+    batch {
+        accountName = '<batch-account-name>'
+        accountKey = '<batch-account-key>'
+        location = '<batch-account-location>'
+    }
+}
+```
+
+You can also use a Shared Access Token (SAS) instead of an account key to provide time-limited access to your storage account:
+
+```groovy
+azure.storage.sasToken = '<sas-token>'
+```
+
+:::tip
+When creating a SAS token, make sure to enable `Read`, `Write`, `Delete`, `List`, `Add`, `Create` permissions for the `Container` and `Object` resource types. The value of `sasToken` should be stripped of the leading `?` character.
+:::
+
+:::tip
+Nextflow uses the following environment variables if storage settings are not provided in the Nextflow configuration file:
+
+- `AZURE_STORAGE_ACCOUNT_NAME`: your Azure Storage account name
+- `AZURE_STORAGE_ACCOUNT_KEY`: your Azure Storage account key
+- `AZURE_BATCH_ACCOUNT_NAME`: your Azure Batch account name
+- `AZURE_BATCH_ACCOUNT_KEY`: your Azure Batch account key
+- `AZURE_STORAGE_SAS_TOKEN`: your Azure Storage account SAS token
+:::
+
+## Advanced configuration
+
+See the [azure][config-azure] configuration scope for the list of available configuration options.
+
+[azure-file-shares]: ./reference/executor/azure-batch#azure-file-shares
+[config-azure]: ./reference/config/azure
+[stdlib-types-path]: ./reference/stdlib-types/path
+[working-with-files]: ./working-with-files

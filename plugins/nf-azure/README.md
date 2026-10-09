@@ -78,7 +78,7 @@ azure {
 
 ## Resources
 
-- [Azure Batch Executor Documentation](https://docs.seqera.io/nextflow/azure)
+- [Azure Batch Executor Documentation](https://docs.seqera.io/nextflow/reference/executor/azure-batch)
 
 ## License
 
