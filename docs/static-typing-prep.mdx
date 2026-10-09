@@ -1,0 +1,194 @@
+---
+title: Preparing for static typing
+description: Refactor existing Nextflow code to avoid patterns that are not compatible with static typing.
+---
+
+# Preparing for static typing
+
+While static typing can be adopted progressively with existing code, many coding patterns are not compatible with static typing. Following best practices and avoiding anti-patterns beforehand will make it easier to [migrate to static typing][migrating-static-types].
+
+## Use the strict syntax parser
+
+The [strict syntax parser][strict-syntax-page] is required to use static typing. It is enabled by default in Nextflow 26.04.
+
+Before you migrate to static typing, ensure your code complies with the strict parser using `nextflow lint` or the language server.
+
+## Avoid deprecated patterns
+
+When preparing for the strict parser, try to address [deprecation warnings][strict-syntax-deprecated] as much as possible. For example:
+
+```nextflow
+Channel.from(1, 2, 3).map { it * 2 }        // deprecated
+channel.of(1, 2, 3).map { it -> it * 2 }    // best practice
+```
+
+The above example shows how to avoid three deprecated patterns:
+
+1. Using `Channel` to access channel factories (use `channel` instead)
+2. Using the deprecated `channel.from` factory (use `channel.of` or `channel.fromList` instead)
+3. Using the implicit `it` closure parameter (declare the parameter explicitly instead)
+
+## Avoid `set` and `tap` operators
+
+Nextflow provides three ways to assign a channel: a standard assignment, the `set` operator, and the `tap` operator:
+
+```nextflow
+ch = channel.of(1, 2, 3)            // standard assignment
+channel.of(10, 20, 30).set { ch }   // set
+channel.of(10, 20, 30).tap { ch }   // tap
+```
+
+However, `set` and `tap` are not supported in typed workflows. Use standard assignments instead.
+
+## Avoid `|` and `&` dataflow operators
+
+The [special operators][workflow-special-operators] `|` and `&` provide shorthands for writing dataflow logic:
+
+```nextflow
+channel.of('Hello', 'Hola', 'Ciao')
+    | greet
+    | map { v -> v.toUpperCase() }
+    | view
+```
+
+However, these special operators are not supported in typed workflows. Use standard assignments and method calls instead:
+
+```nextflow
+ch_input = channel.of('Hello', 'Hola', 'Ciao')
+ch_greet = greet(ch_input)
+ch_greet
+    .map { v -> v.toUpperCase() }
+    .view()
+```
+
+## Avoid `.out` for process and workflow outputs
+
+The `.out` property can be used to access process and workflow outputs in legacy workflows:
+
+```nextflow
+MY_WORKFLOW()
+MY_WORKFLOW.out.foo.view()
+MY_WORKFLOW.out.bar.view()
+```
+
+However, this pattern is not supported in typed workflows. Use standard assignments instead:
+
+```nextflow
+my_out = MY_WORKFLOW()
+my_out.foo.view()
+my_out.bar.view()
+```
+
+## Use single outputs directly
+
+In a legacy workflow, a process or workflow with a single named output can be used directly or by name. For example, given a workflow with a single named emit:
+
+```nextflow
+workflow MY_WORKFLOW {
+    main:
+    ch_foo = channel.of(1, 2, 3)
+
+    emit:
+    foo = ch_foo
+}
+```
+
+A legacy workflow can use the output either way:
+
+```nextflow
+my_out = MY_WORKFLOW()
+my_out.view()
+my_out.foo.view()
+```
+
+However, a typed workflow always receives a single output directly, even if it is named. Use the output directly instead:
+
+```nextflow
+foo = MY_WORKFLOW()
+foo.view()
+```
+
+:::warning
+The type checker reports `my_out.foo` as an error when `MY_WORKFLOW` is a typed workflow. When `MY_WORKFLOW` is a legacy workflow, the error is only reported at runtime, since legacy outputs are not typed.
+:::
+
+## Avoid `each` input qualifier
+
+The [each][process-input-each] input qualifier is not supported in typed processes. Use the [combine][operator-combine] operator to create a single tuple channel instead.
+
+For example:
+
+```nextflow
+process align {
+    input:
+    path seq
+    each mode
+
+    script:
+    """
+    t_coffee -in $seq -mode $mode > result
+    """
+}
+
+workflow {
+    sequences = channel.fromPath('*.fa')
+    methods = ['regular', 'espresso', 'psicoffee']
+
+    align(sequences, methods)
+}
+```
+
+Rewrite the script to use the `combine` operator. It becomes:
+
+```nextflow
+process align {
+    input:
+    tuple path(seq), val(mode)
+
+    script:
+    """
+    t_coffee -in $seq -mode $mode > result
+    """
+}
+
+workflow {
+    sequences = channel.fromPath('*.fa')
+    methods = ['regular', 'espresso', 'psicoffee']
+
+    align(sequences.combine(methods))
+}
+```
+
+:::tip
+The `each` qualifier is discouraged in modern Nextflow code. While it provides a convenient shorthand for combining multiple inputs, it couples the process definition with external workflow logic. Since the introduction of DSL2, Nextflow aims to treat processes as standalone modules that are decoupled from workflow logic.
+:::
+
+## Avoid legacy operators
+
+Many [operators][operator-page] are not statically typed. While you can still use them in typed workflows, the type checker will not be able to fully validate your code. These operators can usually be replaced by another operator and/or a standard library function.
+
+For example, the `splitCsv` operator is not statically typed. Use `flatMap` and the equivalent [Path][stdlib-types-path] method instead:
+
+```nextflow
+// before
+channel.fromPath('samplesheet.csv')
+    .splitCsv(sep: ',')
+    .view()
+
+// after
+channel.fromPath('samplesheet.csv')
+    .flatMap { csv -> csv.splitCsv(sep: ',') }
+    .view()
+```
+
+See [Migrating operators][migrating-static-types-operators] for more information.
+
+[migrating-static-types]: ./tutorials/static-types
+[migrating-static-types-operators]: ./tutorials/static-types-operators
+[operator-combine]: ./reference/operator#combine
+[operator-page]: ./reference/operator
+[process-input-each]: ./process#input-repeaters-each
+[stdlib-types-path]: ./reference/stdlib-types/path
+[strict-syntax-deprecated]: ./strict-syntax#deprecated-syntax
+[strict-syntax-page]: ./strict-syntax
+[workflow-special-operators]: ./workflow#dataflow

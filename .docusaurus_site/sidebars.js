@@ -340,6 +340,7 @@ module.exports = {
                 "updating-nextflow",
                 "deprecations",
                 "strict-syntax",
+                "static-typing-prep",
                 {
                     type: "category",
                     label: "Migration notes",
