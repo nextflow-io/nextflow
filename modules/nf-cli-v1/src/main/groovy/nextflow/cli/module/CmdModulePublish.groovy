@@ -35,6 +35,7 @@ import nextflow.module.ModuleResolver
 import nextflow.module.ModuleValidator
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleStorage
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -224,6 +225,9 @@ class CmdModulePublish extends CmdBase {
         //If local path exists return this path as module dir
         if (Paths.get(module).exists()){
             return Paths.get(module).toAbsolutePath().normalize()
+        }
+        if (ScriptModuleResolver.isLocalModule(module)) {
+            throw new AbortOperationException("Module path not found: $module")
         }
 
         final ref =  ModuleReference.parse(module)
