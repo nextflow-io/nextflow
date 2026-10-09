@@ -237,12 +237,39 @@ class ModuleToolBridgeBindingTest extends Dsl2Spec {
                 type: file
             '''.stripIndent()
         final ModuleSpec spec = ModuleSpecFactory.fromYaml(metaPath)
-        final workDir = Path.of('/work/ab/cdef')
+        final context = new DispatchContext(Path.of('/work/ab/cdef'))
 
         expect:
-        ModuleToolBridge.resolvePathArgs([label: 'x.fa', fasta: 'x.fa', reads: ['r1.fq', '/abs/r2.fq'], ref: 's3://bucket/ref.fa'], spec, workDir)
+        ModuleToolBridge.resolvePathArgs([label: 'x.fa', fasta: 'x.fa', reads: ['r1.fq', '/abs/r2.fq'], ref: 's3://bucket/ref.fa'], spec, context)
             == [label: 'x.fa', fasta: '/work/ab/cdef/x.fa', reads: ['/work/ab/cdef/r1.fq', '/abs/r2.fq'], ref: 's3://bucket/ref.fa']
         ModuleToolBridge.resolvePathArgs([fasta: 'x.fa'], spec, null) == [fasta: 'x.fa']
+        ModuleToolBridge.resolvePathArgs([fasta: 'x.fa'], spec, new DispatchContext(null)) == [fasta: 'x.fa']
+    }
+
+    def 'should resolve a staged input arg to its source instead of the agent work dir'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final metaPath = dir.resolve('meta.yml')
+        metaPath.text = '''\
+            name: echo_tool
+            input:
+              - name: reads
+                type: file
+              - name: fasta
+                type: file
+            '''.stripIndent()
+        final ModuleSpec spec = ModuleSpecFactory.fromYaml(metaPath)
+        and: 'on a remote work dir, the stage-in symlink is not visible to other tasks'
+        final context = new DispatchContext(Path.of('/work/ab/cdef'))
+        context.addStagedInput('sample.fastq', Path.of('/work/stage-1234/ef/sample.fastq'))
+
+        expect:
+        ModuleToolBridge.resolvePathArgs([reads: 'sample.fastq', fasta: 'out.fa'], spec, context)
+            == [reads: '/work/stage-1234/ef/sample.fastq', fasta: '/work/ab/cdef/out.fa']
+        ModuleToolBridge.resolvePathArgs([reads: ['./sample.fastq']], spec, context)
+            == [reads: ['/work/stage-1234/ef/sample.fastq']]
+        and: 'the source is readable by the agent'
+        context.readablePaths.contains(Path.of('/work/stage-1234/ef/sample.fastq'))
     }
 
     def 'should convert scalar tool args to the declared input type'() {

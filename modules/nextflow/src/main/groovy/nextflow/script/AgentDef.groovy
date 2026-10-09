@@ -486,7 +486,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             final dispatchContext = new AtomicReference<DispatchContext>()
             final ToolDispatcher contextualDispatch = bridge == null ? null : ({ String toolName, String argsJson ->
                 if( needsSandbox ) {
-                    dispatchContext.compareAndSet(null, new DispatchContext(taskConfig?.workDir as Path))
+                    dispatchContext.compareAndSet(null, AgentDef.createSandboxContext(inputs, ctx))
                     ModuleToolBridge.setContext(dispatchContext.get())
                 }
                 try {
@@ -557,8 +557,10 @@ class AgentDef extends BindableDef implements ChainableDef {
     }
 
     /**
-     * The sandbox context for an in-JVM agent: the task work dir, plus the SOURCE of every input
-     * that was staged into it.
+     * The dispatch context for an agent: the task work dir, plus the SOURCE of every input
+     * that was staged into it, by stage name. A tool called with the name of a staged input is
+     * given its source, since on a remote work dir the stage-in symlink is only visible inside the
+     * agent task until it completes.
      *
      * <p>Staging materializes an input as a symlink in the work dir ({@link
      * nextflow.executor.local.AgentTaskHandler}), while {@link nextflow.agent.SandboxGuard}
@@ -585,7 +587,7 @@ class AgentDef extends BindableDef implements ChainableDef {
     private static void addStagedSources(DispatchContext sandbox, Object value) {
         // toRealPath() on a TaskPath is a pure accessor for the store path -- no file I/O
         if( value instanceof TaskPath )
-            sandbox.addReadablePath(value.toRealPath())
+            sandbox.addStagedInput(value.toString(), value.toRealPath())
         else if( value instanceof Map )
             ((Map) value).values().each { addStagedSources(sandbox, it) }
         else if( value instanceof Collection )

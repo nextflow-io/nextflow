@@ -498,7 +498,7 @@ class ModuleToolBridge implements ToolDispatcher {
             final DataflowVariable<String> reply = new DataflowVariable<String>()
             if( closed.get() )
                 throw new IllegalStateException("Agent tool bridge is closed")
-            final parsed = resolvePathArgs(parseArgs(toolName, argsJson), tool.spec, context()?.workDir)
+            final parsed = resolvePathArgs(parseArgs(toolName, argsJson), tool.spec, context())
             requests.bind(new ToolCall(tool, parsed, reply))
             final result = reply.val
             // after the module task completes, scan the result for file path strings and whitelist
@@ -678,15 +678,17 @@ class ModuleToolBridge implements ToolDispatcher {
     }
 
     /**
-     * Resolve relative path arguments against the agent work dir, since
-     * the model sees staged inputs by their name in the work dir.
+     * Resolve relative path arguments, since the model sees each file by its
+     * name in the agent work dir. A staged input resolves to its source, because
+     * on a remote work dir the stage-in symlink is only visible inside the agent
+     * task until it completes. Any other relative path resolves against the work dir.
      *
      * @param args
      * @param spec
-     * @param workDir
+     * @param context
      */
-    static Map resolvePathArgs(Map args, ModuleSpec spec, Path workDir) {
-        if( !args || spec == null || workDir == null )
+    static Map resolvePathArgs(Map args, ModuleSpec spec, DispatchContext context) {
+        if( !args || spec == null || context?.workDir == null )
             return args
         final Map result = new LinkedHashMap(args)
         final inputs = spec.inputs ?: Collections.<ModuleParam>emptyList()
@@ -697,18 +699,19 @@ class ModuleToolBridge implements ToolDispatcher {
                     continue
                 final value = result.get(comp.name)
                 if( value instanceof CharSequence )
-                    result.put(comp.name, resolvePath(value.toString(), workDir))
+                    result.put(comp.name, resolvePath(value.toString(), context))
                 else if( value instanceof List )
-                    result.put(comp.name, value.collect { v -> v instanceof CharSequence ? resolvePath(v.toString(), workDir) : v })
+                    result.put(comp.name, value.collect { v -> v instanceof CharSequence ? resolvePath(v.toString(), context) : v })
             }
         }
         return result
     }
 
-    private static String resolvePath(String str, Path workDir) {
+    private static String resolvePath(String str, DispatchContext context) {
         if( !str.trim() || str.contains('://') || Path.of(str).isAbsolute() )
             return str
-        return FilesEx.toUriString(workDir.resolve(str))
+        final source = context.stagedInputs.get(Path.of(str).normalize().toString())
+        return FilesEx.toUriString(source ?: context.workDir.resolve(str))
     }
 
     private void startScalarInvocation(Session session, ToolCall request) {
