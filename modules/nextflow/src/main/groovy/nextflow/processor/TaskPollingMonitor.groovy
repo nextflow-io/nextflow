@@ -18,7 +18,6 @@ package nextflow.processor
 
 import static nextflow.processor.TaskProcessor.*
 
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -37,12 +36,10 @@ import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessSubmitTimeoutException
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.ExecutorConfig
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import nextflow.util.Throttle
@@ -126,15 +123,10 @@ class TaskPollingMonitor implements TaskMonitor {
     private int capacity
 
     /**
-     * Tracks the amount of CPUs and memory reserved by the submitted tasks,
-     * relative to the `executor.cpus` and `executor.memory` settings (if any)
+     * Tracks the cpus and memory of running tasks when the executor
+     * limits them, {@code null} otherwise
      */
-    private ResourceAccount resourceAccount
-
-    /**
-     * Tracks the resources reserved by each task in the running queue
-     */
-    private ConcurrentHashMap<TaskHandler,ResourceAccount.Reservation> reservations
+    protected ResourceTracker resourceTracker
 
     /**
      * Define rate limit for task submission
@@ -171,27 +163,26 @@ class TaskPollingMonitor implements TaskMonitor {
         this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
         this.dumpInterval = params.dumpInterval as Duration
         this.capacity = (params.capacity ?: 0) as int
-
-        this.resourceAccount = params.resourceAccount instanceof ResourceAccount
-                ? params.resourceAccount as ResourceAccount
-                : new ResourceAccount()
-        this.reservations = new ConcurrentHashMap<>()
+        this.resourceTracker = params.resourceTracker as ResourceTracker
 
         this.pendingQueue = new LinkedBlockingQueue<TaskHandler>()
         this.runningQueue = new LinkedBlockingQueue<TaskHandler>()
     }
 
     static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, int defQueueSize, Duration defPollInterval ) {
+        create(session, config, name, defQueueSize, defPollInterval, null)
+    }
+
+    static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, int defQueueSize, Duration defPollInterval, ResourceTracker resourceTracker ) {
         assert session
         assert config
         assert name
         final capacity = config.getQueueSize(name, defQueueSize)
         final pollInterval = config.getPollInterval(name, defPollInterval)
         final dumpInterval = config.getMonitorDumpInterval(name)
-        final resources = resourceAccount(config, name)
 
-        log.debug "Creating task monitor for executor '$name' > capacity: $capacity; pollInterval: $pollInterval; dumpInterval: $dumpInterval; resources: $resources "
-        new TaskPollingMonitor(name: name, session: session, config: config, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval, resourceAccount: resources)
+        log.debug "Creating task monitor for executor '$name' > capacity: $capacity; pollInterval: $pollInterval; dumpInterval: $dumpInterval; resources: ${resourceTracker ?: 'unlimited'}"
+        new TaskPollingMonitor(name: name, session: session, config: config, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval, resourceTracker: resourceTracker)
     }
 
     static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, Duration defPollInterval ) {
@@ -201,22 +192,9 @@ class TaskPollingMonitor implements TaskMonitor {
 
         final pollInterval = config.getPollInterval(name, defPollInterval)
         final dumpInterval = config.getMonitorDumpInterval(name)
-        final resources = resourceAccount(config, name)
 
-        log.debug "Creating task monitor for executor '$name' > pollInterval: $pollInterval; dumpInterval: $dumpInterval; resources: $resources "
-        new TaskPollingMonitor(name: name, session: session, config: config, pollInterval: pollInterval, dumpInterval: dumpInterval, resourceAccount: resources)
-    }
-
-    /**
-     * Create the {@link ResourceAccount} for the specified executor, honoring the
-     * `executor.cpus` and `executor.memory` settings. When these settings are not
-     * specified, the resources are unlimited i.e. the submission is not throttled
-     * based on the requested task resources.
-     */
-    static ResourceAccount resourceAccount(ExecutorConfig config, String name) {
-        final cpus = config.getExecConfigProp(name, 'cpus', 0) as int
-        final memory = (config.getExecConfigProp(name, 'memory', null) as MemoryUnit)?.toBytes() ?: 0L
-        new ResourceAccount(cpus, memory)
+        log.debug "Creating task monitor for executor '$name' > pollInterval: $pollInterval; dumpInterval: $dumpInterval "
+        new TaskPollingMonitor(name: name, session: session, config: config, pollInterval: pollInterval, dumpInterval: dumpInterval)
     }
 
     /**
@@ -279,41 +257,12 @@ class TaskPollingMonitor implements TaskMonitor {
      * @return
      *      {@code true} if the task satisfies the resource requirements and scheduling strategy implemented
      *      by the polling monitor
+     * @throws
+     *      ProcessUnrecoverableException When the task requests more cpus or memory than the executor limit
      */
     protected boolean canSubmit(TaskHandler handler) {
-        if( !(capacity > 0 ? checkQueueCapacity(handler) : true) )
-            return false
-        if( !handler.canForkProcess() || !handler.isReady() )
-            return false
-        return checkResources(handler)
-    }
-
-    /**
-     * Validates that the resources (cpus and memory) requested by the specified
-     * task can be satisfied by the {@link ResourceAccount} associated to this monitor.
-     *
-     * @param handler A {@link TaskHandler} for the task to be submitted
-     * @return {@code true} if enough resources are available, {@code false} otherwise
-     * @throws ProcessUnrecoverableException When the task resource request exceeds the
-     *      total amount of resources allowed by the `executor.cpus` and `executor.memory` settings
-     */
-    protected boolean checkResources(TaskHandler handler) {
-        if( resourceAccount.isUnlimited() )
-            return true
-
-        final taskCpus = ResourceAccount.cpusOf(handler)
-        if( resourceAccount.maxCpus && taskCpus > resourceAccount.maxCpus )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available CPUs -- req: $taskCpus; avail: ${resourceAccount.maxCpus}")
-
-        final taskMemory = ResourceAccount.memOf(handler)
-        if( resourceAccount.maxMemory && taskMemory > resourceAccount.maxMemory )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(resourceAccount.maxMemory)}")
-
-        final result = resourceAccount.canReserve(taskCpus, taskMemory)
-        if( !result && log.isTraceEnabled() ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: ${resourceAccount.availableCpus()} && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(resourceAccount.availableMemory())}"
-        }
-        return result
+        resourceTracker?.validate(handler)
+        (capacity > 0 ? checkQueueCapacity(handler) : true) && handler.canForkProcess() && handler.isReady() && (resourceTracker == null || resourceTracker.canAcquire(handler))
     }
 
     /**
@@ -327,13 +276,10 @@ class TaskPollingMonitor implements TaskMonitor {
             // submit task array
             handler.prepareLauncher()
             handler.submit()
-            // reserve the total resources requested by the array children
-            final reservation = resourceAccount.reserve(handler)
+            resourceTracker?.acquire(handler)
             // add each child task to the running queue
             final task = handler.task as TaskArrayRun
             for( TaskHandler it : task.children ) {
-                if( reservation )
-                    reservations.put(it, reservation)
                 runningQueue.add(it)
                 session.notifyTaskSubmit(it)
             }
@@ -344,10 +290,7 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.submit()
             // note: add the 'handler' into the polling queue *after* the submit operation,
             // this guarantees that in the queue are only jobs successfully submitted
-            // reserve the resources requested by the task (noop when the account is unlimited)
-            final reservation = resourceAccount.reserve(handler)
-            if( reservation )
-                reservations.put(handler, reservation)
+            resourceTracker?.acquire(handler)
             runningQueue.add(handler)
             // notify task submission
             session.notifyTaskSubmit(handler)
@@ -364,16 +307,10 @@ class TaskPollingMonitor implements TaskMonitor {
      *      {@code false} otherwise
      */
     protected boolean remove(TaskHandler handler) {
-        if( !runningQueue.remove(handler) )
-            return false
-        final reservation = reservations.remove(handler)
-        if( reservation != null ) {
-            // the same reservation is shared by all the children of a job array.
-            // release it only when the last child is removed from the running queue
-            if( !reservations.containsValue(reservation) )
-                resourceAccount.release(reservation)
-        }
-        return true
+        final result = runningQueue.remove(handler)
+        if( result )
+            resourceTracker?.release(handler)
+        return result
     }
 
     /**

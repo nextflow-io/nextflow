@@ -41,9 +41,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The maximum total number of CPUs that can be requested by the tasks submitted to this executor.
-        When the limit is reached, pending tasks are not submitted until some of the running tasks complete.
-        When not specified, the task submission is not limited by the requested CPUs. In the local executor, it defaults to the number of CPUs available in the system.
+        *Used only by the local executor and grid executors.*
+
+        The maximum number of CPUs that can be used by running tasks. Pending tasks are not submitted until enough CPUs are available. For the local executor, the default is the number of CPUs on the system. For grid executors, there is no limit by default.
     """)
     final Integer cpus
 
@@ -80,9 +80,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The maximum total amount of memory that can be requested by the tasks submitted to this executor.
-        When the limit is reached, pending tasks are not submitted until some of the running tasks complete.
-        When not specified, the task submission is not limited by the requested memory. In the local executor, it defaults to the total memory available in the system.
+        *Used only by the local executor and grid executors.*
+
+        The maximum amount of memory that can be used by running tasks. Pending tasks are not submitted until enough memory is available. Only tasks that specify the `memory` directive count towards this limit. For the local executor, the default is the total memory on the system. For grid executors, there is no limit by default.
     """)
     final MemoryUnit memory
 
