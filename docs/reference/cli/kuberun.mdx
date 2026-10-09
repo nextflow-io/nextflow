@@ -19,7 +19,7 @@ $ nextflow kuberun [options] [project]
 The `kuberun` command is considered an obsolete approach for running Nextflow pipelines on Kubernetes and is no longer maintained. See [Kubernetes][k8s-page] for alternatives.
 :::
 
-The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The pod runs the specified pipeline and submits a separate pod for each task. The console output of the pipeline is printed in the foreground.
+The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The pod runs the specified pipeline and submits each task as a Kubernetes job (or pod). The console output of the pipeline is printed in the foreground.
 
 The pipeline must be an existing Nextflow project or the absolute path of a pipeline already deployed in the Kubernetes cluster. The `kuberun` command cannot run local Nextflow scripts. It is only intended as a convenient way to test the deployment of pipelines to a Kubernetes cluster.
 

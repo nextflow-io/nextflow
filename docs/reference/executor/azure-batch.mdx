@@ -29,13 +29,13 @@ For automated Azure infrastructure setup, consider using [Batch Forge](https://d
 
 ## Overview
 
-Nextflow integrates with Azure Batch by mapping its execution model to Azure Batch's structure. A Nextflow process corresponds to an Azure Batch job, and every execution of that process (a Nextflow task) becomes an Azure Batch task. These Azure Batch tasks are executed on compute nodes within an Azure Batch pool, which is a collection of virtual machines that can scale up or down based on an autoscale formula.
+Nextflow integrates with Azure Batch by mapping its execution model to Azure Batch's structure. Each Nextflow task is submitted as an Azure Batch task. Tasks are executed on compute nodes within an Azure Batch pool, which is a collection of virtual machines that can scale up or down based on an autoscale formula.
 
 :::note
 In Azure Batch, a *job* is not a unit of work like in other batch schedulers. It is a container for tasks that is bound to a single pool, similar to a job queue. The *task* is the unit of work. Nextflow creates one Azure Batch job for each combination of process and pool, and submits each Nextflow task as an Azure Batch task in that job.
 :::
 
-Nextflow manages these pools dynamically. You can assign processes to specific, pre-existing pools using the process `queue` directive. Nextflow will create it if it doesn't exist and `azure.batch.allowPoolCreation` is set to `true`. Alternatively, `autoPoolMode` enables Nextflow to automatically create multiple pools based on the CPU and memory requirements defined in your processes.
+Nextflow manages these pools dynamically. You can assign processes to specific pools using the process `queue` directive. Nextflow creates the pool if it doesn't exist and `azure.batch.allowPoolCreation` is set to `true`. Alternatively, `autoPoolMode` enables Nextflow to automatically create multiple pools based on the CPU and memory requirements defined in your processes.
 
 An Azure Batch task is created for each Nextflow task. This task first downloads the necessary input files from Azure Blob Storage to its assigned compute node. It then runs the process script. Finally, it uploads any output files back to Azure Blob Storage.
 
@@ -70,6 +70,7 @@ The following example shows a minimal configuration (in addition to authenticati
 ```groovy
 process {
     executor = 'azurebatch'
+    container = 'quay.io/biocontainers/salmon'
 }
 
 workDir = 'az://<blob-container>/work'
@@ -264,6 +265,8 @@ The `azure.batch.pools.<pool-name>.scaleFormula` setting can be used to specify 
 ## Task authentication
 
 By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and can be configured using `azure.storage.tokenDuration` in your configuration.
+
+### Managed identity
 
 <AddedInVersion version="25.10" />
 

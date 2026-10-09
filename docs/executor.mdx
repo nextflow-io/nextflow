@@ -21,6 +21,10 @@ process.executor = 'slurm'
 
 The executor is a process directive, so you can use [process selectors][config-process-selectors] to run different processes with different executors.
 
+## How tasks are executed
+
+For each task, Nextflow creates a task directory in the work directory and writes the task script (`.command.sh`) along with a wrapper script (`.command.run`) that stages the input files, runs the task script, and saves the outputs and exit status. The executor submits the wrapper script to the underlying execution system, and Nextflow periodically polls the status of each submitted task (see `executor.pollInterval`) until it completes.
+
 ## Types of executors
 
 Executors fall into the following categories:
@@ -29,11 +33,13 @@ Executors fall into the following categories:
 
 - **HPC schedulers**: Grid executors such as [SLURM][executor-slurm], [LSF][executor-lsf], and [SGE][executor-sge] submit each task as a job to a cluster resource manager. Launch the pipeline from a node that can submit jobs, typically the cluster login node, and use a work directory on a shared file system that is accessible from all compute nodes (or in object storage when using [Fusion][fusion-page]).
 
-- **Cloud**: Cloud executors such as [AWS Batch][executor-aws-batch], [Azure Batch][executor-azure-batch], and [Google Cloud Batch][executor-google-batch] submit each task as a job to a managed compute service. Every process must specify a container, and the work directory must be located in object storage, such as [Amazon S3][amazons3-page], [Azure Blob Storage][azure-blob-page], or [Google Cloud Storage][google-storage-page]. See the corresponding storage page for how to configure credentials.
+- **Cloud**: Cloud executors submit each task to a managed compute service or container platform. Every process must specify a container.
 
-- **Kubernetes**: The [Kubernetes][executor-kubernetes] executor submits each task as a job or pod to a Kubernetes cluster. Every process must specify a container, and the work directory must be located in a shared persistent volume (or in object storage when using [Fusion][fusion-page]).
+  - The [AWS Batch][executor-aws-batch], [Azure Batch][executor-azure-batch], and [Google Cloud Batch][executor-google-batch] executors require the work directory to be located in object storage, such as [Amazon S3][amazons3-page], [Azure Blob Storage][azure-blob-page], or [Google Cloud Storage][google-storage-page]. See the corresponding storage page for how to configure credentials.
 
-- **Seqera**: The [Seqera][executor-seqera] executor submits tasks to Seqera Intelligent Compute.
+  - The [Kubernetes][executor-kubernetes] executor requires the work directory to be located in a shared persistent volume, or in object storage when using [Fusion][fusion-page].
+
+  - The [Seqera][executor-seqera] executor submits tasks to Seqera Intelligent Compute.
 
 ## Configuring executors
 
@@ -42,7 +48,7 @@ Use the [`executor`][config-executor] config scope to control executor behavior,
 ```groovy
 executor {
     queueSize = 100
-    pollInterval = '30 sec'
+    pollInterval = '30sec'
 }
 ```
 

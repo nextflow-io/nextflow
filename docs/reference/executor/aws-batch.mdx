@@ -55,23 +55,20 @@ which automatically creates the required AWS infrastructure for you with minimal
 
 5. Make sure that all of your container images are published in a Docker registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
 
-### Configuration
+6. Add the following settings to your Nextflow configuration:
 
-To configure your pipeline for AWS Batch:
+    - Set `process.executor` to `awsbatch`.
+    - Set the AWS Batch job queue with the [queue][process-queue] directive.
+    - Set `aws.region` to the region of your AWS Batch environment.
+    - Set `workDir` to an S3 path, e.g., `s3://<bucket>/work`.
 
-1. Set the executor to `awsbatch`
-2. Specify the AWS Batch queue with the [queue][process-queue] directive
-3. Specify any Batch job container options with the [containerOptions][process-containeroptions] directive.
-4. Set the work directory to an S3 path.
-
-An example `nextflow.config` file is shown below:
+For example:
 
 ```groovy
 process {
     executor = 'awsbatch'
     queue = 'my-batch-queue'
     container = 'quay.io/biocontainers/salmon'
-    containerOptions = '--shm-size 16000000 --ulimit nofile=1280:2560 --ulimit nproc=16:32'
 }
 
 workDir = 's3://<bucket>/work'
@@ -83,7 +80,7 @@ aws.region = 'us-east-1'
 Each process can be configured with its own queue by using the [queue][process-queue] directive in the process definition or via [Process selectors][config-process-selectors] in your Nextflow configuration.
 :::
 
-## IAM permissions
+## IAM policies
 
 [IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
 

@@ -5,6 +5,8 @@ description: Create a custom Amazon Machine Image (AMI) for running Nextflow pip
 
 # Custom AMIs for AWS Batch
 
+This guide describes how to create a custom AMI for the compute environments used by the [AWS Batch][awsbatch-executor] executor.
+
 :::tip
 Custom AMIs are mostly needed to provide the AWS CLI to task containers, which is a legacy requirement. Consider using [Wave][wave-page] and [Fusion][fusion-page] to access S3 without the AWS CLI.
 :::
@@ -115,5 +117,6 @@ The `AmazonEC2ContainerRegistryReadOnly` policy should be attached to the instan
 :::
 
 [awsbatch-cli]: ../reference/executor/aws-batch#aws-cli
+[awsbatch-executor]: ../reference/executor/aws-batch
 [fusion-page]: ../fusion
 [wave-page]: ../wave
