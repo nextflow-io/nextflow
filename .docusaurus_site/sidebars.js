@@ -384,6 +384,7 @@ module.exports = {
             label: "Guides",
             collapsed: true,
             items: [
+                "guides/aws-custom-ami",
                 "guides/aws-java-sdk-v2",
                 "guides/gradle-plugin",
                 "guides/migrate-plugin",

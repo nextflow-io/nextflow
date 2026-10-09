@@ -15,7 +15,15 @@ $ nextflow kuberun [options] [project]
 
 ## Description
 
-The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The `kuberun` command cannot run local Nextflow scripts. See [Kubernetes][k8s-page] for more information.
+:::warning
+The `kuberun` command is considered an obsolete approach for running Nextflow pipelines on Kubernetes and is no longer maintained. See [Kubernetes][k8s-page] for alternatives.
+:::
+
+The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The pod runs the specified pipeline and submits a separate pod for each task. The console output of the pipeline is printed in the foreground.
+
+The pipeline must be an existing Nextflow project or the absolute path of a pipeline already deployed in the Kubernetes cluster. The `kuberun` command cannot run local Nextflow scripts. It is only intended as a convenient way to test the deployment of pipelines to a Kubernetes cluster.
+
+Use the `-v` option to specify the persistent volume claim and mount path to use for the pipeline execution. Volume claims can also be specified in the Nextflow configuration. See [k8s][config-k8s] for details.
 
 ## Options
 
@@ -89,10 +97,19 @@ Volume claim mounts. For example, `my-pvc:/mnt/path`.
 
 ## Examples
 
-Run a pipeline on a Kubernetes cluster:
+Run a pipeline on a Kubernetes cluster, using the persistent volume claim `vol-claim` mounted at `/mount/path`:
 
 ```console
-$ nextflow kuberun nextflow-io/hello
+$ nextflow kuberun nextflow-io/hello -v vol-claim:/mount/path
 ```
 
+Launch an interactive shell in a Nextflow pod, for debugging purposes:
+
+```console
+$ nextflow kuberun login -v vol-claim:/mount/path
+```
+
+This command creates a pod, sets up the volume claim(s), configures the Nextflow environment, and launches a Bash login session. The pod is automatically destroyed once the shell session terminates, so do not use it to launch long-running pipelines in the background.
+
+[config-k8s]: ../config/k8s
 [k8s-page]: ../executor/kubernetes

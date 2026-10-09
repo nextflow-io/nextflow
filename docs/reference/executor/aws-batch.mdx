@@ -30,26 +30,26 @@ The following [hints][process-hints] are supported:
   hints consumableResources: ['my-license-a': 1, 'my-license-b': 2]
   ```
 
+See [Amazon S3][amazons3-page] for how to configure AWS credentials and S3 access. See the [aws][config-aws] config scope for the full list of configuration options.
+
 :::tip
 This page describes how to manually set up and use AWS Batch with Nextflow.
 You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/aws-batch) in [Seqera Platform](https://seqera.io/platform/),
 which automatically creates the required AWS infrastructure for you with minimal intervention.
 :::
 
-See [Amazon S3][amazons3-page] for how to configure AWS credentials and S3 access. See the [aws][config-aws] config scope for the full list of configuration options.
-
 ## Getting started
 
 1. In the AWS Console, navigate to **AWS Batch** and create a [Compute environment](http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html) (CE).
 
-   1. If you are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
-   2. Make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
+   1. If you are using a [custom AMI][aws-custom-ami], the AMI ID must be specified in the CE configuration
+   2. Make sure to select an AMI (either custom or existing) with Docker installed
    3. Make sure the policy `AmazonS3FullAccess` (granting access to S3 buckets) is attached to the instance role configured for the CE
    4. If you plan to use Docker images from Amazon ECS container, make sure the `AmazonEC2ContainerServiceforEC2Role` policy is also attached to the instance role
 
 2. In the AWS Console, create (at least) one [Job Queue](https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html) and bind it to the Compute environment.
 
-3. In the AWS Console, create an S3 bucket for the work directory (see below). You can also create separate buckets for input data and results, as needed.
+3. In the AWS Console, create an S3 bucket for the work directory. You can also create separate buckets for input data and results, as needed.
 
 4. Make sure that every process in your pipeline specifies a Docker container with the [container][process-container] directive.
 
@@ -62,6 +62,7 @@ To configure your pipeline for AWS Batch:
 1. Set the executor to `awsbatch`
 2. Specify the AWS Batch queue with the [queue][process-queue] directive
 3. Specify any Batch job container options with the [containerOptions][process-containeroptions] directive.
+4. Set the work directory to an S3 path.
 
 An example `nextflow.config` file is shown below:
 
@@ -73,13 +74,9 @@ process {
     containerOptions = '--shm-size 16000000 --ulimit nofile=1280:2560 --ulimit nproc=16:32'
 }
 
-aws {
-    batch {
-        // NOTE: this setting is only required if the AWS CLI is installed in a custom AMI
-        cliPath = '/home/ec2-user/miniconda/bin/aws'
-    }
-    region = 'us-east-1'
-}
+workDir = 's3://<bucket>/work'
+
+aws.region = 'us-east-1'
 ```
 
 :::tip
@@ -157,7 +154,19 @@ The recommended approach for running Nextflow pipelines with AWS Batch is to use
 
 Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
 
-The `aws` command can be made available by either (1) installing it in the container image(s) or (2) installing it in a [custom AMI][aws-custom-ami] to be used instead of the default AMI when configuring AWS Batch.
+The `aws` command can be made available by either (1) installing it in the container image(s) or (2) installing it in a custom AMI to be used instead of the default AMI when configuring AWS Batch. See [Custom AMIs for AWS Batch][aws-custom-ami] for how to create a custom AMI with the AWS CLI.
+
+When the AWS CLI is installed in a custom AMI, specify the `aws.batch.cliPath` option in the Nextflow configuration as shown below:
+
+```groovy
+aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
+```
+
+Replace the path above with the one matching the location where the `aws` tool is installed in your AMI.
+
+:::warning
+The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
+:::
 
 ## Container options
 
@@ -205,128 +214,6 @@ process.containerOptions = '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --pri
 ```
 
 Check the [AWS documentation](https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html) for further details.
-
-## Custom AMI
-
-There are several reasons why you might need to create your own [AMI (Amazon Machine Image)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) to use in your Compute Environments:
-
-- You do not want to install the AWS CLI into each of your Docker images and would rather provide it through the AMI
-- The existing AMI (selected from the marketplace) does not have Docker installed
-- You need to attach more storage to your EC2 instance (the default ECS instance AMI has only a 30GB EBS volume which is not enough for most data pipelines)
-- You need to install additional software that is not available in your Docker image
-
-### Create your custom AMI
-
-From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
-**AWS Marketplace AMIs**, and then search for `Amazon ECS-Optimized Amazon Linux 2023 (AL2023) x86_64 AMI`. Select the AMI and continue as usual to configure and launch the instance.
-
-:::note
-The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
-:::
-
-When the instance is running, SSH into it (or connect with the Session Manager service), install the AWS CLI, and install any other tool that may be required (see following sections).
-
-Finally, select **Create Image** from the EC2 Dashboard to create a new AMI from the running instance (you can also do it through the AWS CLI).
-
-The new AMI ID needs to be specified when creating the Batch Compute Environment.
-
-:::warning
-Any additional software must be installed on the EC2 instance *before* creating the AMI.
-:::
-
-### AWS CLI installation
-
-:::tip
-The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
-Instead, consider using [Wave][wave-page] and [Fusion][fusion-page] to facilitate access to S3 without using the AWS CLI.
-:::
-
-The [AWS CLI](https://aws.amazon.com/cli) should be installed in your custom AMI using a self-contained package manager such as [Conda](https://conda.io). That way, you can control which version of Python is used by the AWS CLI (which is written in Python).
-
-If you don't use Conda, the `aws` command will attempt to use the version of Python that is installed in the container, and it won't be able to find the necessary dependencies.
-
-The following snippet shows how to install AWS CLI with [Miniconda](https://conda.io/miniconda.html) in the home folder:
-
-```bash
-cd $HOME
-sudo yum install -y bzip2 wget
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b -f -p $HOME/miniconda
-$HOME/miniconda/bin/conda install -c conda-forge --override-channels -y awscli
-rm Miniconda3-latest-Linux-x86_64.sh
-```
-
-Afterwards, verify that the AWS CLI package works correctly:
-
-```console
-$ ./miniconda/bin/aws --version
-aws-cli/1.29.20 Python/3.11.4 Linux/4.14.318-241.531.amzn2.x86_64 botocore/1.31.20
-```
-
-:::note
-The `aws` tool will be placed in a directory named `bin` in the main installation folder. Modifying this directory structure after the tool is installed will cause it to not work properly.
-:::
-
-To configure Nextflow to use this installation, specify the `aws.batch.cliPath` option in the Nextflow configuration as shown below:
-
-```groovy
-aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
-```
-
-Replace the path above with the one matching the location where the `aws` tool is installed in your AMI.
-
-:::warning
-The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
-:::
-
-### Docker installation
-
-Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-optimized Amazon Linux 2023 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
-
-The following snippet shows how to install Docker on an Amazon EC2 instance:
-
-```bash
-# install Docker
-sudo yum update -y
-sudo yum install docker
-
-# start the Docker service
-sudo service docker start
-
-# empower your user to run Docker without sudo
-sudo usermod -a -G docker ec2-user
-```
-
-You must log out and log back in again to use the new `ec2-user` permissions.
-
-These steps must be done *before* creating the AMI from the current EC2 instance.
-
-### Amazon ECS container agent installation
-
-The [ECS container agent](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html) is a component of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of ECS. AWS Batch uses ECS to execute containerized jobs, therefore it requires the agent to be installed on EC2 instances within your Compute Environments.
-
-The ECS agent is included in the **Amazon ECS-optimized Amazon Linux 2023 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
-
-To install the agent, follow these steps:
-
-```bash
-sudo yum install ecs-init
-sudo systemctl enable --now ecs
-```
-
-To test the installation:
-
-```bash
-curl -s http://localhost:51678/v1/metadata | python -mjson.tool
-```
-
-:::note
-The `AmazonEC2ContainerServiceforEC2Role` policy must be attached to the instance role in order to be able to connect the EC2 instance created by the Compute Environment to the ECS container.
-:::
-
-:::note
-The `AmazonEC2ContainerRegistryReadOnly` policy should be attached to the instance role in order to get read-only access to Amazon EC2 Container Registry repositories.
-:::
 
 ## Custom job definition
 
@@ -435,7 +322,7 @@ This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job
 
 [amazons3-iam]: ../../amazons3#iam-policies
 [amazons3-page]: ../../amazons3
-[aws-custom-ami]: #custom-ami
+[aws-custom-ami]: ../../guides/aws-custom-ami
 [config-aws]: ../config/aws
 [config-process-selectors]: ../../config#process-selectors
 [fusion-page]: ../../fusion
