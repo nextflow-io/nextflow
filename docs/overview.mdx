@@ -55,10 +55,10 @@ process extract_top_hits {
     input:
     top_hits: Path
     db: Path
-    
+
     output:
     file('sequences.txt')
-    
+
     script:
     """
     blastdbcmd -db $db -entry_batch $top_hits > sequences.txt

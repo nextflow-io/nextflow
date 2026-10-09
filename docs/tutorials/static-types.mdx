@@ -405,7 +405,7 @@ workflow RNASEQ {
     main:
     index = INDEX(transcriptome)
     fastqc_ch = FASTQC(read_pairs_ch)
-    quant_ch = QUANT(index, read_pairs_ch)
+    quant_ch = QUANT(read_pairs_ch, index)
 
     emit:
     fastqc = fastqc_ch
@@ -489,7 +489,7 @@ workflow RNASEQ {
 }
 ```
 
-Finally, the workflow needs to be updated to only emit the `samples_ch` channel. Type annotations are not required for emits, but they are still useful as documentation and as a sanity check -- if the declared output type doesn't match the assigned value's type, the language server will report it.
+Finally, the workflow needs to be updated to only emit the `samples_ch` channel. Type annotations are not required for emits, but they are still useful as documentation and as a sanity check -- if the declared output type doesn't match the assigned value's type, Nextflow will report it.
 
 While `samples_ch` could be emitted as type `Channel<Record>`, the best practice to use an explicit record type so that downstream workflows know which record fields are available.
 
