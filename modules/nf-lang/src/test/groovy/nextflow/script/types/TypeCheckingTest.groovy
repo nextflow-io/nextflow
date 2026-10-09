@@ -848,6 +848,7 @@ class TypeCheckingTest extends Specification {
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
         "['a', 'b', 'c'][1..<3]"    | null
+        "file('ab.txt') << 'a' << 'b'"  | null
     }
 
     @Unroll
@@ -862,6 +863,7 @@ class TypeCheckingTest extends Specification {
         '1 <=> 2'       | 'Integer'
         "'a' <=> 'b'"   | 'Integer'
         '1 < 2'         | 'Boolean'
+        "file('a.txt') << 'a'" | 'Path'
     }
 
     @Unroll
