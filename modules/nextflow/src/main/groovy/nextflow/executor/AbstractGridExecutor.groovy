@@ -17,6 +17,7 @@
 package nextflow.executor
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -41,7 +42,9 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
+    private final static Pattern CONTROL_CHARS = ~/\p{Cntrl}/
+
+    private final static Pattern INVALID_NAME_CHARS = ~/[ \/:@*?=\p{Cntrl}]/
 
     private Map lastQueueStatus
 
@@ -165,17 +168,19 @@ abstract class AbstractGridExecutor extends Executor {
         // -- check for a custom `jobName` defined in the nextflow config file
         def customName = resolveCustomJobName(task)
         if( customName )
-            return sanitizeJobName(customName)
+            return sanitizeJobName(removeControlChars(customName))
 
         // -- if not available fallback on the custom naming strategy
 
-        final result = new StringBuilder("nf-")
-        final name = task.getName()
-        for( int i=0; i<name.size(); i++ ) {
-            final ch = name[i]
-            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
-        }
-        return sanitizeJobName(result.toString())
+        final name = "nf-" + INVALID_NAME_CHARS.matcher(task.getName()).replaceAll('_')
+        return sanitizeJobName(name)
+    }
+
+    /**
+     * Replace control characters (e.g. newlines) so that the job name is kept on a single directive line
+     */
+    private static String removeControlChars(String name) {
+        CONTROL_CHARS.matcher(name).replaceAll('_')
     }
 
     protected String sanitizeJobName(String name) {
