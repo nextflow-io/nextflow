@@ -7,7 +7,7 @@ description: Use Google Cloud Storage buckets as a file system in Nextflow pipel
 
 Nextflow includes support for [Google Cloud Storage](https://cloud.google.com/storage). Files stored in a Cloud Storage bucket can be accessed transparently in your pipeline script like any other file in the local file system.
 
-## Cloud Storage path
+## Cloud Storage paths
 
 To access a Cloud Storage file, prefix the file path with the `gs://` scheme and the name of the bucket where it is stored.
 
@@ -25,7 +25,7 @@ println file('gs://my-bucket/data/sequences.fa').text
 
 See [Working with files][working-with-files] and the [Path][stdlib-types-path] reference to learn more about available file operations.
 
-## Credentials
+## Authentication
 
 Credentials for Google Cloud services, such as Cloud Storage and Cloud Batch, are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
 
@@ -39,15 +39,21 @@ This will write a credential file to your gcloud configuration directory that wi
 
 The next most common case would be when running on a Compute Engine VM. In this case, Application Default Credentials will pick up the Compute Engine Service Account credentials for that VM.
 
-See the [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http) documentation for how to enable other use cases.
-
-Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify location of the Google credentials file.
-
-To create a service account key file, see [Create and delete service account keys](https://cloud.google.com/iam/docs/keys-create-delete) in the Google Cloud documentation. Then set the following variable, replacing the path in the example with the path of your key file:
+Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify the location of a service account key file. To create a key file, see [Create and delete service account keys](https://cloud.google.com/iam/docs/keys-create-delete) in the Google Cloud documentation. Then set the following variable, replacing the path in the example with the path of your key file:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
+
+When using a key file, Nextflow uses the project ID in the key file as the default value of `google.project`. If `google.project` is also specified in the Nextflow configuration, it must match the project ID in the key file.
+
+See the [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http) documentation for how to enable other use cases.
+
+## Required permissions
+
+The identity associated with your credentials must be able to read and write objects in the buckets used by the pipeline, such as the work directory, input data, and published outputs. The [Storage Object User](https://cloud.google.com/storage/docs/access-control/iam-roles) role (`roles/storage.objectUser`) grants the required permissions. For buckets that are only read by the pipeline, the Storage Object Viewer role (`roles/storage.objectViewer`) is sufficient.
+
+See [Google Cloud Batch][google-batch-executor] for the additional roles required by the Google Batch executor.
 
 ## Requester pays buckets
 
@@ -62,8 +68,9 @@ google {
 
 ## Advanced configuration
 
-See the [google][config-google] configuration scope for more information about advanced Cloud Storage configuration options.
+See the [google][config-google] config scope for all available options.
 
 [config-google]: ./reference/config/google
+[google-batch-executor]: ./reference/executor/google-batch
 [stdlib-types-path]: ./reference/stdlib-types/path
 [working-with-files]: ./working-with-files

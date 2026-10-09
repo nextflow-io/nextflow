@@ -112,7 +112,7 @@ The Google service account email to use for the pipeline execution. If not speci
 
 The service account must have the IAM roles listed in the [Google Cloud Batch documentation for Nextflow](https://cloud.google.com/batch/docs/nextflow). Without these roles, Cloud Batch jobs stay in the `SCHEDULED` state and never run.
 
-This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Credentials][google-credentials] for more information on Google Cloud credentials.
+This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Authentication][google-credentials] for more information on Google Cloud credentials.
 
 ##### `google.batch.spot`
 
@@ -151,4 +151,4 @@ Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
 
 Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
 
-[google-credentials]: ../../google-storage#credentials
+[google-credentials]: ../../google-storage#authentication

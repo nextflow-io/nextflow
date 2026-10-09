@@ -55,7 +55,7 @@ which automatically creates the required AWS infrastructure for you with minimal
 
 5. Make sure that all of your container images are published in a Docker registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
 
-6. Configure your AWS credentials. See [Credentials][amazons3-credentials] for details.
+6. Configure your AWS credentials. See [Authentication][amazons3-credentials] for details.
 
 7. Add the following settings to your Nextflow configuration:
 
@@ -82,7 +82,7 @@ aws.region = 'us-east-1'
 Each process can be configured with its own queue by using the [queue][process-queue] directive in the process definition or via [Process selectors][config-process-selectors] in your Nextflow configuration.
 :::
 
-## IAM policies
+## Required permissions
 
 [IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
 
@@ -319,8 +319,8 @@ There are multiple reasons why this can happen. They are mainly related to the C
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
 
-[amazons3-credentials]: ../../amazons3#credentials
-[amazons3-iam]: ../../amazons3#iam-policies
+[amazons3-credentials]: ../../amazons3#authentication
+[amazons3-iam]: ../../amazons3#required-permissions
 [amazons3-page]: ../../amazons3
 [aws-custom-ami]: ../../guides/aws-custom-ami
 [config-aws]: ../config/aws

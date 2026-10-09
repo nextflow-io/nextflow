@@ -5,20 +5,32 @@ description: Use Azure Blob Storage as a file system in Nextflow pipelines.
 
 # Azure Blob Storage
 
+Nextflow includes support for [Azure Blob Storage](https://azure.microsoft.com/en-us/products/storage/blobs). Files stored in a blob container can be accessed transparently in your pipeline script like any other file in the local file system.
+
 Azure Storage provides several services for storing and accessing data in Azure. Nextflow primarily supports Azure Blob Storage for most workloads. Limited support is available for [Azure file shares][azure-file-shares] when using the Azure Batch executor.
 
-Nextflow uses the `az://` URI scheme to enable transparent access to files stored in Azure Blob Storage. Once Azure Storage is configured, you can use this scheme to reference files in any blob container as if they were local. For example, the path `/path/to/file.txt` in a container named `my-container` can be accessed as follows:
+## Blob Storage paths
 
-```groovy
-file('az://my-container/path/to/file.txt')
+To access a Blob Storage file, prefix the file path with the `az://` scheme and the name of the blob container where it is stored.
+
+For example, if you need to access the file `/data/sequences.fa` stored in a container named `my-container`, that file can be accessed using the following fully qualified path:
+
+```
+az://my-container/data/sequences.fa
 ```
 
-The storage account name must be provided in the Nextflow configuration file as shown below:
+The usual file operations can be applied to a path handle with the above notation. For example, the content of a Blob Storage file can be printed as follows:
+
+```nextflow
+println file('az://my-container/data/sequences.fa').text
+```
+
+The storage account must be specified in the Nextflow configuration, or with the `AZURE_STORAGE_ACCOUNT_NAME` environment variable:
 
 ```groovy
 azure {
     storage {
-        accountName = '<blob-account-name>'
+        accountName = '<storage-account-name>'
     }
 }
 ```
@@ -35,25 +47,9 @@ Nextflow supports three authentication methods for Azure services, listed in ord
 
 - [Access keys](#access-keys): The most basic and least secure method. Relies on direct access keys for authentication.
 
-### Required roles
-
-The following role assignments are required to use Azure services:
-
-For Azure Storage:
-
-- Storage Blob Data Reader
-- Storage Blob Data Contributor
-
-For Azure Batch:
-
-- Batch Data Contributor
-
-To assign roles to a managed identity or service principal, see the [Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
-
 ### Managed identities
 
 <AddedInVersion version="24.10" />
-
 
 [Managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
 
@@ -70,7 +66,7 @@ A system-assigned identity is tied to a specific Azure resource. To use it:
 
 1. Enable [system-assigned managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity) on your Azure resource.
 
-2. Configure the required role assignments. See [Required roles](#required-roles) for more information.
+2. Configure the required role assignments. See [Required permissions](#required-permissions) for more information.
 
 3. Add the following configuration:
 
@@ -181,7 +177,15 @@ You can find your access keys in the Azure portal:
 - For Storage accounts, navigate to your Storage account and select **Access keys** in the left-hand navigation menu.
 - For Batch accounts, navigate to your Batch account and select **Keys** in the left-hand navigation menu.
 
-Keep access keys secure and rotate them regularly. Use environment variables instead of hardcoding keys in configuration files, especially in shared or version-controlled environments:
+Keep access keys secure and rotate them regularly. Use environment variables instead of hardcoding keys in configuration files, especially in shared or version-controlled environments. Nextflow uses the following environment variables if the corresponding settings are not provided in the Nextflow configuration:
+
+- `AZURE_STORAGE_ACCOUNT_NAME`: your Azure Storage account name
+- `AZURE_STORAGE_ACCOUNT_KEY`: your Azure Storage account key
+- `AZURE_STORAGE_SAS_TOKEN`: your Azure Storage account SAS token
+- `AZURE_BATCH_ACCOUNT_NAME`: your Azure Batch account name
+- `AZURE_BATCH_ACCOUNT_KEY`: your Azure Batch account key
+
+Alternatively, specify the access keys in the Nextflow configuration:
 
 ```groovy
 azure {
@@ -207,19 +211,24 @@ azure.storage.sasToken = '<sas-token>'
 When creating a SAS token, make sure to enable `Read`, `Write`, `Delete`, `List`, `Add`, `Create` permissions for the `Container` and `Object` resource types. The value of `sasToken` should be stripped of the leading `?` character.
 :::
 
-:::tip
-Nextflow uses the following environment variables if storage settings are not provided in the Nextflow configuration file:
+## Required permissions
 
-- `AZURE_STORAGE_ACCOUNT_NAME`: your Azure Storage account name
-- `AZURE_STORAGE_ACCOUNT_KEY`: your Azure Storage account key
-- `AZURE_BATCH_ACCOUNT_NAME`: your Azure Batch account name
-- `AZURE_BATCH_ACCOUNT_KEY`: your Azure Batch account key
-- `AZURE_STORAGE_SAS_TOKEN`: your Azure Storage account SAS token
-:::
+The following role assignments are required to use Azure services:
+
+For Azure Storage:
+
+- Storage Blob Data Reader
+- Storage Blob Data Contributor
+
+For Azure Batch:
+
+- Batch Data Contributor
+
+To assign roles to a managed identity or service principal, see the [Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
 
 ## Advanced configuration
 
-See the [azure][config-azure] configuration scope for the list of available configuration options.
+See the [azure][config-azure] config scope for all available options.
 
 [azure-file-shares]: ./reference/executor/azure-batch#azure-file-shares
 [config-azure]: ./reference/config/azure
