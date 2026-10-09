@@ -41,9 +41,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        *Used only by the local executor.*
-
-        The maximum number of CPUs made available by the underlying system.
+        The maximum total number of CPUs that can be requested by the tasks submitted to this executor.
+        When the limit is reached, pending tasks are not submitted until some of the running tasks complete.
+        When not specified, the task submission is not limited by the requested CPUs. In the local executor, it defaults to the number of CPUs available in the system.
     """)
     final Integer cpus
 
@@ -80,9 +80,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        *Used only by the local executor.*
-
-        The maximum amount of memory made available by the underlying system.
+        The maximum total amount of memory that can be requested by the tasks submitted to this executor.
+        When the limit is reached, pending tasks are not submitted until some of the running tasks complete.
+        When not specified, the task submission is not limited by the requested memory. In the local executor, it defaults to the total memory available in the system.
     """)
     final MemoryUnit memory
 
