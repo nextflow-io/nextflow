@@ -24,6 +24,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Timeout
+import spock.lang.Unroll
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -635,6 +636,41 @@ class ScriptRunnerTest extends Dsl2Spec {
         result instanceof DataflowVariable
         result.val == "echo foo"
 
+    }
+
+    @Unroll
+    def 'should disable a process with process.when config setting' () {
+        given:
+        def config = loadConfig(CONFIG)
+
+        def script = '''
+            process hola {
+                input:
+                val x
+
+                output:
+                stdout
+
+                script:
+                "echo $x"
+            }
+
+            workflow {
+                hola(channel.of('a', 'b', 'c')).toList()
+            }
+            '''
+
+        when:
+        def result = runScript(script, config: config)
+
+        then:
+        result.val.sort() == EXPECTED
+
+        where:
+        CONFIG                                                  | EXPECTED
+        "process.executor = 'nope'"                             | ['echo a', 'echo b', 'echo c']
+        "process.executor = 'nope'; process.when = false"       | []
+        "process { executor = 'nope'; withName: hola { when = { x != 'b' } } }" | ['echo a', 'echo c']
     }
 
     def 'should wait for the session shutdown after aborting it' () {
