@@ -172,6 +172,22 @@ class TaskInputResolverTest extends Specification {
         task.context.input.bam.toString() == 'input.bam'
     }
 
+    def 'should normalize typed path input to store path for exec processes'() {
+        given:
+        def file = Files.createTempFile('test', '.txt')
+        def holder = new FileHolder(file).withName('staged.txt')
+        def resolver = new TaskInputResolver(new TaskRun(type: ScriptType.GROOVY), Mock(FilePorter.Batch), Mock(Executor))
+
+        when:
+        def result = resolver.normalizeValue(file, [(file): holder])
+        then:
+        result == file.toRealPath()
+        result.text == ''
+
+        cleanup:
+        Files.deleteIfExists(file)
+    }
+
     def 'should return single item or collection'() {
 
         setup:

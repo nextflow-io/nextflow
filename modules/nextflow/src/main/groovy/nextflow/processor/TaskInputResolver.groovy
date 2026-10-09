@@ -130,7 +130,7 @@ class TaskInputResolver {
 
     private Path normalizePath(Path value, Map<Path,FileHolder> holders) {
         return holders.containsKey(value)
-            ? new TaskPath(holders[value])
+            ? makePath(holders[value], task.type)
             : value
     }
 
