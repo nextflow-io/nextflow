@@ -170,4 +170,16 @@ class CmdModuleValidateTest extends Specification {
         then:
         thrown(AbortOperationException)
     }
+
+    def 'should report missing local path'() {
+        given:
+        def cmd = new CmdModuleValidate(args: ['./modules/nf-core/missing'], root: tempDir)
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Module path not found: ./modules/nf-core/missing'
+    }
 }
