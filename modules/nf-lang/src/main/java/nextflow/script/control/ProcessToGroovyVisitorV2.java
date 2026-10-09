@@ -239,7 +239,7 @@ public class ProcessToGroovyVisitorV2 {
         return block(null, statements);
     }
 
-    private Expression processInputCtor(Parameter param) {
+    static Expression processInputCtor(Parameter param) {
         return createX(
             "nextflow.script.params.v2.ProcessInput",
             args(
@@ -276,7 +276,7 @@ public class ProcessToGroovyVisitorV2 {
      *
      * @param output
      */
-    private static ClassNode outputType(Expression output) {
+    static ClassNode outputType(Expression output) {
         var type = getType(output);
         if( type == null || type.isGenericsPlaceHolder() )
             return ClassHelper.dynamicType();

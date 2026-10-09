@@ -81,7 +81,7 @@ class ProcessToolSchemaTest extends Dsl2Spec {
                 input:
                 name: String
                 count: Integer?
-                score: Double
+                score: Float
                 flag: Boolean
 
                 output:

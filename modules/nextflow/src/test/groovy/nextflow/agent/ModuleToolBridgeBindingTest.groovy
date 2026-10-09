@@ -219,4 +219,44 @@ class ModuleToolBridgeBindingTest extends Dsl2Spec {
         expect: 'only file/path args are dropped -- an empty string is a legit value for a val input'
         ModuleToolBridge.dropEmptyPathArgs([label: '', fasta: '  '], spec) == [label: '']
     }
+
+    def 'should resolve relative path args against the agent work dir'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final metaPath = dir.resolve('meta.yml')
+        metaPath.text = '''\
+            name: echo_tool
+            input:
+              - name: label
+                type: string
+              - name: fasta
+                type: file
+              - name: reads
+                type: file
+              - name: ref
+                type: file
+            '''.stripIndent()
+        final ModuleSpec spec = ModuleSpecFactory.fromYaml(metaPath)
+        final workDir = Path.of('/work/ab/cdef')
+
+        expect:
+        ModuleToolBridge.resolvePathArgs([label: 'x.fa', fasta: 'x.fa', reads: ['r1.fq', '/abs/r2.fq'], ref: 's3://bucket/ref.fa'], spec, workDir)
+            == [label: 'x.fa', fasta: '/work/ab/cdef/x.fa', reads: ['/work/ab/cdef/r1.fq', '/abs/r2.fq'], ref: 's3://bucket/ref.fa']
+        ModuleToolBridge.resolvePathArgs([fasta: 'x.fa'], spec, null) == [fasta: 'x.fa']
+    }
+
+    def 'should convert scalar tool args to the declared input type'() {
+        expect:
+        ModuleToolBridge.asScalarArg(VALUE, TYPE) == EXPECTED
+        ModuleToolBridge.asScalarArg(VALUE, TYPE)?.getClass() == EXPECTED?.getClass()
+
+        where:
+        VALUE   | TYPE    || EXPECTED
+        1       | Float   || 1.0f
+        0.5     | Float   || 0.5f
+        '2'     | Integer || 2
+        'true'  | Boolean || true
+        'x.fa'  | Path    || 'x.fa'
+        null    | Float   || null
+    }
 }

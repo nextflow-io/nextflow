@@ -74,7 +74,7 @@ class AgentPreviewWarnTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -89,7 +89,7 @@ class AgentPreviewWarnTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """

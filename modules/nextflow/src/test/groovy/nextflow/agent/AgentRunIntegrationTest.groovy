@@ -43,7 +43,7 @@ class AgentRunIntegrationTest extends Dsl2Spec {
             nextflow.enable.types = true
 
             record Question { text: String }
-            record Answer { answer: String; confidence: Double }
+            record Answer { answer: String; confidence: Float }
 
             agent eval_agent {
                 model 'openai/gpt-5-mini'
@@ -73,7 +73,7 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         def out = result.val
         out instanceof Map
         out.answer == 'ok'
-        out.confidence == 0.9d
+        out.confidence == 0.9f
         and:
         captured.model == 'openai/gpt-5-mini'
         captured.instruction == 'You are helpful.'
@@ -108,7 +108,7 @@ class AgentRunIntegrationTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -162,7 +162,7 @@ class AgentRunIntegrationTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -202,7 +202,7 @@ class AgentRunIntegrationTest extends Dsl2Spec {
                 text: String
 
                 output:
-                summary: String
+                stdout()
 
                 prompt:
                 """
@@ -250,7 +250,7 @@ class AgentRunIntegrationTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """

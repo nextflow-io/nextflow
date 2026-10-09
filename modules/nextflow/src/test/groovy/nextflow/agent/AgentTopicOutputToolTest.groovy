@@ -116,7 +116,7 @@ class AgentTopicOutputToolTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """

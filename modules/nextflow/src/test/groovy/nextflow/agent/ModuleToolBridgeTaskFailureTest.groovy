@@ -68,7 +68,7 @@ class ModuleToolBridgeTaskFailureTest extends Dsl2Spec {
             request: String
 
             output:
-            answer: String
+            stdout()
 
             prompt:
             """

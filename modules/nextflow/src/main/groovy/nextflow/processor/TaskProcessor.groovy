@@ -1048,6 +1048,7 @@ class TaskProcessor {
         try {
             // -- set task properties in order to resolve task outputs
             task.workDir = folder
+            task.config.workDir = folder
             task.stdout = stdoutFile
             task.config.exitStatus = exitCode
             // -- check if all output resources are available

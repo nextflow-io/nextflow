@@ -57,6 +57,13 @@ NOTE: Metrics clear the thresholds; proceed. -- mods/reporter
 module-local skills were activated; `VERDICT` comes from the tool, not the model.
 Add `-with-agent-trace` to watch the `activate_skill` and `qc_verdict` calls.
 
+The module can also be run directly, without an entry workflow. Its params are mapped to
+the agent inputs, and the `qc_verdict` process it defines is still used as a tool:
+
+```bash
+nextflow module run mods/reporter --request 'Assembly for isolate SRR001: N50 = 45 kb, completeness = 96.4%, total length = 5.1 Mb. Should we proceed?'
+```
+
 To prove the skills really come from the module directory, create
 `skills/qa-report/SKILL.md` next to this `main.nf` with different instructions and
 re-run: the output does not change.

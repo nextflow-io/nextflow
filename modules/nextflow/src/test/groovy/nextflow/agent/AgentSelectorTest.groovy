@@ -65,7 +65,7 @@ class AgentSelectorTest extends Dsl2Spec {
     private AgentDef newAgent(Map directives = [model: 'openai/gpt-4o']) {
         final owner = Mock(BaseScript) { getBinding() >> new ScriptBinding() }
         return new AgentDef(owner, 'qa', directives as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String),
             new PromptDef({ -> 'Q' }, 'Q'))
     }
 

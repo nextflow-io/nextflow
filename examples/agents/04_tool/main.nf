@@ -41,7 +41,7 @@ agent shouty {
     request: String
 
     output:
-    answer: String
+    stdout()
 
     prompt:
     """

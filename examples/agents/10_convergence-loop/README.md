@@ -38,7 +38,7 @@ has a single interior peak the model cannot know without running the tool, so it
    `{"threshold": <x>}`. That keeps the loop a clean single-parameter search and
    removes any chance of the model mangling a long constant path across dozens of
    calls. (A local process tool supports only scalar inputs, so the knob is a
-   `BigDecimal` — the JSON number type.)
+   `Float`.)
 
 3. **The `tuner` agent** has a role-only `instruction` ("the tool is the only
    way to learn F1 — never guess; scan coarsely then refine") and a `goal` ("find
@@ -58,7 +58,7 @@ has a single interior peak the model cannot know without running the tool, so it
 | Loop ≠ composition | Iteration of one tool vs chaining different tools once |
 | Declared-input knob | `threshold` is a process input ⇒ tunable per call, no core change |
 | Fixed dataset | `params.scores` (not an agent input) ⇒ tool call is just `{threshold}` |
-| Scalar-only local tool | Knob is `BigDecimal`; result is a `String` |
+| Scalar-only local tool | Knob is `Float`; result is a `String` |
 | The `ext.args` limit | Stock-module hidden params would need a core feature (see `docs/agent.mdx`) |
 
 ## Running it

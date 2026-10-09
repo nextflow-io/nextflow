@@ -105,7 +105,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -226,7 +226,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -334,7 +334,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -439,7 +439,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """

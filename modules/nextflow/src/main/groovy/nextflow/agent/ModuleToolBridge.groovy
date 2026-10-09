@@ -32,6 +32,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import io.seqera.npr.api.schema.v1.ModuleMetadata
+import nextflow.util.TypeHelper
 import nextflow.Global
 import nextflow.Nextflow
 import nextflow.Session
@@ -92,8 +93,9 @@ class ModuleToolBridge implements ToolDispatcher {
      */
     private static class Tool {
         String name
-        // scalar mode: the ordered input param names
+        // scalar mode: the ordered input params
         List<String> inputParamNames
+        List<Class> inputParamTypes
         String outputParamName
         // spec mode: the module spec
         ModuleSpec spec
@@ -252,8 +254,11 @@ class ModuleToolBridge implements ToolDispatcher {
         // -- ordered input param names
         final inputParams = cfg.getInputs().getParams()
         final inputParamNames = new ArrayList<String>(inputParams.size())
-        for( final p : inputParams )
+        final inputParamTypes = new ArrayList<Class>(inputParams.size())
+        for( final p : inputParams ) {
             inputParamNames.add(((ProcessInput) p).getName())
+            inputParamTypes.add(((ProcessInput) p).getType())
+        }
 
         // -- single output param (Phase 2 assumption)
         final outputParams = cfg.getOutputs().getParams()
@@ -274,6 +279,7 @@ class ModuleToolBridge implements ToolDispatcher {
         final tool = new Tool(
             name: name,
             inputParamNames: inputParamNames,
+            inputParamTypes: inputParamTypes,
             outputParamName: outputParamName,
             processDef: proc )
         tools.put(name, tool)
@@ -492,7 +498,7 @@ class ModuleToolBridge implements ToolDispatcher {
             final DataflowVariable<String> reply = new DataflowVariable<String>()
             if( closed.get() )
                 throw new IllegalStateException("Agent tool bridge is closed")
-            final parsed = parseArgs(toolName, argsJson)
+            final parsed = resolvePathArgs(parseArgs(toolName, argsJson), tool.spec, context()?.workDir)
             requests.bind(new ToolCall(tool, parsed, reply))
             final result = reply.val
             // after the module task completes, scan the result for file path strings and whitelist
@@ -671,10 +677,46 @@ class ModuleToolBridge implements ToolDispatcher {
         return result
     }
 
+    /**
+     * Resolve relative path arguments against the agent work dir, since
+     * the model sees staged inputs by their name in the work dir.
+     *
+     * @param args
+     * @param spec
+     * @param workDir
+     */
+    static Map resolvePathArgs(Map args, ModuleSpec spec, Path workDir) {
+        if( !args || spec == null || workDir == null )
+            return args
+        final Map result = new LinkedHashMap(args)
+        final inputs = spec.inputs ?: Collections.<ModuleParam>emptyList()
+        for( final param : inputs ) {
+            final List<ModuleParam> components = param.isTuple() ? param.components : Collections.singletonList(param)
+            for( final comp : components ) {
+                if( !ToolSchema.isFileType(comp.type?.toLowerCase()) )
+                    continue
+                final value = result.get(comp.name)
+                if( value instanceof CharSequence )
+                    result.put(comp.name, resolvePath(value.toString(), workDir))
+                else if( value instanceof List )
+                    result.put(comp.name, value.collect { v -> v instanceof CharSequence ? resolvePath(v.toString(), workDir) : v })
+            }
+        }
+        return result
+    }
+
+    private static String resolvePath(String str, Path workDir) {
+        if( !str.trim() || str.contains('://') || Path.of(str).isAbsolute() )
+            return str
+        return FilesEx.toUriString(workDir.resolve(str))
+    }
+
     private void startScalarInvocation(Session session, ToolCall request) {
         final tool = request.tool
         final parsed = request.arguments
-        final args = tool.inputParamNames.collect { parsed.get(it) }
+        final args = (0..<tool.inputParamNames.size()).collect { i ->
+            asScalarArg(parsed.get(tool.inputParamNames[i]), tool.inputParamTypes[i])
+        }
         final invocation = tool.processDef.clone()
         final ChannelOut out = (ChannelOut) invocation.run(args as Object[])
         final DataflowReadChannel resultChannel = CH.getReadChannel(out[0])
@@ -684,6 +726,19 @@ class ModuleToolBridge implements ToolDispatcher {
             final key = (tool.outputParamName == '$out') ? 'result' : tool.outputParamName
             return JsonOutput.toJson([(key): result])
         }
+    }
+
+    /**
+     * Convert a JSON scalar to the declared input type, since e.g. the
+     * model may send a whole number for a Float input.
+     *
+     * @param value
+     * @param type
+     */
+    static Object asScalarArg(Object value, Class type) {
+        return type != null && (Number.isAssignableFrom(type) || type == Boolean)
+            ? TypeHelper.asType(value, type)
+            : value
     }
 
     private void startSpecInvocation(Session session, ToolCall request) {
