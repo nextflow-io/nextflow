@@ -18,8 +18,10 @@ package nextflow.processor
 
 
 import nextflow.Session
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.ExecutorConfig
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -223,4 +225,88 @@ class TaskPollingMonitorTest extends Specification {
         10       | 5             | 3          | true     | false    | false            | false     // Not ready
     }
 
+    def 'should not limit resources by default'() {
+        given:
+        def session = Mock(Session)
+        def config = new ExecutorConfig(cpus: 1, memory: '1GB')
+
+        expect:
+        TaskPollingMonitor.create(session, config, 'k8s', 100, Duration.of('5 sec')).resourceTracker == null
+    }
+
+    def 'should limit submission by cpus and memory'() {
+        given:
+        def session = Mock(Session)
+        def tracker = new ResourceTracker(8, MemoryUnit.of('16GB').toBytes())
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceTracker: tracker)
+        def handler = Mock(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB')))
+            canForkProcess() >> true
+            isReady() >> true
+        }
+
+        when:
+        monitor.submit(handler)
+        monitor.submit(handler)
+        then:
+        2 * handler.submit()
+        tracker.availableCpus() == 0
+        tracker.availableMemory() == 0
+        !monitor.canSubmit(handler)
+
+        when:
+        monitor.remove(handler)
+        then:
+        tracker.availableCpus() == 4
+        tracker.availableMemory() == MemoryUnit.of('8GB').toBytes()
+        monitor.canSubmit(handler)
+    }
+
+    def 'should fail when a task exceeds the executor resources'() {
+        given:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: Mock(Session), pollInterval: Duration.of('1min'), resourceTracker: new ResourceTracker(8, 0))
+        def handler = Mock(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 10))
+        }
+
+        when:
+        monitor.canSubmit(handler)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Task requirement exceeds available CPUs -- req: 10; avail: 8'
+    }
+
+    def 'should release job array resources as each child completes'() {
+        given:
+        def tracker = new ResourceTracker(8, MemoryUnit.of('16GB').toBytes())
+        def monitor = new TaskPollingMonitor(name: 'foo', session: Mock(Session), pollInterval: Duration.of('1min'), resourceTracker: tracker)
+        def children = (1..3).collect {
+            Mock(TaskHandler) {
+                getTask() >> new TaskRun(config: new TaskConfig(cpus: 2, memory: MemoryUnit.of('2GB')))
+            }
+        }
+        def array = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) { getChildren() >> children }
+        }
+
+        when:
+        monitor.submit(array)
+        then:
+        tracker.availableCpus() == 2
+        tracker.availableMemory() == MemoryUnit.of('10GB').toBytes()
+
+        when:
+        monitor.remove(children[0])
+        then:
+        tracker.availableCpus() == 4
+        tracker.availableMemory() == MemoryUnit.of('12GB').toBytes()
+
+        when:
+        monitor.remove(children[1])
+        monitor.remove(children[2])
+        monitor.remove(children[2])
+        then:
+        tracker.availableCpus() == 8
+        tracker.availableMemory() == MemoryUnit.of('16GB').toBytes()
+    }
 }

@@ -85,8 +85,8 @@ class LocalPollingMonitorTest extends Specification {
 
         then:
         monitor.runningQueue.empty
-        monitor.availCpus.get() == 8
-        monitor.availMemory.get() == memory.toBytes()
+        monitor.resourceTracker.availableCpus() == 8
+        monitor.resourceTracker.availableMemory() == memory.toBytes()
         monitor.canSubmit(fullPool)
 
         cleanup:
@@ -122,30 +122,30 @@ class LocalPollingMonitorTest extends Specification {
         handler.getTask() >> { task }
 
         expect:
-        monitor.availCpus.get() == 10
+        monitor.resourceTracker.availableCpus() == 10
         monitor.capacity == 20
-        monitor.availMemory.get() == _20_GB
-        monitor.maxCpus == 10
-        monitor.maxMemory == _20_GB
+        monitor.resourceTracker.availableMemory() == _20_GB
+        monitor.resourceTracker.totalCpus == 10
+        monitor.resourceTracker.totalMemory == _20_GB
 
         when:
         monitor.submit(handler)
         then:
         session.notifyTaskSubmit(handler) >> null
         monitor.getRunningQueue().size()==1
-        monitor.availCpus.get() == 7
-        monitor.availMemory.get() == MemoryUnit.of('18GB').toBytes()
-        monitor.maxCpus == 10
-        monitor.maxMemory == _20_GB
+        monitor.resourceTracker.availableCpus() == 7
+        monitor.resourceTracker.availableMemory() == MemoryUnit.of('18GB').toBytes()
+        monitor.resourceTracker.totalCpus == 10
+        monitor.resourceTracker.totalMemory == _20_GB
 
         when:
         monitor.remove(handler)
         then:
         monitor.getRunningQueue().size()==0
-        monitor.availCpus.get() == 10
-        monitor.availMemory.get() == _20_GB
-        monitor.maxCpus == 10
-        monitor.maxMemory == _20_GB
+        monitor.resourceTracker.availableCpus() == 10
+        monitor.resourceTracker.availableMemory() == _20_GB
+        monitor.resourceTracker.totalCpus == 10
+        monitor.resourceTracker.totalMemory == _20_GB
 
     }
 
@@ -181,8 +181,8 @@ class LocalPollingMonitorTest extends Specification {
         1 * session.notifyTaskSubmit(handler) >> null
         and:
         monitor.canSubmit(handler) == true
-        monitor.availCpus.get() == 6
-        monitor.availMemory.get() == MemoryUnit.of('12GB').toBytes()
+        monitor.resourceTracker.availableCpus() == 6
+        monitor.resourceTracker.availableMemory() == MemoryUnit.of('12GB').toBytes()
 
         when:
         monitor.submit(handler)
@@ -191,8 +191,8 @@ class LocalPollingMonitorTest extends Specification {
         1 * session.notifyTaskSubmit(handler) >> null
         and:
         monitor.canSubmit(handler) == false
-        monitor.availCpus.get() == 2
-        monitor.availMemory.get() == MemoryUnit.of('4GB').toBytes()
+        monitor.resourceTracker.availableCpus() == 2
+        monitor.resourceTracker.availableMemory() == MemoryUnit.of('4GB').toBytes()
 
     }
 
@@ -219,7 +219,7 @@ class LocalPollingMonitorTest extends Specification {
 
         expect:
         monitor.canSubmit(handler) == true
-        monitor.availCpus.get() == 1
+        monitor.resourceTracker.availableCpus() == 1
 
         when:
         monitor.submit(handler)
@@ -228,7 +228,7 @@ class LocalPollingMonitorTest extends Specification {
         1 * session.notifyTaskSubmit(handler) >> null
         and:
         monitor.canSubmit(handler) == false
-        monitor.availCpus.get() == 0
+        monitor.resourceTracker.availableCpus() == 0
     }
 
     def 'should throw an exception for missing cpus' () {
@@ -254,7 +254,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e1 = thrown(ProcessUnrecoverableException)
-        e1.message == 'Process requirement exceeds available CPUs -- req: 12; avail: 10'
+        e1.message == 'Task requirement exceeds available CPUs -- req: 12; avail: 10'
 
 
     }
@@ -282,7 +282,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e2 = thrown(ProcessUnrecoverableException)
-        e2.message == 'Process requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
+        e2.message == 'Task requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
 
     }
 
@@ -311,7 +311,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e2 = thrown(ProcessUnrecoverableException)
-        e2.message == 'Process requirement exceeds available accelerators -- req: 8; avail: 4'
+        e2.message == 'Task requirement exceeds available accelerators -- req: 8; avail: 4'
 
         cleanup:
         SysEnv.pop()

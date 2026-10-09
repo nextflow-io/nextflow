@@ -41,9 +41,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        *Used only by the local executor.*
+        *Used only by the local executor and grid executors.*
 
-        The maximum number of CPUs made available by the underlying system.
+        The maximum number of CPUs that can be requested by submitted tasks. Pending tasks are not submitted until enough CPUs are available, and a task that requests more CPUs than this limit fails. A job array counts the CPUs of all its tasks. Only CPUs requested with the `cpus` directive are counted (not `clusterOptions`), and a task without it counts as 1 CPU. For the local executor, the default is the number of CPUs on the system. For grid executors, there is no limit by default.
     """)
     final Integer cpus
 
@@ -80,9 +80,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        *Used only by the local executor.*
+        *Used only by the local executor and grid executors.*
 
-        The maximum amount of memory made available by the underlying system.
+        The maximum amount of memory that can be requested by submitted tasks. Pending tasks are not submitted until enough memory is available, and a task that requests more memory than this limit fails. A job array counts the memory of all its tasks. Only memory requested with the `memory` directive is counted (not `clusterOptions`). For the local executor, the default is the total memory on the system. For grid executors, there is no limit by default.
     """)
     final MemoryUnit memory
 
