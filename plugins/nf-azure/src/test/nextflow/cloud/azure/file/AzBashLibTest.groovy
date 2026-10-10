@@ -32,6 +32,7 @@ class AzBashLibTest extends Specification {
             # custom env variables used for azcopy opts
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
+            export AZCOPY_OPTS=""
 
             nxf_az_upload() {
                 local name=$1
@@ -41,12 +42,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                 fi
             }
 
@@ -57,10 +58,10 @@ class AzBashLibTest extends Specification {
                 local ret
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                ret=$(azcopy cp "$source?$AZ_SAS" "$target" $AZCOPY_OPTS 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive $AZCOPY_OPTS >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         exit 1
@@ -134,6 +135,7 @@ class AzBashLibTest extends Specification {
             # custom env variables used for azcopy opts
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
+            export AZCOPY_OPTS=""
 
             nxf_az_upload() {
                 local name=$1
@@ -143,12 +145,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                 fi
             }
 
@@ -159,10 +161,10 @@ class AzBashLibTest extends Specification {
                 local ret
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                ret=$(azcopy cp "$source?$AZ_SAS" "$target" $AZCOPY_OPTS 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive $AZCOPY_OPTS >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         exit 1
@@ -236,6 +238,7 @@ class AzBashLibTest extends Specification {
             # custom env variables used for azcopy opts
             export AZCOPY_BLOCK_SIZE_MB=10
             export AZCOPY_BLOCK_BLOB_TIER=Hot
+            export AZCOPY_OPTS=""
 
             nxf_az_upload() {
                 local name=$1
@@ -245,12 +248,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
                 fi
             }
 
@@ -261,10 +264,10 @@ class AzBashLibTest extends Specification {
                 local ret
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                ret=$(azcopy cp "$source?$AZ_SAS" "$target" $AZCOPY_OPTS 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive $AZCOPY_OPTS >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         exit 1
@@ -272,5 +275,14 @@ class AzBashLibTest extends Specification {
                 }
             }
             '''.stripIndent()
+    }
+
+    def 'should add extra azcopy opts to the copy commands'() {
+        when:
+        def script = AzBashLib.script(new AzCopyOpts([opts: '--put-md5 --log-level ERROR']), 10, 20, Duration.of('30s'))
+        then:
+        script.contains('export AZCOPY_OPTS="--put-md5 --log-level ERROR"')
+        script.contains('azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS')
+        script.contains('ret=$(azcopy cp "$source?$AZ_SAS" "$target" $AZCOPY_OPTS 2>&1)')
     }
 }
