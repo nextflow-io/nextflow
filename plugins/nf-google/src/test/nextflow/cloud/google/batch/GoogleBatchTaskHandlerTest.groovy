@@ -1451,4 +1451,66 @@ class GoogleBatchTaskHandlerTest extends Specification {
         'h?-standard-88'      | 'local-ssd'          // 'h?' does not match regex ^h3-.*$, so not classified as h3
     }
 
+    def 'should finalize array task when its job was deleted by nextflow' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def client = Mock(BatchClient)
+        def exec = Mock(GoogleBatchExecutor)
+        def task = new TaskRun(name: 'foo (2)', workDir: WORK_DIR)
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '1', client: client, task: task, isArrayChild: true))
+        handler.@executor = exec
+        handler.status = nextflow.processor.TaskStatus.SUBMITTED
+
+        when:
+        def completed = handler.checkIfCompleted()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '1') >> { throw new NotFoundException(new Exception('not found'), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
+        1 * exec.isJobDeleted('job-1') >> true
+        1 * client.removeFromArrayTasks('job-1', '1')
+        and:
+        completed
+        task.error instanceof nextflow.exception.ProcessSubmitTimeoutException
+        task.exitStatus == Integer.MAX_VALUE
+    }
+
+    def 'should rethrow not found when the job was not deleted by nextflow' () {
+        given:
+        def client = Mock(BatchClient)
+        def exec = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun) { lazyName() >> 'foo (2)' }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '1', client: client, task: task, isArrayChild: true))
+        handler.@executor = exec
+
+        when:
+        handler.checkIfCompleted()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '1') >> { throw new NotFoundException(new Exception('not found'), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
+        1 * exec.isJobDeleted('job-1') >> false
+        thrown(NotFoundException)
+    }
+
+    def 'should finalize array task when its job deletion is in progress' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def client = Mock(BatchClient)
+        def exec = Mock(GoogleBatchExecutor)
+        def task = new TaskRun(name: 'foo (2)', workDir: WORK_DIR)
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '1', client: client, task: task, isArrayChild: true))
+        handler.@executor = exec
+        handler.status = nextflow.processor.TaskStatus.SUBMITTED
+
+        when:
+        def running = handler.checkIfRunning()
+        def completed = handler.checkIfCompleted()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '1') >> null
+        1 * client.getJobStatus('job-1') >> makeJobStatus(JobStatus.State.DELETION_IN_PROGRESS)
+        _ * exec.isJobDeleted('job-1') >> true
+        0 * client.getTaskStatus(_, _)
+        and:
+        !running
+        handler.status == nextflow.processor.TaskStatus.COMPLETED
+        completed
+        task.error instanceof nextflow.exception.ProcessSubmitTimeoutException
+    }
 }

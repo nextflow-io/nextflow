@@ -156,4 +156,15 @@ class GoogleBatchExecutorTest extends Specification {
         !executor.shouldDeleteJob('job-3')
         !executor.shouldDeleteJob('job-3')
     }
+
+    def 'should report deleted jobs' () {
+        given:
+        def executor = Spy(GoogleBatchExecutor)
+
+        expect:
+        !executor.isJobDeleted('job-1')
+        executor.shouldDeleteJob('job-1')
+        executor.isJobDeleted('job-1')
+        !executor.isJobDeleted('job-2')
+    }
 }
