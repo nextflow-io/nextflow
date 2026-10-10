@@ -116,6 +116,12 @@ Defines the format for date and time representations in notifications and report
 
 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
+##### `NXF_DISABLE_AOT_CACHE`
+
+<AddedInVersion version="26.10" />
+
+Disables the JVM ahead-of-time (AOT) cache when set to `true` (default: `false`). On Java 25 or later, Nextflow records the cache under `$NXF_HOME/tmp/aot` on the first `run` in an interactive terminal and uses it to speed up later launches.
+
 ##### `NXF_DISABLE_CHECK_LATEST`
 
 <AddedInVersion version="23.10" />
