@@ -151,7 +151,7 @@ class WaveContainerResolver implements ContainerResolver {
      */
     @Override
     boolean isContainerReady(String key) {
-        // images resolved without Wave (e.g. Singularity image files) are not tracked by the Wave client
+        // Images that skip Wave are unknown to the Wave client
         return client().hasContainer(key)
             ? client().isContainerReady(key)
             : defaultResolver.isContainerReady(key)

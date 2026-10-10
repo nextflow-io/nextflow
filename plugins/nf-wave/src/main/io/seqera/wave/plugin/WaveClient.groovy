@@ -573,7 +573,7 @@ class WaveClient {
         else
             checkConflicts(attrs, task.lazyName())
 
-        // Wave cannot augment a URL-style Singularity image, so leave it to the default resolver
+        // Wave cannot change a Singularity image, so use it as is
         if( isSingularityImageUrl(task, attrs) )
             return null
 
