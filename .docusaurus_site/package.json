@@ -35,7 +35,7 @@
         "remark-code-snippets": "1.1.0",
         "remark-math": "6.0.0",
         "remark-sectionize": "2.1.0",
-        "simple-git": "3.36.0",
+        "simple-git": "4.0.1",
         "tailwindcss": "4.3.0"
     },
     "devDependencies": {
