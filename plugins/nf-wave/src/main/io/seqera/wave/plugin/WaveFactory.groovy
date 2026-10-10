@@ -33,6 +33,8 @@ import nextflow.trace.TraceObserverFactoryV2
 @CompileStatic
 class WaveFactory implements TraceObserverFactoryV2 {
 
+    static final String SEQERA_EXECUTOR = 'seqera'
+
     @Override
     Collection<TraceObserverV2> create(Session session) {
         shouldEnable(session)
@@ -51,7 +53,12 @@ class WaveFactory implements TraceObserverFactoryV2 {
             return false
         }
 
-        if( fusion.enabled ) {
+        // the Seqera executor hosts provide the Fusion client, therefore Wave is optional
+        if( fusion.enabled && isSeqeraExecutor(config) ) {
+            if( wave.enabled )
+                enableBundleProjectResources(session, wave, 'Fusion')
+        }
+        else if( fusion.enabled ) {
             checkWaveRequirement(session, wave, 'Fusion')
         }
         if( isAwsBatchFargateMode(config) ) {
@@ -65,10 +72,26 @@ class WaveFactory implements TraceObserverFactoryV2 {
             throw new AbortOperationException("$feature feature requires enabling Wave service")
         }
         else {
-            log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
-            wave.bundleProjectResources = true
-            session.disableRemoteBinDir = true
+            enableBundleProjectResources(session, wave, feature)
         }
+    }
+
+    static private void enableBundleProjectResources(Session session, Map wave, String feature) {
+        log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
+        wave.bundleProjectResources = true
+        session.disableRemoteBinDir = true
+    }
+
+    /**
+     * Whether the run uses the Seqera executor, i.e. it is the default executor for every process.
+     * A per-process ({@code withName}/{@code withLabel}) executor is not considered.
+     *
+     * @param config the session config
+     * @return {@code true} when the default executor is {@code seqera}
+     */
+    static boolean isSeqeraExecutor(Map config) {
+        final executor = config.navigate('process.executor') ?: config.navigate('executor.name')
+        return SEQERA_EXECUTOR == executor?.toString()
     }
 
     static boolean isAwsBatchFargateMode(Map config) {
