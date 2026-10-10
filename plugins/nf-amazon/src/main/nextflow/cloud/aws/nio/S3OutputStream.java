@@ -160,6 +160,22 @@ public final class S3OutputStream extends OutputStream {
         this.bufferSize = request.getBufferSize();
     }
 
+    /**
+     * Creates an {@code S3OutputStream} that continues an existing multipart upload identified by
+     * {@code uploadId}, resuming part numbering after the already-completed {@code completedParts}.
+     */
+    public S3OutputStream(final S3Client s3, S3ObjectId objectId, S3MultipartOptions request,
+                          String uploadId, List<CompletedPart> completedParts) {
+        this.s3 = requireNonNull(s3);
+        this.objectId = requireNonNull(objectId);
+        this.request = request;
+        this.bufferSize = request.getBufferSize();
+        this.uploadId = requireNonNull(uploadId);
+        this.completedParts = new LinkedBlockingQueue<>(completedParts);
+        this.partsCount = completedParts.size();
+        // executor and phaser are created lazily on the first upload (see uploadBuffer)
+    }
+
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
 
         final float expandFactor = 2.5f;
@@ -306,8 +322,15 @@ public final class S3OutputStream extends OutputStream {
             return false;
         }
 
-        if (partsCount == 0) {
+        if (uploadId == null) {
             init();
+        }
+        else if (executor == null) {
+            // a resumed upload already has an uploadId and completed parts, so only the
+            // background executor and phaser need to be created
+            executor = getOrCreateExecutor(request.getMaxThreads());
+            phaser = new Phaser();
+            phaser.register();
         }
 
         // set the buffer in read mode and submit for upload
@@ -388,17 +411,59 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // -- upload remaining chunk
-            if( buf != null )
+            if( buf != null ) {
                 uploadBuffer(buf, true);
+                buf = null;
+                md5 = null;
+            }
 
             // -- shutdown upload executor and await termination
             log.trace("[S3 phaser] Close arriveAndAwaitAdvance");
-            phaser.arriveAndAwaitAdvance();
+            if( phaser != null )
+                phaser.arriveAndAwaitAdvance();
 
             // -- complete upload process
             completeMultipartUpload();
         }
 
+        closed = true;
+    }
+
+    /**
+     * Abandon the upload, leaving it in-progress so a later attempt can resume it. Flushes any
+     * buffered data that forms a full minimum part and waits for the background parts, but does
+     * not complete or abort the multipart upload.
+     */
+    public void abandon() throws IOException {
+        if( closed )
+            return;
+
+        if( uploadId != null ) {
+            // upload any remaining buffered data as a part; a tail smaller than the minimum part
+            // size is left uncommitted, since a resume would make it a middle part and S3 would
+            // reject the completion with EntityTooSmall
+            if( buf != null && buf.position() >= MIN_MULTIPART_UPLOAD ) {
+                uploadBuffer(buf, true);
+                buf = null;
+                md5 = null;
+            }
+            // wait for the background part uploads to complete
+            if( phaser != null )
+                phaser.arriveAndAwaitAdvance();
+            // do NOT complete and do NOT abort — leave the multipart upload in-progress
+        }
+
+        closed = true;
+    }
+
+    /**
+     * Abort the upload, discarding the in-progress multipart upload entirely.
+     */
+    public void abort() {
+        if( closed )
+            return;
+        if( uploadId != null )
+            abortMultipartUpload();
         closed = true;
     }
 
@@ -534,7 +599,8 @@ public final class S3OutputStream extends OutputStream {
         }
         aborted = true;
         log.trace("[S3 phaser] MultipartUpload arriveAndDeregister");
-        phaser.arriveAndDeregister();
+        if( phaser != null )
+            phaser.arriveAndDeregister();
     }
 
     /**

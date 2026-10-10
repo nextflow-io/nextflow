@@ -16,6 +16,7 @@
 
 package nextflow.file
 
+import java.nio.file.FileSystems
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -323,34 +324,77 @@ class FilePorter {
         protected Path stageForeignFile(Path filePath, Path stagePath) {
 
             int count = 0
+            boolean resume = false
             while( true ) {
                 try {
-                    return stageForeignFile0(filePath, stagePath)
+                    // only the first attempt may short-circuit on an existing (cached) target;
+                    // retries must force a download so that a partial file can be resumed
+                    return count == 0
+                            ? stageForeignFile0(filePath, stagePath)
+                            : copyForeignFile(filePath, stagePath, resume)
                 }
                 catch( IOException e ) {
-                    // remove the target file that could be have partially downloaded
-                    cleanup(stagePath)
                     // check if a stage/download retry is allowed
-                    if( count++ < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted() ) {
-                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
+                    final retry = count < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted()
+                    // resume a partial download (HTTP/HTTPS only), otherwise discard the
+                    // partially downloaded file and start again from the beginning
+                    resume = retry && canResumeDownload(filePath, stagePath)
+                    if( !resume )
+                        cleanup(stagePath)
+                    if( retry ) {
+                        count++
+                        def message = resume
+                            ? "Unable to stage foreign file: ${filePath.toUriString()} (resuming, attempt ${count} of ${maxRetries}) -- Cause: $e.message"
+                            : "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
                         sleep (10 + RND.nextInt(300))
                         continue
                     }
 
+                    final targetProvider = stagePath.fileSystem.provider()
+                    if( targetProvider instanceof ResumableFileSystem )
+                        abortResumableUpload((ResumableFileSystem)targetProvider, stagePath)
                     throw new ProcessStageException(fmtError(filePath,e), e)
                 }
             }
         }
 
-        private boolean recoverableError(IOException e){
-            final result =
-                e !instanceof NoSuchFileException
-                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
-                && e !instanceof SocketException
-            log.debug "Stage foreign file exception: recoverable=$result; type=${e.class.name}; message=${e.message}"
-            return result
+        @PackageScope
+        boolean canResumeDownload(Path source, Path target) {
+            if( source.toUri().scheme !in ['http', 'https'] )
+                return false
+            // local target: resume a partial file
+            if( target.fileSystem == FileSystems.getDefault() )
+                return Files.exists(target) && Files.size(target) > 0
+            // cloud target: resume an in-progress upload
+            final provider = target.fileSystem.provider()
+            if( provider !instanceof ResumableFileSystem )
+                return false
+            try {
+                return ((ResumableFileSystem)provider).resumeUpload(target) != null
+            }
+            catch( IOException e ) {
+                log.debug "Unable to determine resume state for ${target.toUriString()}: ${e.message}"
+                return false
+            }
+        }
+
+        private boolean recoverableError(IOException e) {
+            return e !instanceof NoSuchFileException
+                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException);
+        }
+
+        @PackageScope
+        void abortResumableUpload(ResumableFileSystem provider, Path target) {
+            try {
+                final upload = provider.resumeUpload(target)
+                if( upload != null )
+                    upload.abort()
+            }
+            catch( IOException e ) {
+                log.debug "Unable to abort in-progress upload for ${target.toUriString()}: ${e.message}"
+            }
         }
 
         private String fmtError(Path filePath, Exception e) {
@@ -367,10 +411,17 @@ class FilePorter {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
             }
+            return copyForeignFile(source, target, false)
+        }
+
+        @PackageScope
+        Path copyForeignFile(Path source, Path target, boolean resume) {
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
             if( debugDelay )
                 sleep ( new Random().nextInt(debugDelay) )
-            return FileHelper.copyPath(source, target)
+            return resume
+                    ? FileHelper.copyPath(source, target, HttpCopyOption.RESUME)
+                    : FileHelper.copyPath(source, target)
         }
 
         synchronized String getMessageAndClear() {
