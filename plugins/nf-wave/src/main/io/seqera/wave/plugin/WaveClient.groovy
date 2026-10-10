@@ -67,6 +67,7 @@ import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.ProxyConfig
+import nextflow.util.StringUtils
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -572,8 +573,20 @@ class WaveClient {
         else
             checkConflicts(attrs, task.lazyName())
 
+        // Wave cannot augment a URL-style Singularity image, so leave it to the default resolver
+        if( isSingularityImageUrl(task, attrs) )
+            return null
+
         //  resolve the wave assets
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
+    }
+
+    protected boolean isSingularityImageUrl(TaskRun task, Map<String,String> attrs) {
+        if( !attrs.container || attrs.conda || attrs.dockerfile || attrs.singularityfile )
+            return false
+        if( !StringUtils.getUrlProtocol(attrs.container) )
+            return false
+        return task.getContainerConfig()?.getEngine() in ['singularity', 'apptainer']
     }
 
     protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
@@ -730,6 +743,10 @@ class WaveClient {
             log.info "Awaiting container provisioning: $containerImage"
         }
         return false
+    }
+
+    boolean hasContainer(String key) {
+        return responses.containsKey(key)
     }
 
     boolean isContainerReady(String key) {
