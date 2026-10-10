@@ -61,6 +61,11 @@ class FilePorter {
 
     static final private int MAX_TRANSFERS = 50
 
+    /**
+     * Max number of stage directories probed when looking for a free slot for a foreign file
+     */
+    static final private int MAX_CACHE_ATTEMPTS = 10
+
     static final private Duration POLL_TIMEOUT = Duration.of('2sec')
 
     final Map<FileCopy,FileTransfer> stagingTransfers = new HashMap<>()
@@ -384,9 +389,8 @@ class FilePorter {
         sync.lock()
         try {
             final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
-            int i=0
-            while( true ) {
-                final uniq = List.of(sourcePath, dirPath, i++)
+            for( int i=0; i<MAX_CACHE_ATTEMPTS; i++ ) {
+                final uniq = List.of(sourcePath, dirPath, i)
                 final hash = CacheHelper.hasher(uniq).hash().toString()
                 final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
                 final result = new FileCopy(sourcePath, targetPath)
@@ -396,6 +400,7 @@ class FilePorter {
                 if( !exist || checkPathIntegrity(sourcePath, targetPath) )
                     return result
             }
+            throw new ProcessStageException("Unable to determine a stage path for file: ${sourcePath.toUriString()} -- Giving up after ${MAX_CACHE_ATTEMPTS} attempts")
         }
         finally {
             sync.unlock()
