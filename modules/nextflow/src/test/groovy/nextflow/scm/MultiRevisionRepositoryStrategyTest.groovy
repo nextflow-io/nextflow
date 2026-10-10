@@ -302,7 +302,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         and: 'a strategy targeting the local upstream'
         def provider = Mock(RepositoryProvider) {
             hasCredentials() >> false
-            getCloneUrl() >> upstreamDir.absolutePath
+            getConfiguredCloneUrl() >> upstreamDir.absolutePath
         }
         def strategy = new MultiRevisionRepositoryStrategy('test/forced', 'main')
         strategy.setProvider(provider)
