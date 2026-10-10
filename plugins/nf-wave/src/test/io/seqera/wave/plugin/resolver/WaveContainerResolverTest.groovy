@@ -84,6 +84,29 @@ class WaveContainerResolverTest extends Specification {
         result == ORAS_CONTAINER
     }
 
+    def 'should check container readiness for images not resolved by wave' () {
+        given:
+        def client = Mock(WaveClient)
+        def resolver = Spy(new WaveContainerResolver())
+        resolver.client() >> client
+
+        when:
+        def ready = resolver.isContainerReady('/cache/image.img')
+        then:
+        1 * client.hasContainer('/cache/image.img') >> false
+        0 * client.isContainerReady(_)
+        and:
+        ready
+
+        when:
+        ready = resolver.isContainerReady('12345')
+        then:
+        1 * client.hasContainer('12345') >> true
+        1 * client.isContainerReady('12345') >> false
+        and:
+        !ready
+    }
+
     def 'should return container meta' () {
         given:
         def containerKey = 'abc'

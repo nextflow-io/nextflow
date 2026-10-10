@@ -151,7 +151,10 @@ class WaveContainerResolver implements ContainerResolver {
      */
     @Override
     boolean isContainerReady(String key) {
-        return client().isContainerReady(key)
+        // Images that skip Wave are unknown to the Wave client
+        return client().hasContainer(key)
+            ? client().isContainerReady(key)
+            : defaultResolver.isContainerReady(key)
     }
 
     @Override
