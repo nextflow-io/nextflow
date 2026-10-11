@@ -63,8 +63,9 @@ class Osc7501EmitterTest extends Specification {
 
         expect:
         body == "state=working:app=nextflow:msg=${encoded}"
-        body.count(':') == 3
+        body.count(':') == 2
         !body.contains(';')
+        !body.contains('a:b')
         decoded == 'a:b;cnext'
     }
 
@@ -98,11 +99,33 @@ class Osc7501EmitterTest extends Specification {
         'error'    | 'Workflow failed'
     }
 
-    private static class FlushTrackingBuffer extends StringBuilder implements Flushable {
+    private static class FlushTrackingBuffer implements Appendable, Flushable {
+        private final StringBuilder buf = new StringBuilder()
         boolean flushed
 
         @Override
+        Appendable append(CharSequence csq) {
+            buf.append(csq)
+            return this
+        }
+
+        @Override
+        Appendable append(CharSequence csq, int start, int end) {
+            buf.append(csq, start, end)
+            return this
+        }
+
+        @Override
+        Appendable append(char c) {
+            buf.append(c)
+            return this
+        }
+
+        @Override
         void flush() { flushed = true }
+
+        @Override
+        String toString() { buf.toString() }
     }
 
 }
