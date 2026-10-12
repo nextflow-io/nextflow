@@ -32,6 +32,7 @@ import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TestHelper
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -93,6 +94,38 @@ class HttpFilesTests extends Specification {
 
         cleanup:
         server?.stop(0)
+    }
+
+    @Timeout(30)
+    def 'should time out reading a stalled download' () {
+        given:
+        SysEnv.push([NXF_HTTPCLIENT_READ_TIMEOUT: '1s'])
+        def defaultConfig = XFileSystemConfig.instance
+        XFileSystemConfig.instance = new XFileSystemConfig()
+        and:
+        // send half of the declared content, then stall without closing the connection
+        def release = new java.util.concurrent.CountDownLatch(1)
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
+        server.createContext('/', { HttpExchange exchange ->
+            exchange.sendResponseHeaders(200, 100)
+            exchange.responseBody.write(new byte[50])
+            exchange.responseBody.flush()
+            release.await()
+            exchange.close()
+        } as HttpHandler)
+        server.start()
+
+        when:
+        def path = Paths.get(new URI("http://localhost:${server.address.port}/data.bin"))
+        Files.newInputStream(path).withCloseable { it.readAllBytes() }
+        then:
+        thrown(SocketTimeoutException)
+
+        cleanup:
+        release.countDown()
+        server?.stop(0)
+        XFileSystemConfig.instance = defaultConfig
+        SysEnv.pop()
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
