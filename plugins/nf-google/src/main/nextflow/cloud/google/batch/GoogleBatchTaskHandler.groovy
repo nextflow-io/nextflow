@@ -31,6 +31,7 @@ import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
+import com.google.cloud.batch.v1.TaskStatus as BatchTaskStatus
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import com.google.protobuf.Duration
@@ -826,8 +827,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private static final Pattern ZONE_PATTERN = ~/zones\/([^\/]+)\/instances\//
 
     protected CloudMachineInfo getMachineInfo() {
+        return getMachineInfo({ client.getTaskStatus(jobId, taskId) })
+    }
+
+    protected CloudMachineInfo getMachineInfo(Closure<BatchTaskStatus> status) {
         if( machineInfo!=null && !zoneUpdated && isCompleted() )
-            updateZoneFromEvents()
+            updateZoneFromEvents(status)
         return machineInfo
     }
 
@@ -838,9 +843,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Google Batch status events include zone info in the description field with
      * the format: {@code zones/<zone-name>/instances/<instance-id>}
      */
-    private void updateZoneFromEvents() {
+    private void updateZoneFromEvents(Closure<BatchTaskStatus> status) {
         try {
-            final events = client.getTaskStatus(jobId, taskId)?.statusEventsList
+            final events = status.call()?.statusEventsList
             final zone = resolveZoneFromEvents(events)
             if( zone ) {
                 machineInfo = new CloudMachineInfo(
@@ -879,12 +884,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
 
     protected Integer getNumSpotInterruptions(String jobId) {
+        return getNumSpotInterruptions(jobId, { client.getTaskStatus(jobId, taskId) })
+    }
+
+    protected Integer getNumSpotInterruptions(String jobId, Closure<BatchTaskStatus> taskStatus) {
         if (!jobId || !taskId  || !isCompleted()) {
             return null
         }
 
         try {
-            final status = client.getTaskStatus(jobId, taskId)
+            final status = taskStatus.call()
 
             if (!status)
                 return null
@@ -914,8 +923,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         def result = super.getTraceRecord()
         if( jobId && uid )
             result.put('native_id', "$jobId/$taskId/$uid")
-        result.machineInfo = getMachineInfo()
-        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
+        // fetch the task status at most once for both zone resolution and spot interruption count
+        final status = { client.getTaskStatus(jobId, taskId) }.memoize()
+        result.machineInfo = getMachineInfo(status)
+        result.numSpotInterruptions = getNumSpotInterruptions(jobId, status)
         return result
     }
 

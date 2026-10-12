@@ -481,6 +481,45 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.numSpotInterruptions == 1
     }
 
+    def 'should fetch task status once when creating the trace record' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> new TaskConfig()
+        and:
+        def client = Mock(BatchClient)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@client = client
+        handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
+        handler.@uid = '789'
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        and:
+        def taskStatus = TaskStatus.newBuilder()
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setDescription('Task state is updated from RUNNING to FAILED on zones/europe-west2-a/instances/i-abc123')
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .build()
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        handler.isCompleted() >> true
+        1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
+        and:
+        trace.machineInfo.zone == 'europe-west2-a'
+        trace.numSpotInterruptions == 1
+    }
+
     def 'should create submit request with fusion enabled' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
