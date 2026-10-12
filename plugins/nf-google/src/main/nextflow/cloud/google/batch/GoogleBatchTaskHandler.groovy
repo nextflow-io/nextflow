@@ -19,6 +19,7 @@ package nextflow.cloud.google.batch
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import com.google.api.gax.rpc.NotFoundException
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
@@ -42,7 +43,6 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
-import com.google.api.gax.rpc.NotFoundException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
@@ -746,11 +746,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( jobDeleted ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job=$jobId deleted; task=$taskId; last state=$state"
             task.exitStatus = Integer.MAX_VALUE
-            // a task that never started is re-submitted as a submit timeout, which lets it
-            // move on the same way the task that caused the job deletion did
+            // a task that never started is re-submitted as a submit timeout, so it does not count as a task failure
             task.error = status == TaskStatus.RUNNING
                 ? new ProcessException("Google Batch job $jobId was deleted before the task completed")
-                : new ProcessSubmitTimeoutException("Task '${task.lazyName()}' could not be started because its Google Batch job $jobId was deleted after another task of the same job array exceeded the 'maxAwait' time")
+                : new ProcessSubmitTimeoutException("Task '${task.lazyName()}' could not be started because its Google Batch job $jobId was deleted by Nextflow")
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED

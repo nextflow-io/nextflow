@@ -1473,6 +1473,29 @@ class GoogleBatchTaskHandlerTest extends Specification {
         task.exitStatus == Integer.MAX_VALUE
     }
 
+    def 'should fail running array task when its job was deleted by nextflow' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def client = Mock(BatchClient)
+        def exec = Mock(GoogleBatchExecutor)
+        def task = new TaskRun(name: 'foo (1)', workDir: WORK_DIR)
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '0', client: client, task: task, isArrayChild: true))
+        handler.@executor = exec
+        handler.status = nextflow.processor.TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '0') >> { throw new NotFoundException(new Exception('not found'), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
+        1 * exec.isJobDeleted('job-1') >> true
+        1 * client.removeFromArrayTasks('job-1', '0')
+        and:
+        completed
+        handler.status == nextflow.processor.TaskStatus.COMPLETED
+        task.error.class == ProcessException
+        task.exitStatus == Integer.MAX_VALUE
+    }
+
     def 'should rethrow not found when the job was not deleted by nextflow' () {
         given:
         def client = Mock(BatchClient)
