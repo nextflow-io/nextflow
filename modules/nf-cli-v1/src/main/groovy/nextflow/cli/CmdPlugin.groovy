@@ -162,21 +162,24 @@ class CmdPlugin extends CmdBase implements UsageAware {
             refactor.withPluginDir(Path.of(args[3] ?: refactor.pluginName).toFile())
         }
         else {
+            // the same reader must be used for all the prompts
+            final input = new ConsoleInput()
+
             // Prompt for plugin name
             print "Enter plugin name: "
-            refactor.withPluginName(readLine())
+            refactor.withPluginName(input.readLine())
 
             // Prompt for provider name
             print "Enter provider name: "
-            refactor.withProviderName(readLine())
+            refactor.withProviderName(input.readLine())
 
             // Prompt for project path (default to the normalised plugin name)
             print "Enter project path [${refactor.pluginName}]: "
-            refactor.withPluginDir(Path.of(readLine() ?: refactor.pluginName).toFile())
+            refactor.withPluginDir(Path.of(input.readLine() ?: refactor.pluginName).toFile())
 
             // confirm and proceed
             print "All good, are you OK to continue [y/N]? "
-            final confirm = readLine()
+            final confirm = input.readLine()
             if( confirm?.toLowerCase()!='y' ) {
                 println "Plugin creation aborted."
                 return
@@ -228,13 +231,6 @@ class CmdPlugin extends CmdBase implements UsageAware {
         else {
             throw new AbortOperationException("Invalid target plugin: $target")
         }
-    }
-
-    static private String readLine() {
-        final console = System.console()
-        return console != null
-            ? console.readLine()
-            : new BufferedReader(new InputStreamReader(System.in)).readLine()
     }
 
     static private void clonePluginTemplate(File targetDir, String templateVersion) {

@@ -133,7 +133,7 @@ class CmdClean extends CmdBase implements CacheBase {
      *      A {@link Record} object representing a row in the history log file
      */
     private void cleanup(Record entry) {
-        currentCacheDb = cacheFor(entry).openForRead()
+        currentCacheDb = openCache(entry)
         // -- remove each entry and work dir
         currentCacheDb.eachRecord(this.&removeRecord)
         // -- close the cache

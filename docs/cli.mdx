@@ -146,7 +146,11 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ### Kubernetes execution
 
-The `kuberun` command executes pipelines entirely within a Kubernetes cluster. This experimental feature runs the Nextflow driver itself inside Kubernetes.
+:::warning
+The `kuberun` command is no longer maintained. Consider [launching with Fusion][k8s-fusion] instead.
+:::
+
+The `kuberun` command executes pipelines entirely within a Kubernetes cluster. It runs the Nextflow driver itself inside Kubernetes.
 
 Use this when you want both the Nextflow driver and tasks running in Kubernetes. This differs from using the Kubernetes executor with `run`, where only tasks run in Kubernetes while the driver runs externally:
 
@@ -594,4 +598,5 @@ http://nextflow.io
 [config-params]: ./config#parameters
 [data-lineage-page]: ./tutorials/data-lineage
 [git-page]: ./git
+[k8s-fusion]: ./kubernetes#launch-with-fusion
 [using-modules-page]: ./modules/using-modules

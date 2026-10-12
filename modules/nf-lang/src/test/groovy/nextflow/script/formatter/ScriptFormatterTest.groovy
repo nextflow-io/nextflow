@@ -284,7 +284,7 @@ class ScriptFormatterTest extends Specification {
                 depth: Integer
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 """
@@ -432,6 +432,28 @@ class ScriptFormatterTest extends Specification {
                     path 'bar'
                     index {
                         path 'index.csv'
+                    }
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow{}
+
+            output{
+            foo{index{header ( ['a','b'] );sep('\\t')}}
+            }
+            ''',
+            '''\
+            workflow {
+            }
+
+            output {
+                foo {
+                    index {
+                        header(['a', 'b'])
+                        sep '\\t'
                     }
                 }
             }

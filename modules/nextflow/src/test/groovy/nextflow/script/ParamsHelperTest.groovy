@@ -19,11 +19,15 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Channel
+import nextflow.script.types.Value
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RecordMap
 import nextflow.util.VersionNumber
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Tests for {@link ParamsHelper}.
@@ -175,6 +179,117 @@ class ParamsHelperTest extends Specification {
         String  | Integer    | false
         SampleRec | RecordMap  | true
         SampleRec | Map        | false
+    }
+
+    def 'should load records from a samplesheet'() {
+        given:
+        def file = Files.createTempFile('test', ".${EXT}")
+        file.text = TEXT
+
+        when:
+        def result = ParamsHelper.loadFromFile('samples', file.toAbsolutePath())
+
+        then:
+        result == EXPECTED
+
+        cleanup:
+        file?.delete()
+
+        where:
+        EXT    | TEXT                                             | EXPECTED
+        // CSV has no types, so every value is a string
+        'csv'  | 'id,name\n1,sample1\n2,sample2\n'                | [[id: '1', name: 'sample1'], [id: '2', name: 'sample2']]
+        // quoted values, as written by an output index file
+        'csv'  | '"id","name"\n"1","sample1"\n"2",""\n'           | [[id: '1', name: 'sample1'], [id: '2', name: null]]
+        'csv'  | 'id,name\n1,"sample 1, rep 1"\n'                 | [[id: '1', name: 'sample 1, rep 1']]
+        'json' | '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'    | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+        'yml'  | '- id: 1\n  name: s1\n- id: 2\n  name: s2\n'     | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+    }
+
+    def 'should throw for unrecognized samplesheet format'() {
+        given:
+        def txtFile = Files.createTempFile('test', '.txt')
+        txtFile.text = 'some text'
+
+        when:
+        ParamsHelper.loadFromFile('items', txtFile.toAbsolutePath())
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains("Unrecognized file format 'txt'")
+
+        cleanup:
+        txtFile?.delete()
+    }
+
+    def 'should throw for a JSON file whose top level is not a list'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '{"key":"value"}'   // object, not array
+
+        when:
+        ParamsHelper.loadFromFile('samples', jsonFile.toAbsolutePath())
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('must contain a list of records')
+
+        cleanup:
+        jsonFile?.delete()
+    }
+
+    @Unroll
+    def 'should resolve dataflow params to plain values: #CLI #CONFIG'() {
+        given:
+        def declarations = [
+            declaredParam('samples', 'default.csv'),
+            declaredParam('limit', 3),
+            declaredParam('label', 'demo')
+        ]
+
+        when:
+        def result = ParamsHelper.resolvePlainParams(declarations, CLI, CONFIG)
+        then:
+        result == EXPECTED
+        result.limit.getClass() == Integer
+
+        where:
+        CLI                                 | CONFIG                                | EXPECTED
+        [:]                                 | [:]                                   | [samples: 'default.csv', limit: 3, label: 'demo']
+        [:]                                 | [samples: 'config.csv', limit: 7]     | [samples: 'config.csv', limit: 7, label: 'demo']
+        // the config params include the command line values (see ConfigDsl)
+        [samples: 'cli.csv', limit: '5']    | [samples: 'cli.csv', limit: '5']      | [samples: 'cli.csv', limit: 5, label: 'demo']
+        [limit: '5']                        | [samples: 'config.csv', limit: 5]     | [samples: 'config.csv', limit: 5, label: 'demo']
+    }
+
+    def 'should resolve the dataflow fields of a record param to plain values'() {
+        given:
+        def declarations = [ declaredParam('pipeline') ]
+        def cliParams = [pipeline: [samples: 'cli.csv', limit: '5']]
+        def configParams = [pipeline: [samples: 'cli.csv', limit: '5', label: 'config']]
+
+        when:
+        def result = ParamsHelper.resolvePlainParams(declarations, cliParams, configParams)
+        then:
+        result == [pipeline: [samples: 'cli.csv', limit: 5, label: 'config']]
+        result.pipeline instanceof RecordMap
+    }
+
+    private static Param declaredParam(String name, Object defaultValue = null) {
+        new Param(name, TypedParams.getField(name).getGenericType(), false, defaultValue)
+    }
+
+    static class TypedParams {
+        public Channel<Map> samples
+        public Value<Integer> limit
+        public String label
+        public PipelineRec pipeline
+    }
+
+    static class PipelineRec implements nextflow.script.types.Record {
+        Channel<Map> samples
+        Value<Integer> limit
+        String label
     }
 
     static class SampleRec implements nextflow.script.types.Record {

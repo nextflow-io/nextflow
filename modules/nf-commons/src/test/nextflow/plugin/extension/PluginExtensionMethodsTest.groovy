@@ -492,4 +492,104 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         e.cause.message.contains('`sayHello` is already included')
     }
 
+    def 'should execute custom function returning a channel in typed script'() {
+        given:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.types = true
+
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                reverseFn('a string')
+            }
+            '''
+
+        when:
+        def result = runScript(SCRIPT_TEXT)
+
+        then:
+        result.val == 'a string'.reverse()
+        result.val == Channel.STOP
+    }
+
+    def 'should apply typed operators to custom function channel'() {
+        given:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.types = true
+
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                reverseFn('a string').map { s -> s.toUpperCase() }.collect()
+            }
+            '''
+
+        when:
+        def result = runScript(SCRIPT_TEXT)
+
+        then:
+        result.val as List == ['a string'.reverse().toUpperCase()]
+    }
+
+    def 'should execute custom function returning a channel'() {
+        when:
+        def result = runScript('''
+            include { reverseFn } from 'plugin/nf-test-plugin-hello'
+            workflow {
+                reverseFn('a string')
+            }
+            ''')
+        then:
+        result.val == 'a string'.reverse()
+    }
+
+    def 'should execute custom function taking a channel'() {
+        when:
+        def result = runScript('''
+            include { goodbyeFn } from 'plugin/nf-test-plugin-hello'
+            workflow {
+                goodbyeFn(channel.of('Bye bye folks'))
+            }
+            ''')
+        then:
+        result.val == 'Bye bye folks'
+        result.val == Channel.STOP
+    }
+
+    def 'should execute custom function taking a channel in typed script'() {
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            include { goodbyeFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                def ch = channel.of('Bye bye folks')
+                goodbyeFn(ch).map { s -> s.toUpperCase() }.collect()
+            }
+            ''')
+        then:
+        result.val as List == ['BYE BYE FOLKS']
+    }
+
+    def 'should compose channel functions with named args'() {
+        when:
+        def result = runScript("""
+            ${HEADER}
+
+            include { reverseFn; goodbyeFn } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                def rows = reverseFn('a string', upper: true)
+                goodbyeFn(rows, prefix: 'x-')
+            }
+            """)
+        then:
+        result.val == 'x-GNIRTS A'
+        result.val == Channel.STOP
+
+        where:
+        HEADER << ['', 'nextflow.enable.types = true']
+    }
+
 }

@@ -22,6 +22,7 @@ import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -178,4 +179,33 @@ class AbstractGridExecutorTest extends Specification {
         ['-foo 1','--bar 2']    | ['-foo 1', '', '--bar 2', '']
     }
 
+    def 'should create resource tracker from executor config' () {
+        given:
+        def exec = Spy(AbstractGridExecutor)
+        exec.name = 'slurm'
+
+        when:
+        exec.config = new ExecutorConfig([:])
+        then:
+        exec.createResourceTracker() == null
+
+        when:
+        exec.config = new ExecutorConfig(cpus: 8, memory: '16GB')
+        def tracker = exec.createResourceTracker()
+        then:
+        tracker.totalCpus == 8
+        tracker.totalMemory == MemoryUnit.of('16GB').toBytes()
+
+        when:
+        exec.config = new ExecutorConfig(memory: '16GB', '$slurm': [cpus: 4])
+        tracker = exec.createResourceTracker()
+        then:
+        tracker.totalCpus == 4
+        tracker.totalMemory == MemoryUnit.of('16GB').toBytes()
+
+        when:
+        exec.config = new ExecutorConfig('$local': [cpus: 4])
+        then:
+        exec.createResourceTracker() == null
+    }
 }

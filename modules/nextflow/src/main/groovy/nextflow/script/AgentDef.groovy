@@ -16,6 +16,7 @@
 package nextflow.script
 
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicReference
 import java.util.regex.Pattern
 
 import groovy.json.JsonOutput
@@ -56,6 +57,8 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskRun
+import nextflow.util.TypeHelper
 import nextflow.util.CacheHelper
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
@@ -126,7 +129,7 @@ class AgentDef extends BindableDef implements ChainableDef {
     private String baseName
     private Map<String,Object> directives
     private List<AgentInput> inputs
-    private List<AgentOutput> outputs
+    private AgentOutput output
     private PromptDef prompt
     /**
      * The implicit file stagers the compiler inferred from the declared input types, replayed
@@ -297,7 +300,7 @@ class AgentDef extends BindableDef implements ChainableDef {
     }
 
     AgentDef(BaseScript owner, String name, Map<String,Object> directives, List<AgentInput> inputs,
-            List<AgentOutput> outputs, PromptDef prompt,
+            AgentOutput output, PromptDef prompt,
             List<ProcessFileInput> fileInputs = Collections.<ProcessFileInput>emptyList(),
             Map<String,ProcessFileOutput> fileOutputs = Collections.<String,ProcessFileOutput>emptyMap()) {
         this.owner = owner
@@ -306,7 +309,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         this.baseName = name
         this.directives = directives
         this.inputs = inputs
-        this.outputs = outputs
+        this.output = output
         this.prompt = prompt
         this.fileInputs = fileInputs
         this.fileOutputs = fileOutputs
@@ -331,7 +334,7 @@ class AgentDef extends BindableDef implements ChainableDef {
     List getLabels() { directiveList('label') }
     Integer getMaxIterations() { directives.get('maxIterations') as Integer }
     List<AgentInput> getInputs() { inputs }
-    List<AgentOutput> getOutputs() { outputs }
+    AgentOutput getOutput() { output }
     PromptDef getPrompt() { prompt }
 
     @Override
@@ -448,29 +451,24 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     /** Bare single value for 1 input (byte-identical to the legacy path); {name:value} for N>1. */
     private static String buildInputJson(List<AgentInput> ins, Map ctx) {
-        return ins.size() == 1
-            ? toJson(ctx.get(ins[0].name))
-            : toJson(ins.collectEntries { [(it.name): ctx.get(it.name)] })
+        final names = ins.collectMany { it.names }
+        return names.size() == 1
+            ? toJson(ctx.get(names[0]))
+            : toJson(names.collectEntries { [(it): ctx.get(it)] })
     }
 
     /**
-     * @param outputs the MODEL-ANSWERED outputs only (see the {@code modelOuts} partition in
-     *        {@link #buildAgentTaskWithBridge}); an output with an explicit right-hand side is
-     *        not part of the contract the model is given.
+     * @param output the MODEL-ANSWERED output, or null if the output has an explicit
+     *        right-hand side, which is not part of the contract the model is given.
      */
-    private static AgentOutputPlan resolveOutputPlan(String agentName, List<AgentOutput> outputs, List tools) {
-        // an agent whose every output is a work-dir collection asks the model for nothing: its
-        // observable result is the files it wrote, and its final text is discarded
-        if( !outputs )
+    private static AgentOutputPlan resolveOutputPlan(AgentOutput output) {
+        // an agent with no typed output asks the model for nothing: its result is the
+        // files it wrote and its final text, which is available through `stdout()`
+        if( output == null )
             return new AgentOutputPlan(AgentOutputMode.TEXT, null)
-        if( outputs.size() > 1 )
-            return new AgentOutputPlan(AgentOutputMode.WRAPPED, buildWrapperSchema(agentName, outputs))
-        final output = outputs[0]
-        if( Record.isAssignableFrom(output.type as Class) )
+        if( TypeHelper.isRecordType(output.type) )
             return new AgentOutputPlan(AgentOutputMode.RECORD, RecordSchema.of(output.type as Class))
-        if( tools )
-            return new AgentOutputPlan(AgentOutputMode.SCALAR_CONTRACT, scalarOutputSchema(output))
-        return new AgentOutputPlan(AgentOutputMode.TEXT, null)
+        return new AgentOutputPlan(AgentOutputMode.SCALAR_CONTRACT, scalarOutputSchema(output))
     }
 
     @CompileDynamic
@@ -483,16 +481,19 @@ class AgentDef extends BindableDef implements ChainableDef {
             final String promptText = AgentDef.renderPrompt(promptDef, ctx)
             final String inputJson = AgentDef.buildInputJson(inputs, ctx)
             final TaskConfig taskConfig = ctx.get('task') as TaskConfig
-            final Path taskWorkDir = taskConfig?.workDir as Path
-            final DispatchContext dispatchContext = needsSandbox ? new DispatchContext(taskWorkDir) : null
+            // created on the first tool call, because the work dir is assigned
+            // when the task is submitted, after this body runs
+            final dispatchContext = new AtomicReference<DispatchContext>()
             final ToolDispatcher contextualDispatch = bridge == null ? null : ({ String toolName, String argsJson ->
-                if( dispatchContext != null )
-                    ModuleToolBridge.setContext(dispatchContext)
+                if( needsSandbox ) {
+                    dispatchContext.compareAndSet(null, AgentDef.createSandboxContext(inputs, ctx))
+                    ModuleToolBridge.setContext(dispatchContext.get())
+                }
                 try {
                     return bridge.call(toolName, argsJson)
                 }
                 finally {
-                    if( dispatchContext != null )
+                    if( needsSandbox )
                         ModuleToolBridge.clearContext()
                 }
             } as ToolDispatcher)
@@ -515,15 +516,15 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     @CompileDynamic
     private static Closure createInJvmBody(PromptDef promptDef, List<AgentInput> inputs,
-            List<AgentOutput> outputs, ResolvedAgentSettings settings, AgentRunner runner,
+            AgentOutput modelOut, ResolvedAgentSettings settings, AgentRunner runner,
             ModuleToolBridge bridge, boolean needsSandbox, ProcessConfigV2 config,
             AgentOutputPlan outputPlan) {
         return { ->
             final ctx = getDelegate()
             final String promptText = AgentDef.renderPrompt(promptDef, ctx)
             final String inputJson = AgentDef.buildInputJson(inputs, ctx)
-            final String workDir = (ctx.get('task')?.workDir as Path)?.toString()
-            final request = settings.createRequest(promptText, inputJson, bridge as ToolDispatcher, workDir)
+            final Path workDir = ctx.get('task')?.workDir as Path
+            final request = settings.createRequest(promptText, inputJson, bridge as ToolDispatcher, workDir?.toString())
             // Clear stale snapshots before invoking a runner on this pooled task thread.
             AgentCallInfo.clear()
             if( needsSandbox )
@@ -544,14 +545,22 @@ class AgentDef extends BindableDef implements ChainableDef {
             final resolvedModel = AgentCallInfo.consumeResolvedModel()
             if( config.isCacheable() && resolvedModel != null )
                 ctx.put('$agentResolvedModel', resolvedModel)
-            outputPlan.bind(ctx, result, outputs)
-            return null
+            outputPlan.bind(ctx, result, modelOut, workDir)
+            // the task stdout holds the same terminal frame a canonical task prints,
+            // so that `stdout()` in an output resolves the same way on both runners;
+            // it is also written to the work dir so that it is available on resume
+            final String frame = JsonOutput.toJson([type: 'complete', output: result])
+            if( workDir != null )
+                workDir.resolve(TaskRun.CMD_OUTFILE).text = frame
+            return frame
         }
     }
 
     /**
-     * The sandbox context for an in-JVM agent: the task work dir, plus the SOURCE of every input
-     * that was staged into it.
+     * The dispatch context for an agent: the task work dir, plus the SOURCE of every input
+     * that was staged into it, by stage name. A tool called with the name of a staged input is
+     * given its source, since on a remote work dir the stage-in symlink is only visible inside the
+     * agent task until it completes.
      *
      * <p>Staging materializes an input as a symlink in the work dir ({@link
      * nextflow.executor.local.AgentTaskHandler}), while {@link nextflow.agent.SandboxGuard}
@@ -565,7 +574,8 @@ class AgentDef extends BindableDef implements ChainableDef {
     private static DispatchContext createSandboxContext(List<AgentInput> inputs, Object ctx) {
         final sandbox = new DispatchContext(ctx.get('task')?.workDir as Path)
         for( final inp : inputs )
-            addStagedSources(sandbox, ctx.get(inp.name))
+            for( final name : inp.names )
+                addStagedSources(sandbox, ctx.get(name))
         return sandbox
     }
 
@@ -577,7 +587,7 @@ class AgentDef extends BindableDef implements ChainableDef {
     private static void addStagedSources(DispatchContext sandbox, Object value) {
         // toRealPath() on a TaskPath is a pure accessor for the store path -- no file I/O
         if( value instanceof TaskPath )
-            sandbox.addReadablePath(value.toRealPath())
+            sandbox.addStagedInput(value.toString(), value.toRealPath())
         else if( value instanceof Map )
             ((Map) value).values().each { addStagedSources(sandbox, it) }
         else if( value instanceof Collection )
@@ -621,14 +631,14 @@ class AgentDef extends BindableDef implements ChainableDef {
         //    the model is neither asked for it (no schema entry) nor allowed to bind it; a
         //    `file(...)`/`files(...)` call inside that expression ADDITIONALLY registered an
         //    unstager, which is what makes it a work-dir collection
-        final List<AgentOutput> modelOuts = outputs.findAll { it.value == null }
-        final AgentOutputPlan outputPlan = resolveOutputPlan(name, modelOuts, agentTools)
+        final AgentOutput modelOut = output.value == null ? output : null
+        final AgentOutputPlan outputPlan = resolveOutputPlan(modelOut)
 
         // -- capture read-only locals for the body closure (resolve lexically under
         //    DELEGATE_ONLY; do NOT reference `this.name`/`this.inputs`/etc. in the body)
         final String agentName = this.name
         final List<AgentInput> ins = this.inputs
-        final List<AgentOutput> outs = this.outputs
+        final AgentOutput out = this.output
         final Session session = Global.session as Session
         // resolve declared skills ONCE, pre-ignition (portable descriptors; no dataflow
         // coupling). Null when no skills are declared, so a tool-free/skill-free agent
@@ -639,9 +649,9 @@ class AgentDef extends BindableDef implements ChainableDef {
         final settings = resolveSettings(agentConfig, agentName, agentTools, resolvedTools, skillDescriptors,
                 outputPlan, brokerHost)
 
-        declareParams(config, ins, outs, launchSpec, outputPlan)
+        declareParams(config, ins, out, launchSpec, outputPlan)
 
-        final body = createBody(promptDef, ins, modelOuts, settings, config, outputPlan, skillDescriptors,
+        final body = createBody(promptDef, ins, modelOut, settings, config, outputPlan, skillDescriptors,
                 selected, resolvedTools, agentConfig)
 
         attachTaskInfo(config, selected, settings, promptDef, resolvedTools, skillDescriptors)
@@ -661,8 +671,8 @@ class AgentDef extends BindableDef implements ChainableDef {
     private void requireInvocable(List args) {
         if( args.size() != inputs.size() )
             throw new ScriptRuntimeException("Agent `${name}` expects ${inputs.size()} input channel(s) but received ${args.size()}")
-        if( !outputs )
-            throw new ScriptRuntimeException("Agent `${name}` must declare exactly one output - zero outputs are not yet supported")
+        if( output == null )
+            throw new ScriptRuntimeException("Agent `${name}` must declare an output")
     }
 
     /**
@@ -780,9 +790,9 @@ class AgentDef extends BindableDef implements ChainableDef {
         // never be called back into the driver JVM.
         final List<ToolDescriptor> toolSpecs = bridge?.descriptors()
         final List<String> nativeToolNames = toolSelection?.nativeNames ?: null
-        // the in-JVM fs: tools need a per-task sandbox context (the real task work dir). A
-        // containerized runner serves them itself, so its bridge has none and needs no context.
-        final boolean needsSandbox = bridge != null && bridge.filesystemEnabled
+        // the bridge needs a per-task dispatch context (the real task work dir), both for the
+        // in-JVM fs: tools and to resolve relative path arguments of module tool calls
+        final boolean needsSandbox = bridge != null
         return new ResolvedTools(toolSelection, bridge, toolSpecs, nativeToolNames, needsSandbox)
     }
 
@@ -830,29 +840,31 @@ class AgentDef extends BindableDef implements ChainableDef {
      * reads the context slot the body writes.
      */
     @CompileDynamic
-    private void declareParams(ProcessConfigV2 config, List<AgentInput> ins, List<AgentOutput> outs,
+    private void declareParams(ProcessConfigV2 config, List<AgentInput> ins, AgentOutput out,
             AgentLaunchSpec launchSpec, AgentOutputPlan outputPlan) {
-        for( final inp : ins )
-            config.getInputs().addParam(inp.name, inp.type as Class, inp.optional)
+        for( final inp : ins ) {
+            if( inp.components != null )
+                config.getInputs().addTupleParam(inp.components, inp.type as Class)
+            else
+                config.getInputs().addParam(inp.name, inp.type as Class, inp.optional)
+        }
         // replay the compiler-inferred stagers: this is what puts the declared Path inputs into
         // `task.inputFiles`, hence into the stage-in script AND the container bind mounts
         for( final f : fileInputs )
             config.getInputs().addFile(f)
-        for( final out : outs ) {
-            final String outName = out.name   // capture per-iteration (avoid loop-var capture)
-            final Class outType = out.type as Class
-            if( out.value != null ) {
-                // the compiler's RHS closure -- for a file output `{ _file([:], '$path0') }`,
-                // which resolves against TaskOutputResolver like any process output would
-                config.getOutputs().addParam(outName, outType, out.value)
-            }
-            else if( launchSpec != null )
-                config.getOutputs().addParam(outName, outType, {
-                    outputPlan.decode(stdout(), outName, outType)
-                })
-            else
-                config.getOutputs().addParam(outName, outType, { getProperty(outName) })
+        final String outName = out.name
+        final Class outType = TypeHelper.getRawType(out.type)
+        if( out.value != null ) {
+            // the compiler's RHS closure -- for a file output `{ _file([:], '$path0') }`,
+            // which resolves against TaskOutputResolver like any process output would
+            config.getOutputs().addParam(outName, outType, out.value)
         }
+        else if( launchSpec != null )
+            config.getOutputs().addParam(outName, outType, {
+                outputPlan.decode(stdout(), outName, out.type, get('task')?.workDir as Path)
+            })
+        else
+            config.getOutputs().addParam(outName, outType, { getProperty(outName) })
         // replay the compiler-inferred unstagers, so `_file`/`_files` can resolve their key
         for( final entry : fileOutputs )
             config.getOutputs().addFile(entry.key, entry.value)
@@ -866,14 +878,14 @@ class AgentDef extends BindableDef implements ChainableDef {
     }
 
     /** The task body closure, wrapped in the {@link BodyDef} that carries the cache identity. */
-    private BodyDef createBody(PromptDef promptDef, List<AgentInput> ins, List<AgentOutput> modelOuts,
+    private BodyDef createBody(PromptDef promptDef, List<AgentInput> ins, AgentOutput modelOut,
             ResolvedAgentSettings settings, ProcessConfigV2 config, AgentOutputPlan outputPlan,
             List<SkillDescriptor> skillDescriptors, SelectedRunner selected, ResolvedTools resolvedTools,
             AgentConfig agentConfig) {
         final AgentLaunchSpec launchSpec = selected.launchSpec
         final Closure bodyClosure = launchSpec != null
             ? createCanonicalBody(promptDef, ins, settings, launchSpec, selected.runner, resolvedTools.bridge, resolvedTools.needsSandbox)
-            : createInJvmBody(promptDef, ins, modelOuts, settings, selected.runner, resolvedTools.bridge, resolvedTools.needsSandbox, config, outputPlan)
+            : createInJvmBody(promptDef, ins, modelOut, settings, selected.runner, resolvedTools.bridge, resolvedTools.needsSandbox, config, outputPlan)
 
         // -- §7: a runner-native tool has no descriptor to hash, so the ONLY thing that can stand
         //    for its behaviour in the cache key is the runner that implements it. Resolved lazily
@@ -1124,7 +1136,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             final sorted = new TreeMap<String,Object>()
             for( final e : (obj as Map).entrySet() )
                 // coerce a null key to '' so the TreeMap's natural ordering never NPEs
-                // (defensive: RecordSchema.of/buildWrapperSchema only produce String keys)
+                // (defensive: RecordSchema.of only produces String keys)
                 sorted.put(e.key != null ? e.key.toString() : '', canonicalize(e.value))
             return sorted
         }
@@ -1133,38 +1145,11 @@ class AgentDef extends BindableDef implements ChainableDef {
         return obj
     }
 
-    /**
-     * Synthesize the wrapper object schema for a multi-output agent (design §4.5/§5.3b):
-     * one object whose {@code properties[out.name]} is the record schema (for record
-     * outputs) or the scalar fragment (for supported scalar outputs), all names
-     * {@code required}, {@code additionalProperties:false}. A top-level output whose
-     * type is neither a record nor a supported scalar (e.g. {@code Path}, a top-level
-     * collection) is rejected with a clear message.
-     */
-    static Map buildWrapperSchema(String agentName, List<AgentOutput> outs) {
-        final props = new LinkedHashMap<String,Object>()
-        final required = new ArrayList<String>()
-        for( final o : outs ) {
-            final Class t = o.type as Class
-            final Map frag = (t != null && Record.isAssignableFrom(t))
-                ? RecordSchema.of(t)
-                : RecordSchema.scalarFragment(t)
-            if( frag == null )
-                throw new ScriptRuntimeException("Agent `${agentName}` output `${o.name}` has unsupported type ${t?.name} - supported: String, integer, number, boolean, or a record type")
-            props.put(o.name, frag)
-            required.add(o.name)
-        }
-        return ToolSchema.object(props, required)
-    }
-
-    /** Machine-readable wrapper for a single scalar output from a tool agent. */
+    /** Machine-readable wrapper for a single scalar output. */
     static Map scalarOutputSchema(AgentOutput out) {
-        final Class type = out.type as Class
-        final Map fragment = type != null && Path.isAssignableFrom(type)
-            ? [type: 'string', description: 'Absolute path returned by the tool']
-            : RecordSchema.scalarFragment(type)
+        final Map fragment = RecordSchema.outputFragment(out.type)
         if( fragment == null )
-            throw new ScriptRuntimeException("Agent output `${out.name}` has unsupported tool-result type ${type?.name}")
+            throw new ScriptRuntimeException("Agent output `${out.name}` has unsupported type ${out.type?.typeName} -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type")
         final Map<String,Object> props = new LinkedHashMap<String,Object>()
         props.put(out.name, fragment)
         return ToolSchema.object(props, [out.name])

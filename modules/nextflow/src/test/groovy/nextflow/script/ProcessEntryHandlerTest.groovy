@@ -235,7 +235,7 @@ class ProcessEntryHandlerTest extends Specification {
 
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Parameter `--id` is required but no value was provided'
+        e.message == 'Parameter `id` is required but no value was provided'
     }
 
     def 'should resolve a typed input like a pipeline parameter (v2)' () {
@@ -295,6 +295,6 @@ class ProcessEntryHandlerTest extends Specification {
 
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Parameter `--reads` is required but no value was provided'
+        e.message == 'Parameter `reads` is required but no value was provided'
     }
 }

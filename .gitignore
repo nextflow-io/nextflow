@@ -81,3 +81,5 @@ yarn-error.log*
 
 # local agent example validation output
 examples/agents/.validate/
+# agent example validation output (validation/agent.sh)
+validation/agent-validation/

@@ -1,5 +1,103 @@
 # Nextflow change-log
 
+## [Version 26.10.0](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) - 12 Oct 2026
+
+- Add deprecations page to docs (#7766) [af85789fc]
+- Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
+- Allow run-level cpus/memory limits for grid executors (#7783) [ca258a4e9]
+- Bump nf-agent-pi@0.6.0 [eb9cd3ed1]
+- Bump nf-agent@0.2.0 [cf01fdce6]
+- Bump nf-amazon@3.12.0 [e7116238f]
+- Bump nf-google@1.29.0 [376b01ff8]
+- Bump nf-tower@1.32.0 [16d411298]
+- Check typed output names and allow single named outputs (#7769) [32bf20f09]
+- Deprecate process `when` section in favor of `process.when` config setting (#7746) [92de19b0b]
+- Don't wrap null in a dataflow value for nullable workflow emits (#7760) [3c124d8dc]
+- Fix Google Batch array status polling for arrays of 500+ tasks (#7767) [e7474f1a5]
+- Fix Google Batch array task status cache never matching (#7778) [6d44d4740]
+- Fix interactive CLI prompts when stdin is not a terminal (#7641) [56ce4c23f]
+- Fix main thread exiting before flow complete when aborted on another thread (#7781) [6a271f1d2]
+- Fix static typing issues found while migrating a pipeline (#7722) [b199d8e73]
+- Improve error message for local paths in module commands (#7779) [073750312]
+- Infer the element type of empty channels, lists and maps from first use (#7774) [ece56cae0]
+- Make exit() graceful, report error for return statement in workflow body (#7570) [9563c73ff]
+- Prevent IllegalThreadStateException from aborting the session on task timeout (#7571) [d91b08bff]
+- Retry errors on every page when listing Google Batch tasks (#7768) [89fa79675]
+- Reuse the Google Batch job a retried submit already created (#7762) [a8f7cc46b]
+- Write null for values that fail to serialize in TowerJsonGenerator (#7772) [644dcf1a1]
+
+## [Version 26.09.2-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.2-edge) - 6 Oct 2026
+
+- Add conda/micromamba:v2-fast and conda/pixi:v1-fast to the wave.build.template docs (#7727) [cbf790221]
+- Add seqera.executor.machineRequirement.onDemandCostRatio option (#7710) [5272797c4]
+- Allow any return type for a closure with a boolean signature (#7688) [fd118488e]
+- Avoid grep broken pipe error when reading CPU model in trace script (#7672) [f52d68e4b]
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Bump nf-agent-pi to 0.5.4 with pi-coding-agent 1.0.2 so the catalog includes GPT-6 Luna (#7748) [cd0517081]
+- Bump pi-coding-agent to 0.86.1 to fix undici advisories (#7733) [6b72f92f4]
+- Bump sched-client to 0.100.0 in nf-seqera [fe446ce6d]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Check type arguments of call arguments (#7728) [910a4b8ea]
+- Fix ANSI log stale lines when COLUMNS does not match terminal width (#7705) [c96a8ada9]
+- Fix formatting of directives with a list argument (#7679) [edd02e08e]
+- Fix launcher Java version cache and md5 fallback (#7695) [659c5ccad]
+- Fix lineage path references for typed processes (#7713) [51a8f2a0e]
+- Fix LsfExecutor.parseJobId() swallowing submit failures (#7730) [fc95208db]
+- Fix NPE when all publish statements in a workflow output are no-ops (#7674) [bbf6ff031]
+- Fix NPE when publishing an external file with a publish statement (#7721) [6bfe4b55c]
+- Fix plugin functions that return or take a channel (#7715) [c569b04b0]
+- Fix record cast of non-local Path values (#7684) [68287836a]
+- Fix serialization of dataflow params (#7759) [3e6b01d35]
+- Fix validate.sh image override with a relative results dir and Wave images (#7763) [90a7fc1ac]
+- Fix `params` block breaking piped operators in the entry workflow (#7405) [3d2e54702]
+- Improve lint errors for common gotchas (#7742) [6905d449c]
+- Make HashBuilder.isAssetFile public (#7723) [40b949939]
+- Move v1 process output resolution to TaskOutputResolverV1 (#7036) [0153f652b]
+- Pipeline composition (#7213) [d7b37b695]
+- Publish workflow outputs with FilePublisher (#7745) [153d476cf]
+- Quote CSV values only when required (#7377) [61876c83e]
+- Recognize Record::subMap() in type checker (#7743) [3a715e5d6]
+- Record lineage only for tasks that completed (#7664) [f39b2dec7]
+- Replace LockManager with Guava Striped locks (#7736) [2e4405629]
+- Report a closure or function that returns no value (#7714) [38dfed0b4]
+- Report a missing return statement in a closure or function (#7738) [7193a2e45]
+- Report sched multi-attempt tasks with the final attempt's start time (#7755) [ab6f7c60a]
+- Report the real syntax error for invalid script definitions (#7675) [e88b82c2d]
+- Report type error for record field assignment (#7718) [daed1cc16]
+- Send console log to stderr when ANSI logging is disabled (#7741) [c0b15afca]
+- Skip argument checks for plugin functions in typed scripts (#7726) [da84e4d76]
+- Support map of source -> target pairs in output path directive (#7646) [4745fb4cb]
+- Use inferred type for unnamed typed process outputs (#7757) [395475595]
+- Validate agent examples against a staged runner image in CI (#7761) [72eb8d7ae]
+- Validate record fields of process record inputs at runtime (#7692) [508fe13c6]
+- Bump nf-agent@0.1.2
+- Bump nf-agent-pi@0.5.4
+- Bump nf-azure@1.24.1
+- Bump nf-google@1.28.2
+- Bump nf-seqera@0.26.0
+- Bump nf-tower@1.31.0
+- Bump nf-wave@1.22.2
+
+## [Version 26.09.1-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.1-edge) - 25 Sep 2026
+
+- Allow a cache factory to decline a session (#7681) [0d3ab36ac]
+- Bump Bouncy Castle to 1.85 to fix critical CVEs (#7658) [ad5cb26f5]
+- Bump pi-coding-agent to 0.84.4 to fix npm advisories (#7659) [c8be9d3f9]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+- Deprecate Google Batch machine type selection via Cloud Info (#7677) [28afbfded]
+- Fix npm advisories in the docs site dependencies (#7660) [17f187792]
+- Make ByteBufferInputStream resettable so an S3 upload can be retried (#7577) [4e9ea7cff]
+- Propagate machine info to array-child tasks in Google Batch executor (#7629) [fc8d42fc6]
+- Remove stray git push from the release task (#7678) [c77740bc6]
+- Type checking (#7656) [523d2dc19]
+- Warn that log and clean do not support the cloud cache (#7676) [f4e2d53a1]
+- Bump nf-agent-pi@0.5.3
+- Bump nf-amazon@3.11.1
+- Bump nf-cloudcache@0.6.2
+- Bump nf-google@1.28.1
+- Bump nf-k8s@1.6.1
+
 ## [Version 26.09.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.0-edge) - 22 Sep 2026
 
 - Add automatic resource labels for any executor (#7528) [1d7b6655a]

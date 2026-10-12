@@ -139,6 +139,26 @@ class ConfigAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Variable declarations cannot be mixed with config statements"
     }
 
+    def 'should report an error for unexpected end of file' () {
+        when:
+        def errors = check(
+            '''\
+            process {
+                withName: 'FOO' {
+                    ext.args = '--foo'
+
+                withName: 'BAR' {
+                    ext.args = '--bar'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 9
+        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+    }
+
     def 'should report an invalid escape sequence at the exact position' () {
         when:
         def errors = check(

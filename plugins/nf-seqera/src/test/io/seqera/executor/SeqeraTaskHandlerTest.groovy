@@ -49,6 +49,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.nio.file.Paths
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 /**
  * Tests for SeqeraTaskHandler metadata fetching functionality
@@ -262,6 +265,36 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getLogStreamId() == 'log-stream-xyz'
         trace.getResourceAllocation() == [cpuShares: 2048, memoryMiB: 4096]
         trace.getExecutorName() == 'seqera/aws'
+    }
+
+    def 'should anchor the trace start on the last attempt and report the retry time: #desc'() {
+        given: 'Nextflow saw the task RUNNING at t=100s and complete at t=1000s'
+        def handler = createHandlerForTraceTest()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 50_000
+        handler.startTimeMillis = 100_000
+        handler.completeTimeMillis = 1_000_000
+        handler.cachedTaskState = new SchedTaskState().attempts(starts.collect { Long ms ->
+            new TaskAttempt().startedAt(ms != null ? OffsetDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneOffset.UTC) : null)
+        })
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.get('start') == start
+        trace.get('realtime') == realtime
+        trace.getNumAttempts() == attempts
+        trace.getRetryTime() == retry
+
+        where:
+        desc                        | starts                 || start      | realtime | attempts | retry
+        'single attempt'            | [100_000L]             || 100_000L   | 900_000L | 1        | null
+        'reclaimed, then succeeded' | [100_000L, 700_000L]   || 700_000L   | 300_000L | 2        | 600_000L
+        'last attempt never ran'    | [100_000L, null]       || 100_000L   | 900_000L | 2        | null
+        'last start after complete' | [100_000L, 1_200_000L] || 1_000_000L | 0L       | 2        | 900_000L
+        'last start not after seen' | [50_000L, 100_000L]    || 100_000L   | 900_000L | 2        | null
     }
 
     def 'should detect completion when batch submission fails'() {

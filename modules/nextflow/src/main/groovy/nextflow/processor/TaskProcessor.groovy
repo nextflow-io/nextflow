@@ -77,9 +77,8 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.dsl.Nullable
 import nextflow.script.dsl.Types
-import nextflow.script.params.BaseOutParam
-import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -1049,6 +1048,7 @@ class TaskProcessor {
         try {
             // -- set task properties in order to resolve task outputs
             task.workDir = folder
+            task.config.workDir = folder
             task.stdout = stdoutFile
             task.config.exitStatus = exitCode
             // -- check if all output resources are available
@@ -1485,7 +1485,7 @@ class TaskProcessor {
         if( config instanceof ProcessConfigV2 )
             collectOutputsV2( task )
         else if( config instanceof ProcessConfigV1 )
-            collectOutputsV1( task, task.getTargetDir() )
+            collectOutputsV1( task )
     }
 
     @CompileStatic
@@ -1506,136 +1506,17 @@ class TaskProcessor {
         task.canBind = true
     }
 
-    final protected void collectOutputsV1( TaskRun task, Path workDir ) {
+    @CompileStatic
+    protected void collectOutputsV1( TaskRun task ) {
         log.trace "<$name> collecting output: ${task.outputs}"
 
-        for( OutParam param : task.outputs.keySet() ) {
+        final resolver = new TaskOutputResolverV1(task)
 
-            switch( param ) {
-                case StdOutParam:
-                    collectStdOut(task, (StdOutParam)param, task.@stdout)
-                    break
-
-                case FileOutParam:
-                    collectOutFiles(task, (FileOutParam)param, workDir)
-                    break
-
-                case ValueOutParam:
-                    collectOutValues(task, (ValueOutParam)param, task.context)
-                    break
-
-                case EnvOutParam:
-                    collectOutEnvParam(task, (EnvOutParam)param, workDir)
-                    break
-
-                case CmdEvalParam:
-                    collectOutEnvParam(task, (CmdEvalParam)param, workDir)
-                    break
-
-                case DefaultOutParam:
-                    task.setOutput(param, DefaultOutParam.Completion.DONE)
-                    break
-
-                default:
-                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
-            }
-        }
+        for( OutParam param : task.outputs.keySet() )
+            resolver.resolve(param)
 
         // mark ready for output binding
         task.canBind = true
-    }
-
-    protected void collectOutEnvParam(TaskRun task, BaseOutParam param, Path workDir) {
-
-        // fetch the output value
-        final outCmds =  param instanceof CmdEvalParam ? task.getOutputEvals() : null
-        final val = collectOutEnvMap(workDir,outCmds).get(param.name)
-        if( val == null && !param.optional )
-            throw new MissingValueException("Missing environment variable: $param.name")
-        // set into the output set
-        task.setOutput(param,val)
-        // trace the result
-        log.trace "Collecting param: ${param.name}; value: ${val}"
-
-    }
-
-    /**
-     * Parse the `.command.env` file which holds the value for `env` and `cmd`
-     * output types
-     *
-     * @param workDir
-     *      The task work directory that contains the `.command.env` file
-     * @param outEvals
-     *      A {@link Map} instance containing key-value pairs
-     * @return
-     */
-    @CompileStatic
-    @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir, Map<String,String> outEvals) {
-        return new TaskEnvCollector(workDir, outEvals).collect()
-    }
-
-    /**
-     * Collects the process 'std output'
-     *
-     * @param task The executed process instance
-     * @param param The declared {@link StdOutParam} object
-     * @param stdout The object holding the task produced std out object
-     */
-    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
-
-        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
-        }
-
-        if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
-        }
-
-        task.setOutput(param, stdout)
-    }
-
-    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
-
-        // type file parameter can contain a multiple files pattern separating them with a special character
-        final filePatterns = param.getFilePatterns(task.context, task.workDir)
-        final opts = [
-            followLinks: param.followLinks,
-            glob: param.glob,
-            hidden: param.hidden,
-            includeInputs: param.includeInputs,
-            maxDepth: param.maxDepth,
-            optional: param.optional || param.arity?.min == 0,
-            type: param.type,
-        ]
-        final allFiles = collectOutFiles0(task, filePatterns, opts)
-
-        if( !param.isValidArity(allFiles.size()) )
-            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
-
-        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
-
-    }
-
-    protected List<Path> collectOutFiles0(TaskRun task, List<String> filePatterns, Map opts) {
-        return new TaskFileCollector(filePatterns, opts, task).collect()
-    }
-
-    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
-
-        try {
-            // fetch the output value
-            final val = param.resolve(ctx)
-            // set into the output set
-            task.setOutput(param,val)
-            // trace the result
-            log.trace "Collecting param: ${param.name}; value: ${val}"
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
-        }
-
     }
 
     @Memoized
@@ -1947,17 +1828,32 @@ class TaskProcessor {
 
     @CompileStatic
     private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
-        if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
-        }
-        if( value != null ) {
-            final expectedType = param.type
-            final actualType = value.getClass()
-            if( expectedType != null && !isAssignableFrom(expectedType, actualType) )
-                log.warn "[${safeTaskName(task)}] invalid argument type at index ${index} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
-        }
+        checkTaskInput(task, param.type, param.optional, value, index, '')
         task.context.put(param.getName(), value)
         task.setInput(param, value)
+    }
+
+    @CompileStatic
+    private void checkTaskInput(TaskRun task, Class expectedType, boolean optional, Object value, int index, String field) {
+        final location = field ? "input field `${field}` at index ${index}" : "input at index ${index}"
+        if( value == null && !optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] ${location} cannot be null -- append `?` to the type annotation to mark it as nullable")
+        }
+        if( value == null || expectedType == null )
+            return
+        final actualType = value.getClass()
+        if( !isAssignableFrom(expectedType, actualType) )
+            log.warn "[${safeTaskName(task)}] invalid argument type for ${location} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
+        // record types are not validated by `nextflow run`, so check the fields of named record types here
+        if( expectedType != Record.class && Record.class.isAssignableFrom(expectedType) && value instanceof Map ) {
+            final record = value as Map
+            for( final fn : expectedType.getDeclaredFields() ) {
+                if( fn.isSynthetic() )
+                    continue
+                final name = field ? "${field}.${fn.getName()}".toString() : fn.getName()
+                checkTaskInput(task, fn.getType(), fn.isAnnotationPresent(Nullable.class), record[fn.getName()], index, name)
+            }
+        }
     }
 
     private static boolean isAssignableFrom(Class targetType, Class sourceType) {

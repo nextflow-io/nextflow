@@ -38,8 +38,6 @@ import static test.ScriptHelper.*
 @Timeout(10)
 class WorkflowEntryHandlerTest extends Dsl2Spec {
 
-    // ── unit: loadFromFile ────────────────────────────────────────────────────
-
     private WorkflowEntryHandler makeHandler(List<String> inputs = [], List<String> workflowNames = ['HELLO']) {
         def workflowDef = Mock(WorkflowDef) {
             getName() >> workflowNames.first()
@@ -54,60 +52,6 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
             getWorkflow(workflowNames.first()) >> workflowDef
         }
         return new WorkflowEntryHandler(script, session, meta)
-    }
-
-    def 'should load records from a samplesheet'() {
-        given:
-        def file = Files.createTempFile('test', ".${EXT}")
-        file.text = TEXT
-
-        when:
-        def result = makeHandler().loadFromFile('samples', file.toAbsolutePath())
-
-        then:
-        result == EXPECTED
-
-        cleanup:
-        file?.delete()
-
-        where:
-        EXT    | TEXT                                             | EXPECTED
-        // CSV has no types, so every value is a string
-        'csv'  | 'id,name\n1,sample1\n2,sample2\n'                | [[id: '1', name: 'sample1'], [id: '2', name: 'sample2']]
-        'json' | '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'    | [[id: 1, name: 's1'], [id: 2, name: 's2']]
-        'yml'  | '- id: 1\n  name: s1\n- id: 2\n  name: s2\n'     | [[id: 1, name: 's1'], [id: 2, name: 's2']]
-    }
-
-    def 'should throw for unrecognized samplesheet format'() {
-        given:
-        def txtFile = Files.createTempFile('test', '.txt')
-        txtFile.text = 'some text'
-
-        when:
-        makeHandler().loadFromFile('items', txtFile.toAbsolutePath())
-
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message.contains("Unrecognized file format 'txt'")
-
-        cleanup:
-        txtFile?.delete()
-    }
-
-    def 'should throw for a JSON file whose top level is not a list'() {
-        given:
-        def jsonFile = Files.createTempFile('test', '.json')
-        jsonFile.text = '{"key":"value"}'   // object, not array
-
-        when:
-        makeHandler().loadFromFile('samples', jsonFile.toAbsolutePath())
-
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message.contains('must contain a list of records')
-
-        cleanup:
-        jsonFile?.delete()
     }
 
     def 'should throw error when multiple workflows are defined'() {
@@ -237,7 +181,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `--name` is required but no value was provided')
+        e.message.contains('Parameter `name` is required but no value was provided')
     }
 
     def 'should convert samplesheet records to the declared element type'() {
@@ -458,7 +402,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `bogus` was specified on the command line but is not an input of workflow `GREET`')
+        e.message.contains('Parameter `bogus` was specified on the command line or params file but is not declared in the script or config')
     }
 
     def 'should prefer explicit entry workflow over named workflow'() {
@@ -593,7 +537,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `--name` is required but no value was provided')
+        e.message.contains('Parameter `name` is required but no value was provided')
     }
 
     def 'should pass a null param value to a nullable input'() {
@@ -676,7 +620,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         then: 'the param and file are named, rather than a bare NumberFormatException'
         def e = thrown(ScriptRuntimeException)
         e.message.contains('Invalid record in samplesheet')
-        e.message.contains('workflow input `samples`')
+        e.message.contains('parameter `samples`')
 
         cleanup:
         file?.delete()

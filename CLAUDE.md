@@ -129,7 +129,9 @@ Follow these actions to make a new release:
   message the template `Bump plugin-name@version` e.g. `Bump nf-amazon@2.0.0.
 - Update `VERSION` file in the project root using a calendar-like versioning scheme. Versions in the 4-th and 10-th month are "stable releases", e.g. `25.10.0`, while versions in all other months are "edge releases", e.g. `25.09.0-edge`.
 - Update the project root `CHANGELOG.md` with changes since the past release. Use the git log
-  command to determine what changed e.g. `git log v<PREVIOUS VERSION>..`
+  command to determine what changed e.g. `git log v<PREVIOUS VERSION>..`. Do not include `chore:`
+  commits (dependency/CI bot updates) nor docs-only changes (commits touching only `docs/`,
+  `.docusaurus_site/` or code comments).
 - Run `make check-agent-image` to confirm the nf-agent-pi runner image still builds and its
   version is in step with its build context. A failure here means bumping the plugin VERSION,
   fixing the Dockerfile, or both — do it before cutting the release commit.

@@ -123,6 +123,14 @@ class TaskPollingMonitor implements TaskMonitor {
     private int capacity
 
     /**
+     * Tracks the cpus and memory of running tasks when the executor
+     * limits them, {@code null} otherwise. Resources must be acquired in
+     * the same thread as {@link #canSubmit}, i.e. not asynchronously as in
+     * {@link ParallelPollingMonitor}, otherwise tasks can oversubscribe.
+     */
+    protected ResourceTracker resourceTracker
+
+    /**
      * Define rate limit for task submission
      */
     private RateLimiter submitRateLimit
@@ -157,12 +165,17 @@ class TaskPollingMonitor implements TaskMonitor {
         this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
         this.dumpInterval = params.dumpInterval as Duration
         this.capacity = (params.capacity ?: 0) as int
+        this.resourceTracker = params.resourceTracker as ResourceTracker
 
         this.pendingQueue = new LinkedBlockingQueue<TaskHandler>()
         this.runningQueue = new LinkedBlockingQueue<TaskHandler>()
     }
 
     static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, int defQueueSize, Duration defPollInterval ) {
+        create(session, config, name, defQueueSize, defPollInterval, null)
+    }
+
+    static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, int defQueueSize, Duration defPollInterval, ResourceTracker resourceTracker ) {
         assert session
         assert config
         assert name
@@ -170,8 +183,8 @@ class TaskPollingMonitor implements TaskMonitor {
         final pollInterval = config.getPollInterval(name, defPollInterval)
         final dumpInterval = config.getMonitorDumpInterval(name)
 
-        log.debug "Creating task monitor for executor '$name' > capacity: $capacity; pollInterval: $pollInterval; dumpInterval: $dumpInterval "
-        new TaskPollingMonitor(name: name, session: session, config: config, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval)
+        log.debug "Creating task monitor for executor '$name' > capacity: $capacity; pollInterval: $pollInterval; dumpInterval: $dumpInterval; resources: ${resourceTracker ?: 'unlimited'}"
+        new TaskPollingMonitor(name: name, session: session, config: config, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval, resourceTracker: resourceTracker)
     }
 
     static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, Duration defPollInterval ) {
@@ -246,9 +259,12 @@ class TaskPollingMonitor implements TaskMonitor {
      * @return
      *      {@code true} if the task satisfies the resource requirements and scheduling strategy implemented
      *      by the polling monitor
+     * @throws
+     *      ProcessUnrecoverableException When the task requests more cpus or memory than the executor limit
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity > 0 ? checkQueueCapacity(handler) : true) && handler.canForkProcess() && handler.isReady()
+        resourceTracker?.validate(handler)
+        (capacity > 0 ? checkQueueCapacity(handler) : true) && handler.canForkProcess() && handler.isReady() && (resourceTracker == null || resourceTracker.canAcquire(handler))
     }
 
     /**
@@ -262,12 +278,13 @@ class TaskPollingMonitor implements TaskMonitor {
             // submit task array
             handler.prepareLauncher()
             handler.submit()
-            // add each child task to the running queue
+            resourceTracker?.acquire(handler)
+            // add each child task to the running queue before notifying,
+            // so that every child releases its resources on completion
             final task = handler.task as TaskArrayRun
-            for( TaskHandler it : task.children ) {
-                runningQueue.add(it)
+            runningQueue.addAll(task.children)
+            for( TaskHandler it : task.children )
                 session.notifyTaskSubmit(it)
-            }
         }
         else {
             // submit the job execution -- throws a ProcessException when submit operation fail
@@ -275,6 +292,7 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.submit()
             // note: add the 'handler' into the polling queue *after* the submit operation,
             // this guarantees that in the queue are only jobs successfully submitted
+            resourceTracker?.acquire(handler)
             runningQueue.add(handler)
             // notify task submission
             session.notifyTaskSubmit(handler)
@@ -291,7 +309,10 @@ class TaskPollingMonitor implements TaskMonitor {
      *      {@code false} otherwise
      */
     protected boolean remove(TaskHandler handler) {
-        runningQueue.remove(handler)
+        final result = runningQueue.remove(handler)
+        if( result )
+            resourceTracker?.release(handler)
+        return result
     }
 
     /**

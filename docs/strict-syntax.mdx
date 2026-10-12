@@ -529,6 +529,35 @@ ch.map { v -> v * 2 }   // correct
 ch.map { it -> it * 2 } // also correct
 ```
 
+### Process when section
+
+The process [when][process-when] section is deprecated. Implement conditional logic in the calling workflow (e.g. an `if` statement or [`filter`][operator-filter] operator) instead.
+
+To disable a process at runtime, use the [`process.when`][config-process-when] config setting instead. For example:
+
+```nextflow
+process fastqc {
+    // ...
+
+    when:
+    task.ext.when == null || task.ext.when
+
+    // ...
+}
+```
+
+The `when:` section can be removed, and any config settings for `ext.when` can be replaced with `when`:
+
+```groovy
+process {
+    withName: 'FASTQC' {
+        when = { !params.skip_fastqc }
+    }
+}
+```
+
+The `process.when` config setting takes precedence over the `when` section. You can therefore move from `ext.when` to `process.when` in your config before the `when` section is removed from the process.
+
 ### Process shell section
 
 The process `shell` section is deprecated. Use the `script` section instead. The strict parser provides error checking to help distinguish between Nextflow variables and Bash variables.
@@ -621,10 +650,6 @@ workflow {
 }
 ```
 
-### Process when section
-
-The process [when][process-when] section is discouraged. As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or [filter][operator-filter] operator) instead of the process definition.
-
 ## Configuration syntax
 
 See [Configuration][config-syntax] for a comprehensive description of the configuration language.
@@ -708,6 +733,7 @@ Any Groovy code can be moved into the `lib` directory, which supports the full G
 
 For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a script definition. Furthermore, plugins can be easily reused across different pipelines. See [Developing plugins][plugins-dev-page] for more information on how to develop plugins.
 
+[config-process-when]: ./config#disabling-processes
 [config-syntax]: ./config#syntax
 [dsl1-page]: ./migrations/dsl1
 [lib-directory]: ./sharing#the-lib-directory

@@ -21,6 +21,7 @@
 #   ./examples/agents/validate.sh             # every example, both modes
 #   ./examples/agents/validate.sh -m local 01_structured-output 04_tool
 #   ./examples/agents/validate.sh -r          # ... and check -resume replays from cache
+#   ./examples/agents/validate.sh -i <image>  # ... against this runner image
 #
 # Requires OPENAI_API_KEY (the examples call a real model) and, in local mode, a
 # running Docker daemon: the `pi` runner ships no host-local runtime, so every
@@ -29,10 +30,25 @@
 # mode additionally needs the cluster, Wave and S3 access that
 # examples/agents/k8s-local.config describes.
 #
+# k8s mode with AWS SSO: Fusion forwards only static AWS_* keys to the tasks, not an SSO
+# profile, so export the session keys before running (they expire with the SSO session):
+#
+#   eval "$(aws configure export-credentials --profile <profile> --format env)"
+#
+# The `workDir` bucket in k8s-local.config must be writable with those keys; point it at
+# one you can reach if needed. The config pins `k8s.context`, so the active kubectl
+# context is not used.
+#
 # `-r` adds the companion check: a second run, with -resume, in the SAME directory,
 # which must replay from cache rather than call the model again. It costs one extra
 # run per example rather than two, because the fresh run above IS the first half of
 # the pair.
+#
+# `-i` runs every agent task in the given runner image instead of the one the plugin jar
+# declares. The jar names the image by the plugin VERSION, which is bumped only at release, so
+# between a build-context change and its release the declared image is the PREVIOUS build: a run
+# without -i then validates the old runner, not the tree. The CI lane passes the staging image it
+# publishes under `build-image.sh context-tag`; locally, `build-image.sh build -l -t <tag>`.
 #
 # Exits non-zero if any run fails, so it can gate a release check.
 set -u
@@ -43,17 +59,20 @@ JOBS=3
 DRY=0
 RESUME=0
 RESULTS=${AGENT_VALIDATION_DIR:-}
+IMAGE=""
 
 usage() {
   cat <<'TXT'
 Validate examples/agents/* against the local development build.
 
-  usage: ./examples/agents/validate.sh [-m local|k8s|both] [-t secs] [-j n] [-o dir] [-r] [-n] [example ...]
+  usage: ./examples/agents/validate.sh [-m local|k8s|both] [-t secs] [-j n] [-o dir] [-i image] [-r] [-n] [example ...]
 
     -m  mode; default both
     -t  per-run timeout in seconds; default 2400
     -j  runs in parallel; default 3
     -o  results directory; default build/agent-validation
+    -i  runner image every agent task runs in (sets agent.container); default the one
+        the nf-agent-pi plugin declares, i.e. the image of its current VERSION
     -r  also re-run each example with -resume and check it replays from cache
     -n  dry run: run every setup check and print the plan, launch nothing
 
@@ -69,13 +88,14 @@ TXT
   exit "${1:-0}"
 }
 
-while getopts ':m:t:j:o:rnh' opt; do
+while getopts ':m:t:j:o:i:rnh' opt; do
   case $opt in
     m) case $OPTARG in local|k8s) MODES=$OPTARG ;; both) MODES="local k8s" ;;
          *) echo "Unknown mode: $OPTARG (use local, k8s or both)" >&2; exit 2 ;; esac ;;
     t) TIMEOUT=$OPTARG ;;
     j) JOBS=$OPTARG ;;
     o) RESULTS=$OPTARG ;;
+    i) IMAGE=$OPTARG ;;
     r) RESUME=1 ;;
     n) DRY=1 ;;
     h) usage 0 ;;
@@ -87,6 +107,8 @@ shift $((OPTIND-1))
 AGENTS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BASE_DIR=$(cd "$AGENTS_DIR/../.." && pwd)
 RESULTS=${RESULTS:-$BASE_DIR/build/agent-validation}
+# absolute, since each run passes paths under it from its own example dir
+[[ $RESULTS == /* ]] || RESULTS=$PWD/$RESULTS
 
 # `timeout` is GNU coreutils; on macOS it arrives as gtimeout with brew.
 TIMEOUT_BIN=$(command -v timeout || command -v gtimeout) || {
@@ -159,6 +181,27 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   exit 2
 fi
 
+# The runner image override, as one config file shared by every run. Written into RESULTS, not
+# beside the examples: it is a property of this validation, not of any example.
+IMAGE_CONFIG=""
+if [[ -n $IMAGE ]]; then
+  [[ $IMAGE != *"'"* ]] || { echo "ERROR: -i image must not contain a quote: $IMAGE" >&2; exit 2; }
+  mkdir -p "$RESULTS" || exit 2
+  IMAGE_CONFIG=$RESULTS/agent-image.config
+  echo "agent.container = '$IMAGE'" > "$IMAGE_CONFIG"
+fi
+# The image as a task wrapper names it, without the registry host: Wave serves the image
+# as `wave.seqera.io/wt/<token>/<repository>:<tag>`, so match on the repository and tag.
+IMAGE_REF=$IMAGE
+host=${IMAGE%%/*}
+[[ $IMAGE == */* && ( $host == *.* || $host == *:* || $host == localhost ) ]] && IMAGE_REF=${IMAGE#*/}
+
+# The reports below parse the agent-mode console output - the `[SUCCESS] completed=N ...` summary
+# and the `[WARN]`/`[PROCESS]` prefixes `answer_of` strips. Nextflow enables that mode on its own
+# when it detects a coding agent (CLAUDECODE, AGENT), so set it explicitly: a plain shell or a CI
+# runner would otherwise get the regular console and every -resume check would fail to parse.
+export NXF_AGENT_MODE=1
+
 # One run, in its own directory: concurrent runs must not share .nextflow.log,
 # .nextflow/cache or work/. With -r the pair runs SEQUENTIALLY inside this function --
 # the resume run must see the cache the fresh run just wrote -- while different
@@ -168,6 +211,7 @@ run_one() {
   rm -rf "$dir" && mkdir -p "$dir" || return 2
   local args=( run -ansi-log false "$AGENTS_DIR/$ex" )
   [[ $mode == k8s ]] && args+=( -c "$AGENTS_DIR/k8s-local.config" )
+  [[ -n $IMAGE_CONFIG ]] && args+=( -c "$IMAGE_CONFIG" )
   ( cd "$dir" && "$TIMEOUT_BIN" -s TERM -k 30 "$TIMEOUT" "$BASE_DIR/launch.sh" "${args[@]}" ) \
     > "$dir/console.log" 2>&1
   echo $? > "$dir/status"
@@ -191,15 +235,18 @@ if (( DRY )); then
     echo "== $mode: ${#EXAMPLES[@]} examples, $JOBS at a time (dry run)$( (( RESUME )) && echo ', + -resume pass')"
     for ex in "${EXAMPLES[@]}"; do
       cfg=""; [[ $mode == k8s ]] && cfg=" -c $AGENTS_DIR/k8s-local.config"
+      [[ -n $IMAGE_CONFIG ]] && cfg+=" -c $IMAGE_CONFIG"
       printf '   %-24s %s\n' "$ex" "launch.sh run -ansi-log false $AGENTS_DIR/$ex$cfg"
     done
   done
   echo
   echo "dry run: setup checks passed; nothing launched"
+  [[ -n $IMAGE ]] && echo "runner image: $IMAGE"
   echo "results would go to: $RESULTS"
   exit 0
 fi
 
+[[ -n $IMAGE ]] && echo "== runner image: $IMAGE"
 for mode in $MODES; do
   echo "== $mode: ${#EXAMPLES[@]} examples, $JOBS at a time$( (( RESUME )) && echo ' (fresh + resume)')"
   for ex in "${EXAMPLES[@]}"; do
@@ -226,8 +273,17 @@ for ex in "${EXAMPLES[@]}"; do
     reg=$(grep -c 'Registering agent RPC invocation' "$log" 2>/dev/null) || reg=0
     rej=$(grep -c 'Rejected agent RPC connection' "$log" 2>/dev/null) || rej=0
     remote=$(grep -o 'remote=[a-z]*' "$log" 2>/dev/null | sort -u | sed 's/remote=//' | paste -sd, -)
-    [[ $rc == 0 && $rej == 0 ]] || failed=$((failed+1))
-    printf '%-34s' "$([[ $rc == 0 ]] && echo ok || echo "FAIL($rc)") ${secs}s reg=$reg remote=${remote:--} rej=$rej"
+    # With -i, every agent task must have run in THAT image: one launched in any other runner
+    # image means the override did not reach it, and the run validated the old runner. Read from
+    # the local task wrappers, where `docker run` names the image; k8s puts it in the pod spec.
+    other=0
+    if [[ -n $IMAGE && $mode == local ]]; then
+      for f in "$dir"/work/*/*/.command.run; do
+        [[ -f $f ]] && grep -q 'nf-agent-pi:' "$f" && ! grep -q -F "$IMAGE_REF" "$f" && other=$((other+1))
+      done
+    fi
+    [[ $rc == 0 && $rej == 0 && $other == 0 ]] || failed=$((failed+1))
+    printf '%-34s' "$([[ $rc == 0 ]] && echo ok || echo "FAIL($rc)") ${secs}s reg=$reg remote=${remote:--} rej=$rej$( (( other )) && echo " OTHER-IMAGE=$other")"
   done
   echo
 done

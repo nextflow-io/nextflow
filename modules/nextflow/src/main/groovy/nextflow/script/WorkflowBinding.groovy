@@ -49,6 +49,8 @@ class WorkflowBinding extends Binding  {
 
     private ScriptMeta meta
 
+    private Map<String,DataflowWriteChannel> published = new LinkedHashMap<>()
+
     WorkflowBinding() { }
 
     WorkflowBinding(Map vars) {
@@ -184,6 +186,9 @@ class WorkflowBinding extends Binding  {
         }
     }
 
+    @PackageScope
+    Map<String,DataflowWriteChannel> getPublished() { published }
+
     void _publish_(String name, Object source) {
         if( source instanceof ChannelOut ) {
             if( source.size() > 1 )
@@ -191,7 +196,7 @@ class WorkflowBinding extends Binding  {
             source = source[0]
         }
 
-        owner.session.outputs[name] =
+        published[name] =
             source instanceof ChannelImpl ? source.getSource() :
             source instanceof ValueImpl ? source.getSource() :
             source instanceof DataflowWriteChannel ? source :

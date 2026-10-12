@@ -36,8 +36,8 @@ import nextflow.script.types.Record
  * omitted from the {@code required} list.
  *
  * Supported field types (v1): String, integer/long, floating point/decimal,
- * boolean, nested record types, and List/Collection/Set of those. {@link Path}
- * and any other unmapped type are rejected with an {@link IllegalArgumentException}.
+ * boolean, {@link Path}, nested record types, and List/Collection/Set of those.
+ * Any other unmapped type is rejected with an {@link IllegalArgumentException}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -68,6 +68,24 @@ class RecordSchema {
     }
 
     /**
+     * Map an agent output type to its JSON-schema fragment, or {@code null}
+     * if the type is not supported: a scalar, a {@link Path} (answered as a
+     * path string), a record type, or a collection of these types.
+     */
+    static Map outputFragment(Type type) {
+        final raw = rawClass(type)
+        if( Path.isAssignableFrom(raw) )
+            return [type: 'string', description: 'Absolute path of an existing file']
+        if( Record.isAssignableFrom(raw) )
+            return of(raw)
+        if( Collection.isAssignableFrom(raw) ) {
+            final items = outputFragment(elementType(type))
+            return items != null ? [type: 'array', items: items] : null
+        }
+        return scalarFragment(raw)
+    }
+
+    /**
      * Map a scalar type to its JSON-schema fragment, or {@code null} if the type
      * is not a supported scalar (String / integer / number / boolean). Shared
      * with {@link ProcessToolSchema} so the scalar mapping stays in one place.
@@ -89,24 +107,10 @@ class RecordSchema {
     }
 
     private static Map fragmentFor(String fieldName, Type type) {
-        final raw = rawClass(type)
-
-        final scalar = scalarFragment(raw)
-        if( scalar != null )
-            return scalar
-
-        if( raw == Path || Path.isAssignableFrom(raw) )
-            throw new IllegalArgumentException("Unsupported agent output field `${fieldName}` of type ${raw.getName()} - `Path` is not allowed in agent outputs")
-
-        if( Record.isAssignableFrom(raw) )
-            return of(raw)
-
-        if( Collection.isAssignableFrom(raw) ) {
-            final elementType = elementType(type)
-            return [type: 'array', items: fragmentFor("${fieldName}[]".toString(), elementType)]
-        }
-
-        throw new IllegalArgumentException("Unsupported agent output field `${fieldName}` of type ${raw.getName()} - supported types are String, integer, number, boolean, nested record and list of those")
+        final fragment = outputFragment(type)
+        if( fragment == null )
+            throw new IllegalArgumentException("Unsupported agent output field `${fieldName}` of type ${type.getTypeName()} -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type")
+        return fragment
     }
 
     private static Class rawClass(Type type) {

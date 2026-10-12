@@ -279,6 +279,10 @@ This feature addresses previous inconsistencies in timestamp representations.
 
 - The `nextflow.config.schema` package was renamed to `nextflow.config.spec`. Plugin developers that define custom [configuration scopes][dev-plugins-extension-points-config] will need to update their imports accordingly.
 
+### Cache-breaking changes
+
+The commands of `eval` outputs are now included in the task hash. This fixes a bug where editing an `eval` command did not re-execute the task. However, every process with an `eval` output will be re-executed on the first resume after upgrading.
+
 ## Deprecations
 
 - The legacy type detection of CLI parameters is disabled when using the strict parser (`NXF_SYNTAX_PARSER=v2`). [Legacy parameters][workflow-params-legacy] should not rely on legacy type detection. Alternatively, use the new `params` block to convert CLI parameters based on their type annotations. Legacy type detection can be disabled globally by setting the environment variable `NXF_DISABLE_PARAMS_TYPE_DETECTION=true`.

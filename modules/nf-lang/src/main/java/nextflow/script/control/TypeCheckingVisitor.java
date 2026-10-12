@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -29,7 +30,10 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.RecordNode;
@@ -134,6 +138,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         for( var featureFlag : sn.getFeatureFlags() )
             visitFeatureFlag(featureFlag);
+        for( var includeNode : sn.getIncludes() )
+            visitInclude(includeNode);
         if( sn.getParams() != null )
             visitParams(sn.getParams());
         for( var functionNode : sn.getFunctions() )
@@ -150,6 +156,31 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     // script declarations
 
+    /**
+     * The params record type of an included pipeline is partial, so each
+     * field is nullable.
+     */
+    @Override
+    public void visitInclude(IncludeNode node) {
+        for( var entry : node.entries ) {
+            if( !(entry.getTarget() instanceof ClassNode cn) )
+                continue;
+            if( !ScriptNode.isPipelineParams(cn) )
+                continue;
+            for( var fn : cn.getFields() )
+                fn.setType(nullableType(fn.getType()));
+        }
+    }
+
+    private static ClassNode nullableType(ClassNode type) {
+        if( isNullable(type) )
+            return type;
+        var result = type.getPlainNodeReference();
+        result.setGenericsTypes(type.getGenericsTypes());
+        result.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
+        return result;
+    }
+
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
         var fn = node.target;
@@ -158,7 +189,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var expectedType = fn.getType();
         var actualType = node.value.getType();
         if( !Types.isAssignableFrom(expectedType, actualType) )
-            addError("Feature flag '" + node.name + "' expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
+            addError("Feature flag `" + node.name + "` expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
     }
 
     private boolean hasParamsBlock;
@@ -178,7 +209,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         if( allowPathCoercion && Types.isEqual(expectedType, PATH_TYPE) && Types.isEqual(actualType, ClassHelper.STRING_TYPE) )
             return;
-        addError("Parameter '" + node.getName() + "' with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
+        addError("Parameter `" + node.getName() + "` with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
     }
 
     private WorkflowNode currentWorkflow;
@@ -193,8 +224,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             visitWorkflowOutputs(node);
         }
         else {
-            checkSingleNamedOutput(node.emits, "emit");
+            checkWorkflowEmitTypes(node.emits);
             visit(node.emits);
+            checkOutputSources(node.emits, "Workflow emit");
         }
 
         visit(node.onComplete);
@@ -222,7 +254,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 .filter(output -> output.getName().equals(target.getName()))
                 .findFirst().orElse(null);
             if( decl == null ) {
-                addError("Workflow output '" + target.getName() + "' was assigned in the entry workflow but not declared in the output block", publisher);
+                addError("Workflow output `" + target.getName() + "` was assigned in the entry workflow but not declared in the output block", publisher);
                 continue;
             }
             target.setAccessedVariable(decl);
@@ -232,7 +264,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var sourceType = getType(source);
             var targetType = asDataflowType(target.getType(), sourceType);
             if( !Types.isAssignableFrom(targetType, sourceType) )
-                addError("Workflow output '" + target.getName() + "' with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
+                addError("Workflow output `" + target.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
         }
     }
 
@@ -244,17 +276,27 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return type;
     }
 
+    private void checkWorkflowEmitTypes(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
+            if( target == null )
+                continue;
+            var type = target.getType();
+            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+                continue;
+            addError("Workflow emit `" + target.getName() + "` must be declared as a Channel or Value, not " + Types.getName(type), target);
+        }
+    }
+
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
-        checkSingleNamedOutput(node.outputs, "output");
         visit(node.outputs);
+        checkOutputSources(node.outputs, "Process output");
         visitProcessTopics(node.topics);
     }
 
@@ -276,13 +318,25 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         });
     }
 
-    private void checkSingleNamedOutput(Statement block, String section) {
-        var outputs = asBlockStatements(block);
-        if( outputs.size() != 1 )
-            return;
-        var output = ((ExpressionStatement) outputs.get(0)).getExpression();
-        if( output instanceof AssignmentExpression ae )
-            addError("Name should be omitted for a single " + section, ae);
+    /**
+     * Check each typed output name (e.g. `x: T`) against the body
+     * variable that it refers to, as if it were `x: T = x`.
+     *
+     * @param block
+     * @param typeLabel
+     */
+    private void checkOutputSources(Statement block, String typeLabel) {
+        for( var stmt : asBlockStatements(block) ) {
+            var output = ((ExpressionStatement) stmt).getExpression();
+            if( !(output instanceof VariableExpression ve) )
+                continue;
+            if( !(ve.getNodeMetaData(ASTNodeMarker.OUTPUT_SOURCE) instanceof Variable source) )
+                continue;
+            var targetType = ve.getOriginType();
+            var sourceType = getType(source);
+            if( !Types.isAssignableFrom(targetType, sourceType) )
+                addError(typeLabel + " `" + ve.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ve);
+        }
     }
 
     private void visitProcessTopics(Statement block) {
@@ -310,7 +364,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         // check return statements against declared return type
         var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-        visitor.visit(node.getReturnType(), node.getCode());
+        visitor.visit(node, node.getReturnType(), node.getCode());
 
         var inferredReturnType = visitor.getInferredReturnType();
         if( inferredReturnType != null && ClassHelper.isDynamicTyped(node.getReturnType()) )
@@ -427,6 +481,11 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var targetType = getType(target);
         var sourceType = getType(source);
 
+        if( isRecordField(target) ) {
+            addError("Record fields cannot be assigned -- records are immutable", node);
+            return;
+        }
+
         // a call with no return value (e.g. a function with a void return type or a
         // process/workflow that declares no outputs) cannot be assigned to a variable
         if( ClassHelper.isPrimitiveVoid(sourceType) ) {
@@ -451,15 +510,24 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             sourceType = resultType;
         }
 
-        if( Types.isAssignableFrom(targetType, sourceType, true) ) {
-            if( target instanceof VariableExpression ve && ve.isDynamicTyped() )
+        if( Types.isAssignableFrom(targetType, sourceType) ) {
+            if( target instanceof VariableExpression ve && ve.isDynamicTyped() ) {
                 target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
-            else if( target instanceof TupleExpression te )
+                // a variable declared with an empty value (e.g. `[]`) takes the type of its next assignment
+                if( hasUnboundTypeArguments(targetType) && !ClassHelper.isDynamicTyped(sourceType) && ve.getAccessedVariable() instanceof VariableExpression decl )
+                    decl.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
+            }
+            else if( target instanceof TupleExpression te ) {
                 applyTupleAssignment(te, sourceType);
+            }
         }
         else {
             addError("Assignment target with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), node);
         }
+    }
+
+    private static boolean isRecordField(Expression target) {
+        return target instanceof PropertyExpression pe && Types.isRecordType(getType(pe.getObjectExpression()));
     }
 
     /**
@@ -533,6 +601,10 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
         }
 
+        // resolve params and outputs for pipeline calls
+        if( checkPipelineCall(node) )
+            return;
+
         // resolve dataflow inputs and outputs for process calls
         if( checkProcessCall(node) )
             return;
@@ -565,6 +637,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             checkWorkflowCall(node);
         }
         else if( node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET) instanceof MethodNode mn ) {
+            // plugin functions have no known signature
+            if( mn instanceof FunctionNode && mn.isSynthetic() )
+                return;
             var parameters = mn.getParameters();
             if( parameters.length != arguments.size() ) {
                 addError(String.format("%s `%s` expects %d argument(s) but received %d", methodType(mn), node.getMethodAsString(), parameters.length, arguments.size()), node.getMethod());
@@ -779,7 +854,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var argType = getType(value);
             if( !Types.isAssignableFrom(namedParam.getType(), argType) )
                 addError("Named param `" + name + "` expects a " + Types.getName(namedParam.getType()) + " but received a " + Types.getName(argType), value);
-            entry.putNodeMetaData("_NAMED_PARAM", namedParam);
+            entry.putNodeMetaData(ASTNodeMarker.NAMED_PARAM, namedParam);
         }
     }
 
@@ -803,6 +878,89 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var samParameterTypes = resolveClosureParameterTypes(source, target, resolvedPlaceholders);
             argument.visit(this);
         }
+    }
+
+    /**
+     * Check a call to an included pipeline against its params block, and
+     * resolve the return type from its output block.
+     *
+     * A pipeline declares its inputs with a params block rather than a `take:`
+     * section, so it is called with a single record (or no arguments). Each
+     * field must be assignable to the declared param type, like a workflow input.
+     *
+     * The return type follows the same rules as a workflow call, with the
+     * declared outputs as the emits.
+     *
+     * @param node
+     */
+    private boolean checkPipelineCall(MethodCallExpression node) {
+        var mn = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
+        var pipeline = mn instanceof WorkflowNode wn ? ScriptNode.getPipeline(wn) : null;
+        if( pipeline == null )
+            return false;
+        node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
+
+        var name = node.getMethodAsString();
+        var params = pipeline.getParams();
+        var arguments = asMethodCallArguments(node);
+        if( params == null ) {
+            if( !arguments.isEmpty() )
+                addError("Pipeline `" + name + "` does not declare any params, so it should be called with no arguments", node);
+            return true;
+        }
+        if( arguments.size() != 1 ) {
+            addError("Pipeline `" + name + "` should be called with a record", node);
+            return true;
+        }
+        var argument = arguments.get(0);
+        var argType = getType(argument);
+        if( !Types.isRecordType(argType) ) {
+            if( !ClassHelper.isDynamicTyped(argType) )
+                addError("Pipeline `" + name + "` should be called with a record, but received a " + Types.getName(argType), argument);
+            return true;
+        }
+        if( argType.getFields().isEmpty() )
+            return true;
+        checkPipelineParams(node, argument, params, argType);
+        return true;
+    }
+
+    private void checkPipelineParams(MethodCallExpression node, ASTNode argument, ParamBlockNode params, ClassNode argType) {
+        var declarations = params.declarations;
+        var byName = Arrays.stream(declarations).collect(Collectors.toMap(Parameter::getName, p -> p, (a, b) -> a));
+
+        for( var fn : argType.getFields() ) {
+            var declaration = byName.get(fn.getName());
+            if( declaration == null ) {
+                addError("Param `" + fn.getName() + "` is not defined by pipeline `" + node.getMethodAsString() + "`", argument);
+                continue;
+            }
+            var paramType = declaration.getType();
+            if( !Types.isAssignableFrom(paramType, fn.getType()) )
+                addError("Param `" + fn.getName() + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(fn.getType()), argument);
+        }
+
+        var missing = Arrays.stream(declarations)
+            .filter(p -> argType.getField(p.getName()) == null)
+            .filter(p -> !p.hasInitialExpression() && !isNullable(p.getType()) && !ScriptNode.isPipelineParams(p.getType().redirect()))
+            .map(Parameter::getName)
+            .toList();
+        if( !missing.isEmpty() )
+            addError("Pipeline `" + node.getMethodAsString() + "` requires the following params: " + String.join(", ", missing), node);
+    }
+
+    private static ClassNode pipelineOutputType(OutputBlockNode outputs) {
+        if( outputs == null )
+            return ClassHelper.VOID_TYPE;
+        if( outputs.declarations.size() == 1 )
+            return workflowEmitType(outputs.declarations.get(0).getType());
+        var cn = new ClassNode(Record.class);
+        for( var declaration : outputs.declarations ) {
+            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, workflowEmitType(declaration.getType()), cn, null);
+            fn.setDeclaringClass(cn);
+            cn.addField(fn);
+        }
+        return cn;
     }
 
     /**
@@ -847,7 +1005,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         var numChannelArgs = arguments.stream().filter((arg) -> CHANNEL_TYPE.equals(getType(arg))).count();
-        var numDynamicArgs = arguments.stream().filter((arg) -> ClassHelper.isDynamicTyped(getType(arg))).count();
+        var numDynamicArgs = arguments.stream().filter((arg) -> !isNullConstant(arg) && ClassHelper.isDynamicTyped(getType(arg))).count();
         if( numChannelArgs > 1 )
             addError(label + " `" + mn.getName() + "` was called with multiple channel arguments which can lead to non-deterministic behavior -- make sure that at most one argument is a channel and that all other arguments are dataflow values", node);
 
@@ -908,16 +1066,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         if( output instanceof AssignmentExpression ae )
             return (VariableExpression)ae.getLeftExpression();
         return null;
-    }
-
-    private static String methodType(MethodNode node) {
-        if( node instanceof ProcessNode )
-            return "Process";
-        if( node instanceof AgentNode )
-            return "Agent";
-        if( node instanceof WorkflowNode )
-            return "Workflow";
-        return "Function";
     }
 
     private static String className(Expression node) {
@@ -1202,11 +1350,11 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             resultType = trueType;
             nullable = isNullable(trueType) || isNullable(falseType);
         }
-        else if( isEmptyListOrMap(falseExpr) && Types.isAssignableFrom(trueType, falseType) ) {
+        else if( hasUnboundTypeArguments(falseType) && Types.isAssignableFrom(trueType, falseType) ) {
             resultType = trueType;
             nullable = isNullable(trueType);
         }
-        else if( isEmptyListOrMap(trueExpr) && Types.isAssignableFrom(falseType, trueType) ) {
+        else if( hasUnboundTypeArguments(trueType) && Types.isAssignableFrom(falseType, trueType) ) {
             resultType = falseType;
             nullable = isNullable(falseType);
         }
@@ -1222,14 +1370,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
     }
 
-    private static boolean isEmptyListOrMap(Expression node) {
-        if( node instanceof ListExpression le )
-            return le.getExpressions().isEmpty();
-        if( node instanceof MapExpression me )
-            return me.getMapEntryExpressions().isEmpty();
-        return false;
-    }
-
     private static boolean isNullable(ClassNode cn) {
         return cn == null || cn.getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
     }
@@ -1242,9 +1382,12 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         // always returns its last expression, and a void signature discards it,
         // so there is nothing to check against.
         var returnType = (ClassNode) node.getNodeMetaData(ASTNodeMarker.INFERRED_RETURN_TYPE);
-        if( returnType != null && !ClassHelper.VOID_TYPE.equals(returnType) ) {
+        if( returnType != null && !returnType.equals(ClassHelper.VOID_TYPE) ) {
+            // any value can be coerced to a boolean, so a predicate can return any
+            // type, as long as it returns a value
+            var coerce = Types.isEqual(returnType, ClassHelper.Boolean_TYPE);
             var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
-            visitor.visit(returnType, node.getCode());
+            visitor.visit(node, returnType, node.getCode(), coerce);
 
             var inferredReturnType = visitor.getInferredReturnType();
             if( inferredReturnType != null )
@@ -1279,10 +1422,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         super.visitMapExpression(node);
 
         var entries = node.getMapEntryExpressions();
-        if( entries.isEmpty() ) {
-            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.MAP_TYPE.getPlainNodeReference());
+        if( entries.isEmpty() )
             return;
-        }
 
         // infer key and value type args, falling back to `?` when heterogeneous
         var keyType = commonType(entries.stream().map(e -> getType(e.getKeyExpression())));
@@ -1393,12 +1534,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     @Override
     public void visitPropertyExpression(PropertyExpression node) {
         super.visitPropertyExpression(node);
-
-        var mn = asMethodOutput(node);
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode ) {
-            addError("Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead", node);
-            return;
-        }
 
         var receiver = node.getObjectExpression();
         var receiverType = getType(receiver);

@@ -34,7 +34,7 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces/channel#empty)
     """)
-    Channel<?> empty();
+    <E> Channel<E> empty();
 
     @Deprecated
     @Description("""

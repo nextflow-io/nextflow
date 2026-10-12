@@ -1032,4 +1032,32 @@ class TaskRunTest extends Specification {
         task.template == file
         task.traceScript == 'echo Ciao mondo'
     }
+
+    def 'should echo the final answer of an agent task'() {
+        given:
+        def session = Mock(Session)
+        def agentInfo = new nextflow.agent.AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = new TaskRun(config: new TaskConfig([(nextflow.agent.AgentTaskInfo.CONFIG_KEY): agentInfo]))
+        task.stdout = 'log line\n{"type":"complete","output":"the answer"}'
+
+        when:
+        task.echoStdout(session)
+
+        then:
+        1 * session.printConsole('the answer')
+    }
+
+    def 'should echo the raw output of an agent task without a result frame'() {
+        given:
+        def session = Mock(Session)
+        def agentInfo = new nextflow.agent.AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = new TaskRun(config: new TaskConfig([(nextflow.agent.AgentTaskInfo.CONFIG_KEY): agentInfo]))
+        task.stdout = 'log line\nnot a frame'
+
+        when:
+        task.echoStdout(session)
+
+        then:
+        1 * session.printConsole('log line\nnot a frame')
+    }
 }

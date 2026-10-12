@@ -1,5 +1,21 @@
 nf-azure changelog
 ===================
+1.24.1 - 6 Oct 2026
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
+1.24.0 - 22 Sep 2026
+- Add extension points for task caching and object-storage access (#7638) [631ed9734]
+- Add Azure Compute Gallery image and verification options (#7338) [77c91520e]
+- Add automatic resource labels for any executor (#7528) [1d7b6655a]
+- Fix jackson, netty and grpc CVEs via api-scoped dependency constraints (#7329) [7ea2029ac]
+- chore: update dependency com.azure:azure-identity to v1.18.6 (#7590) [5287f6d47]
+- chore: update dependency com.azure:azure-core-http-netty to v1.16.7 (#7589) [11cfd335a]
+- chore: update dependency com.azure:azure-identity to v1.18.5 (#7562) [e6b9cec5b]
+- Fix nf-azure plugin tier-1 bugs (#6831) [640ddc354]
+
 1.23.2 - 20 Aug 2026
 - Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
 - Detect Azure virtual directories without a trailing slash (#6428) [b4ab2e165]

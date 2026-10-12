@@ -1458,7 +1458,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         when:
         def target1 = s3path("s3://$bucket1/foo.data")
         and:
-        target1.setStorageClass('REDUCED_REDUNDANCY')
+        target1.setStorageClass('STANDARD_IA')
         def client = target1.getFileSystem().getClient()
         and:
         FileHelper.copyPath(file, target1)
@@ -1468,7 +1468,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         and:
         client
                 .getObjectMetadata(target1.getBucket(), target1.getKey())
-                .storageClass() == StorageClass.REDUCED_REDUNDANCY
+                .storageClass() == StorageClass.STANDARD_IA
 
         // copy a file across buckets
         when:
