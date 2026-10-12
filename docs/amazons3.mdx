@@ -5,7 +5,7 @@ description: Use Amazon S3 buckets as a file system in Nextflow pipelines.
 
 # Amazon S3
 
-Nextflow includes support for [Amazon S3](https://aws.amazon.com/s3/). Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
+Nextflow supports [Amazon S3](https://aws.amazon.com/s3/). Your pipeline script can access files stored in an S3 bucket transparently, like any other file in the local file system.
 
 ## S3 paths
 
@@ -29,17 +29,17 @@ See [Working with files][working-with-files] and the [Path][stdlib-types-path] r
 
 Nextflow uses the [AWS security credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) to make programmatic calls to AWS services.
 
-The AWS credentials are selected from the following sources, in order of descending priority:
+Nextflow selects AWS credentials from the following sources, in descending order of priority:
 
 1. Nextflow configuration file - `aws.accessKey` and `aws.secretKey`. See [aws][config-aws] for more details.
 
-2. A custom profile in `$HOME/.aws/credentials` and/or `$HOME/.aws/config`. The profile can be supplied from the `aws.profile` config option, or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environmental variables.
+2. A custom profile in `$HOME/.aws/credentials`, `$HOME/.aws/config`, or both. Set the profile with the `aws.profile` config option or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environment variables.
 
 3. Environment variables - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN` for temporary credentials.
 
-4. Web identity token credentials, such as [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) in Amazon EKS. These are configured with the `AWS_WEB_IDENTITY_TOKEN_FILE` and `AWS_ROLE_ARN` environment variables.
+4. Web identity token credentials, such as [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) in Amazon EKS. Configure these with the `AWS_WEB_IDENTITY_TOKEN_FILE` and `AWS_ROLE_ARN` environment variables.
 
-5. The `default` profile in `~/.aws/credentials` and/or `~/.aws/config`.
+5. The `default` profile in `~/.aws/credentials`, `~/.aws/config`, or both.
 
 6. *New in 23.10:* Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
 
@@ -47,27 +47,27 @@ The AWS credentials are selected from the following sources, in order of descend
 
 8. EC2 instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
 
-The AWS region is selected from the following sources, in order of descending priority:
+Nextflow selects the AWS region from the following sources, in descending order of priority:
 
 1. Nextflow configuration file: `aws.region`
 2. Environment variables: `AWS_REGION` or `AWS_DEFAULT_REGION`
 3. EC2 instance metadata (if Nextflow is running in an EC2 instance)
 
-SSO credentials and instance profile credentials are the most recommended because they don't require you to manage and distribute AWS keys explicitly. SSO credentials are ideal for launching pipelines from outside of AWS (e.g. your laptop), while instance profile credentials are ideal for launching pipelines within AWS (e.g. an EC2 instance).
+SSO credentials and instance profile credentials are recommended because you do not need to manage and distribute AWS keys. Use SSO credentials to launch pipelines from outside AWS, for example, from your laptop. Use instance profile credentials to launch pipelines within AWS, for example, from an EC2 instance.
 
-If no credentials are found, Nextflow accesses S3 anonymously, which only works for public buckets.
+If Nextflow finds no credentials, it accesses S3 anonymously. Anonymous access works only for public buckets.
 
 ## Required permissions
 
-[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. The proper policies must be attached to the identity associated with the AWS credentials.
+AWS uses [IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) to define permissions for IAM identities. Attach the required policies to the identity associated with your AWS credentials.
 
-Nextflow requires policies to access [S3 buckets](https://aws.amazon.com/s3/) in order to use the work directory, pull input data, and publish results.
+Nextflow requires policies that grant access to [S3 buckets](https://aws.amazon.com/s3/) to use the work directory, pull input data, and publish results.
 
-Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
+Depending on the pipeline configuration, these actions can use a single bucket but more often span multiple buckets. After you identify the buckets your pipeline uses, give Nextflow access to them in one of two ways:
 
-1. Grant access to all buckets by attaching the policy `"s3:*"` to the IAM identity. This works only if buckets do not set their own access policies (see point 2);
+1. Grant access to all buckets by attaching the policy `"s3:*"` to the IAM identity. This works only if buckets do not set their own access policies (see option 2).
 
-2. For more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values):
+2. For more fine-grained control, assign the following policy to each bucket, replacing the placeholders with actual values:
 
     ```json
     {
@@ -108,7 +108,7 @@ Depending on the pipeline configuration, the above actions can be done all in a 
     }
     ```
 
-See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html) for additional details.
+See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html) for more details.
 
 See [AWS Batch][awsbatch-iam] for the additional permissions required by the AWS Batch executor.
 

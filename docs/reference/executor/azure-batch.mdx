@@ -7,7 +7,7 @@ description: Reference for the azurebatch executor, which submits tasks to Azure
 
 The `azurebatch` executor runs pipeline tasks using [Azure Batch](https://azure.microsoft.com/en-us/services/batch/), a managed compute service that runs containerized workloads in Azure. It submits each task as an Azure Batch task.
 
-To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an Azure VM. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be located in an Azure Blob Storage container.
+To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an Azure VM. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be in an Azure Blob Storage container.
 
 Use the following process directives to control resource requests and other task characteristics:
 
@@ -29,23 +29,23 @@ For automated Azure infrastructure setup, consider using [Seqera Platform](https
 
 ## Overview
 
-Nextflow integrates with Azure Batch by mapping its execution model to Azure Batch's structure. Tasks are executed on compute nodes within an Azure Batch pool, which is a collection of virtual machines that can scale up or down based on an autoscale formula.
+Nextflow integrates with Azure Batch by mapping its execution model to the Azure Batch structure. Nextflow runs tasks on compute nodes within an Azure Batch pool, which is a collection of virtual machines that can scale up or down based on an autoscale formula.
 
 :::note
 In Azure Batch, a *job* is not a unit of work like in other batch schedulers. It is a container for tasks that is bound to a single pool, similar to a job queue. The *task* is the unit of work. Nextflow creates one Azure Batch job for each combination of process and pool, and submits each Nextflow task as an Azure Batch task in that job.
 :::
 
-Nextflow manages these pools dynamically. You can assign processes to specific pools using the process `queue` directive. Nextflow creates the pool if it doesn't exist and `azure.batch.allowPoolCreation` is set to `true`. Alternatively, `autoPoolMode` enables Nextflow to automatically create multiple pools based on the CPU and memory requirements defined in your processes.
+Nextflow manages these pools dynamically. You can assign processes to specific pools using the process `queue` directive. Nextflow creates the pool if it doesn't exist and `azure.batch.allowPoolCreation` is set to `true`. Alternatively, with `autoPoolMode`, Nextflow automatically creates pools based on the CPU and memory requirements defined in your processes.
 
-Each task first downloads the necessary input files from Azure Blob Storage to its assigned compute node. It then runs the process script. Finally, it uploads any output files back to Azure Blob Storage.
+Each task first downloads its input files from Azure Blob Storage to its assigned compute node. It then runs the process script. Finally, it uploads any output files back to Azure Blob Storage.
 
-Nextflow ensures that the corresponding Azure Batch jobs are marked as terminated when the pipeline completes. The compute pools, if configured for auto-scaling, automatically scale down according to their defined formula to minimize costs. Nextflow can also be configured to delete these node pools after pipeline completion.
+Nextflow marks the corresponding Azure Batch jobs as terminated when the pipeline completes. Compute pools configured for auto-scaling scale down according to their formula to minimize costs. You can also configure Nextflow to delete these node pools after the pipeline completes.
 
 ## Getting started
 
 1. Create an Azure Batch account in the Azure portal.
 
-2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of pools, CPUs, and jobs you can create.
+2. Increase the quotas in your Azure Batch account to meet the needs of your pipeline. Quotas limit the number of pools, CPUs, and jobs you can create.
 
 3. Create a storage account and a blob container in the same region as the Batch account.
 
@@ -58,9 +58,9 @@ Nextflow ensures that the corresponding Azure Batch jobs are marked as terminate
     - Set `process.executor` to `azurebatch`.
     - Set `azure.storage.accountName` to your storage account name.
     - Set `azure.batch.accountName` and `azure.batch.location` to your Batch account name and location.
-    - Set `workDir` to a Blob Storage path, e.g., `az://<blob-container>/work`.
+    - Set `workDir` to a Blob Storage path, for example, `az://<blob-container>/work`.
 
-7. Launch your pipeline with the above configuration:
+7. Launch your pipeline with this configuration:
 
     ```bash
     nextflow run <pipeline-name>
@@ -90,11 +90,11 @@ azure {
 ```
 
 :::warning
-The work directory must contain at least one subdirectory. Do not use only the container name, e.g., `az://<blob-container>`.
+The work directory must contain at least one subdirectory. Do not use only the container name, for example, `az://<blob-container>`.
 :::
 
 :::tip
-Any input data **not** stored in Azure Blob Storage will automatically be transferred to the pipeline work directory. Use this feature with caution to avoid unnecessary data transfers.
+Nextflow automatically transfers any input data **not** stored in Azure Blob Storage to the pipeline work directory. Use this feature with caution to avoid unnecessary data transfers.
 :::
 
 :::tip
@@ -109,17 +109,17 @@ az account list-locations -o table
 
 Azure Batch enforces quotas on resources like pools, jobs, and VMs.
 
-- **Pools:** There is a limit on the number of pools that can exist at one time. Nextflow throws an error if it attempts to create a pool when this quota is exhausted. To proceed, you must delete existing pools.
+- **Pools:** Azure Batch limits the number of pools that can exist at one time. Nextflow throws an error if it attempts to create a pool when this quota is exhausted. To proceed, delete existing pools.
 
-- **Active jobs:** There is a limit on the number of active jobs. Completed jobs should be terminated. If this limit is reached, Nextflow throws an error. You must terminate or delete jobs before you run additional pipelines.
+- **Active jobs:** Azure Batch limits the number of active jobs. Terminate completed jobs. If you reach this limit, Nextflow throws an error. Terminate or delete jobs before you run additional pipelines.
 
-- **VM cores:** Each Azure VM family has a maximum core quota. If you request a VM family size for which you lack sufficient core quota, any jobs and tasks created by Nextflow will remain pending, as the pool cannot scale due to the quota. This can cause your pipeline to hang indefinitely.
+- **VM cores:** Each Azure VM family has a maximum core quota. If you request a VM family size for which you lack sufficient core quota, any jobs and tasks that Nextflow creates remain pending because the quota prevents the pool from scaling. This can cause your pipeline to hang indefinitely.
 
-You can increase your quota on the Azure Portal by opening your Batch account and selecting **Quotas** in the left-hand menu, then request an increase in quota numbers.
+To increase your quota, open your Batch account in the Azure portal, select **Quotas** in the left-hand menu, and request an increase.
 
 ## Pools
 
-Nextflow supports two approaches for managing Batch pools: auto pools and named pools. These approaches are described in the following sections.
+Nextflow supports two approaches for managing Batch pools: auto pools and named pools.
 
 :::warning
 Clean up the Batch pools or use auto-scaling to avoid additional charges in the Batch account.
@@ -129,7 +129,7 @@ Clean up the Batch pools or use auto-scaling to avoid additional charges in the 
 
 When `autoPoolMode` is enabled, Nextflow automatically creates pools of compute nodes appropriate for your pipeline.
 
-The `cpus` and `memory` directives are used to find the smallest machine type in the Azure machine family, specified by the `machineType` directive, that satisfies the requested resources. When no options are specified, it uses one compute node of type *Standard_D4a_v4*.
+Nextflow uses the `cpus` and `memory` directives to find the smallest machine type in the Azure machine family, specified by the `machineType` directive, that satisfies the requested resources. If you specify no options, Nextflow uses one compute node of type *Standard_D4a_v4*.
 
 To use `autoPoolMode`, enable it in the `azure.batch` config scope:
 
@@ -155,7 +155,7 @@ You can specify multiple machine families per process using glob patterns in the
 process.machineType = 'Standard_D*d_v5,Standard_E*d_v5'
 ```
 
-For example, the following process creates a pool of *Standard_E16d_v5* machines when using `autoPoolMode` (see the notes below on task packing):
+For example, the following process creates a pool of *Standard_E16d_v5* machines when using `autoPoolMode` (see the following notes on task packing):
 
 ```nextflow
 process EXAMPLE_PROCESS {
@@ -173,17 +173,17 @@ process EXAMPLE_PROCESS {
 Additional notes:
 
 - When the machine type is a pattern, Nextflow selects larger machines to enable task packing: 4x the requested resources for tasks using 4 or fewer CPUs, and 2x for tasks using 8 or fewer CPUs.
-- This behavior can be overridden by specifying an exact machine type (e.g., *Standard_E2d_v5*).
-- Regexes can be used to avoid certain machine types (e.g., `Standard_*[^p]_v*` avoids ARM-based machines).
-- The pool is not removed when the pipeline terminates unless `azure.batch.deletePoolsOnCompletion` is enabled in your Nextflow configuration file.
+- To override this behavior, specify an exact machine type (for example, *Standard_E2d_v5*).
+- Patterns also support regular expression character classes, which you can use to exclude machine types (for example, `Standard_*[^p]_v*` excludes ARM-based machines).
+- Nextflow does not remove the pool when the pipeline terminates unless you enable `azure.batch.deletePoolsOnCompletion` in your Nextflow configuration file.
 
 ### Named pools
 
-The `queue` directive can be used to specify the ID of the Azure Batch compute pool that should be used for a process.
+Use the `queue` directive to specify the ID of the Azure Batch compute pool for a process.
 
-When `azure.batch.allowPoolCreation = true` is set in your configuration, Nextflow creates the pools on-demand. Otherwise, the pool must be available in the Batch environment when Nextflow submits tasks.
+When `azure.batch.allowPoolCreation = true` is set in your configuration, Nextflow creates the pools on demand. Otherwise, the pool must be available in the Batch environment when Nextflow submits tasks.
 
-Each pool can be configured separately in the Nextflow configuration. For example:
+You can configure each pool separately in the Nextflow configuration. For example:
 
 ```groovy
 azure {
@@ -211,21 +211,21 @@ process {
 }
 ```
 
-The above example defines the configuration for two node pools, `small` and `large`. The `small` pool provisions 5 compute nodes of type *Standard_D2_v2*, and the `large` pool provisions 2 nodes of type *Standard_D8_v3*. See the [azure][config-azure] configuration scope for the list of available configuration options.
+This example defines the configuration for two node pools, `small` and `large`. The `small` pool provisions 5 compute nodes of type *Standard_D2_v2*, and the `large` pool provisions 2 nodes of type *Standard_D8_v3*. See the [azure][config-azure] configuration scope for the list of available configuration options.
 
 :::warning
-Pool names may contain alphanumeric characters, hyphens, and underscores. Hyphenated names must be quoted, e.g., `'pool-1'`.
+Pool names can contain alphanumeric characters, hyphens, and underscores. Hyphenated names must be quoted, for example, `'pool-1'`.
 :::
 
 #### Requirements for existing pools
 
-The target pool must satisfy the following requirements when Nextflow is configured to use a pool that is already available in the Batch account:
+When you configure Nextflow to use a pool that already exists in the Batch account, the pool must meet the following requirements:
 
 - The pool must be declared as `dockerCompatible` (Container Type property).
 
 - The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow returns an error of the form "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 
-- Unless you are using Fusion, all tasks must have the `azcopy` command line tool available in the path. If `azure.batch.copyToolInstallMode = 'node'`, every node must have `azcopy` available at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
+- Unless you are using Fusion, all tasks must have the `azcopy` command-line tool available in the path. If `azure.batch.copyToolInstallMode = 'node'`, every node must have `azcopy` available at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
 ### Auto-scaling
 
@@ -247,7 +247,7 @@ azure {
 }
 ```
 
-The default auto-scaling formula initializes the pool with the number of VMs specified by the `vmCount` option. It dynamically scales up the pool based on the number of pending tasks. The pool limit is defined by `maxVmCount`. The formula automatically scales the pool down to zero nodes to minimize costs when no jobs are submitted for execution. The default formula is shown below:
+The default auto-scaling formula initializes the pool with the number of VMs specified by the `vmCount` option. It dynamically scales up the pool based on the number of pending tasks. The `maxVmCount` option sets the pool limit. When no jobs are submitted for execution, the formula scales the pool down to zero nodes to minimize costs. The default formula is:
 
 ```text
 // Get pool lifetime since creation.
@@ -265,11 +265,11 @@ $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
 $NodeDeallocationOption = taskcompletion;
 ```
 
-The `azure.batch.pools.<pool-name>.scaleFormula` setting can be used to specify custom formulas.
+Use the `azure.batch.pools.<pool-name>.scaleFormula` setting to specify a custom formula.
 
 ## Task authentication
 
-By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and can be configured using `azure.storage.tokenDuration` in your configuration.
+By default, Nextflow creates shared access signature (SAS) tokens for specific containers and passes them to tasks for file operations with Azure Storage. SAS tokens expire after 48 hours by default. To change the expiration time, set `azure.storage.tokenDuration` in your configuration.
 
 ### Managed identity
 
@@ -295,31 +295,31 @@ azure {
 }
 ```
 
-Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. It is possible to attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.batch.poolIdentityClientId`.
+Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. You can attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.batch.poolIdentityClientId`.
 
 ## Task packing
 
-Each Azure Batch node is allocated a specific number of task slots that determine how many tasks can run concurrently on that node. The number of slots is calculated based on the virtual machine's available CPUs. Nextflow intelligently assigns task slots to each process based on the proportion of total node resources requested through the `cpus`, `memory`, and `disk` directives.
+Each Azure Batch node is allocated a specific number of task slots that determine how many tasks can run concurrently on that node. The number of slots is based on the available CPUs of the virtual machine. Nextflow assigns task slots to each process based on the proportion of total node resources requested through the `cpus`, `memory`, and `disk` directives.
 
 For example, consider a *Standard_D4d_v5* machine with 4 vCPUs, 16 GB of memory, and 150 GB local disk:
 
-- If a process requests `cpus 2`, `memory 8.GB`, or `disk 75.GB`, two task slots are allocated (50% of resources), allowing two tasks to run concurrently on the node.
+- If a process requests `cpus 2`, `memory 8.GB`, or `disk 75.GB`, two task slots are allocated (50% of resources). Two tasks can run concurrently on the node.
 
-- If a process requests `cpus 4`, `memory 16.GB`, or `disk 150.GB`, four task slots are allocated (100% of resources), allowing one task to run on the node.
+- If a process requests `cpus 4`, `memory 16.GB`, or `disk 150.GB`, four task slots are allocated (100% of resources). One task can run on the node.
 
-Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, the node described above may become overloaded and fail if a task with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space. Make sure to accurately specify resource requirements to ensure optimal performance and prevent task failures.
+Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For example, the node described earlier can become overloaded and fail if a task with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space. Specify resource requirements accurately to prevent task failures.
 
 :::warning
-Azure virtual machines come with fixed storage disks that are not expandable. Tasks will fail if the tasks running concurrently on a node use more storage than the machine has available.
+Azure virtual machines come with fixed storage disks that are not expandable. Tasks fail if the tasks running concurrently on a node use more storage than the machine has available.
 :::
 
-By default, Docker and containerd store image layers on the OS disk, which can fill up quickly when pulling large container images. On VMs with an attached data disk (e.g., `Standard_E16ds_v5`), you can use a pool [start task](#start-tasks) to relocate Docker and containerd storage to `$AZ_BATCH_NODE_ROOT_DIR`, which uses the larger data disk.
+By default, Docker and containerd store image layers on the OS disk, which can fill up quickly when pulling large container images. On VMs with an attached data disk (for example, `Standard_E16ds_v5`), you can use a pool [start task](#start-tasks) to relocate Docker and containerd storage to `$AZ_BATCH_NODE_ROOT_DIR`. This directory uses the larger data disk.
 
 ## Task containers
 
-Every process in your pipeline must specify a container in order to be executed on Azure Batch.
+Every process in your pipeline must specify a container to run on Azure Batch.
 
-Nextflow supports both public and private container images. You can pull public images from repositories such as [https://community.wave.seqera.io](https://community.wave.seqera.io). You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
+Nextflow supports both public and private container images. You can pull public images from repositories such as [https://community.wave.seqera.io](https://community.wave.seqera.io). You must authenticate to use private images. When you use a private registry such as Azure Container Registry (ACR), make sure the Batch pool has access. Provide ACR credentials in the `azure.registry` configuration scope:
 
 ```groovy
 azure {
@@ -338,7 +338,7 @@ Nextflow uses the following environment variables if the registry credentials ar
 - `AZURE_REGISTRY_PASSWORD`: the password for Azure Container Registry authentication
 :::
 
-Container images from public registries such as Docker Hub can be used without additional configuration, even when a private registry is specified in the `azure.registry` scope. The Docker runtime on Azure Batch VMs automatically uses the appropriate registry based on the container image specified for the task.
+You can use container images from public registries such as Docker Hub without additional configuration, even when a private registry is specified in the `azure.registry` scope. The Docker runtime on Azure Batch VMs automatically uses the appropriate registry based on the container image specified for the task.
 
 ## VM images
 
@@ -371,7 +371,7 @@ azure {
 
 **Custom images from an Azure Compute Gallery**
 
-To provision pool nodes from a custom VM image published in an [Azure Compute Gallery](https://learn.microsoft.com/en-us/azure/virtual-machines/azure-compute-gallery), set `virtualMachineImageId` to the image version resource ID. When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU ID that matches the image operating system.
+To provision pool nodes from a custom VM image published in an [Azure Compute Gallery](https://learn.microsoft.com/en-us/azure/virtual-machines/azure-compute-gallery), set `virtualMachineImageId` to the image version resource ID. When `virtualMachineImageId` is set, Nextflow ignores `publisher` and `offer`, and you must set `sku` to the Batch node agent SKU ID that matches the image operating system.
 
 ```groovy
 azure {
@@ -392,7 +392,7 @@ Custom images require Microsoft Entra authentication (service principal or manag
 
 ### Image verification
 
-By default, Nextflow selects only images that Azure Batch has verified. Set `allowUnverifiedImages` to `true` to also allow images that Azure Batch lists but has not verified. Ignored when `virtualMachineImageId` is set.
+By default, Nextflow selects only images that Azure Batch has verified. Set `allowUnverifiedImages` to `true` to also allow images that Azure Batch lists but has not verified. This setting is ignored when `virtualMachineImageId` is set.
 
 ```groovy
 azure {
@@ -408,7 +408,7 @@ azure {
 
 ## Virtual networks
 
-Pools can be configured to use virtual networks to connect to your existing network infrastructure.
+You can configure pools to use a virtual network to connect to your existing network infrastructure.
 
 ```groovy
 azure.batch.pools.<pool-name>.virtualNetwork = '<subnet-id>'
@@ -428,7 +428,7 @@ Virtual networks require Microsoft Entra authentication (service principal or ma
 
 ## Start tasks
 
-Start tasks are optional commands that run when a node joins the pool. They are useful for setting up the node environment or for running other commands that need to be executed when the node is created.
+Start tasks are optional commands that run when a node joins the pool. Use them to set up the node environment or to run other commands when the node is created.
 
 ```groovy
 azure {
@@ -447,9 +447,9 @@ azure {
 
 ## Azure file shares
 
-Azure file shares provide fully managed file shares that can be mounted to compute nodes. Files become immediately available in the file system and can be accessed as local files within processes.
+Azure file shares are fully managed file shares that you can mount to compute nodes. Files are immediately available in the file system, and processes can access them as local files.
 
-The Azure file share must exist in the storage account configured for Blob Storage. You must provide the name of the source Azure file share and mount path (the path where the files are mounted). Additional mount options can also be set for further customization of the mounting process. See the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction) for more information.
+The Azure file share must exist in the storage account configured for Blob Storage. You must provide the name of the source Azure file share and mount path (the path where the files are mounted). You can also set additional mount options. See the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction) for more information.
 
 For example:
 
@@ -488,11 +488,11 @@ azure {
 
 When using `autoPoolMode`, use `auto` as the pool name.
 
-Spot VMs can be preempted by Azure before the task completes. When a node is preempted, Azure Batch automatically requeues its running tasks so that they are executed again when a node becomes available.
+Azure can preempt Spot VMs before the task completes. When Azure preempts a node, Azure Batch automatically requeues its running tasks so that they run again when a node becomes available.
 
 ## Fusion file system
 
-The Azure Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Azure Blob Storage as a virtual distributed file system, optimizing the data transfer and speeding up most task I/O operations. When using Fusion, tasks can also authenticate to Azure Storage with a [managed identity](#managed-identity).
+The Azure Batch executor supports [Fusion][fusion-page]. With Fusion, you can use Azure Blob Storage as a virtual distributed file system. Fusion optimizes data transfer and speeds up most task I/O operations. When using Fusion, tasks can also authenticate to Azure Storage with a [managed identity](#managed-identity).
 
 See [Azure Batch](https://docs.seqera.io/fusion/guide/azure-batch) for more information about configuring Fusion for Azure Batch.
 

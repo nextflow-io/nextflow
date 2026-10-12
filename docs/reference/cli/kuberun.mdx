@@ -16,14 +16,14 @@ $ nextflow kuberun [options] [project]
 ## Description
 
 :::warning
-The `kuberun` command is considered an obsolete approach for running Nextflow pipelines on Kubernetes and is no longer maintained. See [Kubernetes][k8s-page] for alternatives.
+The `kuberun` command is an obsolete approach for running Nextflow pipelines on Kubernetes and is no longer maintained. See [Kubernetes][k8s-page] for alternatives.
 :::
 
-The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The pod runs the specified pipeline and submits each task as a Kubernetes job (or pod). The console output of the pipeline is printed in the foreground.
+The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The pod runs the specified pipeline and submits each task as a Kubernetes job (or pod). The pod prints the pipeline console output in the foreground.
 
-The pipeline must be an existing Nextflow project or the absolute path of a pipeline already deployed in the Kubernetes cluster. The `kuberun` command cannot run local Nextflow scripts. It is only intended as a convenient way to test the deployment of pipelines to a Kubernetes cluster.
+The pipeline must be an existing Nextflow project or the absolute path of a pipeline already deployed in the Kubernetes cluster. The `kuberun` command cannot run local Nextflow scripts. It is intended only for testing the deployment of pipelines to a Kubernetes cluster.
 
-Use the `-v` option to specify the persistent volume claim and mount path to use for the pipeline execution. Volume claims can also be specified in the Nextflow configuration. See [k8s][config-k8s] for details.
+Use the `-v` option to specify the persistent volume claim and mount path to use for the pipeline execution. You can also specify volume claims in the Nextflow configuration. See [k8s][config-k8s] for details.
 
 ## Options
 
@@ -103,13 +103,13 @@ Run a pipeline on a Kubernetes cluster, using the persistent volume claim `vol-c
 $ nextflow kuberun nextflow-io/hello -v vol-claim:/mount/path
 ```
 
-Launch an interactive shell in a Nextflow pod, for debugging purposes:
+Launch an interactive shell in a Nextflow pod for debugging:
 
 ```console
 $ nextflow kuberun login -v vol-claim:/mount/path
 ```
 
-This command creates a pod, sets up the volume claim(s), configures the Nextflow environment, and launches a Bash login session. The pod is automatically destroyed once the shell session terminates, so do not use it to launch long-running pipelines in the background.
+This command creates a pod, sets up the volume claim(s), configures the Nextflow environment, and launches a Bash login session. The pod is automatically destroyed when the shell session terminates. Do not use it to launch long-running pipelines in the background.
 
 [config-k8s]: ../config/k8s
 [k8s-page]: ../executor/kubernetes
