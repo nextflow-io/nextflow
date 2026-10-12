@@ -53,6 +53,23 @@ interface CacheStore {
      */
     default void updateEntry(HashCode key, byte[] value) { putEntry(key, value) }
 
+    /**
+     * Retrieve the final hash of a successful execution for the given content hash,
+     * or {@code null} if no realized-hash index entry exists. Stores without an index
+     * fall back to the per-attempt hash walk.
+     */
+    default HashCode getRealizedHash(HashCode contentHash) { null }
+
+    /**
+     * Map a task content hash to the final hash of a successful execution.
+     */
+    default void putRealizedHash(HashCode contentHash, HashCode finalHash) {}
+
+    /**
+     * Remove the realized-hash index entry for the given content hash.
+     */
+    default void deleteRealizedHash(HashCode contentHash) {}
+
     void writeIndex(HashCode key, boolean cached)
     Iterator<Index> iterateIndex()
     void deleteIndex()

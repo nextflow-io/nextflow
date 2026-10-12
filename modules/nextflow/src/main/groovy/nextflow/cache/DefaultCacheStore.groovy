@@ -28,12 +28,33 @@ import org.iq80.leveldb.Options
 import org.iq80.leveldb.impl.Iq80DBFactory
 /**
  * Implement the default nextflow cache store that save the cache data
- * into the local directory using an embedded LevelDVB instance
+ * into the local directory using an embedded LevelDVB instance *
+ *
+ * KEY-SPACE CONTRACT
+ * ------------------
+ * This single LevelDB instance holds two disjoint key namespaces:
+ *
+ *   - task entries:        key = <hash>            (exactly KEY_SIZE bytes)
+ *   - realized-hash idx:  key = 0x01 + <hash>     (KEY_SIZE + 1 bytes)
+ *
+ * The {@link #REALIZED_HASH_INDEX_PREFIX} byte makes index keys one byte longer than
+ * entry keys, so the two namespaces can never collide (LevelDB compares the
+ * full byte sequence). All key construction goes through {@link #realizedIndexKey}
+ * for index keys and {@code key.asBytes()} for entry keys -- do not build raw
+ * keys elsewhere.
+ *
+ * NOTE: the store is never iterated by LevelDB key (record enumeration uses
+ * the separate flat index file via {@link #iterateIndex}). If a key scan is
+ * ever added, it MUST filter by this contract (length / prefix) so it does
+ * not treat index pointers as task-entry records.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 class DefaultCacheStore implements CacheStore {
+
+    /** Prefix byte for realized-hash index keys -- see KEY-SPACE CONTRACT above. */
+    private static final byte REALIZED_HASH_INDEX_PREFIX = 0x01
 
     /** The underlying Level DB instance */
     private DB db
@@ -190,5 +211,29 @@ class DefaultCacheStore implements CacheStore {
     @Override
     void deleteEntry(HashCode key) {
         db.delete(key.asBytes())
+    }
+
+    private byte[] realizedIndexKey(HashCode contentHash) {
+        final h = contentHash.asBytes()
+        final k = new byte[h.length + 1]
+        k[0] = REALIZED_HASH_INDEX_PREFIX
+        System.arraycopy(h, 0, k, 1, h.length)
+        return k
+    }
+
+    @Override
+    HashCode getRealizedHash(HashCode contentHash) {
+        final value = db.get(realizedIndexKey(contentHash))
+        return value != null ? HashCode.fromBytes(value) : null
+    }
+
+    @Override
+    void putRealizedHash(HashCode contentHash, HashCode finalHash) {
+        db.put(realizedIndexKey(contentHash), finalHash.asBytes())
+    }
+
+    @Override
+    void deleteRealizedHash(HashCode contentHash) {
+        db.delete(realizedIndexKey(contentHash))
     }
 }

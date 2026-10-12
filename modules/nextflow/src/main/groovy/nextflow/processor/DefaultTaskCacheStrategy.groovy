@@ -68,6 +68,14 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
     @Override
     void resolve(TaskRun task, HashCode hash, boolean shouldTryCache, TaskResolver resolver) {
 
+        // only a first attempt receives the content hash -- a retry receives the previous attempt's
+        // folded hash -- and clone()/makeCopy() carry it forward across the retry chain
+        if( task.contentHash == null )
+            task.contentHash = hash
+
+        if( shouldTryCache && resumeFromRealizedHash(task, resolver) )
+            return
+
         int tries = task.failCount +1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
@@ -116,6 +124,39 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
             break
         }
 
+    }
+
+    /**
+     * Resume a task from the realized-hash index in a single lookup, skipping the per-attempt walk,
+     * so that a task which succeeded only after failed attempts is found even when the work dirs of
+     * those attempts are gone or the walk would not reach it.
+     *
+     * @return {@code true} if the task was resumed, {@code false} to fall back to the walk (index miss,
+     *      stale pointer, or lookup error). A stale pointer is rewritten by the next successful resume
+     *      or execution.
+     */
+    private boolean resumeFromRealizedHash(TaskRun task, TaskResolver resolver) {
+        try {
+            final indexed = resolver.realizedHash(task.contentHash)
+            if( !indexed )
+                return false
+            final entry = resolver.entry(indexed)
+            final resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+            if( !entry || !entry.trace.isCompleted() || !resumeDir?.exists() )
+                return false
+            // the resumed copy inherits the flag, so notifyTaskCached skips rewriting a correct pointer
+            task.resumedFromIndex = true
+            try {
+                return resolver.resume(task, indexed, resumeDir, entry)
+            }
+            finally {
+                task.resumedFromIndex = false
+            }
+        }
+        catch( Throwable t ) {
+            log.trace "[${task.lazyName()}] Realized-hash index lookup failed -- falling back to scan -- ${t.message}"
+            return false
+        }
     }
 
 }

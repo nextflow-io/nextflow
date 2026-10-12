@@ -208,4 +208,66 @@ class DefaultTaskCacheStrategyTest extends Specification {
         err.message.startsWith('Unable to create directory=')
     }
 
+    def 'resumes from the realized-hash index, skipping the attempt walk'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def task = Spy(new TaskRun()) { lazyName() >> 'foo' }
+        def hash = HashCode.fromInt(100)
+        def realized = HashCode.fromInt(200)
+        def resumeDir = Files.createDirectories(root.resolve('cd').resolve('ef01'))
+        def entry = entryIn(resumeDir)
+
+        when:
+        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
+
+        then: 'the task hash is kept as the index key and the indexed entry is resumed, flagged as such'
+        task.contentHash == hash
+        1 * resolver.realizedHash(hash) >> realized
+        1 * resolver.entry(realized) >> entry
+        1 * resolver.resume(task, realized, resumeDir, entry) >> { assert task.resumedFromIndex; true }
+        0 * resolver.launch(*_)
+        and: 'the flag does not outlive the resume'
+        !task.resumedFromIndex
+    }
+
+    def 'falls back to the attempt walk when the realized hash is stale'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def task = Spy(new TaskRun()) { lazyName() >> 'foo' }
+        def hash = HashCode.fromInt(100)
+        def stale = HashCode.fromInt(200)
+        def workDir = root.resolve('ab').resolve('cdef')
+
+        when:
+        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
+
+        then: 'a missing entry, or one whose work dir is gone, is not resumed'
+        1 * resolver.realizedHash(hash) >> stale
+        1 * resolver.entry(stale) >> entryIn(root.resolve('gone'))
+        and: 'the walk launches attempt 1'
+        1 * resolver.entry(attempt(hash, 1)) >> null
+        1 * resolver.workDirFor(attempt(hash, 1)) >> workDir
+        1 * resolver.launch(task, attempt(hash, 1), workDir)
+        0 * resolver.resume(*_)
+    }
+
+    def 'does not consult the realized-hash index when not resuming, and keeps the content hash on a retry'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def content = HashCode.fromInt(100)
+        def task = Spy(new TaskRun(contentHash: content)) { lazyName() >> 'foo'; getFailCount() >> 1 }
+        def hash = HashCode.fromInt(300)
+
+        when:
+        new DefaultTaskCacheStrategy().resolve(task, hash, false, resolver)
+
+        then:
+        0 * resolver.realizedHash(_)
+        1 * resolver.entry(attempt(hash, 2, 1)) >> null
+        1 * resolver.workDirFor(_) >> root.resolve('ab').resolve('cdef')
+        1 * resolver.launch(*_)
+        and:
+        task.contentHash == content
+    }
+
 }
