@@ -5,19 +5,19 @@ description: Use Google Cloud Storage buckets as a file system in Nextflow pipel
 
 # Google Cloud Storage
 
-Nextflow includes support for [Google Cloud Storage](https://cloud.google.com/storage). Files stored in a Cloud Storage bucket can be accessed transparently in your pipeline script like any other file in the local file system.
+Nextflow supports [Google Cloud Storage](https://cloud.google.com/storage). You can access files stored in a Cloud Storage bucket in your pipeline script like any other file in the local file system.
 
 ## Cloud Storage paths
 
 To access a Cloud Storage file, prefix the file path with the `gs://` scheme and the name of the bucket where it is stored.
 
-For example, if you need to access the file `/data/sequences.fa` stored in a bucket named `my-bucket`, that file can be accessed using the following fully qualified path:
+For example, to access the file `/data/sequences.fa` stored in a bucket named `my-bucket`, use the following fully qualified path:
 
 ```
 gs://my-bucket/data/sequences.fa
 ```
 
-The usual file operations can be applied to a path handle with the above notation. For example, the content of a Cloud Storage file can be printed as follows:
+You can apply the usual file operations to a path handle with the above notation. For example, to print the content of a Cloud Storage file:
 
 ```nextflow
 println file('gs://my-bucket/data/sequences.fa').text
@@ -27,19 +27,19 @@ See [Working with files][working-with-files] and the [Path][stdlib-types-path] r
 
 ## Authentication
 
-Credentials for Google Cloud services, such as Cloud Storage and Cloud Batch, are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
+Nextflow reads credentials for Google Cloud services, such as Cloud Storage and Cloud Batch, from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
 
-The most common case will be to pick up your end-user Google credentials from your workstation. You can create these by running the following command and running through the authentication flow:
+The most common case is to use your end-user Google credentials from your workstation. To create them, run the following command and complete the authentication flow:
 
 ```bash
 gcloud auth application-default login
 ```
 
-This will write a credential file to your gcloud configuration directory that will be used for any tool you run on your workstation that picks up default credentials.
+This command writes a credential file to your gcloud configuration directory. Any tool you run on your workstation that reads default credentials uses this file.
 
-The next most common case would be when running on a Compute Engine VM. In this case, Application Default Credentials will pick up the Compute Engine Service Account credentials for that VM.
+The next most common case is running on a Compute Engine VM. In this case, Application Default Credentials uses the Compute Engine Service Account credentials for that VM.
 
-Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify the location of a service account key file. To create a key file, see [Create and delete service account keys](https://cloud.google.com/iam/docs/keys-create-delete) in the Google Cloud documentation. Then set the following variable, replacing the path in the example with the path of your key file:
+You can also use the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to specify the location of a service account key file. To create a key file, see [Create and delete service account keys](https://cloud.google.com/iam/docs/keys-create-delete) in the Google Cloud documentation. Then set the following variable, replacing the path in the example with the path of your key file:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"

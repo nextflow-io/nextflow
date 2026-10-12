@@ -7,7 +7,7 @@ description: Reference for the k8s executor, which submits tasks to a Kubernetes
 
 The `k8s` executor runs pipeline tasks on a [Kubernetes](http://kubernetes.io/) cluster. It submits each task as a Kubernetes job, or as a Kubernetes pod when [`k8s.computeResourceType`][config-k8s] is set to `Pod`.
 
-To enable this executor, set `process.executor = 'k8s'` in the `nextflow.config` file. You can launch the pipeline from a pod in the cluster, or from any machine that can connect to the cluster when using [Fusion][fusion-page]. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be located in a shared persistent volume, or in object storage when using Fusion.
+To enable this executor, set `process.executor = 'k8s'` in the `nextflow.config` file. You can launch the pipeline from a pod in the cluster, or from any machine that can connect to the cluster when using [Fusion][fusion-page]. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be in a shared persistent volume, or in object storage when using Fusion.
 
 Use the following process directives to control resource requests and other job characteristics:
 
@@ -26,7 +26,7 @@ See the [k8s][config-k8s] config scope for the full list of configuration option
 
 The main abstraction in Kubernetes is the *pod*, which defines the desired state of one or more containers, such as the required compute resources, storage, and network configuration.
 
-Kubernetes also abstracts storage provisioning through *persistent volumes*, which allow containers to access the underlying storage systems in a transparent and portable manner.
+Kubernetes also abstracts storage provisioning through *persistent volumes*. Containers use persistent volumes to access the underlying storage systems in a portable way.
 
 When using the `k8s` executor, Nextflow submits each task as a Kubernetes job (or pod, depending on [`k8s.computeResourceType`][config-k8s]). Nextflow itself typically runs in a pod in the same cluster, which mounts the same persistent volume as the tasks (see [Running in a pod](#running-in-a-pod)). When using Fusion, Nextflow can run anywhere that can connect to the cluster (see [Launch with Fusion](#launch-with-fusion)).
 
@@ -37,7 +37,7 @@ When using the `k8s` executor, Nextflow submits each task as a Kubernetes job (o
 1. Create a [Persistent Volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistent-volumes) with `ReadWriteMany` [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) in the Kubernetes cluster, and a [Persistent Volume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) to access it. Nextflow uses this volume for the work directory and pipeline outputs.
 
     :::tip
-    When using [Wave][wave-page] and [Fusion][fusion-page], a shared file system and persistent volume claim are not needed. See [Launch with Fusion](#launch-with-fusion) for more information.
+    When you use [Wave][wave-page] and [Fusion][fusion-page], you don't need a shared file system or persistent volume claim. See [Launch with Fusion](#launch-with-fusion) for more information.
     :::
 
 2. Make sure Nextflow can connect to the Kubernetes cluster. Nextflow uses the Kubernetes configuration file at `$HOME/.kube/config` or the file specified by the `KUBECONFIG` environment variable. You can verify the configuration with the following command:
@@ -55,7 +55,7 @@ When using the `k8s` executor, Nextflow submits each task as a Kubernetes job (o
     - Set `process.executor` to `k8s`.
     - Set `k8s.storageClaimName` to the name of the persistent volume claim.
     - Set `k8s.storageMountPath` to the path where the volume is mounted (default: `/workspace`).
-    - Set `workDir` to a path in the mounted volume, e.g., `/workspace/work`.
+    - Set `workDir` to a path in the mounted volume, for example, `/workspace/work`.
 
 5. Launch your pipeline from a pod in the cluster that mounts the same persistent volume claim. See [Running in a pod](#running-in-a-pod) for details.
 
@@ -77,7 +77,7 @@ k8s {
 
 ## Running in a pod
 
-Nextflow can be executed directly from a pod running in a Kubernetes cluster. In these cases you will need to use the plain Nextflow `run` command and specify the `k8s` executor and the required persistent volume claim in the `nextflow.config` file as shown below:
+You can run Nextflow directly from a pod running in a Kubernetes cluster. In this case, use the plain Nextflow `run` command and specify the `k8s` executor and the required persistent volume claim in the `nextflow.config` file:
 
 ```groovy
 process {
@@ -91,14 +91,14 @@ k8s {
 }
 ```
 
-In the above snippet replace `vol-claim` with the name of an existing persistent volume claim and replace `/mount/path` with the actual desired mount path (default: `/workspace`) and `storageSubPath` with the directory in the volume to be mounted (default: `/`).
+In the above snippet, replace `vol-claim` with the name of an existing persistent volume claim, `/mount/path` with the mount path (default: `/workspace`), and `storageSubPath` with the directory in the volume to mount (default: `/`).
 
 :::warning
-The running pod must have been created with the same persistent volume claim name and mount as the one specified in your Nextflow configuration file. Note also that the `run` command does not support the `-v` option.
+The running pod must have been created with the same persistent volume claim name and mount as the one specified in your Nextflow configuration file. The `run` command does not support the `-v` option.
 :::
 
 :::tip
-It is also possible to mount multiple volumes using the [`k8s.pod`][config-k8s] config option, for example:
+You can also mount multiple volumes using the [`k8s.pod`][config-k8s] config option. For example:
 
 ```groovy
 k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]
@@ -107,13 +107,13 @@ k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]
 
 ## Launch with Fusion
 
-The use of [Fusion][fusion-page] allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
+With [Fusion][fusion-page], you can deploy a Nextflow pipeline to a remote (or local) Kubernetes cluster without a shared file system or persistent volume claim.
 
 See [Amazon EKS](https://docs.seqera.io/fusion/guide/aws-eks) for a guide to set up Fusion in Amazon EKS compute environments and [Google Kubernetes Engine (GKE)](https://docs.seqera.io/fusion/guide/gcp-gke) for a guide to set up Fusion in GKE compute environments.
 
 ## Launch with `kuberun`
 
-The [`kuberun`][cli-kuberun] command deploys the Nextflow runtime as a pod and runs a pipeline from it. It is considered obsolete and is no longer maintained. Use [Running in a pod](#running-in-a-pod) or [Launch with Fusion](#launch-with-fusion) instead.
+The [`kuberun`][cli-kuberun] command deploys the Nextflow runtime as a pod and runs a pipeline from it. It is obsolete and no longer maintained. Use [Running in a pod](#running-in-a-pod) or [Launch with Fusion](#launch-with-fusion) instead.
 
 [cli-kuberun]: ../cli/kuberun
 [config-k8s]: ../config/k8s
