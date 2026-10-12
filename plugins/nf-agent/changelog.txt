@@ -1,5 +1,8 @@
 nf-agent changelog
 ===================
+0.2.0 - 12 Oct 2026
+- Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
+
 0.1.2 - 6 Oct 2026
 - Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
 - Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
