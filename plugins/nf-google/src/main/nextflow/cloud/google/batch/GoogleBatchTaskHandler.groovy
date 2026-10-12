@@ -745,11 +745,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final state = getTaskState()
         if( jobDeleted ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job=$jobId deleted; task=$taskId; last state=$state"
-            task.exitStatus = Integer.MAX_VALUE
+            // the task may have completed before the job was deleted
+            task.exitStatus = readExitFile()
             // a task that never started is re-submitted as a submit timeout, so it does not count as a task failure
-            task.error = status == TaskStatus.RUNNING
-                ? new ProcessException("Google Batch job $jobId was deleted before the task completed")
-                : new ProcessSubmitTimeoutException("Task '${task.lazyName()}' could not be started because its Google Batch job $jobId was deleted by Nextflow")
+            if( task.exitStatus == Integer.MAX_VALUE )
+                task.error = status == TaskStatus.RUNNING
+                    ? new ProcessException("Google Batch job $jobId was deleted before the task completed")
+                    : new ProcessSubmitTimeoutException("Task '${task.lazyName()}' could not be started because its Google Batch job $jobId was deleted by Nextflow")
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED

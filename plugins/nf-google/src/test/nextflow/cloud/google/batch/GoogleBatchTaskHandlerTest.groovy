@@ -1466,6 +1466,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         1 * client.getTaskInArrayStatus('job-1', '1') >> { throw new NotFoundException(new Exception('not found'), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
         1 * exec.isJobDeleted('job-1') >> true
+        1 * handler.readExitFile() >> Integer.MAX_VALUE
         1 * client.removeFromArrayTasks('job-1', '1')
         and:
         completed
@@ -1488,6 +1489,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         1 * client.getTaskInArrayStatus('job-1', '0') >> { throw new NotFoundException(new Exception('not found'), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
         1 * exec.isJobDeleted('job-1') >> true
+        1 * handler.readExitFile() >> Integer.MAX_VALUE
         1 * client.removeFromArrayTasks('job-1', '0')
         and:
         completed
@@ -1529,11 +1531,44 @@ class GoogleBatchTaskHandlerTest extends Specification {
         1 * client.getTaskInArrayStatus('job-1', '1') >> null
         1 * client.getJobStatus('job-1') >> makeJobStatus(JobStatus.State.DELETION_IN_PROGRESS)
         _ * exec.isJobDeleted('job-1') >> true
+        1 * handler.readExitFile() >> Integer.MAX_VALUE
         0 * client.getTaskStatus(_, _)
         and:
         !running
         handler.status == nextflow.processor.TaskStatus.COMPLETED
         completed
         task.error instanceof nextflow.exception.ProcessSubmitTimeoutException
+    }
+
+    def 'should use the exit file when the job was deleted by nextflow after the task completed' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def client = Mock(BatchClient)
+        def exec = Mock(GoogleBatchExecutor)
+        def task = new TaskRun(name: 'foo (1)', workDir: WORK_DIR)
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '0', client: client, task: task, isArrayChild: true))
+        handler.@executor = exec
+        handler.status = nextflow.processor.TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '0') >> { if( GONE ) throw new NotFoundException(new Exception('not found'), GrpcStatusCode.of(Status.Code.NOT_FOUND), false); null }
+        (GONE ? 0 : 1) * client.getJobStatus('job-1') >> makeJobStatus(JobStatus.State.DELETION_IN_PROGRESS)
+        _ * exec.isJobDeleted('job-1') >> true
+        1 * handler.readExitFile() >> EXIT_STATUS
+        0 * client.getTaskStatus(_, _)
+        and:
+        completed
+        handler.status == nextflow.processor.TaskStatus.COMPLETED
+        task.exitStatus == EXIT_STATUS
+        task.error == null
+
+        where:
+        GONE    | EXIT_STATUS
+        true    | 0
+        true    | 1
+        false   | 0
+        false   | 1
     }
 }
