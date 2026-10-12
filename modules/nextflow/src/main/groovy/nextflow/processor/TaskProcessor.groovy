@@ -920,11 +920,6 @@ class TaskProcessor {
         Path workDirFor(HashCode key) {
             return FileHelper.getWorkFolder(executor.getWorkDir(), key)
         }
-
-        @Override
-        HashCode realizedHash(HashCode contentHash) {
-            return session.cache.getRealizedHash(contentHash)
-        }
     }
 
     /**

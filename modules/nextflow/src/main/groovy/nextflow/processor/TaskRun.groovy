@@ -84,23 +84,6 @@ class TaskRun implements Cloneable {
      */
     HashCode hash
 
-    /**
-     * The content-based hash of the task, captured on the first attempt
-     * (before per-attempt try-mixing). Used as the key of the realized-hash
-     * index that maps this content hash to the {@link #hash} of a successful
-     * execution. Preserved across retries by {@code clone()} / {@code makeCopy()}.
-     */
-    volatile HashCode contentHash
-
-    /**
-     * Marks a (cloned) task that was resumed via the realized-hash index
-     * fast-path. When set, the index pointer is already known to be correct, so
-     * the redundant rewrite in {@code Session.notifyTaskCached} is skipped. Set
-     * by {@link DefaultTaskCacheStrategy} only for the duration of the resume, so
-     * only the resumed clone keeps it.
-     */
-    transient boolean resumedFromIndex
-
     /*
      * The processor that creates this 'task'
      */
