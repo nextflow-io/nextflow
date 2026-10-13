@@ -22,6 +22,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.AccessDeniedException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -55,13 +56,13 @@ import nextflow.util.Threads
 @CompileStatic
 class FilePorter {
 
-    static final private Random RND = Random.newInstance()
-
     static final private int MAX_RETRIES = 3
 
     static final private int MAX_TRANSFERS = 50
 
     static final private Duration POLL_TIMEOUT = Duration.of('2sec')
+
+    static final private Duration RETRY_DELAY = Duration.of('250ms')
 
     final Map<FileCopy,FileTransfer> stagingTransfers = new HashMap<>()
 
@@ -77,6 +78,8 @@ class FilePorter {
 
     final int maxTransfers
 
+    final Duration retryDelay
+
     final private Session session
 
     FilePorter( Session session ) {
@@ -84,7 +87,8 @@ class FilePorter {
         maxRetries = session.config.navigate('filePorter.maxRetries') as Integer ?: MAX_RETRIES
         pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
         maxTransfers = session.config.navigate('filePorter.maxTransfers') as Integer ?: MAX_TRANSFERS
-        log.debug "File porter settings maxRetries=$maxRetries; maxTransfers=$maxTransfers; pollTimeout=$threadPool"
+        retryDelay = session.config.navigate('filePorter.retryDelay') as Duration ?: RETRY_DELAY
+        log.debug "File porter settings maxRetries=$maxRetries; maxTransfers=$maxTransfers; pollTimeout=$pollTimeout; retryDelay=$retryDelay"
         sync = new ReentrantLock()
         // use a semaphore to cap the number of max transfer when using virtual thread
         // when using platform threads the max transfers are limited by the thread pool itself
@@ -105,7 +109,7 @@ class FilePorter {
     }
 
     protected FileTransfer createFileTransfer(Path source, Path target) {
-        return new FileTransfer(source, target, maxRetries, semaphore)
+        return new FileTransfer(source, target, maxRetries, retryDelay, semaphore)
     }
 
     protected FileTransfer getOrSubmit(FileCopy copy) {
@@ -276,6 +280,8 @@ class FilePorter {
          */
         final int maxRetries
 
+        final long retryDelayMillis
+
         final private Semaphore semaphore
         final AtomicInteger refCount
         volatile Future result
@@ -283,10 +289,15 @@ class FilePorter {
         private int debugDelay
 
         FileTransfer(Path foreignPath, Path stagePath, int maxRetries, Semaphore semaphore) {
+            this(foreignPath, stagePath, maxRetries, RETRY_DELAY, semaphore)
+        }
+
+        FileTransfer(Path foreignPath, Path stagePath, int maxRetries, Duration retryDelay, Semaphore semaphore) {
             this.semaphore = semaphore
             this.source = foreignPath
             this.target = stagePath
             this.maxRetries = maxRetries
+            this.retryDelayMillis = retryDelay ? retryDelay.toMillis() : 0
             this.message = "Staging foreign file: ${source.toUriString()}"
             this.refCount = new AtomicInteger(0)
             this.debugDelay = System.getProperty('filePorter.debugDelay') as Integer ?: 0
@@ -331,11 +342,12 @@ class FilePorter {
                     // remove the target file that could be have partially downloaded
                     cleanup(stagePath)
                     // check if a stage/download retry is allowed
-                    if( count++ < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted() ) {
-                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
+                    if( count++ < maxRetries && recoverableError(filePath, e) && !Thread.currentThread().isInterrupted() ) {
+                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- waiting ${retryDelayMillis}ms before retry -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
-                        sleep (10 + RND.nextInt(300))
+                        if( retryDelayMillis > 0 )
+                            sleep(retryDelayMillis)
                         continue
                     }
 
@@ -344,13 +356,23 @@ class FilePorter {
             }
         }
 
-        private boolean recoverableError(IOException e){
+        private boolean recoverableError(Path source, IOException e){
             final result =
-                e !instanceof NoSuchFileException
-                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
-                && e !instanceof SocketException
+                !(e instanceof InterruptedIOException && !(e instanceof SocketTimeoutException))
+                && !(e instanceof AccessDeniedException)
+                && (!(e instanceof NoSuchFileException) || isHttpUrl(source) && !isMissingHttpResource(e))
             log.debug "Stage foreign file exception: recoverable=$result; type=${e.class.name}; message=${e.message}"
             return result
+        }
+
+        private boolean isHttpUrl(Path source) {
+            final scheme = source?.scheme?.toLowerCase()
+            return scheme == 'http' || scheme == 'https'
+        }
+
+        private boolean isMissingHttpResource(Exception e) {
+            final msg = e.message?.toLowerCase()
+            return msg?.contains('404') || msg?.contains('not found')
         }
 
         private String fmtError(Path filePath, Exception e) {
@@ -362,7 +384,7 @@ class FilePorter {
             return message
         }
 
-        private Path stageForeignFile0(Path source, Path target) {
+        protected Path stageForeignFile0(Path source, Path target) {
             if( target.exists() ) {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
