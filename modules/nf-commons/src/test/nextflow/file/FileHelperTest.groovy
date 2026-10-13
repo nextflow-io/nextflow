@@ -710,7 +710,7 @@ class FileHelperTest extends Specification {
         given:
         def root = Files.createTempDirectory('test')
         def source = root.resolve('source')
-        def skip = SkipDirsOption.of('.fusion')
+        def skip = SkipFusionDirOption.INSTANCE
 
         new FileTreeBuilder(root.toFile())
                 .dir('source') {

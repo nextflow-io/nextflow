@@ -19,28 +19,22 @@ package nextflow.file;
 import java.nio.file.CopyOption;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
 
 /**
- * Copy option to skip the sub-directories with the given names when copying
+ * Copy option to skip the Fusion {@code .fusion} sub-directories when copying
  * a directory. The root directory being copied is never skipped.
+ *
+ * See https://github.com/seqeralabs/fusion/issues/1811
  *
  * This option is only understood by Nextflow directory copy helpers, therefore
  * it must be removed with {@link #strip(CopyOption...)} before the options are
  * passed to a file system provider.
  */
-public final class SkipDirsOption implements CopyOption {
+public enum SkipFusionDirOption implements CopyOption {
 
-    private final Set<String> names;
+    INSTANCE;
 
-    private SkipDirsOption(Set<String> names) {
-        this.names = names;
-    }
-
-    public static SkipDirsOption of(String... names) {
-        return new SkipDirsOption(Set.of(names));
-    }
+    private static final String FUSION_DIR_NAME = ".fusion";
 
     /**
      * @param source The root directory being copied
@@ -49,21 +43,16 @@ public final class SkipDirsOption implements CopyOption {
      */
     public boolean matches(Path source, Path dir) {
         final Path name = dir.getFileName();
-        return name != null && names.contains(name.toString()) && !dir.equals(source);
+        return name != null && FUSION_DIR_NAME.equals(name.toString()) && !dir.equals(source);
     }
 
     /**
-     * Remove any {@link SkipDirsOption} from the given options
+     * Remove this option from the given options
      */
     public static CopyOption[] strip(CopyOption... options) {
         if( options == null )
             return null;
-        final List<CopyOption> result = Arrays.stream(options).filter(it -> !(it instanceof SkipDirsOption)).toList();
-        return result.size() == options.length ? options : result.toArray(new CopyOption[0]);
-    }
-
-    @Override
-    public String toString() {
-        return "SkipDirsOption" + names;
+        final CopyOption[] result = Arrays.stream(options).filter(it -> it != INSTANCE).toArray(CopyOption[]::new);
+        return result.length == options.length ? options : result;
     }
 }
