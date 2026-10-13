@@ -147,6 +147,19 @@ public class CopyMoveHelper {
                 return FileVisitResult.CONTINUE;
             }
 
+            @Override
+            public FileVisitResult visitFileFailed(Path current, IOException exc)
+                    throws IOException
+            {
+                // the attributes of a skipped dir are read before `preVisitDirectory` is invoked,
+                // ignore the error when it is removed or cannot be accessed in the meanwhile
+                if( skipDir != null && skipDir.matches(source, current) ) {
+                    log.trace("Skip DIR: " + current + " - cause: " + exc);
+                    return FileVisitResult.CONTINUE;
+                }
+                throw exc;
+            }
+
         };
 
         Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);

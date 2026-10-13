@@ -20,6 +20,7 @@ import static java.nio.file.LinkOption.*
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemLoopException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
@@ -766,6 +767,39 @@ class FileHelperTest extends Specification {
         FileHelper.copyPath(source, target)
         then:
         target.resolve('dir1/.fusion/chks/part_0').text == 'xxx'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should skip dirs failing to be accessed when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                    }
+                }
+        // a link to an ancestor dir makes the walker fail before `preVisitDirectory` is invoked
+        Files.createSymbolicLink(source.resolve('dir1/.fusion'), source)
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        FileHelper.copyPath(source, root.resolve('copy-all'))
+        then:
+        thrown(FileSystemLoopException)
 
         cleanup:
         root?.deleteDir()
