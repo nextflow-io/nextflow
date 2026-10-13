@@ -16,6 +16,8 @@
 
 package io.seqera.executor
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -30,6 +32,7 @@ import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
 import io.seqera.sched.client.SchedClientConfig
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
 import nextflow.platform.PlatformHelper
 import nextflow.processor.TaskHandler
@@ -76,12 +79,35 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private SeqeraBatchSubmitter batchSubmitter
 
+    /**
+     * The project {@code bin} directory uploaded to the work dir, or {@code null} when there is
+     * none or Wave bundles it into the task container
+     */
+    private Path remoteBinDir
+
     @Override
     protected void register() {
         if( !isFusionEnabled() )
             throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
         applyFusionDefaults()
         createClient()
+        uploadBinDir()
+    }
+
+    /**
+     * Upload the project {@code bin} directory to the work dir, so that tasks reach it via Fusion.
+     * Skipped when Wave is enabled, because it bundles the directory into the task container.
+     */
+    protected void uploadBinDir() {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
+            final remote = getTempDir()
+            log.info "Uploading local `bin` scripts folder to ${remote.toUriString()}/bin"
+            this.remoteBinDir = FilesEx.copyTo(session.binDir, remote)
+        }
+    }
+
+    Path getRemoteBinDir() {
+        return remoteBinDir
     }
 
     /**

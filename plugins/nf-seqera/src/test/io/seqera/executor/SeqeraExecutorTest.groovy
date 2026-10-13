@@ -16,6 +16,8 @@
 
 package io.seqera.executor
 
+import java.nio.file.Files
+
 import io.seqera.config.ExecutorOpts
 import io.seqera.config.SeqeraConfig
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
@@ -200,6 +202,31 @@ class SeqeraExecutorTest extends Specification {
 
         then:
         fusionConfig.targetVersion == null
+    }
+
+    def 'should upload the bin dir only when Wave does not bundle it'() {
+        given:
+        SysEnv.push([:])
+        def folder = Files.createTempDirectory('test')
+        def bin = Files.createDirectory(folder.resolve('bin'))
+        Files.createFile(bin.resolve('hello.sh'))
+        def work = Files.createDirectory(folder.resolve('work'))
+        def session = Mock(Session) { getBinDir() >> bin; isDisableRemoteBinDir() >> DISABLED; getWorkDir() >> work }
+        def executor = Spy(SeqeraExecutor) { getWorkDir() >> work }
+        executor.session = session
+
+        when:
+        executor.uploadBinDir()
+        then:
+        (executor.getRemoteBinDir()?.resolve('hello.sh')?.exists() ?: false) == UPLOADED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        DISABLED | UPLOADED
+        false    | true
+        true     | false
     }
 
     def 'should be secret-native so Nextflow suppresses the local-store secrets snippet'() {

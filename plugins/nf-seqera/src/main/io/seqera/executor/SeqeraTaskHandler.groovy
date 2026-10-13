@@ -39,6 +39,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionConfig
@@ -95,7 +96,23 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     void prepareLauncher() {
         assert fusionEnabled()
         final launcher = fusionLauncher()
+        final remoteBinDir = executor.getRemoteBinDir()
+        if( remoteBinDir )
+            launcher.headerScript += binDirScript(launcher.toContainerMount(remoteBinDir))
         launcher.build()
+    }
+
+    /**
+     * The script putting the project {@code bin} directory on the task {@code PATH} when it is
+     * uploaded to the work dir instead of being bundled into the container by Wave.
+     *
+     * @param binDir the uploaded {@code bin} directory, as seen through the Fusion mount
+     * @return the header script lines
+     */
+    protected static String binDirScript(Path binDir) {
+        return "cp -r ${Escape.path(binDir)} \$HOME/.nextflow-bin\n" +
+            'chmod +x $HOME/.nextflow-bin/*\n' +
+            'export PATH=$HOME/.nextflow-bin:$PATH\n'
     }
 
     @Override
