@@ -705,11 +705,12 @@ class FileHelperTest extends Specification {
         root?.deleteDir()
     }
 
-    def 'should not copy fusion metadata dir' () {
+    def 'should skip dirs when copying directory' () {
 
         given:
         def root = Files.createTempDirectory('test')
         def source = root.resolve('source')
+        def skip = SkipDirsOption.of('.fusion')
 
         new FileTreeBuilder(root.toFile())
                 .dir('source') {
@@ -729,7 +730,7 @@ class FileHelperTest extends Specification {
 
         when:
         def target = root.resolve('copy')
-        FileHelper.copyPath(source, target)
+        FileHelper.copyPath(source, target, skip)
         then:
         target.resolve('file_1').text == 'alpha'
         target.resolve('dir1/file_2').text == 'beta'
@@ -738,7 +739,7 @@ class FileHelperTest extends Specification {
 
         when:
         target = createInMemTempDir().resolve('copy')
-        FileHelper.copyPath(source, target)
+        FileHelper.copyPath(source, target, skip)
         then:
         target.resolve('file_1').text == 'alpha'
         target.resolve('dir1/file_2').text == 'beta'
@@ -746,11 +747,25 @@ class FileHelperTest extends Specification {
         !target.resolve('dir1/.fusion').exists()
 
         when:
-        // copying a `.fusion` dir explicitly is still allowed
+        // the root dir is never skipped
         target = root.resolve('copy-fusion')
-        FileHelper.copyPath(source.resolve('.fusion'), target)
+        FileHelper.copyPath(source.resolve('.fusion'), target, skip)
         then:
         target.resolve('trace.json').text == '{}'
+
+        when:
+        // the option is not passed to the provider when copying a file
+        target = root.resolve('file_1.copy')
+        FileHelper.copyPath(source.resolve('file_1'), target, skip)
+        then:
+        target.text == 'alpha'
+
+        when:
+        // without the option the dirs are copied
+        target = root.resolve('copy-all')
+        FileHelper.copyPath(source, target)
+        then:
+        target.resolve('dir1/.fusion/chks/part_0').text == 'xxx'
 
         cleanup:
         root?.deleteDir()

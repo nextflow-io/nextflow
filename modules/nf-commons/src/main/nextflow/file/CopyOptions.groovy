@@ -32,10 +32,12 @@ class CopyOptions {
     private boolean replaceExisting = false;
     private boolean copyAttributes = false;
     private boolean followLinks = true;
+    private SkipDirsOption skipDirs
 
     boolean replaceExisting() { replaceExisting }
     boolean copyAttributes() { copyAttributes }
     boolean followLinks() { followLinks }
+    SkipDirsOption skipDirs() { skipDirs }
 
     private CopyOptions() { }
 
@@ -52,6 +54,10 @@ class CopyOptions {
             }
             if (option == StandardCopyOption.COPY_ATTRIBUTES) {
                 result.copyAttributes = true;
+                continue;
+            }
+            if (option instanceof SkipDirsOption) {
+                result.skipDirs = option
                 continue;
             }
             if (option == null)
