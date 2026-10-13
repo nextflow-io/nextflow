@@ -481,6 +481,76 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.numSpotInterruptions == 1
     }
 
+    def 'should fetch task status once when creating the trace record' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> new TaskConfig()
+        and:
+        def client = Mock(BatchClient)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@client = client
+        handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
+        handler.@uid = '789'
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        and:
+        def taskStatus = TaskStatus.newBuilder()
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setDescription('Task state is updated from RUNNING to FAILED on zones/europe-west2-a/instances/i-abc123')
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .build()
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        handler.isCompleted() >> true
+        1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
+        and:
+        trace.machineInfo.zone == 'europe-west2-a'
+        trace.numSpotInterruptions == 1
+    }
+
+    def 'should fetch task status once across completion and trace record' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor) { getLogging() >> Mock(BatchLogging) }
+        def task = new TaskRun(name: 'hello')
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '0', client: client, task: task, isArrayChild: true, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        and:
+        def status = TaskStatus.newBuilder()
+            .setState(TaskStatus.State.FAILED)
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setDescription('Task failed due to Spot VM preemption with exit code 50001 on zones/europe-west2-a/instances/i-abc123')
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .build()
+
+        when:
+        def completed = handler.checkIfCompleted()
+        def machineInfo = handler.getMachineInfo()
+        def numSpotInterruptions = handler.getNumSpotInterruptions()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '0') >> status
+        1 * client.getTaskStatus('job-1', '0') >> status
+        and:
+        completed
+        task.exitStatus == 50001
+        task.error.message.contains('Spot VM preemption')
+        machineInfo.zone == 'europe-west2-a'
+        numSpotInterruptions == 1
+    }
+
     def 'should create submit request with fusion enabled' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
@@ -600,13 +670,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
 
         when:
-        client.getTaskStatus(jobId, taskId) >>> [
-            makeTaskStatus(null,'Task failed due to Spot VM preemption with exit code 50001.'),
-            makeTaskStatus(null, 'Task succeeded')
-        ]
+        client.getTaskStatus(jobId, taskId) >> makeTaskStatus(null, DESC)
         then:
-        handler.getJobError().message == "Task failed due to Spot VM preemption with exit code 50001."
-        handler.getJobError() == null
+        handler.getJobError()?.message == EXPECTED
+
+        where:
+        DESC                                                          | EXPECTED
+        'Task failed due to Spot VM preemption with exit code 50001.' | 'Task failed due to Spot VM preemption with exit code 50001.'
+        'Task succeeded'                                              | null
     }
 
     def 'should find best instance type' () {
@@ -1059,13 +1130,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should return zero when no status events exist'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
         handler.@client = Mock(BatchClient) {
             getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder().build()
         }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> true
@@ -1075,6 +1147,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should count spot interruptions correctly from status events'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
         handler.@client = Mock(BatchClient) {
             getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder()
@@ -1097,7 +1170,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> true
@@ -1110,8 +1183,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.@taskId = 'task-123'
 
         when:
-        def resultNullJobId = handler.getNumSpotInterruptions(null)
-        def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
+        def resultNullJobId = handler.getNumSpotInterruptions()
+        handler.@jobId = 'job-123'
+        def resultIncompleteTask = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> false
@@ -1122,13 +1196,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should return null when an exception occurs while fetching task status'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
         handler.@client = Mock(BatchClient) {
             getTaskStatus('job-123', 'task-123') >> { throw new RuntimeException("Error") }
         }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> true

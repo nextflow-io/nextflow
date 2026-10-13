@@ -31,6 +31,7 @@ import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
+import com.google.cloud.batch.v1.TaskStatus as BatchTaskStatus
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import com.google.protobuf.Duration
@@ -137,6 +138,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Flag to indicate that this task has been killed
      */
     private volatile boolean killRequested
+
+    /**
+     * The task status fetched once the task has completed, since it no longer changes
+     */
+    private volatile BatchTaskStatus completedTaskStatus
 
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
@@ -767,7 +773,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return exit code if found, otherwise Integer.MAX_VALUE
      */
     protected Integer getExitCode(){
-        final events = client.getTaskStatus(jobId, taskId)?.getStatusEventsList()
+        final events = getCompletedTaskStatus()?.getStatusEventsList()
         if( events ) {
             // Find the most recent event that contains a TaskExecution with an exit code.
             // Events are not guaranteed to be in chronological order, so we iterate through
@@ -799,7 +805,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             final events = noTaskJobfailure
                 ? client.getJobStatus(jobId).getStatusEventsList()
-                : client.getTaskStatus(jobId, taskId).getStatusEventsList()
+                : getCompletedTaskStatus().getStatusEventsList()
             final lastEvent = events?.get(events.size() - 1)
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
@@ -813,6 +819,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return null
+    }
+
+    private BatchTaskStatus getCompletedTaskStatus() {
+        if( completedTaskStatus == null )
+            completedTaskStatus = client.getTaskStatus(jobId, taskId)
+        return completedTaskStatus
     }
 
     @PackageScope Integer readExitFile() {
@@ -888,7 +900,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     private void updateZoneFromEvents() {
         try {
-            final events = client.getTaskStatus(jobId, taskId)?.statusEventsList
+            final events = getCompletedTaskStatus()?.statusEventsList
             final zone = resolveZoneFromEvents(events)
             if( zone ) {
                 machineInfo = new CloudMachineInfo(
@@ -922,17 +934,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Count the number of spot instance reclamations for this task by examining
      * the task status events and checking for preemption exit codes
      *
-     * @param jobId The Google Batch Job Id
      * @return The number of times this task was retried due to spot instance reclamation
      */
-
-    protected Integer getNumSpotInterruptions(String jobId) {
+    protected Integer getNumSpotInterruptions() {
         if (!jobId || !taskId  || !isCompleted()) {
             return null
         }
 
         try {
-            final status = client.getTaskStatus(jobId, taskId)
+            final status = getCompletedTaskStatus()
 
             if (!status)
                 return null
@@ -963,7 +973,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( jobId && uid )
             result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
-        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
+        result.numSpotInterruptions = getNumSpotInterruptions()
         return result
     }
 
