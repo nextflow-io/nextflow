@@ -329,7 +329,8 @@ module.exports = {
                         "reference/config/workflow"
                     ]
                 },
-                "reference/env-vars"
+                "reference/env-vars",
+                "reference/osc-7501"
             ]
         },
         {
