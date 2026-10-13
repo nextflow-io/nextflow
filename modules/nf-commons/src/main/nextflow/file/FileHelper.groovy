@@ -1027,7 +1027,7 @@ class FileHelper {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
-                sourceProvider.copy(source, target, SkipFusionDirOption.strip(options));
+                sourceProvider.copy(source, target, SkipDirOption.strip(options));
             }
         }
         else {

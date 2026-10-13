@@ -86,7 +86,7 @@ public class CopyMoveHelper {
             throws IOException
     {
         if( !foreign ) {
-            source.getFileSystem().provider().copy(source, target, SkipFusionDirOption.strip(options));
+            source.getFileSystem().provider().copy(source, target, SkipDirOption.strip(options));
             return;
         }
 
@@ -111,14 +111,14 @@ public class CopyMoveHelper {
     {
 
         final boolean foreign = source.getFileSystem().provider() != target.getFileSystem().provider();
-        final SkipFusionDirOption skipFusionDir = CopyOptions.parse(options).skipFusionDir();
+        final SkipDirOption skipDir = CopyOptions.parse(options).skipDir();
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 
             public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr)
                     throws IOException
             {
-                if( skipFusionDir != null && skipFusionDir.matches(source, current) ) {
+                if( skipDir != null && skipDir.matches(source, current) ) {
                     log.trace("Skip DIR: " + current);
                     return FileVisitResult.SKIP_SUBTREE;
                 }
@@ -177,7 +177,7 @@ public class CopyMoveHelper {
 
         // create directory or copy file
         if (attrs.isDirectory()) {
-            copyDirectory(source, target, opts.skipFusionDir() != null ? new CopyOption[]{ opts.skipFusionDir() } : new CopyOption[0]);
+            copyDirectory(source, target, opts.skipDir() != null ? new CopyOption[]{ opts.skipDir() } : new CopyOption[0]);
         }
         else {
             copyFile(source, target, true);

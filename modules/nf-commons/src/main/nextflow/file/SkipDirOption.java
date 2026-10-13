@@ -21,20 +21,20 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 /**
- * Copy option to skip the Fusion {@code .fusion} sub-directories when copying
+ * Copy option to skip the sub-directories with the given name when copying
  * a directory. The root directory being copied is never skipped.
- *
- * See https://github.com/seqeralabs/fusion/issues/1811
  *
  * This option is only understood by Nextflow directory copy helpers, therefore
  * it must be removed with {@link #strip(CopyOption...)} before the options are
  * passed to a file system provider.
  */
-public enum SkipFusionDirOption implements CopyOption {
+public final class SkipDirOption implements CopyOption {
 
-    INSTANCE;
+    private final String name;
 
-    private static final String FUSION_DIR_NAME = ".fusion";
+    public SkipDirOption(String name) {
+        this.name = name;
+    }
 
     /**
      * @param source The root directory being copied
@@ -42,17 +42,22 @@ public enum SkipFusionDirOption implements CopyOption {
      * @return {@code true} when {@code dir} should not be copied
      */
     public boolean matches(Path source, Path dir) {
-        final Path name = dir.getFileName();
-        return name != null && FUSION_DIR_NAME.equals(name.toString()) && !dir.equals(source);
+        final Path fileName = dir.getFileName();
+        return fileName != null && name.equals(fileName.toString()) && !dir.equals(source);
     }
 
     /**
-     * Remove this option from the given options
+     * Remove any {@link SkipDirOption} from the given options
      */
     public static CopyOption[] strip(CopyOption... options) {
         if( options == null )
             return null;
-        final CopyOption[] result = Arrays.stream(options).filter(it -> it != INSTANCE).toArray(CopyOption[]::new);
+        final CopyOption[] result = Arrays.stream(options).filter(it -> !(it instanceof SkipDirOption)).toArray(CopyOption[]::new);
         return result.length == options.length ? options : result;
+    }
+
+    @Override
+    public String toString() {
+        return "SkipDirOption[" + name + "]";
     }
 }

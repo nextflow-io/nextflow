@@ -32,12 +32,12 @@ class CopyOptions {
     private boolean replaceExisting = false;
     private boolean copyAttributes = false;
     private boolean followLinks = true;
-    private SkipFusionDirOption skipFusionDir
+    private SkipDirOption skipDir
 
     boolean replaceExisting() { replaceExisting }
     boolean copyAttributes() { copyAttributes }
     boolean followLinks() { followLinks }
-    SkipFusionDirOption skipFusionDir() { skipFusionDir }
+    SkipDirOption skipDir() { skipDir }
 
     private CopyOptions() { }
 
@@ -56,8 +56,8 @@ class CopyOptions {
                 result.copyAttributes = true;
                 continue;
             }
-            if (option instanceof SkipFusionDirOption) {
-                result.skipFusionDir = option
+            if (option instanceof SkipDirOption) {
+                result.skipDir = option
                 continue;
             }
             if (option == null)

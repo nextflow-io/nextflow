@@ -40,7 +40,7 @@ import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.CopyMoveHelper
 import nextflow.file.FileHelper
-import nextflow.file.SkipFusionDirOption
+import nextflow.file.SkipDirOption
 import nextflow.trace.TraceHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
@@ -1168,7 +1168,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def remote = s3path("s3://$bucketName/cache/foo")
 
         when:
-        CopyMoveHelper.copyToForeignTarget(remote, cache1, SkipFusionDirOption.INSTANCE)
+        CopyMoveHelper.copyToForeignTarget(remote, cache1, new SkipDirOption('.fusion'))
         then:
         cache1.resolve('file-1').exists()
         cache1.resolve('bar/file-2').exists()
@@ -1178,7 +1178,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         when:
         // the use of 'FileHelper.copyPath' will invoke the s3 provider download directory method
         // make sure the resulting local directory structure matches the one created by 'CopyMoveHelper.copyToForeignTarget'
-        FileHelper.copyPath(remote, cache2, SkipFusionDirOption.INSTANCE)
+        FileHelper.copyPath(remote, cache2, new SkipDirOption('.fusion'))
         then:
         cache2.resolve('file-1').exists()
         cache2.resolve('bar/file-2').exists()
