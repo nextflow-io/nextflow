@@ -12,10 +12,11 @@ This guide details fundamental skills to run a basic Nextflow pipeline. It inclu
 - Configuring a pipeline parameter
 
 :::info[**Prerequisites**]
-You will need the following to get started:
 
--  Nextflow version 26.10 or later.
-   See [Installation][install-page] for installation instructions. If you have an older version, see [Updating Nextflow][updating-nextflow] to update.
+You need the following:
+
+- Nextflow 26.10 or later. See [Installation][install-page] to install Nextflow, or [Updating Nextflow][updating-nextflow] to update an older version.
+
 :::
 
 ## Run a pipeline
@@ -35,11 +36,11 @@ This script defines two processes:
 
 - `convert_to_upper`: takes an input file, transforms its contents to uppercase letters, and writes the uppercase text to a file with the prefix `upper_`.
 
-The entry workflow consists of a `params` block, a `workflow` block, and an `output` block:
+The script also defines a `params` block, a `workflow` block, and an `output` block:
 
 - The `params` block declares the pipeline parameters.
 
-- The `workflow` block defines how processes are connected via channels (`main:`), and which channels are published as outputs (`publish:`). In this example, the `split` process emits a collection of files, and the `flatMap` operator emits each file separately to the `convert_to_upper` process.
+- The `workflow` block defines how processes are connected via channels (`main:`) and which channels are published as outputs (`publish:`). In this example, the `split` process emits a collection of files, and the `flatMap` operator emits each file separately to the `convert_to_upper` process.
 
 - The `output` block defines where each output is published. In this example, the outputs from both processes are published to subdirectories (`lower` and `upper`) in the output directory (`results` by default).
 
@@ -145,9 +146,9 @@ See [Caching and resuming][cache-resume-page] for more information about Nextflo
 
 ## Pipeline parameters
 
-Parameters are the inputs of a pipeline. They are declared in the `params` block with a name, a type, and an optional default value. Parameters can be specified on the command line as `--<name>`. Parameters specified on the command line override the default values in the main script.
+Parameters are the inputs of a pipeline. You declare them in the `params` block with a name, a type, and an optional default value. You can set parameters on the command line as `--<name>`. Command-line values override the default values in the main script.
 
-You can set the `str` parameter when running the pipeline. To modify your `str` parameter:
+You can set the `str` parameter when you run the pipeline. To modify your `str` parameter:
 
 1. Run your pipeline using the following command:
 

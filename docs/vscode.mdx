@@ -72,7 +72,7 @@ If a `nextflow_schema.json` file exists in the same directory as a script with a
 
 ### DAG preview for workflows
 
-The extension can generate a workflow DAG that includes the workflow inputs, outputs, and any processes or workflows that are called by the selected workflow. The workflow DAG is displayed in a new panel to the side.
+The extension can generate a workflow DAG that includes the workflow inputs, outputs, and any processes or workflows that are called by the selected workflow. The workflow DAG opens in a new panel.
 
 The DAG preview is similar to the [workflow diagram][workflow-diagram] that can be generated at runtime using the `-with-dag` option. However, it is different in several ways:
 
@@ -86,11 +86,11 @@ To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the 
 
 ### Config preview for processes
 
-The extension can show the configuration settings that apply to a process, based on the pipeline config files. The config preview is displayed in a new panel to the side.
+The extension can show the configuration settings that apply to a process, based on the pipeline config files. The config preview opens in a new panel.
 
 For each process directive, the config preview shows the setting that takes effect according to the [selector priority][config-selector-priority]. You can toggle profiles, toggle overridden settings, and filter for specific entries.
 
-To preview the config of a process, select the **Preview config** CodeLens above the process definition. Alternatively, select a process call and use the **Preview config** code action to preview the config for the fully qualified process name (e.g., `SUB:ALIGN`). This way, the preview includes any `withName` selectors that match the fully qualified name.
+To preview the config of a process, select the **Preview config** CodeLens above the process definition. Alternatively, select a process call and use the **Preview config** code action to preview the config for the fully qualified process name (for example, `SUB:ALIGN`). The preview then includes any `withName` selectors that match the fully qualified name.
 
 ## Troubleshooting
 

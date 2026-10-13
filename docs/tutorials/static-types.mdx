@@ -5,7 +5,7 @@ description: Migrate Nextflow pipelines to typed processes, typed workflows, and
 
 # Migrating to static typing
 
-Nextflow 26.10 brings full support for [static typing][static-typing] in Nextflow code. This tutorial demonstrates how to migrate to static typing using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+Nextflow 26.10 fully supports [static typing][static-typing]. This tutorial shows how to migrate to static typing, using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
 
 :::note
 Static typing is optional. All existing code will continue to work.
@@ -13,27 +13,27 @@ Static typing is optional. All existing code will continue to work.
 
 ## Overview
 
-Static typing allows you to precisely model and validate the structure of your data as it flows through your pipeline. It consists of several new language features:
+Use static typing to model and validate the structure of your data as it flows through your pipeline. It consists of several new language features:
 
-- **Type annotations** can be added to inputs and outputs at every level of a pipeline, from pipeline parameters to process inputs and outputs, using the [standard Nextflow types][stdlib-types]. These annotations make your code easier to understand, and Nextflow uses them to identify type-related errors at compile-time.
+- **Type annotations** can be added to inputs and outputs at every level of a pipeline, from pipeline parameters to process inputs and outputs, using the [standard Nextflow types][stdlib-types]. These annotations make your code easier to understand, and Nextflow uses them to identify type-related errors at compile time.
 
-- **Records** are a new data structure for modeling composite data. They serve as an alternative to tuples -- whereas tuple elements are accessed by index, record fields are accessed by name. This allows you to model data with meaningful names instead of keeping track of how tuple elements are ordered.
+- **Records** are a new data structure for modeling composite data. They are an alternative to tuples -- whereas tuple elements are accessed by index, record fields are accessed by name. With records, you can model data with meaningful names instead of tracking the order of tuple elements.
 
-- **Record types** are custom type definitions that are used to guarantee a minimum set of requirements for a record in a particular context. Records are *duck-typed*, which means that a record can be used as an input as long as it meets the minimum requirements of that input (given by a record type).
+- **Record types** are custom type definitions that guarantee a minimum set of requirements for a record in a particular context. Records are *duck-typed*. A record can be used as an input as long as it meets the minimum requirements of that input, as defined by a record type.
 
-Static typing also enables [pipeline composition][pipeline-composition]. When a pipeline uses typed parameters and workflow outputs, the entire pipeline can be included in another pipeline and called like any other workflow.
+Static typing also enables [pipeline composition][pipeline-composition]. When a pipeline uses typed parameters and workflow outputs, you can include the entire pipeline in another pipeline and call it like any other workflow.
 
 ## Developer tooling
 
 ### Type checking
 
-When using static typing, Nextflow can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when it is passed as input to a process.
+When you use static typing, Nextflow can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when you pass it as input to a process.
 
-Nextflow performs type checking on every script that enables the `nextflow.enable.types` feature flag. Use `nextflow lint` or the [Nextflow language server][vscode] to type-check your code during development.
+Nextflow type-checks every script that enables the `nextflow.enable.types` feature flag. Use `nextflow lint` or the [Nextflow language server][vscode] to type-check your code during development.
 
 ### Automatic migration
 
-The [Nextflow agent skills](https://github.com/nextflow-io/agent-skills) include a `migrate-nextflow-code` skill that can migrate a pipeline to static typing using a coding agent such as Claude Code, Codex, or Cursor. See the repository README for installation instructions.
+The [Nextflow agent skills](https://github.com/nextflow-io/agent-skills) include a `migrate-nextflow-code` skill. Use it with a coding agent such as Claude Code, Codex, or Cursor to migrate a pipeline to static typing. See the repository README for installation instructions.
 
 ## Example: rnaseq-nf
 
@@ -489,9 +489,9 @@ workflow RNASEQ {
 }
 ```
 
-Finally, the workflow needs to be updated to only emit the `samples_ch` channel. Type annotations are not required for emits, but they are still useful as documentation and as a sanity check -- if the declared output type doesn't match the assigned value's type, Nextflow will report it.
+Finally, update the workflow to emit only the `samples_ch` channel. Type annotations are not required for emits, but they document the output and act as a sanity check. If the declared output type doesn't match the type of the assigned value, Nextflow reports an error.
 
-While `samples_ch` could be emitted as type `Channel<Record>`, the best practice to use an explicit record type so that downstream workflows know which record fields are available.
+While `samples_ch` could be emitted as type `Channel<Record>`, the best practice is to use an explicit record type so that downstream workflows know which record fields are available.
 
 Define a new record type based on the available fields in `samples_ch`:
 
