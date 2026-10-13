@@ -249,26 +249,36 @@ class BatchClient {
 
 
     TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
-        final taskName = generateTaskName(jobId,taskId)
-        final now = System.currentTimeMillis()
-        TaskStatusRecord record = arrayTaskStatus.get(taskName)
-        if( !record || now - record.timestamp > TASK_STATE_INVALID_TIME ){
+        final key = arrayTaskKey(jobId, taskId)
+        TaskStatusRecord record = arrayTaskStatus.get(key)
+        if( !record || System.currentTimeMillis() - record.timestamp > TASK_STATE_INVALID_TIME ){
             log.trace("[GOOGLE BATCH] Updating tasks status for job $jobId")
-            updateArrayTasks(jobId, now)
-            record = arrayTaskStatus.get(taskName)
+            updateArrayTasks(jobId)
+            record = arrayTaskStatus.get(key)
         }
         return record?.status
     }
 
-    private void updateArrayTasks(String jobId, long now){
-        for( Task t: listTasks(jobId) ){
-            arrayTaskStatus.put(t.name, new TaskStatusRecord(t.status, now))
+    private void updateArrayTasks(String jobId){
+        final tasks = listTasks(jobId)
+        // take the timestamp after the listing, which can take longer than TASK_STATE_INVALID_TIME for large arrays
+        final now = System.currentTimeMillis()
+        for( Task t: tasks ){
+            final name = TaskName.parse(t.name)
+            arrayTaskStatus.put(arrayTaskKey(name.getJob(), name.getTask()), new TaskStatusRecord(t.status, now))
         }
     }
 
     void removeFromArrayTasks(String jobId, String taskId){
-        final taskName = generateTaskName(jobId,taskId)
-        TaskStatusRecord record = arrayTaskStatus.remove(taskName)
+        arrayTaskStatus.remove(arrayTaskKey(jobId, taskId))
+    }
+
+    /*
+     * The API returns task names with the project number, while names created by
+     * generateTaskName() use the configured project ID, so they cannot be compared
+     */
+    private static String arrayTaskKey(String jobId, String taskId) {
+        return "${jobId}/${taskId}".toString()
     }
 }
 

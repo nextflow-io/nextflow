@@ -55,10 +55,12 @@ builds on this shape.
 - **`goal`** *(optional)* — a high-level objective that steers the multi-turn
   loop; advisory (it never raises `maxIterations`). See `09_goal-directed/`,
   `10_convergence-loop/`, and `11_contig-filter/`.
-- **`input:` / `output:`** — process-style typed I/O: a scalar, a `path`, or a
-  named `record`. A **record output** opts into *structured output* (the record
-  type becomes the model's JSON-schema contract). A plain output (e.g. `String`)
-  emits the model's text.
+- **`input:` / `output:`** — process-style typed I/O, including destructured
+  `record(...)` and `tuple(...)` inputs. A **typed output** (a record or a
+  scalar such as `Integer`) opts into *structured output* (the type becomes the
+  model's JSON-schema contract). Otherwise compose the output from `stdout()`
+  (the model's final text), `file()`/`files()`, and the inputs, e.g.
+  `record(id: id, summary: stdout())`.
 - **`tools`** — a list of **namespaced tool refs** (not module names). Every entry
   is `family[:group]:name`; a ref that names a *non-leaf* selects its whole
   subtree, so `'nf:module_run'` means `'nf:module_run:*'`. A ref that selects
@@ -202,12 +204,13 @@ NXF_PLUGINS_MODE=dev OPENAI_API_KEY="$OPENAI_API_KEY" \
 
 ## v1 limits / notes
 
-- Multiple inputs and multiple named structured outputs are supported (a queue
-  input maps per-item, a value/singleton input fans in); at least one output is
-  required (zero outputs are not yet supported). Provider support follows the Pi SDK.
-- Structured output requires a named `record` type; `Path` fields are not
-  allowed in output records. Optional (`?`) fields are preserved in the portable
-  schema for both input and output records.
+- Multiple inputs are supported (a queue input maps per-item, a value/singleton
+  input fans in). An agent has exactly one output -- use a record for multiple
+  values. Provider support follows the Pi SDK.
+- Structured output uses a named `record` type. `Path` fields are answered by the
+  model as the path of an existing file, relative to the agent work directory or
+  absolute. Optional (`?`) fields are preserved in the
+  portable schema for both input and output records.
 - A tool agent runs on the **task path** like any other agent, so it fans out over
   a queue in parallel (one `TaskRun` per record — see [`05_tool-parallel/`](05_tool-parallel/main.nf)).
   Within a single agent the tool calls are **sequential** — the model waits for each

@@ -15,7 +15,7 @@ process reduce_with_process {          agent reduce_with_agent {
     output:                                input:
         report: String                         findings: Bag<Finding>
     exec:                                  output:
-        report = "...${findings.size()}"       report: String
+        report = "...${findings.size()}"       record(count: findings.size(), summary: stdout())
 }                                          prompt: "...${findings.size()}..."
                                        }
 ```
@@ -50,7 +50,7 @@ Fresh run — each reducer is one task:
 [c4/4bf198] Submitted process > reduce_with_process
 [aa/805a26] Submitted process > reduce_with_agent
 PROCESS reducer => combined 3 findings [f1, f2, f3]
-AGENT   reducer => The analysis shows low contamination, minimal adapter content, and good coverage.
+AGENT   reducer => combined 3 findings: The analysis shows low contamination, minimal adapter content, and good coverage.
 [SUCCESS] completed=2 failed=0 cached=0
 ```
 

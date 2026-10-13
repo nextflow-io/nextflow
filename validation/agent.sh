@@ -43,4 +43,5 @@ make -C "$ROOT" compile
 echo "Test agent examples on the local executor"
 AGENT_VALIDATION_DIR=$PWD/agent-validation \
   "$ROOT/examples/agents/validate.sh" -m local -r -i "$image" \
-    01_structured-output 02_two-agents 03_skills
+    01_structured-output 02_two-agents 03_skills \
+    04_tool 06_tool-structured 08_filesystem 17_agent-module

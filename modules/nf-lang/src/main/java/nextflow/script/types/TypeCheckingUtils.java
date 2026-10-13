@@ -98,10 +98,30 @@ public class TypeCheckingUtils {
      */
     public static ClassNode getType(Expression node) {
         if( node.getNodeMetaData(ASTNodeMarker.INFERRED_TYPE) instanceof ClassNode cn )
-            return cn;
-        var result = resolveType(node);
+            return unboundToDynamic(cn);
+        var result = unboundToDynamic(resolveType(node));
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, result);
         return result;
+    }
+
+    /**
+     * Determine whether a type has an unbound type argument, such as
+     * an empty list `[]` (List<E>) or an empty channel (Channel<E>).
+     *
+     * @param type
+     */
+    public static boolean hasUnboundTypeArguments(ClassNode type) {
+        return type != null && GenericsUtils.hasUnresolvedGenerics(type);
+    }
+
+    /**
+     * An unbound type parameter (e.g. the element type `E` of an empty
+     * list `[]`) is not known yet, so it is treated as dynamic.
+     *
+     * @param type
+     */
+    private static ClassNode unboundToDynamic(ClassNode type) {
+        return type != null && type.isGenericsPlaceHolder() ? ClassHelper.dynamicType() : type;
     }
 
     private static ClassNode resolveType(Expression node) {
@@ -467,39 +487,37 @@ public class TypeCheckingUtils {
         // whose parameter array is reused across calls, is never mutated)
         var parameters = method.getParameters().clone();
 
+        var resolvedPlaceholders = new HashMap<GenericsTypeName, GenericsType>();
         if( methodTypeParameters != null ) {
-            var resolvedPlaceholders = new HashMap<GenericsTypeName, GenericsType>();
             for( var gt : methodTypeParameters )
                 resolvedPlaceholders.put(new GenericsTypeName(gt.getName()), gt);
-
-            for( int i = 0; i < parameters.length; i++ ) {
-                var paramType = parameters[i].getType();
-                if( !Types.isFunctionalInterface(paramType) )
-                    paramType = applyGenericsContext(context, paramType);
-                parameters[i] = new Parameter(paramType, parameters[i].getName());
-            }
-
-            var expandedParams = expandVargs(parameters, arguments.size());
-            var connections = extractGenericsConnectionsFromArguments(methodTypeParameters, expandedParams, arguments, conflicts);
-            applyGenericsConnections(connections, resolvedPlaceholders);
-
-            // resolve the functional-interface parameters, which were left
-            // unresolved above so that method type params could be inferred
-            // from the corresponding closure arguments
-            for( int i = 0; i < parameters.length; i++ ) {
-                if( !Types.isFunctionalInterface(parameters[i].getType()) )
-                    continue;
-                var paramType = applyGenericsContext(context, parameters[i].getType());
-                paramType = applyGenericsContext(resolvedPlaceholders, paramType);
-                parameters[i] = new Parameter(paramType, parameters[i].getName());
-            }
-
-            returnType = applyGenericsContext(resolvedPlaceholders, returnType);
         }
-        else {
-            for( int i = 0; i < parameters.length; i++ )
-                parameters[i] = new Parameter(applyGenericsContext(context, parameters[i].getType()), parameters[i].getName());
+
+        for( int i = 0; i < parameters.length; i++ ) {
+            var paramType = parameters[i].getType();
+            if( !Types.isFunctionalInterface(paramType) )
+                paramType = applyGenericsContext(context, paramType);
+            parameters[i] = new Parameter(paramType, parameters[i].getName());
         }
+
+        // also bind the type parameters of an empty receiver (e.g. `channel.empty().mix(ch)`)
+        var expandedParams = expandVargs(parameters, arguments.size());
+        var connections = extractGenericsConnectionsFromArguments(expandedParams, arguments, conflicts);
+        applyGenericsConnections(connections, context);
+        applyGenericsConnections(connections, resolvedPlaceholders);
+
+        // resolve the functional-interface parameters, which were left
+        // unresolved above so that method type params could be inferred
+        // from the corresponding closure arguments
+        for( int i = 0; i < parameters.length; i++ ) {
+            if( !Types.isFunctionalInterface(parameters[i].getType()) )
+                continue;
+            var paramType = applyGenericsContext(context, parameters[i].getType());
+            paramType = applyGenericsContext(resolvedPlaceholders, paramType);
+            parameters[i] = new Parameter(paramType, parameters[i].getName());
+        }
+
+        returnType = applyGenericsContext(resolvedPlaceholders, returnType);
 
         // resolve type parameters of declaring type
         returnType = applyGenericsContext(context, returnType);
@@ -551,12 +569,11 @@ public class TypeCheckingUtils {
      * The first argument to infer a given type parameter wins. Any later argument
      * that infers a different type is reported as a conflict.
      *
-     * @param methodTypeParameters
      * @param parameters
      * @param arguments
      * @param conflicts
      */
-    private static Map<GenericsTypeName, GenericsType> extractGenericsConnectionsFromArguments(GenericsType[] methodTypeParameters, Parameter[] parameters, List<Expression> arguments, List<GenericsConflict> conflicts) {
+    private static Map<GenericsTypeName, GenericsType> extractGenericsConnectionsFromArguments(Parameter[] parameters, List<Expression> arguments, List<GenericsConflict> conflicts) {
         var result = new HashMap<GenericsTypeName, GenericsType>();
 
         for( int i = 0; i < arguments.size(); i++ ) {
@@ -830,9 +847,30 @@ public class TypeCheckingUtils {
                     && isAssignableFrom(parameters[0], lhsType, resolvedPlaceholders)
                     && isAssignableFrom(parameters[1], rhsType, resolvedPlaceholders);
             })
-            .map(mn -> applyGenericsContext(resolvedPlaceholders, mn.getReturnType()))
+            .map(mn -> applyGenericsContext(bindOperands(resolvedPlaceholders, mn, lhsType, rhsType), mn.getReturnType()))
             .findFirst()
             .orElse(null);
+    }
+
+    /**
+     * Bind the type parameters of an empty operand from the other
+     * operand (e.g. `[] + ['a']` has type List<String>).
+     *
+     * @param resolvedPlaceholders
+     * @param mn
+     * @param lhsType
+     * @param rhsType
+     */
+    private static Map<GenericsTypeName, GenericsType> bindOperands(Map<GenericsTypeName, GenericsType> resolvedPlaceholders, MethodNode mn, ClassNode lhsType, ClassNode rhsType) {
+        var parameters = mn.getParameters();
+        var operandTypes = new ClassNode[] { lhsType, rhsType };
+        var connections = new HashMap<GenericsTypeName, GenericsType>();
+        for( int i = 0; i < 2; i++ ) {
+            if( !hasUnboundTypeArguments(operandTypes[i]) )
+                extractGenericsConnections(connections, operandTypes[i], parameters[i].getType());
+        }
+        applyGenericsConnections(connections, resolvedPlaceholders);
+        return resolvedPlaceholders;
     }
 
     /**
@@ -910,9 +948,9 @@ public class TypeCheckingUtils {
         var gts = type.getGenericsTypes();
         if( gts == null || gts.length != 1 )
             return ClassHelper.dynamicType();
-        // a wildcard element type is unknown, not Object -- `Channel<?>` should
-        // disable downstream checking the same way a raw `Channel` does
-        if( gts[0].isWildcard() )
+        // a wildcard or unbound element type is unknown, not Object -- `Channel<?>`
+        // and `channel.empty()` should disable downstream checking like a raw `Channel`
+        if( gts[0].isWildcard() || gts[0].isPlaceholder() )
             return ClassHelper.dynamicType();
         return gts[0].getType();
     }

@@ -360,7 +360,7 @@ agent qa {
     question: String
 
     output:
-    answer: String
+    stdout()
 
     prompt:
     """
@@ -373,17 +373,17 @@ agent qa {
 
 - Sections must be defined in the order shown above.
 
-- Agent inputs and outputs are declared with a name and type, in the same manner as a [typed process](#process-typed).
+- Agent inputs and outputs are declared in the same manner as a [typed process](#process-typed).
 
 Agents may specify the following sections:
 
 ##### `input:`
 
-Consists of one or more agent inputs. Each input has a name and type.
+Consists of one or more agent inputs. Each input has a name and type, or is a destructured record or tuple.
 
 ##### `output:`
 
-Consists of one or more *output statements*. Each output has a name and type. An output may also specify a source expression after an equals sign, which collects a file written by the agent instead of asking the model for the value.
+Consists of a single *output statement*. An output with a name and type is answered by the model as structured output. An output may instead be an expression, which is composed from the agent's final answer (`stdout()`), output files (`file()`, `files()`), and inputs.
 
 ##### `prompt:`
 

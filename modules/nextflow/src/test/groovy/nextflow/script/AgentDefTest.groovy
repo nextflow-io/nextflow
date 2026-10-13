@@ -50,7 +50,7 @@ class AgentDefTest extends Specification {
 
     private AgentDef makeAgent(BaseScript script, String name) {
         def prompt = new PromptDef({ -> 'hello' }, 'hello')
-        return new AgentDef(script, name, [:], [], [], prompt)
+        return new AgentDef(script, name, [:], [], null, prompt)
     }
 
     def 'should construct an AgentDef with name and content'() {
@@ -97,6 +97,21 @@ class AgentDefTest extends Specification {
         AgentDef.toJson([id: 's1', seq: staged]) == '{"id":"s1","seq":"contigs.fa"}'
     }
 
+    def 'should record the source of each staged input in the dispatch context'() {
+        given:
+        final workDir = Path.of('/work/ab/cdef')
+        final source = Path.of('/work/stage-1234/ef/abcd/sample.fq')
+        final ctx = [task: [workDir: workDir], s: [id: 's1', reads: new TaskPath(new FileHolder(source))]]
+
+        when:
+        final sandbox = AgentDef.createSandboxContext([new AgentBuilder.AgentInput('s', Map)], ctx)
+
+        then:
+        sandbox.workDir == workDir
+        sandbox.stagedInputs == ['sample.fq': source]
+        sandbox.readablePaths == [workDir, source] as Set
+    }
+
     def 'should fail on run() when a tool-free agent declares zero outputs (task path)'() {
         given:
         // no tools/skills -> task path, where the one-input guard is gone; a
@@ -109,7 +124,7 @@ class AgentDefTest extends Specification {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('must declare exactly one output')
+        e.message.contains('must declare an output')
     }
 
     def 'should fail on run() with an input arity mismatch (task path)'() {
@@ -118,7 +133,7 @@ class AgentDefTest extends Specification {
         def script = Mock(BaseScript)
         def inp = new AgentBuilder.AgentInput('q', String)
         def out = new AgentBuilder.AgentOutput('a', String)
-        def agent = new AgentDef(script, 'foo', [:] as Map<String,Object>, [inp], [out], new PromptDef({ -> 'h' }, 'h'))
+        def agent = new AgentDef(script, 'foo', [:] as Map<String,Object>, [inp], out, new PromptDef({ -> 'h' }, 'h'))
 
         when:
         agent.run(new Object[0])
@@ -135,14 +150,14 @@ class AgentDefTest extends Specification {
         // inputs are now permitted). The generalized guards apply instead; here the zero-output
         // guard fires (0 inputs / 0 args passes the arity check), proving task-path routing.
         def script = Mock(BaseScript)
-        def agent = new AgentDef(script, 'foo', [tools: 'nf:module_run:someProc'] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h'))
+        def agent = new AgentDef(script, 'foo', [tools: 'nf:module_run:someProc'] as Map<String,Object>, [], null, new PromptDef({ -> 'h' }, 'h'))
 
         when:
         agent.run(new Object[0])
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('must declare exactly one output')
+        e.message.contains('must declare an output')
     }
 
     def 'should clone with a new name'() {
@@ -179,7 +194,7 @@ class AgentDefTest extends Specification {
 
     def 'should expose the declared labels'() {
         expect:
-        new AgentDef(Mock(BaseScript), 'a', [label: ['big', 'fast']] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).labels == ['big', 'fast']
+        new AgentDef(Mock(BaseScript), 'a', [label: ['big', 'fast']] as Map<String,Object>, [], null, new PromptDef({ -> 'h' }, 'h')).labels == ['big', 'fast']
         and: 'an agent with no label declaration has none'
         makeAgent(Mock(BaseScript), 'a').labels == []
     }
@@ -188,7 +203,7 @@ class AgentDefTest extends Specification {
         given:
         def directives = [model: 'openai/gpt-5-mini', instruction: 'be careful', goal: 'assemble then QC'] as Map<String,Object>
         def prompt = new PromptDef({ -> 'hi' }, 'hi')
-        def agent = new AgentDef(Mock(BaseScript), 'a', directives, [], [], prompt)
+        def agent = new AgentDef(Mock(BaseScript), 'a', directives, [], null, prompt)
 
         expect:
         agent.goal == 'assemble then QC'
@@ -197,7 +212,7 @@ class AgentDefTest extends Specification {
 
     def 'should return null goal when not declared'() {
         given:
-        def agent = new AgentDef(Mock(BaseScript), 'a', [model: 'openai/gpt-5-mini'] as Map<String,Object>, [], [],
+        def agent = new AgentDef(Mock(BaseScript), 'a', [model: 'openai/gpt-5-mini'] as Map<String,Object>, [], null,
             new PromptDef({ -> 'hi' }, 'hi'))
         expect:
         agent.goal == null
@@ -205,52 +220,15 @@ class AgentDefTest extends Specification {
 
     static class TestRec implements nextflow.script.types.Record {}
 
-    static class WrapPlan implements nextflow.script.types.Record {
-        String title
-        Long count
-    }
-
-    def 'buildWrapperSchema builds an object-root wrapper with per-output fragments'() {
-        given:
-        def outs = [
-            new AgentBuilder.AgentOutput('rec', WrapPlan),
-            new AgentBuilder.AgentOutput('n', Long),
-            new AgentBuilder.AgentOutput('score', Double),
-            new AgentBuilder.AgentOutput('flag', Boolean),
-            new AgentBuilder.AgentOutput('label', String),
-        ]
-
+    def 'scalarOutputSchema rejects an unsupported output type'() {
         when:
-        def schema = AgentDef.buildWrapperSchema('agentX', outs)
-
-        then:
-        schema.type == 'object'
-        schema.additionalProperties == false
-        schema.required == ['rec', 'n', 'score', 'flag', 'label']
-        (schema.properties.keySet() as List) == ['rec', 'n', 'score', 'flag', 'label']
-
-        and: 'scalar fragments map to the right JSON-schema type'
-        schema.properties.n.type == 'integer'
-        schema.properties.score.type == 'number'
-        schema.properties.flag.type == 'boolean'
-        schema.properties.label.type == 'string'
-
-        and: 'nested record fragment recursion is intact'
-        schema.properties.rec.type == 'object'
-        schema.properties.rec.properties.title.type == 'string'
-        schema.properties.rec.properties.count.type == 'integer'
-    }
-
-    def 'buildWrapperSchema rejects an unsupported top-level output type'() {
-        when:
-        AgentDef.buildWrapperSchema('agentX', [new AgentBuilder.AgentOutput('p', java.nio.file.Path)])
+        AgentDef.scalarOutputSchema(new AgentBuilder.AgentOutput('p', Map))
 
         then:
         def e = thrown(ScriptRuntimeException)
         e.message.contains('unsupported type')
         e.message.contains('`p`')
-        and: 'the message enumerates the supported output set (plan §4.5/§9)'
-        e.message.contains('supported:')
+        e.message.contains('supported types are')
         e.message.contains('record type')
     }
 
@@ -263,6 +241,19 @@ class AgentDefTest extends Specification {
         schema.properties.assembly_path.type == 'string'
         schema.required == ['assembly_path']
         schema.additionalProperties == false
+    }
+
+    static class ListHolder {
+        public List<Integer> scores
+        public List<TestRec> recs
+    }
+
+    def 'scalarOutputSchema represents a List as an array of its element type'() {
+        expect:
+        AgentDef.scalarOutputSchema(new AgentBuilder.AgentOutput('scores', ListHolder.getField('scores').getGenericType()))
+            .properties.scores == [type: 'array', items: [type: 'integer']]
+        AgentDef.scalarOutputSchema(new AgentBuilder.AgentOutput('recs', ListHolder.getField('recs').getGenericType()))
+            .properties.recs.items.type == 'object'
     }
 
     def 'decodeCanonicalOutput unwraps a scalar final answer contract'() {
@@ -279,7 +270,7 @@ class AgentDefTest extends Specification {
     // -----------------------------------------------------------------------
 
     private AgentDef agentWith(Map directives, PromptDef prompt) {
-        return new AgentDef(Mock(BaseScript), 'a', directives as Map<String,Object>, [], [], prompt)
+        return new AgentDef(Mock(BaseScript), 'a', directives as Map<String,Object>, [], null, prompt)
     }
 
     def 'canonicalAgentSource is deterministic for the same effective inputs'() {
@@ -561,9 +552,9 @@ class AgentDefTest extends Specification {
 
     def 'should expose the skills directive (single, list, none)'() {
         expect:
-        new AgentDef(Mock(BaseScript), 'a', [skills: 'greet'] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).skills == ['greet']
-        new AgentDef(Mock(BaseScript), 'a', [skills: ['a', 'b']] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).skills == ['a', 'b']
-        new AgentDef(Mock(BaseScript), 'a', [:] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).skills == []
+        new AgentDef(Mock(BaseScript), 'a', [skills: 'greet'] as Map<String,Object>, [], null, new PromptDef({ -> 'h' }, 'h')).skills == ['greet']
+        new AgentDef(Mock(BaseScript), 'a', [skills: ['a', 'b']] as Map<String,Object>, [], null, new PromptDef({ -> 'h' }, 'h')).skills == ['a', 'b']
+        new AgentDef(Mock(BaseScript), 'a', [:] as Map<String,Object>, [], null, new PromptDef({ -> 'h' }, 'h')).skills == []
     }
 
     def 'should no longer reject skills combined with a record (structured) output (M5 guard removed)'() {
@@ -574,7 +565,7 @@ class AgentDefTest extends Specification {
         // short-circuiting with the old guard message.
         def inp = new AgentBuilder.AgentInput('q', String)
         def out = new AgentBuilder.AgentOutput('a', TestRec)
-        def agent = new AgentDef(Mock(BaseScript), 'a', [skills: 'greet'] as Map<String,Object>, [inp], [out], new PromptDef({ -> 'h' }, 'h'))
+        def agent = new AgentDef(Mock(BaseScript), 'a', [skills: 'greet'] as Map<String,Object>, [inp], out, new PromptDef({ -> 'h' }, 'h'))
         // inject a stub runner so run() gets PAST the runner lookup and deterministically
         // reaches skills resolution (otherwise it would abort earlier for a missing runner)
         nextflow.agent.AgentRunnerProvider.testRunner = { req -> '{}' } as nextflow.agent.AgentRunner

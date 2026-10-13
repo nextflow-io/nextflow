@@ -268,7 +268,7 @@ class ResolveIncludeTest extends Specification {
             sample: String
 
             output:
-            report: String
+            stdout()
 
             prompt:
             """

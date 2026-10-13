@@ -265,54 +265,6 @@ $ nextflow lineage view lid://eff8846883b46c5a76f11e7e4480a6c8#output
 
 Each entry is one declared task output. `type` is the output qualifier (`path`, `val`, `env`, `eval`, or `stdout`), `name` is the output name (`null` when the output declares only a file pattern), and `value` is a `lid://` reference for file outputs or the literal value otherwise.
 
-### Agent runs
-
-An [agent][agent-page] also runs as a task, but its provenance is a model and prompt rather than a script. Agent executions are therefore recorded as a separate `AgentRun` record in place of a `TaskRun`:
-
-```console
-$ nextflow lineage view lid://c47bf9183c56715c9bca1a67a4acdc68
-{
-  "version": "lineage/v1beta1",
-  "kind": "AgentRun",
-  "spec": {
-    "sessionId": "554fe81b-8034-4f5a-81c4-b07195258201",
-    "name": "analyst (1)",
-    "codeChecksum": {
-      "value": "f8acadb0cd9048eaf953b1b30836dffd",
-      "algorithm": "nextflow",
-      "mode": "standard"
-    },
-    "runner": "pi",
-    "model": "openai/gpt-5-mini",
-    "resolvedModel": null,
-    "instruction": "You are a precise scientific analyst. Be concise and honest about uncertainty.",
-    "goal": null,
-    "promptTemplate": "    \"\"\"\n    Analyze the following question and return a structured analysis.\n\n    Question: ${query.question}\n    \"\"\"\n",
-    "maxIterations": 20,
-    "outputSchema": "{\"additionalProperties\":false,\"properties\":{\"actionable\":{\"type\":\"boolean\"},\"confidence\":{\"type\":\"number\"},\"key_points\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"summary\":{\"type\":\"string\"}},\"required\":[\"summary\",\"confidence\",\"actionable\",\"key_points\"],\"type\":\"object\"}",
-    "tools": null,
-    "skills": null,
-    "input": [
-      {
-        "type": "val",
-        "name": "query",
-        "value": {
-          "question": "Is FASTQ a binary or a text format?",
-          "context": "bioinformatics file formats"
-        }
-      }
-    ],
-    "container": null,
-    "workflowRun": "lid://6334982d0dd5e6573989fa5640fc01d3",
-    "moduleId": null
-  }
-}
-```
-
-An agent's results are recorded as a `TaskOutput`, exactly like a process, so agent outputs traverse and query the same way as any other task output.
-
-See [Data lineage][agent-lineage] in the agent documentation for the full list of what is and is not captured.
-
 ### Lineage graph
 
 Finally, use the `render` subcommand to render the entire lineage of the MULTIQC report as an HTML report:
@@ -548,8 +500,6 @@ It should produce the following output:
 
 The `fromLineage` channel factory can also be used to query lineage records in a similar manner as the `find` subcommand. See [fromLineage][channel-from-lineage] for details.
 
-[agent-lineage]: ../agent#data-lineage
-[agent-page]: ../agent
 [cache-resume-task-hash]: ../cache-and-resume#task-cache
 [channel-from-lineage]: ../reference/stdlib-namespaces/channel#fromlineage
 [cli-lineage]: ../reference/cli/lineage

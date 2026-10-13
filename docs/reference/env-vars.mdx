@@ -316,6 +316,12 @@ Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
 Defines the path location of the SCM config file .
 
+##### `NXF_SHUTDOWN_TIMEOUT`
+
+<AddedInVersion version="26.10" />
+
+Maximum time Nextflow waits for the shutdown to complete before exiting, when the run is aborted by an error (default: `5m`). During the shutdown, Nextflow runs the workflow completion handlers and notifies observers such as Seqera Platform. Increase this value if completion events are lost on a slow network.
+
 ##### `NXF_SINGULARITY_CACHEDIR`
 
 Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.

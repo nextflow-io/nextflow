@@ -1,5 +1,31 @@
 # Nextflow change-log
 
+## [Version 26.10.0](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) - 12 Oct 2026
+
+- Add deprecations page to docs (#7766) [af85789fc]
+- Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
+- Allow run-level cpus/memory limits for grid executors (#7783) [ca258a4e9]
+- Bump nf-agent-pi@0.6.0 [eb9cd3ed1]
+- Bump nf-agent@0.2.0 [cf01fdce6]
+- Bump nf-amazon@3.12.0 [e7116238f]
+- Bump nf-google@1.29.0 [376b01ff8]
+- Bump nf-tower@1.32.0 [16d411298]
+- Check typed output names and allow single named outputs (#7769) [32bf20f09]
+- Deprecate process `when` section in favor of `process.when` config setting (#7746) [92de19b0b]
+- Don't wrap null in a dataflow value for nullable workflow emits (#7760) [3c124d8dc]
+- Fix Google Batch array status polling for arrays of 500+ tasks (#7767) [e7474f1a5]
+- Fix Google Batch array task status cache never matching (#7778) [6d44d4740]
+- Fix interactive CLI prompts when stdin is not a terminal (#7641) [56ce4c23f]
+- Fix main thread exiting before flow complete when aborted on another thread (#7781) [6a271f1d2]
+- Fix static typing issues found while migrating a pipeline (#7722) [b199d8e73]
+- Improve error message for local paths in module commands (#7779) [073750312]
+- Infer the element type of empty channels, lists and maps from first use (#7774) [ece56cae0]
+- Make exit() graceful, report error for return statement in workflow body (#7570) [9563c73ff]
+- Prevent IllegalThreadStateException from aborting the session on task timeout (#7571) [d91b08bff]
+- Retry errors on every page when listing Google Batch tasks (#7768) [89fa79675]
+- Reuse the Google Batch job a retried submit already created (#7762) [a8f7cc46b]
+- Write null for values that fail to serialize in TowerJsonGenerator (#7772) [644dcf1a1]
+
 ## [Version 26.09.2-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.2-edge) - 6 Oct 2026
 
 - Add conda/micromamba:v2-fast and conda/pixi:v1-fast to the wave.build.template docs (#7727) [cbf790221]
