@@ -705,6 +705,57 @@ class FileHelperTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should not copy fusion metadata dir' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('.fusion') {
+                        file('trace.json', '{}')
+                    }
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                        dir('.fusion') {
+                            dir('chks') {
+                                file('part_0', 'xxx')
+                            }
+                        }
+                    }
+                }
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        target = createInMemTempDir().resolve('copy')
+        FileHelper.copyPath(source, target)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        // copying a `.fusion` dir explicitly is still allowed
+        target = root.resolve('copy-fusion')
+        FileHelper.copyPath(source.resolve('.fusion'), target)
+        then:
+        target.resolve('trace.json').text == '{}'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
     def 'should copy path content' () {
 
         given:

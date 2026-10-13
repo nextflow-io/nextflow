@@ -50,6 +50,26 @@ public class CopyMoveHelper {
 
     private CopyMoveHelper() { }
 
+    /**
+     * Name of the directory where Fusion stores its internal metadata and staging data
+     */
+    public static final String FUSION_DIR_NAME = ".fusion";
+
+    /**
+     * Check whether a directory visited while copying the {@code source} directory
+     * is a Fusion internal directory which should not be copied.
+     *
+     * See https://github.com/seqeralabs/fusion/issues/1811
+     *
+     * @param source The root directory being copied
+     * @param current The directory being visited
+     * @return {@code true} when {@code current} is a {@code .fusion} directory below {@code source}
+     */
+    public static boolean isFusionDir(Path source, Path current) {
+        final Path name = current.getFileName();
+        return name != null && FUSION_DIR_NAME.equals(name.toString()) && !current.equals(source);
+    }
+
 
     /**
      * Converts the given array of options for moving a file to options suitable
@@ -117,6 +137,10 @@ public class CopyMoveHelper {
             public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr)
                     throws IOException
             {
+                if( isFusionDir(source, current) ) {
+                    log.trace("Skip DIR: " + current);
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
                 // get the *delta* path against the source path
                 Path rel = source.relativize(current);
                 String delta = rel != null ? rel.toString() : null;

@@ -1158,6 +1158,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         createObject("$bucketName/cache/foo/file-1",'File one')
         createObject("$bucketName/cache/foo/bar/file-2",'File two')
         createObject("$bucketName/cache/foo/baz/file-3",'File three')
+        createObject("$bucketName/cache/foo/baz/.fusion/chks/part-0",'Fusion part')
         and:
         def local = Files.createTempDirectory('test')
         def cache1 = local.resolve('cache1')
@@ -1171,6 +1172,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cache1.resolve('file-1').exists()
         cache1.resolve('bar/file-2').exists()
         cache1.resolve('baz/file-3').exists()
+        !cache1.resolve('baz/.fusion').exists()
 
         when:
         // the use of 'FileHelper.copyPath' will invoke the s3 provider download directory method
@@ -1180,6 +1182,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cache2.resolve('file-1').exists()
         cache2.resolve('bar/file-2').exists()
         cache2.resolve('baz/file-3').exists()
+        !cache2.resolve('baz/.fusion').exists()
 
         cleanup:
         local?.deleteDir()
