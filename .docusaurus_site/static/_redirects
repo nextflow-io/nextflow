@@ -20,3 +20,7 @@
 /nextflow/operator                 /nextflow/reference/operator                     301
 /nextflow/reference/channel        /nextflow/reference/stdlib-namespaces/channel    301
 /nextflow/reference/operator-typed /nextflow/reference/stdlib-types/channel         301
+/nextflow/aws                      /nextflow/reference/executor/aws-batch           301
+/nextflow/azure                    /nextflow/reference/executor/azure-batch         301
+/nextflow/google                   /nextflow/reference/executor/google-batch        301
+/nextflow/kubernetes               /nextflow/reference/executor/kubernetes          301

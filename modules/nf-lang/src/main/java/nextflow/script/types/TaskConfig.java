@@ -242,7 +242,7 @@ public interface TaskConfig {
 
     @Constant("machineType")
     @Description("""
-        The `machineType` directive can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch](https://docs.seqera.io/nextflow/google#cloud-batch) executor.
+        The `machineType` directive can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch](https://docs.seqera.io/nextflow/reference/executor/google-batch) executor.
 
         [Read more](https://docs.seqera.io/nextflow/reference/process#machinetype)
     """)
@@ -298,7 +298,7 @@ public interface TaskConfig {
 
     @Constant("penv")
     @Description("""
-        The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/executor/sge) resource manager.
+        The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/reference/executor/sge) resource manager.
 
         [Read more](https://docs.seqera.io/nextflow/reference/process#penv)
     """)
@@ -306,7 +306,7 @@ public interface TaskConfig {
 
     @Constant("pod")
     @Description("""
-        The `pod` directive allows you to define pod specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes](https://docs.seqera.io/nextflow/kubernetes) executor.
+        The `pod` directive allows you to define pod specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes](https://docs.seqera.io/nextflow/reference/executor/kubernetes) executor.
 
         [Read more](https://docs.seqera.io/nextflow/reference/process#pod)
     """)
