@@ -18,6 +18,7 @@ package nextflow.file
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Semaphore
 
@@ -302,6 +303,46 @@ class FilePorterTest extends Specification {
         then:
         // file was not touched, since it was in the cache
         ts == Files.getLastModifiedTime(local1)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should check recoverable stage errors' () {
+        given:
+        def transfer = new FilePorter.FileTransfer(Path.of('/foo'), Path.of('/bar'), 3, Mock(Semaphore))
+
+        expect:
+        transfer.recoverableError(ERROR) == EXPECTED
+
+        where:
+        ERROR                                                               | EXPECTED
+        new IOException('Read data length does not match expected size')    | true
+        new SocketException('Connection reset')                             | true
+        new SocketTimeoutException('Read timed out')                        | true
+        new NoSuchFileException('/foo')                                     | false
+        new InterruptedIOException('interrupted')                           | false
+    }
+
+    def 'should retry stage on connection reset' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('hola.txt')
+        def source = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
+        and:
+        def attempts = 0
+        def transfer = Spy(new FilePorter.FileTransfer(source, target, 3, Mock(Semaphore)))
+
+        when:
+        def result = transfer.stageForeignFile(source, target)
+        then:
+        2 * transfer.copyForeignFile(source, target) >> {
+            if( attempts++ == 0 ) throw new SocketException('Connection reset')
+            Files.copy(source, target)
+        }
+        and:
+        result == target
+        target.text == 'hola mundo!'
 
         cleanup:
         folder?.deleteDir()
