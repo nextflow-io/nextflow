@@ -130,6 +130,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile boolean noTaskJobfailure
 
     /**
+     * The handlers of all tasks in the same job array (including this one), when this is an array child
+     */
+    private List<GoogleBatchTaskHandler> arraySiblings
+
+    /**
+     * Flag to indicate that this task has been killed
+     */
+    private volatile boolean killRequested
+
+    /**
      * The task status fetched once the task has completed, since it no longer changes
      */
     private volatile BatchTaskStatus completedTaskStatus
@@ -209,6 +219,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
+    @PackageScope void setArraySiblings(List<GoogleBatchTaskHandler> siblings) {
+        this.arraySiblings = siblings
+    }
+
     protected void updateStatus(String jobId, String taskId, String uid, CloudMachineInfo machineInfo=null) {
         if( task instanceof TaskArrayRun ) {
             // update status for children, propagating the machine info resolved for the
@@ -216,6 +230,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             for( int i=0; i<task.children.size(); i++ ) {
                 final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
+                handler.setArraySiblings(task.children as List<GoogleBatchTaskHandler>)
                 handler.updateStatus(jobId, arrayTaskId, uid, this.machineInfo)
             }
         }
@@ -738,8 +753,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            if( isArrayChild )
+            if( isArrayChild ) {
                 client.removeFromArrayTasks(jobId, taskId)
+                // delete the job when a sibling task was killed and this was the last active one
+                if( shouldDeleteArrayJob() )
+                    deleteJob()
+            }
             return true
         }
 
@@ -821,14 +840,43 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     protected void killTask() {
-        if( isActive() ) {
-            log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
-            if( executor.shouldDeleteJob(jobId) )
-                executor.reaper.submit({ client.deleteJob(jobId) })
-        }
-        else {
+        if( !isActive() ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"
+            return
         }
+        killRequested = true
+        if( isArrayChild && !shouldDeleteArrayJob() ) {
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job=$jobId is shared with other active array tasks, deferring its deletion"
+            return
+        }
+        deleteJob()
+    }
+
+    protected void deleteJob() {
+        log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
+        if( executor.shouldDeleteJob(jobId) )
+            executor.reaper.submit({ client.deleteJob(jobId) })
+    }
+
+    /**
+     * The tasks of a job array share the same Batch job, which cannot be deleted
+     * for a single task without aborting the other ones. Therefore the job is deleted
+     * only once all its tasks are either completed or killed, and at least one was killed
+     * (when all tasks complete, the job terminates on its own).
+     *
+     * @return {@code true} when the job shared by the array tasks should be deleted
+     */
+    protected boolean shouldDeleteArrayJob() {
+        if( !arraySiblings )
+            return killRequested
+        boolean anyKilled = false
+        for( GoogleBatchTaskHandler it : arraySiblings ) {
+            if( it.killRequested )
+                anyKilled = true
+            else if( !it.isCompleted() )
+                return false
+        }
+        return anyKilled
     }
 
     /**
