@@ -38,6 +38,7 @@ import nextflow.script.ProcessDef
 import nextflow.script.PromptDef
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
+import nextflow.script.ScriptType
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.event.TaskEvent
@@ -172,6 +173,23 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
             }
             @Override String run(AgentRunnerRequest req) { 'x' }
         }
+    }
+
+    def 'should use the #expected script type for #kind agents'() {
+        given:
+        AgentRunnerProvider.testRunner = runner
+        newSession(config)
+
+        when:
+        def processor = newAgent().buildAgentTask(['hello'])
+
+        then:
+        processor.getTaskBody().type == expected
+
+        where:
+        kind            | runner            | config            | expected
+        'in-JVM'        | namedRunner()     | null              | ScriptType.PROMPT
+        'containerized' | canonicalRunner() | containerized()   | ScriptType.SCRIPTLET
     }
 
     def 'canonical agents default to local independently of process executor'() {
