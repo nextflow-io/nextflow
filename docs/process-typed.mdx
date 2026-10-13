@@ -57,10 +57,6 @@ All [standard types][stdlib-types] except for the dataflow types (`Channel` and 
 
 Nextflow automatically stages `Path` inputs and `Path` collections (such as `Set<Path>`) into the task directory.
 
-:::note
-Processes with an `exec:` section receive the actual location of each input file, rather than its staged name, since they run inside Nextflow instead of in the task directory. As a result, stage directives such as `stageAs` have no effect on the input paths in an `exec:` section. This behavior is the same as [legacy processes][process-script].
-:::
-
 Path collections are rendered like any other collection when interpolated into a script (e.g. `[a.fastq, b.fastq]`). Use `join()` to render them as a space-separated list:
 
 ```nextflow
