@@ -706,6 +706,101 @@ class GoogleBatchTaskHandlerTest extends Specification {
         0 * client.deleteJob('job1') >> null
     }
 
+    private List<GoogleBatchTaskHandler> makeArrayChildren(int size, BatchClient client, GoogleBatchExecutor executor) {
+        final children = (0..<size).collect { int i ->
+            final handler = Spy(new GoogleBatchTaskHandler(jobId: 'job1', taskId: "$i".toString(), client: client, task: Mock(TaskRun)))
+            handler.@executor = executor
+            handler.isArrayChild = true
+            handler.status = nextflow.processor.TaskStatus.SUBMITTED
+            handler.getTaskState() >> 'SUCCEEDED'
+            handler.getExitCode() >> 0
+            return handler
+        }
+        children.each { it.setArraySiblings(children) }
+        return children
+    }
+
+    def 'should not delete the job shared by an array while other array tasks are active' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
+        def (a, b, c) = makeArrayChildren(3, client, executor)
+
+        when: 'one array task is killed while the others are active'
+        a.kill()
+        then:
+        0 * executor.shouldDeleteJob(_)
+        0 * client.deleteJob(_)
+
+        when: 'another array task completes while one is still active'
+        b.checkIfCompleted()
+        then:
+        0 * executor.shouldDeleteJob(_)
+        0 * client.deleteJob(_)
+
+        when: 'the last active array task is killed'
+        c.kill()
+        then:
+        1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
+        1 * client.deleteJob('job1')
+    }
+
+    def 'should delete the job shared by an array when the last task completes after a sibling was killed' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
+        def (a, b) = makeArrayChildren(2, client, executor)
+
+        when:
+        a.kill()
+        then:
+        0 * client.deleteJob(_)
+
+        when:
+        b.checkIfCompleted()
+        then:
+        1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
+        1 * client.deleteJob('job1')
+    }
+
+    def 'should not delete the job shared by an array when all tasks complete' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def (a, b) = makeArrayChildren(2, client, executor)
+
+        when:
+        a.checkIfCompleted()
+        b.checkIfCompleted()
+        then:
+        0 * executor.shouldDeleteJob(_)
+        0 * client.deleteJob(_)
+    }
+
+    def 'should set the array siblings of each array task' () {
+        given:
+        def executor = Mock(GoogleBatchExecutor) {
+            getArrayTaskId('job1', _) >> { List args -> args[1].toString() }
+        }
+        def a = Spy(new GoogleBatchTaskHandler(task: Mock(TaskRun)))
+        def b = Spy(new GoogleBatchTaskHandler(task: Mock(TaskRun)))
+        def task = Mock(TaskArrayRun) { getChildren() >> [a, b] }
+        def handler = new GoogleBatchTaskHandler(task: task)
+        handler.@executor = executor
+
+        when:
+        handler.updateStatus('job1', '0', 'uid1')
+        then:
+        1 * a.setArraySiblings([a, b])
+        1 * b.setArraySiblings([a, b])
+    }
+
     JobStatus makeJobStatus(JobStatus.State state, String desc = null) {
         final builder = JobStatus.newBuilder().setState(state)
         if( desc ) {
