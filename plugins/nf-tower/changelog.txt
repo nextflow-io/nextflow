@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.32.0 - 12 Oct 2026
+- Write null for values that fail to serialize in TowerJsonGenerator (#7772) [644dcf1a1]
+
 1.31.0 - 6 Oct 2026
 - Report sched multi-attempt tasks with the final attempt's start time (#7755) [ab6f7c60a]
 - Fix serialization of dataflow params (#7759) [3e6b01d35]
