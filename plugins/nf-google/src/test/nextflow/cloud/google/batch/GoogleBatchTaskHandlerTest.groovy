@@ -1003,13 +1003,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should return zero when no status events exist'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
-        handler.@client = Mock(BatchClient) {
-            getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder().build()
-        }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions({ TaskStatus.newBuilder().build() })
 
         then:
         handler.isCompleted() >> true
@@ -1019,29 +1017,22 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should count spot interruptions correctly from status events'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
-        handler.@client = Mock(BatchClient) {
-            getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder()
-                .addStatusEvents(
-                    StatusEvent.newBuilder()
-                        .setTaskExecution(
-                            TaskExecution.newBuilder().setExitCode(0).build()
-                        ).build())
-                .addStatusEvents(
-                StatusEvent.newBuilder()
-                    .setTaskExecution(
-                        TaskExecution.newBuilder().setExitCode(50001).build()
-                    ).build())
-                .addStatusEvents(
-                    StatusEvent.newBuilder()
-                        .setTaskExecution(
-                            TaskExecution.newBuilder().setExitCode(50001).build()
-                        ).build()
-                ).build()
-        }
+        def status = TaskStatus.newBuilder()
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(0).build())
+                .build())
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .build()
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions({ status })
 
         then:
         handler.isCompleted() >> true
@@ -1054,8 +1045,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.@taskId = 'task-123'
 
         when:
-        def resultNullJobId = handler.getNumSpotInterruptions(null)
-        def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
+        def resultNullJobId = handler.getNumSpotInterruptions({ TaskStatus.newBuilder().build() })
+        handler.@jobId = 'job-123'
+        def resultIncompleteTask = handler.getNumSpotInterruptions({ TaskStatus.newBuilder().build() })
 
         then:
         handler.isCompleted() >> false
@@ -1066,13 +1058,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should return null when an exception occurs while fetching task status'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
-        handler.@client = Mock(BatchClient) {
-            getTaskStatus('job-123', 'task-123') >> { throw new RuntimeException("Error") }
-        }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions({ throw new RuntimeException("Error") })
 
         then:
         handler.isCompleted() >> true
@@ -1304,8 +1294,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.updateStatus('job-1', '0', 'uid-1')
 
         then:
-        child0.getMachineInfo() == machineInfo
-        child1.getMachineInfo() == machineInfo
+        child0.@machineInfo == machineInfo
+        child1.@machineInfo == machineInfo
     }
 
     def 'should resolve zone from status events: #DESCRIPTION' () {
@@ -1321,12 +1311,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def status = builder.build()
 
         when:
-        def info = handler.getMachineInfo()
+        def info = handler.getMachineInfo({ status })
         then:
         handler.isCompleted() >> true
-        handler.@client = Mock(BatchClient) {
-            getTaskStatus('job-123', '0') >> status
-        }
         and:
         info.zone == EXPECTED
 
@@ -1344,7 +1331,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.@machineInfo = MACHINE_INFO
 
         when:
-        def info = handler.getMachineInfo()
+        def info = handler.getMachineInfo({ TaskStatus.newBuilder().build() })
         then:
         handler.isCompleted() >> COMPLETED
         and:
@@ -1373,8 +1360,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.isCompleted() >> true
-        def info1 = handler.getMachineInfo()
-        def info2 = handler.getMachineInfo()
+        def info1 = handler.getMachineInfo({ mockClient.getTaskStatus('job-123', '0') })
+        def info2 = handler.getMachineInfo({ mockClient.getTaskStatus('job-123', '0') })
 
         then:
         1 * mockClient.getTaskStatus('job-123', '0') >> status
@@ -1392,12 +1379,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.task = Mock(TaskRun) { lazyName() >> 'foo (1)' }
 
         when:
-        def info = handler.getMachineInfo()
+        def info = handler.getMachineInfo({ throw new IOException('API error') })
         then:
         handler.isCompleted() >> true
-        handler.@client = Mock(BatchClient) {
-            getTaskStatus('job-123', '0') >> { throw new IOException('API error') }
-        }
         and:
         info.zone == 'europe-west2'
     }

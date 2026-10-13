@@ -826,10 +826,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     private static final Pattern ZONE_PATTERN = ~/zones\/([^\/]+)\/instances\//
 
-    protected CloudMachineInfo getMachineInfo() {
-        return getMachineInfo({ client.getTaskStatus(jobId, taskId) })
-    }
-
     protected CloudMachineInfo getMachineInfo(Closure<BatchTaskStatus> status) {
         if( machineInfo!=null && !zoneUpdated && isCompleted() )
             updateZoneFromEvents(status)
@@ -879,15 +875,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Count the number of spot instance reclamations for this task by examining
      * the task status events and checking for preemption exit codes
      *
-     * @param jobId The Google Batch Job Id
+     * @param taskStatus Supplier of the task status
      * @return The number of times this task was retried due to spot instance reclamation
      */
-
-    protected Integer getNumSpotInterruptions(String jobId) {
-        return getNumSpotInterruptions(jobId, { client.getTaskStatus(jobId, taskId) })
-    }
-
-    protected Integer getNumSpotInterruptions(String jobId, Closure<BatchTaskStatus> taskStatus) {
+    protected Integer getNumSpotInterruptions(Closure<BatchTaskStatus> taskStatus) {
         if (!jobId || !taskId  || !isCompleted()) {
             return null
         }
@@ -926,7 +917,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // fetch the task status at most once for both zone resolution and spot interruption count
         final status = { client.getTaskStatus(jobId, taskId) }.memoize()
         result.machineInfo = getMachineInfo(status)
-        result.numSpotInterruptions = getNumSpotInterruptions(jobId, status)
+        result.numSpotInterruptions = getNumSpotInterruptions(status)
         return result
     }
 
