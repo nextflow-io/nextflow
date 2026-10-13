@@ -457,6 +457,7 @@ class TaskInputResolverTest extends Specification {
 
         cleanup:
         tempFolder?.deleteDir()
+        Global.session = null
     }
 
     def 'should normalise to path' () {

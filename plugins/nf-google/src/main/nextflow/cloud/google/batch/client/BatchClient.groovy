@@ -26,6 +26,7 @@ import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.InternalException
 import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
@@ -231,6 +232,8 @@ class BatchClient {
                 if( t instanceof UnavailableException )
                     return true
                 if( t instanceof DeadlineExceededException )
+                    return true
+                if( t instanceof InternalException )
                     return true
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
