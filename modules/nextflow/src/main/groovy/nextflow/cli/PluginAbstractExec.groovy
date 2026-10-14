@@ -18,7 +18,6 @@ package nextflow.cli
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import nextflow.Const
@@ -90,7 +89,7 @@ trait PluginAbstractExec implements PluginExecAware {
 
     private List<Path> configFiles() {
         final home = Const.APP_HOME_DIR.resolve('config')
-        final local = Paths.get(SysEnv.get('NXF_CONFIG_FILE') ?: 'nextflow.config')
+        final local = Path.of(SysEnv.get('NXF_CONFIG_FILE') ?: 'nextflow.config')
         return [home, local].findAll { Path it -> Files.exists(it) }
     }
 
