@@ -187,6 +187,8 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         // without a read timeout a stalled connection blocks the reading thread indefinitely
+        conn.setConnectTimeout(config().connectTimeoutMillis())
+        conn.setReadTimeout(config().readTimeoutMillis())
         if( conn instanceof HttpURLConnection ) {
             // by default HttpURLConnection does redirect only within the same host
             // disable the built-in to implement custom redirection logic (see below)

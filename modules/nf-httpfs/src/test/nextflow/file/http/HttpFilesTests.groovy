@@ -110,7 +110,8 @@ class HttpFilesTests extends Specification {
             exchange.sendResponseHeaders(200, 100)
             exchange.responseBody.write(new byte[50])
             exchange.responseBody.flush()
-            release.await()
+            // bounded, so the test fails instead of hanging if the read timeout is not applied
+            release.await(10, java.util.concurrent.TimeUnit.SECONDS)
             exchange.close()
         } as HttpHandler)
         server.start()
