@@ -136,9 +136,9 @@ class WorkflowBinding extends Binding  {
 
     @Override
     void setProperty(String name, Object value) {
-        // when a script variable name matches a BaseScript attribute name
+        // when a script variable name matches a BaseScript or binding attribute name
         // set it directly via `setVariable` otherwise groovy will try to
-        // set into the base script attribute
+        // set into the attribute
         if( name in BaseScriptConsts.PRIVATE_NAMES )
             setVariable(name, value)
         else
