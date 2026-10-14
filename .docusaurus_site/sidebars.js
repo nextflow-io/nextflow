@@ -105,8 +105,8 @@ module.exports = {
             type: "category",
             label: "Plugins",
             collapsed: true,
+            link: { type: "doc", id: "plugins/plugins" },
             items: [
-                "plugins/plugins",
                 "plugins/using-plugins",
                 "plugins/developing-plugins",
                 "plugins/plugin-registry"
