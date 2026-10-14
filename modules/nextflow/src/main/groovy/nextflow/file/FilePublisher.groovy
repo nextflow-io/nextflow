@@ -65,6 +65,12 @@ class FilePublisher {
 
     private static final List<Mode> SYMLINK_MODES = [Mode.SYMLINK, Mode.RELLINK]
 
+    /**
+     * Fusion internal data (e.g. `.fusion/chks` part objects) must not be published
+     * when copying a directory output, see https://github.com/seqeralabs/fusion/issues/1811
+     */
+    private static final SkipDirOption SKIP_FUSION_DIR = new SkipDirOption('.fusion')
+
     private final Session session
 
     /**
@@ -307,9 +313,9 @@ class FilePublisher {
         else if( mode == Mode.MOVE )
             FileHelper.movePath(source, target, copyOpts())
         else if( mode == Mode.COPY )
-            FileHelper.copyPath(source, target, copyOpts())
+            FileHelper.copyPath(source, target, copyOpts(SKIP_FUSION_DIR))
         else if( mode == Mode.COPY_NO_FOLLOW )
-            FileHelper.copyPath(source, target, copyOpts(LinkOption.NOFOLLOW_LINKS))
+            FileHelper.copyPath(source, target, copyOpts(LinkOption.NOFOLLOW_LINKS, SKIP_FUSION_DIR))
         else
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
     }
