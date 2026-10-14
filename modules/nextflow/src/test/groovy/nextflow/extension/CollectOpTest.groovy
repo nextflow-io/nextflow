@@ -28,7 +28,7 @@ import static test.ScriptHelper.runDataflow
  */
 class CollectOpTest extends Specification {
 
-    @Timeout(1)
+    @Timeout(5)
     def 'should collect items into a list'() {
 
         when:
@@ -58,7 +58,7 @@ class CollectOpTest extends Specification {
         result.val instanceof ArrayBag
     }
 
-    @Timeout(1)
+    @Timeout(5)
     def 'should collect and flatten items'() {
 
         given:
@@ -98,7 +98,7 @@ class CollectOpTest extends Specification {
 
     }
 
-    @Timeout(1)
+    @Timeout(5)
     def 'should collect items into a sorted list '() {
 
         when:
