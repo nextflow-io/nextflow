@@ -22,6 +22,7 @@ import nextflow.Session
 import nextflow.conda.CondaConfig
 import nextflow.container.DockerConfig
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayExecutor
 import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -105,6 +106,35 @@ class TaskBeanTest extends Specification {
 
         bean.useMicromamba == true
 
+    }
+
+    def 'should leave in-place inputs out of the array input files' () {
+        given:
+        def LOCAL = Paths.get('/mnt/shared/ref.fa')
+        def REMOTE = Paths.get('/bucket/a.bam')
+        def child = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/child')
+            getInputFilesMap() >> ['ref.fa': LOCAL, 'a.bam': REMOTE]
+            getInPlaceInputs() >> ([LOCAL] as Set)
+        }
+        def executor = Mock(Executor, additionalInterfaces: [TaskArrayExecutor])
+        def process = Mock(TaskProcessor) {
+            getSession() >> Mock(Session)
+            getExecutor() >> executor
+        }
+        def array = Mock(TaskArrayRun) {
+            getConfig() >> new TaskConfig()
+            getProcessor() >> process
+            getChildren() >> [ Mock(TaskHandler) { getTask() >> child } ]
+            getInPlaceInputs() >> new HashSet<>()
+        }
+
+        when:
+        def bean = new TaskBean(array)
+        then:
+        bean.arrayWorkDirs == [Paths.get('/work/child')]
+        bean.arrayInputFiles == [REMOTE]
+        bean.inPlaceInputs.isEmpty()
     }
 
     def 'should clone task bean' () {

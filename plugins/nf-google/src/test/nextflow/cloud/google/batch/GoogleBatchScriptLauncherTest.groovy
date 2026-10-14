@@ -120,4 +120,30 @@ class GoogleBatchScriptLauncherTest extends Specification{
         launcher.makeBinding().task_env == 'export MY_ENV_VAR="my_value"\n'
     }
 
+    def 'should link an in-place input where it is' () {
+        given:
+        def LOCAL = Paths.get('/mnt/shared/ref.fa')
+        def bucket = CloudStorageFileSystem.forBucket('alpha')
+        def bean = new TaskBean(
+            workDir: bucket.getPath('/work/dir'),
+            targetDir: bucket.getPath('/work/dir'),
+            inputFiles: ['ref.fa': LOCAL, 'a.bam': bucket.getPath('/data/a.bam')],
+            inPlaceInputs: [LOCAL] as Set )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        then:
+        bean.inputFiles['ref.fa'] == LOCAL
+        bean.inputFiles['a.bam'] == Paths.get('/mnt/disks/alpha/data/a.bam')
+        and:
+        def script = launcher.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        script.contains('test -e /mnt/shared/ref.fa ||')
+        script.contains('ln -sfn /mnt/disks/alpha/data/a.bam a.bam')
+
+        when: 'a local input no filter accepted'
+        new GoogleBatchScriptLauncher(new TaskBean(workDir: bucket.getPath('/work/dir'), targetDir: bucket.getPath('/work/dir'), inputFiles: ['x': Paths.get('/data/x')]), null)
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }

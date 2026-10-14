@@ -49,9 +49,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.workDir = toContainerMount(bean.workDir, scheme)
         bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
-        // remap input files to container mounted paths
+        // remap input files to container mounted paths, except those linked where they are
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
+            if( !bean.inPlaceInputs.contains(entry.value) )
+                bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
         }
 
         // make it change to the task work dir
