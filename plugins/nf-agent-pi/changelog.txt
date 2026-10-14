@@ -1,5 +1,8 @@
 nf-agent-pi changelog
 =====================
+0.6.0 - 12 Oct 2026
+- Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
+
 0.5.4 - 4 Oct 2026
 - Bump pi-coding-agent to 1.0.2 so the bundled catalog includes GPT-6 Luna [266f648b7].
   OpenAI `gpt-6-luna`: context 272000, max tokens 128000, input 0.1 / output 0.5 /
