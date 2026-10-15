@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 
@@ -302,6 +303,72 @@ class WorkflowMetadataTest extends Specification {
         result2 == trace
         result3
 
+    }
+
+    def 'should invoke onComplete and onError sections on failure' () {
+
+        given:
+        def outdir = Files.createTempDirectory('test')
+        def SCRIPT = '''
+            params {
+                outdir: String
+                foo: String
+            }
+
+            def hello() { 'hello' }
+
+            workflow {
+                main:
+                channel.of(1).map { v -> error('Boom') }
+
+                onComplete:
+                file("${params.outdir}/complete.txt").text = "${workflow.success} ${params.foo} ${hello()}"
+
+                onError:
+                file("${params.outdir}/error.txt").text = "${workflow.success} ${workflow.errorMessage} ${params.foo} ${hello()}"
+            }
+            '''
+
+        when:
+        runScript(SCRIPT, params: [outdir: outdir.toString(), foo: 'bar'])
+        then:
+        thrown(Exception)
+        outdir.resolve('complete.txt').text == 'false bar hello'
+        outdir.resolve('error.txt').text == 'false Boom bar hello'
+
+        cleanup:
+        outdir?.deleteDir()
+    }
+
+    def 'should invoke onComplete section but not onError section on success' () {
+
+        given:
+        def outdir = Files.createTempDirectory('test')
+        def SCRIPT = '''
+            params {
+                outdir: String
+            }
+
+            workflow {
+                main:
+                channel.of(1).view()
+
+                onComplete:
+                file("${params.outdir}/complete.txt").text = "${workflow.success}"
+
+                onError:
+                file("${params.outdir}/error.txt").text = "${workflow.success}"
+            }
+            '''
+
+        when:
+        runScript(SCRIPT, params: [outdir: outdir.toString()])
+        then:
+        outdir.resolve('complete.txt').text == 'true'
+        !Files.exists(outdir.resolve('error.txt'))
+
+        cleanup:
+        outdir?.deleteDir()
     }
 
     def 'should convert to map object' () {
