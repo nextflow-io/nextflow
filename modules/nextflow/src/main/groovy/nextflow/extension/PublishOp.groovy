@@ -186,9 +186,13 @@ class PublishOp {
 
         // if the closure returned a map of source -> target pairs,
         // treat it the same as a set of publish statements
-        if( resolvedPath instanceof Map )
+        if( resolvedPath instanceof Map ) {
+            // an empty map publishes nothing
+            if( resolvedPath.isEmpty() )
+                return resolvedPath
             for( final entry : resolvedPath.entrySet() )
                 dsl.publish(entry.key, entry.value as String)
+        }
 
         // if the closure contained publish statements, resolve each declared
         // target against the base output directory

@@ -112,6 +112,20 @@ class PublishOpTest extends Specification {
         ]
     }
 
+    def 'should publish nothing when a closure returns an empty map' () {
+        given:
+        def session = Mock(Session) {
+            getOutputDir() >> Path.of('/work/results')
+            getWorkDir() >> Path.of('/work')
+        }
+        def resolver = { v -> [:] }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        then:
+        op.resolveTargets(Path.of('/work/ab/cdef/out.txt')) == [:]
+    }
+
     def 'should publish files outside the work directory' () {
         given:
         def session = Mock(Session) {
