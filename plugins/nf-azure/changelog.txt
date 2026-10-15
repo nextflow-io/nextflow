@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.24.2 - 15 Oct 2026
+- Update azure-identity to 1.18.7 (#7796) [f1c2234a6]
+- Fix unit tests that depend on global state from other tests (#7804) [49bdb37ee]
+
 1.24.1 - 6 Oct 2026
 - Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
 - Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]

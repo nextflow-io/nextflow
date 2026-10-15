@@ -1,5 +1,21 @@
 # Nextflow change-log
 
+## [Version 26.10.1](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.1) - 15 Oct 2026
+
+- Bump nf-amazon@3.12.1 [95b076bbd]
+- Bump nf-azure@1.24.2 [934f50269]
+- Bump nf-google@1.29.1 [37393d550]
+- Fetch Google Batch task status once per trace record (#7807) [36e08de58]
+- Fix file-handling bugs in native processes (#7789) [223df42a8]
+- Fix Google Batch array job deleted when a single array task is killed (#7808) [139910816]
+- Fix unit tests that depend on global state from other tests (#7804) [49bdb37ee]
+- Fix workflow output path closure returning an empty map (#7823) [e7a303cc0]
+- Fix workflow variables named `published` or `owner` (#7814) [4894fec67]
+- Load the config files in plugin commands session (#7815) [936138a13]
+- Retry foreign file staging on connection reset (#7799) [565603922]
+- Retry INTERNAL errors from the Google Batch API (#7805) [24d78183e]
+- Skip Fusion .fusion dirs when publishing directories (#7811) [d69ed57a8]
+
 ## [Version 26.10.0](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) - 12 Oct 2026
 
 - Add deprecations page to docs (#7766) [af85789fc]
