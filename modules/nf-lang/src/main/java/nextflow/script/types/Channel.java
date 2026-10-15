@@ -93,7 +93,7 @@ public interface Channel<E> {
     """)
     Channel<Record> join(
         @NamedParams({
-            @NamedParam(value = "by", type = String.class),
+            @NamedParam(value = "by", type = Object.class),
             @NamedParam(value = "remainder", type = Boolean.class)
         })
         Map<String,?> opts,

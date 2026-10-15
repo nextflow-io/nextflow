@@ -133,7 +133,7 @@ The `by` option can also be a closure with one parameter, which acts as a *key f
 ```console file=../../snippets/join-record-key-function.out
 ```
 
-A composite key can be returned as a list, e.g. `{ r -> [r.id, r.type] }`.
+A composite key can be returned as a tuple, e.g. `{ r -> tuple(r.id, r.type) }`.
 
 The `by` option can also be a closure with two parameters, which acts as a *join predicate*. It receives one record from each channel and returns `true` if they should be joined, which is useful when the matching fields have different names in each channel:
 

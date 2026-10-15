@@ -456,7 +456,7 @@ class ChannelImplTest extends Specification {
         def result = runDataflow {
             def ch1 = channel.of(record(id: 'X', type: 'dna', a: 1), record(id: 'X', type: 'rna', a: 2))
             def ch2 = channel.of(record(id: 'X', type: 'rna', b: 5), record(id: 'X', type: 'dna', b: 4))
-            ch1.join(ch2, by: { r -> [r.id, r.type] }).collect()
+            ch1.join(ch2, by: { r -> tuple(r.id, r.type) }).collect()
         }.getVal()
         then:
         result.size() == 2

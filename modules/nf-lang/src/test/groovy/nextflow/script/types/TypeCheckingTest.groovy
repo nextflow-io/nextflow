@@ -2009,4 +2009,164 @@ class TypeCheckingTest extends Specification {
         errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
+
+    def 'should resolve a `join` operation with a key function' () {
+        when:
+        def exp = parseExpression(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello') )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: { r -> r.id })
+            '''
+        )
+        def type = getType(exp)
+        then:
+        Types.getName(type) == 'Channel<Record {\n    id: Integer\n    name: String\n    alive: Boolean\n}>'
+
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello') )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: { r -> r.id })
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for a `join` key function field that is not in both records' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(meta: record(id: 'a', strandedness: 'forward'), fastq: 'a.fq') )
+            right = channel.of( record(meta: record(id: 'a'), bam: 'a.bam') )
+            left.join(right, by: { r -> r.meta.strandedness })
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors.find { !it.isSoftError() }.getOriginalMessage().startsWith('Unrecognized property `strandedness`')
+
+        when:
+        errors = getErrors(
+            '''\
+            left  = channel.of( record(meta: record(id: 'a', strandedness: 'forward'), fastq: 'a.fq') )
+            right = channel.of( record(meta: record(id: 'a'), bam: 'a.bam') )
+            left.join(right, by: { r -> r.fastq })
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors.find { !it.isSoftError() }.getOriginalMessage().startsWith('Unrecognized property `fastq`')
+    }
+
+    def 'should report a soft error for a `join` key function that overwrites left-hand fields' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(meta: record(id: 'a', strandedness: 'forward'), fastq: 'a.fq') )
+            right = channel.of( record(meta: record(id: 'a'), bam: 'a.bam') )
+            left.join(right, by: { r -> r.meta.id })
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [meta] are present in both records -- the left-hand values will be overwritten by the right-hand values'
+
+        when:
+        errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, type: 'dna', name: 'hello', alive: false) )
+            right = channel.of( record(id: 42, type: 'dna', alive: true) )
+            left.join(right, by: { r -> tuple(r.id, r.type) })
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
+    }
+
+    def 'should resolve a `join` operation with a join predicate' () {
+        when:
+        def exp = parseExpression(
+            '''\
+            samples = channel.of( record(sample: 'X', genome: 'g1') )
+            genomes = channel.of( record(id: 'g1', ref: 4) )
+            samples.join(genomes, by: { s, g -> s.genome == g.id })
+            '''
+        )
+        def type = getType(exp)
+        then:
+        Types.getName(type) == 'Channel<Record {\n    sample: String\n    genome: String\n    id: String\n    ref: Integer\n}>'
+
+        when:
+        def errors = getErrors(
+            '''\
+            samples = channel.of( record(sample: 'X', genome: 'g1') )
+            genomes = channel.of( record(id: 'g1', ref: 4) )
+            samples.join(genomes, by: { s, g -> s.genome == g.id })
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for a `join` predicate field that is not in its record' () {
+        when:
+        def errors = getErrors(
+            '''\
+            samples = channel.of( record(sample: 'X', genome: 'g1') )
+            genomes = channel.of( record(id: 'g1', ref: 4) )
+            samples.join(genomes, by: { s, g -> s.genome == g.genome })
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage().startsWith('Unrecognized property `genome`')
+    }
+
+    def 'should report a soft error for a `join` predicate that overwrites left-hand fields' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello', alive: false) )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: { l, r -> l.id == r.id })
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
+    }
+
+    def 'should report an error for an invalid `join` by option' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42) )
+            right = channel.of( record(id: 42) )
+            left.join(right, by: { a, b, c -> true })
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage() == 'Join closure must have one parameter (key function) or two parameters (join predicate)'
+
+        when:
+        errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42) )
+            right = channel.of( record(id: 42) )
+            left.join(right, by: 42)
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage() == 'Join option `by` must be a field name or a closure'
+    }
+
 }
