@@ -1248,6 +1248,18 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch = channel.fromFilePairs("${params.dir}/*.vcf.gz")
+                url = "${params.host}//path"
+            }
+            '''
+        )
+    }
+
     /// MULTI-LINE STRINGS
 
     def 'should re-indent a multi-line string with its statement' () {
