@@ -438,22 +438,62 @@ class ChannelImplTest extends Specification {
         result.isEmpty()
     }
 
-    def testJoinByClosureInvalidArity() {
-        when:
-        runDataflow {
-            channel.of(record(id: 1)).join(channel.of(record(id: 1)), by: { l -> true })
-        }
+    def testJoinByKeyFunction() {
+        when: 'joining on a nested key whose parent map differs between channels'
+        def result = runDataflow {
+            def ch1 = channel.of(record(meta: [id: 'X', strandedness: 'forward'], a: 1), record(meta: [id: 'Y', strandedness: 'reverse'], a: 2), record(meta: [id: 'P'], a: 7))
+            def ch2 = channel.of(record(meta: [id: 'Y'], b: 5), record(meta: [id: 'X'], b: 4))
+            ch1.join(ch2, by: { r -> r.meta.id }).collect()
+        }.getVal()
         then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Operator `join` expected a closure with two parameters for the `by` option but received a closure with 1'
+        result.size() == 2
+        result.contains( record(meta: [id: 'X'], a: 1, b: 4) )
+        result.contains( record(meta: [id: 'Y'], a: 2, b: 5) )
+    }
 
+    def testJoinByKeyFunctionComposite() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(id: 'X', type: 'dna', a: 1), record(id: 'X', type: 'rna', a: 2))
+            def ch2 = channel.of(record(id: 'X', type: 'rna', b: 5), record(id: 'X', type: 'dna', b: 4))
+            ch1.join(ch2, by: { r -> [r.id, r.type] }).collect()
+        }.getVal()
+        then:
+        result.size() == 2
+        result.contains( record(id: 'X', type: 'dna', a: 1, b: 4) )
+        result.contains( record(id: 'X', type: 'rna', a: 2, b: 5) )
+    }
+
+    def testJoinByKeyFunctionWithRemainder() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(meta: [id: 'X'], a: 1), record(meta: [id: 'P'], a: 7))
+            def ch2 = channel.of(record(meta: [id: 'X'], b: 4), record(meta: [id: 'Q'], b: 8))
+            ch1.join(ch2, by: { it.meta.id }, remainder: true).collect()
+        }.getVal()
+        then:
+        result.size() == 3
+        result.contains( record(meta: [id: 'X'], a: 1, b: 4) )
+        result.contains( record(meta: [id: 'P'], a: 7) )
+        result.contains( record(meta: [id: 'Q'], b: 8) )
+    }
+
+    def testJoinByClosureInvalidArity() {
         when:
         runDataflow {
             channel.of(record(id: 1)).join(channel.of(record(id: 1)), by: { -> true })
         }
         then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Operator `join` expected a closure with one parameter (key function) or two parameters (join predicate) for the `by` option but received a closure with 0'
+
+        when:
+        runDataflow {
+            channel.of(record(id: 1)).join(channel.of(record(id: 1)), by: { a, b, c -> true })
+        }
+        then:
         e = thrown(ScriptRuntimeException)
-        e.message.contains 'received a closure with 0'
+        e.message.contains 'received a closure with 3'
     }
 
     def testJoinByClosureError() {

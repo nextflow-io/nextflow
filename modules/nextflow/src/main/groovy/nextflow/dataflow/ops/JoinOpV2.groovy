@@ -46,6 +46,8 @@ class JoinOpV2 {
 
     private String pivot
 
+    private Closure keyFn
+
     private Closure predicate
 
     private boolean remainder
@@ -57,9 +59,14 @@ class JoinOpV2 {
         this.left = left
         this.right = right
         if( opts.by instanceof Closure ) {
-            this.predicate = opts.by as Closure
-            if( predicate.maximumNumberOfParameters != 2 )
-                throw new ScriptRuntimeException("Operator `join` expected a closure with two parameters for the `by` option but received a closure with ${predicate.maximumNumberOfParameters}")
+            final closure = opts.by as Closure
+            final arity = closure.maximumNumberOfParameters
+            if( arity == 1 )
+                this.keyFn = closure
+            else if( arity == 2 )
+                this.predicate = closure
+            else
+                throw new ScriptRuntimeException("Operator `join` expected a closure with one parameter (key function) or two parameters (join predicate) for the `by` option but received a closure with ${arity}")
         }
         else
             this.pivot = opts.by as String
@@ -121,7 +128,7 @@ class JoinOpV2 {
 
     private void onNextKey(DataflowWriteChannel target, RecordMap record, int index) {
         if( index == 0 ) {
-            final key = record[pivot]
+            final key = keyOf(record)
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final rightValue : rightValues )
@@ -131,7 +138,7 @@ class JoinOpV2 {
             leftValues.add(record)
         }
         else if( index == 1 ) {
-            final key = record[pivot]
+            final key = keyOf(record)
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final leftValue : leftValues )
@@ -140,6 +147,10 @@ class JoinOpV2 {
                 emitted.add(key)
             rightValues.add(record)
         }
+    }
+
+    private Object keyOf(RecordMap record) {
+        return pivot != null ? record[pivot] : keyFn.call(record)
     }
 
     // nested-loop join, O(n*m) predicate calls
