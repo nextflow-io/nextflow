@@ -186,7 +186,6 @@ class WorkflowBinding extends Binding  {
         }
     }
 
-    @PackageScope
     Map<String,DataflowWriteChannel> getPublished() { published }
 
     void _publish_(String name, Object source) {

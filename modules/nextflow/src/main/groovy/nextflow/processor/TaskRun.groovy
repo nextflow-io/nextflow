@@ -147,6 +147,19 @@ class TaskRun implements Cloneable {
     boolean cached
 
     /**
+     * Output files that were deleted after a previous run (e.g. by eager
+     * cleanup), which are collected as if they exist when resuming the task
+     */
+    Set<Path> deletedOutputs
+
+    /**
+     * The original work directory of a task that is re-executed only to
+     * restore its deleted output files, in which case its outputs are moved
+     * to this directory instead of being bound or published
+     */
+    Path restoreDir
+
+    /**
      * The list of resolved output files
      *
      * @see TaskOutputResolver#_file()

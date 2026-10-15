@@ -201,7 +201,8 @@ class LinObserver implements TraceObserverV2 {
     @Override
     void onTaskComplete(TaskEvent event) {
         final task = event.handler.task
-        if( task.failed || task.aborted )
+        // a restored task has the same outputs as the original task
+        if( task.failed || task.aborted || task.restoreDir )
             return
         storeTaskInfo(task)
     }

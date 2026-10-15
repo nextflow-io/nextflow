@@ -111,7 +111,7 @@ class DAG {
         assert inputs
         assert outputs
         final normalizedInputs = inputs.getParams().collect { p ->
-            new ChannelHandler(channel: p.getChannel(), label: p.getName())
+            new ChannelHandler(channel: p.getRawChannel() ?: p.getChannel(), label: p.getName())
         }
         final normalizedOutputs = outputs.getParams().collect { p ->
             new ChannelHandler(channel: p.getChannel(), label: p.getName())

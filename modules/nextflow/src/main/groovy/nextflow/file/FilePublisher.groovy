@@ -282,7 +282,16 @@ class FilePublisher {
         try {
             writeFile(source, target, mode)
         }
-        catch( FileAlreadyExistsException e ) {
+        catch( FileAlreadyExistsException | NoSuchFileException e ) {
+            // keep the existing target if the source was deleted after a previous run (e.g. by eager cleanup)
+            if( !source.exists() && target.exists() ) {
+                log.debug "Source file was deleted, keeping existing target: ${target.toUriString()}"
+                session.notifyFilePublish(new FilePublishEvent(source, target, labels))
+                return
+            }
+            if( e instanceof NoSuchFileException )
+                throw e
+
             // don't publish the source if the target already resolves to it,
             // but still report it as published
             final sameRealPath = checkIsSameRealPath(source, target, mode)

@@ -220,8 +220,11 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
 
         // set inputs
-        for( int i = 0; i < declaredInputs.size(); i++ )
-            declaredInputs[i].setChannel(createSourceChannel(args[i]))
+        for( int i = 0; i < declaredInputs.size(); i++ ) {
+            final ch = createSourceChannel(args[i])
+            declaredInputs[i].setChannel(ch)
+            declaredInputs[i].setRawChannel(isChannel(args[i]) ? args[i] : ch)
+        }
 
         // set outputs
         final singleton = declaredInputs.isSingleton()
@@ -249,8 +252,12 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return new ChannelOut(channels)
     }
 
+    private static boolean isChannel(Object value) {
+        return value instanceof DataflowReadChannel || value instanceof DataflowBroadcast
+    }
+
     private DataflowReadChannel createSourceChannel(Object value) {
-        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
+        if( isChannel(value) )
             return CH.getReadChannel(value)
 
         final result = CH.value()
