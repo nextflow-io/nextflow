@@ -123,13 +123,29 @@ By default, unmatched values are discarded. Use the `remainder` option to emit t
 ```console file=../../snippets/join-record-remainder.out
 ```
 
+<AddedInVersion version="27.04" />
+
+The `by` option can also be a closure that acts as a join predicate, which is useful when the matching fields have different names in each channel:
+
+```nextflow file=../../snippets/join-record-closure.nf
+```
+
+```console file=../../snippets/join-record-closure.out
+```
+
+The closure receives one record from each channel and returns `true` if they should be joined. Every pair for which it returns `true` is emitted.
+
+:::note
+A closure join must evaluate the closure for every pair of records, whereas a field join matches records by key lookup. For large channels, use a field name whenever the matching fields have the same name in both channels.
+:::
+
 Available options:
 
-###### `by: String`
+###### `by: String | (Record, Record) -> Boolean`
 
 *This option is required.*
 
-The record field to use as the matching key.
+The record field to use as the matching key, or a closure that receives a record from each channel and returns `true` when they should be joined.
 
 ###### `remainder: Boolean`
 

@@ -38,13 +38,15 @@ import nextflow.util.RecordMap
 @CompileStatic
 class JoinOpV2 {
 
-    private static final Map JOIN_PARAMS = [by: String, remainder: Boolean]
+    private static final Map JOIN_PARAMS = [by: [String, Closure], remainder: Boolean]
 
     private DataflowReadChannel left
 
     private DataflowReadChannel right
 
     private String pivot
+
+    private Closure predicate
 
     private boolean remainder
 
@@ -54,7 +56,13 @@ class JoinOpV2 {
         CheckHelper.checkParams('join', opts, JOIN_PARAMS)
         this.left = left
         this.right = right
-        this.pivot = opts.by as String
+        if( opts.by instanceof Closure ) {
+            this.predicate = opts.by as Closure
+            if( predicate.maximumNumberOfParameters != 2 )
+                throw new ScriptRuntimeException("Operator `join` expected a closure with two parameters for the `by` option but received a closure with ${predicate.maximumNumberOfParameters}")
+        }
+        else
+            this.pivot = opts.by as String
         this.remainder = opts.remainder ? opts.remainder as boolean : false
     }
 
@@ -79,6 +87,13 @@ class JoinOpV2 {
     private Map<?,Collection<RecordMap>> mappingsLeft = [:]
     private Map<?,Collection<RecordMap>> mappingsRight = [:]
     private Set<?> emitted = []
+
+    // buffers for the predicate (closure) join
+    private List<RecordMap> leftBuf = []
+    private List<RecordMap> rightBuf = []
+    private BitSet leftMatched = new BitSet()
+    private BitSet rightMatched = new BitSet()
+
     private volatile int count = 2
     private volatile boolean failed
 
@@ -97,27 +112,59 @@ class JoinOpV2 {
     private void onNext(DataflowWriteChannel target, Object value, int index) {
         if( value !instanceof RecordMap )
             throw new ScriptRuntimeException("Operator `join` expected a record but received: ${value} [${value.class.simpleName}]")
+        final record = value as RecordMap
+        if( predicate != null )
+            onNextPredicate(target, record, index)
+        else
+            onNextKey(target, record, index)
+    }
+
+    private void onNextKey(DataflowWriteChannel target, RecordMap record, int index) {
         if( index == 0 ) {
-            final leftValue = value as RecordMap
-            final key = leftValue[pivot]
+            final key = record[pivot]
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final rightValue : rightValues )
-                target << leftValue.plus(rightValue)
+                target << record.plus(rightValue)
             if( !rightValues.isEmpty() )
                 emitted.add(key)
-            leftValues.add(leftValue)
+            leftValues.add(record)
         }
         else if( index == 1 ) {
-            final rightValue = value as RecordMap
-            final key = rightValue[pivot]
+            final key = record[pivot]
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final leftValue : leftValues )
-                target << leftValue.plus(rightValue)
+                target << leftValue.plus(record)
             if( !leftValues.isEmpty() )
                 emitted.add(key)
-            rightValues.add(rightValue)
+            rightValues.add(record)
+        }
+    }
+
+    // nested-loop join, O(n*m) predicate calls
+    private void onNextPredicate(DataflowWriteChannel target, RecordMap record, int index) {
+        if( index == 0 ) {
+            final i = leftBuf.size()
+            for( int j = 0; j < rightBuf.size(); j++ ) {
+                if( predicate.call(record, rightBuf.get(j)) ) {
+                    target << record.plus(rightBuf.get(j))
+                    leftMatched.set(i)
+                    rightMatched.set(j)
+                }
+            }
+            leftBuf.add(record)
+        }
+        else if( index == 1 ) {
+            final j = rightBuf.size()
+            for( int i = 0; i < leftBuf.size(); i++ ) {
+                if( predicate.call(leftBuf.get(i), record) ) {
+                    target << leftBuf.get(i).plus(record)
+                    leftMatched.set(i)
+                    rightMatched.set(j)
+                }
+            }
+            rightBuf.add(record)
         }
     }
 
@@ -128,7 +175,16 @@ class JoinOpV2 {
         if( --count > 0 )
             return
 
-        if( remainder ) {
+        if( remainder && predicate != null ) {
+            // emit unmatched values from the predicate (closure) join
+            for( int i = 0; i < leftBuf.size(); i++ )
+                if( !leftMatched.get(i) )
+                    target << leftBuf.get(i)
+            for( int j = 0; j < rightBuf.size(); j++ )
+                if( !rightMatched.get(j) )
+                    target << rightBuf.get(j)
+        }
+        else if( remainder ) {
             // emit unmatched left-hand values
             final keysLeft = mappingsLeft.keySet()
             keysLeft.removeAll(emitted)
