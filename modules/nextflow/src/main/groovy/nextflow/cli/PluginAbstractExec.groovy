@@ -16,14 +16,9 @@
 
 package nextflow.cli
 
-import java.nio.file.Files
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
-import nextflow.Const
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -72,25 +67,14 @@ trait PluginAbstractExec implements PluginExecAware {
         return 0
     }
 
-    /**
-     * Load the user and launch dir config files, because plugin commands
-     * may need them e.g. Seqera Platform provides the cloud storage credentials
-     * only via the `nextflow.config` file. The work dir and cloud cache env
-     * variables take precedence over the config files
-     */
     private Map getConfig() {
-        final Map result = new ConfigBuilder().build(configFiles())
-        result.workDir = SysEnv.get('NXF_WORK') ?: result.workDir ?: 'work'
+        final result = [
+            workDir: SysEnv.get('NXF_WORK') ?: 'work'
+        ]
         final cloudCachePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
         if( cloudCachePath )
             result.cloudcache = [ enabled: true, path: cloudCachePath ]
         return result
-    }
-
-    private List<Path> configFiles() {
-        final home = Const.APP_HOME_DIR.resolve('config')
-        final local = Path.of(SysEnv.get('NXF_CONFIG_FILE') ?: 'nextflow.config')
-        return [home, local].findAll { Path it -> Files.exists(it) }
     }
 
     abstract int exec(String cmd, List<String> args)
