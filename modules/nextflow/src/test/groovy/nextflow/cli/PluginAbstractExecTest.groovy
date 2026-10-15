@@ -64,4 +64,25 @@ class PluginAbstractExecTest extends Specification {
         [NXF_WORK: '/env/work'] | '/env/work'
     }
 
+    def 'should not resolve config includes' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('nextflow.config')
+        configFile.text = '''
+            azure.storage.accountName = 'my-account'
+            includeConfig 'https://localhost:1/single-use.config'
+            '''
+        and:
+        SysEnv.push([NXF_CONFIG_FILE: configFile.toString()])
+        def command = new TestCommand()
+
+        when:
+        command.exec('nf-test', 'test', [])
+        then:
+        command.config.azure.storage.accountName == 'my-account'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

@@ -76,10 +76,14 @@ trait PluginAbstractExec implements PluginExecAware {
      * Load the user and launch dir config files, because plugin commands
      * may need them e.g. Seqera Platform provides the cloud storage credentials
      * only via the `nextflow.config` file. The work dir and cloud cache env
-     * variables take precedence over the config files
+     * variables take precedence over the config files.
+     *
+     * Config includes are not resolved: Seqera Platform includes the user config
+     * from a single-use URL that the main run has already consumed, and the
+     * `-config-ignore-includes` CLI option no longer reaches plugin commands
      */
     private Map getConfig() {
-        final Map result = new ConfigBuilder().build(configFiles())
+        final Map result = new ConfigBuilder().setIgnoreIncludes(true).build(configFiles())
         result.workDir = SysEnv.get('NXF_WORK') ?: result.workDir ?: 'work'
         final cloudCachePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
         if( cloudCachePath )
