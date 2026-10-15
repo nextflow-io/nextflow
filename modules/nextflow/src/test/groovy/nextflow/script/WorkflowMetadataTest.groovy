@@ -278,6 +278,32 @@ class WorkflowMetadataTest extends Specification {
 
     }
 
+    def 'should invoke onError handlers with and without arguments' () {
+
+        given:
+        def script = Mock(ScriptFile)
+        def session = Spy(Session)
+        def metadata = new WorkflowMetadata(session, script)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        and:
+        def trace = Mock(TraceRecord)
+        def result1
+        def result2
+        def result3 = false
+
+        when:
+        metadata.setOnError { err -> result1 = err }
+        metadata.setOnError { result2 = it }
+        metadata.setOnError { -> result3 = true }
+        metadata.invokeOnError(trace)
+
+        then:
+        result1 == trace
+        result2 == trace
+        result3
+
+    }
+
     def 'should convert to map object' () {
 
         given:
