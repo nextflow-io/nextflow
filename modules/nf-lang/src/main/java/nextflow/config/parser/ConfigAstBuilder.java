@@ -198,7 +198,7 @@ public class ConfigAstBuilder {
         if( !commentsEnabled )
             return;
         tokenStream.fill();
-        moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, Comments.collect(tokenStream.getTokens()));
+        moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, Comments.collect(tokenStream.getTokens(), ConfigLexer.NL));
     }
 
     /// CONFIG STATEMENTS

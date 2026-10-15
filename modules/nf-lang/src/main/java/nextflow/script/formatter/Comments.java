@@ -97,8 +97,9 @@ public class Comments {
      * Collect the comments from the token buffer built by the parse.
      *
      * @param tokens
+     * @param commentType the token type of comments (i.e. the lexer's {@code NL} type)
      */
-    public static Comments collect(List<Token> tokens) {
+    public static Comments collect(List<Token> tokens, int commentType) {
         var comments = new ArrayList<Comment>();
         var contentLines = new BitSet();
         var firstColumns = new HashMap<Integer,Integer>();
@@ -123,7 +124,7 @@ public class Comments {
             // line is the leftmost one
             firstColumns.putIfAbsent(line, token.getCharPositionInLine() + 1);
 
-            if( isComment(text) ) {
+            if( token.getType() == commentType && isComment(text) ) {
                 if( first && text.startsWith("#!") ) {
                     // the shebang must stay on the first line, so it is not
                     // subject to comment attachment
@@ -158,7 +159,7 @@ public class Comments {
         lexer.removeErrorListeners();
         var stream = new CommonTokenStream(lexer);
         stream.fill();
-        var comments = collect(stream.getTokens());
+        var comments = collect(stream.getTokens(), config ? ConfigLexer.NL : ScriptLexer.NL);
         var result = new ArrayList<String>();
         if( comments.getShebang() != null )
             result.add(Comment.normalize(comments.getShebang()));
