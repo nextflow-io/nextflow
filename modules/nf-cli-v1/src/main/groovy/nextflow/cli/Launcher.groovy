@@ -637,6 +637,9 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
+        // the JVM prints "AOTConfiguration recorded" on stdout after the shutdown hooks run; closing fd 1 points it at /dev/null
+        if( System.getProperty('nxf.aot.record') )
+            Runtime.runtime.addShutdownHook(new Thread({ System.out.flush(); new FileOutputStream(FileDescriptor.out).close() }))
         LoggerHelper.bootstrapLogger()
         final status = new Launcher() .command(args) .run()
         if( status )
