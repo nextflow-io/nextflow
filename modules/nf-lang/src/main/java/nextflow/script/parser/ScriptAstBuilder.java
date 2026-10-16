@@ -1098,6 +1098,7 @@ public class ScriptAstBuilder {
         var code = blockStatements(ctx.blockStatements());
 
         var result = ast( new FunctionNode(name, returnType, params, code), ctx );
+        result.putNodeMetaData(ASTNodeMarker.SOURCE_UNIT, sourceUnit);
         checkInvalidVarName(name, result);
         groovydocManager.handle(result, ctx);
         return result;

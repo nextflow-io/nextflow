@@ -66,6 +66,65 @@ class ScriptToGroovyHelperTest extends Specification {
         names == ['params.x', 'task.ext.args']
     }
 
+    def 'should collect source text of functions called by process body' () {
+        given:
+        def source = parse('''\
+            process hello {
+                input:
+                val x
+
+                exec:
+                foo(x) + foo(x)
+            }
+
+            def foo(x) {
+                bar(x)
+            }
+
+            def bar(x) {
+                x > 0 ? bar(x - 1) : x
+            }
+
+            def unused() {
+            }
+            ''')
+        scriptParser.analyze()
+        def sgh = new ScriptToGroovyHelper(source)
+
+        when:
+        def process = source.getAST().getProcesses().first()
+        then:
+        sgh.getFunctionSources(process.exec).value == '''\
+            def foo(x) {
+                bar(x)
+            }
+
+            def bar(x) {
+                x > 0 ? bar(x - 1) : x
+            }
+            '''.stripIndent()
+    }
+
+    def 'should return empty function sources when process body calls no functions' () {
+        given:
+        def source = parse('''\
+            process hello {
+                exec:
+                println 'hello'
+            }
+
+            def unused() {
+            }
+            ''')
+        scriptParser.analyze()
+        def sgh = new ScriptToGroovyHelper(source)
+
+        when:
+        def process = source.getAST().getProcesses().first()
+        then:
+        sgh.getFunctionSources(process.exec).value == ''
+    }
+
     def 'should get source text of process body' () {
         given:
         def source = parse('''\

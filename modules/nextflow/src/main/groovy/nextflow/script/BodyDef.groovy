@@ -42,6 +42,11 @@ class BodyDef implements Cloneable {
     Set<TokenValRef> valRefs
 
     /**
+     * The source of script functions called by the task script, used to compute the task hash
+     */
+    String functionSources
+
+    /**
      * Hold the use provided task body
      *
      * @param closure The task body closure
@@ -59,6 +64,11 @@ class BodyDef implements Cloneable {
     BodyDef(Closure closure, String source, String section, List<TokenValRef> values ) {
         this(closure, source, section)
         this.valRefs = values != null ? values as Set : Collections.<TokenValRef>emptySet()
+    }
+
+    BodyDef(Closure closure, String source, String section, List<TokenValRef> values, String functionSources ) {
+        this(closure, source, section, values)
+        this.functionSources = functionSources
     }
 
     BodyDef clone() {
