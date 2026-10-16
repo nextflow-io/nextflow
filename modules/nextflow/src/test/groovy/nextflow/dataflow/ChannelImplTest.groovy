@@ -384,6 +384,136 @@ class ChannelImplTest extends Specification {
         result.contains( record(id: 'P', a: 7) )
     }
 
+    def testJoinByClosure() {
+        when: 'joining on a predicate with differently-named fields'
+        def result = runDataflow {
+            def ch1 = channel.of(record(sample: 'X', genome: 'g1'), record(sample: 'Y', genome: 'g2'), record(sample: 'Z', genome: 'g3'))
+            def ch2 = channel.of(record(id: 'g3', ref: 6), record(id: 'g2', ref: 5), record(id: 'g1', ref: 4))
+            ch1.join(ch2, by: { s, g -> s.genome == g.id }).collect()
+        }.getVal()
+        then:
+        result.size() == 3
+        result.contains( record(sample: 'X', genome: 'g1', id: 'g1', ref: 4) )
+        result.contains( record(sample: 'Y', genome: 'g2', id: 'g2', ref: 5) )
+        result.contains( record(sample: 'Z', genome: 'g3', id: 'g3', ref: 6) )
+    }
+
+    def testJoinByClosureDuplicates() {
+        when: 'multiple pairs satisfy the predicate'
+        def result = runDataflow {
+            def ch1 = channel.of(record(a: 1, k: 'X'), record(a: 3, k: 'X'))
+            def ch2 = channel.of(record(b: 2, k: 'X'), record(b: 4, k: 'X'))
+            ch1.join(ch2, by: { l, r -> l.k == r.k }).collect()
+        }.getVal()
+        then:
+        result.size() == 4
+        result.contains( record(a: 1, k: 'X', b: 2) )
+        result.contains( record(a: 1, k: 'X', b: 4) )
+        result.contains( record(a: 3, k: 'X', b: 2) )
+        result.contains( record(a: 3, k: 'X', b: 4) )
+    }
+
+    def testJoinByClosureWithRemainder() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(sample: 'X', genome: 'g1'), record(sample: 'P', genome: 'g9'))
+            def ch2 = channel.of(record(id: 'g1', ref: 4), record(id: 'g8', ref: 8))
+            ch1.join(ch2, by: { s, g -> s.genome == g.id }, remainder: true).collect()
+        }.getVal()
+        then:
+        result.size() == 3
+        result.contains( record(sample: 'X', genome: 'g1', id: 'g1', ref: 4) )
+        result.contains( record(sample: 'P', genome: 'g9') )
+        result.contains( record(id: 'g8', ref: 8) )
+    }
+
+    def testJoinByClosureNoMatch() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(sample: 'X', genome: 'g1'))
+            def ch2 = channel.of(record(id: 'g2', ref: 5))
+            ch1.join(ch2, by: { s, g -> s.genome == g.id }).collect()
+        }.getVal()
+        then:
+        result.isEmpty()
+    }
+
+    def testJoinByKeyFunction() {
+        when: 'joining on a nested key whose parent map differs between channels'
+        def result = runDataflow {
+            def ch1 = channel.of(record(meta: [id: 'X', strandedness: 'forward'], a: 1), record(meta: [id: 'Y', strandedness: 'reverse'], a: 2), record(meta: [id: 'P'], a: 7))
+            def ch2 = channel.of(record(meta: [id: 'Y'], b: 5), record(meta: [id: 'X'], b: 4))
+            ch1.join(ch2, by: { r -> r.meta.id }).collect()
+        }.getVal()
+        then:
+        result.size() == 2
+        result.contains( record(meta: [id: 'X'], a: 1, b: 4) )
+        result.contains( record(meta: [id: 'Y'], a: 2, b: 5) )
+    }
+
+    def testJoinByKeyFunctionComposite() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(id: 'X', type: 'dna', a: 1), record(id: 'X', type: 'rna', a: 2))
+            def ch2 = channel.of(record(id: 'X', type: 'rna', b: 5), record(id: 'X', type: 'dna', b: 4))
+            ch1.join(ch2, by: { r -> tuple(r.id, r.type) }).collect()
+        }.getVal()
+        then:
+        result.size() == 2
+        result.contains( record(id: 'X', type: 'dna', a: 1, b: 4) )
+        result.contains( record(id: 'X', type: 'rna', a: 2, b: 5) )
+    }
+
+    def testJoinByKeyFunctionWithRemainder() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(meta: [id: 'X'], a: 1), record(meta: [id: 'P'], a: 7))
+            def ch2 = channel.of(record(meta: [id: 'X'], b: 4), record(meta: [id: 'Q'], b: 8))
+            ch1.join(ch2, by: { it.meta.id }, remainder: true).collect()
+        }.getVal()
+        then:
+        result.size() == 3
+        result.contains( record(meta: [id: 'X'], a: 1, b: 4) )
+        result.contains( record(meta: [id: 'P'], a: 7) )
+        result.contains( record(meta: [id: 'Q'], b: 8) )
+    }
+
+    def testJoinByClosureInvalidArity() {
+        when:
+        runDataflow {
+            channel.of(record(id: 1)).join(channel.of(record(id: 1)), by: { -> true })
+        }
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Operator `join` expected a closure with one parameter (key function) or two parameters (join predicate) for the `by` option but received a closure with 0'
+
+        when:
+        runDataflow {
+            channel.of(record(id: 1)).join(channel.of(record(id: 1)), by: { a, b, c -> true })
+        }
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message.contains 'received a closure with 3'
+    }
+
+    def testJoinByClosureError() {
+        when:
+        runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                left = channel.of(record(id: 1))
+                right = channel.of(record(id: 1))
+                left.join(right, by: { l, r -> l.id / 0 == r.id })
+            }
+            '''
+        )
+        then:
+        def e = thrown(ArithmeticException)
+        e.message == 'Division by zero'
+    }
+
     def testJoinError() {
 
         when:

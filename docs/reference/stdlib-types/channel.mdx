@@ -123,13 +123,37 @@ By default, unmatched values are discarded. Use the `remainder` option to emit t
 ```console file=../../snippets/join-record-remainder.out
 ```
 
+<AddedInVersion version="27.04" />
+
+The `by` option can also be a closure with one parameter, which acts as a *key function*. It receives a record and returns its matching key, which is useful when the key is nested or composed of multiple fields:
+
+```nextflow file=../../snippets/join-record-key-function.nf
+```
+
+```console file=../../snippets/join-record-key-function.out
+```
+
+A composite key can be returned as a tuple, e.g. `{ r -> tuple(r.id, r.type) }`.
+
+The `by` option can also be a closure with two parameters, which acts as a *join predicate*. It receives one record from each channel and returns `true` if they should be joined, which is useful when the matching fields have different names in each channel:
+
+```nextflow file=../../snippets/join-record-closure.nf
+```
+
+```console file=../../snippets/join-record-closure.out
+```
+
+:::note
+A join predicate is evaluated for every pair of records, so its cost grows with the product of the channel sizes. For example, joining two channels of 10,000 records each requires 100 million evaluations. Use a field name or key function whenever records can be matched by equality.
+:::
+
 Available options:
 
-###### `by: String`
+###### `by: String | (Record) -> ? | (Record, Record) -> Boolean`
 
 *This option is required.*
 
-The record field to use as the matching key.
+The record field to use as the matching key, a closure that returns the matching key of a record, or a closure that returns `true` when two records should be joined.
 
 ###### `remainder: Boolean`
 
