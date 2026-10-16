@@ -24,7 +24,7 @@ import nextflow.script.dsl.TupleComponents;
 import nextflow.script.types.Tuple;
 
 @Description("""
-    A list is an unordered collection of elements.
+    A list is an ordered collection of elements.
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#list-e)
 """)
