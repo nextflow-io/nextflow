@@ -14,17 +14,32 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.cli;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Define the interface for plugin commands
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface PluginExecAware {
+public interface PluginExecAware {
 
-    static final String CMD_SEP = ':'
+    String CMD_SEP = ":";
 
-    int exec(String pluginId, String cmd, List<String> args)
+    int exec(String pluginId, String cmd, List<String> args);
+
+    /**
+     * Execute a plugin command with the config resolved by the CLI, so that
+     * options such as {@code -c} and {@code -config-ignore-includes}
+     * are honoured.
+     *
+     * <p>Defined as a Java default method so that plugins compiled against a previous
+     * version fall back to {@link #exec(String, String, List)}.
+     */
+    default int exec(String pluginId, String cmd, List<String> args, Map config) {
+        return exec(pluginId, cmd, args);
+    }
 
 }

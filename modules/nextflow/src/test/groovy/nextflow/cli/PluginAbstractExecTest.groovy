@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import java.nio.file.Files
-
 import nextflow.SysEnv
 import spock.lang.Specification
 
@@ -33,35 +31,49 @@ class PluginAbstractExecTest extends Specification {
         int exec(String cmd, List<String> args) { config = getSession().config; return 0 }
     }
 
+    // a plugin compiled before `exec(String,String,List,Map)` was added
+    static class LegacyCommand implements PluginExecAware {
+        List<String> received
+        int exec(String pluginId, String cmd, List<String> args) { received = [pluginId, cmd]; return 0 }
+    }
+
     def cleanup() {
         SysEnv.pop()
     }
 
-    def 'should create the session with the config file and the work dir env override' () {
+    def 'should create the session with the given config' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        def configFile = folder.resolve('nextflow.config')
-        configFile.text = '''
-            workDir = "$WORK_DIR"
-            azure.storage.accountName = 'my-account'
-            '''.replace('$WORK_DIR', folder.resolve('config-work').toString())
-        and:
-        SysEnv.push(ENV + [NXF_CONFIG_FILE: configFile.toString()])
+        SysEnv.push([:])
+        def command = new TestCommand()
+
+        when:
+        command.exec('nf-test', 'test', [], [workDir: '/my/work', azure: [storage: [accountName: 'my-account']]])
+        then:
+        command.config.workDir == '/my/work'
+        command.config.azure.storage.accountName == 'my-account'
+    }
+
+    def 'should create the session with the env config' () {
+        given:
+        SysEnv.push([NXF_WORK: '/env/work'])
         def command = new TestCommand()
 
         when:
         command.exec('nf-test', 'test', [])
         then:
-        command.config.workDir == (WORK ?: folder.resolve('config-work').toString())
-        command.config.azure.storage.accountName == 'my-account'
+        command.config.workDir == '/env/work'
+    }
 
-        cleanup:
-        folder?.deleteDir()
+    def 'should fallback to legacy exec method' () {
+        given:
+        SysEnv.push([:])
+        def command = new LegacyCommand()
 
-        where:
-        ENV                     | WORK
-        [:]                     | null
-        [NXF_WORK: '/env/work'] | '/env/work'
+        when:
+        def ret = command.exec('nf-test', 'test', [], [workDir: '/my/work'])
+        then:
+        ret == 0
+        command.received == ['nf-test', 'test']
     }
 
 }

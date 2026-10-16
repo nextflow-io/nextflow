@@ -50,11 +50,11 @@ class CacheCommand implements PluginAbstractExec {
         if( !getSession().cloudCachePath && !SysEnv.get('NXF_CLOUDCACHE_PATH') ) {
             log.debug "Running Nextflow cache backup (CacheManager)"
             // legacy cache manager
-            new CacheManager(System.getenv()).saveCacheFiles()
+            new CacheManager(SysEnv.get()).saveCacheFiles()
         }
         else {
             log.debug "Running Nextflow cache backup (LogsHandler)"
-            new LogsHandler(getSession(), System.getenv()).saveFiles()
+            new LogsHandler(getSession(), SysEnv.get()).saveFiles()
         }
     }
 

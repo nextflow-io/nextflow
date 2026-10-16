@@ -1,5 +1,12 @@
 # Nextflow change-log
 
+## [Version 26.10.2](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.2) - 15 Oct 2026
+
+- Build plugin commands config in the CLI (#7834) [1f805db0d]
+- Bump nf-tower@1.32.1 [2454be6be]
+- Bump nf-wave@1.22.3 [a3347f1e6]
+- Fix formatter treating comment-like GString text as a comment (#7828) [a002ed880]
+
 ## [Version 26.10.1](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.1) - 15 Oct 2026
 
 - Bump nf-amazon@3.12.1 [95b076bbd]
