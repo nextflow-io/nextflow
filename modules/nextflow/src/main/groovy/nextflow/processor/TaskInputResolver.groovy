@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Nextflow
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ForeignFileFilter
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
@@ -53,12 +54,15 @@ class TaskInputResolver {
 
     private Executor executor
 
+    private List<ForeignFileFilter> filters
+
     private int count = 0
 
-    TaskInputResolver(TaskRun task, FilePorter.Batch foreignFiles, Executor executor) {
+    TaskInputResolver(TaskRun task, FilePorter.Batch foreignFiles, Executor executor, List<ForeignFileFilter> filters=Collections.<ForeignFileFilter>emptyList()) {
         this.task = task
         this.foreignFiles = foreignFiles
         this.executor = executor
+        this.filters = filters
     }
 
     /**
@@ -145,8 +149,12 @@ class TaskInputResolver {
 
             if( item instanceof Path || coerceToPath ) {
                 final path = normalizeToPath(item)
-                final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
-                final holder = new FileHolder(path, target)
+                final foreign = executor.isForeignFile(path)
+                // a filter can only veto an upload, so it is asked only for foreign files
+                final inPlace = foreign && isTaskAccessible(path)
+                final holder = new FileHolder(path, foreign && !inPlace ? foreignFiles.addToForeign(path) : path)
+                if( inPlace )
+                    task.inPlaceInputs.add(holder.storePath)
                 files << holder
             }
             else {
@@ -155,6 +163,14 @@ class TaskInputResolver {
         }
 
         return files
+    }
+
+    protected boolean isTaskAccessible(Path path) {
+        for( ForeignFileFilter it : filters ) {
+            if( it.isTaskAccessible(path) )
+                return true
+        }
+        return false
     }
 
     protected static Path normalizeToPath( obj ) {

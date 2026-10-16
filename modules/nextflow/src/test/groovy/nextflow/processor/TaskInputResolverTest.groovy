@@ -24,6 +24,7 @@ import nextflow.Global
 import nextflow.ISession
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ForeignFileFilter
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
 import nextflow.script.params.v2.ProcessFileInput
@@ -495,6 +496,61 @@ class TaskInputResolverTest extends Specification {
         result.size() == 1
         result[0] == new FileHolder(PATH)
 
+    }
+
+    def 'should not stage a foreign file a filter declares task accessible' () {
+        given:
+        def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
+        def filter = Mock(ForeignFileFilter)
+        def PATH = Path.of('/mnt/shared/ref.fa')
+        def task = new TaskRun()
+        def resolver = new TaskInputResolver(task, batch, executor, [filter])
+
+        when:
+        def result = resolver.normalizeInputToFiles(PATH.toString(), 0, true)
+        then:
+        1 * executor.isForeignFile(PATH) >> true
+        1 * filter.isTaskAccessible(PATH) >> true
+        0 * batch.addToForeign(_)
+        and:
+        result[0] == new FileHolder(PATH)
+        task.inPlaceInputs == [PATH] as Set
+    }
+
+    def 'should stage a foreign file no filter accepts' () {
+        given:
+        def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
+        def filter = Mock(ForeignFileFilter)
+        def PATH = Path.of('/data/ref.fa')
+        def STAGED = Path.of('/work/stage/ref.fa')
+        def task = new TaskRun()
+        def resolver = new TaskInputResolver(task, batch, executor, [filter])
+
+        when:
+        def result = resolver.normalizeInputToFiles(PATH.toString(), 0, true)
+        then:
+        1 * executor.isForeignFile(PATH) >> true
+        1 * filter.isTaskAccessible(PATH) >> false
+        1 * batch.addToForeign(PATH) >> STAGED
+        and:
+        result[0] == new FileHolder(PATH, STAGED)
+        task.inPlaceInputs.isEmpty()
+    }
+
+    def 'should not ask the filters for a local file' () {
+        given:
+        def executor = Mock(Executor)
+        def filter = Mock(ForeignFileFilter)
+        def PATH = Path.of('/some/path')
+        def resolver = new TaskInputResolver(Mock(TaskRun), Mock(FilePorter.Batch), executor, [filter])
+
+        when:
+        resolver.normalizeInputToFiles(PATH.toString(), 0, true)
+        then:
+        1 * executor.isForeignFile(PATH) >> false
+        0 * filter.isTaskAccessible(_)
     }
 
 }
