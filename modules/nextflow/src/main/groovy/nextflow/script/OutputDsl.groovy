@@ -77,7 +77,8 @@ class OutputDsl {
 
         // print workflow outputs on run completion
         session.workflowMetadata.onComplete {
-            if( !session.isSuccess() )
+            // workflow outputs are never bound in preview mode
+            if( !session.isSuccess() || session.preview )
                 return
             final output = getOutput()
             if( session.outputFormat == 'json' )
