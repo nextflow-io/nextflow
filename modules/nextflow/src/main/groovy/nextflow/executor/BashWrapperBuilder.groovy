@@ -500,10 +500,43 @@ class BashWrapperBuilder {
         return false
     }
 
+    /**
+     * Render a value as a YAML double-quoted string, escaping backslashes, double quotes
+     * and control characters so that the value is kept on a single comment line
+     * and can be decoded back to the original string
+     */
+    @PackageScope
+    static String yamlString(Object value) {
+        if( value == null )
+            return 'null'
+        final str = value.toString()
+        final result = new StringBuilder(str.length() + 2)
+        result.append('"')
+        for( int i=0; i<str.length(); i++ ) {
+            final char ch = str.charAt(i)
+            if( ch == '\\' as char )
+                result.append('\\\\')
+            else if( ch == '"' as char )
+                result.append('\\"')
+            else if( ch == '\n' as char )
+                result.append('\\n')
+            else if( ch == '\r' as char )
+                result.append('\\r')
+            else if( ch == '\t' as char )
+                result.append('\\t')
+            else if( Character.isISOControl(ch) || ch == '\u2028' as char || ch == '\u2029' as char )
+                result.append(String.format('\\u%04x', (int) ch))
+            else
+                result.append(ch)
+        }
+        result.append('"')
+        return result.toString()
+    }
+
     protected String getTaskMetadata() {
         final lines = new StringBuilder()
         lines << '### ---\n'
-        lines << "### name: '${bean.name}'\n"
+        lines << "### name: ${yamlString(bean.name)}\n"
         if( bean.arrayIndexName ) {
             lines << '### array:\n'
             lines << "###   index-name: ${bean.arrayIndexName}\n"
@@ -514,12 +547,12 @@ class BashWrapperBuilder {
         }
 
         if( containerConfig?.isEnabled() )
-            lines << "### container: '${bean.containerImage}'\n"
+            lines << "### container: ${yamlString(bean.containerImage)}\n"
 
         if( outputFiles.size() > 0 ) {
             lines << '### outputs:\n'
             for( final output : bean.outputFiles )
-                lines << "### - '${output}'\n"
+                lines << "### - ${yamlString(output)}\n"
         }
 
         lines << '### ...\n'
