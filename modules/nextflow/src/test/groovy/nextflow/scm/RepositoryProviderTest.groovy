@@ -67,6 +67,39 @@ class RepositoryProviderTest extends Specification {
         provider.endpointUrl == 'file:/user/data/w'
     }
 
+    def 'should rewrite the clone url with the configured server host' () {
+
+        given:
+        def provider = Spy(RepositoryProvider)
+        provider.@config = new ProviderConfig('mygit', [platform: 'gitlab', server: SERVER])
+        provider.getCloneUrl() >> CLONE
+
+        expect:
+        provider.getConfiguredCloneUrl() == EXPECTED
+
+        where:
+        SERVER                          | CLONE                                              | EXPECTED
+        'https://git-alias.foo.com'     | 'https://git.foo.com/pditommaso/hello.git'         | 'https://git-alias.foo.com/pditommaso/hello.git'
+        'https://git.foo.com'           | 'https://git.foo.com/pditommaso/hello.git'         | 'https://git.foo.com/pditommaso/hello.git'
+        'https://git-alias.foo.com'     | 'https://git.foo.com/gitlab/grp/sub/hello.git'     | 'https://git-alias.foo.com/gitlab/grp/sub/hello.git'
+        'https://git-alias.foo.com:8443'| 'https://git.foo.com:8443/pditommaso/hello.git'    | 'https://git-alias.foo.com:8443/pditommaso/hello.git'
+        'https://git-alias.foo.com'     | 'https://user@git.foo.com/pditommaso/hello.git'    | 'https://user@git-alias.foo.com/pditommaso/hello.git'
+    }
+
+    def 'should leave the clone url untouched when there is no host to rewrite' () {
+
+        given:
+        def provider = Spy(RepositoryProvider)
+        provider.@config = new ProviderConfig('local', [path: '/user/data'])
+        provider.getCloneUrl() >> CLONE
+
+        expect:
+        provider.getConfiguredCloneUrl() == CLONE
+
+        where:
+        CLONE << ['file:/user/data/hello.git', '/user/data/hello.git', 'not a url']
+    }
+
     def 'should set credentials' () {
 
         given:
