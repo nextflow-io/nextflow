@@ -49,6 +49,7 @@ The following directives are available:
 | [`queue`][queue] | The queue to which tasks should be submitted. |
 | [`resourceLabels`][resource-labels] | Custom name-value pairs to attach to task executions. |
 | [`resourceLimits`][resource-limits] | Environment-specific limits for task resource requests. |
+| [`retryOn`][retry-on] | Termination reasons that cause a failed task to be retried. |
 | [`scratch`][scratch] | Execute each task in a temporary directory local to the compute node. |
 | [`secret`][secret] | The secrets required by each task. |
 | [`shell`][shell] | A custom shell command for process scripts. |
@@ -102,6 +103,7 @@ The following directives are available:
 [queue]: ./directives/queue
 [resource-labels]: ./directives/resource-labels
 [resource-limits]: ./directives/resource-limits
+[retry-on]: ./directives/retry-on
 [scratch]: ./directives/scratch
 [secret]: ./directives/secret
 [shell]: ./directives/shell

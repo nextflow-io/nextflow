@@ -59,6 +59,14 @@ The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respect
 
 The name of the process that spawned the task.
 
+##### `task.terminationReason`
+
+<AddedInVersion version="27.04" />
+
+The reason reported by the executor for the termination of the task, for example, `OOMKilled`. It is `null` when no reason is reported.
+
+The termination reason is only available after the task has been executed, for example, in the [`errorStrategy`](./directives/error-strategy) directive. It is currently reported only by the Kubernetes executor. See [retryOn](./directives/retry-on) for the list of reported values.
+
 ##### `task.workDir`
 
 *Available only in `exec:` blocks*
