@@ -85,6 +85,32 @@ class ConfigValidatorTest extends Specification {
         capture.toString().contains('Unrecognized config option \'process.$bar.cpus\'')
     }
 
+    def 'should validate retry policy config options' () {
+        when:
+        new ConfigValidator().validate([
+            nextflow: [
+                retryPolicy: [
+                    delay: '5s',
+                    maxDelay: '2m',
+                    maxAttempts: 7,
+                    jitter: 0.2,
+                    multiplier: 1.5
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            nextflow: [
+                retryPolicy: [ maxAttempt: 7 ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'nextflow.retryPolicy.maxAttempt\'')
+    }
+
     def 'should warn about invalid config options' () {
         when:
         new ConfigValidator().validate([
