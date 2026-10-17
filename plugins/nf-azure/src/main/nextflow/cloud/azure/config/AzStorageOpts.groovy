@@ -18,7 +18,6 @@ package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
-import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
@@ -49,7 +48,7 @@ class AzStorageOpts implements ConfigScope {
     @Description("""
         The blob storage shared access signature (SAS) token, which can be provided instead of an account key. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
     """)
-    String sasToken
+    final String sasToken
 
     @ConfigOption
     @Description("""
@@ -59,7 +58,6 @@ class AzStorageOpts implements ConfigScope {
 
     @PlaceholderName("<name>")
     final Map<String,AzFileShareOpts> fileShares
-
 
     AzStorageOpts(Map config, Map<String,String> env=SysEnv.get()) {
         assert config!=null
