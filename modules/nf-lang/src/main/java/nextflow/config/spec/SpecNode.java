@@ -31,6 +31,7 @@ import nextflow.script.dsl.DslScope;
 import nextflow.script.dsl.FeatureFlag;
 import nextflow.script.dsl.FeatureFlagDsl;
 import nextflow.script.dsl.ProcessDsl;
+import nextflow.script.types.Duration;
 
 /**
  * Models a config spec.
@@ -88,7 +89,21 @@ public sealed interface SpecNode {
             "",
             Map.ofEntries(
                 Map.entry("enable", (SpecNode) new Scope("", enableOpts)),
-                Map.entry("preview", (SpecNode) new Scope("", previewOpts))
+                Map.entry("preview", (SpecNode) new Scope("", previewOpts)),
+                Map.entry("retryPolicy", (SpecNode) retryPolicyScope())
+            )
+        );
+    }
+
+    private static Scope retryPolicyScope() {
+        return new Scope(
+            "",
+            Map.ofEntries(
+                Map.entry("delay", (SpecNode) new Option("Delay used for retryable operations (default: `350ms`).", List.of(Duration.class))),
+                Map.entry("jitter", (SpecNode) new Option("Jitter value used for retryable operations (default: `0.25`).", List.of(Double.class))),
+                Map.entry("maxAttempts", (SpecNode) new Option("Max attempts used for retryable operations (default: `5`).", List.of(Integer.class))),
+                Map.entry("maxDelay", (SpecNode) new Option("Max delay used for retryable operations (default: `90s`).", List.of(Duration.class))),
+                Map.entry("multiplier", (SpecNode) new Option("Delay multiplier used for retryable operations (default: `2.0`).", List.of(Double.class)))
             )
         );
     }
