@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.Lock
 
 import com.google.common.hash.HashCode
@@ -62,13 +63,27 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
      */
     private static final Striped<Lock> locks = Striped.lock(1024)
 
+    /**
+     * How far the resume walk looks past a missing attempt, e.g. one removed by {@code nextflow clean},
+     * for a later attempt that is still cached.
+     */
+    static final int MAX_LOOKAHEAD = 10
+
+    /**
+     * The walk position of tasks launched past an existing work dir, keyed by the hash they were launched
+     * under, so that their retry continues the walk instead of restarting at {@code failCount + 1}.
+     * Tasks launched at {@code failCount + 1} are not recorded.
+     */
+    private final Map<HashCode,Integer> positions = new ConcurrentHashMap<>()
+
     @Override
     boolean isEnabled(Session session) { return true }
 
     @Override
     void resolve(TaskRun task, HashCode hash, boolean shouldTryCache, TaskResolver resolver) {
 
-        int tries = task.failCount +1
+        final position = positions.remove(hash)
+        int tries = position != null ? position + 1 : task.failCount + 1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
@@ -90,6 +105,13 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
             }
 
             if( exists ) {
+                if( shouldTryCache && tries > 1 && resumeLegacyRetry(task, hash, resolver) )
+                    break
+                tries++
+                continue
+            }
+
+            if( shouldTryCache && hasLaterAttempt(hash, tries, resolver) ) {
                 tries++
                 continue
             }
@@ -111,11 +133,46 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
                 lock.unlock()
             }
 
+            if( tries != task.failCount + 1 )
+                positions.put(hash, tries)
+
             // submit task for execution
             resolver.launch( task, hash, workDir )
             break
         }
 
+    }
+
+    /**
+     * Whether a later attempt of the walk is still cached, when the current one is missing -- e.g. a
+     * failed attempt removed by {@code nextflow clean} while the successful one was kept.
+     */
+    private static boolean hasLaterAttempt(HashCode hash, int tries, TaskResolver resolver) {
+        for( int i = tries + 1; i <= tries + MAX_LOOKAHEAD; i++ ) {
+            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(i).hash()
+            final entry = resolver.entry(hash)
+            if( entry && FileHelper.asPath(entry.trace.getWorkDir()).exists() )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * Resume a task from the retry chain of an attempt launched past an existing work dir, as written
+     * before retries continued the walk: the retry of the attempt at {@code hash} was keyed
+     * {@code H(hash, 2)}, then {@code H(H(hash, 2), 3)}, and so on, which the walk never reaches.
+     */
+    private static boolean resumeLegacyRetry(TaskRun task, HashCode hash, TaskResolver resolver) {
+        for( int i = 2; i <= MAX_LOOKAHEAD + 1; i++ ) {
+            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(i).hash()
+            final entry = resolver.entry(hash)
+            if( !entry )
+                return false
+            final workDir = FileHelper.asPath(entry.trace.getWorkDir())
+            if( entry.trace.isCompleted() && workDir.exists() )
+                return resolver.resume(task, hash, workDir, entry)
+        }
+        return false
     }
 
 }
