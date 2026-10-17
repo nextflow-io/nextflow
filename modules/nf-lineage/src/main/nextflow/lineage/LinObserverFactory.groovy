@@ -18,6 +18,7 @@ package nextflow.lineage
 
 import groovy.transform.CompileStatic
 import nextflow.Session
+import nextflow.lineage.cleanup.DeletedOutputs
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceObserverFactoryV2
 
@@ -31,10 +32,13 @@ class LinObserverFactory implements TraceObserverFactoryV2 {
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        final result = new ArrayList<TraceObserverV2>(1)
+        final result = new ArrayList<TraceObserverV2>(2)
         final store = LinStoreFactory.getOrCreate(session)
         if( store )
             result.add( new LinObserver(session, store) )
+        final deleted = DeletedOutputs.get(session)
+        if( deleted )
+            result.add( deleted )
         return result
     }
 

@@ -19,7 +19,9 @@ package nextflow.trace
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cache.CacheDB
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.trace.config.DagConfig
@@ -32,6 +34,7 @@ import nextflow.trace.config.TraceConfig
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
@@ -48,6 +51,7 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
         createReportObserver(result)
         createTimelineObserver(result)
         createTraceFileObserver(result)
+        createCleanupObserver(result)
         return result
     }
 
@@ -102,6 +106,30 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
             final path = resolve('trace', config.directory, config.file)
             result << new TraceFileObserver(config, path)
         }
+    }
+
+    protected void createCleanupObserver(Collection<TraceObserverV2> result) {
+        final cleanup = session.config.cleanup
+        if( cleanup !instanceof String )
+            return
+        if( cleanup != 'eager' )
+            throw new AbortOperationException("Invalid `cleanup` config option -- offending value: '${cleanup}'")
+        if( !isDefaultCache(session) ) {
+            log.warn "Eager cleanup is not supported with a custom cache, since other runs may use the deleted files -- cleanup will be disabled"
+            return
+        }
+        result << new CleanupObserver()
+    }
+
+    /**
+     * Determine whether the session uses the default cache (local or
+     * cloud cache), rather than a custom cache provided by a plugin,
+     * which may be shared by other runs.
+     *
+     * @param session
+     */
+    static boolean isDefaultCache(Session session) {
+        return session.cache == null || session.cache.getClass() == CacheDB
     }
 
     /**

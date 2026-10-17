@@ -19,6 +19,7 @@ package nextflow.file
 import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ExecutorService
@@ -333,6 +334,35 @@ class FilePublisherTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should keep the existing target when the source was deleted'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        def source = workDir.resolve('foo.txt')
+        def target = pubDir.resolve('foo.txt'); target.text = 'Hello'
+        def session = mockSession()
+        def opts = [sourceDir: workDir, overwrite: 'standard']
+
+        when:
+        new FilePublisher(session, opts).publishFile(source, target, MODE)
+        then:
+        1 * session.notifyFilePublish(_)
+        target.text == 'Hello'
+
+        when:
+        target.delete()
+        new FilePublisher(session, opts).publishFile(source, target, MODE)
+        then:
+        thrown(NoSuchFileException)
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE << [FilePublisher.Mode.COPY, FilePublisher.Mode.LINK]
     }
 
     def 'should return copy options'() {

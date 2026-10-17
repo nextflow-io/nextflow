@@ -36,11 +36,13 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
     """)
     final String bucketDir
 
-    @ConfigOption
+    @ConfigOption(types=[Boolean])
     @Description("""
         Delete all files associated with a run in the work directory when the run completes successfully (default: `false`).
+
+        Set to `'eager'` to delete each task output file during the run, as soon as it is no longer needed.
     """)
-    final boolean cleanup
+    final String cleanup
 
     @ConfigOption
     @Description("""
@@ -70,7 +72,7 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
     ConfigMap(Map opts) {
         super(opts)
         bucketDir = opts.bucketDir
-        cleanup = opts.cleanup as boolean
+        cleanup = opts.cleanup?.toString()
         outputDir = opts.outputDir
         resume = opts.resume as boolean
         workDir = opts.workDir

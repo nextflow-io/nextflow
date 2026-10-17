@@ -23,6 +23,24 @@ This option will prevent the use of the *resume* feature on subsequent execution
 This option is not supported for remote work directories, such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
 :::
 
+Set to `'eager'` to delete each task output file during the run, as soon as it has been published (if needed) and every task that might use it has completed.
+
+When resuming a run with eager cleanup, a task whose outputs were deleted is resumed from its [lineage](../../tutorials/data-lineage), so lineage must be enabled (`lineage.enabled = true`). If a downstream task needs to be executed, the deleted files are restored by re-executing the tasks that produced them. If a deleted file was published by a workflow output and the published copy has since changed, the task that produced it is re-executed so that it can be published again.
+
+Eager cleanup has the following limitations:
+
+- Tasks that hash their inputs by content (i.e. `cache 'deep'` or `cache 'sha256'`) are re-executed on resume if their inputs were deleted.
+
+- Eager cleanup is disabled when using a custom cache provided by a plugin, since the cache may be shared with other runs.
+
+- Helper files and log files created by Nextflow (e.g. `.command.run`, `.command.log`) are not deleted.
+
+- Files that are published as symlinks (the default `publishDir` mode) are not deleted, since deleting them would break the published files. Use the `copy` or `link` publish mode instead.
+
+- Input files that are staged into the work directory (e.g. from an HTTP/FTP server or S3 bucket) are not deleted.
+
+- Files created by operators (e.g. `collectFile`, `splitFastq`) are not deleted.
+
 ##### `outputDir`
 
 <AddedInVersion version="24.10" />
