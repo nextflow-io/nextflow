@@ -56,4 +56,30 @@ class DefaultCacheStoreTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should report the underlying cause when the cache DB cannot be opened' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def uuid = UUID.randomUUID()
+        and: 'a db path that cannot be opened by leveldb'
+        def dataDir = folder.resolve("cache/$uuid")
+        Files.createDirectories(dataDir)
+        Files.createFile(dataDir.resolve('db'))
+        and:
+        def store = new DefaultCacheStore(uuid, 'test_1', folder)
+
+        when:
+        store.open()
+        then:
+        def e = thrown(IOException)
+        and:
+        e.message.startsWith("Can't open cache DB:")
+        e.message.contains('Cause: ')
+        e.message.contains('NXF_CACHE_DIR')
+        and:
+        e.cause instanceof IllegalArgumentException
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

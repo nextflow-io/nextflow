@@ -19,7 +19,11 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.file.FileHelper
@@ -78,11 +82,28 @@ class ParamsDslTest extends Specification {
         noExceptionThrown()
     }
 
-    def 'should report error for missing required param'() {
-        given:
-        def cliParams = [:]
-        def configParams = [outdir: 'results']
+    def 'should report error for missing required record param'() {
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
 
+            record Sample {
+                id: String?
+            }
+
+            workflow { params }
+            ''',
+            params: [:]
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample` is required but no value was provided'
+    }
+
+    def 'should report error for missing required param'() {
         when:
         runScript(
             '''\
@@ -93,12 +114,28 @@ class ParamsDslTest extends Specification {
 
             workflow { params }
             ''',
-            params: cliParams,
-            configParams: configParams
+            params: [:],
+            configParams: [outdir: 'results']
         )
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `input` is required but was not specified on the command line, params file, or config'
+        e.message == 'Parameter `input` is required but no value was provided'
+
+        when:
+        runScript(
+            '''\
+            params {
+                limit: Integer = 10
+            }
+
+            workflow { params.limit }
+            ''',
+            configParams: [limit: null]
+        )
+
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `limit` is required but no value was provided'
     }
 
     def 'should report error for invalid param'() {
@@ -164,12 +201,12 @@ class ParamsDslTest extends Specification {
     }
 
     @Unroll
-    def 'should validate float param with default value'() {
+    def 'should validate a numeric param default given in any numeric literal'() {
         when:
         runScript(
             """\
             params {
-                factor: Float = ${DEF_VALUE}
+                factor: ${TYPE} = ${DEF_VALUE}
             }
 
             workflow { params }
@@ -179,26 +216,13 @@ class ParamsDslTest extends Specification {
         noExceptionThrown()
 
         where:
-        DEF_VALUE << [ '0.1f', '0.1d', '0.1g' ]
-    }
-
-    @Unroll
-    def 'should validate integer param with default value'() {
-        when:
-        runScript(
-            """\
-            params {
-                factor: Integer = ${DEF_VALUE}
-            }
-
-            workflow { params }
-            """
-        )
-        then:
-        noExceptionThrown()
-
-        where:
-        DEF_VALUE << [ '100i', '100l', '100g' ]
+        TYPE      | DEF_VALUE
+        'Float'   | '0.1f'
+        'Float'   | '0.1d'
+        'Float'   | '0.1g'
+        'Integer' | '100i'
+        'Integer' | '100l'
+        'Integer' | '100g'
     }
 
     def 'should validate record collection param'() {
@@ -239,6 +263,209 @@ class ParamsDslTest extends Specification {
         result[2].id == 3
     }
 
+    def 'should load dataflow params from the command line'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id,count\na,1\nb,2\n'
+        def cliParams = [samples: samplesheet.toString(), limit: '5']
+
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+                limit: Value<Integer>
+            }
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow {
+                params.samples
+                    .map { s -> s.count }
+                    .collect()
+                    .combine(params.limit)
+            }
+            ''',
+            params: cliParams
+        )
+        then:
+        def (counts, limit) = result.val
+        counts.toSorted() == [1, 2]
+        limit == 5
+
+        cleanup:
+        samplesheet?.delete()
+    }
+
+    def 'should give dataflow params as plain values'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id,count\na,1\nb,2\n'
+        def cliParams = [samples: samplesheet.toString(), limit: '5']
+        def configParams = [outdir: 'results'] + cliParams
+
+        when:
+        def params = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+                limit: Value<Integer>
+                factor: Value<Integer> = 3
+                label: String = 'demo'
+            }
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow { params }
+            ''',
+            config: [params: configParams],
+            params: cliParams,
+            configParams: configParams
+        )
+        then:
+        params.samples instanceof ChannelImpl
+        ((ChannelImpl)params.samples).getSource() instanceof DataflowBroadcast
+        params.limit instanceof ValueImpl
+        ((ValueImpl)params.limit).getSource() instanceof DataflowVariable
+        and:
+        params.toPlainMap() == [outdir: 'results', samples: samplesheet.toString(), limit: 5, factor: 3, label: 'demo']
+
+        cleanup:
+        samplesheet?.delete()
+    }
+
+    def 'should give a channel param set to a path in the config as that path'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id\na\n'
+        def configParams = [samples: samplesheet]
+
+        when:
+        def params = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+            }
+
+            record Sample {
+                id: String
+            }
+
+            workflow { params }
+            ''',
+            config: [params: configParams],
+            configParams: configParams
+        )
+        then:
+        params.samples instanceof ChannelImpl
+        params.toPlainMap().samples.is(samplesheet)
+
+        cleanup:
+        samplesheet?.delete()
+    }
+
+    def 'should keep the non-dataflow fields of a record param'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id\na\n'
+        def reference = Files.createTempFile('test', '.fa')
+        def cliParams = [inputs: [samples: samplesheet.toString(), reference: reference.toString()]]
+
+        when:
+        def params = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                inputs: Inputs
+            }
+
+            record Inputs {
+                samples: Channel<Sample>
+                reference: Path
+            }
+
+            record Sample {
+                id: String
+            }
+
+            workflow { params }
+            ''',
+            config: [params: cliParams],
+            params: cliParams,
+            configParams: cliParams
+        )
+        then:
+        def plain = params.toPlainMap()
+        params.inputs.samples instanceof ChannelImpl
+        plain.inputs.samples == samplesheet.toString()
+        plain.inputs.reference == params.inputs.reference
+
+        cleanup:
+        samplesheet?.delete()
+        reference?.delete()
+    }
+
+    def 'should give non-dataflow params unchanged as plain values'() {
+        given:
+        def inputFile = Files.createTempFile('test', '.csv')
+        def cliParams = [input: inputFile.toString(), chunk_size: '3', sample: [id: 'a', greeting: 'hola']]
+        def configParams = [outdir: 'results'] + cliParams
+
+        when:
+        def params = runScript(
+            '''\
+            params {
+                input: Path
+                chunk_size: Integer = 1
+                save_intermeds: Boolean
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                greeting: String
+            }
+
+            workflow { params }
+            ''',
+            config: [params: configParams],
+            params: cliParams,
+            configParams: configParams
+        )
+        then:
+        def plain = params.toPlainMap()
+        plain == params
+
+        cleanup:
+        inputFile?.delete()
+    }
+
+    def 'should give the params as plain values without a params block'() {
+        when:
+        def params = runScript(
+            '''\
+            params.input = 'samples.csv'
+
+            workflow { params }
+            '''
+        )
+        then:
+        params.toPlainMap().is(params)
+    }
+
     def 'should validate record param from nested map'() {
         when: 'a script is invoked as `nextflow run module.nf --sample.id a --sample.greeting hola`'
         def result = runScript(
@@ -262,6 +489,52 @@ class ParamsDslTest extends Specification {
         result instanceof Record
         result.id == 'a'
         result.greeting == 'hola'
+    }
+
+    def 'should report the field of a record param that cannot be converted'() {
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                paired: Boolean
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [id: 'a', paired: 'yes']]
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample.paired` with type Boolean cannot be assigned to yes [String]'
+
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                paired: Boolean
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [paired: 'true']]
+        )
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample` with type Sample is missing required field `id`'
     }
 
     def 'should report error for invalid record type'() {
@@ -310,6 +583,23 @@ class ParamsDslTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message == "Input record [id:1, name:sample1] is missing field 'value' required by record type 'Sample'"
+    }
+
+    def 'should apply a null param value over the declared default'() {
+        when:
+        def result = runScript(
+            '''\
+            params {
+                limit: Integer? = 10
+            }
+
+            workflow { params.limit }
+            ''',
+            configParams: [limit: null]
+        )
+
+        then:
+        result == null
     }
 
 }

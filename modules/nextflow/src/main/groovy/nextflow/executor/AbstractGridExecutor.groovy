@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.ResourceTracker
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -28,6 +29,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.MemoryUnit
 import nextflow.util.Throttle
 import org.apache.commons.lang3.StringUtils
 /**
@@ -60,7 +62,18 @@ abstract class AbstractGridExecutor extends Executor {
      * @return
      */
     TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'))
+        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'), createResourceTracker())
+    }
+
+    /**
+     * Create a resource tracker from the `executor.cpus` and `executor.memory`
+     * settings, or {@code null} when neither is specified
+     */
+    @PackageScope
+    ResourceTracker createResourceTracker() {
+        final cpus = config.getExecConfigProp(name, 'cpus', 0) as int
+        final memory = config.getExecConfigProp(name, 'memory', null) as MemoryUnit
+        return cpus || memory ? new ResourceTracker(cpus, memory?.toBytes() ?: 0L) : null
     }
 
     /*

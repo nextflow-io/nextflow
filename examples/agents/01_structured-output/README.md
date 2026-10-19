@@ -39,7 +39,7 @@ every agent task runs in. It is safe to run locally as a first test of the
    - `key_points: List<String>` — a bullet-list of the main takeaways
 
    These four types (`String`, `Float`, `Boolean`, `List<String>`) cover the
-   full set of scalar and collection types the v1 JSON-schema deriver supports.
+   full set of scalar and collection types the v1 JSON-schema derivation supports.
 
 3. **The `analyst` agent** is declared with:
    - `model 'openai/gpt-5-mini'` — the LLM to call.

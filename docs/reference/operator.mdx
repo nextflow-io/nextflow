@@ -752,7 +752,7 @@ An optional [closure][script-closure] can be used to control how two items are m
 
 The `merge` operator may return a channel or value depending on the inputs:
 
-- If the first argument is a channel, the `merge` operator returns a channel merging as many values as are available for all inputs. Dataflow values are re-used for each merged value.
+- If the first argument is a channel, the `merge` operator returns a channel merging as many values as are available for all inputs. Dataflow values are reused for each merged value.
 
 - If the first argument is a dataflow value, the `merge` operator returns a dataflow value, merging the first value from each input, regardless of whether there are channel inputs with additional values.
 
@@ -1523,7 +1523,7 @@ Associate the channel with a tag. For example:
 [config-feature-flags]: ./feature-flags
 [operator-empty]: ./stdlib-namespaces/channel#empty
 [operator-typed]: ./stdlib-types/channel
-[preparing-static-types]: ../tutorials/static-types#preparing-for-static-typing
+[preparing-static-types]: ../static-typing-prep
 [process-cache]: ./process/directives/cache
 [script-closure]: ../script#closures
 [script-regexp]: ../script#regular-expressions

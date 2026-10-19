@@ -524,6 +524,23 @@ class BashWrapperBuilderTest extends Specification {
         SysEnv.pop()
     }
 
+    def 'should flush the file system before writing the exit file' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
+
+        when:
+        def wrapper = newBashWrapperBuilder(workDir: Paths.get('/work/dir')).buildNew0()
+        then:
+        // the `.exitcode` file is the completion marker polled by the executors, therefore
+        // it must be written only after all other task writes have been flushed, otherwise
+        // a shared file system may expose the marker before the task outputs
+        wrapper.indexOf('sync || true') > 0
+        wrapper.indexOf('sync || true') < wrapper.indexOf('printf -- $exit_status > /work/dir/.exitcode')
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should unstage outputs' () {
         given:
         def folder = Paths.get('/work/dir')

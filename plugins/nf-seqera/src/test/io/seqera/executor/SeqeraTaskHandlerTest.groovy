@@ -49,6 +49,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.nio.file.Paths
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 /**
  * Tests for SeqeraTaskHandler metadata fetching functionality
@@ -262,6 +265,36 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getLogStreamId() == 'log-stream-xyz'
         trace.getResourceAllocation() == [cpuShares: 2048, memoryMiB: 4096]
         trace.getExecutorName() == 'seqera/aws'
+    }
+
+    def 'should anchor the trace start on the last attempt and report the retry time: #desc'() {
+        given: 'Nextflow saw the task RUNNING at t=100s and complete at t=1000s'
+        def handler = createHandlerForTraceTest()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 50_000
+        handler.startTimeMillis = 100_000
+        handler.completeTimeMillis = 1_000_000
+        handler.cachedTaskState = new SchedTaskState().attempts(starts.collect { Long ms ->
+            new TaskAttempt().startedAt(ms != null ? OffsetDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneOffset.UTC) : null)
+        })
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.get('start') == start
+        trace.get('realtime') == realtime
+        trace.getNumAttempts() == attempts
+        trace.getRetryTime() == retry
+
+        where:
+        desc                        | starts                 || start      | realtime | attempts | retry
+        'single attempt'            | [100_000L]             || 100_000L   | 900_000L | 1        | null
+        'reclaimed, then succeeded' | [100_000L, 700_000L]   || 700_000L   | 300_000L | 2        | 600_000L
+        'last attempt never ran'    | [100_000L, null]       || 100_000L   | 900_000L | 2        | null
+        'last start after complete' | [100_000L, 1_200_000L] || 1_000_000L | 0L       | 2        | 900_000L
+        'last start not after seen' | [50_000L, 100_000L]    || 100_000L   | 900_000L | 2        | null
     }
 
     def 'should detect completion when batch submission fails'() {
@@ -1377,6 +1410,104 @@ class SeqeraTaskHandlerTest extends Specification {
                 fusionEnv() >> [:]
             }
         }
+    }
+
+    def 'submit leaves Task.labels unset when the task declares no labels of its own'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def autoLabels = ['nextflow.io/runName': 'crazy_darwin', 'nextflow.io/resume': 'false']
+        // a real task config, so that the runtime merge of the auto labels is exercised
+        def taskConfig = new TaskConfig([cpus: 2, memory: '1 GB'])
+        taskConfig.setAutoResourceLabels(autoLabels)
+        and:
+        // the merge must have happened, otherwise the empty delta below would prove nothing
+        assert taskConfig.getResourceLabels() == autoLabels
+        and:
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            // the run baseline holds the very same auto labels -- see
+            // SeqeraExecutor#computeRunResourceLabels
+            getRunResourceLabels() >> autoLabels
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'the auto labels are attached to the run, therefore not re-sent with every task'
+        captured != null
+        captured.getLabels() == null
+    }
+
+    def 'submit sends the task labels missing from the run baseline'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        // a real task config, so that the runtime merge of the auto labels is exercised
+        def taskConfig = new TaskConfig([cpus: 2, memory: '1 GB', resourceLabels: [team: 'genomics']])
+        taskConfig.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin', 'nextflow.io/resume': 'false'])
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            // the run baseline only holds part of the labels carried by the task
+            getRunResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'only the delta against the run baseline is sent'
+        captured != null
+        captured.getLabels() == ['nextflow.io/resume': 'false', team: 'genomics']
     }
 
     def 'submit leaves Task.labels unset when the task labels equal the run baseline'() {

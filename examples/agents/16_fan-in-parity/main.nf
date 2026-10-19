@@ -4,7 +4,8 @@ nextflow.enable.types = true
 // channel (a `Bag<Finding>` produced by `collect()`) and BOTH fire exactly once over
 // the whole bag. This shows the agent inherits canonical Nextflow cardinality: a
 // value/singleton input (what `collect()` yields) => one invocation. The only
-// difference is what the body does — deterministic Groovy vs an LLM call. See README.md.
+// difference is what the body does — deterministic Groovy vs an LLM call. The agent
+// composes its output from the model's answer and a value computed by Nextflow. See README.md.
 
 record Finding {
     id:      String
@@ -18,7 +19,7 @@ process reduce_with_process {
     output:
     report: String
     exec:
-        report = "combined ${findings.size()} findings [${findings.collect { it.id }.sort().join(', ')}]"
+        report = "combined ${findings.size()} findings [${findings.collect { f -> f.id }.toSorted().join(', ')}]"
 }
 
 // Agent reducer: SAME input shape (Bag<Finding>) -> also runs ONCE (same isSingleton rule).
@@ -28,12 +29,12 @@ agent reduce_with_agent {
     input:
     findings: Bag<Finding>
     output:
-    report: String
+    record(count: findings.size(), summary: stdout())
     prompt:
     """
     Combine these ${findings.size()} findings into one short sentence:
 
-    ${findings.collect { "- ${it.id}: ${it.summary}" }.join('\n')}
+    ${findings.collect { f -> "- ${f.id}: ${f.summary}" }.join('\n')}
     """
 }
 
@@ -50,5 +51,5 @@ workflow {
     def bag = findings.collect()
 
     reduce_with_process(bag).view { r -> "PROCESS reducer => ${r}" }
-    reduce_with_agent(bag).view   { r -> "AGENT   reducer => ${r}" }
+    reduce_with_agent(bag).view   { r -> "AGENT   reducer => combined ${r.count} findings: ${r.summary}" }
 }

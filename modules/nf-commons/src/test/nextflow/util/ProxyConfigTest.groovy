@@ -17,8 +17,12 @@
 package nextflow.util
 
 import io.seqera.http.HxClient
+import io.seqera.util.net.ProxyConfig as NetProxyConfig
 import spock.lang.Specification
 /**
+ * Tests for the thin {@link ProxyConfig} adapter that exposes the shared
+ * {@code io.seqera:lib-util-net} config to HxClient-based clients. The proxy resolution and
+ * matching semantics are covered by {@code io.seqera.util.net.ProxyConfigTest}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -28,90 +32,17 @@ class ProxyConfigTest extends Specification {
         ProxyConfig.reset()
     }
 
-    private static PasswordAuthentication invokeAuth(Authenticator authenticator, Authenticator.RequestorType type, String host, int port, String protocol) {
-        // drive the protected Authenticator API the same way the JDK HTTP client does
-        return authenticator.requestPasswordAuthenticationInstance(
-                host, null, port, protocol, 'proxy auth', 'basic', new URL('http://example.com'), type )
-    }
-
-    def 'should parse proxy env variables'( ) {
-
-        expect:
-        ProxyConfig.parse(null) == null
-
-        ProxyConfig.parse('http://domain') == new ProxyConfig(protocol: 'http', host: 'domain')
-        ProxyConfig.parse('http://domain:333') == new ProxyConfig(protocol: 'http',host: 'domain', port: '333')
-        ProxyConfig.parse('http://10.20.30.40') == new ProxyConfig(protocol: 'http',host: '10.20.30.40')
-        ProxyConfig.parse('http://10.20.30.40:333') == new ProxyConfig(protocol: 'http',host: '10.20.30.40', port: '333')
-        ProxyConfig.parse('http://10.20.30.40:333/some/path') == new ProxyConfig(protocol: 'http',host: '10.20.30.40', port: '333')
-
-        ProxyConfig.parse('http://user:pass@domain') == new ProxyConfig(protocol: 'http',host: 'domain', username: 'user', password: 'pass')
-        ProxyConfig.parse('http://user:pass@domain:333') == new ProxyConfig(protocol: 'http',host: 'domain', port: '333', username: 'user', password: 'pass')
-        ProxyConfig.parse('http://user:pass@10.20.30.40') == new ProxyConfig(protocol: 'http',host: '10.20.30.40', username: 'user', password: 'pass')
-        ProxyConfig.parse('http://user:pass@10.20.30.40:333') == new ProxyConfig(protocol: 'http',host: '10.20.30.40', port: '333', username: 'user', password: 'pass')
-        ProxyConfig.parse('http://user:pass@10.20.30.40:333/some/path') == new ProxyConfig(protocol: 'http',host: '10.20.30.40', port: '333', username: 'user', password: 'pass')
-
-        ProxyConfig.parse('foo') == new ProxyConfig(host: 'foo')
-        ProxyConfig.parse('foo:123') == new ProxyConfig(host: 'foo', port: '123')
-
-    }
-
-    def 'should url-decode proxy credentials'() {
-        expect: 'percent-encoded username/password are decoded'
-        ProxyConfig.parse('http://user%40corp:p%40ss%3Aword@domain:333') == new ProxyConfig(protocol: 'http', host: 'domain', port: '333', username: 'user@corp', password: 'p@ss:word')
-        and: 'a plus sign stays literal (RFC 3986 userinfo, not form encoding)'
-        ProxyConfig.parse('http://a+b:c+d@domain') == new ProxyConfig(protocol: 'http', host: 'domain', username: 'a+b', password: 'c+d')
-    }
-
-    def 'authenticator should release credentials only for matching proxy challenges'() {
-        given:
-        def proxy = new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar')
-        def authenticator = proxy.authenticator()
-
-        expect: 'proxy challenge from the matching host/port/protocol'
-        with(invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'proxy.example.com', 8080, 'https')) {
-            userName == 'foo'
-            new String(password) == 'bar'
-        }
-        and: 'origin-server challenge yields nothing'
-        invokeAuth(authenticator, Authenticator.RequestorType.SERVER, 'proxy.example.com', 8080, 'https') == null
-        and: 'different host yields nothing'
-        invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'other.example.com', 8080, 'https') == null
-    }
-
-    def 'authenticator should release credentials for an https proxy over an http CONNECT tunnel'() {
-        given: 'an https_proxy-derived config (Launcher sets protocol=https from HTTPS_PROXY)'
-        def proxy = new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar')
-        def authenticator = proxy.authenticator()
-
-        when: 'the JDK authenticates an HTTPS CONNECT tunnel — it reports requestingProtocol="http", not "https" (see #5634)'
-        def auth = invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'proxy.example.com', 8080, 'http')
-
-        then: 'credentials must still be released, otherwise HTTPS targets 407 behind an authenticating proxy'
-        auth != null
-        auth.userName == 'foo'
-        new String(auth.password) == 'bar'
-    }
-
-    def 'authenticator relaxation is one-directional: http proxy config rejects an https request'() {
-        given: 'an http_proxy-derived config'
-        def proxy = new ProxyConfig(protocol: 'http', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar')
-        def authenticator = proxy.authenticator()
-
-        expect: 'an https requesting-protocol against an http config is still rejected'
-        invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'proxy.example.com', 8080, 'https') == null
-    }
-
-    def 'proxyConfig should return null when no proxy is registered'() {
+    def 'proxyConfig should return null when no proxy is configured'() {
         expect:
         ProxyConfig.proxyConfig() == null
     }
 
-    def 'proxyConfig should build an HxProxyConfig from the resolved proxies'() {
+    def 'proxyConfig should return the scheme-aware resolved proxies'() {
         given:
-        ProxyConfig.register(new ProxyConfig(protocol: 'http', host: 'http-proxy', port: '3128'))
-        ProxyConfig.register(new ProxyConfig(protocol: 'https', host: 'https-proxy', port: '3129', username: 'foo', password: 'bar'))
-        ProxyConfig.setNoProxyHosts(['internal.example.com'])
+        ProxyConfig.setConfig(NetProxyConfig.fromEnvironment([
+                HTTP_PROXY : 'http://http-proxy:3128',
+                HTTPS_PROXY: 'http://foo:bar@https-proxy:3129',
+                NO_PROXY   : 'internal.example.com' ]))
 
         when:
         def cfg = ProxyConfig.proxyConfig()
@@ -130,7 +61,7 @@ class ProxyConfigTest extends Specification {
 
     def 'proxyConfig should default the port when missing'() {
         given:
-        ProxyConfig.register(new ProxyConfig(protocol: 'https', host: 'p'))
+        ProxyConfig.setConfig(NetProxyConfig.fromEnvironment([HTTPS_PROXY: 'https://p']))
 
         expect:
         (ProxyConfig.proxyConfig().toProxySelector().select(URI.create('https://x/y'))[0].address() as InetSocketAddress).port == 443
@@ -138,7 +69,7 @@ class ProxyConfigTest extends Specification {
 
     def 'proxyConfig applied via withProxyConfig should reach the client config'() {
         given:
-        ProxyConfig.register(new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar'))
+        ProxyConfig.setConfig(NetProxyConfig.fromEnvironment([HTTPS_PROXY: 'http://foo:bar@proxy.example.com:8080']))
 
         when:
         def client = HxClient.newBuilder().withProxyConfig(ProxyConfig.proxyConfig()).build()

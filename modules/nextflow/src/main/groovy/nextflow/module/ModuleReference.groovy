@@ -19,6 +19,7 @@ package nextflow.module
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import nextflow.exception.AbortOperationException
+import nextflow.script.control.ModuleResolver
 
 import java.util.regex.Pattern
 
@@ -31,7 +32,8 @@ import java.util.regex.Pattern
 @EqualsAndHashCode
 class ModuleReference {
 
-    // Must stay in sync with ModuleResolver.REMOTE_MODULE_PATTERN in nf-lang
+    // The canonical module reference format: an include source that is not a path is
+    // parsed with this pattern, and reported as an invalid module reference if it fails
     private static final Pattern MODULE_NAME_PATTERN = ~/^([a-z0-9][a-z0-9._\-]*)\/([a-z][a-z0-9._\-]*(?:\/[a-z][a-z0-9._\-]*)*)$/
 
     final String scope
@@ -58,6 +60,10 @@ class ModuleReference {
 
         // Trim whitespace
         source = source.trim()
+
+        if( ModuleResolver.isLocalModule(source) ) {
+            throw new AbortOperationException("Invalid module reference: '${source}' -- expected a registry module (scope/name), not a local path")
+        }
 
         def matcher = MODULE_NAME_PATTERN.matcher(source)
         if( !matcher.matches() ) {

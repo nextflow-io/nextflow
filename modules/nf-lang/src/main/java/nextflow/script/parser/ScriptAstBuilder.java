@@ -113,6 +113,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
 import static nextflow.script.ast.ASTUtils.*;
+import static nextflow.script.parser.EscapeUtils.checkEscapes;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static nextflow.script.parser.ScriptParser.*;
@@ -223,7 +224,7 @@ public class ScriptAstBuilder {
         if( !commentsEnabled )
             return;
         tokenStream.fill();
-        var comments = Comments.collect(tokenStream.getTokens());
+        var comments = Comments.collect(tokenStream.getTokens(), ScriptLexer.NL);
         moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, comments);
         if( comments.getShebang() != null )
             moduleNode.setShebang(comments.getShebang());
@@ -235,13 +236,16 @@ public class ScriptAstBuilder {
 
     private ModuleNode compilationUnit(CompilationUnitContext ctx) {
         var statements = new ArrayList<Statement>();
+        var statementContexts = new ArrayList<StatementContext>();
         boolean hasDeclarations = false;
 
         for( var declOrStmt : ctx.scriptDeclarationOrStatement() ) {
             if( declOrStmt.scriptDeclaration() != null )
                 hasDeclarations |= scriptDeclaration(declOrStmt.scriptDeclaration());
-            if( declOrStmt.statement() != null )
+            if( declOrStmt.statement() != null ) {
                 statements.add(statement(declOrStmt.statement()));
+                statementContexts.add(declOrStmt.statement());
+            }
         }
 
         for( int i = 0; i < statements.size(); i++ ) {
@@ -250,7 +254,8 @@ public class ScriptAstBuilder {
                 ? mce.getMethodAsString()
                 : null;
             if( defName != null && SCRIPT_DEF_NAMES.contains(defName) ) {
-                collectSyntaxError(new SyntaxException("Invalid " + defName + " definition -- check for missing or out-of-order section labels", stmt));
+                if( !reparseScriptDeclaration(statementContexts.get(i)) )
+                    collectSyntaxError(new SyntaxException("Invalid " + defName + " definition -- check for missing or out-of-order section labels", stmt));
                 statements.set(i, ast(new InvalidDeclaration(), stmt));
                 hasDeclarations = true;
             }
@@ -285,6 +290,31 @@ public class ScriptAstBuilder {
             throw createParsingFailedException(numberFormatError.getV2().getMessage(), numberFormatError.getV1());
 
         return moduleNode;
+    }
+
+    /**
+     * Re-parse a statement as a script declaration in order to
+     * report the syntax error that caused it to be parsed as a
+     * statement, e.g. `process foo { ... }` with an invalid body.
+     *
+     * Returns true if a syntax error was reported.
+     *
+     * @param ctx
+     */
+    private boolean reparseScriptDeclaration(StatementContext ctx) {
+        var parser = new ScriptParser(tokenStream);
+        parser.setErrorHandler(new DescriptiveErrorStrategy(tokenStream.getTokenSource().getInputStream()));
+        parser.getInterpreter().setPredictionMode(PredictionMode.LL);
+        parser.removeErrorListeners();
+        parser.addErrorListener(createANTLRErrorListener());
+        tokenStream.seek(ctx.getStart().getTokenIndex());
+        try {
+            parser.scriptDeclaration();
+            return false;
+        }
+        catch( ParseCancellationException e ) {
+            return true;
+        }
     }
 
     private boolean scriptDeclaration(ScriptDeclarationContext ctx) {
@@ -671,7 +701,7 @@ public class ScriptAstBuilder {
         Statement result;
         if( ctx.statement() != null ) {
             result = statement(ctx.statement());
-            if( !(result instanceof ExpressionStatement) ) {
+            if( !isEmitExpression(result) ) {
                 collectSyntaxError(new SyntaxException("Invalid output declaration in typed process -- must be a name, assignment, or expression", result));
                 return null;
             }
@@ -791,6 +821,7 @@ public class ScriptAstBuilder {
     private Expression processWhen(ProcessWhenContext ctx) {
         if( ctx == null )
             return EmptyExpression.INSTANCE;
+        collectWarning("The `when` section is deprecated -- use conditional logic in the calling workflow, or the `process.when` config option to disable a process at runtime", ctx.WHEN().getText(), ast( new EmptyStatement(), ctx.WHEN() ));
         return ast( expression(ctx.expression()), ctx );
     }
 
@@ -864,7 +895,12 @@ public class ScriptAstBuilder {
             .map(this::processOutput)
             .filter(stmt -> stmt != null)
             .toList();
-        return ast( block(null, statements), ctx );
+        var result = ast( block(null, statements), ctx );
+        if( statements.size() > 1 ) {
+            collectSyntaxError(new SyntaxException("Agent should have only one output -- combine outputs into a record", result));
+            return null;
+        }
+        return result;
     }
 
     private Statement agentPrompt(AgentPromptContext ctx) {
@@ -968,7 +1004,7 @@ public class ScriptAstBuilder {
         Statement result;
         if( ctx.statement() != null ) {
             result = statement(ctx.statement());
-            if( !(result instanceof ExpressionStatement) ) {
+            if( !isEmitExpression(result) ) {
                 collectSyntaxError(new SyntaxException("Invalid workflow emit -- must be a name, assignment, or expression", result));
                 return null;
             }
@@ -992,7 +1028,8 @@ public class ScriptAstBuilder {
     private boolean isEmitExpression(Statement stmt) {
         if( stmt instanceof ExpressionStatement es ) {
             var exp = es.getExpression();
-            return !(exp instanceof VariableExpression || exp instanceof AssignmentExpression);
+            return !(exp instanceof VariableExpression)
+                && !(exp instanceof BinaryExpression be && be.getOperation().isA(Types.ASSIGNMENT_OPERATOR));
         }
         return false;
     }
@@ -1653,6 +1690,7 @@ public class ScriptAstBuilder {
 
     private ConstantExpression string(ParserRuleContext ctx) {
         var text = ctx.getText();
+        checkEscapes(text, ctx, text.startsWith(SLASH_STR)).forEach(this::collectSyntaxError);
         var result = constX(stringLiteral(text));
         result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
         return result;
@@ -1755,6 +1793,7 @@ public class ScriptAstBuilder {
 
     private ConstantExpression gstringText(ParserRuleContext ctx, String beginQuotation) {
         var text = ctx.getText();
+        checkEscapes(text, ctx, false).forEach(this::collectSyntaxError);
         var quotedText = new StringBuilder(text)
             .insert(0, beginQuotation)
             .append(beginQuotation)

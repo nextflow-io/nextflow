@@ -21,6 +21,7 @@ import java.nio.file.Paths
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -98,6 +99,25 @@ class GoogleBatchScriptLauncherTest extends Specification{
         launcher.targetScriptFile() == workDir.resolve(TaskRun.CMD_SCRIPT)
         launcher.targetWrapperFile() == workDir.resolve(TaskRun.CMD_RUN)
         launcher.targetStageFile() == workDir.resolve(TaskRun.CMD_STAGE)
+    }
+
+    def 'should export the config env in the task wrapper' () {
+        given:
+        def workDir = CloudStorageFileSystem.forBucket('my-bucket').getPath('/work/dir')
+        def bean = new TaskBean(
+                name: 'foo',
+                workDir: workDir,
+                targetDir: workDir,
+                script: 'echo hello',
+                containerImage: 'ubuntu:latest',
+                containerEnabled: true,
+                containerNative: true,
+                environment: [MY_ENV_VAR: 'my_value'] )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        then:
+        launcher.makeBinding().task_env == 'export MY_ENV_VAR="my_value"\n'
     }
 
 }

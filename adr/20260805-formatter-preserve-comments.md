@@ -7,7 +7,7 @@
 
 ## Summary
 
-The formatter can silently delete, move, or corrupt comments, because comments are only captured for a hand-picked set of AST node positions. Replace this allowlist with an algorithm that attaches *every* comment in the source to an AST node, ensuring that every comment is preserved by the formatter.
+The formatter can silently delete, move, or corrupt comments, because comments are only captured for a hand-picked set of AST node positions. Replace this allowlist with an algorithm that attaches *every* comment in the source to an AST node, so the formatter preserves every comment.
 
 ## Problem Statement
 
@@ -52,7 +52,7 @@ For a tool that rewrites the user's file in place, silent data loss is the worst
 
 Keep the AST printer; derive all comment attachments in one pass over the comment tokens.
 
-- Good, because the existing printer, options, and tests are reused unchanged -- the diff is confined to comment collection and comment emission.
+- Good, because the existing printer, options, and tests are reused unchanged, and the diff is confined to comment collection and comment emission.
 - Good, because it needs neither a grammar change nor a second lexer pass: comments are already in the parser's token stream, they just weren't all being preserved with the AST.
 - Good, because it is the mainstream design. Prettier decorates each comment with `(precedingNode, enclosingNode, followingNode)` and falls back `leading → trailing → dangling(enclosing) → dangling(root)`; Ruff attaches leading/trailing/dangling per node in a side map with a dedicated `place_comment` pass and hand-written overrides.
 - Bad, because attachment is a heuristic. Some source positions have no representable emission point, and those comments must be relocated using heuristics.
@@ -79,7 +79,7 @@ Attach nothing; let the printer query `commentsBefore/After/Inside` at each emis
 Introduce a full-fidelity concrete syntax tree containing every token including trivia, and derive the AST from it.
 
 - Good, because a formatter over a tree that contains every token cannot lose input. Sprocket's `wdl-format` carries comments as first-class trivia (`Trivia::{BlankLine, Comment}`, `Comment::{Preceding, Inline}`) rather than as node attachments, and gets blank-line policy in the same mechanism.
-- Bad, because it means maintaining a CST layer in addition to the AST -- a much larger change with new surface area.
+- Bad, because it means maintaining a CST layer in addition to the AST, a much larger change with more code to maintain.
 - Bad, because `WS -> skip` already forfeits the whitespace half of the fidelity, so the architectural cost buys less than it does for Sprocket.
 
 ## Decision
@@ -92,7 +92,7 @@ Adopt **option 1**: collect *all* comments from the parser token stream during A
 
 Comments (text and position) are collected from the parser token stream and stored on each module node.
 
-Comments are classified as newlines (`NL`) by the lexer, so they are identified by text prefix -- `//`, `/*`, `#!`. This is unambiguous, because an `NL` token is either a line terminator or a comment. Comments could be given a distinct token type, allowing them to be filtered by type rather than by text prefix, but this change is riskier while providing no additional benefit.
+Comments are classified as newlines (`NL`) by the lexer, so they are identified by text prefix: `//`, `/*`, `#!`. This is unambiguous, because an `NL` token is either a line terminator or a comment. Comments could be given a distinct token type, allowing them to be filtered by type rather than by text prefix, but this change is riskier while providing no additional benefit.
 
 The shebang remains a special case: it is recognized and set explicitly on `ScriptNode`, rather than attached like any other comment. Treating it as an ordinary comment would make it leading on whatever declaration happens to follow it in the source, and declaration sorting could then move it off line 1.
 
@@ -104,7 +104,7 @@ The formatter attaches each comment to an AST node prior to printing. The existi
 
 The AST is organized into a tree of **containers**: the module, script declarations with a body, block statements of an `if`/`else`/`try`/`catch`, closures, lists, maps, and argument lists. Each container owns an ordered list of *slots*: an AST node together with the source range in which a comment belongs to it. Containers nest, and sibling containers within a parent are disjoint, so the innermost container holding a comment is found by descent rather than by search.
 
-The reason why a slot can have its own range distinct from the node, is a **method chain**. `a.b().c().d()` is a single nested expression whose sub-expressions all start at `a`, so extents cannot separate one link from the next. Instead, each link gets a slot spanning the gap between the end of its receiver and the start of its method name -- exactly the point where the formatter breaks the line when it wraps the chain. A statement whose root expression is a wrappable chain therefore becomes a container of its own, holding one slot per link. This way, most comments in a method chain are preserved where they are.
+A slot can have its own range distinct from the node because of **method chains**. `a.b().c().d()` is a single nested expression whose sub-expressions all start at `a`, so extents cannot separate one link from the next. Instead, each link gets a slot spanning the gap between the end of its receiver and the start of its method name, exactly the point where the formatter breaks the line when it wraps the chain. A statement whose root expression is a wrappable chain therefore becomes a container of its own, holding one slot per link. This way, most comments in a method chain are preserved where they are.
 
 Each comment is resolved against its container:
 
@@ -120,30 +120,30 @@ Each comment is resolved against its container:
    - otherwise end-of-line and `precedingNode` exists → `TRAILING` on `precedingNode`
    - otherwise → `DANGLING` on the container, or `LEADING` on it for a container that has no place to print a dangling comment (a chain statement)
 
-Like the allowlist, this approach is fundamentally best-effort. The difference is that it is best-effort in *where comments are placed*, not whether they are placed at all. The attachment rules guarantee that **every comment lands somewhere**. If a comment cannot be preserved exactly where it is -- a comment in the middle of a binary operator expression, for example -- it is hoisted to a leading comment on its enclosing statement (cf. Prettier, Ruff, Black). The user can learn the limitations of the formatter and place comments accordingly, but this is much easier to do when comments are merely reassigned rather than deleted.
+Like the allowlist, this approach is best-effort. The difference is that it is best-effort in *where comments are placed*, not whether they are placed at all. The attachment rules guarantee that **every comment lands somewhere**. If a comment cannot be preserved exactly where it is, a comment in the middle of a binary operator expression for example, it is hoisted to a leading comment on its enclosing statement (cf. Prettier, Ruff, Black). The user can learn the limitations of the formatter and place comments accordingly, but this is much easier to do when comments are merely reassigned rather than deleted.
 
-This approach also builds on the existing *leading* and *trailing* modes, and adds a third mode -- *dangling* -- which handles comments after the last statement in a container (cf. Ruff).
+This approach also builds on the existing *leading* and *trailing* modes, and adds a third mode, *dangling*, which handles comments after the last statement in a container (cf. Ruff).
 
 ### Emitting comments
 
 The formatter emits leading, trailing, and dangling comments at every point where a comment can be attached:
 
-- statements and declarations -- leading and trailing
-- before a closing brace -- dangling
-- end of module -- dangling
-- list elements, map entries, call arguments -- leading and trailing
+- statements and declarations: leading and trailing
+- before a closing brace: dangling
+- end of module: dangling
+- list elements, map entries, call arguments: leading and trailing
 - process and workflow section labels
-- method-chain links -- leading and trailing
+- method-chain links: leading and trailing
 
 This logic largely replaces and augments the existing emission logic in the formatter.
 
-The main caveat: **every attachment site must have a matching emission point.** Attachment and emission must be kept in sync in order to guarantee that all comments are preserved. This invariant is verified by testing (see below).
+The main caveat: **every attachment site must have a matching emission point.** Attachment and emission must be kept in sync to guarantee that all comments are preserved. This invariant is verified by testing (see below).
 
 ### Verification
 
 The test suite covers all error cases presented in the Problem Statement, as well as all scripts in `docs/snippets` and `tests`. For each test case, the test harness verifies that all comments are preserved and `format(format(x)) == format(x)` (idempotence).
 
-As a final fallback, `nextflow lint -format` refuses skips formatting for a file (and warns) if any comments are missing from the formatter output. This catches alteration and duplication, and it replaces the current silent corruption with a loud, safe failure for every future edge case, including ones not yet imagined.
+As a final fallback, `nextflow lint -format` skips formatting a file (and warns) if any comments are missing from the formatter output. This catches alteration and duplication, and it replaces the current silent corruption with a loud, safe failure for every future edge case, including ones not yet imagined.
 
 ## Links
 

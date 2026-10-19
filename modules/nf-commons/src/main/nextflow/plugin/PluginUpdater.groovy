@@ -524,7 +524,7 @@ class PluginUpdater extends UpdateManager {
 
             // 2. find latest satisfying req
             // -- if it's a core nextflow plugin use the version expected by it
-            def depVersion = defaultPlugins.getPlugin(it.pluginId)?.version
+            def depVersion = defaultPlugins.hasPlugin(it.pluginId) ? defaultPlugins.getPlugin(it.pluginId).version : null
             // -- otherwise try to find the newest matching release
             if( !depVersion )
                 depVersion = findNewestMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version

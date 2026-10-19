@@ -42,24 +42,34 @@ public class RecordMap extends LinkedHashMap<String,Object> implements Record {
 
     @Override
     public void clear() {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot clear record");
     }
 
     @Override
     public Object put(String key, Object value) {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot set record field '" + key + "'");
     }
 
     @Override
     public void putAll(Map<? extends String, ? extends Object> m) {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot set record fields " + m.keySet());
     }
 
     @Override
     public Object remove(Object key) {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot remove record field '" + key + "'");
     }
 
+    private static UnsupportedOperationException immutable(String message) {
+        return new UnsupportedOperationException(message + " -- records are immutable");
+    }
+
+    @Override
+    public Record subMap(Iterable<String> keys) {
+        return subMap(DefaultGroovyMethods.toList(keys));
+    }
+
+    // needed to take precedence over DGM Map::subMap(Collection) at runtime
     public Record subMap(Collection<String> keys) {
         return new RecordMap(DefaultGroovyMethods.subMap(this, keys));
     }

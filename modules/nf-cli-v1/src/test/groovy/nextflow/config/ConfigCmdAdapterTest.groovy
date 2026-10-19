@@ -331,8 +331,8 @@ class ConfigCmdAdapterTest extends Specification {
         and:
         def paramsFile = Files.createTempFile('test', '.yml')
         paramsFile.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             theta: "${baseDir}/something"
             '''.stripIndent()
@@ -374,8 +374,8 @@ class ConfigCmdAdapterTest extends Specification {
         setup:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             '''.stripIndent()
         and:
@@ -388,7 +388,7 @@ class ConfigCmdAdapterTest extends Specification {
         params.delta = 'Foo'
         params.gamma = "I'm gamma"
         params.omega = "I'm the last"
-        
+
         process {
           publishDir = [path: params.alpha]
         }
@@ -809,63 +809,16 @@ class ConfigCmdAdapterTest extends Specification {
         config.dag.enabled
     }
 
-    def 'should set session weblog options' () {
+    def 'should reject the weblog option' () {
 
         given:
         def env = [:]
         def builder = [:] as ConfigCmdAdapter
 
         when:
-        def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(new ConfigObject(), env, new CmdRun(withWebLog: 'http://foo.com'))
         then:
-        !config.weblog
-
-        when:
-        config = new ConfigObject()
-        config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun())
-        then:
-        config.weblog instanceof Map
-        !config.weblog.enabled
-        config.weblog.url == 'http://bar.com'
-
-        when:
-        config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://foo.com'
-
-        when:
-        config = new ConfigObject()
-        config.weblog.enabled = true
-        config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://foo.com'
-
-        when:
-        config = new ConfigObject()
-        config.weblog.enabled = true
-        config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://bar.com'
-
-        when:
-        config = new ConfigObject()
-        config.weblog.enabled = true
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://localhost'
+        thrown(AbortOperationException)
 
     }
 
@@ -1249,7 +1202,7 @@ class ConfigCmdAdapterTest extends Specification {
         !config.process.spack
     }
 
-    def 'SHOULD SET `RESUME` OPTION'() {
+    def 'should normalize the `resume` option'() {
 
         given:
         def env = [:]
@@ -1281,6 +1234,33 @@ class ConfigCmdAdapterTest extends Specification {
         builder.configRunOptions(config, env, new CmdRun(resume: 'xxx-yyy'))
         then:
         config.resume == 'xxx-yyy'
+    }
+
+    @Unroll
+    def 'should ignore the `resume` option for commands other than `run` [#VALUE]' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('my.config')
+        configFile.text = "resume = $VALUE"
+        and:
+        SysEnv.push(NXF_IGNORE_RESUME_HISTORY: 'true')
+
+        when:
+        // no `cmdRun`, ie. any command other than `run`
+        def config = new ConfigCmdAdapter()
+            .setOptions(new CliOptions(config: [configFile.toString()]))
+            .buildConfigObject()
+        then:
+        // `resume` only applies to `run`, so it must not be passed along as a session id,
+        // which would fail later with 'Invalid UUID string'
+        !config.resume
+
+        cleanup:
+        SysEnv.pop()
+        folder?.deleteDir()
+
+        where:
+        VALUE << ['true', 'false', "'last'"]
     }
 
     def 'should set `workDir`' () {
@@ -1615,13 +1595,13 @@ class ConfigCmdAdapterTest extends Specification {
             baz {
                 x = "Ciao"
                 y = "mundo"
-                z { 
+                z {
                     alpha = "Hallo"
                     beta  = "World"
                 }
             }
-            
-        }        
+
+        }
         """
 
         when:
@@ -1697,7 +1677,7 @@ class ConfigCmdAdapterTest extends Specification {
         def config = folder.resolve('nf.config')
         config.text = '''\
         params.test.foo = "foo_def"
-        params.test.bar = "bar_def"        
+        params.test.bar = "bar_def"
         '''.stripIndent()
 
         when:
@@ -1708,7 +1688,7 @@ class ConfigCmdAdapterTest extends Specification {
         cfg1.params.test.foo == "foo_def"
         cfg1.params.test.bar == "bar_def"
 
-        
+
         when:
         def cfg2 = configWithParams([params: ['test.foo': 'CLI_FOO']], [userConfig: [config.toString()]])
         then:
@@ -1759,12 +1739,12 @@ class ConfigCmdAdapterTest extends Specification {
         def config = folder.resolve('nf.yaml')
         config.text = '''\
             title: "something"
-            nested: 
+            nested:
               name: "Mike"
               and:
                 more: nesting
                 still:
-                  another: layer      
+                  another: layer
         '''.stripIndent()
 
         when:
@@ -1833,4 +1813,3 @@ class ConfigCmdAdapterTest extends Specification {
     }
 
 }
-

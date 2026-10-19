@@ -33,7 +33,7 @@ $NXF_CMD -C ../../profiles.config run $NXF_SCRIPT | tee stdout
 # Verify run uses the *advanced* profile
 #
 $NXF_CMD -C ../../profiles.config run $NXF_SCRIPT -profile advanced | tee stdout
-< stdout grep "cpus: 8 memory: 10 GB" || false
+< stdout grep "cpus: 4 memory: 10 GB" || false
 
 #
 # Verify that return an error code

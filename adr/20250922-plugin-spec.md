@@ -6,7 +6,7 @@
 - Date: 2025-09-22
 - Tags: plugins
 
-## Summary 
+## Summary
 
 Provide a way for external systems to understand key information about third-party plugins.
 
@@ -16,7 +16,7 @@ Nextflow plugins need a way to statically declare extensions to the Nextflow lan
 
 Primary use cases:
 
-- The Nextflow language server needs to know about any config scopes, custom functions, etc, defined by a plugin, in order to recognize them in Nextflow scripts and config files.
+- The Nextflow language server needs to know about any config scopes, custom functions, etc, defined by a plugin, so it can recognize them in Nextflow scripts and config files.
 
 - The Nextflow plugin registry (or other user interfaces) can use this information to provide API documentation.
 
@@ -32,13 +32,13 @@ Primary use cases:
 
 ### Nextflow plugin system
 
-Require external systems to use Nextflow's plugin system to load plugins at runtime in order to extract information about them.
+Require external systems to use Nextflow's plugin system to load plugins at runtime to extract information about them.
 
 - **Pro:** Allows any information to be extracted since the entire plugin is loaded
 
-- **Con:** Requires the entire Nextflow plugin system to be reused or reimplemented. Not ideal for Java applications since the plugin system is implemented in Groovy, incompatible with non-JVM applications
+- **Con:** Requires the entire Nextflow plugin system to be reused or reimplemented. Not ideal for Java applications since the plugin system is implemented in Groovy, and incompatible with non-JVM applications
 
-- **Con:** Requires plugins to be downloaded, cached, loaded in the JVM, even though there is no need to use the plugin.
+- **Con:** Requires plugins to be downloaded, cached, and loaded in the JVM, even when the plugin itself is never used.
 
 ### Plugin spec
 
@@ -151,4 +151,4 @@ Defines a channel operator that can be included in Nextflow scripts. The spec is
 
 Now that there is a Gradle plugin for building Nextflow plugins and a registry to publish and retrieve plugins, it is possible to generate, publish, and retrieve plugin specs in a way that is transparent to plugin developers.
 
-Plugins specs adhere to a pre-defined [schema](https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/v1/schema.json) to ensure consistency across different versions of Nextflow. In the future, new versions of the schema can be defined as needed to support new behaviors or requirements.
+Plugin specs adhere to a pre-defined [schema](https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/v1/schema.json) to ensure consistency across different versions of Nextflow. In the future, new versions of the schema can be defined as needed to support new behaviors or requirements.

@@ -21,6 +21,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import io.seqera.http.HxClient
+import io.seqera.util.net.ProxyConfig as NetProxyConfig
 import io.seqera.tower.model.DataLinkCredentials
 import io.seqera.tower.model.DataLinkDto
 import io.seqera.tower.model.DataLinkItem
@@ -77,7 +78,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
     def "default constructor builds an HxClient routed through the configured proxy"() {
         given:
-        nextflow.util.ProxyConfig.register(new nextflow.util.ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar'))
+        nextflow.util.ProxyConfig.setConfig(NetProxyConfig.fromUri('https://foo:bar@proxy.example.com:8080'))
 
         when:
         def h = new DataLinksResourceHandler(fs, client)

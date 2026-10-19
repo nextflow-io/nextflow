@@ -42,6 +42,8 @@ import org.eclipse.jgit.transport.TrackingRefUpdate
  * Multi-revision repository strategy that uses a bare repository with shared clones.
  * This approach allows multiple revisions to coexist efficiently by sharing objects
  * through a bare repository and creating lightweight clones for each commit.
+ * The bare repository is stored in `$NXF_ASSETS/.repos/{project}/bare/` and each
+ * commit is cloned into `$NXF_ASSETS/.repos/{project}/clones/{commitId}/`.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */

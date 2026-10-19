@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.exception.AbortOperationException
 
 /**
  * Validates module structure and module spec (meta.yml).
@@ -59,16 +60,28 @@ class ModuleValidator {
         if( errors )
             return errors
 
-        // Level 3: validate module input/output spec against process definition
-        final scriptPath = moduleDir.resolve("main.nf")
-        final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
-        errors.addAll(validateInputsOutputs(spec, sourceSpec))
+        final scriptPath = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
+
+        // Level 2c: reconcile the declared dependencies with the script's includes
+        errors.addAll(validateDependencies(spec, scriptPath))
+        if( errors )
+            return errors
+
+        // Level 3: validate the module script against its kind
+        if( spec.isWorkflow() ) {
+            errors.addAll(validateWorkflow(spec, scriptPath))
+        }
+        else {
+            final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
+            errors.addAll(validateProcess(spec, sourceSpec))
+        }
 
         return errors
     }
 
     static List<String> validate(Path moduleDir) {
-        return validate(moduleDir, ModuleSchemaValidator.DEFAULT_SCHEMA_URL)
+        final manifest = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        return validate(moduleDir, ModuleSchemaValidator.resolveSchemaLocation(manifest, null))
     }
 
     /**
@@ -112,7 +125,51 @@ class ModuleValidator {
         return errors
     }
 
-    static List<String> validateInputsOutputs(ModuleSpec spec, ModuleSpec sourceSpec) {
+    /**
+     * Reconcile a module's declared {@code requires.modules} with the includes in its script: every
+     * included module must be a registry module (a module is distributed on its own, so a local
+     * include would not resolve for a consumer), and the declared dependencies must be exactly the
+     * included modules. Parsing is syntactic only, so a module that includes not-yet-installed
+     * modules can still be validated.
+     *
+     * @param spec       the parsed module spec
+     * @param scriptPath the module's main.nf
+     */
+    static List<String> validateDependencies(ModuleSpec spec, Path scriptPath) {
+        final errors = new ArrayList<String>()
+
+        final includes = ModuleSpecFactory.includes(scriptPath)
+        for( final source : includes.local )
+            errors << "Module script includes a local module '${source}' -- a module can only include registry modules".toString()
+
+        // an include source that is not a path is a module reference -- report a malformed one
+        // rather than letting it abort the validation
+        final included = new ArrayList<String>()
+        for( final source : includes.remote ) {
+            try {
+                included.add(ModuleReference.parse(source).fullName)
+            }
+            catch( AbortOperationException e ) {
+                errors << e.message
+            }
+        }
+        if( errors )
+            return errors
+
+        final declared = spec.requiresModules.collect { ModuleResolver.parseDependency(it).reference.fullName }
+
+        for( final name : included )
+            if( !(name in declared) )
+                errors << "Module '${name}' is included by the module script but not declared in requires.modules".toString()
+
+        for( final name : declared )
+            if( !(name in included) )
+                errors << "Module '${name}' is declared in requires.modules but not included by the module script".toString()
+
+        return errors
+    }
+
+    static List<String> validateProcess(ModuleSpec spec, ModuleSpec sourceSpec) {
         final errors = new ArrayList<String>()
 
         final specInputs = spec.inputs?.size() ?: 0
@@ -133,6 +190,38 @@ class ModuleValidator {
             if( specTopics != sourceTopics )
                 errors << "Module spec has ${specTopics} topic emissions but module has ${sourceTopics} topic emissions".toString()
         }
+
+        return errors
+    }
+
+    /**
+     * Validate a workflow module's script and reconcile its {@code take:}/{@code emit:} interface
+     * with the meta.yml. A workflow module must define exactly one workflow; when the meta.yml also
+     * declares {@code input}/{@code output} (e.g. a typed workflow) the counts must match the
+     * workflow's take/emit arity. When the meta.yml omits them the take:/emit: sections are the sole
+     * source of truth and there is nothing to reconcile.
+     *
+     * @param spec       the parsed module spec
+     * @param scriptPath the module's main.nf
+     */
+    static List<String> validateWorkflow(ModuleSpec spec, Path scriptPath) {
+        final errors = new ArrayList<String>()
+
+        final interfaces = ModuleSpecFactory.workflowInterfaces(scriptPath)
+        if( interfaces.isEmpty() ) {
+            errors << "Workflow module '${spec.name}' must define a workflow in ${Const.DEFAULT_MAIN_FILE_NAME}".toString()
+            return errors
+        }
+        if( interfaces.size() > 1 ) {
+            errors << "Workflow module '${spec.name}' must define exactly one workflow in ${Const.DEFAULT_MAIN_FILE_NAME} (found ${interfaces.size()})".toString()
+            return errors
+        }
+
+        final iface = interfaces[0]
+        if( spec.inputs != null && spec.inputs.size() != iface.takes )
+            errors << "Module spec has ${spec.inputs.size()} inputs but workflow declares ${iface.takes} take(s)".toString()
+        if( spec.outputs != null && spec.outputs.size() != iface.emits )
+            errors << "Module spec has ${spec.outputs.size()} outputs but workflow declares ${iface.emits} emit(s)".toString()
 
         return errors
     }

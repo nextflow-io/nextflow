@@ -18,11 +18,17 @@ package nextflow.script.control;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import nextflow.module.spi.RemoteModuleResolver;
 import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -71,13 +77,48 @@ public class ModuleResolver {
         return modules;
     }
 
+    /**
+     * Order the given sources so that a script appears after every module
+     * it includes, via depth-first post-order traversal. Only includes
+     * among the given sources are considered.
+     *
+     * @param sources
+     */
+    public List<SourceUnit> orderByDependencies(Collection<SourceUnit> sources) {
+        var byUri = new HashMap<URI,SourceUnit>();
+        for( var source : sources )
+            byUri.put(source.getSource().getURI(), source);
+        var ordered = new ArrayList<SourceUnit>(sources.size());
+        var visited = new HashSet<URI>();
+        for( var source : sources )
+            visitDependencies(source, byUri, visited, ordered);
+        return ordered;
+    }
+
+    private void visitDependencies(SourceUnit source, Map<URI,SourceUnit> byUri, Set<URI> visited, List<SourceUnit> ordered) {
+        var uri = source.getSource().getURI();
+        if( !visited.add(uri) )
+            return;
+        if( source.getAST() instanceof ScriptNode sn ) {
+            for( var in : sn.getIncludes() ) {
+                var include = in.source.getText();
+                if( include.startsWith("plugin/") )
+                    continue;
+                var dep = byUri.get(getIncludeUri(uri, include, projectDir));
+                if( dep != null )
+                    visitDependencies(dep, byUri, visited, ordered);
+            }
+        }
+        ordered.add(source);
+    }
+
     private SourceUnit resolveInclude(IncludeNode node, SourceUnit sourceUnit, Function<URI,SourceUnit> sourceResolver) {
         var source = node.source.getText();
         if( source.startsWith("plugin/") )
             return null;
 
         var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source);
+        var includeUri = getIncludeUri(uri, source, projectDir);
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -90,34 +131,48 @@ public class ModuleResolver {
         return includeSource;
     }
 
-    private URI getIncludeUri(URI uri, String source) {
-        if( isRemoteModule(source) ) {
-            return RemoteModuleResolverProvider.getInstance()
-                .resolve(source, projectDir)
-                .normalize()
-                .toUri();
-        }
-        else {
-            var parent = Path.of(uri).getParent();
-            return getLocalIncludeUri(parent, source);
-        }
+    /**
+     * @return true if the given include source refers to a local module, i.e. it is a path to a
+     * script. Any other include source is a remote module reference -- a malformed one is
+     * reported as an invalid module reference by the resolver.
+     */
+    public static boolean isLocalModule(String source) {
+        return source.startsWith("/") || source.startsWith("./") || source.startsWith("../");
     }
 
     /**
-     * Module name pattern matching the canonical format used by ModuleReference.
-     * Scope: lowercase alphanumeric with dots/underscores/hyphens.
-     * Name: one or more slash-separated segments, each lowercase alphanumeric with dots/underscores/hyphens.
+     * Resolve an include source to the URI of the included script.
+     *
+     * @param uri the URI of the including script
+     * @param source the include source
+     * @param projectDir the project directory, used to resolve remote modules
      */
-    private static final String REMOTE_MODULE_PATTERN = "^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$";
-
-    static boolean isRemoteModule(String source) {
-        if( source.startsWith("/") || source.startsWith("./") || source.startsWith("../") )
-            return false;
-        return source.matches(REMOTE_MODULE_PATTERN);
+    public static URI getIncludeUri(URI uri, String source, Path projectDir) {
+        var localUri = getLocalIncludeUri(uri, source);
+        if( localUri != null )
+            return localUri;
+        // Resolve a remote module relative to the including module's directory
+        // (context-relative), so a workflow module's own dependencies are found under its
+        // nested `modules/` directory (nested vendoring). Any other script -- the entry
+        // script, or a plain local script -- resolves against the project directory.
+        var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
+        return RemoteModuleResolverProvider.getInstance()
+            .resolve(source, base)
+            .normalize()
+            .toUri();
     }
 
-    private static URI getLocalIncludeUri(Path parent, String source) {
-        Path includePath = parent.resolve(source);
+    /**
+     * Resolve a local include source to the URI of the included script.
+     *
+     * @param uri the URI of the including script
+     * @param source the include source
+     * @return the include URI, or null if the source is not a local module
+     */
+    public static URI getLocalIncludeUri(URI uri, String source) {
+        if( !isLocalModule(source) )
+            return null;
+        Path includePath = Path.of(uri).getParent().resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )

@@ -29,7 +29,7 @@ process bar {
 
 workflow {
   main:
-  ch_inputs = channel.of( 1..3 )
+  ch_inputs = channel.fromList( 1..3 )
   foo( ch_inputs )
   bar( ch_inputs )
 

@@ -30,9 +30,11 @@ import nextflow.Session
 import nextflow.exception.IllegalModulePathException
 import nextflow.exception.ScriptCompilationException
 import nextflow.module.ModuleReference
+import nextflow.module.spi.RemoteModuleResolver
 import nextflow.module.spi.RemoteModuleResolverProvider
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.script.parser.v1.ScriptLoaderV1
 /**
  * Implements a script inclusion
@@ -100,7 +102,7 @@ class IncludeDef {
         final moduleFile = realModulePath(path).normalize()
         // -- load the module
         final moduleScript = NF.isSyntaxParserV2()
-            ? loadModuleV2(moduleFile, ownerParams, session)
+            ? loadModuleV2(moduleFile, ownerParams)
             : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
         for( Module module : modules ) {
@@ -129,16 +131,14 @@ class IncludeDef {
      *
      * @param path    The included script path
      * @param params  The params of the including script
-     * @param session The current workflow run
      */
     @PackageScope
-    @Memoized
-    static BaseScript loadModuleV2(Path path, Map params, Session session) {
+    static BaseScript loadModuleV2(Path path, Map params) {
         final script = ScriptMeta.getScriptByPath(path)
         if( !script )
             throw new IllegalStateException("Unable to find module script for path: $path")
         script.getBinding().setParams(params)
-        script.run()
+        script.runModule()
         return script
     }
 
@@ -170,7 +170,7 @@ class IncludeDef {
             throw new IllegalModulePathException("Cannot resolve module path: ${result.toUriString()}")
         }
         final str = include.toString()
-        if( str.startsWith('./') || str.startsWith('../') ) {
+        if( ScriptModuleResolver.isLocalModule(str) ) {
             return getOwnerPath().resolveSibling(str).normalize()
         }
         // Not a local path — treat as remote module reference (scope/name)
@@ -181,7 +181,11 @@ class IncludeDef {
     Path resolveRemoteModulePath(String moduleName) {
         // Use SPI to get the remote module resolver implementation
         def resolver = RemoteModuleResolverProvider.getInstance()
-        return resolver.resolve(moduleName, session.baseDir)
+        // Resolve relative to the including module's directory (context-relative) so that a
+        // workflow module's own dependencies are found under its nested `modules/` directory
+        // (nested vendoring). Any other script resolves against the project base dir.
+        final base = RemoteModuleResolver.resolveBaseDir(getOwnerPath(), session.baseDir)
+        return resolver.resolve(moduleName, base)
     }
 
     @PackageScope

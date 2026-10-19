@@ -511,7 +511,7 @@ class AzBatchServiceTest extends Specification {
                 getMemory() >> MEM
                 getCpus() >> CPUS
                 getMachineType() >> TYPE
-                getResourceLabels() >> [foo: 'bar']
+                getResourceLabels(_) >> [foo: 'bar']
             }
         }
 
@@ -523,6 +523,67 @@ class AzBatchServiceTest extends Specification {
         spec.poolId == 'nf-pool-42f3635f3fb8b71160900efa959f7809-Standard_X1'
         spec.metadata == [foo: 'bar']
 
+    }
+
+    def 'should sanitise the auto resource labels in the autopool metadata' () {
+        given:
+        def LOC = 'europe'
+        def CFG = new AzConfig([batch: [location: LOC]])
+        def CPUS = 2
+        def MEM = MemoryUnit.of('1 GB')
+        def TYPE = 'Standard_X1'
+        def VM = new AzVmType(name: TYPE, numberOfCores: CPUS)
+        and:
+        def exec = createExecutor(CFG)
+        AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
+        and:
+        def CONFIG = new TaskConfig(cpus: CPUS, memory: MEM, machineType: TYPE, resourceLabels: ['microsoft.dept': 'the/user value'])
+        CONFIG.setAutoResourceLabels(['nextflow.io/runName': 'crazy_curie', 'microsoft.io/workflowId': '12345'])
+        and:
+        def TASK = Mock(TaskRun) { getConfig() >> CONFIG }
+
+        when:
+        def spec = svc.specFromAutoPool(TASK)
+        then:
+        1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
+        and:
+        // the auto labels are normalised for Azure Batch i.e. the reserved `microsoft` name
+        // prefix is stripped, while the label declared by the process is applied verbatim
+        spec.metadata == ['nextflow.io/runName': 'crazy_curie', 'io/workflowId': '12345', 'microsoft.dept': 'the/user value']
+        and:
+        spec.metadata.keySet() as List == ['nextflow.io/runName', 'io/workflowId', 'microsoft.dept']
+    }
+
+    def 'should derive the autopool id from the sanitised labels' () {
+        given:
+        def LOC = 'europe'
+        def CFG = new AzConfig([batch: [location: LOC]])
+        def CPUS = 2
+        def MEM = MemoryUnit.of('1 GB')
+        def TYPE = 'Standard_X1'
+        def VM = new AzVmType(name: TYPE, numberOfCores: CPUS)
+        and:
+        def exec = createExecutor(CFG)
+        AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
+        and:
+        def AUTO = new TaskConfig(cpus: CPUS, memory: MEM, machineType: TYPE)
+        AUTO.setAutoResourceLabels(['microsoft.io/dept': 'bio'])
+        and:
+        def DECLARED = new TaskConfig(cpus: CPUS, memory: MEM, machineType: TYPE, resourceLabels: ['io/dept': 'bio'])
+        and:
+        def TASK1 = Mock(TaskRun) { getConfig() >> AUTO }
+        def TASK2 = Mock(TaskRun) { getConfig() >> DECLARED }
+
+        when:
+        def spec1 = svc.specFromAutoPool(TASK1)
+        def spec2 = svc.specFromAutoPool(TASK2)
+        then:
+        2 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
+        and:
+        // the pool id is hashed from the sanitised map, therefore it only depends on the
+        // labels as they are applied to the pool
+        spec1.metadata == ['io/dept': 'bio']
+        spec1.poolId == spec2.poolId
     }
 
     def 'should set jobs to automatically terminate by default' () {

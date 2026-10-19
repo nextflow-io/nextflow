@@ -102,6 +102,18 @@ class ModuleReferenceTest extends Specification {
         thrown(AbortOperationException)
     }
 
+    def 'should reject local module path'() {
+        when:
+        ModuleReference.parse(source)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('not a local path')
+
+        where:
+        source << ['./modules/nf-core/fastqc', '../fastqc', '/abs/fastqc']
+    }
+
     def 'should create module reference from components'() {
         when:
         def ref = new ModuleReference('nf-core', 'fastqc')

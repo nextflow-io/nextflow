@@ -51,6 +51,8 @@ import com.azure.compute.batch.models.BatchContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.ImageVerificationType
+import com.azure.compute.batch.models.BatchVmImageReference
 import com.azure.compute.batch.models.BatchMetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -93,6 +95,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
@@ -704,7 +707,7 @@ class AzBatchService implements Closeable {
                 continue
             if( it.osType != opts.osType )
                 continue
-            if( it.verificationType != opts.verification )
+            if( !opts.allowUnverifiedImages && it.verificationType != ImageVerificationType.VERIFIED )
                 continue
             if( !it.imageReference.publisher.equalsIgnoreCase(opts.publisher) )
                 continue
@@ -712,8 +715,12 @@ class AzBatchService implements Closeable {
                 return it
         }
 
-        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification - supported images: $available"
-        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; allow unverified images=${opts.allowUnverifiedImages} - supported images: $available"
+        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; allow unverified images=${opts.allowUnverifiedImages}")
+    }
+
+    protected BatchVmImageReference customImageReference(AzPoolOpts opts) {
+        return new BatchVmImageReference().setVirtualMachineImageId(opts.virtualMachineImageId)
     }
 
     protected AzVmPoolSpec specFromPoolConfig(String poolId) {
@@ -752,7 +759,10 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final metadata = task.config.getResourceLabels()
+        // normalise the auto-derived labels for the Azure Batch metadata syntax; the labels
+        // declared by the process are applied verbatim. Note: the pool id is derived from this
+        // map, therefore a label changing at each run implies a new auto-pool at each run
+        final metadata = task.config.getResourceLabels(ResourceLabelPolicy.AZURE)
         final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
         return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
@@ -883,9 +893,20 @@ class AzBatchService implements Closeable {
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
-        final image = getImage(opts)
+        final BatchVmImageReference imageRef
+        final String nodeAgentSkuId
+        if( opts.virtualMachineImageId ) {
+            imageRef = customImageReference(opts)
+            nodeAgentSkuId = opts.sku
+            log.debug "[AZURE BATCH] Using custom VM image from Compute Gallery: $opts.virtualMachineImageId (node agent SKU: $nodeAgentSkuId)"
+        }
+        else {
+            final image = getImage(opts)
+            imageRef = image.imageReference
+            nodeAgentSkuId = image.nodeAgentSkuId
+        }
 
-        new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
+        new VirtualMachineConfiguration(imageRef, nodeAgentSkuId)
                 .setContainerConfiguration(containerConfig)
     }
 

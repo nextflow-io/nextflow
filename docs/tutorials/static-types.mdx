@@ -1,11 +1,11 @@
 ---
 title: Migrating to static typing
-description: Migrate Nextflow pipelines to static typing using records, type annotations, and typed processes.
+description: Migrate Nextflow pipelines to typed processes, typed workflows, and records.
 ---
 
 # Migrating to static typing
 
-Nextflow 26.04 brings full support for *static typing* in Nextflow code. This tutorial demonstrates how to migrate to static typing using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+Nextflow 26.10 fully supports [static typing][static-typing]. This tutorial shows how to migrate to static typing, using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
 
 :::note
 Static typing is optional. All existing code will continue to work.
@@ -13,35 +13,27 @@ Static typing is optional. All existing code will continue to work.
 
 ## Overview
 
-Static typing allows you to precisely model and validate the structure of your data as it flows through your pipeline. It consists of several new language features:
+Use static typing to model and validate the structure of your data as it flows through your pipeline. It consists of several new language features:
 
-- **Type annotations** can be added to inputs and outputs at every level of a pipeline, from pipeline parameters to process inputs and outputs, using the [standard Nextflow types][stdlib-types]. These annotations make your code easier to understand and are used by the Nextflow language server to identify type-related errors during development.
+- **Type annotations** can be added to inputs and outputs at every level of a pipeline, from pipeline parameters to process inputs and outputs, using the [standard Nextflow types][stdlib-types]. These annotations make your code easier to understand, and Nextflow uses them to identify type-related errors at compile time.
 
-- **Records** are a new data structure for modeling composite data. They serve as an alternative to tuples -- whereas tuple elements must be accessed by index, record fields are accessed by name. This allows you to model data with meaningful names instead of keeping track of how tuple elements are ordered.
+- **Records** are a new data structure for modeling composite data. They are an alternative to tuples -- whereas tuple elements are accessed by index, record fields are accessed by name. With records, you can model data with meaningful names instead of tracking the order of tuple elements.
 
-- **Record types** are custom type definitions that can be used to guarantee a minimum set of requirements for a record in a particular context. Records are *duck-typed*, which means that a record can be used as an input as long as it meets the minimum requirements of that input (given by a record type).
+- **Record types** are custom type definitions that guarantee a minimum set of requirements for a record in a particular context. Records are *duck-typed*. A record can be used as an input as long as it meets the minimum requirements of that input, as defined by a record type.
+
+Static typing also enables [pipeline composition][pipeline-composition]. When a pipeline uses typed parameters and workflow outputs, you can include the entire pipeline in another pipeline and call it like any other workflow.
 
 ## Developer tooling
 
-Static typing works best with the [Nextflow language server](https://github.com/nextflow-io/language-server) and [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow).
-
-:::tip
-See [Environment setup][devenv-page] for instructions on how to setup VS Code and the Nextflow extension.
-:::
-
 ### Type checking
 
-When using static typing, the language server can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when it is passed as input to a process.
+When you use static typing, Nextflow can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when you pass it as input to a process.
 
-The language server performs type checking on every script that enables the `nextflow.enable.types` feature flag.
+Nextflow type-checks every script that enables the `nextflow.enable.types` feature flag. Use `nextflow lint` or the [Nextflow language server][vscode] to type-check your code during development.
 
 ### Automatic migration
 
-The Nextflow VS Code extension provides a command for automatically migrating Nextflow pipelines to static types. To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
-
-:::note
-Automatic migration is an experimental feature and may not be able to convert an entire pipeline to static types. Always review generated code for correctness.
-:::
+The [Nextflow agent skills](https://github.com/nextflow-io/agent-skills) include a `migrate-nextflow-code` skill. Use it with a coding agent such as Claude Code, Codex, or Cursor to migrate a pipeline to static typing. See the repository README for installation instructions.
 
 ## Example: rnaseq-nf
 
@@ -54,7 +46,7 @@ The approach is as follows:
 3. Convert each process to static typing
 4. Convert each workflow to static typing
 
-The completed migration is available in the [preview-26-04](https://github.com/nextflow-io/rnaseq-nf/tree/preview-26-04) branch.
+The completed migration is available in the [static-typing](https://github.com/nextflow-io/rnaseq-nf/tree/static-typing) branch.
 
 ### Migrating pipeline parameters
 
@@ -100,28 +92,29 @@ To migrate the pipeline parameters, use the schema and legacy parameters to defi
 ```nextflow
 params {
     // The input read-pair files
-    reads: String = "${projectDir}/data/ggal/ggal_gut_{1,2}.fq"
+    reads: String
 
     // The input transcriptome file
-    transcriptome: Path = "${projectDir}/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa"
+    transcriptome: Path
 
     // The output directory where the results will be saved
-    outdir: Path = 'results'
+    outdir: String = 'results'
 
     // Directory containing the configuration for MultiQC
     multiqc: Path = "${projectDir}/multiqc"
 }
 ```
 
-See [Parameters][workflow-typed-params] for more information about the `params` block.
+Specify the test data defaults in the config file:
 
-:::note
-Parameters used only in the config file should be declared in the config, not in the script. Since rnaseq-nf has no such parameters, all parameters are declared in the script. See [Parameters][config-params] for more information.
-:::
+```groovy
+params.reads = "${projectDir}/data/ggal/ggal_gut_{1,2}.fq"
+params.transcriptome = "${projectDir}/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa"
+```
 
-:::tip
-The rnaseq-nf pipeline initializes the `reads` and `transcriptome` parameters to a test dataset by default, as it is designed as a toy example. In practice, defaults for test data should be defined in a config profile (e.g., `test`).
-:::
+The config file should declare parameters that are only used by the config. It can also specify overrides for script parameters, ideally in a config profile (e.g., `test`). Since rnaseq-nf is a toy example, it uses the test data by default.
+
+See [Typed parameters][typed-parameters-page] and [Config parameters][config-params] for more information.
 
 ### Loading a samplesheet input
 
@@ -151,21 +144,55 @@ Refactor `params.reads` to refer to the samplesheet file path instead of a glob 
 ```nextflow
 params {
     // The input samplesheet of paired-end reads
-    reads: Path = "${projectDir}/data/allreads.csv"
+    reads: Path
 
     // ...
 }
+```
+
+```groovy
+params.reads = "${projectDir}/data/allreads.csv"
+params.transcriptome = // ...
 ```
 
 Refactor the `read_pairs_ch` to load the samplesheet as a channel of records:
 
 ```nextflow
 read_pairs_ch = channel.of(params.reads)
-    .flatMap { csv -> csv.splitCsv() }
+    .flatMap { csv -> csv.splitCsv(header: true) }
     .map { row ->
-        record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
+        record(id: row.id, fastq_1: file(row.fastq_1), fastq_2: file(row.fastq_2))
     }
 ```
+
+<AddedInVersion version="26.10" />
+
+A samplesheet input can be modeled as a channel of records instead of a file path. This approach simplifies the pipeline code and supports [pipeline composition][pipeline-composition], where a calling pipeline supplies the input from dataflow logic instead of a file.
+
+Refactor `params.reads` as a channel of records:
+
+```nextflow
+params {
+    // The input samplesheet of paired-end reads
+    reads: Channel<Sample>
+
+    // ...
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
+
+In this example, `Sample` is a *record type* that matches the samplesheet structure. When you supply a file path to a channel-type parameter (e.g., `Channel<Sample>`), Nextflow loads the file and validates and converts each row against the element type.
+
+Because Nextflow loads the samplesheet automatically, `params.reads` replaces `read_pairs_ch`.
+
+:::note
+Channel params can also be loaded from JSON and YAML samplesheets. See [Typed parameters][typed-parameters-page] for more information.
+:::
 
 ### Migrating processes
 
@@ -359,7 +386,7 @@ Apply the same migration principles from the previous processes to migrate `INDE
 
 Once you migrate every process called by a workflow to static typing, you can migrate the workflow itself.
 
-See [Workflows (typed)][workflow-typed-page] for an overview of typed workflows.
+See [Typed workflows][workflow-typed-page] for an overview of typed workflows.
 
 :::note
 You must enable the `nextflow.enable.types` feature flag in each script that uses typed workflows.
@@ -378,7 +405,7 @@ workflow RNASEQ {
     main:
     index = INDEX(transcriptome)
     fastqc_ch = FASTQC(read_pairs_ch)
-    quant_ch = QUANT(index, read_pairs_ch)
+    quant_ch = QUANT(read_pairs_ch, index)
 
     emit:
     fastqc = fastqc_ch
@@ -390,13 +417,7 @@ You can infer the type of each workflow input by examining how the workflow is c
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.of(params.reads)
-        .flatMap { csv -> csv.splitCsv() }
-        .map { row ->
-            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
-        }
-
-    RNASEQ(read_pairs_ch, params.transcriptome)
+    RNASEQ(params.reads, params.transcriptome)
 
     // ...
 }
@@ -404,9 +425,9 @@ workflow {
 
 You can determine the type of each input as follows:
 
-- The channel `read_pairs_ch` has type `Channel<Record>`, where each record contains the fields `id`, `fastq_1`, `fastq_2`.
+- The parameter `params.reads` is declared in the `params` block as `Channel<Sample>`.
 
-- The parameter `params.transcriptome` has type `Path` as defined in the `params` block.
+- The parameter `params.transcriptome` is declared in the `params` block as `Path`.
 
 Specify the workflow input types as follows:
 
@@ -419,12 +440,6 @@ workflow RNASEQ {
     transcriptome: Path
 
     // ...
-}
-
-record Sample {
-    id: String
-    fastq_1: Path
-    fastq_2: Path
 }
 ```
 
@@ -474,9 +489,9 @@ workflow RNASEQ {
 }
 ```
 
-Finally, the workflow needs to be updated to only emit the `samples_ch` channel. Type annotations are not required for emits, but they are still useful as documentation and as a sanity check -- if the declared output type doesn't match the assigned value's type, the language server will report it.
+Finally, update the workflow to emit only the `samples_ch` channel. Type annotations are not required for emits, but they document the output and act as a sanity check. If the declared output type doesn't match the type of the assigned value, Nextflow reports an error.
 
-While `samples_ch` could be emitted as type `Channel<Record>`, the best practice to use an explicit record type so that downstream workflows know which record fields are available.
+While `samples_ch` could be emitted as type `Channel<Record>`, the best practice is to use an explicit record type so that downstream workflows know which record fields are available.
 
 Define a new record type based on the available fields in `samples_ch`:
 
@@ -515,11 +530,7 @@ The entry workflow is defined as follows:
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.of(params.reads)
-        .flatMap { csv -> csv.splitCsv() }
-        .map { row ->
-            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
-        }
+    read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
 
     (fastqc_ch, quant_ch) = RNASEQ(read_pairs_ch, params.transcriptome)
 
@@ -535,199 +546,42 @@ Rewrite this workflow based on the updated params, processes, and subworkflows:
 nextflow.enable.types = true
 
 workflow {
-    read_pairs_ch = channel.of(params.reads)
-        .flatMap { csv -> csv.splitCsv() }
-        .map { row ->
-            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
-        }
-
-    samples_ch = RNASEQ(read_pairs_ch, params.transcriptome)
+    samples_ch = RNASEQ(params.reads, params.transcriptome)
 
     multiqc_files_ch = samples_ch
-        .flatMap { id, fastqc, quant -> [fastqc, quant] }
+        .flatMap { r -> [r.fastqc, r.quant] }
         .collect()
 
     MULTIQC(multiqc_files_ch, params.multiqc)
 }
 ```
 
-The `reads` param was refactored as a `Path`, so it is loaded into a channel of records using `splitCsv`. It is compatible with the records expected by `RNASEQ`.
+The `reads` param was refactored as a channel of records, so it can be passed directly to `RNASEQ`. It is compatible with the records expected by `RNASEQ`.
 
 The `RNASEQ` workflow now returns a single combined channel, so the `mix` operation is no longer needed. The `flatMap` operator is used to extract the files from each record in `samples_ch`.
-
-## Preparing for static typing
-
-While static typing can be adopted progressively with existing code, many coding patterns are not compatible with static typing. Following best practices and avoiding anti-patterns beforehand will make it easier to adopt static typing.
-
-### Use the strict syntax parser
-
-The [strict syntax parser][strict-syntax-page] is required to use static typing. It is enabled by default in Nextflow 26.04.
-
-Before you migrate to static typing, ensure your code complies with the strict parser using `nextflow lint` or the language server.
-
-### Avoid deprecated patterns
-
-When preparing for the strict parser, try to address [deprecation warnings][strict-syntax-deprecated] as much as possible. For example:
-
-```nextflow
-Channel.from(1, 2, 3).map { it * 2 }        // deprecated
-channel.of(1, 2, 3).map { it -> it * 2 }    // best practice
-```
-
-The above example shows how to avoid three deprecated patterns:
-
-1. Using `Channel` to access channel factories (use `channel` instead)
-2. Using the deprecated `channel.from` factory (use `channel.of` or `channel.fromList` instead)
-3. Using the implicit `it` closure parameter (declare the parameter explicitly instead)
-
-### Avoid `set` and `tap` operators
-
-Nextflow provides three ways to assign a channel: a standard assignment, the `set` operator, and the `tap` operator:
-
-```nextflow
-ch = channel.of(1, 2, 3)            // standard assignment
-channel.of(10, 20, 30).set { ch }   // set
-channel.of(10, 20, 30).tap { ch }   // tap
-```
-
-However, `set` and `tap` are not supported in typed workflows. Use standard assignments instead.
-
-### Avoid `|` and `&` dataflow operators
-
-The [special operators][workflow-special-operators] `|` and `&` provide shorthands for writing dataflow logic:
-
-```nextflow
-channel.of('Hello', 'Hola', 'Ciao')
-    | greet
-    | map { v -> v.toUpperCase() }
-    | view
-```
-
-However, these special operators are not supported in typed workflows. Use standard assignments and method calls instead:
-
-```nextflow
-ch_input = channel.of('Hello', 'Hola', 'Ciao')
-ch_greet = greet(ch_input)
-ch_greet
-    .map { v -> v.toUpperCase() }
-    .view()
-```
-
-### Avoid `.out` for process and workflow outputs
-
-The `.out` property can be used to access process and workflow outputs in legacy workflows:
-
-```nextflow
-MY_WORKFLOW()
-MY_WORKFLOW.out.foo.view()
-MY_WORKFLOW.out.bar.view()
-```
-
-However, this pattern is not supported in typed workflows. Use standard assignments instead:
-
-```nextflow
-my_out = MY_WORKFLOW()
-my_out.foo.view()
-my_out.bar.view()
-```
-
-### Avoid `each` input qualifier
-
-The [each][process-input-each] input qualifier is not supported in typed processes. Use the [combine][operator-combine] operator to create a single tuple channel instead.
-
-For example:
-
-```nextflow
-process align {
-    input:
-    path seq
-    each mode
-
-    script:
-    """
-    t_coffee -in $seq -mode $mode > result
-    """
-}
-
-workflow {
-    sequences = channel.fromPath('*.fa')
-    methods = ['regular', 'espresso', 'psicoffee']
-
-    align(sequences, methods)
-}
-```
-
-Rewrite the script to use the `combine` operator. It becomes:
-
-```nextflow
-process align {
-    input:
-    tuple path(seq), val(mode)
-
-    script:
-    """
-    t_coffee -in $seq -mode $mode > result
-    """
-}
-
-workflow {
-    sequences = channel.fromPath('*.fa')
-    methods = ['regular', 'espresso', 'psicoffee']
-
-    align(sequences.combine(methods))
-}
-```
-
-:::tip
-The `each` qualifier is discouraged in modern Nextflow code. While it provides a convenient shorthand for combining multiple inputs, it couples the process definition with external workflow logic. Since the introduction of DSL2, Nextflow aims to treat processes as standalone modules that are decoupled from workflow logic.
-:::
-
-### Avoid legacy operators
-
-Many [operators][operator-page] are not statically typed. While you can still use them in typed workflows, the type checker will not be able to fully validate your code. These operators can usually be replaced by another operator and/or a standard library function.
-
-For example, the `splitCsv` operator is not statically typed. Use `flatMap` and the equivalent [Path][stdlib-types-path] method instead:
-
-```nextflow
-// before
-channel.fromPath('samplesheet.csv')
-    .splitCsv(sep: ',')
-    .view()
-
-// after
-channel.fromPath('samplesheet.csv')
-    .flatMap { csv -> csv.splitCsv(sep: ',') }
-    .view()
-```
-
-See [Migrating operators][migrating-static-types-operators] for more information.
 
 ## Additional resources
 
 See the following links to learn more about static typing:
 
+- [Preparing for static typing][static-typing-prep-page]
 - [Typed processes][process-typed-page]
-- [Workflows (typed)][workflow-typed-page]
+- [Typed workflows][workflow-typed-page]
 - [Types][stdlib-types]
 - [Records][script-records]
 - [Record type syntax][syntax-record-type]
 
 [config-params]: ../config#parameters
-[devenv-page]: ../developer-env
-[migrating-static-types-operators]: ./static-types-operators
 [migrating-workflow-outputs]: ./workflow-outputs
-[operator-combine]: ../reference/operator#combine
-[operator-page]: ../reference/operator
-[process-input-each]: ../process#input-repeaters-each
+[pipeline-composition]: ../workflow-typed#pipeline-composition
 [process-reference-typed]: ../reference/process/inputs-outputs-typed
 [process-typed-page]: ../process-typed
 [rnaseq-nf-page]: ./rnaseq-nf
-[script-records]: ../script#records
-[strict-syntax-deprecated]: ../strict-syntax#deprecated-syntax
-[strict-syntax-page]: ../strict-syntax
+[script-records]: ../script#records-and-tuples
+[static-typing]: ../static-typing
 [stdlib-types]: ../reference/stdlib-types
-[stdlib-types-path]: ../reference/stdlib-types/path
+[static-typing-prep-page]: ../static-typing-prep
 [syntax-record-type]: ../reference/syntax#record-type
-[workflow-special-operators]: ../workflow#dataflow
+[typed-parameters-page]: ../typed-parameters
+[vscode]: ../vscode
 [workflow-typed-page]: ../workflow-typed
-[workflow-typed-params]: ../workflow#parameters

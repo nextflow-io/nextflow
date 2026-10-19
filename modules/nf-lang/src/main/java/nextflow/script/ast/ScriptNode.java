@@ -18,7 +18,10 @@ package nextflow.script.ast;
 import java.util.ArrayList;
 import java.util.List;
 
+import nextflow.script.dsl.PipelineParams;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
@@ -143,6 +146,33 @@ public class ScriptNode extends ModuleNode {
 
     public void setEntry(WorkflowNode entry) {
         this.entry = entry;
+        entry.putNodeMetaData(ASTNodeMarker.PIPELINE_SCRIPT, this);
+    }
+
+    /**
+     * Get the script that declares an entry workflow, i.e. the pipeline that
+     * the workflow belongs to, or null if the workflow is not an entry.
+     *
+     * @param node
+     */
+    public static ScriptNode getPipeline(WorkflowNode node) {
+        return (ScriptNode) node.getNodeMetaData(ASTNodeMarker.PIPELINE_SCRIPT);
+    }
+
+    private static final ClassNode PIPELINE_PARAMS = ClassHelper.makeCached(PipelineParams.class);
+
+    /**
+     * Returns true if a record type was synthesized from the params
+     * block of an included pipeline.
+     *
+     * @param node
+     */
+    public static boolean isPipelineParams(ClassNode node) {
+        return !node.getAnnotations(PIPELINE_PARAMS).isEmpty();
+    }
+
+    public static void setPipelineParams(ClassNode node) {
+        node.addAnnotation(new AnnotationNode(PIPELINE_PARAMS));
     }
 
     public void setOutputs(OutputBlockNode outputs) {

@@ -1,0 +1,299 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.script
+
+import java.nio.file.Files
+import java.nio.file.Path
+
+import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Channel
+import nextflow.script.types.Value
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import nextflow.util.RecordMap
+import nextflow.util.VersionNumber
+import spock.lang.Specification
+import spock.lang.Unroll
+
+/**
+ * Tests for {@link ParamsHelper}.
+ *
+ * This is the shared mapping of a param value to a declared type, used by
+ * the `params` block, typed workflows, and typed processes. The exhaustive
+ * per-type coverage lives here -- each caller only needs to prove that it
+ * routes through this class.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+class ParamsHelperTest extends Specification {
+
+    private static Param param(java.lang.reflect.Type type) {
+        new Param('x', type, false, null)
+    }
+
+    def 'should resolve a value against the declared type'() {
+        expect:
+        final result = FROM_CLI
+            ? ParamsHelper.resolveFromCli(param(TYPE), VALUE)
+            : ParamsHelper.resolveFromCode(param(TYPE), VALUE)
+        result == EXPECTED
+        result?.getClass() == EXPECTED?.getClass()
+
+        where:
+        FROM_CLI | TYPE          | VALUE     | EXPECTED
+        // a command-line value is always a string, so it is parsed
+        true     | String        | 'hello'   | 'hello'
+        true     | Boolean       | 'true'    | true
+        true     | Boolean       | 'false'   | false
+        true     | Boolean       | 'TRUE'    | true
+        true     | Integer       | '42'      | 42
+        true     | Integer       | '0'       | 0
+        true     | Integer       | ' 42 '    | 42
+        true     | Float         | '5.5'     | 5.5f
+        true     | Float         | '5'       | 5.0f
+        true     | Duration      | '2h'      | Duration.of('2h')
+        true     | MemoryUnit    | '4.GB'    | MemoryUnit.of('4.GB')
+        true     | VersionNumber | '1.2.3'   | new VersionNumber('1.2.3')
+        // a config value is already structured, but a number is still
+        // normalized to the declared type
+        false    | String        | 'hello'   | 'hello'
+        false    | Integer       | 40        | 40
+        false    | Integer       | 40G       | 40
+        false    | Integer       | 40.0G     | 40
+        false    | Float         | 96.4G     | 96.4f
+        false    | Float         | 96.4d     | 96.4f
+        false    | Float         | 40        | 40.0f
+        false    | Duration      | '2h'      | Duration.of('2h')
+        false    | MemoryUnit    | '4.GB'    | MemoryUnit.of('4.GB')
+        false    | VersionNumber | '1.2.3'   | new VersionNumber('1.2.3')
+        // a null value is always passed through
+        true     | Integer       | null      | null
+        false    | Integer       | null      | null
+        // an untyped param is passed through unchanged
+        true     | null          | '42'      | '42'
+    }
+
+    def 'should widen an integral value that is too large for an Integer'() {
+        expect:
+        final result = ParamsHelper.resolveFromCli(param(Integer), VALUE)
+        result == EXPECTED
+        result.getClass() == EXPECTED.getClass()
+
+        where:
+        VALUE                          | EXPECTED
+        '2147483647'                   | 2147483647                       // Integer.MAX_VALUE
+        '99999999999'                  | 99999999999L
+        '-99999999999'                 | -99999999999L
+        '999999999999999999999999999'  | 999999999999999999999999999G
+    }
+
+    def 'should widen a value that is too large for a Float'() {
+        expect:
+        final result = ParamsHelper.resolveFromCli(param(Float), VALUE)
+        result == EXPECTED
+        result.getClass() == EXPECTED.getClass()
+
+        where:
+        VALUE     | EXPECTED
+        '3.4e38'  | 3.4e38f
+        '1e39'    | 1e39d          // too large for a Float, but fits a Double
+        '1e400'   | 1e400G         // too large for a Double
+    }
+
+    def 'should leave a value that the declared type cannot represent unconverted'() {
+        when:
+        // the value is reported by the caller as not assignable to the
+        // declared type, rather than being silently coerced
+        final result = ParamsHelper.resolveFromCli(param(TYPE), VALUE)
+
+        then:
+        result == VALUE
+        !ParamsHelper.isAssignableFrom(TYPE, result.getClass())
+
+        where:
+        TYPE    | VALUE
+        Integer | 'abc'
+        Integer | '3.7'      // a fractional value is not truncated
+        Float   | 'abc'
+    }
+
+    def 'should not convert a boolean string that came from the config'() {
+        expect:
+        // unlike a command-line value, a config value is expected to already
+        // be a boolean -- a string is left alone and reported as a mismatch
+        ParamsHelper.resolveFromCode(param(Boolean), 'false') == 'false'
+        ParamsHelper.resolveFromCode(param(Boolean), false) == false
+    }
+
+    def 'should resolve a Path and require it to exist'() {
+        given:
+        def file = Files.createTempFile('data', '.txt')
+
+        when:
+        def result = ParamsHelper.resolveFromCli(param(Path), file.toString())
+
+        then:
+        result == file
+
+        when:
+        ParamsHelper.resolveFromCli(param(Path), '/some/missing/file.txt')
+
+        then:
+        def e = thrown(Exception)
+        e.message.contains('/some/missing/file.txt')
+
+        cleanup:
+        file?.delete()
+    }
+
+    def 'should determine whether a value type is assignable to a declared type'() {
+        expect:
+        ParamsHelper.isAssignableFrom(TARGET, SOURCE) == EXPECTED
+
+        where:
+        TARGET  | SOURCE     | EXPECTED
+        Integer | Integer    | true
+        Integer | Long       | true
+        Integer | BigInteger | true
+        Integer | Float      | false
+        Integer | String     | false
+        Float   | Float      | true
+        Float   | Integer    | true
+        Float   | BigDecimal | true
+        Float   | String     | false
+        String  | String     | true
+        String  | Integer    | false
+        SampleRec | RecordMap  | true
+        SampleRec | Map        | false
+    }
+
+    def 'should load records from a samplesheet'() {
+        given:
+        def file = Files.createTempFile('test', ".${EXT}")
+        file.text = TEXT
+
+        when:
+        def result = ParamsHelper.loadFromFile('samples', file.toAbsolutePath())
+
+        then:
+        result == EXPECTED
+
+        cleanup:
+        file?.delete()
+
+        where:
+        EXT    | TEXT                                             | EXPECTED
+        // CSV has no types, so every value is a string
+        'csv'  | 'id,name\n1,sample1\n2,sample2\n'                | [[id: '1', name: 'sample1'], [id: '2', name: 'sample2']]
+        // quoted values, as written by an output index file
+        'csv'  | '"id","name"\n"1","sample1"\n"2",""\n'           | [[id: '1', name: 'sample1'], [id: '2', name: null]]
+        'csv'  | 'id,name\n1,"sample 1, rep 1"\n'                 | [[id: '1', name: 'sample 1, rep 1']]
+        'json' | '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'    | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+        'yml'  | '- id: 1\n  name: s1\n- id: 2\n  name: s2\n'     | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+    }
+
+    def 'should throw for unrecognized samplesheet format'() {
+        given:
+        def txtFile = Files.createTempFile('test', '.txt')
+        txtFile.text = 'some text'
+
+        when:
+        ParamsHelper.loadFromFile('items', txtFile.toAbsolutePath())
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains("Unrecognized file format 'txt'")
+
+        cleanup:
+        txtFile?.delete()
+    }
+
+    def 'should throw for a JSON file whose top level is not a list'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '{"key":"value"}'   // object, not array
+
+        when:
+        ParamsHelper.loadFromFile('samples', jsonFile.toAbsolutePath())
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('must contain a list of records')
+
+        cleanup:
+        jsonFile?.delete()
+    }
+
+    @Unroll
+    def 'should resolve dataflow params to plain values: #CLI #CONFIG'() {
+        given:
+        def declarations = [
+            declaredParam('samples', 'default.csv'),
+            declaredParam('limit', 3),
+            declaredParam('label', 'demo')
+        ]
+
+        when:
+        def result = ParamsHelper.resolvePlainParams(declarations, CLI, CONFIG)
+        then:
+        result == EXPECTED
+        result.limit.getClass() == Integer
+
+        where:
+        CLI                                 | CONFIG                                | EXPECTED
+        [:]                                 | [:]                                   | [samples: 'default.csv', limit: 3, label: 'demo']
+        [:]                                 | [samples: 'config.csv', limit: 7]     | [samples: 'config.csv', limit: 7, label: 'demo']
+        // the config params include the command line values (see ConfigDsl)
+        [samples: 'cli.csv', limit: '5']    | [samples: 'cli.csv', limit: '5']      | [samples: 'cli.csv', limit: 5, label: 'demo']
+        [limit: '5']                        | [samples: 'config.csv', limit: 5]     | [samples: 'config.csv', limit: 5, label: 'demo']
+    }
+
+    def 'should resolve the dataflow fields of a record param to plain values'() {
+        given:
+        def declarations = [ declaredParam('pipeline') ]
+        def cliParams = [pipeline: [samples: 'cli.csv', limit: '5']]
+        def configParams = [pipeline: [samples: 'cli.csv', limit: '5', label: 'config']]
+
+        when:
+        def result = ParamsHelper.resolvePlainParams(declarations, cliParams, configParams)
+        then:
+        result == [pipeline: [samples: 'cli.csv', limit: 5, label: 'config']]
+        result.pipeline instanceof RecordMap
+    }
+
+    private static Param declaredParam(String name, Object defaultValue = null) {
+        new Param(name, TypedParams.getField(name).getGenericType(), false, defaultValue)
+    }
+
+    static class TypedParams {
+        public Channel<Map> samples
+        public Value<Integer> limit
+        public String label
+        public PipelineRec pipeline
+    }
+
+    static class PipelineRec implements nextflow.script.types.Record {
+        Channel<Map> samples
+        Value<Integer> limit
+        String label
+    }
+
+    static class SampleRec implements nextflow.script.types.Record {
+        String id
+    }
+
+}

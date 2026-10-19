@@ -146,11 +146,11 @@ class AgentTaskHandlerTest extends Specification {
         task.workDir.toFile().list().length == 0
     }
 
-    def 'the agent executor dispatches a native task to the staging handler'() {
+    def 'the agent executor dispatches a prompt task to the staging handler'() {
         given:
         final executor = new AgentExecutor(session: Mock(Session))
         final task = taskWith([:])
-        task.type = ScriptType.GROOVY
+        task.type = ScriptType.PROMPT
 
         expect:
         executor.createTaskHandler(task) instanceof AgentTaskHandler

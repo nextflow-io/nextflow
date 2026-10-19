@@ -130,6 +130,16 @@ class ConfigFormatterTest extends Specification {
         )
     }
 
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            params.pattern = "${params.dir}/*.vcf.gz"
+            params.url = "${params.host}//path"
+            '''
+        )
+    }
+
     def 'should re-indent a multi-line string with its statement' () {
         expect:
         checkFormat(

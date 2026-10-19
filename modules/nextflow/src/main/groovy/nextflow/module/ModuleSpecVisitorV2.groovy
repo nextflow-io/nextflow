@@ -21,6 +21,7 @@ import groovy.util.logging.Slf4j
 import nextflow.script.ast.AssignmentExpression
 import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.TupleParameter
+import nextflow.script.ast.WorkflowNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.Parameter
@@ -33,6 +34,7 @@ import org.codehaus.groovy.ast.stmt.Statement
 
 import static nextflow.module.ModuleSpec.ModuleParam
 import static nextflow.script.ast.ASTUtils.*
+import static nextflow.script.types.TypeCheckingUtils.getType
 
 /**
  * AST visitor to extract inputs/outputs from a typed process.
@@ -60,6 +62,22 @@ class ModuleSpecVisitorV2 {
 
     List<ModuleParam> visitTopics(ProcessNodeV2 node) {
         return moduleTopics(asBlockStatements(node.topics), oldSpec.topics)
+    }
+
+    /**
+     * Extract the module inputs from a workflow's {@code take:} parameters. An untyped take
+     * yields a null type, which is rendered as a {@code TODO: Add type} placeholder.
+     */
+    List<ModuleParam> visitTakes(WorkflowNode node) {
+        return moduleInputs(node.getParameters(), oldSpec.inputs)
+    }
+
+    /**
+     * Extract the module outputs from a workflow's {@code emit:} statements. An untyped emit
+     * yields a null type, which is rendered as a {@code TODO: Add type} placeholder.
+     */
+    List<ModuleParam> visitEmits(WorkflowNode node) {
+        return moduleOutputs(asBlockStatements(node.emits), oldSpec.outputs)
     }
 
     private static List<ModuleParam> moduleInputs(Parameter[] params, List<ModuleParam> oldParams) {
@@ -166,12 +184,12 @@ class ModuleSpecVisitorV2 {
     }
 
     private static ModuleParam moduleOutput(Expression output, ModuleParam oldParam) {
-        final target = 
-            output instanceof AssignmentExpression ? (VariableExpression) output.getLeftExpression() : 
+        final target =
+            output instanceof AssignmentExpression ? (VariableExpression) output.getLeftExpression() :
             output instanceof VariableExpression ? output : null
 
-        final name = target != null ? target.getName() : null
-        final type = target != null ? paramType(target.getType()) : paramType(output)
+        final name = target?.getName()
+        final type = paramType(target ?: output)
 
         return new ModuleParam(
             name: name ?: oldParam?.name,
@@ -200,10 +218,20 @@ class ModuleSpecVisitorV2 {
         return result
     }
 
+    private static final ClassNode CHANNEL_TYPE = ClassHelper.makeCached(nextflow.script.types.Channel)
     private static final ClassNode PATH_TYPE = ClassHelper.makeCached(java.nio.file.Path)
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(nextflow.script.types.Record)
+    private static final ClassNode VALUE_TYPE = ClassHelper.makeCached(nextflow.script.types.Value)
 
     private static String paramType(ClassNode type) {
-        if( !type || !type.isResolved() )
+        if( !type )
+            return null
+
+        // a record declared in the module script is not resolved yet
+        if( isRecordType(type) )
+            return 'record'
+
+        if( !type.isResolved() )
             return null
 
         if( type.implementsInterface(ClassHelper.ITERABLE_TYPE) && !type.equals(PATH_TYPE) ) {
@@ -226,26 +254,26 @@ class ModuleSpecVisitorV2 {
             case ClassHelper.STRING_TYPE:
             case ClassHelper.GSTRING_TYPE:
                 return 'string'
+            case CHANNEL_TYPE:
+                return 'channel'
+            case VALUE_TYPE:
+                return 'value'
             default:
                 return null
         }
     }
 
-    private static String paramType(Expression node) {
-        if( node instanceof MethodCallExpression ) {
-            final name = node.getMethodAsString()
-            switch( name ) {
-                case 'env':
-                case 'eval':
-                case 'stdout':
-                    return 'string'
-                case 'file':
-                case 'files':
-                    return 'file'
-            }
-        }
+    private static boolean isRecordType(ClassNode type) {
+        return type.equals(RECORD_TYPE) || type.implementsInterface(RECORD_TYPE)
+    }
 
-        return paramType(node.getType())
+    /**
+     * The type of an output expression. Typed scripts are type checked before the
+     * spec is extracted, so an output without a type annotation still has an
+     * inferred type.
+     */
+    private static String paramType(Expression node) {
+        return paramType(getType(node))
     }
 
 }

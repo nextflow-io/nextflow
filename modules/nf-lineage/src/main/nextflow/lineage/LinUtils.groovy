@@ -213,7 +213,7 @@ class LinUtils {
             log.trace("No property found for $key")
             return null
         }
-        // Return a single record if only ine results is found.
+        // Return a single record if only one result is found.
         return results.size() == 1 ? results[0] : results
     }
 
@@ -233,7 +233,7 @@ class LinUtils {
     /**
      * Helper function to convert from String ISO 8601 to FileTime.
      *
-     * @param date ISO formated time
+     * @param date ISO formatted time
      * @return Converted FileTime or null if date is not available (null or 'N/A')
      */
     static FileTime toFileTime(OffsetDateTime date) {

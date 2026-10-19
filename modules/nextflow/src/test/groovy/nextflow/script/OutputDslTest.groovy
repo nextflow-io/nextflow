@@ -33,10 +33,7 @@ import spock.lang.Specification
 class OutputDslTest extends Specification {
 
     Session createSession(Map config) {
-        def session = new Session(config) {
-            @Override
-            void abort(Throwable cause) { throw cause }
-        }
+        def session = new Session(config)
         session.init(null)
         return session
     }
@@ -66,9 +63,10 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(file1))
-        session.outputs.put('bar', Channel.of(file2))
+        outputs.put('foo', Channel.of(file1))
+        outputs.put('bar', Channel.of(file2))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
@@ -82,7 +80,7 @@ class OutputDslTest extends Specification {
                 path 'index.csv'
             }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -90,7 +88,7 @@ class OutputDslTest extends Specification {
         outputDir.resolve('foo/file1.txt').text == 'Hello'
         outputDir.resolve('barbar/file2.txt').text == 'world'
         outputDir.resolve('index.csv').text == """\
-            "${outputDir}/barbar/file2.txt"
+            ${outputDir}/barbar/file2.txt
             """.stripIndent()
         and:
         session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
@@ -98,6 +96,103 @@ class OutputDslTest extends Specification {
         session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
         session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should publish files with the same name from different tasks'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def work2 = workDir.resolve('cd/5678'); Files.createDirectories(work2)
+        def file1 = work1.resolve('report.txt'); file1.text = 'Hello'
+        def file2 = work2.resolve('report.txt'); file2.text = 'world'
+        def record = [id: '1', alpha: file1, beta: file2]
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(record))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v ->
+                publish(v.alpha, "reports/${v.id}.alpha.txt")
+                publish(v.beta, "reports/${v.id}.beta.txt")
+            }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        outputDir.resolve('reports/1.alpha.txt').text == 'Hello'
+        outputDir.resolve('reports/1.beta.txt').text == 'world'
+        and:
+        session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('reports/1.alpha.txt'), null))
+        session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('reports/1.beta.txt'), null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [[
+            id: '1',
+            alpha: outputDir.resolve('reports/1.alpha.txt'),
+            beta: outputDir.resolve('reports/1.beta.txt')
+        ]], null))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should publish files outside the work directory only when includeInputs is enabled'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def input = root.resolve('input.txt'); input.text = 'Hello'
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(input))
+        outputs.put('bar', Channel.of(input))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path 'foo'
+            includeInputs true
+        }
+        dsl.declare('bar') {
+            path 'bar'
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        outputDir.resolve('foo/input.txt').text == 'Hello'
+        !outputDir.resolve('bar/input.txt').exists()
+        and:
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/input.txt')], null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [input], null))
 
         cleanup:
         SysEnv.pop()
@@ -121,13 +216,14 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(file1))
+        outputs.put('foo', Channel.of(file1))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -140,6 +236,66 @@ class OutputDslTest extends Specification {
         cleanup:
         SysEnv.pop()
         root?.deleteDir()
+    }
+
+    def 'should not publish outputs when the output directory is disabled'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def file1 = work1.resolve('file1.txt'); file1.text = 'Hello'
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+        // the output directory is disabled when a named workflow is executed directly
+        session.outputDir = null
+
+        outputs.put('foo', Channel.of(file1))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        def output = dsl.getOutput()
+
+        then:
+        // the output file is reported by its work directory path
+        output == [foo: [file1]]
+        and:
+        // no output directory is created and no file is published
+        !Files.exists(outputDir)
+        0 * session.notifyFilePublish(_)
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should print outputs when the output directory is disabled'() {
+        given:
+        def file1 = Path.of('/work/ab/1234/file1.txt')
+        def session = Mock(Session) {
+            getOutputDir() >> null
+        }
+
+        when:
+        OutputDsl.printOutput(session, [foo: [file1]])
+
+        then:
+        // the output file is listed, without a bogus 'null' output directory header
+        1 * session.printConsole({ String it ->
+            it.contains('/work/ab/1234/file1.txt') && !it.contains('null')
+        })
     }
 
     def 'should preserve non-task output files in workflow output'() {
@@ -161,13 +317,14 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(record))
+        outputs.put('foo', Channel.of(record))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -231,35 +388,37 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid path directive' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(1, 2, 3))
+        outputs.put('foo', Channel.of(1, 2, 3))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
             path { v -> 42 }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
         then:
         def e = thrown(ScriptRuntimeException)
         e.message.contains "Invalid `path` directive for workflow output 'foo'"
-        e.message.contains "expected a string or publish statements, but received: 42 [Integer]"
+        e.message.contains "expected a string, a map, or publish statements, but received: 42 [Integer]"
     }
 
     def 'should report error for invalid publish target' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
         def file = Path.of('output.txt')
 
-        session.outputs.put('foo', Channel.of([file, file, file]))
+        outputs.put('foo', Channel.of([file, file, file]))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
             path { files -> publish(files, 'foo.txt') }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -271,14 +430,15 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid publish source' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(42))
+        outputs.put('foo', Channel.of(42))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
             path { v -> publish(v, 'foo') }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -291,8 +451,9 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid index file extension' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.empty())
+        outputs.put('foo', Channel.empty())
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
@@ -300,7 +461,7 @@ class OutputDslTest extends Specification {
                 path 'index.txt'
             }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 

@@ -1,17 +1,17 @@
-# Module System for Nextflow
+# Module system
 
 - Authors: Paolo Di Tommaso
 - Status: approved
 - Date: 2025-01-06
-- Tags: modules, dsl, registry, versioning, architecture
+- Tags: modules, dsl, registry, versioning
 - Version: 2.7
 
 ## Updates
 
 ### Version 2.7 (2026-03-09)
 - **Renamed `.checksum` to `.module-info`**: Leaves room for additional properties in the future
-- **Removed `@` prefix from module scopes**: Local modules are distinguished from remote modules by presence/absence of `./` prefix
-- **Removed version pinning from config**: Installed module versions are now inferred from the `meta.yml` of each module in the `modules/` directory instead of being declared in `nextflow.config`
+- **Removed `@` prefix from module scopes**: The `./` prefix is what distinguishes a local module from a remote one
+- **Removed version pinning from config**: Nextflow now infers installed module versions from the `meta.yml` of each module in the `modules/` directory, instead of reading them from `nextflow.config`
 
 ### Version 2.6 (2026-01-28)
 - **Removed module parameters**: Module parameters specification moved to separate spec document.
@@ -28,12 +28,12 @@
 - **Simplified model**: Each module explicitly declares its dependencies in `nextflow.config`
 
 ### Version 2.3 (2026-01-15)
-- **Resolution Rules table**: Added clear table specifying behavior for each combination of local state and declared version
+- **Resolution Rules table**: Added a table giving the behavior for each combination of local state and declared version
 - **Local modification protection**: Locally modified modules (checksum mismatch) are NOT overridden unless `-force` flag is used
 - **Simplified storage model**: Single version per module locally (`modules/@scope/name/` without version in path)
 - **`.checksum` file**: Registry checksum cached locally for fast integrity verification without network calls
 
-### Version 2.2 (2025-01-06) — *Superseded by v2.5*
+### Version 2.2 (2025-01-06), *superseded by v2.5*
 - **Structured tool arguments**: Added `args` property to `tools` section for type-safe argument configuration
 - **New implicit variables**: `tools.<toolname>.args.<argname>` returns formatted flag+value; `tools.<toolname>.args` returns all args concatenated
 - **Deprecation**: All `ext.*` custom directives (e.g., `ext.args`, `ext.args2`, `ext.args3`, `ext.prefix`, `ext.suffix`) deprecated in favor of structured tool arguments
@@ -46,9 +46,9 @@
 
 ## Context and Problem Statement
 
-Nextflow supports local script inclusion via `include` directive but lacks standardized mechanisms for package management, versioning, and distribution of reusable process definitions. This limits code reuse and reproducibility across the ecosystem.
+Nextflow can include local scripts with the `include` directive, but it has no standard way to package, version, and distribute reusable process definitions. That limits code reuse and reproducibility across the ecosystem.
 
-Discussion/request goes back to at least 2019, see GitHub issues [#1376](https://github.com/nextflow-io/nextflow/issues/1376), [#1463](https://github.com/nextflow-io/nextflow/issues/1463) and [#4122](https://github.com/nextflow-io/nextflow/issues/4112).
+Discussion/request goes back to at least 2019, see GitHub issues [#1376](https://github.com/nextflow-io/nextflow/issues/1376), [#1463](https://github.com/nextflow-io/nextflow/issues/1463) and [#4112](https://github.com/nextflow-io/nextflow/issues/4112).
 
 ## Decision
 
@@ -72,13 +72,13 @@ include { BWA_ALIGN } from 'nf-core/bwa-align'
 include { MY_PROCESS } from './modules/my-process.nf'
 ```
 
-**Module Naming**: Scoped modules `scope/name` (e.g., `nf-core/salmon`, `myorg/custom`). Local paths supported for backwards compatibility. No nested paths with the module are allowed - each module must have a `main.nf` as the entry point.
+**Module Naming**: Scoped modules `scope/name` (e.g., `nf-core/salmon`, `myorg/custom`). Local paths are still supported for backwards compatibility. Nested paths within a module are not allowed. Each module must have a `main.nf` as the entry point.
 
-**Version Resolution**: Installed module versions are inferred from the `meta.yml` of each module in the `modules/` directory. If a module is not present locally, the latest available version is downloaded from the registry.
+**Version Resolution**: Nextflow infers installed module versions from the `meta.yml` of each module in the `modules/` directory. If a module is not present locally, Nextflow downloads the latest available version from the registry.
 
 **Resolution Order**:
-1. Check local `modules/scope/name/` exists
-2. Verify integrity against `.module-info` file
+1. Check whether `modules/scope/name/` exists locally
+2. Verify integrity against the `.module-info` file
 3. Apply resolution rules (see below)
 
 **Resolution Rules**:
@@ -90,12 +90,12 @@ include { MY_PROCESS } from './modules/my-process.nf'
 | Exists, checksum mismatch | **Warn**: locally modified, will NOT replace unless `-force` is used |
 
 **Key Behaviors**:
-- **Local modification**: When the local module content was manually changed (checksum mismatch with `.module-info`), Nextflow warns and does NOT override to prevent accidental loss of local changes
+- **Local modification**: When the local module content has been changed by hand (checksum mismatch with `.module-info`), Nextflow warns and does NOT override it, so local changes are not lost
 - **Force flag**: Use `-force` with `nextflow module install` to override locally modified modules
 
 **Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
 
-**Local Storage**: Downloaded modules stored in `modules/scope/name/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point. It is intended that module source code will be committed to the pipeline git repository.
+**Local Storage**: Downloaded modules are stored in the `modules/scope/name/` directory in the project root, not in a global cache. Each module must contain a `main.nf` file as its entry point. Module source code is meant to be committed to the pipeline git repository.
 
 ### 2. Semantic Versioning and Configuration
 
@@ -152,13 +152,13 @@ Modules use the same version constraint syntax already supported by both `nextfl
 | 1.2.+ | >=1.2.0 <1.3.0 | ✓ | - | - |
 | ~1.2.3 | >=1.2.3 <1.3.0 | - | ✓ | - |
 
-Using comparison operators (`>=`, `<`) with comma-separated ranges provides the same expressive power as
-npm-style `^` and `~` notation while maintaining consistency with existing Nextflow version constraint syntax.
-This avoids introducing new notation that would require additional parser support.
+Comparison operators (`>=`, `<`) with comma-separated ranges say everything that npm-style `^` and `~`
+notation can say, and they match the version constraint syntax Nextflow already has.
+No new notation means no new parser support.
 
 **Module Resolution**:
 
-Installed module versions are inferred from the `meta.yml` file for each module in the `modules/` directory.
+Nextflow infers installed module versions from the `meta.yml` file of each module in the `modules/` directory.
 
 ### 3. Unified Nextflow Registry
 
@@ -215,7 +215,7 @@ nextflow module publish scope/name          # Publish to registry (requires api 
 
 #### `nextflow module run scope/name`
 
-Run a module directly without requiring a wrapper workflow script. This command enables standalone execution of any module by automatically mapping command-line arguments to the module's process inputs. If the module is not available locally, it is automatically installed before execution.
+Run a module directly, with no wrapper workflow script. The command maps command-line arguments to the module's process inputs. If the module is not available locally, Nextflow installs it first.
 
 **Arguments**:
 - `scope/name`: Module identifier to run (required)
@@ -226,17 +226,17 @@ Run a module directly without requiring a wrapper workflow script. This command 
 - All standard `nextflow run` options (e.g., `-profile`, `-work-dir`, `-resume`, etc.)
 
 **Behavior**:
-1. Checks if module is installed locally; if not, downloads from registry
-2. Parses the module's `main.nf` to identify the main process and its input declarations
+1. Checks whether the module is installed locally; if not, downloads it from the registry
+2. Parses the module's `main.nf` to find the main process and its input declarations
 3. Validates command-line arguments against the process input declarations
 4. Generates an implicit workflow that wires CLI arguments to process inputs
-5. Executes the workflow using standard Nextflow runtime
+5. Executes the workflow with the standard Nextflow runtime
 
 **Input Mapping**:
-- Named arguments (`--reads`, `--reference`) are mapped to corresponding process inputs
-- File paths are automatically converted to files for process file inputs
-- Multiple values can be provided for inputs expecting collections
-- Required inputs without defaults must be provided; optional inputs use declared defaults
+- Named arguments (`--reads`, `--reference`) map to the corresponding process inputs
+- Nextflow converts path arguments to files for process file inputs
+- Inputs that expect a collection accept multiple values
+- Required inputs without defaults must be given; optional inputs use their declared defaults
 
 **Example**:
 ```bash
@@ -263,10 +263,10 @@ nextflow module run nf-core/salmon \
 
 #### `nextflow module search <query>`
 
-Search the Nextflow registry for available modules matching the specified query. The search operates against module names, descriptions, tags, and author information. Results are displayed with module name, latest version, description, and download statistics.
+Search the Nextflow registry for modules matching the given query. The search covers module names, descriptions, tags, and author information. Each result shows the module name, latest version, description, and download statistics.
 
 **Arguments**:
-- `<query>`: Search term (required) - matches against module metadata
+- `<query>`: Search term (required), matched against module metadata
 
 **Options**:
 - `-limit <n>`: Maximum number of results to return (default: 10)
@@ -292,13 +292,13 @@ Download and install a module to the local `modules/` directory.
 - `-force`: Overwrite any local changes
 
 **Behavior**:
-1. If `-version` not specified, queries registry for the latest available version
-2. Checks if local module exists and verifies integrity against `.module-info` file
-3. If local module is unmodified and version differs: replaces with requested version
-4. If local module was modified (checksum mismatch): warns and aborts unless `-force` is used
+1. If `-version` is not specified, queries the registry for the latest available version
+2. Checks whether the local module exists and verifies its integrity against the `.module-info` file
+3. If the local module is unmodified and the version differs: replaces it with the requested version
+4. If the local module was modified (checksum mismatch): warns and aborts unless `-force` is used
 5. Downloads the module archive from the registry
 6. Extracts to `modules/scope/name/` directory
-7. Stores `.module-info` file from registry's X-Checksum response header
+7. Stores the `.module-info` file from the registry's X-Checksum response header
 
 **Example**:
 ```bash
@@ -310,7 +310,7 @@ nextflow module install nf-core/salmon -version 1.2.0
 
 #### `nextflow module list`
 
-Display the status of all modules, comparing what is configured in `nextflow.config` against what is actually installed in the `modules/` directory.
+Display the status of all modules, comparing what `nextflow.config` declares against what is installed in the `modules/` directory.
 
 **Options**:
 - `-json`: Output in JSON format
@@ -353,7 +353,7 @@ nextflow module remove myorg/custom -keep-files
 
 #### `nextflow module publish scope/name`
 
-Publish a module to the Nextflow registry, making it available for others to install. Requires authentication via API key and appropriate permissions for the target scope.
+Publish a module to the Nextflow registry so others can install it. Requires an API key and write permission for the target scope.
 
 **Arguments**:
 - `scope/name`: Module identifier to publish (required)
@@ -365,7 +365,7 @@ Publish a module to the Nextflow registry, making it available for others to ins
 
 **Behavior**:
 1. Validates `meta.yml` schema and required fields (name, version, description)
-2. Verifies that `main.nf` exists and is valid Nextflow syntax
+2. Verifies that `main.nf` exists and is valid Nextflow code
 3. Verifies that `README.md` documentation is present
 4. Authenticates with registry using configured credentials
 5. Creates a release draft and uploads the module archive
@@ -387,7 +387,7 @@ nextflow module publish myorg/my-process -dry-run
 ## Module Structure
 
 **Directory Layout**:
-Everything within the module directory should be uploaded. Module bundle should not exceed 1MB (uncompressed). Typically this is expected to look something like this:
+Everything in the module directory should be uploaded. A module bundle should not exceed 1MB uncompressed. A typical layout:
 ```
 my-module/
 ├── main.nf      # Required: entry point for module
@@ -432,10 +432,10 @@ project-root/
 ```
 
 **Module Integrity Verification**:
-- On install: `.module-info` file created from registry's X-Checksum response header
-- On run: Local module checksum compared against `.module-info` file
-- If match: Proceed without network call
-- If mismatch: Report warning (module may have been locally modified)
+- On install: the `.module-info` file is created from the registry's X-Checksum response header
+- On run: the local module checksum is compared against the `.module-info` file
+- If they match: proceed without a network call
+- If they differ: report a warning, since the module may have been modified locally
 
 ## Implementation Strategy
 
@@ -454,7 +454,7 @@ project-root/
 **Module Resolution Flow**:
 1. Parse `include` statements → extract module names (e.g., `nf-core/bwa-align`)
 2. For each module:
-   a. Check local `modules/scope/name/` exists
+   a. Check whether `modules/scope/name/` exists locally
       - If exists → read installed version from `modules/scope/name/meta.yml`
       - If missing → download latest version from registry
    b. Verify local module integrity against `.module-info` file
@@ -490,27 +490,27 @@ project-root/
 ## Rationale
 
 **Why unified registry?**
-- Reuses battle-tested infrastructure (HTTP API, S3, auth)
-- Single discovery experience for ecosystem
+- Reuses infrastructure that already works (HTTP API, S3, auth)
+- One place to discover both plugins and modules
 - Lower operational overhead
-- Type-specific handling maintains separation of concerns
+- The registry handles plugins and modules separately, so their logic stays apart
 
 **Why infer versions from `meta.yml` instead of pinning in a separate file?**
-- Simple: install a version once and it is captured in the module files
+- Install a version once and the module files record it
 - Reproducibility via committing the `modules/` directory (including `meta.yml`) to the project git repository
-- Reduces configuration burden: no need to keep config in sync with installed state
+- Less configuration to maintain, since there is no config to keep in sync with the installed state
 
 **Why parse-time resolution?**
 - Modules are source code, not compiled artifacts
-- Allows inspection/modification for reproducibility
-- Enables dependency analysis before execution
+- Modules can be inspected and modified, which helps reproducibility
+- Allows dependency analysis before execution
 
 **Why scoped modules?**
 - Organization namespacing prevents name collisions (`nf-core/salmon` vs `myorg/salmon`)
 - Clear ownership and provenance of modules
 - Supports private registries per scope
-- Industry-standard pattern (NPM, Terraform, others)
-- Enables ecosystem organization by maintainer/organization
+- Matches what npm and Terraform already do
+- Organizes the ecosystem by maintainer
 
 **Why semantic versioning?**
 - Clear compatibility guarantees
@@ -519,12 +519,12 @@ project-root/
 ## Consequences
 
 **Positive**:
-- Enables ecosystem-wide code reuse
+- Code can be reused across the whole ecosystem
 - Reproducible workflows via committing the `modules/` directory (including `meta.yml`) to the project git repository
 - Centralized discovery and distribution via unified registry
 - Minimal operational overhead (single registry for both plugins and modules)
 - Module scoping enables organization namespaces and private registries
-- Local `modules/` directory provides project isolation
+- The local `modules/` directory keeps projects isolated from each other
 - No version duplication: installed `meta.yml` is the single source of truth
 - Simple module structure: each module has single `main.nf` entry point
 
@@ -535,8 +535,8 @@ project-root/
 - Local `modules/` directory duplicates storage across projects (unlike global cache)
 
 **Neutral**:
-- Modules and plugins conceptually distinct but share infrastructure
-- Different resolution timing supported by same API
+- Modules and plugins are separate concepts but share infrastructure
+- The same API handles both startup and parse-time resolution
 
 ## Links
 
@@ -548,7 +548,7 @@ project-root/
 
 ## Appendix A: Module Schema Specification
 
-This appendix defines the JSON schema for module `meta.yml` files. The schema maintains backward compatibility with existing nf-core module metadata patterns while supporting the new Nextflow module system features.
+This appendix defines the JSON schema for module `meta.yml` files. The schema stays backward compatible with existing nf-core module metadata and adds the fields the new module system needs.
 
 **Schema File:** [module-spec-schema.json](module-spec-schema.json)
 **Published URL:** `https://registry.nextflow.io/schemas/module-spec/v1.0.0`
@@ -557,7 +557,7 @@ This appendix defines the JSON schema for module `meta.yml` files. The schema ma
 
 #### Core Fields (Existing nf-core Pattern)
 
-These fields are already widely adopted in the nf-core community and remain fully supported:
+These fields are already widely used in the nf-core community and remain supported:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -661,7 +661,7 @@ tools:
 
 #### `input` and `output`
 
-The schema supports a simplified syntax for inputs and outputs. Tooling such as the `module` CLI and module registry supports both the module spec and nf-core syntax for backwards compatibility:
+The schema supports a simplified syntax for inputs and outputs. Tooling such as the `module` CLI and the module registry accepts both the module spec and the nf-core syntax, for backwards compatibility:
 
 **Module Spec:**
 ```yaml
@@ -814,7 +814,7 @@ version: "1.0.0"
 
 ### Unsupported nf-core Attributes
 
-The following attributes from the nf-core meta schema are **not supported** in the Nextflow module system:
+These attributes from the nf-core meta schema are **not supported** in the Nextflow module system:
 
 | Attribute | Reason | Alternative |
 |-----------|--------|-------------|
@@ -927,4 +927,3 @@ output:
     description: Software versions
     pattern: "versions.yml"
 ```
-

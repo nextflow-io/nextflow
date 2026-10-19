@@ -89,7 +89,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
     private AgentDef newAgent(Map directives = [model: 'openai/gpt-4o']) {
         final owner = Mock(BaseScript) { getBinding() >> new ScriptBinding() }
         return new AgentDef(owner, 'qa', directives as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String),
             new PromptDef({ -> 'Q' }, 'Q'))
     }
 
@@ -344,7 +344,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         then:
         newAgent().buildAgentTask(['hello']).config.container == 'mine:1'
 
-        when: 'a `withLabel:` selector declares one -- the default must not pre-empt the ladder'
+        when: 'a `withLabel:` selector declares one -- the default must not preempt the ladder'
         bareSession([docker: [enabled: true], agent: ['withLabel:reasoning': [container: 'mine:2']]])
         then:
         newAgent([model: 'openai/gpt-4o', label: ['reasoning']]).buildAgentTask(['hello']).config.container == 'mine:2'

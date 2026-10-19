@@ -18,6 +18,7 @@ package nextflow.cli.module
 
 import groovy.json.JsonSlurper
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.api.schema.v1.ModuleKind
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
 import nextflow.exception.AbortOperationException
@@ -44,12 +45,14 @@ class CmdModuleSearchTest extends Specification {
         def result1 = new ModuleSearchResult(
             name: 'nf-core/fastqc',
             repositoryPath: 'nf-core/modules',
+            kind: ModuleKind.WORKFLOW,
             description: 'FastQC quality control',
             relevanceScore: 0.95,
             keywords: ['quality-control', 'fastqc'],
             tools: ['fastqc'],
             revoked: false
         )
+        // result2 has no kind -> should default to Process
         def result2 = new ModuleSearchResult(
             name: 'nf-core/multiqc',
             repositoryPath: 'nf-core/modules',
@@ -93,16 +96,30 @@ class CmdModuleSearchTest extends Specification {
         output.contains('nf-core/multiqc')
         output.contains('MultiQC reporting')
 
+        and: 'the module kind is shown, defaulting to Process when absent'
+        output.contains('Kind: Workflow')
+        output.contains('Kind: Process')
+
     }
 
     def 'should search and display results in JSON output'() {
         given:
         def result1 = new ModuleSearchResult(
             name: 'nf-core/fastqc',
+            kind: ModuleKind.WORKFLOW,
             description: 'FastQC quality control',
             relevanceScore: 0.95,
             keywords: ['quality-control'],
             tools: ['fastqc'],
+            revoked: false
+        )
+        // result2 has no kind -> should default to Process in the JSON output
+        def result2 = new ModuleSearchResult(
+            name: 'nf-core/multiqc',
+            description: 'MultiQC reporting',
+            relevanceScore: 0.85,
+            keywords: ['reporting'],
+            tools: ['multiqc'],
             revoked: false
         )
 
@@ -120,8 +137,8 @@ class CmdModuleSearchTest extends Specification {
         def mockClient = Mock(RegistryClient)
         mockClient.searchModules('fastqc', 10) >> new SearchModulesResponse(
             query: 'fastqc',
-            totalResults: 1,
-            results: [result1]
+            totalResults: 2,
+            results: [result1, result2]
         )
         cmd.client = mockClient
 
@@ -135,10 +152,14 @@ class CmdModuleSearchTest extends Specification {
 
         then:
         json.query == 'fastqc'
-        json.totalResults == 1
-        json.results.size() == 1
+        json.totalResults == 2
+        json.results.size() == 2
         json.results[0].name == 'nf-core/fastqc'
         json.results[0].description == 'FastQC quality control'
+
+        and: 'kind is emitted, defaulting to Process when absent'
+        json.results[0].kind == 'Workflow'
+        json.results[1].kind == 'Process'
 
     }
 

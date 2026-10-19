@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import java.lang.reflect.Type
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -38,9 +40,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private BodyDef body
 
-    private List<String> declaredInputs
+    private List<Param> declaredInputs
 
-    private List<String> declaredOutputs
+    private List<Param> declaredOutputs
 
     private Set<String> variableNames
 
@@ -100,11 +102,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     @PackageScope BodyDef getBody() { body }
 
-    @PackageScope List<String> getDeclaredInputs() { declaredInputs }
+    @PackageScope List<Param> getDeclaredInputs() { declaredInputs }
 
-    @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
-
-    @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
+    @PackageScope List<Param> getDeclaredOutputs() { declaredOutputs }
 
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
@@ -114,7 +114,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         def variableNames = body.getValNames()
         if( variableNames ) {
             Set<String> declaredNames = []
-            declaredNames.addAll( declaredInputs )
+            declaredNames.addAll( declaredInputs*.name )
             if( declaredNames )
                 variableNames = variableNames - declaredNames
         }
@@ -126,24 +126,26 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() ) {
             final prefix = name ? "Workflow `$name`" : "Main workflow"
-            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were given")
+            final expected = declaredInputs.size()
+            final actual = params.size()
+            throw new IllegalArgumentException("$prefix declares ${expected} ${expected == 1 ? 'input' : 'inputs'} but was called with ${actual} ${actual == 1 ? 'argument' : 'arguments'}")
         }
 
         // attach declared inputs with the invocation arguments
         for( int i=0; i< declaredInputs.size(); i++ ) {
-            final name = declaredInputs[i]
+            final name = declaredInputs[i].name
             context.setProperty( name, params[i] )
         }
     }
 
-    protected ChannelOut collectOutputs(List<String> emissions) {
+    protected ChannelOut collectOutputs(List<Param> emissions) {
         // make sure feedback channel cardinality matches
         if( feedbackChannels && feedbackChannels.size() != emissions.size() )
             throw new ScriptRuntimeException("Workflow `$name` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
         final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
         for( int i=0; i<emissions.size(); i++ ) {
-            final targetName = emissions[i]
+            final targetName = emissions[i].name
             if( !binding.hasVariable(targetName) )
                 throw new MissingValueException("Missing workflow output parameter: $targetName")
             final obj = DataflowTypeHelper.normalizeV1(binding.getVariable(targetName))
@@ -163,6 +165,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             else {
                 if( feedbackChannels!=null )
                     throw new ScriptRuntimeException("Workflow `$name` static output is not allowed when using recursion - Check output: $targetName")
+                if( obj == null && emissions[i].optional ) {
+                    channels.put(targetName, null)
+                    continue
+                }
                 final value = CH.create(true)
                 value.bind(obj)
                 channels.put(targetName, value)
@@ -202,15 +208,12 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         final result = closure.call()
-        if( name == null ) {
-            // return the last statement if entry workflow (used for testing)
-            return result
-        }
-        else {
-            // otherwise collect the outputs from the workflow binding
-            output = collectOutputs(declaredOutputs)
-            return output
-        }
+        // the outputs of an entry workflow are its published outputs
+        this.output = declaredOutputs
+            ? collectOutputs(declaredOutputs)
+            : new ChannelOut(binding.getPublished())
+        // return the last statement if entry workflow (used for testing)
+        return name == null ? result : output
     }
 
 }
@@ -222,18 +225,26 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 @CompileStatic
 class WorkflowParamsDsl {
 
-    private static final String TAKE = '_take_'
-    private static final String EMIT = '_emit_'
+    List<Param> takes = new ArrayList<>(10)
+    List<Param> emits = new ArrayList<>(10)
 
-    List<String> takes = new ArrayList<>(10)
-    List<String> emits = new ArrayList<>(10)
-
-    void _take_(String name) {
-        takes.add(name)
+    /**
+     * Called by generated code for each workflow take parameter.
+     *
+     * @param name     the parameter name
+     * @param clazz    the hidden class holding the declared take types,
+     *                 or null for an untyped workflow (see ScriptToGroovyVisitor)
+     * @param optional whether the parameter type is nullable
+     */
+    void _take_(String name, Class clazz = null, boolean optional = false) {
+        final type = clazz != null
+            ? clazz.getField(name).getGenericType()
+            : null
+        takes.add(new Param(name, type != Object ? type : null, optional, null))
     }
 
-    void _emit_(String name) {
-        emits.add(name)
+    void _emit_(String name, boolean optional = false) {
+        emits.add(new Param(name, null, optional, null))
     }
 
 }

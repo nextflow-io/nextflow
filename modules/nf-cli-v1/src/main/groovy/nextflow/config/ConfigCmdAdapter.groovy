@@ -140,8 +140,13 @@ class ConfigCmdAdapter {
         validateConfigFiles(configFiles)
         final config = buildGivenFiles(configFiles)
 
+        // -- `run` command-line options (if applicable)
         if( cmdRun )
             configRunOptions(config, SysEnv.get(), cmdRun)
+
+        // -- normalize the `resume` option (only applies to the `run` command)
+        if( config.isSet('resume') )
+            config.resume = cmdRun ? normalizeResumeId(config.resume as String) : null
 
         return config
     }
@@ -398,9 +403,6 @@ class ConfigCmdAdapter {
         if( cmdRun.resume )
             config.resume = cmdRun.resume
 
-        if( config.isSet('resume') )
-            config.resume = normalizeResumeId(config.resume as String)
-
         // -- sets `dumpHashes` option
         if( cmdRun.dumpHashes ) {
             config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
@@ -475,16 +477,8 @@ class ConfigCmdAdapter {
             }
         }
 
-        // -- sets the messages options
         if( cmdRun.withWebLog ) {
-            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
-            if( !(config.weblog instanceof Map) )
-                config.weblog = [:]
-            config.weblog.enabled = true
-            if( cmdRun.withWebLog != '-' )
-                config.weblog.url = cmdRun.withWebLog
-            else if( !config.weblog.url )
-                config.weblog.url = 'http://localhost'
+            throw new AbortOperationException("The command line option '-with-weblog' is no longer supported -- use the 'nf-weblog' plugin instead, see https://github.com/nextflow-io/nf-weblog")
         }
 
         // -- sets tower options

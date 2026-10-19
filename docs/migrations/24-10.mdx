@@ -55,26 +55,36 @@ The `task` variable in the process definition has two new properties, `task.prev
 
 - The use of `addParams` and `params` clauses in include declarations is deprecated. See [Preparing for strict syntax][strict-syntax-page] for details.
 
+- The `-entry` run option is deprecated. Use params in the entry workflow to call different workflows from the command line.
+
 ## Miscellaneous
 
-- New config option: `aws.client.requesterPays`
-- New config option: `google.batch.autoRetryExitCodes`
-- New config option: `google.batch.bootDiskImage`
-- New config option: `manifest.contributors`
-- New config option: `wave.mirror`
-- New config option: `wave.scan.mode`
-- New config option: `wave.scan.allowedLevels`
-- New config option: `workflow.failOnIgnore`
-- Rename `nextflow.publish.retryPolicy` config scope to `workflow.output.retryPolicy`
+- New config option: [`aws.client.requesterPays`][config-aws-client-requesterPays]
+- New config option: [`google.batch.autoRetryExitCodes`][config-google-batch-autoRetryExitCodes]
+- New config option: [`google.batch.bootDiskImage`][config-google-batch-bootDiskImage]
+- New config option: [`manifest.contributors`][config-manifest-contributors]
+- New config option: [`wave.mirror`][config-wave-mirror]
+- New config option: [`wave.scan.mode`][config-wave-scan-mode]
+- New config option: [`wave.scan.allowedLevels`][config-wave-scan-allowedLevels]
+- New config option: [`workflow.failOnIgnore`][config-workflow-failOnIgnore]
+- Rename `nextflow.publish.retryPolicy` config scope to [`workflow.output.retryPolicy`][config-workflow-output]
 
-
-[azure-managed-identities]: ../azure#managed-identities
-[hyperqueue-executor]: ../executor/hyperqueue
+[azure-managed-identities]: ../azure-blob#managed-identities
+[config-aws-client-requesterPays]: ../reference/config/aws#awsclientrequesterpays
+[config-google-batch-autoRetryExitCodes]: ../reference/config/google#googlebatchautoretryexitcodes
+[config-google-batch-bootDiskImage]: ../reference/config/google#googlebatchbootdiskimage
+[config-manifest-contributors]: ../reference/config/manifest#manifestcontributors
+[config-wave-mirror]: ../reference/config/wave#wavemirror
+[config-wave-scan-allowedLevels]: ../reference/config/wave#wavescanallowedlevels
+[config-wave-scan-mode]: ../reference/config/wave#wavescanmode
+[config-workflow-failOnIgnore]: ../reference/config/workflow#workflowfailonignore
+[config-workflow-output]: ../reference/config/workflow
+[hyperqueue-executor]: ../reference/executor/hyperqueue
 [install-standalone]: ../install#standalone-distribution
 [spot-retries-page]: ../guides/updating-spot-retries
 [strict-syntax-page]: ../strict-syntax
 [syntax-page]: ../reference/syntax
 [task-previous-execution-trace]: ../process#dynamic-task-resources-with-previous-execution-trace
+[vscode-page]: ../vscode
 [workflow-output-def]: ../workflow#outputs
 [workflow-outputs-first-preview]: ./24-04#workflow-outputs-first-preview
-[vscode-page]: ../vscode

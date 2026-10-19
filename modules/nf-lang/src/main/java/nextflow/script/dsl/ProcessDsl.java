@@ -99,7 +99,7 @@ public interface ProcessDsl extends DslScope {
         void beforeScript(String value);
 
         @Description("""
-            The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the `-resume` option, any task executions that are already cached will be re-used.
+            The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the `-resume` option, any task executions that are already cached will be reused.
 
             [Read more](https://docs.seqera.io/nextflow/reference/process#cache)
         """)
@@ -208,7 +208,7 @@ public interface ProcessDsl extends DslScope {
         void label(String value);
 
         @Description("""
-            The `machineType` directive can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch](https://docs.seqera.io/nextflow/google#cloud-batch) executor.
+            The `machineType` directive can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch](https://docs.seqera.io/nextflow/reference/executor/google-batch) executor.
 
             [Read more](https://docs.seqera.io/nextflow/reference/process#machinetype)
         """)
@@ -257,14 +257,14 @@ public interface ProcessDsl extends DslScope {
         void module(String value);
 
         @Description("""
-            The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/executor/sge) resource manager.
+            The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/reference/executor/sge) resource manager.
 
             [Read more](https://docs.seqera.io/nextflow/reference/process#penv)
         """)
         void penv(String value);
 
         @Description("""
-            The `pod` directive allows you to define pod specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes](https://docs.seqera.io/nextflow/kubernetes) executor.
+            The `pod` directive allows you to define pod specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes](https://docs.seqera.io/nextflow/reference/executor/kubernetes) executor.
 
             [Read more](https://docs.seqera.io/nextflow/reference/process#pod)
         """)
@@ -355,6 +355,7 @@ public interface ProcessDsl extends DslScope {
         """)
         void stageOutMode(String value);
 
+        @Deprecated
         @Description("""
             The `storeDir` directive allows you to use an external directory as a *permanent* cache for process outputs.
 

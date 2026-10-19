@@ -20,7 +20,7 @@ This approach has several structural limitations:
 
 - **Poor error messages.** Syntax and semantic errors are surfaced as Groovy compiler errors, which do not understand Nextflow concepts such as processes and workflows. Users receive messages that reference internal Groovy machinery rather than familiar Nextflow concepts.
 
-- **Poor developer tooling.** A language server, formatter, or linter cannot operate accurately on a language defined only by a series of post-hoc AST rewrites. For example, there is no clear AST node type for a process or workflow -- they are represented as opaque method calls.
+- **Poor developer tooling.** A language server, formatter, or linter cannot operate accurately on a language defined only by a series of post-hoc AST rewrites. For example, there is no clear AST node type for a process or workflow; they are represented as opaque method calls.
 
 - **Language evolution is coupled to Groovy.** Every new Nextflow feature must be expressed as valid Groovy syntax, even though the best way to express a concept in Nextflow might not be valid in Groovy. This hinders our ability to evolve the Nextflow language based on the needs of Nextflow users.
 
@@ -36,11 +36,11 @@ This approach has several structural limitations:
 
 ## Non-goals
 
-- Replacing the Groovy runtime -- Nextflow code should still compile and run as Groovy scripts.
+- Replacing the Groovy runtime. Nextflow code should still compile and run as Groovy scripts.
 
-- Removing the legacy parser immediately -- both parsers are supported during the transition period.
+- Removing the legacy parser immediately. Both parsers are supported during the transition period.
 
-- Introducing new language features -- the first iteration of the strict parser should focus on supporting existing functionality, with new features addressed in future efforts.
+- Introducing new language features. The first iteration of the strict parser should focus on supporting existing functionality, with new features addressed in future efforts.
 
 ## Decision
 
@@ -50,7 +50,7 @@ Implement a parser for Nextflow code, using an ANTLR grammar based on the Groovy
 
 ### Module boundaries
 
-The parser is implemented in the `nf-lang` module, which is independent of the Nextflow runtime. This way, it can be used by the linter, language server, and runtime -- the language server can use `nf-lang` without importing the entire runtime.
+The parser is implemented in the `nf-lang` module, which is independent of the Nextflow runtime. This way, it can be used by the linter, language server, and runtime. The language server can use `nf-lang` without importing the entire runtime.
 
 ### Parsing
 
@@ -89,7 +89,7 @@ Once a script passes semantic analysis without any errors, it is converted to a 
 
 The resulting Groovy AST is identical to the one produced by the legacy parser. The validity of this AST is guaranteed by the layers of error checking in the strict parser. All subsequent Groovy compilation and execution steps proceed unchanged.
 
-Each script is compiled to a Groovy class with a unique name (e.g. `_nf_script_abc123`) derived from its URI, in order to avoid class name collisions.
+Each script is compiled to a Groovy class with a unique name (e.g. `_nf_script_abc123`) derived from its URI, to avoid class name collisions.
 
 ### Config parsing
 
@@ -150,7 +150,7 @@ export NXF_SYNTAX_PARSER=v2
 
 In principle, the strict parser is just a strict implementation of the Nextflow language, so existing Nextflow code should continue to work with it.
 
-In practice, many users have adopted patterns that are allowed in Groovy but are not intended for use in Nextflow (e.g. classes, annotations). Some syntax patterns are technically valid but redundant (e.g. lambdas vs closures). Overall, there is a great deal of ambiguity in what is or isn't considered part of the Nextflow language.
+In practice, many users have adopted patterns that are allowed in Groovy but are not intended for use in Nextflow (e.g. classes, annotations). Some syntax patterns are technically valid but redundant (e.g. lambdas vs closures). Overall, there is much ambiguity in what is or isn't considered part of the Nextflow language.
 
 To that end, we have defined a language specification for Nextflow which enumerates every syntax construct that is supported, as well as a guide that describes the most common patterns that must be rewritten to comply with the strict parser.
 
@@ -172,9 +172,9 @@ We could commit to the legacy parser and focus on improving it:
 
 - Build tooling (linter, language server) around the legacy parser and rely on it to improve the developer experience
 
-This approach is fundamentally limited because we have no control over parsing or AST construction, only AST analysis. Some errors are much harder, or even impossible, to capture during AST analysis vs parsing. Furthermore, we would always be restricted to Groovy syntax when considering new language features, which makes it difficult to design new features for our needs.
+This approach is fundamentally limited because we have no control over parsing or AST construction, only AST analysis. Some errors are much harder, or even impossible, to capture during AST analysis vs parsing. We would also remain restricted to Groovy syntax when considering new language features, which makes it difficult to design new features for our needs.
 
-A custom parser is more work up front, but will be easier to maintain over time and gives us significantly more room to extend the language in the future. We also minimize the potential maintenance burden by continuing to use the rest of the Groovy runtime -- Nextflow only handles the transformation from source code to Groovy AST.
+A custom parser is more work up front, but will be easier to maintain over time and gives us much more room to extend the language in the future. We also minimize the potential maintenance burden by continuing to use the rest of the Groovy runtime, since Nextflow only handles the transformation from source code to Groovy AST.
 
 ### Replace DSL with an SDK
 
@@ -232,13 +232,13 @@ def main() {
 
 A Nextflow SDK has many potential advantages:
 
-- SDKs have a much more "normal" developer experience than DSLs -- errors can still happen, but they are the same "kinds" of errors encountered with any other library.
+- SDKs have a much more "normal" developer experience than DSLs. Errors can still happen, but they are the same "kinds" of errors encountered with any other library.
 
 - SDKs are just libraries in an existing language, so they can be used with existing developer tools for that language.
 
 - SDKs can be exposed to multiple programming languages via language bindings, so Nextflow could be used directly in the user's preferred language (e.g. Python).
 
-The problem is that a Nextflow SDK would be significantly more verbose. The above example is extremely simple, but quickly becomes large and unreadable as the pipeline grows. This trade-off may be acceptable to experienced software engineers, but Nextflow is specifically designed for "domain experts" -- non-technical users who benefit from having a "domain-specific" language.
+The problem is that a Nextflow SDK would be much more verbose. The example above is trivial, but such code becomes large and unreadable as the pipeline grows. This trade-off may be acceptable to experienced software engineers, but Nextflow is designed for "domain experts", non-technical users who benefit from having a "domain-specific" language.
 
 Users who prefer SDKs already have several good options for workflow systems, such as Airflow, Prefect, and Dagster. Rewriting Nextflow as an SDK is unlikely to attract these users. In fact, it would likely only alienate Nextflow's existing user base.
 
@@ -246,15 +246,15 @@ A custom workflow language is harder to develop and maintain, but it is essentia
 
 ### Replace Groovy DSL with a Python DSL
 
-Nextflow is a custom workflow language based on Groovy. But most users use Python in their regular work, and are not familiar at all with Groovy. Nextflow might attract many more users if it were based on Python instead of Groovy.
+Nextflow is a custom workflow language based on Groovy. But most users work in Python and are not familiar with Groovy at all. Nextflow might attract many more users if it were based on Python instead of Groovy.
 
 This question has multiple aspects that are worth unpacking:
 
-- **Syntax and semantics.** Groovy and Python use different syntax and names to express the same concepts (curly braces vs indentation, `'hello'.length()` vs `len('hello')`). If Nextflow syntax was based on Python, users would be able to learn Nextflow more easily.
+- **Syntax and semantics.** Groovy and Python use different syntax and names to express the same concepts (curly braces vs indentation, `'hello'.length()` vs `len('hello')`). If Nextflow syntax were based on Python, users could learn Nextflow more easily.
 
 - **Runtime interoperability.** Nextflow code runs on the Groovy runtime, so it can't call Python code natively. It can only call Python scripts through a process, which requires extra ceremony to pass data between Nextflow and Python. If Nextflow code ran on Python, users could use Python libraries directly in Nextflow code.
 
-It may be possible to define a Python-based DSL for Nextflow. For example, the aforementioned "Hello World" example might be written as follows in a Python-based DSL:
+It may be possible to define a Python-based DSL for Nextflow. For example, the "Hello World" example above might be written as follows in a Python-based DSL:
 
 ```python
 process sayHello:
@@ -288,9 +288,9 @@ However, such a change comes with significant challenges:
 
 - Nextflow would still be a *Python-based DSL*, not pure Python. It would still need its own parser and its own developer tooling, just one that targets Python AST instead of Groovy AST.
 
-- Nextflow uses a functional-reactive programming model (a.k.a. channels and operators) for which there is no native equivalent in Python. This is another reason why users find Nextflow unfamiliar, and it won't go away by simply replacing Groovy syntax with Python syntax.
+- Nextflow uses a functional-reactive programming model (a.k.a. channels and operators) for which there is no native equivalent in Python. This is another reason why users find Nextflow unfamiliar, and replacing Groovy syntax with Python syntax won't change it.
 
-In summary, a Python DSL for Nextflow is an extreme solution that only addresses a small aspect of the developer experience. Since Nextflow is a custom language, the developer experience ultimately depends on the quality of the parser and developer tooling, regardless of whether the syntax is based on Groovy or Python.
+A Python DSL for Nextflow is an extreme solution that addresses only a small aspect of the developer experience. Since Nextflow is a custom language, the developer experience ultimately depends on the quality of the parser and developer tooling, regardless of whether the syntax is based on Groovy or Python.
 
 ### Use a static configuration language
 
@@ -304,9 +304,9 @@ However, an essential aspect of Nextflow config is the ability to use dynamic ex
 process.memory = { 8.GB * task.attempt }
 ```
 
-This feature would be difficult to replicate in a static language like YAML. Dynamic expressions could be specified as plain-text, but they would not benefit from Nextflow-specific tooling (syntax highlighting, linting).
+This feature would be difficult to replicate in a static language like YAML. Dynamic expressions could be written as plain text, but they would not benefit from Nextflow-specific tooling such as syntax highlighting and linting.
 
-Much of the difficulty that users experience with Nextflow config comes from (1) lack of developer tooling and (2) gaps in native functionality. The Nextflow config language is simple, but a strict parser is needed to enforce this simplicity and provide clear error feedback. Features such as the `resourceLimits` directive and workflow outputs can eliminate prior ad-hoc solutions that involved a lot of complex Nextflow config.
+Much of the difficulty that users experience with Nextflow config comes from (1) lack of developer tooling and (2) gaps in native functionality. The Nextflow config language is simple, but a strict parser is needed to enforce this simplicity and provide clear error feedback. Features such as the `resourceLimits` directive and workflow outputs can replace the ad-hoc solutions that previously required a lot of complex Nextflow config.
 
 ## Links
 

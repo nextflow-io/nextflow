@@ -262,7 +262,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         given:
         def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
         def target = Paths.get('/target/work dir')
-        def task = new TaskBean(workDir: target)
+        def task = new TaskBean(workDir: target, targetDir: target)
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
@@ -279,13 +279,31 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    def 'should return cp script to unstage output files when the unstage dir is a container mount' () {
+
+        given:
+        // the Google Batch launcher remaps the task dirs onto a gcsfuse container mount,
+        // which must not be mistaken for a storeDir -- see issue #4819
+        def outputs = [ 'out/*' ]
+        def workDir = Paths.get('/work/da/2fe756')
+        def mount = Paths.get('/mnt/disks/my-bucket/work/da/2fe756')
+        def task = new TaskBean(workDir: workDir, targetDir: workDir)
+
+        when:
+        def strategy = new SimpleFileCopyStrategy(task)
+        def script = strategy.getUnstageOutputFilesScript(outputs, mount)
+        then:
+        script.contains('nxf_fs_copy "$name" /mnt/disks/my-bucket/work/da/2fe756')
+
+    }
+
     def 'should return mv script to unstage output files when storeDir used' () {
 
         given:
         def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
         def workDir = Paths.get('/target/work')
         def storeDir = Paths.get('/target/store')
-        def task = new TaskBean(workDir: workDir)
+        def task = new TaskBean(workDir: workDir, targetDir: storeDir)
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)

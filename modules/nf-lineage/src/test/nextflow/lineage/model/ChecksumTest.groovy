@@ -16,9 +16,13 @@
 
 package nextflow.lineage.model
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.util.CacheHelper
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -54,5 +58,41 @@ class ChecksumTest extends Specification {
         checksum1.algorithm == 'nextflow'
         checksum1.value == CacheHelper.hasher('1234567890abcdef').hash().toString()
         checksum1.mode == 'standard'
+    }
+
+    @Unroll
+    def 'should compute ofNextflow checksum with the mode it reports - #mode'() {
+        given: 'a file and NXF_CACHE_MODE set to the given mode'
+        Path path = Files.createTempFile('checksum', '.txt')
+        path.text = 'Hello world'
+        setDefaultHashMode(mode)
+
+        when:
+        def checksum = Checksum.ofNextflow(path)
+
+        then: 'the reported mode is the configured one'
+        checksum.algorithm == 'nextflow'
+        checksum.mode == mode.toString().toLowerCase()
+
+        and: 'the value is the hash for that mode, not for the standard mode'
+        checksum.value == CacheHelper.hasher(path, mode).hash().toString()
+
+        cleanup:
+        setDefaultHashMode(null)
+        Files.deleteIfExists(path)
+
+        where:
+        mode << CacheHelper.HashMode.values()
+    }
+
+    /**
+     * Override the hash mode default, which {@link CacheHelper.HashMode} reads from
+     * NXF_CACHE_MODE in a static initialiser and therefore cannot be changed by
+     * setting the environment variable from a test.
+     */
+    private static void setDefaultHashMode(CacheHelper.HashMode mode) {
+        final field = CacheHelper.HashMode.class.getDeclaredField('defaultValue')
+        field.setAccessible(true)
+        field.set(null, mode)
     }
 }

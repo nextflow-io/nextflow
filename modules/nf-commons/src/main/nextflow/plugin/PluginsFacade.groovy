@@ -238,7 +238,7 @@ class PluginsFacade implements PluginStateListener {
             return new DevPluginManager(root)
         }
         if( embedded ) {
-            // use the custom plugin manager to by-pass the creation of a local plugin repository
+            // use the custom plugin manager to bypass the creation of a local plugin repository
             return new EmbeddedPluginManager(root)
         }
         return new LocalPluginManager(root)
@@ -568,9 +568,6 @@ class PluginsFacade implements PluginStateListener {
 
         if( 'k8s' in executors )
             plugins << defaultPlugins.getPlugin('nf-k8s')
-
-        if( Bolts.navigate(config, 'weblog.enabled'))
-            plugins << new PluginRef('nf-weblog')
 
         return plugins
     }

@@ -11,9 +11,9 @@ Replace the Auth0 Device Authorization Grant used by `nextflow auth login` with 
 
 ## Problem Statement
 
-The `nextflow auth login` command authenticates via Auth0, an external identity provider, using the OAuth2 Device Authorization Grant. This requires hardcoded Auth0 domain and client ID mappings per environment (dev, stage, prod) and creates an artificial distinction between "cloud" and "enterprise" endpoints — cloud uses Auth0 while enterprise falls back to manual PAT entry.
+The `nextflow auth login` command authenticates via Auth0, an external identity provider, using the OAuth2 Device Authorization Grant. This requires hardcoded Auth0 domain and client ID mappings per environment (dev, stage, prod) and creates an artificial distinction between "cloud" and "enterprise" endpoints. Cloud uses Auth0 while enterprise falls back to manual PAT entry.
 
-Seqera Platform now exposes a standards-compliant OIDC provider at `/.well-known/openid-configuration`, making it possible for CLI clients to authenticate directly against Platform using Authorization Code + PKCE — eliminating the Auth0 dependency and unifying the login flow for all Platform instances.
+Seqera Platform now exposes a standards-compliant OIDC provider at `/.well-known/openid-configuration`, so CLI clients can authenticate directly against Platform using Authorization Code + PKCE. That removes the Auth0 dependency and unifies the login flow for all Platform instances.
 
 ## Goals
 
@@ -29,7 +29,7 @@ Seqera Platform now exposes a standards-compliant OIDC provider at `/.well-known
 - Modifying runtime token refresh (`TowerXAuth`, `TowerClient`, `WaveClient`)
 - Removing backward compatibility with existing PATs in config
 
-Note: The logout flow was simplified as a consequence of removing the cloud-vs-enterprise distinction — PAT deletion via Platform API is now always attempted for all endpoints.
+Note: The logout flow was simplified as a consequence of removing the cloud-vs-enterprise distinction. PAT deletion via the Platform API is now always attempted for all endpoints.
 
 ## Login Flow
 
@@ -110,7 +110,7 @@ Note: The logout flow was simplified as a consequence of removing the cloud-vs-e
 
 ### 2. New module `lib-platform-oidc` in libseqera
 
-Plain Java production code, Groovy/Spock tests. No external dependencies — uses only JDK classes (`java.net.http.HttpClient`, `com.sun.net.httpserver.HttpServer`, `java.security.*`).
+Plain Java production code, Groovy/Spock tests. No external dependencies, only JDK classes (`java.net.http.HttpClient`, `com.sun.net.httpserver.HttpServer`, `java.security.*`).
 
 ```
 lib-platform-oidc/
@@ -134,7 +134,7 @@ lib-platform-oidc/
       OidcLoginFlowTest.groovy
 ```
 
-**`OidcLoginFlow`** — public API:
+**`OidcLoginFlow`** public API:
 ```java
 public class OidcLoginFlow {
     public OidcLoginFlow(String endpoint, String clientId) { ... }
@@ -172,7 +172,7 @@ Add `@Deprecated` to `getAuthDomain()` and `getAuthClientId()`.
 
 1. `./gradlew :lib-platform-oidc:test` in libseqera
 2. `./gradlew :plugins:nf-tower:test` in Nextflow
-3. Manual: `./launch.sh auth login -url https://api.cloud.dev-seqera.io` — browser opens, PKCE flow completes, PAT stored in config
+3. Manual: `./launch.sh auth login -url https://api.cloud.dev-seqera.io` opens a browser, completes the PKCE flow, and stores the PAT in config
 4. Backward compat: existing PAT in `seqera-auth.config` continues to work
 
 ## Links

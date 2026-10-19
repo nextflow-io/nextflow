@@ -284,7 +284,7 @@ class ScriptFormatterTest extends Specification {
                 depth: Integer
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 """
@@ -332,6 +332,19 @@ class ScriptFormatterTest extends Specification {
             '''\
             def hello(x: Integer, y: Integer) -> Integer {
                 def xy = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            Object hello(Object x,String[] y){
+            Object xy=x ; return xy
+            }
+            ''',
+            '''\
+            def hello(x, y) {
+                def xy = x
                 return xy
             }
             '''
@@ -419,6 +432,28 @@ class ScriptFormatterTest extends Specification {
                     path 'bar'
                     index {
                         path 'index.csv'
+                    }
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow{}
+
+            output{
+            foo{index{header ( ['a','b'] );sep('\\t')}}
+            }
+            ''',
+            '''\
+            workflow {
+            }
+
+            output {
+                foo {
+                    index {
+                        header(['a', 'b'])
+                        sep '\\t'
                     }
                 }
             }
@@ -567,6 +602,19 @@ class ScriptFormatterTest extends Specification {
                 println(file('foo.txt').text)
             }
             catch (e: IOException) {
+                log.warn("Could not load foo.txt")
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            try{println(file('foo.txt').text)}catch(e){log.warn("Could not load foo.txt")}
+            ''',
+            '''\
+            try {
+                println(file('foo.txt').text)
+            }
+            catch (e) {
                 log.warn("Could not load foo.txt")
             }
             '''
@@ -1195,6 +1243,18 @@ class ScriptFormatterTest extends Specification {
                 channel // about of
                     .of(1)
                     .view()
+            }
+            '''
+        )
+    }
+
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch = channel.fromFilePairs("${params.dir}/*.vcf.gz")
+                url = "${params.host}//path"
             }
             '''
         )

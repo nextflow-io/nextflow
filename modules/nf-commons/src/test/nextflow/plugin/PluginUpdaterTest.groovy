@@ -90,6 +90,43 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should install a plugin depending on a non-core plugin' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        and:
+        // the dependency is a registry plugin, NOT one of the nextflow core plugins
+        def dep = createPlugin(repo, '0.7.1', 'dep-plugin')
+        dep.zip = zipDir(dep.path)
+        and:
+        def main = createPlugin(repo, '1.0.0', PLUGIN_ID, 'dep-plugin@0.7.1')
+        main.zip = zipDir(main.path)
+        and:
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "dep-plugin", "description": "Test dependency", "releases": [
+                 {"version": "0.7.1", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${dep.zip}"} ]},
+             { "id": "$PLUGIN_ID", "description": "Test plugin", "releases": [
+                 {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${main.zip}"} ]}]
+            """
+        and:
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        noExceptionThrown()
+        and:
+        manager.getPlugin('dep-plugin').descriptor.version == '0.7.1'
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should detect already-installed pinned plugin from the on-disk store' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -670,8 +707,7 @@ class PluginUpdaterTest extends Specification {
         return plugin
     }
 
-    static private MockPlugin createPlugin(Path baseDir, String ver) {
-        def id = "my-plugin"
+    static private MockPlugin createPlugin(Path baseDir, String ver, String id=PLUGIN_ID, String dependencies=null) {
         def clazz = FooPlugin.class
         def fqn = "$id-$ver".toString()
         def pluginDir = baseDir.resolve(fqn)
@@ -684,7 +720,7 @@ class PluginUpdaterTest extends Specification {
                 Plugin-Class: ${clazz.getName()}
                 Plugin-Id: $id
                 Plugin-Version: $ver
-                """.stripIndent()
+                """.stripIndent() + (dependencies ? "Plugin-Dependencies: $dependencies\n" : '')
 
         return new MockPlugin(version: ver, path: pluginDir)
     }

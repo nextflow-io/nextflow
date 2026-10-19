@@ -58,11 +58,15 @@ Throw a script runtime error with an optional error message.
 
 ##### `exit( exitCode: int = 0, message: String = null )`
 
-<DeprecatedInVersion version="22.10">
-Use `error()` instead
-</DeprecatedInVersion>
+<ChangedInVersion version="26.10">
+The run now exits gracefully instead of exiting immediately.
+</ChangedInVersion>
 
 Stop the pipeline execution and return an exit code and optional error message.
+
+:::note
+Call `exit()` only from the workflow body. To fail the pipeline from a process or operator, use `error()`.
+:::
 
 ##### `file( filePattern: String, [options] ) -> Path | List<Path>`
 

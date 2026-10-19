@@ -67,6 +67,12 @@ class Manifest implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Project workflow diagram location (Relative path or URL).
+    """)
+    final String diagram
+
+    @ConfigOption
+    @Description("""
         Project documentation URL.
     """)
     final String docsUrl
@@ -147,6 +153,7 @@ class Manifest implements ConfigScope {
         contributors = parseContributors(opts.contributors)
         defaultBranch = opts.defaultBranch as String
         description = opts.description as String
+        diagram = opts.diagram as String
         docsUrl = opts.docsUrl as String
         doi = opts.doi as String
         gitmodules = opts.gitmodules
@@ -193,6 +200,7 @@ class Manifest implements ConfigScope {
             doi: doi,
             docsUrl: docsUrl,
             icon: icon,
+            diagram: diagram,
             organization: organization,
             license: license,
         ]

@@ -29,6 +29,7 @@ import nextflow.module.ModuleReference
 import nextflow.module.ModuleSchemaValidator
 import nextflow.module.ModuleStorage
 import nextflow.module.ModuleValidator
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
 
 /**
@@ -61,7 +62,8 @@ class CmdModuleValidate extends CmdBase {
             throw new AbortOperationException("Incorrect number of arguments -- usage: nextflow module validate <namespace/name>")
 
         final moduleDir = determineModuleDir(args[0])
-        final schemaLocation = schema ?: ModuleSchemaValidator.DEFAULT_SCHEMA_URL
+        final manifest = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        final schemaLocation = ModuleSchemaValidator.resolveSchemaLocation(manifest, schema)
         final errors = ModuleValidator.validate(moduleDir, schemaLocation)
 
         if( errors ) {
@@ -80,6 +82,8 @@ class CmdModuleValidate extends CmdBase {
         final path = Paths.get(module)
         if( path.exists() )
             return path.toAbsolutePath().normalize()
+        if( ScriptModuleResolver.isLocalModule(module) )
+            throw new AbortOperationException("Module path not found: $module")
 
         final ref = ModuleReference.parse(module)
         final storage = new ModuleStorage(root ?: Paths.get('.').toAbsolutePath().normalize())

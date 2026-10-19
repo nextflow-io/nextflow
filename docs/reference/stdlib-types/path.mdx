@@ -185,7 +185,7 @@ Writes text to a file, replacing any existing content. Equivalent to `setText()`
 
 The following methods are available for manipulating files and directories in a filesystem:
 
-##### `copyTo( target: Path )`
+##### `copyTo( target: String )`
 
 Copies a source file or directory to a target file or directory.
 
@@ -286,7 +286,7 @@ When `true`, creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) 
 
 When `true`, overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileAlreadyExistsException.html) (default: `false`).
 
-##### `moveTo( target: Path )`
+##### `moveTo( target: String )`
 
 Moves a source file or directory to a target file or directory. Follows the same semantics as `copyTo()`.
 

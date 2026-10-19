@@ -24,7 +24,7 @@ process uppercase {
     text: String
 
     output:
-    result: String = stdout()
+    stdout()
 
     script:
     """
@@ -41,7 +41,7 @@ agent shouty {
     request: String
 
     output:
-    answer: String
+    stdout()
 
     prompt:
     """

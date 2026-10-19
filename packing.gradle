@@ -252,7 +252,6 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
     def branch = gitBranch()
     def cmd =  """\
     # tag the release
-    git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
     sleep 1
     gh release create --repo nextflow-io/nextflow --prerelease --title "Version $version" v$version 

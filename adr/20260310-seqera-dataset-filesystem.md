@@ -9,11 +9,11 @@ Technical Story: Enable Nextflow pipelines to read Seqera Platform datasets as o
 
 ## Summary
 
-Add a Java NIO `FileSystemProvider` to the `nf-tower` plugin that registers the `seqera://` scheme, allowing pipelines to reference Seqera Platform datasets (CSV/TSV) as standard file paths without manual download steps. The implementation reuses the existing `TowerClient` for all HTTP communication, inheriting authentication and retry behaviour.
+Add a Java NIO `FileSystemProvider` to the `nf-tower` plugin that registers the `seqera://` scheme, so pipelines can reference Seqera Platform datasets (CSV/TSV) as standard file paths with no manual download step. The implementation reuses the existing `TowerClient` for all HTTP communication, so authentication and retry behaviour carry over.
 
 ## Problem Statement
 
-Nextflow users managing datasets on the Seqera Platform must currently download dataset files manually or through custom scripts before referencing them in pipelines. There is no native integration between Nextflow's file abstraction and the Seqera Platform dataset API. This creates friction in workflows where datasets are the primary input and forces users to handle authentication, versioning, and file staging outside the pipeline definition.
+Nextflow users managing datasets on the Seqera Platform must currently download dataset files manually or through custom scripts before referencing them in pipelines. There is no native integration between Nextflow's file abstraction and the Seqera Platform dataset API. In workflows where datasets are the primary input, this forces users to handle authentication, versioning, and file staging outside the pipeline definition.
 
 ## Goals or Decision Drivers
 
@@ -21,14 +21,14 @@ Nextflow users managing datasets on the Seqera Platform must currently download 
 - Reuse of existing nf-tower plugin infrastructure (authentication, HTTP client, retry/backoff)
 - Hierarchical path browsing matching the platform's org/workspace/dataset structure
 - Extensible architecture that can support future Seqera-managed resource types (e.g. data-links)
-- No new plugin or module — feature lives within nf-tower
+- No new plugin or module; the feature lives within nf-tower
 
 ## Non-goals
 
-- Streaming large datasets — the Platform API does not support streaming; content is fully buffered on download
-- Implementing resource types beyond `datasets` — only the extensible architecture is required
-- Local caching across pipeline runs — Nextflow's standard task staging handles caching
-- Dataset management operations (delete, rename) — the filesystem is read-only in the initial implementation
+- Streaming large datasets. The Platform API does not support streaming; content is fully buffered on download
+- Implementing resource types beyond `datasets`. Only the extensible architecture is required
+- Local caching across pipeline runs. Nextflow's standard task staging handles caching
+- Dataset management operations (delete, rename). The filesystem is read-only in the initial implementation
 
 ## Considered Options
 
@@ -58,7 +58,7 @@ Add the filesystem to nf-tower but use `HxClient` directly rather than going thr
 
 ## Solution or decision outcome
 
-Option 2 — NIO filesystem within nf-tower using TowerClient delegation. All HTTP calls go through `TowerClient.sendApiRequest()`, ensuring a single point of authentication and retry logic.
+Option 2: NIO filesystem within nf-tower using TowerClient delegation. All HTTP calls go through `TowerClient.sendApiRequest()`, which gives a single point of authentication and retry logic.
 
 ## Rationale & discussion
 
@@ -83,7 +83,7 @@ The path uses human-readable names but the Platform API requires numeric IDs. Re
 1. `GET /user-info` → obtain `userId`
 2. `GET /user/{userId}/workspaces` → returns all accessible org/workspace pairs
 
-This single source provides both directory listing content and name→ID mapping. Results are cached in `SeqeraFileSystem` with invalidation on write operations. `GET /orgs` is intentionally not used as it returns all platform orgs, not scoped to user membership.
+This single source provides both directory listing content and name→ID mapping. Results are cached in `SeqeraFileSystem` with invalidation on write operations. `GET /orgs` is deliberately not used, because it returns all platform orgs rather than only those the user belongs to.
 
 ### Component Structure
 
@@ -118,7 +118,7 @@ plugins/nf-tower/src/main/io/seqera/tower/plugin/
 
 5. **Extensible resource types**: The path hierarchy reserves depth 3 for a resource type segment (currently only `datasets`). Adding support for data-links or other resource types requires only a new handler at the directory listing and I/O layers, with no changes to path resolution or authentication.
 
-6. **Thread safety**: `SeqeraFileSystem` cache methods and `SeqeraFileSystemProvider` lifecycle methods are `synchronized`. The filesystem map uses `LinkedHashMap` with external synchronization rather than `ConcurrentHashMap`, matching the low-contention access pattern.
+6. **Thread safety**: `SeqeraFileSystem` cache methods and `SeqeraFileSystemProvider` lifecycle methods are `synchronized`. The filesystem map uses `LinkedHashMap` with external synchronization rather than `ConcurrentHashMap`, which matches the low-contention access pattern.
 
 ### Limitations
 
@@ -127,7 +127,7 @@ plugins/nf-tower/src/main/io/seqera/tower/plugin/
 
 ### Streaming Downloads
 
-Dataset downloads use `TowerClient.sendStreamingRequest()` which calls `HxClient.sendAsStream()` — the response body is returned as an `InputStream` streamed directly from the HTTP connection. This avoids the triple-buffering problem (`String` → `getBytes()` → `ByteArrayInputStream`) that would otherwise consume ~40 MB heap per 10 MB dataset. The `HxClient.sendAsStream()` method goes through the same `sendWithRetry()` path as `sendAsString()`, so retry logic and token refresh are preserved.
+Dataset downloads use `TowerClient.sendStreamingRequest()`, which calls `HxClient.sendAsStream()`. That returns the response body as an `InputStream` streamed directly from the HTTP connection. This avoids the triple-buffering problem (`String` → `getBytes()` → `ByteArrayInputStream`) that would otherwise consume ~40 MB heap per 10 MB dataset. The `HxClient.sendAsStream()` method goes through the same `sendWithRetry()` path as `sendAsString()`, so retry logic and token refresh are preserved.
 
 ## Links
 

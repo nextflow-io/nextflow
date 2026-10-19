@@ -31,8 +31,8 @@ import java.nio.file.Path;
 public class FallbackRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    public Path resolve(String moduleName, Path projectDir) {
-        var baseDir = projectDir != null ? projectDir : Path.of(".").toAbsolutePath();
+    public Path resolve(String moduleName, Path baseDir0) {
+        var baseDir = baseDir0 != null ? baseDir0 : Path.of(".").toAbsolutePath();
         var modulesDir = baseDir.resolve("modules").normalize();
         var resolved = modulesDir.resolve(moduleName).normalize();
         if( !resolved.startsWith(modulesDir) ) {

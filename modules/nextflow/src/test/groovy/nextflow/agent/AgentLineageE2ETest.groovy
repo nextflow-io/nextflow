@@ -78,7 +78,7 @@ class AgentLineageE2ETest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                answer: String
+                stdout()
                 prompt:
                 """
                 Question: ${q}
@@ -126,17 +126,17 @@ class AgentLineageE2ETest extends Dsl2Spec {
         and: 'the concrete model reported by the provider is captured'
         agentRun.resolvedModel == 'gpt-4o-2024-11-20'
 
-        and: 'the typed input is recorded as a value parameter, not as the literal class name'
+        and: 'the typed input is recorded with its declared type, not as the literal class name'
         agentRun.input.size() == 1
         agentRun.input[0].name == 'q'
-        agentRun.input[0].type == 'val'
+        agentRun.input[0].type == 'String'
         agentRun.input[0].value == 'what is the meaning of life'
 
         and: 'the agent output is recorded as a TaskOutput, exactly like a process'
         final outputs = loadAll(store, TaskOutput)
         final agentOutput = outputs.find { it.taskRun == "lid://${agentHash(store)}".toString() }
         agentOutput
-        agentOutput.output[0].name == 'answer'
+        agentOutput.output[0].name == '$out'
         agentOutput.output[0].value == 'the answer is 42'
 
         and: 'the ordinary process in the same run is still stored as a plain TaskRun'
@@ -187,7 +187,7 @@ class AgentLineageE2ETest extends Dsl2Spec {
                 input:
                 word: String
                 output:
-                result: String
+                stdout()
                 prompt:
                 """
                 Shout: ${word}
@@ -229,7 +229,7 @@ class AgentLineageE2ETest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                answer: String
+                stdout()
                 prompt: "Q: ${q}"
             }
 

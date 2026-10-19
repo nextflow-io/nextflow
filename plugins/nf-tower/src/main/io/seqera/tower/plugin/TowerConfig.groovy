@@ -46,6 +46,25 @@ class TowerConfig implements ConfigScope {
     """)
     final String accessToken
 
+    @ConfigOption(types=[Boolean, List, String])
+    @Description("""
+        Automatically derive resource labels from the workflow metadata (using the `nextflow.io/`
+        and `seqera.io/platform/` key prefixes) and attach them to the compute resources created
+        by the executor. Accepts:
+          - `true`: include all available metadata labels
+          - `false` (default): disable
+          - a list or comma-separated string of short names: e.g.
+            `['runName', 'projectName']` or `'runName,projectName'`
+
+        Valid names: `projectName`, `userName`, `runName`, `sessionId`, `resume`,
+        `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`,
+        `workflowId`, `workspaceId`, `computeEnvId`.
+
+        The labels declared with the `resourceLabels` process directive take precedence
+        on key collision.
+    """)
+    final Object autoLabels
+
     @ConfigOption
     @Description("""
         The Compute Environment ID in Seqera Platform in which to launch the run (default: the primary environment in the workspace).
@@ -89,6 +108,9 @@ class TowerConfig implements ConfigScope {
 
     TowerConfig(Map opts, Map<String,String> env) {
         this.accessToken = PlatformHelper.getAccessToken(opts, env)
+        // keep the raw value: the runtime parses it with `AutoLabels.parse` and needs to
+        // tell apart the boolean, list and comma-separated string forms
+        this.autoLabels = opts.get('autoLabels')
         if( opts.computeEnvId )
             this.computeEnvId = opts.computeEnvId as String
         this.enabled = opts.enabled as boolean

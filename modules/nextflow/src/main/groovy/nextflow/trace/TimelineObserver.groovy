@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
 import nextflow.processor.TaskId
 import nextflow.trace.config.TimelineConfig
 import nextflow.trace.event.TaskEvent
@@ -61,8 +60,8 @@ class TimelineObserver implements TraceObserverV2 {
 
     private boolean overwrite
 
-    TimelineObserver(TimelineConfig config) {
-        this.reportFile = FileHelper.asPath(config.file)
+    TimelineObserver(TimelineConfig config, Path reportFile) {
+        this.reportFile = reportFile
         this.overwrite = config.overwrite
     }
 

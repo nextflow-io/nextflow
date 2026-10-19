@@ -17,27 +17,44 @@
 package nextflow
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import nextflow.cache.CacheDB
+import nextflow.cache.DefaultCacheStore
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
+import nextflow.executor.CachedTaskHandler
 import nextflow.file.FileHelper
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.script.BodyDef
+import nextflow.script.ProcessConfig
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceRecord
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.TaskEvent
+import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -64,9 +81,9 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.baseDir = Paths.get('some/folder')
+        session.baseDir = Path.of('some/folder')
         then:
-        session.baseDir == Paths.get('some/folder')
+        session.baseDir == Path.of('some/folder')
         session.binDir == null
 
         when:
@@ -102,7 +119,7 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.setBaseDir(Paths.get('/some/path'))
+        session.setBaseDir(Path.of('/some/path'))
         then:
         session.getLibDir() == []
 
@@ -139,6 +156,8 @@ class SessionTest extends Specification {
         def session
         def result
         def observer
+        and:
+        def outputDir = Path.of('/some/results')
 
         when:
         session = [:] as Session
@@ -186,6 +205,56 @@ class SessionTest extends Specification {
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
 
+        when: 'the trace directory is defined'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is resolved against the output directory'
+        observer.tracePath == outputDir.resolve('pipeline_info/trace.txt')
+
+        when: 'the trace directory is the current directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '.', file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is placed in the output directory'
+        observer.tracePath == outputDir.resolve('trace.txt')
+
+        when: 'the trace directory is an absolute path'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '/pipeline_info']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace directory escapes the output directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '../escaped']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace file escapes the output directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: '../../escaped.txt']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace file is an absolute path'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: '/other/trace.txt']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
     }
 
     def 'should return absolute workDir' () {
@@ -213,6 +282,89 @@ class SessionTest extends Specification {
         cleanup:
         session.classesDir?.deleteDir()
 
+    }
+
+    def 'a cache factory that resolves its own work dir is visible to everything below it' () {
+
+        given: 'a cache factory that writes back into the session, as the global cloud cache does'
+        def folder = Files.createTempDirectory('test')
+        def shared = folder.resolve('shared-cache/work')
+        def db = Mock(CacheDB)     // created here: a Spock mock cannot be built inside the subclass
+        def session = new Session([workDir: folder.resolve('local-work').toString()]) {
+            @Override protected CacheDB createCache() {
+                this.workDir = shared
+                this.resumeMode = true
+                return db
+            }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the work dir it resolved is the one that got created, not the one config named'
+        session.workDir == shared
+        Files.isDirectory(shared)
+        !Files.exists(folder.resolve('local-work'))
+        and: 'and the one the workflow reports -- `workflow.workDir` must not name a dir no task uses'
+        session.workflowMetadata.workDir == shared
+        and: 'the resumeMode it forced on survived too'
+        session.resumeMode
+
+        cleanup:
+        session.classesDir?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'an abort after the cache is created still closes it' () {
+
+        given: 'a work dir that cannot be created, so init fails right after createCache()'
+        def folder = Files.createTempDirectory('test')
+        def blocked = folder.resolve('not-a-dir')
+        blocked.text = 'a file, so mkdirs() on it fails'
+        def db = Mock(CacheDB)
+        def session = new Session([workDir: blocked.resolve('work').toString()]) {
+            @Override protected CacheDB createCache() { return db }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the original failure propagates, unchanged'
+        thrown(AbortOperationException)
+        and: 'but the cache does not leak -- ScriptRunner calls init() outside the try that would'
+        and: 'otherwise close it, and DefaultCacheStore.open() has already truncated the index'
+        1 * db.close()
+        session.cache == null
+
+        cleanup:
+        session.classesDir?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'cleanup returns before opening the cache for a non-file work dir' () {
+
+        given: 'a session with `cleanup = true` whose work dir is on a remote (non-file:) file system, as a cloud work dir is'
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        def workDir = TestHelper.createInMemTempDir()
+        def kept = workDir.resolve('ab/cdef0123/out.txt')
+        Files.createDirectories(kept.parent)
+        kept.text = 'data'
+        def session = new Session([cleanup: true])
+        session.workDir = workDir
+
+        when:
+        session.cleanup()
+
+        then: 'it warns and stops -- no cache is opened, nothing under the work dir is touched'
+        Files.exists(kept)
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('not supported for remote work directory') }
+        !appender.list.any { it.formattedMessage.contains('Failed to cleanup work dir') }
+
+        cleanup:
+        logger.detachAppender(appender)
     }
 
     def 'should collect bin executable files' () {
@@ -476,6 +628,85 @@ class SessionTest extends Specification {
 
     }
 
+    def 'should compute the auto resource labels lazily and memoize them' () {
+        given:
+        def session = new Session([tower: [autoLabels: 'runName']])
+        // the Platform metadata is only filled in at `notifyFlowCreate` i.e. after the session is created
+        def meta = Mock(WorkflowMetadata)
+        session.@workflowMetadata = meta
+
+        when:
+        def labels = session.getAutoResourceLabels()
+        then:
+        // the metadata is only read on the first access
+        (1.._) * meta.getRunName() >> 'crazy_darwin'
+        and:
+        labels == ['nextflow.io/runName': 'crazy_darwin']
+
+        when:
+        def again = session.getAutoResourceLabels()
+        then:
+        0 * meta.getRunName()
+        and:
+        again.is(labels)
+    }
+
+    def 'should return no auto resource labels when the option is not set' () {
+        given:
+        def session = new Session()
+        session.@workflowMetadata = Mock(WorkflowMetadata)
+
+        expect:
+        session.getAutoResourceLabels() == [:]
+    }
+
+    @Unroll
+    def 'should resolve the auto resource labels option scope' () {
+        given:
+        def session = new Session(CONFIG)
+        session.@workflowMetadata = Mock(WorkflowMetadata) {
+            getRunName() >> 'crazy_darwin'
+            getProjectName() >> 'nf-core/rnaseq'
+        }
+
+        expect:
+        session.getAutoResourceLabels().keySet() as List == EXPECTED
+
+        where:
+        CONFIG                                                                          | EXPECTED
+        [tower: [autoLabels: 'runName']]                                                | ['nextflow.io/runName']
+        [tower: [autoLabels: ['runName','projectName']]]                                | ['nextflow.io/projectName','nextflow.io/runName']
+        [tower: [autoLabels: false]]                                                    | []
+        [seqera: [executor: [autoLabels: 'runName']]]                                   | ['nextflow.io/runName']
+        // the deprecated option wins when given, even as `false`
+        [seqera: [executor: [autoLabels: 'projectName']], tower: [autoLabels:'runName']]| ['nextflow.io/projectName']
+        [seqera: [executor: [autoLabels: false]], tower: [autoLabels: true]]            | []
+        // ... and only when given
+        [seqera: [executor: [endpoint: 'http://foo']], tower: [autoLabels: 'runName']]  | ['nextflow.io/runName']
+    }
+
+    def 'should report the offending option name for an invalid auto labels value' () {
+        when:
+        new Session([tower: [autoLabels: 'foo']]).getAutoResourceLabels()
+        then:
+        def e1 = thrown(IllegalArgumentException)
+        e1.message.contains("'tower.autoLabels'")
+
+        when:
+        new Session([seqera: [executor: [autoLabels: 'foo']]]).getAutoResourceLabels()
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("'seqera.executor.autoLabels'")
+    }
+
+    def 'should fail fast on an invalid auto labels value at config check' () {
+        when: 'the config is checked, before any task is created'
+        new Session([tower: [autoLabels: 'foo']]).checkConfig()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'tower.autoLabels'")
+    }
+
     def 'should notify flow complete only once when abort and destroy race' () {
         given:
         def observer = Mock(TraceObserverV2)
@@ -493,5 +724,343 @@ class SessionTest extends Specification {
 
         then:
         1 * observer.onFlowComplete()
+    }
+
+    def 'destroy should wait for flow complete started by abort on another thread' () {
+        given:
+        def started = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); sleep 2_000; finished.set(true) }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // an error on a non-main thread aborts the session, which runs notifyFlowComplete() there
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+        // the main thread winds the session down (ScriptRunner.shutdown) and then the JVM exits
+        session.destroy()
+        def completedWhenDestroyReturned = finished.get()
+
+        then:
+        completedWhenDestroyReturned
+
+        cleanup:
+        t1?.join()
+    }
+
+    def 'destroy should wait for the error notification of an abort on another thread' () {
+        given:
+        def started = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown() }
+            @Override
+            void onFlowError(TaskEvent event) { sleep 2_000; finished.set(true) }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+        session.destroy()
+        def completedWhenDestroyReturned = finished.get()
+
+        then:
+        completedWhenDestroyReturned
+
+        cleanup:
+        t1?.join()
+    }
+
+    def 'should wait for an abort on another thread when the main thread aborts too' () {
+        given:
+        def started = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); sleep 2_000; finished.set(true) }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        def t1 = Thread.start { session.abort(new Exception('operator error')) }
+        assert started.await(5, TimeUnit.SECONDS)
+        // what ScriptRunner does on the main thread when the script execution throws:
+        // abort() returns at once because the session is already aborted
+        session.abort(new Exception('script error'))
+        session.awaitShutdown()
+        def completedWhenAwaitReturned = finished.get()
+
+        then:
+        completedWhenAwaitReturned
+
+        cleanup:
+        t1?.join()
+    }
+
+    def 'destroy should not interrupt an abort running on a task finalizer thread' () {
+        given:
+        def started = new CountDownLatch(1)
+        def interrupted = new AtomicBoolean(false)
+        def finished = new AtomicBoolean(false)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() {
+                started.countDown()
+                // Thread.sleep, unlike Groovy sleep, is interrupted when the pool is shut down hard
+                try { Thread.sleep(2_000); finished.set(true) }
+                catch( InterruptedException e ) { interrupted.set(true) }
+            }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // with the default `terminate` error strategy, a task error aborts the session on a finalizer thread
+        session.taskFinalizerExecutorService().submit { session.abort(new Exception('task error')) }
+        assert started.await(5, TimeUnit.SECONDS)
+        session.destroy()
+
+        then:
+        !interrupted.get()
+        finished.get()
+    }
+
+    def 'should wait for an abort that has not initiated the shutdown yet' () {
+        given:
+        def inAbort = new CountDownLatch(1)
+        def proceed = new CountDownLatch(1)
+        def finished = new AtomicBoolean(false)
+        def session = new Session() {
+            @Override
+            String dumpNetworkStatus() { inAbort.countDown(); proceed.await(); return null }
+        }
+        session.onShutdown { finished.set(true) }
+
+        when:
+        // hold the abort on another thread after `aborted` is set, before the shutdown is initiated
+        def t1 = Thread.start { session.abort(new Exception('operator error')) }
+        assert inAbort.await(5, TimeUnit.SECONDS)
+        // the main thread fails at the same moment: abort() returns at once, as the session is already aborted
+        session.abort(new Exception('script error'))
+        def t2 = Thread.start { session.awaitShutdown() }
+        t2.join(500)
+        def waiting = t2.isAlive()
+        proceed.countDown()
+        t2.join(5_000)
+
+        then:
+        waiting
+        !t2.isAlive()
+        finished.get()
+
+        cleanup:
+        proceed.countDown()
+        t1?.join()
+    }
+
+    def 'should run the shutdown when the abort diagnostics fail' () {
+        given:
+        def session = new Session() {
+            @Override
+            String dumpNetworkStatus() { throw new IllegalStateException('cannot dump the network status') }
+        }
+        def ran = new AtomicBoolean(false)
+        session.onShutdown { ran.set(true) }
+
+        when:
+        session.abort()
+
+        then:
+        ran.get()
+    }
+
+    def 'observer joining a thread that aborts the session should not stall'() {
+        given:
+        def session = new Session()
+        // a regression would wait for the whole timeout
+        session.shutdownTimeout = Duration.of('10s')
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() {
+                // like TowerObserver, whose sender thread aborts the session when a request fails
+                Thread.start { session.abort(new Exception('send failed')) }.join()
+            }
+        }
+        session.@observersV2 = [observer]
+
+        when:
+        def start = System.currentTimeMillis()
+        session.destroy()
+
+        then:
+        System.currentTimeMillis() - start < 5_000
+    }
+
+    def 'should not block a late abort once the main thread has shut down the session' () {
+        given:
+        def session = new Session()
+        session.destroy()
+
+        when:
+        def t1 = Thread.start { session.abort(new Exception('late error')) }
+        t1.join(5_000)
+
+        then:
+        !t1.isAlive()
+    }
+
+    def 'should not wait when the thread running the shutdown awaits it' () {
+        given:
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        and:
+        def session = new Session()
+        session.shutdownTimeout = Duration.of('1s')
+
+        when:
+        // the thread that ran the shutdown would never be released if it waited for itself
+        session.abort()
+        session.awaitShutdown()
+
+        then:
+        !appender.list.any { it.formattedMessage.contains('waiting for the session shutdown') }
+
+        cleanup:
+        logger.detachAppender(appender)
+    }
+
+    def 'should give up waiting after the shutdown timeout' () {
+        given:
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        and:
+        def started = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); release.await() }
+        }
+        def session = new Session()
+        session.shutdownTimeout = Duration.of('200ms')
+        session.@observersV2 = [observer]
+
+        when:
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+        session.destroy()
+
+        then:
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('NXF_SHUTDOWN_TIMEOUT') }
+
+        cleanup:
+        release.countDown()
+        t1?.join()
+        logger.detachAppender(appender)
+    }
+
+    def 'should restore the interrupt flag when interrupted while waiting for the shutdown' () {
+        given:
+        def started = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
+        def observer = new TraceObserverV2() {
+            @Override
+            void onFlowComplete() { started.countDown(); release.await() }
+        }
+        def session = new Session()
+        session.@observersV2 = [observer]
+        def t1 = Thread.start { session.abort() }
+        assert started.await(5, TimeUnit.SECONDS)
+
+        when:
+        def interrupted = new AtomicBoolean(false)
+        def t2 = Thread.start {
+            Thread.currentThread().interrupt()
+            session.destroy()
+            interrupted.set(Thread.currentThread().isInterrupted())
+        }
+        t2.join(5_000)
+
+        then:
+        !t2.isAlive()
+        interrupted.get()
+
+        cleanup:
+        release.countDown()
+        t1?.join()
+    }
+
+    @Unroll
+    def 'should resolve the shutdown timeout from NXF_SHUTDOWN_TIMEOUT=#VALUE' () {
+        given:
+        SysEnv.push(VALUE ? [NXF_SHUTDOWN_TIMEOUT: VALUE] : [:])
+
+        expect:
+        new Session().shutdownTimeout == Duration.of(EXPECTED)
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        VALUE   | EXPECTED
+        null    | '5m'
+        '30s'   | '30s'
+        'foo'   | '5m'
+    }
+
+    private void writeCacheEntry(CacheDB cache, String key, String workDir) {
+        final hash = CacheHelper.hasher(key).hash()
+        final proc = Mock(TaskProcessor)
+        proc.getTaskBody() >> new BodyDef(null,'source')
+        proc.getConfig() >> new ProcessConfig([:])
+        proc.isCacheable() >> true
+        final task = Mock(TaskRun)
+        task.getProcessor() >> proc
+        task.getHash() >> hash
+        task.getId() >> TaskId.of(1)
+        final trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0, workdir: workDir])
+        final handler = new CachedTaskHandler(task, trace)
+        cache.writeTaskEntry0(handler, trace)
+        cache.writeTaskIndex0(handler, false)
+    }
+
+    def 'should cleanup local task dirs and skip the remote ones' () {
+        given: 'a local work dir holding one task dir'
+        def cacheHome = Files.createTempDirectory('cache')
+        def work = Files.createTempDirectory('work')
+        def localTask = Files.createDirectories(work.resolve('aa/bbbbbb'))
+        Files.createFile(localTask.resolve('.command.sh'))
+        SysEnv.push(NXF_CACHE_DIR: cacheHome.toString())
+
+        and:
+        def session = new Session([cleanup: true, workDir: work.toString(), runName: 'test_1'])
+
+        and: 'a cache holding one remote task and one local task'
+        def cache = new CacheDB(new DefaultCacheStore(session.uniqueId, 'test_1', cacheHome)).open()
+        writeCacheEntry(cache, 'remote', 's3://some-bucket/48/299e411a526eb1453a5a2acfa0f721')
+        writeCacheEntry(cache, 'local', localTask.toString())
+        cache.close()
+
+        when:
+        session.cleanup()
+
+        then: 'the remote task does not prevent the local one from being deleted'
+        !Files.exists(localTask)
+
+        cleanup:
+        SysEnv.pop()
+        work?.deleteDir()
+        cacheHome?.deleteDir()
     }
 }

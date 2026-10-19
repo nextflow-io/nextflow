@@ -1104,12 +1104,12 @@ While this option can be used with any process output, it cannot be applied to i
 
 ### Singleton outputs
 
-When a process is only supplied with dataflow values, regular values, or no inputs, it returns outputs as dataflow values. For example:
+When a process is only supplied with dataflow values, plain values, or no inputs, it returns outputs as dataflow values. For example:
 
 ```nextflow file=./snippets/process-out-singleton.nf
 ```
 
-In the above example, the `echo` process is invoked with a regular value that is wrapped in a dataflow value. As a result, `echo` returns a dataflow value and `greet` is executed three times.
+In the above example, the `echo` process is invoked with a plain value that is wrapped in a dataflow value. As a result, `echo` returns a dataflow value and `greet` is executed three times.
 
 If the call to `echo` was changed to `echo( channel.of('hello') )`, the process would instead return a channel, and `greet` would be executed only once.
 
@@ -1117,9 +1117,9 @@ See also: [Multiple inputs][process-multiple-inputs].
 
 ## When
 
-:::note
-As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or [`filter`][operator-filter] operator) instead of the process definition.
-:::
+<DeprecatedInVersion version="26.10">
+Implement conditional logic in the calling workflow (e.g. an `if` statement or [`filter`][operator-filter] operator), or use the [`process.when`][config-process-when] config setting to disable a process at runtime.
+</DeprecatedInVersion>
 
 The `when` section allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
 
@@ -1319,13 +1319,12 @@ process hello {
 ```
 
 [cache-nondeterministic-inputs]: ./cache-and-resume#non-deterministic-process-inputs
-[channel-value]: ./reference/stdlib-namespaces/channel#value
+[config-process-when]: ./config#disabling-processes
 [executor-page]: ./executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html.mdx#glob
 [operator-combine]: ./reference/operator#combine
 [operator-filter]: ./reference/operator#filter
 [operator-flatten]: ./reference/operator#flatten
-[operator-cross]: ./reference/operator#cross
 [operator-merge]: ./reference/operator#merge
 [process-conda]: ./reference/process/directives/conda
 [process-container]: ./reference/process/directives/container

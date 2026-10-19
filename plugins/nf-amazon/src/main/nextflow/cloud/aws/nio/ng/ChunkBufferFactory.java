@@ -58,10 +58,10 @@ public class ChunkBufferFactory {
 
         // add logistic delay to slow down the allocation of new buffer
         // when the request approach or exceed the max capacity
-        final int indx = count.getAndIncrement();
+        final int index = count.getAndIncrement();
         if( log.isTraceEnabled() )
-            log.trace("Creating a new buffer index={}; capacity={}", indx, capacity);
-        return new ChunkBuffer(this, chunkSize, indx);
+            log.trace("Creating a new buffer index={}; capacity={}", index, capacity);
+        return new ChunkBuffer(this, chunkSize, index);
     }
 
     void giveBack(ChunkBuffer buffer) {

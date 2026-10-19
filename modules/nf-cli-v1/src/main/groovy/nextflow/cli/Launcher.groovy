@@ -34,6 +34,7 @@ import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
+import nextflow.exception.ExitException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.secret.SecretsLoader
@@ -538,6 +539,12 @@ class Launcher {
             return 0
         }
 
+        catch( ExitException e ) {
+            // early termination requested by the pipeline script via `exit()`
+            // -- the message (if any) was already reported by `exit()`
+            return e.exitCode
+        }
+
         catch( AbortRunException e ) {
             return(1)
         }
@@ -606,15 +613,10 @@ class Launcher {
     private void setupEnvironment() {
 
         final env = System.getenv()
-        setProxy('HTTP',env)
-        setProxy('HTTPS',env)
-        setProxy('FTP',env)
-
-        setProxy('http',env)
-        setProxy('https',env)
-        setProxy('ftp',env)
-
-        setNoProxy(env)
+        // resolve the http/https/ftp egress proxy from the environment and install it into the JVM
+        // (system properties, default authenticator, Basic-over-CONNECT tunnelling); the resolution
+        // lives in the shared io.seqera:lib-util-net library - see ProxyConfig.setupFromEnvironment
+        ProxyConfig.setupFromEnvironment(env)
 
         setHttpClientProperties(env)
     }
@@ -627,85 +629,6 @@ class Launcher {
         System.setProperty("jdk.httpclient.keepalive.timeout", env.getOrDefault("NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT","10"))
         if( env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE") )
             System.setProperty("jdk.httpclient.connectionPoolSize", env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE"))
-    }
-
-    /**
-     * Set no proxy property if defined in the launching env
-     *
-     * See for details
-     * https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html
-     *
-     * @param env
-     */
-    @PackageScope
-    static void setNoProxy(Map<String,String> env) {
-        final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
-        if(noProxy) {
-            System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
-            // make the same entries available to HxClient-based clients via ProxyConfig
-            ProxyConfig.setNoProxyHosts(noProxy.tokenize(','))
-        }
-    }
-
-
-    /**
-     * Setup proxy system properties and optionally configure the network authenticator
-     *
-     * See:
-     * http://docs.oracle.com/javase/6/docs/technotes/guides/net/proxies.html
-     * https://github.com/nextflow-io/nextflow/issues/24
-     *
-     * @param qualifier Either {@code http/HTTP} or {@code https/HTTPS}.
-     * @param env The environment variables system map
-     */
-    @PackageScope
-    static void setProxy(String qualifier, Map<String,String> env ) {
-        assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
-        def str = null
-        def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
-        // ALL_PROXY / all_proxy is the fallback when no scheme-specific variable is set
-        def allVar = qualifier.isLowerCase() ? 'all_proxy' : 'ALL_PROXY'
-
-        // -- setup HTTP proxy
-        try {
-            final proxy = ProxyConfig.parse(str = env.get(var.toString()) ?: env.get(allVar))
-            if( proxy ) {
-                // set the expected protocol
-                proxy.protocol = qualifier.toLowerCase()
-                log.debug "Setting $qualifier proxy: $proxy"
-                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy.host)
-                if( proxy.port )
-                    System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy.port)
-                if( proxy.authenticator() ) {
-                    log.debug "Setting $qualifier proxy authenticator"
-                    Authenticator.setDefault(proxy.authenticator())
-                    enableBasicProxyTunneling()
-                }
-                // register so HxClient-based clients honour the same proxy (routing + credentials)
-                ProxyConfig.register(proxy)
-            }
-        }
-        catch ( MalformedURLException e ) {
-            log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
-        }
-
-    }
-
-    /**
-     * The JDK strips proxy credentials from the HTTPS {@code CONNECT} request for the auth schemes
-     * listed in {@code jdk.http.auth.tunneling.disabledSchemes} (default {@code Basic}, see
-     * {@code $JAVA_HOME/conf/net.properties}), so HTTPS targets behind an authenticating proxy fail
-     * with a 407 even when the authenticator is correctly wired. Clear the property so Basic proxy
-     * authentication works over the tunnel — but never override a value the user set explicitly
-     * (e.g. via {@code NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes=...'}).
-     */
-    @PackageScope
-    static void enableBasicProxyTunneling() {
-        final key = 'jdk.http.auth.tunneling.disabledSchemes'
-        if( System.getProperty(key) == null ) {
-            log.debug "Clearing $key to allow Basic proxy authentication over HTTPS tunnelling"
-            System.setProperty(key, '')
-        }
     }
 
     /**

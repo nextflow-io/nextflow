@@ -1,5 +1,5 @@
 plugins {
-    id "com.gradleup.shadow" version "9.3.1"
+    id "com.gradleup.shadow" version "9.6.1"
 }
 apply plugin: 'groovy'
 apply plugin: 'application'
@@ -19,7 +19,7 @@ dependencies {
     api(project(':nf-lineage'))
     api "com.beust:jcommander:1.35"
 
-    testImplementation 'org.subethamail:subethasmtp:3.1.7'
+    testImplementation "org.subethamail:subethasmtp:${subethasmtpVersion}"
 
     // test configuration
     testImplementation(testFixtures(project(":nextflow")))
