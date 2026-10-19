@@ -41,7 +41,7 @@ dependencies {
     api "ch.qos.logback:logback-classic:${logbackVersion}"
     api "ch.qos.logback:logback-core:${logbackVersion}"
     api "org.codehaus.gpars:gpars:1.2.1"
-    api("ch.artecat.grengine:grengine:3.0.2") { exclude group: 'org.codehaus.groovy' }
+    api "ch.grengine:grengine:3.1.2"
     api "org.apache.commons:commons-lang3:${commonsLang3Version}"
     api "commons-codec:commons-codec:1.15"
     api "commons-io:commons-io:2.15.1"
