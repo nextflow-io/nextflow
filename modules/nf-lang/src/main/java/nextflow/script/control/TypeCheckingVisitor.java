@@ -1344,6 +1344,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             resultType = falseType;
         }
         else if( ClassHelper.isDynamicTyped(trueType) || ClassHelper.isDynamicTyped(falseType) ) {
+            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.dynamicType());
             return;
         }
         else if( Types.isEqual(trueType, falseType) ) {
@@ -1360,6 +1361,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
         else {
             addError(String.format("Conditional expression has inconsistent types -- true branch has type %s but false branch has type %s", Types.getName(trueType), Types.getName(falseType)), node);
+            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.dynamicType());
             return;
         }
 
@@ -1407,6 +1409,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
             else if( !Types.isEqual(elementType, type) ) {
                 addError(String.format("List expression has inconsistent element types -- some elements have type %s while others have type %s", Types.getName(elementType), Types.getName(type)), node);
+                elementType = ClassHelper.dynamicType();
                 break;
             }
         }
