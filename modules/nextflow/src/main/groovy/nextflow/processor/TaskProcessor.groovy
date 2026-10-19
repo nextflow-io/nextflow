@@ -1768,6 +1768,9 @@ class TaskProcessor {
             resolvedValues.add(value)
         }
 
+        // -- check conflicting file names (the same file may be staged by multiple inputs)
+        checkConflicts(task.inputFiles.unique(false) { FileHolder holder -> List.of(holder.stageName, holder.storePath) })
+
         // -- normalize input values by replacing source paths with staged paths
         final Map<Path,FileHolder> holders = [:]
         for( final holder : task.inputFiles )
