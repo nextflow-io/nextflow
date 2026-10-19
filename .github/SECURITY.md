@@ -1,25 +1,5 @@
 # Security Policy
 
-## Supported Versions
-
-Nextflow uses a calendar-based versioning scheme (`YY.MM.PATCH`).
-Releases in April (`04`) and October (`10`) are **stable** releases;
-all other months produce **edge** releases (e.g. `26.09.x-edge`).
-The currently recommended version is the latest stable release.
-
-| Version stream        | Supported          | Notes                                          |
-|-----------------------|--------------------|------------------------------------------------|
-| ≤ 24.10.x             | :x:                | End of life                                    |
-| 25.04.x               | :x:                | Superseded by 25.10                            |
-| 25.10.x               | :white_check_mark: | Previous stable — critical fixes only (\*)     |
-| 26.04.x               | :white_check_mark: | Previous stable — critical fixes only (\*)     |
-| Edge (`26.xx.x-edge`) | :grey_question:    | Best-effort; may not receive backports         |
-| **26.10.x**           | :white_check_mark: | **Currently recommended stable**               |
-
-(\*) Older stable streams are no longer the primary focus of the maintainers,
-but critical security fixes are applied when feasible and when reachability
-in that stream is confirmed.
-
 ## Threat Model
 
 Before reporting, please consult the project [Threat Model](../THREAT_MODEL.md).
