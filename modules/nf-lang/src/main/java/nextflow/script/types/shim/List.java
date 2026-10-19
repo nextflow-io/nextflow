@@ -69,6 +69,11 @@ public interface List<E> extends Iterable<E> {
     List<E> init();
 
     @Description("""
+        Returns the elements of the list that are also in the given iterable, preserving the order and duplicates of the list.
+    """)
+    List<E> intersect(Iterable<E> right);
+
+    @Description("""
         Returns the last element in the list. Raises an error if the list is empty.
     """)
     E last();

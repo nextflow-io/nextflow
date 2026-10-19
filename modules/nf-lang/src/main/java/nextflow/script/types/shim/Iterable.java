@@ -90,11 +90,6 @@ public interface Iterable<E> {
     <R> R inject(R initialValue, BiFunction<R,E,R> accumulator);
 
     @Description("""
-        Returns the elements that are present in both this iterable and the given iterable.
-    """)
-    Iterable<E> intersect(Iterable<E> right);
-
-    @Description("""
         Returns `true` if the iterable is empty.
     """)
     boolean isEmpty();
