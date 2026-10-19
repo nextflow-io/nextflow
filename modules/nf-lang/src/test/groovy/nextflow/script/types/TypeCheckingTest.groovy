@@ -844,6 +844,9 @@ class TypeCheckingTest extends Specification {
         "2 in [2]"      | null
         "[2] == ['2']"  | "The `==` operator is not defined for operands with types List<Integer> and List<String>"
         "[2] == [2]"    | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a') }"     | null
+        "record Sample { id: String }\ndef f(s: Sample) { record(id: 'a') != s }"     | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(name: 'a') }"   | "The `==` operator is not defined for operands with types Sample and Record {\n    name: String\n}"
         "['a', 'b', 'c'][0]"        | null
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
