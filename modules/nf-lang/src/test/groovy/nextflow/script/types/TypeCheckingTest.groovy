@@ -655,6 +655,37 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a function call with default params' () {
+        expect:
+        check(
+            """\
+            def greet(name: String, greeting: String = 'Hello') -> String {
+                "\${greeting}, \${name}!"
+            }
+
+            def pad(prefix: String = '>', s: String) -> String {
+                prefix + s
+            }
+
+            workflow {
+                ${SOURCE}
+            }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                          | ERROR
+        "greet('world')"                | null
+        "greet('world', 'Hi')"          | null
+        "greet()"                       | "Function `greet` expects 1 to 2 argument(s) but received 0"
+        "greet('world', 'Hi', 'x')"     | "Function `greet` expects 1 to 2 argument(s) but received 3"
+        "greet(42)"                     | "Argument with type Integer is not compatible with parameter of type String"
+        "pad('x')"                      | null
+        "pad(42)"                       | "Argument with type Integer is not compatible with parameter of type String"
+    }
+
+    @Unroll
     def 'should check a function call with overloads' () {
         expect:
         check(SOURCE, ERROR)

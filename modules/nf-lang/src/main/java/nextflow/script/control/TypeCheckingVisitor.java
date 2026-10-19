@@ -640,9 +640,12 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             // plugin functions have no known signature
             if( mn instanceof FunctionNode && mn.isSynthetic() )
                 return;
-            var parameters = mn.getParameters();
+            var parameters = parametersForArguments(mn.getParameters(), arguments.size());
             if( parameters.length != arguments.size() ) {
-                addError(String.format("%s `%s` expects %d argument(s) but received %d", methodType(mn), node.getMethodAsString(), parameters.length, arguments.size()), node.getMethod());
+                var maxCount = mn.getParameters().length;
+                var minCount = requiredParameterCount(mn.getParameters());
+                var expected = minCount < maxCount ? minCount + " to " + maxCount : String.valueOf(maxCount);
+                addError(String.format("%s `%s` expects %s argument(s) but received %d", methodType(mn), node.getMethodAsString(), expected, arguments.size()), node.getMethod());
             }
             else {
                 checkArguments(parameters, arguments);
