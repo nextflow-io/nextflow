@@ -287,6 +287,12 @@ record Vcf {
 }
 ```
 
+The `*` pattern stages every file in the task directory, which keeps each index file next to its VCF file. If two files have the same name, the task fails with an input file name collision error.
+
+:::note
+The `?` and `*` wildcards in a file pattern are numbered separately for each `stageAs` directive. When a nullable field is filtered, the files of the remaining records are renumbered, so patterns such as `vcf?/*` do not keep the files of each record in the same directory.
+:::
+
 For more information about the available stage directives, see [Inputs and outputs (typed)][process-reference-typed].
 
 ## Outputs
