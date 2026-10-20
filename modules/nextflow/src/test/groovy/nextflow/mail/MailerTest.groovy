@@ -430,4 +430,14 @@ class MailerTest extends Specification {
 
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new Mailer([smtp: [host: 'localhost']])
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'Mailer'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

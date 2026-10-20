@@ -179,5 +179,13 @@ class ClusterConfigTest extends Specification {
         cfg.getClusterJoin() == 'multicast:228.1.2.4'
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new ClusterConfig([x: 1], 'master', [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'ClusterConfig'
+        !"$obj".contains('s3cr3t-canary')
+    }
 
 }

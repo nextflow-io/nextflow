@@ -560,4 +560,14 @@ class TowerClientTest extends Specification {
         req.tasks[0].numSpotInterruptions == 3
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new TowerClient()
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'TowerClient'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

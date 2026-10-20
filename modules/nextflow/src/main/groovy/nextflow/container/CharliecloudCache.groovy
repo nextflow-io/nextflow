@@ -311,4 +311,8 @@ class CharliecloudCache {
         return result
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }

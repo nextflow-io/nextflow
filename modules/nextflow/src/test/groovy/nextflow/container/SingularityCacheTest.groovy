@@ -206,4 +206,13 @@ class SingularityCacheTest extends Specification {
         file == container
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new SingularityCache(null, null, false, null, [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'SingularityCache'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

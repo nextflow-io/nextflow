@@ -263,4 +263,15 @@ class LocalSecretsProviderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should not render the environment' () {
+        given:
+        def obj = new LocalSecretsProvider()
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'LocalSecretsProvider'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

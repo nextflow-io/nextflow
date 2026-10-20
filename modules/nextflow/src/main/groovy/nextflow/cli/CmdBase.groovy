@@ -35,4 +35,8 @@ abstract class CmdBase implements Runnable {
 
     @Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
     boolean help
+
+    /** Must not render the environment */
+    @Override
+    String toString() { "${getClass().getSimpleName()}[name=${getName()}]" }
 }

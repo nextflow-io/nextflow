@@ -830,4 +830,8 @@ class TowerClient implements TraceObserverV2 {
         }
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }
