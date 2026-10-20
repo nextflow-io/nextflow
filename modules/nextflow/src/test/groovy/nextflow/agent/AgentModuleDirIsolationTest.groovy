@@ -124,7 +124,7 @@ class AgentModuleDirIsolationTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 \"\"\"

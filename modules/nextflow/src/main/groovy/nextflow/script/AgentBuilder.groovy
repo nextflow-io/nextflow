@@ -15,10 +15,13 @@
  */
 package nextflow.script
 
+import java.lang.reflect.Type
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessFileOutput
 
 /**
@@ -46,7 +49,7 @@ class AgentBuilder {
 
     private final Map<String,Object> directives = new LinkedHashMap<>()
     private final List<AgentInput> inputs = new ArrayList<>()
-    private final List<AgentOutput> outputs = new ArrayList<>()
+    private AgentOutput output
     private final List<ProcessFileInput> fileInputs = new ArrayList<>()
     private final Map<String,ProcessFileOutput> fileOutputs = new LinkedHashMap<>()
     private PromptDef prompt
@@ -82,9 +85,22 @@ class AgentBuilder {
         inputs.add(new AgentInput(name, type, optional))
     }
 
+    /** A destructured tuple or record input. */
+    void _input_(List<ProcessInput> components, Class type) {
+        inputs.add(new AgentInput(components, type))
+    }
+
     /** A null `value` is a bare output the model answers; an explicit RHS is the value itself. */
     void _output_(String name, Class type, Closure value = null) {
-        outputs.add(new AgentOutput(name, type, value))
+        output = new AgentOutput(name, type, value)
+    }
+
+    /**
+     * Declare an output with a parameterized type, which is preserved
+     * in a field of a hidden class (see AgentToGroovyVisitor).
+     */
+    void _output_(String name, Class holder, String field, Closure value = null) {
+        output = new AgentOutput(name, holder.getField(field).getGenericType(), value)
     }
 
     /**
@@ -115,7 +131,7 @@ class AgentBuilder {
     AgentDef build() {
         if( prompt == null )
             throw new IllegalStateException("Missing prompt in agent `${agentName}` definition")
-        return new AgentDef(ownerScript, agentName, directives, inputs, outputs, prompt, fileInputs, fileOutputs)
+        return new AgentDef(ownerScript, agentName, directives, inputs, output, prompt, fileInputs, fileOutputs)
     }
 
     @CompileStatic
@@ -124,22 +140,31 @@ class AgentBuilder {
         final Class type
         /** Declared with a trailing `?`; a null value is then admitted and stages nothing. */
         final boolean optional
+        /** The components of a destructured input, otherwise null. */
+        final List<ProcessInput> components
         AgentInput(String name, Class type, boolean optional = false) {
             this.name = name; this.type = type; this.optional = optional
+        }
+        AgentInput(List<ProcessInput> components, Class type) {
+            this.name = ''; this.type = type; this.optional = false; this.components = components
+        }
+        /** The names this input binds in the task context. */
+        List<String> getNames() {
+            components != null ? components.collect { it.name } : [name]
         }
     }
 
     @CompileStatic
     static class AgentOutput {
         final String name
-        final Class type
+        final Type type
         /**
          * The declared right-hand side, or null for a bare output. A non-null value takes the
          * output OUT of the model-answered set: its value is the expression, exactly as for a
          * process output.
          */
         final Closure value
-        AgentOutput(String name, Class type, Closure value = null) {
+        AgentOutput(String name, Type type, Closure value = null) {
             this.name = name; this.type = type; this.value = value
         }
     }

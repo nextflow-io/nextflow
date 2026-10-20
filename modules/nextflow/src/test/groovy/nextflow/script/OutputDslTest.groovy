@@ -19,6 +19,8 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovyx.gpars.dataflow.DataflowQueue
+
 import nextflow.Channel
 import nextflow.Session
 import nextflow.SysEnv
@@ -26,6 +28,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -33,10 +36,7 @@ import spock.lang.Specification
 class OutputDslTest extends Specification {
 
     Session createSession(Map config) {
-        def session = new Session(config) {
-            @Override
-            void abort(Throwable cause) { throw cause }
-        }
+        def session = new Session(config)
         session.init(null)
         return session
     }
@@ -299,6 +299,36 @@ class OutputDslTest extends Specification {
         1 * session.printConsole({ String it ->
             it.contains('/work/ab/1234/file1.txt') && !it.contains('null')
         })
+    }
+
+    @Timeout(10)
+    def 'should not print outputs in preview mode'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def config = [
+            outputDir: root.resolve('results'),
+            workDir: root.resolve('work'),
+            preview: true
+        ]
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+        // process outputs are never closed in preview mode
+        outputs.put('foo', new DataflowQueue())
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork(true)
+        session.workflowMetadata.invokeOnComplete()
+
+        then:
+        0 * session.printConsole(_)
+
+        cleanup:
+        root?.deleteDir()
     }
 
     def 'should preserve non-task output files in workflow output'() {

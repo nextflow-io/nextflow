@@ -61,53 +61,6 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         Thread.interrupted() // clear any leaked interrupt flag from a fatal-tool abort (Test N)
     }
 
-    // -- Test A [LINCHPIN]: N-way output split via getDelegate().put under DELEGATE_ONLY
-    def 'should split a wrapper response into N named output channels'() {
-        given:
-        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
-            '{"plan":{"title":"t","shards":[{"id":"s1","question":"q1"}]},"count":3}'
-        } as AgentRunner
-
-        when:
-        def result = runScript('''
-            nextflow.enable.types = true
-
-            record Shard { id: String; question: String }
-            record Plan  { title: String; shards: List<Shard> }
-
-            agent planner {
-                model 'openai/gpt-4o'
-                tools()
-                input:
-                brief: String
-                output:
-                plan: Plan
-                count: Long
-                prompt:
-                """
-                Break: ${brief}
-                """
-            }
-
-            workflow {
-                def r = planner(channel.of('brief'))
-                [ r.plan, r.count ]
-            }
-            ''')
-
-        then: 'plan channel (agent.out.plan) yields the Plan record slice'
-        def plan = result[0].val
-        plan instanceof Map
-        plan.title == 't'
-        plan.shards instanceof List
-        plan.shards[0].id == 's1'
-        plan.shards[0].question == 'q1'
-        and: 'count channel (agent.out.count) yields the coerced Long slice'
-        def count = result[1].val
-        count == 3
-        count instanceof Long
-    }
-
     // -- Test B: single-record output stays UNWRAPPED (bare RecordSchema.of)
     def 'should keep a single-record output unwrapped (no wrapper key)'() {
         given:
@@ -120,7 +73,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         def result = runScript('''
             nextflow.enable.types = true
 
-            record Answer { answer: String; confidence: Double }
+            record Answer { answer: String; confidence: Float }
 
             agent qa {
                 model 'openai/gpt-4o'
@@ -154,7 +107,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         def out = result.val
         out instanceof Map
         out.answer == 'ok'
-        out.confidence == 0.9d
+        out.confidence == 0.9f
     }
 
     // -- Test C: free-text passthrough (single scalar output)
@@ -175,7 +128,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                answer: String
+                stdout()
                 prompt:
                 """
                 Q: ${q}
@@ -190,6 +143,107 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         then:
         result.val == 'hello world'
         captured.outputSchema == null
+    }
+
+    def 'should destructure a record input and compose a record output'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req; 'looks good'
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-4o'
+                input:
+                record(id: String, count: Integer)
+                output:
+                record(id: id, summary: stdout())
+                prompt:
+                """
+                Review ${id} with ${count} reads
+                """
+            }
+
+            workflow {
+                qa(channel.of(record(id: 's1', count: 3, extra: true)))
+            }
+            ''')
+
+        then: 'each record field is in the prompt and the input JSON, but not the undeclared field'
+        captured.prompt.contains('Review s1 with 3 reads')
+        new JsonSlurper().parseText(captured.inputJson) == [id: 's1', count: 3]
+        captured.outputSchema == null
+        and: 'the output record passes the input through next to the answer'
+        def out = result.val
+        out.id == 's1'
+        out.summary == 'looks good'
+    }
+
+    def 'should destructure a tuple input'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req; 'ok'
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-4o'
+                input:
+                tuple(id: String, count: Integer)
+                output:
+                tuple(id, stdout())
+                prompt:
+                "Review ${id} with ${count} reads"
+            }
+
+            workflow {
+                qa(channel.of(tuple('s1', 3)))
+            }
+            ''')
+
+        then:
+        captured.prompt == 'Review s1 with 3 reads'
+        new JsonSlurper().parseText(captured.inputJson) == [id: 's1', count: 3]
+        result.val == ['s1', 'ok']
+    }
+
+    def 'should enforce a schema for a single typed scalar output'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req; '{"count": 42}'
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-4o'
+                input:
+                q: String
+                output:
+                count: Integer
+                prompt:
+                "Count ${q}"
+            }
+
+            workflow {
+                qa(channel.of('hi'))
+            }
+            ''')
+
+        then:
+        captured.outputSchema.properties.keySet() == ['count'] as Set
+        result.val == 42
     }
 
     // -- Test D: multiple inputs combine natively
@@ -212,7 +266,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 a: String
                 b: String
                 output:
-                r: String
+                stdout()
                 prompt:
                 """
                 A=${a} B=${b}
@@ -251,7 +305,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                answer: String
+                stdout()
                 prompt: "Q: ${q}"
             }
 
@@ -287,7 +341,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 items: String
                 output:
-                report: String
+                stdout()
                 prompt: "Reduce: ${items}"
             }
 
@@ -303,51 +357,11 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         result.val == 'summary'
     }
 
-    // -- Test F: wrapper schema shape (multi-output)
-    def 'should synthesize an object-root wrapper schema for multiple outputs'() {
-        given:
-        AgentRunnerRequest captured = null
-        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
-            captured = req; '{"rec":{"title":"t","count":1},"n":2}'
-        } as AgentRunner
-
-        when:
-        runScript('''
-            nextflow.enable.types = true
-
-            record Rec { title: String; count: Long }
-
-            agent multi {
-                model 'openai/gpt-4o'
-                tools()
-                input:
-                q: String
-                output:
-                rec: Rec
-                n: Long
-                prompt: "Q: ${q}"
-            }
-
-            workflow {
-                multi(channel.of('x'))
-            }
-            ''')
-
-        then:
-        captured.outputSchema.type == 'object'
-        (captured.outputSchema.properties.keySet() as List) == ['rec', 'n']
-        captured.outputSchema.required == ['rec', 'n']
-        captured.outputSchema.additionalProperties == false
-        and: 'nested record recursion is intact'
-        captured.outputSchema.properties.rec.type == 'object'
-        captured.outputSchema.properties.rec.properties.containsKey('title')
-    }
-
-    // -- Test G: top-level scalar coercion (multi-output)
+    // -- Test G: top-level scalar coercion
     def 'should coerce top-level scalar outputs to the declared Java type'() {
         given:
         AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
-            '{"count":3,"score":0.5}'
+            '{"count":3}'
         } as AgentRunner
 
         when:
@@ -360,24 +374,93 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                count: Long
-                score: Double
+                count: Integer
                 prompt: "Q: ${q}"
             }
 
             workflow {
-                def r = nums(channel.of('x'))
-                [ r.count, r.score ]
+                nums(channel.of('x'))
             }
             ''')
 
         then:
-        def count = result[0].val
-        def score = result[1].val
+        def count = result.val
         count == 3
-        count instanceof Long
-        score == 0.5d
-        score instanceof Double
+        count instanceof Integer
+    }
+
+    def 'should bind a Path field of a typed record output'() {
+        given:
+        def file = Files.createTempFile('contigs', '.fa')
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req
+            groovy.json.JsonOutput.toJson([id: 's1', contigs: file.toString()])
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            record Assembly {
+                id: String
+                contigs: Path
+            }
+
+            agent assembler {
+                model 'openai/gpt-4o'
+                input:
+                q: String
+                output:
+                a: Assembly
+                prompt: "Q: ${q}"
+            }
+
+            workflow {
+                assembler(channel.of('x'))
+            }
+            ''')
+
+        then:
+        captured.outputSchema.properties.contigs.type == 'string'
+        def a = result.val
+        a.id == 's1'
+        a.contigs instanceof Path
+        a.contigs == file
+
+        cleanup:
+        Files.deleteIfExists(file)
+    }
+
+    def 'should bind a typed list output'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req
+            groovy.json.JsonOutput.toJson([scores: ['1', 2]])
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent scorer {
+                model 'openai/gpt-4o'
+                input:
+                q: String
+                output:
+                scores: List<Integer>
+                prompt: "Q: ${q}"
+            }
+
+            workflow {
+                scorer(channel.of('x'))
+            }
+            ''')
+
+        then:
+        captured.outputSchema.properties.scores == [type: 'array', items: [type: 'integer']]
+        result.val == [1, 2]
     }
 
     // -- Test H: unsupported top-level output type rejected with a clear message
@@ -395,8 +478,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                label: String
-                items: List<String>
+                items: Map
                 prompt: "Q: ${q}"
             }
 
@@ -410,7 +492,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         allMessages(e).contains('unsupported type')
         allMessages(e).contains('items')
         and: 'the message names the supported output set (plan §4.5/§9)'
-        allMessages(e).contains('supported:')
+        allMessages(e).contains('supported types are')
         allMessages(e).contains('record type')
     }
 
@@ -438,7 +520,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                answer: String
+                stdout()
                 prompt: "Q: ${q}"
             }
 
@@ -482,7 +564,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 n: Integer
                 output:
-                r: String
+                stdout()
                 prompt: "N: ${n}"
             }
 
@@ -517,7 +599,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 item: String
                 output:
-                label: String
+                stdout()
                 prompt: "Classify: ${item}"
             }
 
@@ -619,7 +701,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 request: String
                 output:
-                answer: String
+                stdout()
                 prompt: "Handle: ${request}"
             }
 
@@ -942,7 +1024,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                     input:
                     request: String
                     output:
-                    answer: String
+                    stdout()
                     prompt: "Handle: ${request}"
                 }
 
@@ -981,7 +1063,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
                 input:
                 q: String
                 output:
-                answer: String
+                stdout()
                 prompt: "Q: ${q}"
             }
 
@@ -1080,7 +1162,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
     private AgentDef newAgent(Map directives = [model: 'openai/gpt-4o']) {
         final owner = Mock(BaseScript) { getBinding() >> new ScriptBinding() }
         return new AgentDef(owner, 'qa', directives as Map<String,Object>,
-            [new AgentInput('q', String)], [new AgentOutput('answer', String)],
+            [new AgentInput('q', String)], new AgentOutput('answer', String),
             new PromptDef({ -> 'Q' }, 'Q'))
     }
 

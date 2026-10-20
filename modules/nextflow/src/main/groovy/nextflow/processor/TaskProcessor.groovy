@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Pattern
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -1048,6 +1048,7 @@ class TaskProcessor {
         try {
             // -- set task properties in order to resolve task outputs
             task.workDir = folder
+            task.config.workDir = folder
             task.stdout = stdoutFile
             task.config.exitStatus = exitCode
             // -- check if all output resources are available

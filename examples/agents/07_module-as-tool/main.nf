@@ -1,17 +1,17 @@
 nextflow.enable.types = true
 
-// The agent's input record. Its shape need NOT match skesa's tool input
-// ({meta, fastq}) — the LLM bridges the two from the prompt. See README.md.
-record AssemblyRequest {
-    sample_id: String
-    reads: Path          // absolute path to a FASTQ file (an opaque path handle)
-}
-
 // Include nf-core/skesa so `nf:module_run` surfaces it as the `SKESA` tool.
 include { SKESA } from 'nf-core/skesa'
 
-// Agent that calls the SKESA tool to assemble reads into contigs. An agent that
-// declares `tools` must use a plain output type (here `Path`), not a record.
+record Assembly {
+    sample_id: String
+    contigs: Path
+}
+
+// Agent that calls the SKESA tool to assemble reads into contigs. The input record
+// is destructured, and its shape need NOT match skesa's tool input ({meta, fastq}) --
+// the LLM bridges the two from the prompt. The `contigs` field of the typed output is the
+// path of the contigs returned by the tool call. See README.md.
 agent assembler {
     model 'openai/gpt-5-mini'
     instruction """
@@ -23,14 +23,14 @@ agent assembler {
     tools 'nf:module_run'
 
     input:
-    req: AssemblyRequest
+    record(sample_id: String, reads: Path)
     output:
-    assembly_path: Path
+    assembly: Assembly
 
     prompt:
     """
-    Assemble the genome for sample '${req.sample_id}'.
-    The input FASTQ reads are at: ${req.reads}
+    Assemble the genome for sample '${sample_id}'.
+    The input FASTQ reads are at: ${reads}
     """
 }
 
@@ -43,5 +43,5 @@ workflow {
     assembler(channel.of(
         record(sample_id: 'sample1', reads: file("${projectDir}/data/sample.fastq"))
     ))
-    .view { path -> "ASSEMBLY=${path}" }
+    .view { a -> "ASSEMBLY ${a.sample_id}=${a.contigs}" }
 }

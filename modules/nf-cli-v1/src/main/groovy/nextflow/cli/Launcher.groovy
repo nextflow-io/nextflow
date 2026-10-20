@@ -34,6 +34,7 @@ import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
+import nextflow.exception.ExitException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.secret.SecretsLoader
@@ -536,6 +537,12 @@ class Launcher {
             if( log.isTraceEnabled())
                 log.trace "Exit\n" + dumpThreads()
             return 0
+        }
+
+        catch( ExitException e ) {
+            // early termination requested by the pipeline script via `exit()`
+            // -- the message (if any) was already reported by `exit()`
+            return e.exitCode
         }
 
         catch( AbortRunException e ) {

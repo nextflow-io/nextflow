@@ -101,7 +101,7 @@ Time elapsed to complete since the submission.
 
 ###### `realtime`
 
-Task execution time i.e. delta between completion and start timestamp.
+Wall-clock time of the task script. It excludes other activities in the wrapper script such as input staging, container setup, `beforeScript`, output unstaging, and `afterScript`. If the task trace file is not available, `realtime` falls back to `complete - start`.
 
 ###### `queue`
 
@@ -109,7 +109,7 @@ The queue that the executor attempted to run the process on.
 
 ###### `%cpu`
 
-Percentage of CPU used by the process.
+Percentage of CPU used by the task, relative to a single CPU. For example, a task that keeps four CPUs busy reports approximately `400%`.
 
 ###### `%mem`
 

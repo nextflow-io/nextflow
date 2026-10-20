@@ -418,18 +418,15 @@ workflow {
 }
 ```
 
-The name should be omitted when only one output is declared:
+The name can be omitted when only one output is declared:
 
 ```nextflow
 workflow my_workflow {
     take:
     data
 
-    main:
-    ch_bye = bye(hello(data))
-
     emit:
-    ch_bye
+    bye(hello(data))
 }
 
 workflow {
@@ -668,9 +665,9 @@ The fully qualified process name can be used as a [process selector][config-proc
 
 ### Special operators (`|` and `&`)
 
-<DeprecatedInVersion version="26.04">
+:::note
 These operators are not supported when [static typing][preparing-static-types] is enabled. Use standard method calls and assignments instead.
-</DeprecatedInVersion>
+:::
 
 The following operators have a special meaning when used with process and workflow calls in a workflow:
 
@@ -772,7 +769,6 @@ Workflows can also be invoked recursively:
 [config-workflow]: ./reference/config/workflow
 [data-lineage-page]: ./tutorials/data-lineage
 [data-lineage-workflow-outputs]: ./tutorials/data-lineage
-[dsl1-page]: ./migrations/dsl1
 [migrating-workflow-outputs]: ./tutorials/workflow-outputs
 [operator-collect]: ./reference/operator#collect
 [operator-combine]: ./reference/operator#combine
@@ -784,7 +780,7 @@ Workflows can also be invoked recursively:
 [operator-mix]: ./reference/operator#mix
 [operator-page]: ./reference/operator
 [operator-view]: ./reference/operator#view
-[preparing-static-types]: ./tutorials/static-types
+[preparing-static-types]: ./static-typing-prep
 [process-naming-outputs]: ./process#naming-outputs
 [process-out-singleton]: ./process#singleton-outputs
 [process-page]: ./process

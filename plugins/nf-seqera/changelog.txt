@@ -1,5 +1,19 @@
 nf-seqera changelog
 ====================
+0.26.0 - 6 Oct 2026
+- Bump sched-client to 0.100.0 in nf-seqera [fe446ce6d]
+- Report sched multi-attempt tasks with the final attempt's start time (#7755) [ab6f7c60a]
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Add seqera.executor.machineRequirement.onDemandCostRatio option (#7710) [5272797c4]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
+0.25.0 - 22 Sep 2026
+- Add automatic resource labels for any executor (#7528) [1d7b6655a]
+- Fix jackson, netty and grpc CVEs via api-scoped dependency constraints (#7329) [7ea2029ac]
+- Adopt shared io.seqera:lib-util-net ProxyConfig for egress proxy handling (#7587) [8b07422b2]
+
 0.24.0 - 20 Aug 2026
 - Report the task directives read while the command is rendered (#7506) [1b4e75729]
 - Stop fabricating a memory request for the Seqera executor (#7488) [cdf425437]

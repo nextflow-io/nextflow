@@ -224,7 +224,7 @@ public class ScriptAstBuilder {
         if( !commentsEnabled )
             return;
         tokenStream.fill();
-        var comments = Comments.collect(tokenStream.getTokens());
+        var comments = Comments.collect(tokenStream.getTokens(), ScriptLexer.NL);
         moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, comments);
         if( comments.getShebang() != null )
             moduleNode.setShebang(comments.getShebang());
@@ -821,6 +821,7 @@ public class ScriptAstBuilder {
     private Expression processWhen(ProcessWhenContext ctx) {
         if( ctx == null )
             return EmptyExpression.INSTANCE;
+        collectWarning("The `when` section is deprecated -- use conditional logic in the calling workflow, or the `process.when` config option to disable a process at runtime", ctx.WHEN().getText(), ast( new EmptyStatement(), ctx.WHEN() ));
         return ast( expression(ctx.expression()), ctx );
     }
 
@@ -894,7 +895,12 @@ public class ScriptAstBuilder {
             .map(this::processOutput)
             .filter(stmt -> stmt != null)
             .toList();
-        return ast( block(null, statements), ctx );
+        var result = ast( block(null, statements), ctx );
+        if( statements.size() > 1 ) {
+            collectSyntaxError(new SyntaxException("Agent should have only one output -- combine outputs into a record", result));
+            return null;
+        }
+        return result;
     }
 
     private Statement agentPrompt(AgentPromptContext ctx) {

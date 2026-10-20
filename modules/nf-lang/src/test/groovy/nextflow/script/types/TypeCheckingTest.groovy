@@ -103,29 +103,6 @@ class TypeCheckingTest extends Specification {
         return true
     }
 
-    def 'should warn about a process `when` section' () {
-        when:
-        def errors = getErrors(
-            '''\
-            nextflow.enable.types = true
-
-            process hello {
-                when:
-                task.ext.when
-
-                exec:
-                println 'hello!'
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 4
-        errors[0].getStartColumn() == 5
-        errors[0].isSoftError()
-        errors[0].getOriginalMessage() == "Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead"
-    }
-
     @Unroll
     def 'should report legacy type annotations' () {
         expect:
@@ -171,7 +148,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Parameter 'input' with type String cannot be assigned to default value with type Float"
+        errors[0].getOriginalMessage() == "Parameter `input` with type String cannot be assigned to default value with type Float"
 
         when:
         def exp = parseExpression(
@@ -226,8 +203,8 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                a: String = 42
-                b: Integer = 1
+                a: Value<String> = channel.value(42)
+                b: Value<Integer> = channel.value(1)
             }
             '''
         )
@@ -235,7 +212,24 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 5
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Assignment target with type String cannot be assigned to value with type Integer"
+        errors[0].getOriginalMessage() == "Assignment target with type Value<String> cannot be assigned to value with type Value<Integer>"
+
+        when:
+        errors = getErrors(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                emit:
+                a: Value<Integer> = channel.value(42)
+                b: Channel<Integer> = channel.of(1)
+                c: Value<Integer>? = null
+                d = 1
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
 
         when:
         errors = getErrors(
@@ -245,15 +239,18 @@ class TypeCheckingTest extends Specification {
             workflow hello {
                 emit:
                 a: Integer = 42
-                b: Integer = 1
+                b: Value<Integer> = channel.value(1)
             }
             '''
         )
         then:
-        errors.size() == 0
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Workflow emit `a` must be declared as a Channel or Value, not Integer"
     }
 
-    def 'should warn about a single named output' () {
+    def 'should allow a single named output' () {
         expect:
         check(
             '''\
@@ -261,16 +258,10 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                result: Integer = 42
+                result = 42
             }
-            ''',
-            "Name should be omitted for a single emit"
-        )
-        check(
-            '''\
-            nextflow.enable.types = true
 
-            process hello {
+            process bye {
                 output:
                 sample: String = 'hi'
 
@@ -278,7 +269,67 @@ class TypeCheckingTest extends Specification {
                 ''
             }
             ''',
-            "Name should be omitted for a single output"
+            null
+        )
+    }
+
+    def 'should check a typed output name against the body variable' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                main:
+                x = channel.of('a')
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            "Workflow emit `x` with type Channel<Integer> cannot be assigned to value with type Channel<String>"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                take:
+                x: Channel<String>
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            "Workflow emit `x` with type Channel<Integer> cannot be assigned to value with type Channel<String>"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                x: Integer
+
+                exec:
+                x = 'a'
+            }
+            ''',
+            "Process output `x` with type Integer cannot be assigned to value with type String"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                main:
+                x = channel.of(1)
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            null
         )
     }
 
@@ -604,6 +655,37 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a function call with default params' () {
+        expect:
+        check(
+            """\
+            def greet(name: String, greeting: String = 'Hello') -> String {
+                "\${greeting}, \${name}!"
+            }
+
+            def pad(prefix: String = '>', s: String) -> String {
+                prefix + s
+            }
+
+            workflow {
+                ${SOURCE}
+            }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                          | ERROR
+        "greet('world')"                | null
+        "greet('world', 'Hi')"          | null
+        "greet()"                       | "Function `greet` expects 1 to 2 argument(s) but received 0"
+        "greet('world', 'Hi', 'x')"     | "Function `greet` expects 1 to 2 argument(s) but received 3"
+        "greet(42)"                     | "Argument with type Integer is not compatible with parameter of type String"
+        "pad('x')"                      | null
+        "pad(42)"                       | "Argument with type Integer is not compatible with parameter of type String"
+    }
+
+    @Unroll
     def 'should check a function call with overloads' () {
         expect:
         check(SOURCE, ERROR)
@@ -719,6 +801,7 @@ class TypeCheckingTest extends Specification {
         "W( channel.of(record(id: 'a', n: 1)) )"    | null
         "P( channel.of([1, 2]) )"                   | "Argument with type List<Integer> is not compatible with process input of type List<String>"
         "P( channel.of(['a']) )"                    | null
+        "P( channel.empty() )"                      | null
         "g( record(xs: [1, 2]) )"                   | "Argument with type Record {\n    xs: List<Integer>\n} is not compatible with parameter of type Names"
         "g( record(xs: ['a']) )"                    | null
     }
@@ -796,6 +879,7 @@ class TypeCheckingTest extends Specification {
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
         "['a', 'b', 'c'][1..<3]"    | null
+        "file('ab.txt') << 'a' << 'b'"  | null
     }
 
     @Unroll
@@ -810,6 +894,7 @@ class TypeCheckingTest extends Specification {
         '1 <=> 2'       | 'Integer'
         "'a' <=> 'b'"   | 'Integer'
         '1 < 2'         | 'Boolean'
+        "file('a.txt') << 'a'" | 'Path'
     }
 
     @Unroll
@@ -853,8 +938,10 @@ class TypeCheckingTest extends Specification {
         where:
         SOURCE                  | ERROR
         "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
-        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map"
+        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map<K, V>"
         "true ? 42 : null"      | null
+        "(true ? [1] : 'a').size()"                 | "Conditional expression has inconsistent types -- true branch has type List<Integer> but false branch has type String"
+        "def f(d) { (true ? d : 'a').size() }"      | null
     }
 
     def 'should resolve a ternary expression' () {
@@ -895,6 +982,7 @@ class TypeCheckingTest extends Specification {
         SOURCE          | ERROR
         "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
         "[1, 2, 3]"     | null
+        "[1, 'a'].collect { v -> v.size() }"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
     }
 
     @Unroll
@@ -1156,8 +1244,8 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                foo: String = 'hello'
-                bar: Integer = 42
+                foo = 'hello'
+                bar = 42
             }
 
             workflow {
@@ -1325,6 +1413,63 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should infer the element type of an empty channel' () {
+        expect:
+        check(
+            """\
+            def flag = true
+            ${SOURCE}
+            ch.map { r -> r.${FIELD} }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                                                          | FIELD     | ERROR
+        "def ch = flag ? channel.of(record(id: '1')) : channel.empty()" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = flag ? channel.empty() : channel.of(record(id: '1'))" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty().mix(channel.of(record(id: '1')))"    | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty().mix(channel.value(record(id: '1')))" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; ch = ch.mix(channel.of(record(id: '1')))"                      | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; if( flag ) { ch = channel.of(record(id: '1')) }"               | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "if( !flag ) { ch = channel.empty() } else { ch = channel.of(record(id: '1')) }"           | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "if( flag ) { ch = channel.of(record(id: '1')) } else { ch = channel.empty() }"            | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; ch = channel.of(record(id: '1')) ; ch = channel.of('a')"       | 'id'      | 'Assignment target with type Channel<Record {\n    id: String\n}> cannot be assigned to value with type Channel<String>'
+        "def ch = channel.empty() ; ch = null ; ch = 42"                                           | 'id'      | 'Assignment target with type Channel<E> cannot be assigned to value with type Integer'
+    }
+
+    @Unroll
+    def 'should infer the type of an empty value' () {
+        expect:
+        check(
+            """\
+            def flag = true
+            ${SOURCE}
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                                                  | ERROR
+        "def xs = [] ; xs.each { s -> s.length() }"             | null
+        "def m = [:] ; m.each { k, v -> v.length() }"           | null
+        "def xs = [] ; if( flag ) { xs = ['a'] } ; xs.each { s -> s.missing }"         | 'Unrecognized property `missing` for type String'
+        "def m = [:] ; if( flag ) { m = [k: 'v'] } ; m.each { k, v -> v.missing }"     | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs = ['a'] ; xs = [1]"                                          | 'Assignment target with type List<String> cannot be assigned to value with type List<Integer>'
+        "def xs = [] ; xs = xs + ['a'] ; xs.each { s -> s.missing }"                   | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs += ['a'] ; xs.each { s -> s.missing }"                       | 'Unrecognized property `missing` for type String'
+        "def e = [] ; def xs = flag ? ['a'] : e ; xs.each { s -> s.missing }"          | 'Unrecognized property `missing` for type String'
+        "def xs = [[]] ; xs = [['a']] ; xs.each { ys -> ys.each { s -> s.missing } }"  | 'Unrecognized property `missing` for type String'
+        "def xs = flag ? [['a']] : [[]] ; xs.each { ys -> ys.each { s -> s.missing } }" | 'Unrecognized property `missing` for type String'
+        "def t = flag ? tuple(1, []) : tuple(1, ['a']) ; t[1].each { s -> s.missing }" | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs = null ; xs = 'abc'"                                         | 'Assignment target with type List<E> cannot be assigned to value with type String'
+        "def xs = [] ; xs = [].first() ; xs = 'abc'"                                   | 'Assignment target with type List<E> cannot be assigned to value with type String'
+        "def ys = [] ; def zs = ys[[0]] ; zs.each { z -> z.length() }"                 | null
+        "channel.empty().mix(channel.of(1)).mix(channel.of('a'))"                      | 'Function `mix` (with multiple signatures) was called with incorrect number of arguments and/or incorrect argument types'
+        "channel.topic('x').mix(channel.of(1)).mix(channel.of('a'))"                   | null
+    }
+
+    @Unroll
     def 'should report a legacy operator as discouraged rather than unrecognized' () {
         expect:
         check("channel.of('a').${SOURCE}", "Operator `${OPERATOR}` is discouraged from use with static typing")
@@ -1353,7 +1498,7 @@ class TypeCheckingTest extends Specification {
                 message: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 "say ${message}"
@@ -1375,7 +1520,7 @@ class TypeCheckingTest extends Specification {
                 message: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 "say ${message}"
@@ -1463,6 +1608,31 @@ class TypeCheckingTest extends Specification {
 
             process hello {
                 input:
+                target: String?
+
+                output:
+                "Hello, $target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( null )
+            }
+            '''
+        )
+        type = getType(exp)
+        then:
+        Types.getName(type) == 'Value<String>'
+
+        when:
+        exp = parseExpression(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
                 target: String
 
                 output:
@@ -1505,6 +1675,40 @@ class TypeCheckingTest extends Specification {
         type = getType(exp)
         then:
         Types.getName(type) == 'Value<Record {\n    target: String\n    message: String\n}>'
+    }
+
+    @Unroll
+    def 'should recognize process output type with a null argument' () {
+        when:
+        def exp = parseExpression(
+            """\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                greeting: String
+                target: String?
+
+                output:
+                "\$greeting, \$target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( ${ARG}, null )
+            }
+            """
+        )
+        def type = getType(exp)
+        then:
+        Types.getName(type) == TYPE
+
+        where:
+        ARG                 | TYPE
+        "'foo'"             | 'Value<String>'
+        "channel.of('foo')" | 'Channel<String>'
     }
 
     def 'should not allow a void call result to be assigned to a variable' () {
@@ -1822,6 +2026,21 @@ class TypeCheckingTest extends Specification {
         errors.size() == 2
         errors[0].getOriginalMessage() == 'Join field `sample_id` is not present in left-hand side'
         errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
+    }
+
+    def 'should report a soft error for a `join` that overwrites left-hand fields' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello', alive: false) )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: 'id')
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
 }

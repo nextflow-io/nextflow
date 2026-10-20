@@ -41,7 +41,7 @@ class AgentBuilderTest extends Specification {
         agent.maxIterations == 20
         agent.tools == []
         agent.inputs*.name == ['question']
-        agent.outputs*.name == ['plan']
+        agent.output.name == 'plan'
         agent.prompt.source == 'Question: ${question}'
     }
 

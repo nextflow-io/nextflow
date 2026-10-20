@@ -5,7 +5,7 @@ description: Review new features, breaking changes, and deprecations introduced 
 
 # Migrating to 26.10
 
-[Nextflow 26.10](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) is scheduled to release in October 2026.
+[Nextflow 26.10](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) was released on October 12, 2026.
 
 ## New features
 
@@ -126,7 +126,7 @@ agent qa {
     question: String
 
     output:
-    answer: String
+    stdout()
 
     prompt:
     """
@@ -165,6 +165,10 @@ See the [`logfile`][cli-logfile] command reference for details.
 ### Accelerator directive for local executor
 
 The local executor now allocates accelerators such as GPUs to tasks that request them with the `accelerator` directive. Set the environment variable for your accelerator type to declare which devices are available. See [Local executor][executor-local] for details.
+
+### Resource limits for grid executors
+
+The [`executor.cpus`][config-executor-cpus] and [`executor.memory`][config-executor-memory] settings now apply to grid executors such as SLURM. Nextflow does not submit a task until enough cpus and memory are available, which limits the total resources used by a run on a shared cluster.
 
 ### Publish targets as a map
 
@@ -214,6 +218,8 @@ Nextflow can run tasks in [smolvm](https://github.com/smol-machines/smolvm) micr
 
 - The Kubernetes executor uses Jobs by default instead of Pods. Set [`k8s.computeResourceType`][config-k8s-computeResourceType] to `Pod` to keep the previous behavior.
 
+- The `executor.cpus` and `executor.memory` settings now apply to grid executors, and tasks that request more than these limits fail. Use `executor.$local.cpus` and `executor.$local.memory` to limit only the local executor.
+
 - Nextflow writes console output to standard error instead of standard output. This separates log messages from the output of commands such as `nextflow config` and `nextflow run -output-format json`. To save the full console output to a file, redirect both streams, e.g. `nextflow run main.nf > out.log 2>&1`. Background runs (`-bg`) are not affected and still write console output to standard output.
 
 ### Cache-breaking changes
@@ -221,6 +227,8 @@ Nextflow can run tasks in [smolvm](https://github.com/smol-machines/smolvm) micr
 The hash of `eval` commands has changed. This fixes a bug where tasks with `eval` outputs did not have a stable hash across runs. As a result, every process with an `eval` output re-executes on the first resume after upgrading.
 
 ## Deprecations
+
+- The process `when` section is deprecated. Use explicit workflow logic, or use the [`process.when`][config-process-when] config setting to disable a process at runtime. See [Process when section][strict-syntax-process-when] for more information.
 
 - The `storeDir` process directive is deprecated. Use explicit workflow logic to reuse an intermediate output if it is present and compute it otherwise. See [`storeDir`][process-storeDir] for an example.
 
@@ -251,7 +259,10 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 [config-azure-batch-pools-virtualMachineImageId]: ../reference/config/azure#azurebatchpoolsnamevirtualmachineimageid
 [config-dag-directory]: ../reference/config/dag#dagdirectory
 [config-docker-cpuLimits]: ../reference/config/docker#dockercpulimits
+[config-executor-cpus]: ../reference/config/executor#executorcpus
+[config-executor-memory]: ../reference/config/executor#executormemory
 [config-k8s-computeResourceType]: ../reference/config/k8s#k8scomputeresourcetype
+[config-process-when]: ../config#disabling-processes
 [config-manifest-diagram]: ../reference/config/manifest#manifestdiagram
 [config-report-directory]: ../reference/config/report#reportdirectory
 [config-seqera-executor-autoLabels]: ../reference/config/seqera#seqeraexecutorautolabels
@@ -263,11 +274,12 @@ The hash of `eval` commands has changed. This fixes a bug where tasks with `eval
 [config-workflow-output-includeInputs]: ../reference/config/workflow#workflowoutputincludeinputs
 [container-smolvm]: ../container/smolvm
 [env-vars-NXF_CLOUDINFO_ENABLED]: ../reference/env-vars#nxf_cloudinfo_enabled
-[executor-local]: ../executor/local#accelerators
+[executor-local]: ../reference/executor/local#accelerators
 [module-registry]: ../modules
 [pipeline-composition]: ../workflow-typed#pipeline-composition
 [plugin-registry]: ../plugins/plugin-registry#configuring-plugin-registries
 [process-storeDir]: ../reference/process/directives/store-dir
 [static-typing]: ../static-typing
+[strict-syntax-process-when]: ../strict-syntax#process-when-section
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-params]: ../typed-parameters

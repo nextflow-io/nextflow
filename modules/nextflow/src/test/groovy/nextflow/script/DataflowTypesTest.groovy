@@ -208,6 +208,50 @@ class DataflowTypesTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
+    def 'should access multiple named outputs of legacy process as record in typed workflow' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('main.nf').text = '''
+            nextflow.enable.types = true
+
+            include { foo } from './module.nf'
+
+            workflow {
+                r = foo(channel.of(1, 2, 3))
+                r.zeta.map { v -> "zeta:$v" }
+                    .mix(r.alpha.map { v -> "alpha:$v" })
+                    .mix(r.mid.map { v -> "mid:$v" })
+                    .collect()
+            }
+            '''
+
+        folder.resolve('module.nf').text = '''
+            process foo {
+                input:
+                val x
+
+                output:
+                val a, emit: zeta
+                val b, emit: alpha
+                val c, emit: mid
+
+                exec:
+                a = "zeta-$x"
+                b = "alpha-$x"
+                c = "mid-$x"
+            }
+            '''
+
+        when:
+        def result = runScript(folder.resolve('main.nf'))
+        then:
+        result.val.sort() == ['alpha:alpha-1', 'alpha:alpha-2', 'alpha:alpha-3', 'mid:mid-1', 'mid:mid-2', 'mid:mid-3', 'zeta:zeta-1', 'zeta:zeta-2', 'zeta:zeta-3']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should validate record fields of process record input' () {
         when:
         runScript('''
