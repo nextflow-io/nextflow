@@ -524,13 +524,28 @@ class BashWrapperBuilder {
                 result.append('\\r')
             else if( ch == '\t' as char )
                 result.append('\\t')
-            else if( Character.isISOControl(ch) || ch == '\u2028' as char || ch == '\u2029' as char )
+            else if( isNonPrintable(str, i) )
                 result.append(String.format('\\u%04x', (int) ch))
             else
                 result.append(ch)
         }
         result.append('"')
         return result.toString()
+    }
+
+    /**
+     * Check if the char at the given index must be emitted as a `\\uXXXX` escape, i.e. control chars,
+     * line/paragraph separators, non-characters and unpaired surrogates (not allowed in a YAML stream)
+     */
+    private static boolean isNonPrintable(String str, int i) {
+        final char ch = str.charAt(i)
+        if( Character.isISOControl(ch) || ch == '\u2028' as char || ch == '\u2029' as char || ch == '\ufffe' as char || ch == '\uffff' as char )
+            return true
+        if( Character.isHighSurrogate(ch) )
+            return i+1 >= str.length() || !Character.isLowSurrogate(str.charAt(i+1))
+        if( Character.isLowSurrogate(ch) )
+            return i == 0 || !Character.isHighSurrogate(str.charAt(i-1))
+        return false
     }
 
     protected String getTaskMetadata() {

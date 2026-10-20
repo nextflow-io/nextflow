@@ -427,7 +427,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def NAME = 'foo (it\'s a\nb a\\nb "c")'
         def IMAGE = 'ubuntu\tlatest'
-        def OUTPUTS = ['out\r\nfile', 'x\u0000\u000by z']
+        def OUTPUTS = ['out\r\nfile', 'x\u0000\u000by\u2028z']
         def builder = newBashWrapperBuilder(
             name: NAME,
             containerConfig: new DockerConfig(enabled: true),
@@ -473,6 +473,10 @@ class BashWrapperBuilderTest extends Specification {
         'a\\b'          | '"a\\\\b"'
         'a\nb'          | '"a\\nb"'
         'a\u007fb'      | '"a\\u007fb"'
+        'a\uffffb'      | '"a\\uffffb"'
+        'a\ud83db'      | '"a\\ud83db"'
+        'a\ude00b'      | '"a\\ude00b"'
+        'a\ud83d\ude00b' | '"a\ud83d\ude00b"'
     }
 
     def 'should copy control files' () {
