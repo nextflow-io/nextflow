@@ -16,6 +16,7 @@
 package nextflow.script.types;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -271,7 +272,7 @@ public class TypeCheckingUtils {
      * @param resolvedPlaceholders
      */
     private static boolean isCompatibleMethod(MethodNode mn, List<Expression> arguments, Map<GenericsTypeName, GenericsType> resolvedPlaceholders) {
-        var parameters = expandVargs(mn.getParameters(), arguments.size());
+        var parameters = parametersForArguments(expandVargs(mn.getParameters(), arguments.size()), arguments.size());
         if( parameters.length != arguments.size() ) {
             return false;
         }
@@ -301,6 +302,41 @@ public class TypeCheckingUtils {
             }
         }
         return true;
+    }
+
+    /**
+     * Get the parameters that correspond to the given number of call
+     * arguments, omitting parameters with default values as needed.
+     *
+     * Like Groovy, defaulted parameters are omitted from right to left.
+     *
+     * @param params
+     * @param argCount
+     */
+    public static Parameter[] parametersForArguments(Parameter[] params, int argCount) {
+        int omitted = params.length - argCount;
+        if( omitted <= 0 )
+            return params;
+        var result = new ArrayList<Parameter>(Arrays.asList(params));
+        for( int i = result.size() - 1; i >= 0 && omitted > 0; i-- ) {
+            if( result.get(i).hasInitialExpression() ) {
+                result.remove(i);
+                omitted--;
+            }
+        }
+        return result.toArray(Parameter[]::new);
+    }
+
+    /**
+     * Get the number of parameters that must be supplied by a call,
+     * i.e. parameters without a default value.
+     *
+     * @param params
+     */
+    public static int requiredParameterCount(Parameter[] params) {
+        return (int) Arrays.stream(params)
+            .filter(p -> !p.hasInitialExpression())
+            .count();
     }
 
     private static Parameter[] expandVargs(Parameter[] params, int argCount) {
