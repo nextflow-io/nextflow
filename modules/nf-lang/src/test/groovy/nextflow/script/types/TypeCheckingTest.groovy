@@ -710,6 +710,18 @@ class TypeCheckingTest extends Specification {
         "file('input.txt', checkIfExists: true)"    | null
     }
 
+    @Unroll
+    def 'should accept a boolean or a list of columns for splitCsv header' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                  | ERROR
+        "file('input.csv').splitCsv(header: true)"              | null
+        "file('input.csv').splitCsv(header: ['id', 'fastq'])"   | null
+        "file('input.csv').splitCsv(header: true, skip: 'x')"   | "Named param `skip` expects a Integer but received a String"
+    }
+
     def 'should check a function call with record parameters' () {
         expect:
         check(
