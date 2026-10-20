@@ -28,7 +28,7 @@ public class Config implements ConfigScope {
     """)
     public ConfigScope env;
 
-    // NOTE: `nextflow` config options are inferred from FeatureFlagDsl
+    // NOTE: `nextflow` config options are inferred from FeatureFlagDsl and RetryPolicyConfig
     public ConfigScope nextflow;
 
     @Description("""

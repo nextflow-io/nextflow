@@ -468,7 +468,7 @@ class TaskRun implements Cloneable {
         // cannot be re-derived on a cache hit (this is the in-JVM `agent` body too). A script task
         // instead re-evaluates its body -- and therefore rebuilds its context -- in
         // TaskProcessor.invokeTask, before the cache is consulted.
-        if( type == ScriptType.GROOVY )
+        if( type == ScriptType.GROOVY || type == ScriptType.PROMPT )
             return true
 
         for( OutParam it : outputs.keySet() ) {

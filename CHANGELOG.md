@@ -1,5 +1,68 @@
 # Nextflow change-log
 
+## [Version 26.10.3](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.3) - 20 Oct 2026
+
+- Apply Harshil alignment to trailing comments, not annotations (#7832) [4bcfeb315]
+- Escape control characters in task metadata and job names (#7764) [f26218342]
+- Fix cascading type errors from inconsistently typed expressions (#7851) [a53283b7c]
+- Fix hang in preview mode with workflow outputs (#7838) [b5fbdf1dd]
+- Fix onError section in entry workflow (#7831) [64c574e11]
+- Fix stdlib typos (#7863) [b09af93c1]
+- Fix type checking of function calls that omit default params (#7860) [b2e18bded]
+- Fix type of task.label in language definitions (#7857) [625721007]
+- Fix unrecognized config warnings for nextflow.retryPolicy options (#7843) [830fe609d]
+- Keep Bitbucket API token out of git clone URL and logs (#7870) [6985ffe2e]
+- Update Grengine to 3.1.2 (group ID and package ch.grengine) (#7842) [11888daed]
+
+## [Version 26.10.2](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.2) - 15 Oct 2026
+
+- Build plugin commands config in the CLI (#7834) [1f805db0d]
+- Bump nf-tower@1.32.1 [2454be6be]
+- Bump nf-wave@1.22.3 [a3347f1e6]
+- Fix formatter treating comment-like GString text as a comment (#7828) [a002ed880]
+
+## [Version 26.10.1](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.1) - 15 Oct 2026
+
+- Bump nf-amazon@3.12.1 [95b076bbd]
+- Bump nf-azure@1.24.2 [934f50269]
+- Bump nf-google@1.29.1 [37393d550]
+- Fetch Google Batch task status once per trace record (#7807) [36e08de58]
+- Fix file-handling bugs in native processes (#7789) [223df42a8]
+- Fix Google Batch array job deleted when a single array task is killed (#7808) [139910816]
+- Fix unit tests that depend on global state from other tests (#7804) [49bdb37ee]
+- Fix workflow output path closure returning an empty map (#7823) [e7a303cc0]
+- Fix workflow variables named `published` or `owner` (#7814) [4894fec67]
+- Load the config files in plugin commands session (#7815) [936138a13]
+- Retry foreign file staging on connection reset (#7799) [565603922]
+- Retry INTERNAL errors from the Google Batch API (#7805) [24d78183e]
+- Skip Fusion .fusion dirs when publishing directories (#7811) [d69ed57a8]
+
+## [Version 26.10.0](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) - 12 Oct 2026
+
+- Add deprecations page to docs (#7766) [af85789fc]
+- Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
+- Allow run-level cpus/memory limits for grid executors (#7783) [ca258a4e9]
+- Bump nf-agent-pi@0.6.0 [eb9cd3ed1]
+- Bump nf-agent@0.2.0 [cf01fdce6]
+- Bump nf-amazon@3.12.0 [e7116238f]
+- Bump nf-google@1.29.0 [376b01ff8]
+- Bump nf-tower@1.32.0 [16d411298]
+- Check typed output names and allow single named outputs (#7769) [32bf20f09]
+- Deprecate process `when` section in favor of `process.when` config setting (#7746) [92de19b0b]
+- Don't wrap null in a dataflow value for nullable workflow emits (#7760) [3c124d8dc]
+- Fix Google Batch array status polling for arrays of 500+ tasks (#7767) [e7474f1a5]
+- Fix Google Batch array task status cache never matching (#7778) [6d44d4740]
+- Fix interactive CLI prompts when stdin is not a terminal (#7641) [56ce4c23f]
+- Fix main thread exiting before flow complete when aborted on another thread (#7781) [6a271f1d2]
+- Fix static typing issues found while migrating a pipeline (#7722) [b199d8e73]
+- Improve error message for local paths in module commands (#7779) [073750312]
+- Infer the element type of empty channels, lists and maps from first use (#7774) [ece56cae0]
+- Make exit() graceful, report error for return statement in workflow body (#7570) [9563c73ff]
+- Prevent IllegalThreadStateException from aborting the session on task timeout (#7571) [d91b08bff]
+- Retry errors on every page when listing Google Batch tasks (#7768) [89fa79675]
+- Reuse the Google Batch job a retried submit already created (#7762) [a8f7cc46b]
+- Write null for values that fail to serialize in TowerJsonGenerator (#7772) [644dcf1a1]
+
 ## [Version 26.09.2-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.09.2-edge) - 6 Oct 2026
 
 - Add conda/micromamba:v2-fast and conda/pixi:v1-fast to the wave.build.template docs (#7727) [cbf790221]
