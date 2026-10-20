@@ -141,6 +141,40 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     /**
+     * Emit the blank lines that precede a node's leading block, for a node whose
+     * source position no longer matches its output position (e.g. a reordered
+     * declaration). The blank count is taken from the node's first own-line leading
+     * comment if it has one, otherwise from the node itself.
+     *
+     * @param node
+     */
+    public void appendBlankLinesBefore(ASTNode node) {
+        appendBlankLines(comments.leadingLine(node));
+    }
+
+    /**
+     * Append the comments that precede a reordered node, preserving the blank
+     * lines between the comments and between the last comment and the node, but
+     * not the blank lines above the first comment -- those separate the node's
+     * group from what precedes it and are placed by the caller, since the node's
+     * source position no longer matches its output position.
+     *
+     * @param node
+     */
+    public void appendInnerComments(ASTNode node) {
+        var leading = comments.leading(node);
+        for( int i = 0; i < leading.size(); i++ ) {
+            if( i > 0 )
+                appendBlankLines(leading.get(i).line);
+            appendComment(leading.get(i));
+        }
+        // within a group only a comment-to-node blank reaches here; a bare blank
+        // above the node would have started a new group
+        if( !leading.isEmpty() )
+            appendBlankLines(node.getLineNumber());
+    }
+
+    /**
      * Append the comments that belong to a construct but not to any
      * particular child, e.g. a comment before a closing brace.
      *
