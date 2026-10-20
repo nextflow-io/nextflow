@@ -667,4 +667,8 @@ class AgentConfig implements ConfigScope {
 
     /** Whether execution tracing is enabled (defaults to {@code false} when not configured). */
     boolean traceEnabled() { trace != null && trace }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 }
