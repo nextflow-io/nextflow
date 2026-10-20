@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.22.8 - 20 Oct 2026
+- Prevent leaking environment secrets in CI (#7873) [a0ba70834]
+
 1.22.7 - 8 Oct 2026
 - Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
 
