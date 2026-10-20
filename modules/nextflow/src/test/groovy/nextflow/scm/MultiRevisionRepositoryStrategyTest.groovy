@@ -337,4 +337,27 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         bareGitB.close()
     }
 
+    def 'should remove password from remote url'() {
+        given:
+        def dir = tempDir.getRoot().resolve('repo').toFile()
+        def git = Git.init().setDirectory(dir).call()
+        def config = git.getRepository().getConfig()
+        config.setString('remote', 'origin', 'url', REMOTE)
+        config.save()
+
+        when:
+        AbstractRepositoryStrategy.removeRemotePassword(git)
+        then:
+        git.getRepository().getConfig().getString('remote', 'origin', 'url') == EXPECTED
+
+        cleanup:
+        git?.close()
+
+        where:
+        REMOTE                                                 | EXPECTED
+        'https://user:secret@bitbucket.org/foo/bar.git'     | 'https://user@bitbucket.org/foo/bar.git'
+        'https://user@bitbucket.org/foo/bar.git'            | 'https://user@bitbucket.org/foo/bar.git'
+        'https://github.com/foo/bar.git'                    | 'https://github.com/foo/bar.git'
+        'git@github.com:foo/bar.git'                        | 'git@github.com:foo/bar.git'
+    }
 }

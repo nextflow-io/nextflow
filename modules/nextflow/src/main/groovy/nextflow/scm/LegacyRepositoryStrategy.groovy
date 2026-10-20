@@ -246,6 +246,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
     Git getGit() {
         if( !_git ) {
             _git = Git.open(localPath)
+            removeRemotePassword(_git)
         }
         return _git
     }

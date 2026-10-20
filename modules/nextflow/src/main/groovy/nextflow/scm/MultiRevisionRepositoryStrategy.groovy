@@ -402,6 +402,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         assert bareRepo
         if( !_bareGit ) {
             _bareGit = Git.open(this.bareRepo)
+            removeRemotePassword(_bareGit)
         }
         return _bareGit
     }

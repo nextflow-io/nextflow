@@ -1093,7 +1093,7 @@ class AssetManager implements Closeable {
         final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
     }
 
