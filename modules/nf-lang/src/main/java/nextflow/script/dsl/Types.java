@@ -111,10 +111,13 @@ public class Types {
 
     private static boolean isAssignableFromRecord(ClassNode target, ClassNode source) {
         for( var targetFn : target.getFields() ) {
-            if( targetFn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
-                continue;
             var sourceFn = source.getDeclaredField(targetFn.getName());
-            if( sourceFn == null || !isAssignableFrom(targetFn.getType(), sourceFn.getType()) )
+            if( sourceFn == null ) {
+                if( targetFn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+                    continue;
+                return false;
+            }
+            if( !isAssignableFrom(targetFn.getType(), sourceFn.getType()) )
                 return false;
         }
         return true;
