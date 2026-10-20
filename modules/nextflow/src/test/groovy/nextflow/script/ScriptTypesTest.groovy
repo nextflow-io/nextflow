@@ -369,6 +369,68 @@ class ScriptTypesTest extends Dsl2Spec {
         folder.deleteDir()
     }
 
+    def 'should stage path fields of a record collection with stageAs' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file = folder.resolve('main.nf')
+        file.text = '''\
+            nextflow.enable.types = true
+
+            record Vcf {
+                id: String
+                vcf: Path
+                tbi: Path?
+            }
+
+            process COMBINE_VCFS {
+                input:
+                record(
+                    id: String,
+                    vcfs: List<Vcf>
+                )
+
+                stage:
+                stageAs vcfs*.vcf, '*'
+                stageAs vcfs*.tbi.findAll { tbi -> tbi != null }, '*'
+
+                script:
+                """
+                bcftools concat ${vcfs*.vcf.join(' ')} -o ${id}.vcf.gz
+                """
+            }
+
+            workflow {
+            }
+            '''.stripIndent()
+
+        and:
+        def a = Path.of('/data/a.vcf')
+        def b = Path.of('/data/b.vcf')
+        def bTbi = Path.of('/data/b.vcf.tbi')
+        def ctx = [
+            id: 'all',
+            vcfs: [
+                new RecordMap(id: 'a', vcf: a, tbi: null),
+                new RecordMap(id: 'b', vcf: b, tbi: bTbi)
+            ]
+        ]
+
+        when:
+        runScript(file)
+        and:
+        def process = ScriptMeta.get(ScriptMeta.getScriptByPath(file)).getProcess('COMBINE_VCFS')
+        def files = process.getProcessConfig().getInputs().getFiles()
+
+        then:
+        files.size() == 2
+        files.collect { f -> f.resolve(ctx) } == [ [a, b], [bTbi] ]
+        files.collect { f -> f.getFilePattern(ctx) } == [ '*', '*' ]
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should expose type annotations via reflection'() {
         when:
         def script = loadScript(
