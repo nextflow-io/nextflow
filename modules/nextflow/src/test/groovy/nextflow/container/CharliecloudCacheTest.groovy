@@ -241,4 +241,13 @@ class CharliecloudCacheTest extends Specification {
         file == container
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new CharliecloudCache(Mock(CharliecloudConfig), [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'CharliecloudCache'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }
