@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Pattern
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized

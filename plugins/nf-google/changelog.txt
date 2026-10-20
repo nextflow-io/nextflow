@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.29.1 - 15 Oct 2026
+- Fetch Google Batch task status once per trace record (#7807) [36e08de58]
+- Fix Google Batch array job deleted when a single array task is killed (#7808) [139910816]
+- Retry INTERNAL errors from the Google Batch API (#7805) [24d78183e]
+
 1.29.0 - 12 Oct 2026
 - Fix Google Batch array task status cache never matching (#7778) [6d44d4740]
 - Retry errors on every page when listing Google Batch tasks (#7768) [89fa79675]

@@ -655,6 +655,37 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a function call with default params' () {
+        expect:
+        check(
+            """\
+            def greet(name: String, greeting: String = 'Hello') -> String {
+                "\${greeting}, \${name}!"
+            }
+
+            def pad(prefix: String = '>', s: String) -> String {
+                prefix + s
+            }
+
+            workflow {
+                ${SOURCE}
+            }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                          | ERROR
+        "greet('world')"                | null
+        "greet('world', 'Hi')"          | null
+        "greet()"                       | "Function `greet` expects 1 to 2 argument(s) but received 0"
+        "greet('world', 'Hi', 'x')"     | "Function `greet` expects 1 to 2 argument(s) but received 3"
+        "greet(42)"                     | "Argument with type Integer is not compatible with parameter of type String"
+        "pad('x')"                      | null
+        "pad(42)"                       | "Argument with type Integer is not compatible with parameter of type String"
+    }
+
+    @Unroll
     def 'should check a function call with overloads' () {
         expect:
         check(SOURCE, ERROR)
@@ -848,6 +879,7 @@ class TypeCheckingTest extends Specification {
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
         "['a', 'b', 'c'][1..<3]"    | null
+        "file('ab.txt') << 'a' << 'b'"  | null
     }
 
     @Unroll
@@ -862,6 +894,7 @@ class TypeCheckingTest extends Specification {
         '1 <=> 2'       | 'Integer'
         "'a' <=> 'b'"   | 'Integer'
         '1 < 2'         | 'Boolean'
+        "file('a.txt') << 'a'" | 'Path'
     }
 
     @Unroll
@@ -907,6 +940,8 @@ class TypeCheckingTest extends Specification {
         "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
         "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map<K, V>"
         "true ? 42 : null"      | null
+        "(true ? [1] : 'a').size()"                 | "Conditional expression has inconsistent types -- true branch has type List<Integer> but false branch has type String"
+        "def f(d) { (true ? d : 'a').size() }"      | null
     }
 
     def 'should resolve a ternary expression' () {
@@ -947,6 +982,7 @@ class TypeCheckingTest extends Specification {
         SOURCE          | ERROR
         "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
         "[1, 2, 3]"     | null
+        "[1, 'a'].collect { v -> v.size() }"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
     }
 
     @Unroll

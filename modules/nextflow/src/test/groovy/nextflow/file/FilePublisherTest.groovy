@@ -107,6 +107,33 @@ class FilePublisherTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should not publish fusion dirs when copying a directory'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def work1 = root.resolve('work/ab/1234')
+        def dir1 = work1.resolve('outs'); Files.createDirectories(dir1.resolve('.fusion/chks'))
+        dir1.resolve('data.txt').text = 'Hello'
+        dir1.resolve('.fusion/chks/part-0').text = 'xxx'
+        def outputDir = root.resolve('results')
+        and:
+        def session = mockSession()
+        def publisher = new FilePublisher(session, [mode: MODE])
+
+        when:
+        publisher.publish(dir1, outputDir.resolve('outs'))
+        awaitPublish()
+
+        then:
+        outputDir.resolve('outs/data.txt').text == 'Hello'
+        !outputDir.resolve('outs/.fusion').exists()
+
+        cleanup:
+        root?.deleteDir()
+
+        where:
+        MODE << ['copy', 'copyNoFollow']
+    }
+
     def 'should publish the same file to more than one target'() {
         given:
         def root = Files.createTempDirectory('test')

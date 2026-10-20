@@ -224,7 +224,7 @@ public class ScriptAstBuilder {
         if( !commentsEnabled )
             return;
         tokenStream.fill();
-        var comments = Comments.collect(tokenStream.getTokens());
+        var comments = Comments.collect(tokenStream.getTokens(), ScriptLexer.NL);
         moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, comments);
         if( comments.getShebang() != null )
             moduleNode.setShebang(comments.getShebang());
