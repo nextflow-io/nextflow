@@ -16,10 +16,13 @@
 
 package nextflow.scm
 
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.transport.CredentialItem
 import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.URIish
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
 /**
@@ -62,7 +65,39 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     CredentialsProvider getGitCredentials() {
-        return new UsernamePasswordCredentialsProvider(getUser(), getToken() ?: getPassword())
+        return getToken()
+            ? new ApiTokenCredentialsProvider(getUser(), getToken())
+            : new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
+
+    /**
+     * Git credentials for Bitbucket API tokens.
+     *
+     * The REST API authenticates with the Atlassian account email, whereas
+     * git over HTTPS requires the Bitbucket username, which is provided by
+     * the user info of the clone URL.
+     *
+     * @see <a href="https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/">Using API tokens</a>
+     */
+    @CompileStatic
+    static class ApiTokenCredentialsProvider extends UsernamePasswordCredentialsProvider {
+
+        ApiTokenCredentialsProvider(String user, String token) {
+            super(user, token)
+        }
+
+        @Override
+        boolean get(URIish uri, CredentialItem... items) {
+            if( !super.get(uri, items) )
+                return false
+            if( uri?.user ) {
+                for( CredentialItem item : items ) {
+                    if( item instanceof CredentialItem.Username )
+                        ((CredentialItem.Username) item).setValue(uri.user)
+                }
+            }
+            return true
+        }
     }
 
     /** {@inheritDoc} */
@@ -175,12 +210,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-        /**
-         * The clone URL when an API token is used is of the form: https://{bitbucket_username}:{api_token}@bitbucket.org/{workspace}/{repository}.git
-         * @see <a href="https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/">Using API tokens</a>
-         */
-        String cloneUrl = result.href
-        return getToken() ? cloneUrl.replace('@', ":${getToken()}@") : cloneUrl
+        return result.href
     }
 
     @Override

@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import static nextflow.Const.*
+import static nextflow.util.StringUtils.redactUrlPassword
 
 import java.nio.file.Path
 
@@ -46,6 +47,7 @@ import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
 import org.eclipse.jgit.merge.MergeStrategy
+import org.eclipse.jgit.transport.URIish
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -571,8 +573,35 @@ class AssetManager {
     protected Git getGit() {
         if( !_git ) {
             _git = Git.open(localPath)
+            removeBitbucketToken(_git, provider)
         }
         return _git
+    }
+
+    /**
+     * Remove the Bitbucket API token from the remote URL of a local repository, if present.
+     *
+     * Previous versions stored the Bitbucket API token in the clone URL, see
+     * https://github.com/nextflow-io/nextflow/issues/7868
+     */
+    @PackageScope
+    static void removeBitbucketToken(Git git, RepositoryProvider provider) {
+        if( provider !instanceof BitbucketRepositoryProvider || !provider.getToken() )
+            return
+        try {
+            final config = git.getRepository().getConfig()
+            final url = config.getString('remote', 'origin', 'url')
+            if( !url )
+                return
+            final uri = new URIish(url)
+            if( !uri.getPass() )
+                return
+            config.setString('remote', 'origin', 'url', uri.setPass(null).toString())
+            config.save()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to remove Bitbucket token from remote url -- cause: ${e.message}"
+        }
     }
 
     /**
@@ -593,7 +622,7 @@ class AssetManager {
             checkValidRemoteRepo(revision)
 
             final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling $project -- Using remote clone url: ${redactUrlPassword(cloneURL)}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
@@ -621,7 +650,7 @@ class AssetManager {
                     .newUpdate(REMOTE_DEFAULT_HEAD, true)
                     .link(REMOTE_REFS_ROOT + headName)
             } else {
-                log.debug "Unable to determine default branch of repo ${cloneURL}, symbolic ref not created"
+                log.debug "Unable to determine default branch of repo ${redactUrlPassword(cloneURL)}, symbolic ref not created"
             }
 
             // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
@@ -632,7 +661,7 @@ class AssetManager {
             }
 
             // return status message
-            return "downloaded from ${cloneURL}"
+            return "downloaded from ${redactUrlPassword(cloneURL)}"
         }
 
         log.debug "Pull pipeline $project  -- Using local path: $localPath"
@@ -697,7 +726,7 @@ class AssetManager {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -1087,7 +1116,7 @@ class AssetManager {
         final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
     }
 

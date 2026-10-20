@@ -17,6 +17,8 @@
 package nextflow.scm
 
 
+import org.eclipse.jgit.transport.CredentialItem
+import org.eclipse.jgit.transport.URIish
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -269,5 +271,52 @@ class BitbucketRepositoryProviderTest extends Specification {
         and:
         depthOne.every { it.path && it.name && it.sha }
         depthTwo.every { it.path && it.name && it.sha }
+    }
+
+    def 'should use clone url username for api token git credentials'() {
+        given:
+        def config = new ProviderConfig('bitbucket', [user: 'me@example.com', token: 'xyz'])
+        def provider = new BitbucketRepositoryProvider('foo/bar', config)
+
+        when:
+        def creds = provider.getGitCredentials()
+        def user = new CredentialItem.Username()
+        def pass = new CredentialItem.Password()
+        creds.get(new URIish(REMOTE), user, pass)
+        then:
+        user.getValue() == USER
+        new String(pass.getValue()) == 'xyz'
+
+        where:
+        REMOTE                                     | USER
+        'https://bbuser@bitbucket.org/foo/bar'  | 'bbuser'
+        'https://bitbucket.org/foo/bar'         | 'me@example.com'
+    }
+
+    def 'should use username and app password for git credentials'() {
+        given:
+        def config = new ProviderConfig('bitbucket', [user: 'bbuser', password: 'secret'])
+        def provider = new BitbucketRepositoryProvider('foo/bar', config)
+
+        when:
+        def creds = provider.getGitCredentials()
+        def user = new CredentialItem.Username()
+        def pass = new CredentialItem.Password()
+        creds.get(new URIish('https://other@bitbucket.org/foo/bar'), user, pass)
+        then:
+        user.getValue() == 'bbuser'
+        new String(pass.getValue()) == 'secret'
+    }
+
+    def 'should not include api token in clone url'() {
+        given:
+        def config = new ProviderConfig('bitbucket', [user: 'me@example.com', token: 'xyz'])
+        def provider = new BitbucketRepositoryProvider('foo/bar', config)
+        provider.metaClass.invokeAndParseResponse = { String url ->
+            [scm: 'git', links: [clone: [[name: 'https', href: 'https://bbuser@bitbucket.org/foo/bar.git']]]]
+        }
+
+        expect:
+        provider.getCloneUrl() == 'https://bbuser@bitbucket.org/foo/bar.git'
     }
 }

@@ -651,4 +651,37 @@ class AssetManagerTest extends Specification {
         !AssetManager.isRemoteBranch(local_master)
     }
 
+    def 'should remove bitbucket token from remote url'() {
+        given:
+        def dir = tempDir.getRoot().resolve('repo').toFile()
+        def git = Git.init().setDirectory(dir).call()
+        def config = git.getRepository().getConfig()
+        config.setString('remote', 'origin', 'url', REMOTE)
+        config.save()
+
+        when:
+        AssetManager.removeBitbucketToken(git, PROVIDER)
+        then:
+        git.getRepository().getConfig().getString('remote', 'origin', 'url') == EXPECTED
+
+        cleanup:
+        git?.close()
+
+        where:
+        PROVIDER            | REMOTE                                            | EXPECTED
+        bitbucket('xyz')    | 'https://user:secret@bitbucket.org/foo/bar.git'   | 'https://user@bitbucket.org/foo/bar.git'
+        bitbucket('xyz')    | 'https://user@bitbucket.org/foo/bar.git'          | 'https://user@bitbucket.org/foo/bar.git'
+        bitbucket('xyz')    | 'git@bitbucket.org:foo/bar.git'                   | 'git@bitbucket.org:foo/bar.git'
+        bitbucket(null)     | 'https://user:secret@bitbucket.org/foo/bar.git'   | 'https://user:secret@bitbucket.org/foo/bar.git'
+        github('xyz')       | 'https://user:secret@github.com/foo/bar.git'      | 'https://user:secret@github.com/foo/bar.git'
+        null                | 'https://user:secret@bitbucket.org/foo/bar.git'   | 'https://user:secret@bitbucket.org/foo/bar.git'
+    }
+
+    private static RepositoryProvider bitbucket(String token) {
+        new BitbucketRepositoryProvider('foo/bar', new ProviderConfig('bitbucket', [user: 'me@example.com', token: token]))
+    }
+
+    private static RepositoryProvider github(String token) {
+        new GithubRepositoryProvider('foo/bar', new ProviderConfig('github', [user: 'me', token: token]))
+    }
 }
