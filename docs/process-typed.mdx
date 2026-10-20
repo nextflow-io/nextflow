@@ -260,6 +260,33 @@ process grep {
 }
 ```
 
+The `stageAs` directive can also stage files that are not staged automatically, such as files in a collection of records. Use the `*` pattern to keep the original file names, and remove any `null` values from nullable fields:
+
+```nextflow
+nextflow.enable.types = true
+
+process combine_vcfs {
+    input:
+    id: String
+    vcfs: List<Vcf>
+
+    stage:
+    stageAs vcfs*.vcf, '*'
+    stageAs vcfs*.tbi.findAll { tbi -> tbi != null }, '*'
+
+    script:
+    """
+    bcftools concat ${vcfs*.vcf.join(' ')} -o ${id}.vcf.gz
+    """
+}
+
+record Vcf {
+    id: String
+    vcf: Path
+    tbi: Path?
+}
+```
+
 For more information about the available stage directives, see [Inputs and outputs (typed)][process-reference-typed].
 
 ## Outputs
