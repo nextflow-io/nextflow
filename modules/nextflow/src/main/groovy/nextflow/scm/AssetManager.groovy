@@ -759,6 +759,7 @@ class AssetManager implements Closeable {
         // Fallback to legacy behavior if strategy not initialized
         if( !_git ) {
             _git = Git.open(localPath)
+            AbstractRepositoryStrategy.removeBitbucketToken(_git, provider)
         }
         return _git
     }

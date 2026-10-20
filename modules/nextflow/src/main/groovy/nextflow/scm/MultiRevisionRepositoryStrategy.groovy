@@ -307,7 +307,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         commitPath.parentFile.mkdirs()
         try {
             final cloneURL = this.bareRepo.toString()
-            log.debug "Pulling ${project} -- Using remote clone url: ${redactUrlPassword(cloneURL)}"
+            log.debug "Pulling ${project} -- Using remote clone url: ${cloneURL}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             File bareObjectsDir = new File(this.bareRepo, "objects")
@@ -402,7 +402,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         assert bareRepo
         if( !_bareGit ) {
             _bareGit = Git.open(this.bareRepo)
-            removeRemotePassword(_bareGit)
+            removeBitbucketToken(_bareGit, provider)
         }
         return _bareGit
     }
@@ -416,8 +416,10 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     private Git getLegacyGit() {
         if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() ) {
-            if( !_legacyGit )
+            if( !_legacyGit ) {
                 _legacyGit = Git.open(this.legacyRepoPath)
+                removeBitbucketToken(_legacyGit, provider)
+            }
             return _legacyGit
         }
         return null

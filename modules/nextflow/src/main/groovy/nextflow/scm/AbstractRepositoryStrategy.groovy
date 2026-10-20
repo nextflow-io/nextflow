@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.Manifest
@@ -130,12 +131,15 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
     }
 
     /**
-     * Remove the password from the remote URL of a local repository, if present.
+     * Remove the Bitbucket API token from the remote URL of a local repository, if present.
      *
      * Previous versions stored the Bitbucket API token in the clone URL, see
      * https://github.com/nextflow-io/nextflow/issues/7868
      */
-    protected static void removeRemotePassword(Git git) {
+    @PackageScope
+    static void removeBitbucketToken(Git git, RepositoryProvider provider) {
+        if( provider !instanceof BitbucketRepositoryProvider || !provider.getToken() )
+            return
         try {
             final config = git.getRepository().getConfig()
             final url = config.getString('remote', 'origin', 'url')
@@ -148,7 +152,7 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
             config.save()
         }
         catch( Exception e ) {
-            log.debug "Unable to remove password from remote url -- cause: ${e.message}"
+            log.debug "Unable to remove Bitbucket token from remote url -- cause: ${e.message}"
         }
     }
 

@@ -319,4 +319,16 @@ class BitbucketRepositoryProviderTest extends Specification {
         user.getValue() == 'bbuser'
         new String(pass.getValue()) == 'secret'
     }
+
+    def 'should not include api token in clone url'() {
+        given:
+        def config = new ProviderConfig('bitbucket', [user: 'me@example.com', token: 'xyz'])
+        def provider = new BitbucketRepositoryProvider('foo/bar', config)
+        provider.metaClass.invokeAndParseResponse = { String url ->
+            [scm: 'git', links: [clone: [[name: 'https', href: 'https://bbuser@bitbucket.org/foo/bar.git']]]]
+        }
+
+        expect:
+        provider.getCloneUrl() == 'https://bbuser@bitbucket.org/foo/bar.git'
+    }
 }
