@@ -435,4 +435,15 @@ class ConfigDiscoveryTest extends Specification {
         then:
         managers.size()==1
     }
+
+    def 'should not render the environment' () {
+        given:
+        def obj = new ConfigDiscovery()
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'ConfigDiscovery'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }
