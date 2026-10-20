@@ -126,6 +126,22 @@ Each field in the record type is staged into the task the same way as an individ
 
 When the process is invoked, the incoming record should contain the specified fields, or else the run will fail. If the incoming record has additional fields not declared by the process input, they are ignored.
 
+Record collections (such as `List<Sample>`) are staged the same way. Each `Path` field is staged as an input file for every record in the collection, and `null` values of nullable fields are skipped:
+
+```nextflow
+nextflow.enable.types = true
+
+process cat_samples {
+    input:
+    samples: List<Sample>
+
+    script:
+    """
+    cat ${samples*.fastq.join(' ')}
+    """
+}
+```
+
 Record inputs can also be declared as a *destructured* input:
 
 ```nextflow

@@ -19,9 +19,11 @@ import java.nio.file.Path;
 import java.util.Collection;
 
 import nextflow.script.ast.RecordNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
@@ -46,20 +48,56 @@ class ImplicitStagers {
      * - Inputs with a record type are recursively inspected for nested
      *   file inputs based on the record type definition.
      *
+     * - Inputs with a record collection type (e.g. List&lt;Sample&gt;) are
+     *   inspected in the same way, staging the files of every element.
+     *
      * @param param
      * @param target
      * @param stagers
      */
     static void visitInputType(Variable param, Expression target, BlockStatement stagers) {
-        var cn = param.getType();
+        visitInputType(param.getType(), target, false, stagers);
+    }
+
+    private static void visitInputType(ClassNode cn, Expression target, boolean spread, BlockStatement stagers) {
         if( isPathType(cn) ) {
-            var stager = stmt(callThisX("stageAs", args(closureX(stmt(target)))));
+            var value = spread ? flattenNonNull(target) : target;
+            var stager = stmt(callThisX("stageAs", args(closureX(stmt(value)))));
             stagers.addStatement(stager);
         }
         else if( isRecordType(cn) ) {
-            for( var fn : cn.getFields() )
-                visitInputType(fn, propX(target, fn.getName()), stagers);
+            for( var fn : cn.getFields() ) {
+                var property = propX(target, fn.getName());
+                property.setSpreadSafe(spread);
+                visitInputType(fn.getType(), property, spread, stagers);
+            }
         }
+        else if( isRecordCollectionType(cn) ) {
+            var elements = spread ? safeCallX(target, "flatten") : target;
+            visitInputType(cn.getGenericsTypes()[0].getType(), elements, true, stagers);
+        }
+    }
+
+    /**
+     * Flatten the values collected from a record collection and
+     * discard null values (i.e. from nullable fields).
+     *
+     * @param target
+     */
+    private static Expression flattenNonNull(Expression target) {
+        var p = param(ClassHelper.dynamicType(), "p");
+        var notNull = closureX(params(p), stmt(notNullX(varX(p))));
+        return safeCallX(safeCallX(target, "flatten"), "findAll", args(notNull));
+    }
+
+    private static Expression safeCallX(Expression target, String name) {
+        return safeCallX(target, name, MethodCallExpression.NO_ARGUMENTS);
+    }
+
+    private static Expression safeCallX(Expression target, String name, Expression args) {
+        var call = callX(target, name, args);
+        call.setSafe(true);
+        return call;
     }
 
     private static boolean isPathType(ClassNode cn) {
@@ -78,6 +116,14 @@ class ImplicitStagers {
 
     private static boolean isRecordType(ClassNode cn) {
         return cn.redirect() instanceof RecordNode;
+    }
+
+    private static boolean isRecordCollectionType(ClassNode cn) {
+        if( !cn.isResolved() || !cn.isUsingGenerics() )
+            return false;
+        if( !Collection.class.isAssignableFrom(cn.getTypeClass()) )
+            return false;
+        return isRecordType(cn.getGenericsTypes()[0].getType());
     }
 
 }
