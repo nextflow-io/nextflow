@@ -18,6 +18,7 @@ package nextflow.scm
 
 import static nextflow.Const.*
 import static GitReferenceHelper.*
+import static nextflow.util.StringUtils.redactUrlPassword
 
 import java.nio.file.Path
 
@@ -791,7 +792,7 @@ class AssetManager implements Closeable {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")

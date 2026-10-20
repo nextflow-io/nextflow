@@ -16,6 +16,8 @@
 
 package nextflow.scm
 
+import static nextflow.util.StringUtils.redactUrlPassword
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -200,7 +202,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
         try {
             final cloneURL = provider.getCloneUrl()
-            log.debug "Pulling bare repo for ${project} -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling bare repo for ${project} -- Using remote clone url: ${redactUrlPassword(cloneURL)}"
             def bare = Git.cloneRepository()
             if( provider.hasCredentials() )
                 bare.setCredentialsProvider(provider.getGitCredentials())
@@ -258,7 +260,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         finally {
             file.delete()
         }
-        return "downloaded from ${getGitRepositoryUrl()}"
+        return "downloaded from ${redactUrlPassword(getGitRepositoryUrl())}"
     }
 
     /** Checkout in multi-revision is just updating the commit dir. This methods check if bare repo, commit id and commit path exists.
@@ -305,7 +307,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         commitPath.parentFile.mkdirs()
         try {
             final cloneURL = this.bareRepo.toString()
-            log.debug "Pulling ${project} -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling ${project} -- Using remote clone url: ${redactUrlPassword(cloneURL)}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             File bareObjectsDir = new File(this.bareRepo, "objects")
@@ -338,7 +340,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
 
         // return status message
-        return "downloaded from ${getGitRepositoryUrl()}"
+        return "downloaded from ${redactUrlPassword(getGitRepositoryUrl())}"
     }
 
     private RefSpec refSpecForName(String revision) {
