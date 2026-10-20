@@ -1703,17 +1703,24 @@ class TaskProcessor {
         checkConflicts(task.inputFiles)
     }
 
+    /**
+     * Check that no stage name is used by more than one file.
+     * The same file staged multiple times under the same name
+     * is not a conflict.
+     */
+    @CompileStatic
     private void checkConflicts(List<FileHolder> allFiles) {
-        final allNames = new HashMap<String,Integer>()
-        for( final holder : allFiles ) {
-            final num = allNames.getOrCreate(holder.stageName, 0) + 1
-            allNames.put(holder.stageName, num)
-        }
+        final allNames = new LinkedHashMap<String,Map<Path,FileHolder>>()
+        for( final holder : allFiles )
+            allNames.computeIfAbsent(holder.stageName, k -> new LinkedHashMap<Path,FileHolder>()).putIfAbsent(holder.storePath, holder)
 
-        final conflicts = allNames.findAll { name, num -> num > 1 }
+        final conflicts = allNames.findAll { name, holders -> holders.size() > 1 }
         if( conflicts ) {
-            log.debug("Process $name > collision check staging file names: $allNames")
-            def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
+            final names = conflicts.collect { name, holders ->
+                final paths = holders.values().collect { FileHolder h -> h.sourcePath ?: h.storePath }
+                "${name} (${paths.join(', ')})"
+            }
+            final message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${names.join(', ')}"
             throw new ProcessUnrecoverableException(message)
         }
     }
@@ -1768,8 +1775,8 @@ class TaskProcessor {
             resolvedValues.add(value)
         }
 
-        // -- check conflicting file names (the same file may be staged by multiple inputs)
-        checkConflicts(task.inputFiles.unique(false) { FileHolder holder -> List.of(holder.stageName, holder.storePath) })
+        // -- check conflicting file names
+        checkConflicts(task.inputFiles)
 
         // -- normalize input values by replacing source paths with staged paths
         final Map<Path,FileHolder> holders = [:]
