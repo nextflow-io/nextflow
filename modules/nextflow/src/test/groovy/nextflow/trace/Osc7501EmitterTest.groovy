@@ -40,7 +40,7 @@ class Osc7501EmitterTest extends Specification {
 
         where:
         STATE      | MESSAGE                | EXPECTED
-        'idle'     | 'Waiting for tasks'    | "${ESC}]7501;state=idle:app=nextflow:msg=V2FpdGluZyBmb3IgdGFza3M=${ESC}\\"
+        'working'  | 'Running workflow'     | "${ESC}]7501;state=working:app=nextflow:msg=UnVubmluZyB3b3JrZmxvdw==${ESC}\\"
         'working'  | 'Running tasks'        | "${ESC}]7501;state=working:app=nextflow:msg=UnVubmluZyB0YXNrcw==${ESC}\\"
         'done'     | 'Workflow completed'   | "${ESC}]7501;state=done:app=nextflow:msg=V29ya2Zsb3cgY29tcGxldGVk${ESC}\\"
         'error'    | 'Workflow failed'      | "${ESC}]7501;state=error:app=nextflow:msg=V29ya2Zsb3cgZmFpbGVk${ESC}\\"
@@ -93,7 +93,7 @@ class Osc7501EmitterTest extends Specification {
 
         where:
         state      | message
-        'idle'     | 'Waiting for tasks'
+        'working'  | 'Running workflow'
         'working'  | 'Running tasks'
         'done'     | 'Workflow completed'
         'error'    | 'Workflow failed'

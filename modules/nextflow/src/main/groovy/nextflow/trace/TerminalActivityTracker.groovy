@@ -23,9 +23,9 @@ import nextflow.SysEnv
 /**
  * Maps a Nextflow run onto OSC 7501 states and emits only when the state changes.
  *
- * <p>{@code working} while any task is pending, submitted, or running.
- * {@code idle} when the run is still going and nothing is in flight, and when
- * the user cancels or interrupts (the protocol asks for {@code idle} then).
+ * <p>{@code working} for the whole live run, including the gap before the
+ * first task and any stretch where nothing is in flight. {@code idle} only
+ * when the user cancels or interrupts, which is the protocol's at-rest state.
  * {@code done} when the run completes successfully. {@code error} when it
  * stops because of a failure. {@code blocked} is not used: a run does not
  * pause for permission, a question, or a credential.
@@ -50,14 +50,14 @@ class TerminalActivityTracker {
     }
 
     /**
-     * @return a tracker that has already reported {@code idle}, or {@code null}
+     * @return a tracker that has already reported {@code working}, or {@code null}
      *         when reporting is off
      */
     static TerminalActivityTracker start(Session session) {
         if( !enabled(session, Osc7501Emitter.stdoutIsTty()) )
             return null
         final tracker = new TerminalActivityTracker(new Osc7501Emitter())
-        tracker.report('idle', 'Waiting for tasks')
+        tracker.reportRunning(0)
         return tracker
     }
 
@@ -81,16 +81,26 @@ class TerminalActivityTracker {
     synchronized void onStats(int inFlight) {
         if( suspended || settled )
             return
+        reportRunning(inFlight)
+    }
+
+    /**
+     * A live run is {@code working} whether or not tasks are queued. An empty
+     * queue does not mean the process is waiting for the user, so it is not
+     * {@code idle}. The message is fixed on the first report; later queue
+     * changes stay on the same state and are not written again.
+     */
+    private void reportRunning(int inFlight) {
         if( inFlight > 0 )
             report('working', 'Running tasks')
-        else
-            report('idle', 'Waiting for tasks')
+        else if( current == null )
+            report('working', 'Running workflow')
     }
 
     /**
      * Ignore further queue updates. Called once the run is finishing so the
-     * last progress paint does not report {@code idle} ahead of {@code done}
-     * or {@code error}.
+     * last progress paint does not rewrite {@code working} ahead of
+     * {@code done} or {@code error}.
      */
     synchronized void beginShutdown() {
         suspended = true

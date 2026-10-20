@@ -25,7 +25,7 @@ class TerminalActivityTrackerTest extends Specification {
 
     static final char ESC = 0x1B as char
 
-    def 'should emit only when the activity state changes'() {
+    def 'should stay working while the queue drains during a live run'() {
         given:
         def sink = new StringBuilder()
         def tracker = TerminalActivityTracker.open(new Osc7501Emitter(sink))
@@ -40,12 +40,23 @@ class TerminalActivityTrackerTest extends Specification {
         tracker.onStats(3)
 
         then:
-        sink.toString() == sequence('idle', 'Waiting for tasks') +
-                sequence('working', 'Running tasks') +
-                sequence('idle', 'Waiting for tasks') +
-                sequence('working', 'Running tasks')
-        sink.toString().count('state=working') == 2
-        sink.toString().count('state=idle') == 2
+        sink.toString() == sequence('working', 'Running workflow')
+        !sink.toString().contains('state=idle')
+    }
+
+    def 'should name in-flight work on the first report and not repeat it'() {
+        given:
+        def sink = new StringBuilder()
+        def tracker = TerminalActivityTracker.open(new Osc7501Emitter(sink))
+
+        when:
+        tracker.onStats(4)
+        tracker.onStats(0)
+        tracker.onStats(1)
+
+        then:
+        sink.toString() == sequence('working', 'Running tasks')
+        !sink.toString().contains('state=idle')
     }
 
     def 'should report completion after the queue drains without an idle flicker'() {

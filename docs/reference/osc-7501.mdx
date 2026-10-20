@@ -61,13 +61,13 @@ The ANSI progress observer (`AnsiLogObserver`) owns the signal. The bytes are pr
 
 | Run | OSC 7501 `state` |
 | --- | --- |
+| The run has started, including before the first task and after the queue drains | `working` |
 | At least one task is pending, submitted, or running | `working` |
-| The run is still going and nothing is in flight | `idle` |
 | The run completes successfully | `done` |
 | The run stops because of a failure | `error` |
 | The user cancels or interrupts the run | `idle` |
 
-`app` is `nextflow`. `msg` is a single stable line (`Running tasks`, `Waiting for tasks`, `Workflow completed`, `Workflow failed`, or `Run cancelled`). A task that fails and is retried or ignored does not emit `error`: the protocol's `error` means the program failed and stopped. `blocked` is not emitted, because a run does not wait on permission, a typed answer, or a credential. `progress` is omitted, so `working` stays indeterminate instead of rewriting the record on every task.
+`app` is `nextflow`. `msg` is a single stable line (`Running workflow`, `Running tasks`, `Workflow completed`, `Workflow failed`, or `Run cancelled`). The first `working` report keeps its message for the rest of the run: an empty queue is still `working`, because the process has not returned to a prompt. A task that fails and is retried or ignored does not emit `error`: the protocol's `error` means the program failed and stopped. `blocked` is not emitted, because a run does not wait on permission, a typed answer, or a credential. `progress` is omitted, so `working` stays indeterminate instead of rewriting the record on every task. `clear` is not sent on success or failure, so the `done` or `error` record survives process exit.
 
 A report is written only when the state changes. Queue updates that stay in `working` do not emit again. Reports go to standard output, and only when it is a terminal, ANSI logging is enabled, and reporting has not been turned off. Nextflow does not send the feature-detection query: the specification allows sending reports without a reply, and reading the reply would take input that belongs to the pipeline.
 
