@@ -18,6 +18,7 @@ package nextflow.script.types.shim;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
+import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.Ops;
 
@@ -88,8 +89,19 @@ public interface Map<K,V> {
         A map entry is a key-value pair.
     """)
     interface Entry<K,V> {
+
+        @Constant("key")
+        @Description("""
+            Returns the key of the entry.
+        """)
         K getKey();
+
+        @Constant("value")
+        @Description("""
+            Returns the value of the entry.
+        """)
         V getValue();
+
     }
 
 }
