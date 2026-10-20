@@ -1056,6 +1056,36 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should prefer the comparator variant over tuple destructuring' () {
+        when:
+        def exp = parseExpression(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """
+        )
+        def method = exp.getNodeMetaData(ASTNodeMarker.METHOD_TARGET)
+        then:
+        Types.getName(method.getParameters().last().getType()) == '(Tuple<String, Integer>, Tuple<String, Integer>) -> Integer'
+        Types.getName(getType(exp)) == TYPE
+
+        and:
+        check(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """,
+            null
+        )
+
+        where:
+        METHOD      | TYPE
+        'toSorted'  | 'List<Tuple<String, Integer>>'
+        'max'       | 'Tuple<String, Integer>'
+        'min'       | 'Tuple<String, Integer>'
+    }
+
+    @Unroll
     def 'should check a unary expression' () {
         expect:
         check(SOURCE, ERROR)
