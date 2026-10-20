@@ -74,6 +74,15 @@ jobs:
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
+      # Random per-run value that looks like a secret, scanned for in test reports
+      # and artifacts before upload to detect tests that dump the environment.
+      # Generated in-job so it also works for fork PRs, which get no secrets.
+      - name: Setup leak canary
+        run: |
+          canary="nxfcanary-$(openssl rand -hex 16)"
+          echo "::add-mask::$canary"
+          echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
+
       - name: Setup Java ${{ matrix.java_version }}
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
@@ -109,8 +118,18 @@ jobs:
           AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-      - name: Publish tests report
+      - name: Scan tests report for leaks
+        id: leak_scan
         if: always()
+        run: |
+          shopt -s globstar nullglob
+          if ! .github/scripts/check-leaks.sh ./**/build/reports/tests/test; then
+            echo "::error::A test leaked the job environment (incl. secrets) into the tests report. The report artifact was withheld; fix the test before re-running."
+            exit 1
+          fi
+
+      - name: Publish tests report
+        if: always() && steps.leak_scan.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
@@ -147,6 +166,15 @@ jobs:
           echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+
+      # Random per-run value that looks like a secret, scanned for in test reports
+      # and artifacts before upload to detect tests that dump the environment.
+      # Generated in-job so it also works for fork PRs, which get no secrets.
+      - name: Setup leak canary
+        run: |
+          canary="nxfcanary-$(openssl rand -hex 16)"
+          echo "::add-mask::$canary"
+          echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
 
       - name: Setup Java ${{ matrix.java_version }}
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
@@ -189,9 +217,18 @@ jobs:
             tar -cvf integration-tests.tar.gz tests/checks
             tar -cvf validation-tests.tar.gz validation
 
+      - name: Scan integration tests for leaks
+        id: leak_scan
+        if: always()
+        run: |
+          if ! .github/scripts/check-leaks.sh integration-tests.tar.gz validation-tests.tar.gz; then
+            echo "::error::A test leaked the job environment (incl. secrets) into the integration tests output. The report artifact was withheld; fix the test before re-running."
+            exit 1
+          fi
+
       - name: Publish tests report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        if: always() && steps.leak_scan.outcome == 'success'
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |

@@ -135,4 +135,13 @@ class TowerFactoryTest extends Specification {
         'HTTPS://TOWER.NF/THIS/THAT'    | true          | 'Bearer xyz123'
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new TowerFactory(env: [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'TowerFactory'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

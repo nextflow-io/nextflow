@@ -561,4 +561,14 @@ class PluginsFacadeTest extends Specification {
         [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-foo'      | false
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new PluginsFacade()
+        obj.env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'PluginsFacade'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

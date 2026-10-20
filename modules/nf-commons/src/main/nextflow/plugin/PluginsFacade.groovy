@@ -607,4 +607,8 @@ class PluginsFacade implements PluginStateListener {
         return list.collect(it->it.id).join('')
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }
