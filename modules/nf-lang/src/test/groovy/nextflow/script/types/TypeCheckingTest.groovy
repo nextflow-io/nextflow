@@ -909,6 +909,8 @@ class TypeCheckingTest extends Specification {
         "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
         "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map<K, V>"
         "true ? 42 : null"      | null
+        "(true ? [1] : 'a').size()"                 | "Conditional expression has inconsistent types -- true branch has type List<Integer> but false branch has type String"
+        "def f(d) { (true ? d : 'a').size() }"      | null
     }
 
     def 'should resolve a ternary expression' () {
@@ -949,6 +951,7 @@ class TypeCheckingTest extends Specification {
         SOURCE          | ERROR
         "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
         "[1, 2, 3]"     | null
+        "[1, 'a'].collect { v -> v.size() }"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
     }
 
     @Unroll
