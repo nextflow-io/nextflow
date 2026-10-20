@@ -216,8 +216,11 @@ public class TypeCheckingUtils {
         var methods = methodOverloads(node);
         var arguments = asMethodCallArguments(node);
         return methods.stream()
-            .filter((mn) -> isCompatibleMethod(mn, arguments, resolvedPlaceholders))
+            .filter((mn) -> isCompatibleMethod(mn, arguments, resolvedPlaceholders, false))
             .findFirst()
+            .or(() -> methods.stream()
+                .filter((mn) -> isCompatibleMethod(mn, arguments, resolvedPlaceholders, true))
+                .findFirst())
             .orElse(null);
     }
 
@@ -265,13 +268,16 @@ public class TypeCheckingUtils {
      * functional type accepts one parameter, the closure can instead accept
      * multiple parameters if the target parameter type is a tuple with the same
      * number of components. The Groovy runtime will automatically destructure
-     * tuple arguments when calling this closure.
+     * tuple arguments when calling this closure. Destructuring is only
+     * considered when no overload matches the closure arity exactly, which
+     * is consistent with Groovy runtime dispatch (e.g. `toSorted`).
      *
      * @param mn
      * @param arguments
      * @param resolvedPlaceholders
+     * @param allowDestructure
      */
-    private static boolean isCompatibleMethod(MethodNode mn, List<Expression> arguments, Map<GenericsTypeName, GenericsType> resolvedPlaceholders) {
+    private static boolean isCompatibleMethod(MethodNode mn, List<Expression> arguments, Map<GenericsTypeName, GenericsType> resolvedPlaceholders, boolean allowDestructure) {
         var parameters = parametersForArguments(expandVargs(mn.getParameters(), arguments.size()), arguments.size());
         if( parameters.length != arguments.size() ) {
             return false;
@@ -284,7 +290,7 @@ public class TypeCheckingUtils {
                 var samParameterTypes = GenericsUtils.parameterizeSAM(paramType).getV1();
                 var closureParams = ce.getParameters();
                 if( samParameterTypes.length == 1 && closureParams.length > 1 ) {
-                    if( !isTupleDestructure(samParameterTypes[0], closureParams) )
+                    if( !allowDestructure || !isTupleDestructure(samParameterTypes[0], closureParams) )
                         return false;
                 }
                 else if( samParameterTypes.length != closureParams.length ) {

@@ -463,4 +463,8 @@ class Mailer {
         send(mail)
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }
