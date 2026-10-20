@@ -123,6 +123,13 @@ Follow these actions to make a new release:
 - Update the `VERSION` file in in each plugin sub-project.
   Use a semantic version number depending the impact of the change, or do not change
   if no changes have been done to the plugin.
+  - When patching a stable branch (`STABLE-*.x`), do NOT bump to the next semantic version:
+    plugin versions are global across branches, so it has most likely been published already
+    from master, and the release would silently ship that build instead (which may require a
+    newer Nextflow). Instead append a `-patchN` suffix to the last plugin version released from
+    the stable branch, e.g. `1.5.4` -> `1.5.4-patch1` -> `1.5.4-patch2`. Check the registry
+    (`https://registry.nextflow.io/api/v1/plugins/<name>`) to confirm the version is unused.
+    The release fails if a plugin version was already published from another branch.
 - Update `nextflowVersion` attribute in the `build.gradle` file for plugins requiring specific
   Nextflow versions.
 - Commit the version and changelog files changes independently for each plugin. Use as commit

@@ -252,7 +252,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
     def branch = gitBranch()
     def cmd =  """\
     # tag the release
-    (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
+    (git tag -a v$version -m 'Tagging version $version [release]' && git push origin v$version) || exit \$?
     sleep 1
     gh release create --repo nextflow-io/nextflow --prerelease --title "Version $version" v$version 
     sleep 1
@@ -283,8 +283,9 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
         # being served the previous version.
         #
         # Instead, decide by version. Read the version currently advertised as latest from
-        # the exact same endpoint the launcher polls in check_latest()
-        # (https://www.nextflow.io/releases/latest/version), and compare it with the version
+        # the bucket behind the endpoint the launcher polls in check_latest()
+        # (https://www.nextflow.io/releases/latest/version) -- not the endpoint itself, whose
+        # CDN cache can serve a stale version for hours -- and compare it with the version
         # being released using the launcher's OWN cmp_ver() function -- extracted from the
         # released `nextflow` script so the comparison is identical to Nextflow's and there is
         # no second copy of the semver logic to keep in sync. Promote only when this release
@@ -297,7 +298,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
         export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
         eval "\$(sed -n '/^function cmp_ver()/,/^}/p' $launcherFile)" || true
-        published=\$(curl -fsSL https://www.nextflow.io/releases/latest/version 2>/dev/null | tr -d '[:space:]') || true
+        published=\$(aws s3 cp s3://www2.nextflow.io/releases/latest/version - --region eu-west-1 2>/dev/null | tr -d '[:space:]') || true
         if ! declare -F cmp_ver >/dev/null; then
           echo "Skipping 'latest' promotion: version comparator could not be loaded"
         elif [ -z "\$published" ]; then

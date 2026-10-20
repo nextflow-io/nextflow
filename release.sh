@@ -78,6 +78,14 @@ fi
 
 echo "✅ All required environment variables are set"
 
+# A release must run once. GitHub can deliver the same push twice, and re-running a CI run
+# re-runs its release job: either would re-publish artifacts over an existing release.
+VERSION=$(cat VERSION)
+if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+    echo "❌ ERROR: Tag v$VERSION already exists -- this version has already been released"
+    exit 1
+fi
+
 echo "🐳 === Step 1: Publish the pi agent runner image ==="
 # FIRST, before anything is published: `deploy` (step 2) uploads to s3://www2.nextflow.io,
 # `release-plugins` (step 4) creates permanent registry entries, and `make release` (step 5)
