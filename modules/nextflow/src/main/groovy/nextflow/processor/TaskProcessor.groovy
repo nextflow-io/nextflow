@@ -1718,11 +1718,18 @@ class TaskProcessor {
         if( conflicts ) {
             final names = conflicts.collect { name, holders ->
                 final paths = holders.values().collect { FileHolder h -> h.sourcePath ?: h.storePath }
-                "${name} (${paths.join(', ')})"
+                "${name} (${truncateList(paths, 3)})".toString()
             }
-            final message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${names.join(', ')}"
+            final message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${truncateList(names, 10)}"
             throw new ProcessUnrecoverableException(message)
         }
+    }
+
+    @CompileStatic
+    private static String truncateList(List items, int max) {
+        return items.size() > max
+            ? items.take(max).join(', ') + ", ... ${items.size() - max} more"
+            : items.join(', ')
     }
 
     @CompileStatic

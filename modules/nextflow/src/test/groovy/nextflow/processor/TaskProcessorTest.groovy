@@ -705,6 +705,31 @@ class TaskProcessorTest extends Specification {
         [Path.of('/b/reads.fq')]                            | '*'
     }
 
+    def 'should truncate input file name collision message' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('xs', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> xs }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+        and:
+        def files = (1..12).collectMany { i -> (1..5).collect { j -> Path.of("/work/${j}/file${i}.txt") } }
+
+        when:
+        processor.resolveTaskInputs(task, [files, true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        def names = (1..10).collect { i -> "file${i}.txt (/work/1/file${i}.txt, /work/2/file${i}.txt, /work/3/file${i}.txt, ... 2 more)" }
+        e.message == "Process `foo` input file name collision -- There are multiple input files for each of the following file names: ${names.join(', ')}, ... 2 more"
+    }
+
     def 'should report input file name collision for typed process with explicit stage name' () {
         given:
         def executor = Mock(Executor)
