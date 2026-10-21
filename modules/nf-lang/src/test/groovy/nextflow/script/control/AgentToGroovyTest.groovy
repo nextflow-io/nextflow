@@ -226,9 +226,9 @@ class AgentToGroovyTest extends Specification {
             'vcfs*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
             'vcfs*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
             'vcfs*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.sum([])*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.sum([])*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.sum([])*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
         ]
     }
 
@@ -263,11 +263,11 @@ class AgentToGroovyTest extends Specification {
 
         then:
         stagerTargets(blockAt(process, 1)) == [
-            'batches?.sum([])*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'batches?.collectMany({ java.lang.Object e -> ... })*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
             'chunks?.flatten()?.findAll({ java.lang.Object p -> ... })',
             't?.getAt(1)',
             'ts*.getAt(1)?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'tss?.sum([])*.getAt(1)?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'tss?.collectMany({ java.lang.Object e -> ... })*.getAt(1)?.flatten()?.findAll({ java.lang.Object p -> ... })',
             'reads?.getAt(0)',
             'reads?.getAt(1)',
         ]

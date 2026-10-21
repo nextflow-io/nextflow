@@ -17,7 +17,6 @@ package nextflow.script.control;
 
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.List;
 
 import nextflow.script.ast.RecordNode;
 import nextflow.script.types.Tuple;
@@ -87,9 +86,14 @@ class ImplicitStagers {
         }
         else if( isCollectionType(cn) ) {
             // flatten one level only, so that tuples (which are lists) are kept intact
-            var elements = spread ? safeCallX(target, "sum", args(listX(List.of()))) : target;
+            var elements = spread ? flattenOneLevel(target) : target;
             visitInputType(cn.getGenericsTypes()[0].getType(), elements, true, stagers);
         }
+    }
+
+    private static Expression flattenOneLevel(Expression target) {
+        var e = param(ClassHelper.dynamicType(), "e");
+        return safeCallX(target, "collectMany", args(closureX(params(e), stmt(varX(e)))));
     }
 
     /**
