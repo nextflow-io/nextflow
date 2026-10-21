@@ -34,12 +34,36 @@ class SecretHelper {
     @Deprecated
     static public final Pattern SECRET_KEYS = ~/(?im)^AWS.+|.*TOKEN.*|.*PASSWORD.*|.*SECRET.*|.*accessKey.*|.*api_?key.*/
 
-    // `NAME=value` lines whose name is sensitive by the same rule as StringUtils.isSensitiveName
-    // note: ?i stands for ignore case - ?m stands for multiline
-    static public final Pattern SECRET_REGEX = Pattern.compile('(?im)(^AWS[^=]*|.*(?:' + StringUtils.SENSITIVE_NAME_PARTS.join('|') + ')[^=]*|.*_KEY)=(.*)$')
+    /**
+     * @deprecated Use {@link #secureEnvString(java.lang.String)} instead
+     */
+    @Deprecated
+    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*|.*API_?KEY[^=]*)=(.*)$/
 
+    // `NAME=` starting only at the beginning of a `[\w.-]` run, possessive, so scanning stays linear
+    static private final Pattern ENV_NAME = ~/(?<![\w.-])([\w.-]++)[ \t]*+=/
+
+    /**
+     * Mask, up to the end of the line, the value of each `NAME=value` whose name is sensitive
+     * by {@link StringUtils#isSensitiveName(java.lang.String)}
+     */
     static String secureEnvString( String str ) {
-        str.replaceAll(SECRET_REGEX, '$1=[secure]')
+        final result = new StringBuilder()
+        final matcher = ENV_NAME.matcher(str)
+        int last = 0
+        while( matcher.find() ) {
+            // a bare `AWS` is not a sensitive config name (it is the `aws` scope) but it was always masked as env var
+            final name = matcher.group(1)
+            if( !StringUtils.isSensitiveName(name) && !name.equalsIgnoreCase('aws') )
+                continue
+            int eol = str.indexOf('\n', matcher.end())
+            if( eol < 0 )
+                eol = str.length()
+            result.append(str, last, matcher.end()).append('[secure]')
+            last = eol
+            matcher.region(eol, str.length())
+        }
+        return result.append(str, last, str.length()).toString()
     }
 
     static Object hideSecrets( obj ) {
@@ -49,6 +73,9 @@ class SecretHelper {
         if( obj instanceof Map ) {
             final names = obj.keySet()
             for( String n : names )  {
+                // manifest values, e.g. author and license, describe the pipeline and are never credentials
+                if( n == 'manifest' )
+                    continue
                 if( StringUtils.isSensitiveName(n) ) {
                     obj.put(n, '[secret]')
                 }
