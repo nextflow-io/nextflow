@@ -32,7 +32,7 @@ import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
-import nextflow.util.SecretHelper
+import nextflow.util.StringUtils
 import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
 /**
@@ -274,7 +274,7 @@ class CmdInfo extends CmdBase {
         def entries = env.keySet().sort()
         for( def key : entries ) {
             if( key.startsWith('NXF_') || level>1 ) {
-                final value = SecretHelper.SECRET_KEYS.matcher(key).find() ? '[secret]' : env.get(key)
+                final value = StringUtils.isSensitiveName(key) ? '[secret]' : env.get(key)
                 dump(  key, value, 2, result )
             }
         }

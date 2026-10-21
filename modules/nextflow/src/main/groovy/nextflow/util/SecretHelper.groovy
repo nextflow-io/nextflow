@@ -28,19 +28,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SecretHelper {
 
-    // NOTE: `api_?key` covers `agent.apiKey` and the `*_API_KEY` environment spellings; without it
-    // a resolved provider credential is persisted verbatim by the lineage observer and shipped as
-    // `workflow.configText` (`accessKey` does NOT match `apiKey`)
+    /**
+     * @deprecated Use {@link StringUtils#isSensitiveName(java.lang.String)} instead
+     */
+    @Deprecated
     static public final Pattern SECRET_KEYS = ~/(?im)^AWS.+|.*TOKEN.*|.*PASSWORD.*|.*SECRET.*|.*accessKey.*|.*api_?key.*/
 
+    // `NAME=value` lines whose name is sensitive by the same rule as StringUtils.isSensitiveName
     // note: ?i stands for ignore case - ?m stands for multiline
-    // NOTE: `api_?key` mirrors SECRET_KEYS above. The two must agree: SECRET_KEYS masks a config
-    // MAP entry while this masks a `NAME=value` environment line, and the out-of-band credential
-    // channel the agent docs still recommend (`env { OPENAI_API_KEY = ... }`,
-    // `agent.containerOptions = '-e OPENAI_API_KEY'`) is delivered as exactly such a line -- so a
-    // pattern that covers only one of the two masks the credential in only half the places it
-    // appears. Kept in sync with the identical twin in {@code nextflow.trace.TraceRecord}.
-    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*|.*API_?KEY[^=]*)=(.*)$/
+    static public final Pattern SECRET_REGEX = Pattern.compile('(?im)(^AWS[^=]*|.*(?:' + StringUtils.SENSITIVE_NAME_PARTS.join('|') + ')[^=]*|.*_KEY)=(.*)$')
 
     static String secureEnvString( String str ) {
         str.replaceAll(SECRET_REGEX, '$1=[secure]')
@@ -53,7 +49,7 @@ class SecretHelper {
         if( obj instanceof Map ) {
             final names = obj.keySet()
             for( String n : names )  {
-                if( SECRET_KEYS.matcher(n).find() ) {
+                if( StringUtils.isSensitiveName(n) ) {
                     obj.put(n, '[secret]')
                 }
                 else {
