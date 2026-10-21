@@ -159,7 +159,7 @@ class ExecutorOpts implements ConfigScope {
         How the task containers get the Fusion client. Supported values:
           - `wave` (default): Wave adds the Fusion layer to the task container
           - `native`: the compute hosts provide the Fusion client; Wave does not add the
-            Fusion layer and is optional (VM backends only)
+            Fusion layer and is optional
     """)
     final String fusionMode
 
