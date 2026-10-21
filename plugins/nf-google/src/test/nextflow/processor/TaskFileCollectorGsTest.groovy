@@ -66,6 +66,27 @@ class TaskFileCollectorGsTest extends Specification {
         workDir.relativize(result[0]).toString() == 'outdir'
     }
 
+    def 'should strip multiple trailing slashes of a directory output' () {
+        given:
+        createBlob('work/ab/cdef/outdir/hello.txt')
+
+        when:
+        def result = collector(['outdir//']).collect()
+        then:
+        result*.toString() == ['/work/ab/cdef/outdir']
+    }
+
+    def 'should collect an empty directory backed by a placeholder object' () {
+        // gcsfuse creates a placeholder object for each directory
+        given:
+        createBlob('work/ab/cdef/emptydir/')
+
+        when:
+        def result = collector(['emptydir/']).collect()
+        then:
+        result*.toString() == ['/work/ab/cdef/emptydir']
+    }
+
     def 'should report a missing directory output' () {
         // gcs considers any path ending with a slash to exist,
         // see https://github.com/nextflow-io/nextflow/issues/7885

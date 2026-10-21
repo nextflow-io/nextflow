@@ -128,8 +128,9 @@ class TaskFileCollector {
      * @param path
      */
     static protected Path stripTrailingSlash(Path path) {
-        return path.nameCount>0 && path.toString().endsWith('/')
-            ? path.resolveSibling(path.getFileName())
+        final str = path.toString()
+        return path.nameCount>0 && str.endsWith('/')
+            ? path.getFileSystem().getPath(str.replaceAll('/+$', ''))
             : path
     }
 
