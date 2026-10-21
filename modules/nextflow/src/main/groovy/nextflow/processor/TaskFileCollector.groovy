@@ -71,7 +71,7 @@ class TaskFileCollector {
             }
             else {
                 final path = opts.glob ? splitter.strip(filePattern) : filePattern
-                final file = workDir.resolve(path)
+                final file = stripTrailingSlash(workDir.resolve(path))
                 final exists = checkFileExists(file)
                 if( exists )
                     result = List.of(file)
@@ -105,13 +105,32 @@ class TaskFileCollector {
 
         List<Path> files = []
         try {
-            FileHelper.visitFiles(opts, workDir, pattern) { Path it -> files.add(it) }
+            FileHelper.visitFiles(opts, workDir, pattern) { Path it -> files.add(stripTrailingSlash(it)) }
         }
         catch( NoSuchFileException e ) {
             throw new MissingFileException("Cannot access directory: '$workDir'", e)
         }
 
         return files.sort()
+    }
+
+    /**
+     * Remove the trailing slash of a directory path, if any.
+     *
+     * NOTE: the trailing slash of a directory path is preserved by some remote file
+     * systems (e.g. Google Cloud Storage), where it denotes a "pseudo-directory",
+     * but not by the local file system. Removing it makes an output directory
+     * consistent across file systems, which matters because the relative path of an
+     * output file is used as a lookup key when publishing it (see PublishOp) and
+     * when excluding staged inputs. It also ensures that the existence check queries
+     * the storage, since GCS reports any path with a trailing slash as existing.
+     *
+     * @param path
+     */
+    static protected Path stripTrailingSlash(Path path) {
+        return path.nameCount>0 && path.toString().endsWith('/')
+            ? path.resolveSibling(path.getFileName())
+            : path
     }
 
     protected Map<String,?> visitOptions(String pattern) {
