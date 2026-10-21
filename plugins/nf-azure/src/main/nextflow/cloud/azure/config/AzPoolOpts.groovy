@@ -28,6 +28,7 @@ import nextflow.script.dsl.Description
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 /**
  * Model the settings of a VM pool
  *
@@ -66,9 +67,15 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Use an ephemeral OS disk for the compute nodes in the pool identified with `<name>`. The OS disk is placed on the node's local/cache storage instead of remote Azure storage, which can improve performance and reduce cost, but the disk and its data are lost when the node is deallocated. The VM size must support an ephemeral OS disk with a cache large enough for the OS image (default: `false`).
+        Use an ephemeral OS disk for the compute nodes in the pool identified with `<name>`. The OS disk is placed on the node's local storage (the cache disk, or the temp disk when there is none) instead of remote Azure storage, which can improve performance and reduce cost, but the disk and its data are lost when the node is deallocated. The OS disk takes space from the local storage, which reduces the space available to task directories. Set `osDiskSize` to choose its size, otherwise it uses the image size (usually 64 GB) (default: `false`).
     """)
     final boolean ephemeralOsDisk
+
+    @ConfigOption
+    @Description("""
+        The OS disk size for the compute nodes in the pool identified with `<name>`, e.g. `256.GB`. When `ephemeralOsDisk` is enabled, the disk is carved from the node's local storage, so the VM size must have enough local storage for it (default: the image size, usually 64 GB).
+    """)
+    final MemoryUnit osDiskSize
 
     @ConfigOption
     @Description("""
@@ -182,6 +189,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
         this.ephemeralOsDisk = opts.ephemeralOsDisk as boolean
+        this.osDiskSize = opts.osDiskSize as MemoryUnit
     }
 
     @Override
@@ -203,6 +211,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
         hasher.putBoolean(ephemeralOsDisk)
+        hasher.putLong(osDiskSize?.toBytes() ?: 0)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher

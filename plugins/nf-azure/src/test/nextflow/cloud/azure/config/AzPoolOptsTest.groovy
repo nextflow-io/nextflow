@@ -17,6 +17,7 @@
 package nextflow.cloud.azure.config
 
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -47,6 +48,7 @@ class AzPoolOptsTest extends Specification {
         !opts.virtualNetwork
         !opts.lowPriority
         !opts.ephemeralOsDisk
+        !opts.osDiskSize
         !opts.startTask.script
         !opts.startTask.privileged
     }
@@ -72,6 +74,7 @@ class AzPoolOptsTest extends Specification {
             virtualNetwork: 'some-vnet',
             lowPriority: true,
             ephemeralOsDisk: true,
+            osDiskSize: '256 GB',
             startTask: [
                 script: 'echo hello-world',
                 privileged: true
@@ -97,6 +100,7 @@ class AzPoolOptsTest extends Specification {
         opts.virtualNetwork == 'some-vnet'
         opts.lowPriority
         opts.ephemeralOsDisk
+        opts.osDiskSize == MemoryUnit.of('256 GB')
         opts.startTask.script == 'echo hello-world'
         opts.startTask.privileged
     }

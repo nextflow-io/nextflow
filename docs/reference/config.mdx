@@ -517,7 +517,7 @@ Enable autoscaling feature for the pool identified with `<name>`.
 
 <AddedInVersion version="26.10.0" />
 
-Use an ephemeral OS disk for the compute nodes in the pool identified with `<name>`. The OS disk is placed on the node's local/cache storage instead of remote Azure storage, which can improve performance and reduce cost, but the disk and its data are lost when the node is deallocated. The VM size must support an ephemeral OS disk with a cache large enough for the OS image (default`false`).
+Use an ephemeral OS disk for the compute nodes in the pool identified with `<name>`. The OS disk is placed on the node's local storage (the cache disk, or the temp disk when there is none) instead of remote Azure storage, which can improve performance and reduce cost, but the disk and its data are lost when the node is deallocated. The OS disk takes space from the local storage, which reduces the space available to task directories. Set `osDiskSize` to choose its size, otherwise it uses the image size (usually 64 GB) (default`false`).
 
 ##### `azure.batch.pools.<name>.fileShareRootPath`
 
@@ -542,6 +542,12 @@ The mount options for mounting the file shares (default`-o vers=3.0,dir_mode=077
 ##### `azure.batch.pools.<name>.offer`
 
 The offer type of the virtual machine type used by the pool identified with `<name>` (default`centos-container`).
+
+##### `azure.batch.pools.<name>.osDiskSize`
+
+<AddedInVersion version="26.10.0" />
+
+The OS disk size for the compute nodes in the pool identified with `<name>`, e.g. `256.GB`. When `ephemeralOsDisk` is enabled, the disk is carved from the node's local storage, so the VM size must have enough local storage for it (default: the image size, usually 64 GB).
 
 ##### `azure.batch.pools.<name>.privileged`
 

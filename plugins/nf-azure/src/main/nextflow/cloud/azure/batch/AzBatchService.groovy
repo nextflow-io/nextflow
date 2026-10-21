@@ -47,6 +47,7 @@ import com.azure.compute.batch.models.BatchTaskContainerSettings
 import com.azure.compute.batch.models.BatchTaskCreateContent
 import com.azure.compute.batch.models.BatchTaskSchedulingPolicy
 import com.azure.compute.batch.models.ContainerConfiguration
+import com.azure.compute.batch.models.CachingType
 import com.azure.compute.batch.models.DiffDiskPlacement
 import com.azure.compute.batch.models.DiffDiskSettings
 import com.azure.compute.batch.models.OSDisk
@@ -864,12 +865,20 @@ class AzBatchService implements Closeable {
         final vmConfig = new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
                 .setContainerConfiguration(containerConfig)
 
-        // use an ephemeral OS disk placed on the node's local cache disk instead of remote storage
-        if( opts.ephemeralOsDisk ) {
-            log.debug "[AZURE BATCH] Enabling ephemeral OS disk for Azure Batch pool"
-            vmConfig.setOsDisk(
-                    new OSDisk().setEphemeralOSDiskSettings(
-                            new DiffDiskSettings().setPlacement(DiffDiskPlacement.CACHE_DISK) ) )
+        if( opts.ephemeralOsDisk || opts.osDiskSize ) {
+            final osDisk = new OSDisk()
+            // use an ephemeral OS disk placed on the node's local storage instead of remote storage
+            if( opts.ephemeralOsDisk ) {
+                log.debug "[AZURE BATCH] Enabling ephemeral OS disk for Azure Batch pool"
+                osDisk.setCaching(CachingType.READ_ONLY)
+                osDisk.setEphemeralOSDiskSettings(new DiffDiskSettings().setPlacement(DiffDiskPlacement.CACHE_DISK))
+            }
+            // without an explicit size the OS disk takes the image size (64 GB)
+            if( opts.osDiskSize ) {
+                log.debug "[AZURE BATCH] Setting OS disk size to ${opts.osDiskSize.toGiga()} GB for Azure Batch pool"
+                osDisk.setDiskSizeGB(opts.osDiskSize.toGiga() as Integer)
+            }
+            vmConfig.setOsDisk(osDisk)
         }
 
         return vmConfig

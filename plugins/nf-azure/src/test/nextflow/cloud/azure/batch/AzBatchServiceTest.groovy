@@ -25,6 +25,7 @@ import dev.failsafe.function.CheckedPredicate
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.BatchSupportedImage
+import com.azure.compute.batch.models.CachingType
 import com.azure.compute.batch.models.DiffDiskPlacement
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
@@ -519,7 +520,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-e3a346bceb6506d94e3da8f523d68cb6-Standard_X1'
+        spec.poolId == 'nf-pool-91c364bd1a2fd927a10c6e90f5f65f0e-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }
@@ -1221,5 +1222,24 @@ class AzBatchServiceTest extends Specification {
         and:
         result.osDisk != null
         result.osDisk.ephemeralOSDiskSettings.placement == DiffDiskPlacement.CACHE_DISK
+        result.osDisk.caching == CachingType.READ_ONLY
+    }
+
+    def 'should set OS disk size' () {
+        given:
+        def exec = createExecutor()
+        AzBatchService svc = Spy(new AzBatchService(exec))
+        def opts = new AzPoolOpts([ephemeralOsDisk: EPHEMERAL, osDiskSize: '256 GB'])
+
+        when:
+        def result = svc.poolVmConfig(opts)
+        then:
+        1 * svc.getImage(opts) >> supportedImage()
+        and:
+        result.osDisk.diskSizeGB == 256
+        (result.osDisk.ephemeralOSDiskSettings != null) == EPHEMERAL
+
+        where:
+        EPHEMERAL << [true, false]
     }
 }
