@@ -44,6 +44,25 @@ class WorkflowBindingTest extends Specification {
         WorkflowBinding.lookup(obj2) == 'bar'
     }
 
+    def 'should store variables named after binding fields' () {
+        given:
+        def owner = Mock(BaseScript)
+        def ch = new Object()
+        def binding = new WorkflowBinding()
+        binding.setOwner(owner)
+
+        when:
+        binding.published = ch
+        binding.owner = ch
+        then:
+        binding.published.is(ch)
+        binding.owner.is(ch)
+        binding.getVariable('published').is(ch)
+        binding.getVariable('owner').is(ch)
+        binding.getPublished() == [:]
+        binding.getOwner().is(owner)
+    }
+
     def 'should invoke an extension method' () {
 
         given:

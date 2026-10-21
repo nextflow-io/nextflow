@@ -19,6 +19,8 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -288,6 +290,37 @@ class PipelineCompositionTest extends Dsl2Spec {
         def result = runScript([params: cliParams], script)
         then:
         result.val == 15
+    }
+
+    def 'should give the dataflow params of an included pipeline as plain values' () {
+        given:
+        folder.resolve('samples.csv').text = 'id,count\na,1\nb,2\n'
+        def script = write([
+            'count.nf': COUNT,
+            'main.nf': '''
+                include { params as CountParams ; workflow as COUNT } from './count.nf'
+
+                params {
+                    count: CountParams
+                }
+
+                workflow {
+                    main:
+                    COUNT( params.count )
+                    params
+                }
+                '''
+        ])
+        def samples = folder.resolve('samples.csv').toString()
+        def cliParams = [count: [samples: samples, factor: '5']]
+
+        when:
+        def params = runScript([params: cliParams], script)
+        then:
+        params.count.samples instanceof ChannelImpl
+        params.count.factor instanceof ValueImpl
+        and:
+        params.toPlainMap() == [count: [samples: samples, factor: 5]]
     }
 
     def 'should scope the processes of an included pipeline by its name' () {

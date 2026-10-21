@@ -33,6 +33,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.google.common.hash.HashCode
+import nextflow.Global
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.file.FileHolder
@@ -50,6 +51,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
+import nextflow.script.Param
+import nextflow.script.ParamsHelper
 import nextflow.script.ScriptBinding
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
@@ -66,7 +69,9 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
+import nextflow.script.types.Channel
 import nextflow.script.types.Record
+import nextflow.script.types.Value
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
@@ -251,6 +256,102 @@ class LinObserverTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should save workflow with the plain values of dataflow params' (){
+        given:
+        // the dataflow network is never started, so the params are never bound
+        Global.session = Mock(Session)
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore();
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def samplesheet = folder.resolve("samples.csv"); samplesheet.text = 'id\na\n'
+        def cliParams = [input: samplesheet.toString(), factor: '5']
+        def params = resolveParams([param('input'), param('factor'), param('label', 'demo')], cliParams)
+        def map = [
+            repository: "https://nextflow.io/nf-test/",
+            commitId: "123456",
+            scriptId: "78910",
+            scriptFile: scriptFile,
+            projectDir: folder.resolve("projectDir"),
+            revision: "main",
+            projectName: "nextflow.io/nf-test",
+            workDir: folder.resolve("workDir")
+        ]
+        def metadata = Mock(WorkflowMetadata){
+            getRepository() >> map.repository
+            getCommitId() >> map.commitId
+            getScriptId() >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getRevision() >> map.revision
+            getProjectName() >> map.projectName
+            getWorkDir() >> map.workDir
+            toMap() >> map
+        }
+        def session = Mock(Session) {
+            getConfig() >> config
+            getUniqueId() >> uniqueId
+            getRunName() >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams() >> params
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+        def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
+        def workflow = new Workflow([mainScript], map.repository, map.commitId)
+        def expectedParams = LinObserver.getNormalizedParams([input: samplesheet.toString(), factor: 5, label: 'demo'], new PathNormalizer(metadata))
+        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", expectedParams, config, map)
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        then:
+        folder.resolve("${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
+
+        cleanup:
+        Global.session = null
+        folder?.deleteDir()
+    }
+
+    def 'should normalize non-dataflow params identically to the session params' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def metadata = Mock(WorkflowMetadata){
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> folder.resolve("workDir")
+        }
+        def normalizer = new PathNormalizer(metadata)
+        def cliParams = [outdir: folder.toString(), chunks: '3']
+        def params = resolveParams([param('outdir'), param('chunks'), param('label', 'demo')], cliParams)
+        def encode = { Map value ->
+            new LinEncoder().encode(new WorkflowRun(null, 'uuid', 'test_run', LinObserver.getNormalizedParams(value, normalizer), [:], [:]))
+        }
+
+        expect:
+        encode(params.toPlainMap()) == encode(params)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    private static Param param(String name, Object defaultValue = null) {
+        new Param(name, TypedParams.getField(name).getGenericType(), false, defaultValue)
+    }
+
+    private static ScriptBinding.ParamsMap resolveParams(List<Param> declarations, Map cliParams) {
+        final result = new ScriptBinding.ParamsMap(ParamsHelper.resolveParams(declarations, cliParams, cliParams))
+        result.setPlainValues(ParamsHelper.resolvePlainParams(declarations, cliParams, cliParams))
+        return result
+    }
+
+    static class TypedParams {
+        public Channel<Map> input
+        public Value<Integer> factor
+        public String label
+        public Path outdir
+        public Integer chunks
     }
 
     def 'should strip sensitive user data from platform metadata in lineage' () {

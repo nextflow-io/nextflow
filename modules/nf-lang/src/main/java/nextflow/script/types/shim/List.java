@@ -24,7 +24,7 @@ import nextflow.script.dsl.TupleComponents;
 import nextflow.script.types.Tuple;
 
 @Description("""
-    A list is an unordered collection of elements.
+    A list is an ordered collection of elements.
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#list-e)
 """)
@@ -67,6 +67,11 @@ public interface List<E> extends Iterable<E> {
         Returns a shallow copy of the list with the last element excluded.
     """)
     List<E> init();
+
+    @Description("""
+        Returns the elements of the list that are also in the given iterable, preserving the order and duplicates of the list.
+    """)
+    List<E> intersect(Iterable<E> right);
 
     @Description("""
         Returns the last element in the list. Raises an error if the list is empty.

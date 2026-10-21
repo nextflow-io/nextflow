@@ -17,10 +17,12 @@
 package nextflow.executor
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.ResourceTracker
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -28,6 +30,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.MemoryUnit
 import nextflow.util.Throttle
 import org.apache.commons.lang3.StringUtils
 /**
@@ -41,7 +44,9 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
+    private final static Pattern CONTROL_CHARS = ~/\p{Cntrl}/
+
+    private final static Pattern INVALID_NAME_CHARS = ~/[ \/:@*?=\p{Cntrl}]/
 
     private Map lastQueueStatus
 
@@ -60,7 +65,18 @@ abstract class AbstractGridExecutor extends Executor {
      * @return
      */
     TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'))
+        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'), createResourceTracker())
+    }
+
+    /**
+     * Create a resource tracker from the `executor.cpus` and `executor.memory`
+     * settings, or {@code null} when neither is specified
+     */
+    @PackageScope
+    ResourceTracker createResourceTracker() {
+        final cpus = config.getExecConfigProp(name, 'cpus', 0) as int
+        final memory = config.getExecConfigProp(name, 'memory', null) as MemoryUnit
+        return cpus || memory ? new ResourceTracker(cpus, memory?.toBytes() ?: 0L) : null
     }
 
     /*
@@ -165,17 +181,19 @@ abstract class AbstractGridExecutor extends Executor {
         // -- check for a custom `jobName` defined in the nextflow config file
         def customName = resolveCustomJobName(task)
         if( customName )
-            return sanitizeJobName(customName)
+            return sanitizeJobName(removeControlChars(customName))
 
         // -- if not available fallback on the custom naming strategy
 
-        final result = new StringBuilder("nf-")
-        final name = task.getName()
-        for( int i=0; i<name.size(); i++ ) {
-            final ch = name[i]
-            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
-        }
-        return sanitizeJobName(result.toString())
+        final name = "nf-" + INVALID_NAME_CHARS.matcher(task.getName()).replaceAll('_')
+        return sanitizeJobName(name)
+    }
+
+    /**
+     * Replace control characters (e.g. newlines) so that the job name is kept on a single directive line
+     */
+    private static String removeControlChars(String name) {
+        CONTROL_CHARS.matcher(name).replaceAll('_')
     }
 
     protected String sanitizeJobName(String name) {

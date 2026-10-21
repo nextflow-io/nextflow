@@ -19,6 +19,7 @@ package nextflow.executor.local
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -231,7 +232,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
              */
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
-                task.exitStatus = process.exitValue()
+                // destroy() is async, so wait for the process to actually exit
+                task.exitStatus = process.waitFor(5, TimeUnit.SECONDS) ? process.exitValue() : Integer.MAX_VALUE
                 task.stdout = outputFile
                 task.stderr = errorFile
                 task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")

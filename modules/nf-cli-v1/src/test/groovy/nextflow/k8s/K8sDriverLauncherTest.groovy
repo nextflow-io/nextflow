@@ -90,6 +90,7 @@ class K8sDriverLauncherTest extends Specification {
     def 'should get cmd cli' () {
 
         given:
+        def cmd = new CmdKubeRun(args)
         def l = new K8sDriverLauncher(cmd: cmd, pipelineName: 'foo')
 
         when:
@@ -98,25 +99,25 @@ class K8sDriverLauncherTest extends Specification {
         l.getLaunchCli() == expected
 
         where:
-        cmd                                         | expected
-        new CmdKubeRun()                                | 'nextflow run foo'
-        new CmdKubeRun(cacheable: false)                | 'nextflow run foo -cache false'
-        new CmdKubeRun(resume: true)                    | 'nextflow run foo -resume true'
-        new CmdKubeRun(poolSize: 10)                    | 'nextflow run foo -ps 10'
-        new CmdKubeRun(pollInterval: 5)                 | 'nextflow run foo -pi 5'
-        new CmdKubeRun(queueSize: 9)                    | 'nextflow run foo -qs 9'
-        new CmdKubeRun(revision: 'xyz')                 | 'nextflow run foo -r xyz'
-        new CmdKubeRun(latest: true)                    | 'nextflow run foo -latest true'
-        new CmdKubeRun(withTrace: true)                 | 'nextflow run foo -with-trace true'
-        new CmdKubeRun(withTimeline: true)              | 'nextflow run foo -with-timeline true'
-        new CmdKubeRun(withDag: true)                   | 'nextflow run foo -with-dag true'
-        new CmdKubeRun(dumpHashes: true)                | 'nextflow run foo -dump-hashes true'
-        new CmdKubeRun(dumpChannels: 'lala')            | 'nextflow run foo -dump-channels lala'
-        new CmdKubeRun(env: [XX:'hello', YY: 'world'])  | 'nextflow run foo -e.XX hello -e.YY world'
-        new CmdKubeRun(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
-        new CmdKubeRun(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
-        new CmdKubeRun(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
-        new CmdKubeRun(entryName: 'lala')               | 'nextflow run foo -entry lala'
+        args                                | expected
+        [:]                                 | 'nextflow run foo'
+        [cacheable: false]                  | 'nextflow run foo -cache false'
+        [resume: true]                      | 'nextflow run foo -resume true'
+        [poolSize: 10]                      | 'nextflow run foo -ps 10'
+        [pollInterval: 5]                   | 'nextflow run foo -pi 5'
+        [queueSize: 9]                      | 'nextflow run foo -qs 9'
+        [revision: 'xyz']                   | 'nextflow run foo -r xyz'
+        [latest: true]                      | 'nextflow run foo -latest true'
+        [withTrace: true]                   | 'nextflow run foo -with-trace true'
+        [withTimeline: true]                | 'nextflow run foo -with-timeline true'
+        [withDag: true]                     | 'nextflow run foo -with-dag true'
+        [dumpHashes: true]                  | 'nextflow run foo -dump-hashes true'
+        [dumpChannels: 'lala']              | 'nextflow run foo -dump-channels lala'
+        [env: [XX:'hello', YY: 'world']]    | 'nextflow run foo -e.XX hello -e.YY world'
+        [process: [mem: '100',cpus:'2']]    | 'nextflow run foo -process.mem 100 -process.cpus 2'
+        [params: [alpha:'x', beta:'y']]     | 'nextflow run foo --alpha x --beta y'
+        [params: [alpha: '/path/*.txt']]    | 'nextflow run foo --alpha /path/\\*.txt'
+        [entryName: 'lala']                 | 'nextflow run foo -entry lala'
     }
 
     def 'should set the run name' () {
@@ -543,61 +544,6 @@ class K8sDriverLauncherTest extends Specification {
         def l = new K8sDriverLauncher(cmd: cmd, plugins: 'nf-cws@1.0.0', runName: 'bar')
         then:
         l.makeConfig( "/bar").get('plugins') == [ 'nf-cws@1.0.0' ]
-    }
-
-    def 'should make config - deprecated' () {
-
-        given:
-        Map config
-        def driver = Spy(K8sDriverLauncher)
-        def NAME = 'somePipelineName'
-        def CFG_EMPTY = new ConfigObject()
-        def CFG_WITH_MOUNTS = new ConfigObject()
-        CFG_WITH_MOUNTS.k8s.volumeClaims = [ pvc: [mountPath:'/foo'] ]
-
-        when:
-        driver.@cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_EMPTY
-        config.process.executor == 'k8s'
-
-        when:
-        driver.@cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
-        config.process.executor == 'k8s'
-        config.k8s.storageClaimName == 'pvc'
-        config.k8s.storageMountPath == '/foo'
-
-        when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_EMPTY
-        config.process.executor == 'k8s'
-        config.k8s.storageClaimName == 'pvc-1'
-        config.k8s.storageMountPath == '/this'
-        config.k8s.pod == [ [volumeClaim: 'pvc-2', mountPath: '/that'] ]
-
-
-        when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
-        config = driver.makeConfig(NAME).toMap()
-        then:
-        1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
-        config.process.executor == 'k8s'
-        config.k8s.storageClaimName == 'xyz'
-        config.k8s.storageMountPath == '/this'
-        config.k8s.pod == null
-        and:
-        new K8sConfig(config.k8s).getStorageClaimName() == 'xyz'
-        new K8sConfig(config.k8s).getStorageMountPath() == '/this'
-        new K8sConfig(config.k8s).getPodOptions() == new PodOptions([
-                [volumeClaim:'xyz', mountPath: '/this']
-        ])
-
     }
 
     def 'should return pod exit status' () {

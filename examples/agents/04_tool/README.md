@@ -37,9 +37,8 @@ offloaded through any canonical Nextflow executor.
    process as a real dataflow node (executor, work dir, caching), serializes its
    output back to the model as JSON, and the model produces its final answer.
 
-4. **Exact scalar output:** the agent declares `answer: String`. The Pi harness
-   returns it through a structured final-answer contract so explanatory prose
-   cannot contaminate the task value.
+4. **Text output:** the agent declares `stdout()`, which emits the model's
+   final answer as text.
 
 ## Key concepts
 
@@ -49,7 +48,7 @@ offloaded through any canonical Nextflow executor.
 | Auto-discovery | No `include` needed for a locally-defined process |
 | Tool schema | Derived from the process inputs (`{text}`, required) |
 | Tool-call loop | The model decides when to call the tool, then replies |
-| Exact scalar output | Tool-backed `String` result uses the final-answer contract |
+| Text output | `stdout()` emits the model's final answer |
 | Executor-portable tool | `script:` process can run locally or on a remote backend |
 | No input data | The shell tool only needs a basic POSIX container remotely |
 

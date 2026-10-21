@@ -36,6 +36,7 @@ class BodyDefTest extends Dsl2Spec {
         where:
         section     | expected              | shell
         'exec'      | ScriptType.GROOVY     | false
+        'prompt'    | ScriptType.PROMPT     | false
         'script'    | ScriptType.SCRIPTLET  | false
         'shell'     | ScriptType.SCRIPTLET  | true
         'workflow'  | ScriptType.GROOVY     | false

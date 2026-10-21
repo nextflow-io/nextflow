@@ -38,7 +38,7 @@ Channels and values are modeled using the dataflow types:
 
 The element type `V` can be any [standard type][stdlib-types], such as `Path`, `String`, or a record.
 
-Workflow inputs can be channels, dataflow values, or regular values. Workflow outputs can be channels or dataflow values.
+Workflow inputs can be channels, dataflow values, or plain values. Workflow outputs can be channels or dataflow values.
 
 ## Restricted syntax
 
@@ -101,6 +101,8 @@ output {
 It can be included and called as follows:
 
 ```nextflow
+nextflow.enable.types = true
+
 include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
 
 workflow {
@@ -142,6 +144,8 @@ Note the following:
 Redeclaring every param of an included pipeline gets tedious. The `params` block can be imported as a record type instead:
 
 ```nextflow
+nextflow.enable.types = true
+
 include {
     params as RnaseqParams ;
     workflow as NFCORE_RNASEQ
@@ -188,7 +192,7 @@ None of these constraints are absolute. Each of them can be circumvented by repl
 
 ## Validation
 
-The language server validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as an error before the pipeline runs.
+Nextflow validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as a type error.
 
 ## See also
 
@@ -198,7 +202,7 @@ The language server validates each workflow input and output against its declare
 
 [channel-type]: ./reference/stdlib-types/channel
 [migrating-static-types-operators]: ./tutorials/static-types-operators
-[preparing-static-types]: ./tutorials/static-types#preparing-for-static-typing
+[preparing-static-types]: ./static-typing-prep
 [static-typing-page]: ./static-typing
 [stdlib-types]: ./reference/stdlib-types
 [syntax-workflow-typed]: ./reference/syntax#workflow-typed

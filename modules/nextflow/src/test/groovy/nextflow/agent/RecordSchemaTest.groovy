@@ -59,14 +59,14 @@ class RecordSchemaTest extends Dsl2Spec {
         parser.parse(file)
         parser.runScript()
         def agent = ScriptMeta.get(parser.script).getDefinitions().find { it instanceof AgentDef } as AgentDef
-        return agent.outputs[0].type
+        return agent.output.type
     }
 
     def 'should derive a JSON schema from a record output type'() {
         given:
         def cls = loadOutputType('''
             record Question { text: String }
-            record Answer { answer: String; confidence: Double }
+            record Answer { answer: String; confidence: Float }
             ''', 'a: Answer')
 
         when:
@@ -105,18 +105,21 @@ class RecordSchemaTest extends Dsl2Spec {
         schema.properties.note == [type: 'string']
     }
 
-    def 'should reject a Path output field'() {
+    def 'should map Path output fields to path strings'() {
         given:
         def cls = loadOutputType('''
             record Question { text: String }
-            record WithPath { p: Path }
+            record WithPath {
+                p: Path
+                ps: List<Path>
+            }
             ''', 'a: WithPath')
 
         when:
-        RecordSchema.of(cls)
+        def schema = RecordSchema.of(cls)
 
         then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains('p')
+        schema.properties.p == [type: 'string', description: 'Absolute path of an existing file']
+        schema.properties.ps == [type: 'array', items: [type: 'string', description: 'Absolute path of an existing file']]
     }
 }

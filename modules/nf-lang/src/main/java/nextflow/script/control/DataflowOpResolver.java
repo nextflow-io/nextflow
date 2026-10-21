@@ -198,13 +198,14 @@ class DataflowOpResolver {
         var rhsType = dataflowElementType(argType);
         if( !Types.isRecordType(rhsType) )
             return ClassHelper.dynamicType();
-        checkJoinByFields(lhsType, rhsType, arguments);
+        checkJoinFields(lhsType, rhsType, arguments);
         var elementType = recordSumType(lhsType, rhsType);
         return makeType(CHANNEL_TYPE, elementType);
     }
 
-    private void checkJoinByFields(ClassNode lhsType, ClassNode rhsType, List<Expression> arguments) {
-        // Report an error if the `by` field of a `join` operation is not present in both records.
+    private void checkJoinFields(ClassNode lhsType, ClassNode rhsType, List<Expression> arguments) {
+        // Report an error if the `by` field is not present in both records,
+        // and a soft error if any other field is present in both records.
         if( arguments.isEmpty() || !(arguments.get(0) instanceof NamedArgumentListExpression nale) )
             return;
         for( var entry : nale.getMapEntryExpressions() ) {
@@ -213,10 +214,20 @@ class DataflowOpResolver {
             var field = entry.getValueExpression();
             if( !(field instanceof ConstantExpression ce) || !(ce.getValue() instanceof String name) )
                 continue;
-            if( lhsType.getField(name) == null )
+            var lhsMissing = lhsType.getField(name) == null;
+            var rhsMissing = rhsType.getField(name) == null;
+            if( lhsMissing )
                 addError("Join field `" + name + "` is not present in left-hand side", field);
-            if( rhsType.getField(name) == null )
+            if( rhsMissing )
                 addError("Join field `" + name + "` is not present in right-hand side", field);
+            if( lhsMissing || rhsMissing )
+                continue;
+            var overwritten = rhsType.getFields().stream()
+                .map(fn -> fn.getName())
+                .filter(fieldName -> !fieldName.equals(name) && lhsType.getField(fieldName) != null)
+                .toList();
+            if( !overwritten.isEmpty() )
+                addSoftError("Join fields " + overwritten + " are present in both records -- the left-hand values will be overwritten by the right-hand values", field);
         }
     }
 
@@ -227,7 +238,15 @@ class DataflowOpResolver {
     }
 
     private void addError(String message, ASTNode node) {
-        var cause = new TypeError(message, node);
+        addError(message, node, false);
+    }
+
+    private void addSoftError(String message, ASTNode node) {
+        addError(message, node, true);
+    }
+
+    private void addError(String message, ASTNode node, boolean softError) {
+        var cause = new TypeError(message, node, softError);
         var errorMessage = new SyntaxErrorMessage(cause, sourceUnit);
         errorCollector.addErrorAndContinue(errorMessage);
     }

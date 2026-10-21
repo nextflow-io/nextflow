@@ -97,7 +97,7 @@ class CallArityTest extends Specification {
                 sample: String
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 """
@@ -126,7 +126,7 @@ class CallArityTest extends Specification {
                 sample: String
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 """

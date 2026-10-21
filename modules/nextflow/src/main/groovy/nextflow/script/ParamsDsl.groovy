@@ -48,7 +48,9 @@ class ParamsDsl {
     Map<String,Param> getDeclarations() { declarations }
 
     void apply(Session session) {
-        final params = ParamsHelper.resolveParams(declarations.values(), session.cliParams ?: [:], session.configParams ?: [:])
+        final cliParams = session.cliParams ?: [:]
+        final configParams = session.configParams ?: [:]
+        final params = ParamsHelper.resolveParams(declarations.values(), cliParams, configParams)
 
         // propagate resolved params to all scripts for legacy compatibility
         if( !session.binding.getScriptPath() )
@@ -59,6 +61,8 @@ class ParamsDsl {
             final script = ScriptMeta.getScriptByPath(scriptPath)
             script.binding.setParams(params, true)
         }
+
+        session.getParams().setPlainValues(ParamsHelper.resolvePlainParams(declarations.values(), cliParams, configParams))
     }
 
 }

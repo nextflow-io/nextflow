@@ -77,7 +77,8 @@ class OutputDsl {
 
         // print workflow outputs on run completion
         session.workflowMetadata.onComplete {
-            if( !session.isSuccess() )
+            // workflow outputs are never bound in preview mode
+            if( !session.isSuccess() || session.preview )
                 return
             final output = getOutput()
             if( session.outputFormat == 'json' )
@@ -171,6 +172,10 @@ class OutputDsl {
 
         void ignoreErrors(boolean value) {
             setOption('ignoreErrors', value)
+        }
+
+        void includeInputs(boolean value) {
+            setOption('includeInputs', value)
         }
 
         void index(Closure closure) {

@@ -70,10 +70,42 @@ class ParamsHelper {
                 throw new ScriptRuntimeException("Parameter `${name}` was specified on the command line or params file but is not declared in the script or config")
         }
 
-        final given = cliParams.subMap(names) + configParams.subMap(names)
+        final given = givenParams(names, cliParams, configParams)
         return resolveParams(declarations, given, '') { Param decl, Object value ->
             resolveParam(decl, value, cliParams.containsKey(decl.name))
         }
+    }
+
+    /**
+     * Resolve declared params from the command line and config to plain
+     * values, which can be serialized before the dataflow network has
+     * started (e.g. for lineage or Seqera Platform).
+     *
+     * Each param is resolved as in {@link #resolveParams(Collection,Map,Map)},
+     * except that a {@code Channel<E>} param is resolved to its samplesheet
+     * and a {@code Value<V>} param to its value of type {@code V}, instead
+     * of a dataflow value. The params are assumed to be valid, i.e. already
+     * resolved by {@link #resolveParams(Collection,Map,Map)}.
+     *
+     * @param declarations
+     * @param cliParams
+     * @param configParams
+     */
+    static Map<String,Object> resolvePlainParams(Collection<Param> declarations, Map cliParams, Map configParams) {
+        final given = givenParams(declarations*.name as Set<String>, cliParams, configParams)
+        final result = new LinkedHashMap<String,Object>(declarations.size())
+        for( final decl : declarations ) {
+            final name = decl.name
+            final value = given.containsKey(name)
+                ? resolveParam(decl, given.get(name), cliParams.containsKey(name), true)
+                : resolveDefault(decl, true)
+            result.put(name, value)
+        }
+        return result
+    }
+
+    private static Map<String,?> givenParams(Set<String> names, Map cliParams, Map configParams) {
+        return cliParams.subMap(names) + configParams.subMap(names)
     }
 
     /**
@@ -154,21 +186,26 @@ class ParamsHelper {
      * @param value
      * @param fromCli whether the value came from the command line (and is
      *                therefore a string that may need to be parsed)
+     * @param plain whether to give the plain value of a {@code Channel<E>}
+     *              or {@code Value<V>} param instead of a dataflow value
+     *              (see {@link #resolvePlainParams})
      */
-    static Object resolveParam(Param decl, Object value, boolean fromCli) {
+    static Object resolveParam(Param decl, Object value, boolean fromCli, boolean plain=false) {
         if( value == null )
             return null
 
         final rawType = TypeHelper.getRawType(decl.type)
 
         if( rawType == Channel )
-            return ChannelNamespace.fromList(loadChannelInput(decl, value))
+            return plain ? value : ChannelNamespace.fromList(loadChannelInput(decl, value))
 
-        if( rawType == Value )
-            return ChannelNamespace.value(resolveParam(elementDecl(decl), value, fromCli))
+        if( rawType == Value ) {
+            final result = resolveParam(elementDecl(decl), value, fromCli, plain)
+            return plain ? result : ChannelNamespace.value(result)
+        }
 
         if( TypeHelper.isRecordType(decl.type) && value instanceof Map )
-            return resolveRecord(decl, (Map)value, fromCli)
+            return resolveRecord(decl, (Map)value, fromCli, plain)
 
         final result = fromCli
             ? resolveFromCli(decl, value)
@@ -177,7 +214,7 @@ class ParamsHelper {
         return result
     }
 
-    private static RecordMap resolveRecord(Param decl, Map value, boolean fromCli) {
+    private static RecordMap resolveRecord(Param decl, Map value, boolean fromCli, boolean plain) {
         final type = (Class)decl.type
         final result = new LinkedHashMap<String,Object>(value)
         for( final field : type.getDeclaredFields() ) {
@@ -192,7 +229,7 @@ class ParamsHelper {
                 continue
             }
             final fieldDecl = new Param("${decl.name}.${name}", field.getGenericType(), optional, null)
-            result.put(name, resolveParam(fieldDecl, fieldValue, fromCli))
+            result.put(name, resolveParam(fieldDecl, fieldValue, fromCli, plain))
         }
         return new RecordMap(result)
     }
@@ -450,10 +487,11 @@ class ParamsHelper {
      * the pipeline is called.
      *
      * @param decl
+     * @param plain see {@link #resolveParam}
      */
-    static Object resolveDefault(Param decl) {
+    static Object resolveDefault(Param decl, boolean plain=false) {
         if( decl.defaultValue != null )
-            return resolveParam(decl, decl.defaultValue, false)
+            return resolveParam(decl, decl.defaultValue, false, plain)
         final type = TypeHelper.getRawType(decl.type)
         return type.isAnnotationPresent(PipelineParams)
             ? new RecordMap([:])

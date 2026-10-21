@@ -74,6 +74,15 @@ jobs:
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
+      # Random per-run value that looks like a secret, scanned for in test reports
+      # and artifacts before upload to detect tests that dump the environment.
+      # Generated in-job so it also works for fork PRs, which get no secrets.
+      - name: Setup leak canary
+        run: |
+          canary="nxfcanary-$(openssl rand -hex 16)"
+          echo "::add-mask::$canary"
+          echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
+
       - name: Setup Java ${{ matrix.java_version }}
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
@@ -109,8 +118,18 @@ jobs:
           AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-      - name: Publish tests report
+      - name: Scan tests report for leaks
+        id: leak_scan
         if: always()
+        run: |
+          shopt -s globstar nullglob
+          if ! .github/scripts/check-leaks.sh ./**/build/reports/tests/test; then
+            echo "::error::A test leaked the job environment (incl. secrets) into the tests report. The report artifact was withheld; fix the test before re-running."
+            exit 1
+          fi
+
+      - name: Publish tests report
+        if: always() && steps.leak_scan.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
@@ -131,7 +150,11 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [17, 25]
-        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
+        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave", "test_agent"]
+        exclude:
+          # the agent examples call a real model: once per run is enough
+          - java_version: 25
+            test_mode: test_agent
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -148,6 +171,15 @@ jobs:
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
+      # Random per-run value that looks like a secret, scanned for in test reports
+      # and artifacts before upload to detect tests that dump the environment.
+      # Generated in-job so it also works for fork PRs, which get no secrets.
+      - name: Setup leak canary
+        run: |
+          canary="nxfcanary-$(openssl rand -hex 16)"
+          echo "::add-mask::$canary"
+          echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
+
       - name: Setup Java ${{ matrix.java_version }}
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
@@ -155,6 +187,25 @@ jobs:
           distribution: 'corretto'
           architecture: x64
           cache: gradle
+
+      # test_agent publishes the nf-agent-pi runner image built from this tree to the staging
+      # registry (see validation/agent.sh). Docker Hub because the image build pulls its base
+      # images from there, and an anonymous pull from a shared runner IP hits `toomanyrequests`.
+      # Fork PRs get no secrets, so these are skipped and so are the tests.
+      - name: Docker Login to Docker Hub
+        if: ${{ matrix.test_mode == 'test_agent' && vars.DOCKERHUB_USERNAME != '' && github.event.pull_request.head.repo.fork != true }}
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker Login to Seqera stage CR
+        if: ${{ matrix.test_mode == 'test_agent' && vars.SEQERA_STAGE_CR_USERNAME != '' && github.event.pull_request.head.repo.fork != true }}
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: "public.cr.stage-seqera.io"
+          username: ${{ vars.SEQERA_STAGE_CR_USERNAME }}
+          password: ${{ secrets.SEQERA_STAGE_CR_PASSWORD }}
 
       - name: Run tests
         run: |
@@ -170,6 +221,8 @@ jobs:
           TEST_MODE: ${{ matrix.test_mode }}
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SEQERA_STAGE_CR_PASSWORD: ${{ secrets.SEQERA_STAGE_CR_PASSWORD }}
           AWS_DEFAULT_REGION: eu-west-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -189,9 +242,18 @@ jobs:
             tar -cvf integration-tests.tar.gz tests/checks
             tar -cvf validation-tests.tar.gz validation
 
+      - name: Scan integration tests for leaks
+        id: leak_scan
+        if: always()
+        run: |
+          if ! .github/scripts/check-leaks.sh integration-tests.tar.gz validation-tests.tar.gz; then
+            echo "::error::A test leaked the job environment (incl. secrets) into the integration tests output. The report artifact was withheld; fix the test before re-running."
+            exit 1
+          fi
+
       - name: Publish tests report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        if: always() && steps.leak_scan.outcome == 'success'
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
@@ -250,7 +312,7 @@ jobs:
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
   release:
-    if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    if: ${{ always() && github.event_name == 'push' && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     needs: [build, test]
     runs-on: ubuntu-latest
     # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,

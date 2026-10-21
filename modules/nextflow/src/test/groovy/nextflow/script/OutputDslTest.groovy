@@ -19,6 +19,8 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovyx.gpars.dataflow.DataflowQueue
+
 import nextflow.Channel
 import nextflow.Session
 import nextflow.SysEnv
@@ -26,6 +28,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -33,10 +36,7 @@ import spock.lang.Specification
 class OutputDslTest extends Specification {
 
     Session createSession(Map config) {
-        def session = new Session(config) {
-            @Override
-            void abort(Throwable cause) { throw cause }
-        }
+        def session = new Session(config)
         session.init(null)
         return session
     }
@@ -91,7 +91,7 @@ class OutputDslTest extends Specification {
         outputDir.resolve('foo/file1.txt').text == 'Hello'
         outputDir.resolve('barbar/file2.txt').text == 'world'
         outputDir.resolve('index.csv').text == """\
-            "${outputDir}/barbar/file2.txt"
+            ${outputDir}/barbar/file2.txt
             """.stripIndent()
         and:
         session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
@@ -99,6 +99,103 @@ class OutputDslTest extends Specification {
         session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
         session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should publish files with the same name from different tasks'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def work2 = workDir.resolve('cd/5678'); Files.createDirectories(work2)
+        def file1 = work1.resolve('report.txt'); file1.text = 'Hello'
+        def file2 = work2.resolve('report.txt'); file2.text = 'world'
+        def record = [id: '1', alpha: file1, beta: file2]
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(record))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v ->
+                publish(v.alpha, "reports/${v.id}.alpha.txt")
+                publish(v.beta, "reports/${v.id}.beta.txt")
+            }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        outputDir.resolve('reports/1.alpha.txt').text == 'Hello'
+        outputDir.resolve('reports/1.beta.txt').text == 'world'
+        and:
+        session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('reports/1.alpha.txt'), null))
+        session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('reports/1.beta.txt'), null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [[
+            id: '1',
+            alpha: outputDir.resolve('reports/1.alpha.txt'),
+            beta: outputDir.resolve('reports/1.beta.txt')
+        ]], null))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should publish files outside the work directory only when includeInputs is enabled'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def input = root.resolve('input.txt'); input.text = 'Hello'
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(input))
+        outputs.put('bar', Channel.of(input))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path 'foo'
+            includeInputs true
+        }
+        dsl.declare('bar') {
+            path 'bar'
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        outputDir.resolve('foo/input.txt').text == 'Hello'
+        !outputDir.resolve('bar/input.txt').exists()
+        and:
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/input.txt')], null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [input], null))
 
         cleanup:
         SysEnv.pop()
@@ -202,6 +299,36 @@ class OutputDslTest extends Specification {
         1 * session.printConsole({ String it ->
             it.contains('/work/ab/1234/file1.txt') && !it.contains('null')
         })
+    }
+
+    @Timeout(10)
+    def 'should not print outputs in preview mode'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def config = [
+            outputDir: root.resolve('results'),
+            workDir: root.resolve('work'),
+            preview: true
+        ]
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+        // process outputs are never closed in preview mode
+        outputs.put('foo', new DataflowQueue())
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork(true)
+        session.workflowMetadata.invokeOnComplete()
+
+        then:
+        0 * session.printConsole(_)
+
+        cleanup:
+        root?.deleteDir()
     }
 
     def 'should preserve non-task output files in workflow output'() {

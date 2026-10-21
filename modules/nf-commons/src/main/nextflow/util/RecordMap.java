@@ -64,6 +64,12 @@ public class RecordMap extends LinkedHashMap<String,Object> implements Record {
         return new UnsupportedOperationException(message + " -- records are immutable");
     }
 
+    @Override
+    public Record subMap(Iterable<String> keys) {
+        return subMap(DefaultGroovyMethods.toList(keys));
+    }
+
+    // needed to take precedence over DGM Map::subMap(Collection) at runtime
     public Record subMap(Collection<String> keys) {
         return new RecordMap(DefaultGroovyMethods.subMap(this, keys));
     }

@@ -45,7 +45,7 @@ agent triage {
     input:
     isolate: Isolate
     output:
-    verdict: String          // tools => plain (non-record) output; the LLM's final report
+    stdout()
 
     prompt:
     """

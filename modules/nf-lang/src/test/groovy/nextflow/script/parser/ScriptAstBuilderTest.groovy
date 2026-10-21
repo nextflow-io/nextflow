@@ -139,6 +139,47 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Unexpected input: ','"
     }
 
+    def 'should report an error for unexpected end of file' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                if( true ) {
+                    println 'hello'
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                println 'hello'
+            }
+            x = [1, 2
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                println """hello
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+    }
+
     def 'should report the syntax error in an invalid definition' () {
         when:
         def errors = check(

@@ -189,7 +189,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var expectedType = fn.getType();
         var actualType = node.value.getType();
         if( !Types.isAssignableFrom(expectedType, actualType) )
-            addError("Feature flag '" + node.name + "' expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
+            addError("Feature flag `" + node.name + "` expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
     }
 
     private boolean hasParamsBlock;
@@ -209,7 +209,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         if( allowPathCoercion && Types.isEqual(expectedType, PATH_TYPE) && Types.isEqual(actualType, ClassHelper.STRING_TYPE) )
             return;
-        addError("Parameter '" + node.getName() + "' with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
+        addError("Parameter `" + node.getName() + "` with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
     }
 
     private WorkflowNode currentWorkflow;
@@ -224,8 +224,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             visitWorkflowOutputs(node);
         }
         else {
-            checkSingleNamedOutput(node.emits, "emit");
+            checkWorkflowEmitTypes(node.emits);
             visit(node.emits);
+            checkOutputSources(node.emits, "Workflow emit");
         }
 
         visit(node.onComplete);
@@ -253,7 +254,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 .filter(output -> output.getName().equals(target.getName()))
                 .findFirst().orElse(null);
             if( decl == null ) {
-                addError("Workflow output '" + target.getName() + "' was assigned in the entry workflow but not declared in the output block", publisher);
+                addError("Workflow output `" + target.getName() + "` was assigned in the entry workflow but not declared in the output block", publisher);
                 continue;
             }
             target.setAccessedVariable(decl);
@@ -263,7 +264,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var sourceType = getType(source);
             var targetType = asDataflowType(target.getType(), sourceType);
             if( !Types.isAssignableFrom(targetType, sourceType) )
-                addError("Workflow output '" + target.getName() + "' with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
+                addError("Workflow output `" + target.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
         }
     }
 
@@ -275,17 +276,27 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return type;
     }
 
+    private void checkWorkflowEmitTypes(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            var target = outputTarget(((ExpressionStatement) stmt).getExpression());
+            if( target == null )
+                continue;
+            var type = target.getType();
+            if( ClassHelper.isDynamicTyped(type) || CHANNEL_TYPE.equals(type) || VALUE_TYPE.equals(type) )
+                continue;
+            addError("Workflow emit `" + target.getName() + "` must be declared as a Channel or Value, not " + Types.getName(type), target);
+        }
+    }
+
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
-        checkSingleNamedOutput(node.outputs, "output");
         visit(node.outputs);
+        checkOutputSources(node.outputs, "Process output");
         visitProcessTopics(node.topics);
     }
 
@@ -307,13 +318,25 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         });
     }
 
-    private void checkSingleNamedOutput(Statement block, String section) {
-        var outputs = asBlockStatements(block);
-        if( outputs.size() != 1 )
-            return;
-        var output = ((ExpressionStatement) outputs.get(0)).getExpression();
-        if( output instanceof AssignmentExpression ae )
-            addError("Name should be omitted for a single " + section, ae);
+    /**
+     * Check each typed output name (e.g. `x: T`) against the body
+     * variable that it refers to, as if it were `x: T = x`.
+     *
+     * @param block
+     * @param typeLabel
+     */
+    private void checkOutputSources(Statement block, String typeLabel) {
+        for( var stmt : asBlockStatements(block) ) {
+            var output = ((ExpressionStatement) stmt).getExpression();
+            if( !(output instanceof VariableExpression ve) )
+                continue;
+            if( !(ve.getNodeMetaData(ASTNodeMarker.OUTPUT_SOURCE) instanceof Variable source) )
+                continue;
+            var targetType = ve.getOriginType();
+            var sourceType = getType(source);
+            if( !Types.isAssignableFrom(targetType, sourceType) )
+                addError(typeLabel + " `" + ve.getName() + "` with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ve);
+        }
     }
 
     private void visitProcessTopics(Statement block) {
@@ -488,10 +511,15 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         if( Types.isAssignableFrom(targetType, sourceType) ) {
-            if( target instanceof VariableExpression ve && ve.isDynamicTyped() )
+            if( target instanceof VariableExpression ve && ve.isDynamicTyped() ) {
                 target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
-            else if( target instanceof TupleExpression te )
+                // a variable declared with an empty value (e.g. `[]`) takes the type of its next assignment
+                if( hasUnboundTypeArguments(targetType) && !ClassHelper.isDynamicTyped(sourceType) && ve.getAccessedVariable() instanceof VariableExpression decl )
+                    decl.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
+            }
+            else if( target instanceof TupleExpression te ) {
                 applyTupleAssignment(te, sourceType);
+            }
         }
         else {
             addError("Assignment target with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), node);
@@ -612,9 +640,12 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             // plugin functions have no known signature
             if( mn instanceof FunctionNode && mn.isSynthetic() )
                 return;
-            var parameters = mn.getParameters();
+            var parameters = parametersForArguments(mn.getParameters(), arguments.size());
             if( parameters.length != arguments.size() ) {
-                addError(String.format("%s `%s` expects %d argument(s) but received %d", methodType(mn), node.getMethodAsString(), parameters.length, arguments.size()), node.getMethod());
+                var maxCount = mn.getParameters().length;
+                var minCount = requiredParameterCount(mn.getParameters());
+                var expected = minCount < maxCount ? minCount + " to " + maxCount : String.valueOf(maxCount);
+                addError(String.format("%s `%s` expects %s argument(s) but received %d", methodType(mn), node.getMethodAsString(), expected, arguments.size()), node.getMethod());
             }
             else {
                 checkArguments(parameters, arguments);
@@ -977,7 +1008,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
 
         var numChannelArgs = arguments.stream().filter((arg) -> CHANNEL_TYPE.equals(getType(arg))).count();
-        var numDynamicArgs = arguments.stream().filter((arg) -> ClassHelper.isDynamicTyped(getType(arg))).count();
+        var numDynamicArgs = arguments.stream().filter((arg) -> !isNullConstant(arg) && ClassHelper.isDynamicTyped(getType(arg))).count();
         if( numChannelArgs > 1 )
             addError(label + " `" + mn.getName() + "` was called with multiple channel arguments which can lead to non-deterministic behavior -- make sure that at most one argument is a channel and that all other arguments are dataflow values", node);
 
@@ -1038,16 +1069,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         if( output instanceof AssignmentExpression ae )
             return (VariableExpression)ae.getLeftExpression();
         return null;
-    }
-
-    private static String methodType(MethodNode node) {
-        if( node instanceof ProcessNode )
-            return "Process";
-        if( node instanceof AgentNode )
-            return "Agent";
-        if( node instanceof WorkflowNode )
-            return "Workflow";
-        return "Function";
     }
 
     private static String className(Expression node) {
@@ -1326,22 +1347,24 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             resultType = falseType;
         }
         else if( ClassHelper.isDynamicTyped(trueType) || ClassHelper.isDynamicTyped(falseType) ) {
+            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.dynamicType());
             return;
         }
         else if( Types.isEqual(trueType, falseType) ) {
             resultType = trueType;
             nullable = isNullable(trueType) || isNullable(falseType);
         }
-        else if( isEmptyListOrMap(falseExpr) && Types.isAssignableFrom(trueType, falseType) ) {
+        else if( hasUnboundTypeArguments(falseType) && Types.isAssignableFrom(trueType, falseType) ) {
             resultType = trueType;
             nullable = isNullable(trueType);
         }
-        else if( isEmptyListOrMap(trueExpr) && Types.isAssignableFrom(falseType, trueType) ) {
+        else if( hasUnboundTypeArguments(trueType) && Types.isAssignableFrom(falseType, trueType) ) {
             resultType = falseType;
             nullable = isNullable(falseType);
         }
         else {
             addError(String.format("Conditional expression has inconsistent types -- true branch has type %s but false branch has type %s", Types.getName(trueType), Types.getName(falseType)), node);
+            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.dynamicType());
             return;
         }
 
@@ -1350,14 +1373,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             resultType.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
         }
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
-    }
-
-    private static boolean isEmptyListOrMap(Expression node) {
-        if( node instanceof ListExpression le )
-            return le.getExpressions().isEmpty();
-        if( node instanceof MapExpression me )
-            return me.getMapEntryExpressions().isEmpty();
-        return false;
     }
 
     private static boolean isNullable(ClassNode cn) {
@@ -1397,6 +1412,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
             else if( !Types.isEqual(elementType, type) ) {
                 addError(String.format("List expression has inconsistent element types -- some elements have type %s while others have type %s", Types.getName(elementType), Types.getName(type)), node);
+                elementType = ClassHelper.dynamicType();
                 break;
             }
         }
@@ -1412,10 +1428,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         super.visitMapExpression(node);
 
         var entries = node.getMapEntryExpressions();
-        if( entries.isEmpty() ) {
-            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.MAP_TYPE.getPlainNodeReference());
+        if( entries.isEmpty() )
             return;
-        }
 
         // infer key and value type args, falling back to `?` when heterogeneous
         var keyType = commonType(entries.stream().map(e -> getType(e.getKeyExpression())));
@@ -1526,12 +1540,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     @Override
     public void visitPropertyExpression(PropertyExpression node) {
         super.visitPropertyExpression(node);
-
-        var mn = asMethodOutput(node);
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode ) {
-            addError("Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead", node);
-            return;
-        }
 
         var receiver = node.getObjectExpression();
         var receiverType = getType(receiver);
