@@ -20,7 +20,7 @@ The executor requires [Fusion](https://docs.seqera.io/fusion) (`fusion.enabled =
 :::warning{title="Experimental: may change in a future release."}
 :::
 
-Set `seqera.executor.fusionMode = 'native'` to have the compute hosts provide the Fusion client instead. In this mode Wave is optional. When Wave is enabled, it works as usual (for example, it builds Conda environments and bundles the project `bin` directory), except that it does not add the Fusion layer to the task containers of this executor. When Wave is disabled, tasks run with their container image as-is, and the project `bin` directory is not made available to them.
+Set `seqera.executor.fusionMode = 'native'` to have the compute hosts provide the Fusion client instead. In this mode Wave is optional. When Wave is enabled, it works as usual, including the Fusion layer, which the compute hosts override with their own Fusion client. When Wave is disabled, tasks run with their container image as-is, and the project `bin` directory is not made available to them.
 
 Use the following process directives to control resource requests and other job characteristics:
 

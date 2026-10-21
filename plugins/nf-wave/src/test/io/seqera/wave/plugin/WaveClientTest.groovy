@@ -47,8 +47,6 @@ import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
-import nextflow.executor.Executor
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
@@ -534,7 +532,7 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, IMAGE, false)
         then:
-        client.resolveContainerConfig(ARCH, true) >> CONTAINER_CONFIG
+        client.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
         assets.containerImage == IMAGE
         assets.moduleResources == BUNDLE
@@ -543,28 +541,6 @@ class WaveClientTest extends Specification {
         !assets.containerFile
         !assets.packagesSpec
         !assets.projectResources
-    }
-
-    @Unroll
-    def 'should add the fusion layer for a seqera task only when not in native fusion mode' () {
-        given:
-        def ARCH = 'linux/amd64'
-        def session = Mock(Session) { getConfig() >> CONFIG }
-        def executor = Mock(Executor) { getName() >> 'seqera' }
-        def task = Mock(TaskRun) { getConfig() >> [:]; getContainerPlatform() >> ARCH; getProcessor() >> Mock(TaskProcessor) { getExecutor() >> executor } }
-        and:
-        WaveClient client = Spy(WaveClient, constructorArgs:[session])
-
-        when:
-        client.resolveAssets(task, 'foo:latest', false)
-        then:
-        1 * client.resolveContainerConfig(ARCH, FUSION_LAYER) >> null
-
-        where:
-        CONFIG                                                                   | FUSION_LAYER
-        [process:[executor:'seqera']]                                            | true
-        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'wave']]]     | true
-        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']]]   | false
     }
 
     def 'should create asset with dockerfile' () {
@@ -768,7 +744,7 @@ class WaveClientTest extends Specification {
         then:
         1 * wave.projectResources(BIN_DIR) >> PROJECT_RES
         and:
-        1 * wave.resolveContainerConfig(ARCH, true) >> CONTAINER_CONFIG
+        1 * wave.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
         assets.moduleResources == MODULE_RES
         assets.projectResources ==  PROJECT_RES
@@ -1001,29 +977,6 @@ class WaveClientTest extends Specification {
 
         expect:
         client.resolveContainerConfig() == new ContainerConfig(entrypoint: ['entry.sh'])
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should not add the fusion layer for the seqera executor in native fusion mode' () {
-        given:
-        def folder = Files.createTempDirectory('wave-local-manifest')
-        def manifest = folder.resolve('manifest.json')
-        manifest.text = JsonOutput.toJson([entrypoint: ['entry.sh']])
-        and:
-        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true, containerConfigUrl: manifest.toUri().toString()]] }
-        def client = new WaveClient(session)
-        and:
-        def seqeraTask = Mock(TaskRun) { getProcessor() >> Mock(TaskProcessor) { getExecutor() >> Mock(Executor) { getName() >> 'seqera' } } }
-        def batchTask = Mock(TaskRun) { getProcessor() >> Mock(TaskProcessor) { getExecutor() >> Mock(Executor) { getName() >> 'awsbatch' } } }
-
-        expect:
-        client.resolveContainerConfig('linux/amd64', false) == null
-        client.resolveContainerConfig('linux/amd64', true) == new ContainerConfig(entrypoint: ['entry.sh'])
-        and:
-        WaveClient.isSeqeraExecutor(seqeraTask)
-        !WaveClient.isSeqeraExecutor(batchTask)
 
         cleanup:
         folder?.deleteDir()
