@@ -12,8 +12,9 @@
 # REQUIRED SECRETS/ENVIRONMENT VARIABLES FOR GITHUB ACTIONS:
 #
 # AWS S3 Deployment:
-#   NXF_AWS_ACCESS       - AWS Access Key for deploying to s3://www2.nextflow.io
-#   NXF_AWS_SECRET       - AWS Secret Key for S3 deployment
+#   NXF_AWS_ACCESS        - Temporary AWS Access Key (assumed role) for deploying to s3://www2.nextflow.io
+#   NXF_AWS_SECRET        - Temporary AWS Secret Key for S3 deployment
+#   NXF_AWS_SESSION_TOKEN - Session token matching the temporary credentials above
 #
 # Maven Repository (Seqera S3-based):
 #   AWS_ACCESS_KEY_ID    - AWS credentials for Maven repository access
@@ -49,6 +50,7 @@ echo "=== Checking required environment variables ==="
 REQUIRED_VARS=(
     "NXF_AWS_ACCESS"
     "NXF_AWS_SECRET"
+    "NXF_AWS_SESSION_TOKEN"
     "AWS_ACCESS_KEY_ID"
     "AWS_SECRET_ACCESS_KEY"
     "GITHUB_TOKEN"

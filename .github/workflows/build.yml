@@ -328,6 +328,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+      id-token: write  # OIDC token to assume the AWS release role
     steps:
       # Intentionally persists credentials: the `release` task in
       # packing.gradle runs `git push origin vX.Y.Z` against this repo,
@@ -389,6 +390,18 @@ jobs:
           # thing the release newly depends on.
           image: docker.io/tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
 
+      # Short-lived credentials to publish nextflow assets to the nextflow bucket, obtained by
+      # assuming the release role via GitHub OIDC (no static keys). Exposed as step outputs
+      # rather than only via GITHUB_ENV because `Run release` also sets AWS_ACCESS_KEY_ID /
+      # AWS_SECRET_ACCESS_KEY to the (static) Maven credentials, which would shadow them.
+      - name: Assume AWS release role
+        id: aws_release_role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # ratchet:aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.SEQERA_NEXTFLOW_RELEASE_ROLE_ARN }}
+          aws-region: eu-west-1
+          output-credentials: true
+
       - name: Run release
         run: |
           echo "Starting release process..."
@@ -398,9 +411,10 @@ jobs:
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: 'true'
-          # credentials to pubslish nextflow assets
-          NXF_AWS_ACCESS: ${{ vars.NXF_AWS_ACCESS }}
-          NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
+          # temporary credentials (assumed role) to publish nextflow assets
+          NXF_AWS_ACCESS: ${{ steps.aws_release_role.outputs.aws-access-key-id }}
+          NXF_AWS_SECRET: ${{ steps.aws_release_role.outputs.aws-secret-access-key }}
+          NXF_AWS_SESSION_TOKEN: ${{ steps.aws_release_role.outputs.aws-session-token }}
           # credentials to publish maven libraries
           AWS_ACCESS_KEY_ID: ${{ vars.SEQERA_MAVEN_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SEQERA_MAVEN_SECRET_KEY }}
