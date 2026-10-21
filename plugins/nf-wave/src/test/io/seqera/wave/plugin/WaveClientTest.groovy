@@ -545,6 +545,28 @@ class WaveClientTest extends Specification {
         !assets.projectResources
     }
 
+    @Unroll
+    def 'should add the fusion layer for a seqera task only when not in native fusion mode' () {
+        given:
+        def ARCH = 'linux/amd64'
+        def session = Mock(Session) { getConfig() >> CONFIG }
+        def executor = Mock(Executor) { getName() >> 'seqera' }
+        def task = Mock(TaskRun) { getConfig() >> [:]; getContainerPlatform() >> ARCH; getProcessor() >> Mock(TaskProcessor) { getExecutor() >> executor } }
+        and:
+        WaveClient client = Spy(WaveClient, constructorArgs:[session])
+
+        when:
+        client.resolveAssets(task, 'foo:latest', false)
+        then:
+        1 * client.resolveContainerConfig(ARCH, FUSION_LAYER) >> null
+
+        where:
+        CONFIG                                                                   | FUSION_LAYER
+        [process:[executor:'seqera']]                                            | true
+        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'wave']]]     | true
+        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']]]   | false
+    }
+
     def 'should create asset with dockerfile' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -984,7 +1006,7 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should not add the fusion layer for the seqera executor' () {
+    def 'should not add the fusion layer for the seqera executor in native fusion mode' () {
         given:
         def folder = Files.createTempDirectory('wave-local-manifest')
         def manifest = folder.resolve('manifest.json')

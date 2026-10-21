@@ -117,6 +117,8 @@ class WaveClient {
 
     final private boolean awsFargate
 
+    final private boolean fusionNative
+
     final private URL s5cmdConfigUrl
 
     final private RateLimiter limiter
@@ -127,6 +129,7 @@ class WaveClient {
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
+        this.fusionNative = WaveFactory.isFusionNative(session.config)
         this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
@@ -573,12 +576,12 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch, !isSeqeraExecutor(task))
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, !(fusionNative && isSeqeraExecutor(task)))
     }
 
     /**
-     * Whether the task runs on the Seqera executor, whose hosts provide the Fusion client,
-     * therefore Wave must not add the Fusion layer to its container.
+     * Whether the task runs on the Seqera executor. In native Fusion mode its hosts provide
+     * the Fusion client, therefore Wave must not add the Fusion layer to its container.
      *
      * @param task the task to be executed
      * @return {@code true} when the task runs on the {@code seqera} executor

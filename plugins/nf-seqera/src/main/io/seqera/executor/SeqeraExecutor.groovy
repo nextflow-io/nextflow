@@ -25,6 +25,7 @@ import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
 import io.seqera.util.SchemaMapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.FusionMode
 import io.seqera.sched.api.schema.v1a1.PipelineSpec
 import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.client.SchedClient
@@ -178,6 +179,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
         computeRunResourceLabels()
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
+        final fusionMode = seqeraConfig.fusionMode ? FusionMode.fromValue(seqeraConfig.fusionMode) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
                 .workflowUrl(workflowUrl)
@@ -196,6 +198,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .schedulingRequirement(SchemaMapperUtil.toSchedulingRequirement(seqeraConfig.schedulingRequirement))
                 .computeEnvId(computeEnvId)
                 .shellEnabled(seqeraConfig.shellEnabled)
+                .fusionMode(fusionMode)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()

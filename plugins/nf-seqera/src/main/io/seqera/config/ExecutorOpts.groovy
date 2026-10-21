@@ -34,6 +34,8 @@ import nextflow.util.Duration
 @CompileStatic
 class ExecutorOpts implements ConfigScope {
 
+    static final List<String> FUSION_MODES = ['wave', 'native']
+
     final RetryOpts retryPolicy
 
     @Description("""
@@ -150,6 +152,17 @@ class ExecutorOpts implements ConfigScope {
     """)
     final boolean shellEnabled
 
+    @ConfigOption
+    @Description("""
+        *Experimental: may change in a future release.*
+
+        How the task containers get the Fusion client. Supported values:
+          - `wave` (default): Wave adds the Fusion layer to the task container
+          - `native`: the compute hosts provide the Fusion client; Wave does not add the
+            Fusion layer and is optional (VM backends only)
+    """)
+    final String fusionMode
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
@@ -185,6 +198,16 @@ class ExecutorOpts implements ConfigScope {
         this.computeEnvId = opts.computeEnvId as String
         // on-demand shell access to task containers (default false)
         this.shellEnabled = opts.shellEnabled as boolean
+        // how the task containers get the Fusion client (default wave)
+        this.fusionMode = parseFusionMode(opts.fusionMode as String)
+    }
+
+    private static String parseFusionMode(String value) {
+        if( !value )
+            return null
+        if( value !in FUSION_MODES )
+            throw new IllegalArgumentException("Invalid 'seqera.executor.fusionMode' value: '$value' - valid values: ${FUSION_MODES.join(', ')}")
+        return value
     }
 
     RetryOpts retryOpts() {
@@ -249,5 +272,9 @@ class ExecutorOpts implements ConfigScope {
 
     boolean getShellEnabled() {
         return shellEnabled
+    }
+
+    String getFusionMode() {
+        return fusionMode
     }
 }

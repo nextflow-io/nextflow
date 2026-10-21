@@ -35,6 +35,8 @@ class WaveFactory implements TraceObserverFactoryV2 {
 
     static final String SEQERA_EXECUTOR = 'seqera'
 
+    static final String FUSION_MODE_NATIVE = 'native'
+
     @Override
     Collection<TraceObserverV2> create(Session session) {
         shouldEnable(session)
@@ -53,8 +55,8 @@ class WaveFactory implements TraceObserverFactoryV2 {
             return false
         }
 
-        // the Seqera executor hosts provide the Fusion client, therefore Wave is optional
-        if( fusion.enabled && isSeqeraExecutor(config) ) {
+        // in native Fusion mode the Seqera executor hosts provide the Fusion client, therefore Wave is optional
+        if( fusion.enabled && isFusionNative(config) ) {
             if( wave.enabled )
                 enableBundleProjectResources(session, wave, 'Fusion')
         }
@@ -92,6 +94,17 @@ class WaveFactory implements TraceObserverFactoryV2 {
     static boolean isSeqeraExecutor(Map config) {
         final executor = config.navigate('process.executor') ?: config.navigate('executor.name')
         return SEQERA_EXECUTOR == executor?.toString()
+    }
+
+    /**
+     * Whether the run uses the Seqera executor in native Fusion mode
+     * ({@code seqera.executor.fusionMode = 'native'}), i.e. the compute hosts provide the Fusion client.
+     *
+     * @param config the session config
+     * @return {@code true} when the default executor is {@code seqera} and its Fusion mode is {@code native}
+     */
+    static boolean isFusionNative(Map config) {
+        return isSeqeraExecutor(config) && FUSION_MODE_NATIVE == config.navigate('seqera.executor.fusionMode')?.toString()
     }
 
     static boolean isAwsBatchFargateMode(Map config) {
