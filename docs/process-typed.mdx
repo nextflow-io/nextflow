@@ -168,6 +168,24 @@ This pattern mirrors the standard `record()` function used to construct records.
 Record inputs are a useful way to select a subset of fields from a larger record. This way, the process stages only what it needs, keeping related data together in your workflow logic.
 :::
 
+Only the `Path` fields declared by the process input are staged. To avoid staging files that a process doesn't need, omit those fields from the input declaration. If the process needs the metadata of a record but none of its files, declare the input with the generic `Record` type:
+
+```nextflow
+nextflow.enable.types = true
+
+process report {
+    input:
+    samples: List<Record>
+
+    script:
+    """
+    echo 'ids: ${samples*.id.join(' ')}'
+    """
+}
+```
+
+In this example, the fields of each record can be accessed in the task, but no files are staged. Any `Path` fields still refer to the original file locations, so they shouldn't be used by the task script.
+
 ### Tuple inputs
 
 Tuple inputs can be declared as a *destructured* input:
@@ -275,6 +293,31 @@ process grep {
     """
 }
 ```
+
+Input files are staged under their original names by default, so two input files with the same name (e.g. from different records in a record collection) cause the task to fail with a file name collision error. Use a file pattern to stage each file in its own directory:
+
+```nextflow
+nextflow.enable.types = true
+
+process cat_samples {
+    input:
+    samples: List<Sample>
+
+    stage:
+    stageAs samples*.fastq, 'fastq?/*'
+
+    script:
+    """
+    cat ${samples*.fastq.join(' ')}
+    """
+}
+```
+
+In this example, the files are staged as `fastq1/<name>`, `fastq2/<name>`, and so on.
+
+:::note
+Wildcards in a file pattern are numbered separately for each `stageAs` directive, based on the files staged by that directive. If a directive stages the values of a nullable field, the files are numbered after `null` values are removed, so the files of a record might not have the same number in each directive.
+:::
 
 For more information about the available stage directives, see [Inputs and outputs (typed)][process-reference-typed].
 
