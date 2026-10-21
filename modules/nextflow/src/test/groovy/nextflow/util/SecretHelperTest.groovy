@@ -17,6 +17,7 @@
 package nextflow.util
 
 
+import spock.lang.Timeout
 import test.BaseSpec
 /**
  *
@@ -152,6 +153,31 @@ class SecretHelperTest extends BaseSpec {
         SecretHelper.secureEnvString('FOO=bar MY_TOKEN=xyz') == 'FOO=bar MY_TOKEN=[secure]'
         and: 'not secrets'
         SecretHelper.secureEnvString('FOO=bar\nKEY_ID=x\nREGION=eu') == 'FOO=bar\nKEY_ID=x\nREGION=eu'
+    }
+
+    def 'should not hide manifest values' () {
+        given:
+        def obj = [manifest: [author: 'Paolo', license: 'MIT', name: 'foo'], tower: [license: 'l1']]
+
+        expect:
+        SecretHelper.hideSecrets(obj) == [manifest: [author: 'Paolo', license: 'MIT', name: 'foo'], tower: [license: '[secret]']]
+    }
+
+    def 'should secure env lines with any name format' () {
+        expect:
+        SecretHelper.secureEnvString('export GH_TOKEN=x') == 'export GH_TOKEN=[secure]'
+        SecretHelper.secureEnvString('  NXF_TOKEN = x') == '  NXF_TOKEN =[secure]'
+        SecretHelper.secureEnvString('aws.region=eu-west-1') == 'aws.region=[secure]'
+        SecretHelper.secureEnvString('AWS=x') == 'AWS=[secure]'
+        SecretHelper.secureEnvString('MY_TOKEN=a FOO=b\nBAR=c') == 'MY_TOKEN=[secure]\nBAR=c'
+        SecretHelper.secureEnvString('A=1\nB_SECRET=2\nC=3\nD_PASSWORD=4') == 'A=1\nB_SECRET=[secure]\nC=3\nD_PASSWORD=[secure]'
+        SecretHelper.secureEnvString('') == ''
+    }
+
+    @Timeout(5)
+    def 'should secure env strings in linear time' () {
+        expect:
+        [ 'FOO=' + 'a' * 100_000, 'FOO=' + 'token' * 20_000, 'a-' * 50_000, '=' * 100_000 ].every { SecretHelper.secureEnvString(it) == it }
     }
 
 }
