@@ -391,9 +391,11 @@ jobs:
           image: docker.io/tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
 
       # Short-lived credentials to publish nextflow assets to the nextflow bucket, obtained by
-      # assuming the release role via GitHub OIDC (no static keys). Exposed as step outputs
-      # rather than only via GITHUB_ENV because `Run release` also sets AWS_ACCESS_KEY_ID /
-      # AWS_SECRET_ACCESS_KEY to the (static) Maven credentials, which would shadow them.
+      # assuming the release role via GitHub OIDC (no static keys). Exposed ONLY as step outputs:
+      # `output-env-credentials: false` keeps AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+      # AWS_SESSION_TOKEN out of GITHUB_ENV. `Run release` also sets AWS_ACCESS_KEY_ID /
+      # AWS_SECRET_ACCESS_KEY to the (static) Maven credentials, and a stray AWS_SESSION_TOKEN
+      # from the role would be paired with them and break Maven authentication.
       - name: Assume AWS release role
         id: aws_release_role
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # ratchet:aws-actions/configure-aws-credentials@v6.3.0
@@ -401,6 +403,7 @@ jobs:
           role-to-assume: ${{ vars.SEQERA_NEXTFLOW_RELEASE_ROLE_ARN }}
           aws-region: eu-west-1
           output-credentials: true
+          output-env-credentials: false
 
       - name: Run release
         run: |
