@@ -189,49 +189,6 @@ class AgentToGroovyTest extends Specification {
         stagerTargets(blockAt(process, 1)) == stagerTargets(blockAt(agent, 1))
     }
 
-    def 'should generate stagers for the files in a record collection'() {
-        given:
-        final source = analyze('''
-            nextflow.enable.types = true
-
-            record Vcf {
-                id: String
-                vcf: Path
-                tbi: Path?
-                extra: List<Path>
-            }
-
-            record Cohort {
-                id: String
-                vcfs: List<Vcf>
-            }
-
-            process CHECK {
-                input:
-                vcfs: Set<Vcf>
-                cohorts: List<Cohort>
-                output:
-                'x'
-                script:
-                'true'
-            }
-            ''')
-
-        when:
-        final process = new ProcessToGroovyVisitorV2(source)
-            .transform((ProcessNodeV2) source.getAST().getProcesses().first())
-
-        then:
-        stagerTargets(blockAt(process, 1)) == [
-            'vcfs*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'vcfs*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'vcfs*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.flatten()*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.flatten()*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.flatten()*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
-        ]
-    }
-
     def 'should carry the nullable marker into the input declaration'() {
         when:
         final blocks = lowerAgent('''

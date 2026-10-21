@@ -67,15 +67,21 @@ class ImplicitStagers {
         }
         else if( isRecordType(cn) ) {
             for( var fn : cn.getFields() ) {
-                var property = propX(target, fn.getName());
+                // use safe navigation to allow nullable records
+                var property = propX(target, constX(fn.getName()), !spread);
                 property.setSpreadSafe(spread);
                 visitInputType(fn.getType(), property, spread, stagers);
             }
         }
         else if( isRecordCollectionType(cn) ) {
-            var elements = spread ? safeCallX(target, "flatten") : target;
+            var elements = spread ? flattenOneLevel(target) : target;
             visitInputType(cn.getGenericsTypes()[0].getType(), elements, true, stagers);
         }
+    }
+
+    private static Expression flattenOneLevel(Expression target) {
+        var e = param(ClassHelper.dynamicType(), "e");
+        return safeCallX(target, "collectMany", args(closureX(params(e), stmt(varX(e)))));
     }
 
     /**

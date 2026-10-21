@@ -24,9 +24,25 @@ process combine_vcfs {
     script:
     """
     for f in ${vcfs*.vcf.join(' ')} ${vcfs*.tbi.findAll { tbi -> tbi != null }.join(' ')}; do
-        [[ -e \$(basename \$f) ]] || { echo "file not staged: \$f"; exit 1; }
+        [[ "\$f" == "\$(basename \$f)" ]] || { echo "not a staged path: \$f"; exit 1; }
+        [[ -e \$f ]] || { echo "file not staged: \$f"; exit 1; }
     done
     echo ${id}: \$(ls *.vcf *.tbi | sort | xargs)
+    """
+}
+
+/*
+ * a nullable record should allow null values
+ */
+process index_vcf_opt {
+    debug true
+
+    input:
+    vcf: Vcf?
+
+    script:
+    """
+    echo vcf: ${vcf == null ? 'none' : vcf.vcf}
     """
 }
 
@@ -59,4 +75,5 @@ workflow {
     ]
     combine_vcfs( channel.of(record(id: 'all', vcfs: vcfs)) )
     combine_vcfs_opt( channel.of(null) )
+    index_vcf_opt( channel.of(null) )
 }
