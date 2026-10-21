@@ -33,8 +33,22 @@ class TaskArrayRun extends TaskRun {
 
     List<TaskHandler> children
 
+    private boolean childrenPrepared
+
     int getArraySize() {
         children.size()
+    }
+
+    /**
+     * Prepare the child task launchers, unless they were already
+     * prepared by a previous submission attempt.
+     */
+    void prepareChildren() {
+        if( childrenPrepared )
+            return
+        final executor = (TaskArrayExecutor)processor.getExecutor()
+        executor.prepareArrayChildren(children)
+        childrenPrepared = true
     }
 
     @Override

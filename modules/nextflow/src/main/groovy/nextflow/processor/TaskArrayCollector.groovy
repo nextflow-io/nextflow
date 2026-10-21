@@ -133,11 +133,8 @@ class TaskArrayCollector {
      * @param tasks
      */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
-        // prepare child job launcher scripts
+        // create child task handlers -- launchers are prepared at submit time
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
-        for( TaskHandler handler : handlers ) {
-            handler.prepareLauncher()
-        }
 
         // create work directory
         final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()

@@ -32,6 +32,7 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
@@ -71,6 +72,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
      * Executor service to throttle job deletion requests
      */
     private ThrottlingExecutor reaper
+
+    /**
+     * Thread pool to prepare job array child launchers
+     */
+    private final ArrayLauncherPool arrayLaunchers = new ArrayLauncherPool('GoogleBatch-array-launcher')
 
     private final Set<String> deletedJobs = ConcurrentHashMap.<String>newKeySet()
 
@@ -194,11 +200,18 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     ThrottlingExecutor getReaper() { reaper }
 
     @Override
+    void prepareArrayChildren(List<TaskHandler> children) {
+        arrayLaunchers.prepare(children)
+    }
+
+    @Override
     void shutdown() {
         // shutdown the submitter executor
         def tasks = submitter.shutdownNow()
         if( tasks ) log.warn "Execution interrupted -- cleaning up execution pool"
         submitter.awaitTermination(5, TimeUnit.MINUTES)
+
+        arrayLaunchers.shutdown()
 
         // shutdown the reaper executor
         reaper.shutdown()
