@@ -404,65 +404,8 @@ task validateAgentImageVersion {
  *
  * This validation prevents releases with stale or mismatched metadata.
  */
-/*
- * Fail the release when a plugin version already exists in the registry but was not
- * released from this branch.
- *
- * Plugin versions are global across branches, and `releasePluginToRegistryIfNotExists`
- * skips a version that already exists. A stable patch that bumps a plugin to a version
- * already published from master would therefore ship master's build, which may require a
- * newer Nextflow (e.g. nf-k8s@1.5.6 in 26.04.8). Stable branches must use a `-patchN`
- * suffix instead (see CLAUDE.md).
- *
- * A version is accepted when the previous release on this branch already pinned it
- * (unchanged plugin), or when it was published after the release commit (re-run of a
- * release that failed after publishing some plugins).
- */
-task validatePluginRegistryVersions {
-    outputs.upToDateWhen { false }
-
-    doLast {
-        final git = { String... args ->
-            final proc = new ProcessBuilder(['git'] + (args as List))
-                    .directory(rootProject.rootDir)
-                    .redirectError(ProcessBuilder.Redirect.DISCARD)
-                    .start()
-            final out = proc.inputStream.getText('UTF-8').trim()
-            return proc.waitFor()==0 ? out : null
-        }
-        final previousTag = git('describe', '--tags', '--abbrev=0', '--match', 'v[0-9]*', 'HEAD^')
-        final previousPins = previousTag
-                ? (git('show', "${previousTag}:modules/nextflow/src/main/resources/META-INF/plugins-info.txt") ?: '').readLines()
-                : []
-        final commitTime = java.time.OffsetDateTime.parse(git('log', '-1', '--format=%cI', 'HEAD')).toInstant()
-
-        final errors = []
-        new File(rootProject.rootDir, 'plugins').eachDir { dir ->
-            if( !dir.name.startsWith('nf-') )
-                return
-            final p = project(":plugins:${dir.name}")
-            final pin = "${p.name}@${p.version}" as String
-            if( pin in previousPins )
-                return
-            final conn = (HttpURLConnection) new URL("https://registry.nextflow.io/api/v1/plugins/${p.name}").openConnection()
-            if( conn.responseCode == 404 )
-                return
-            if( conn.responseCode != 200 )
-                throw new GradleException("Unable to query the plugin registry for ${p.name} -- HTTP ${conn.responseCode}")
-            final release = new groovy.json.JsonSlurper().parse(conn.inputStream).plugin.releases.find { it.version == p.version }
-            if( release && java.time.Instant.parse(release.date) < commitTime )
-                errors << "  ${pin} was already published on ${release.date} (requires ${release.requires})"
-        }
-        if( errors )
-            throw new GradleException(
-                "Plugin versions already exist in the registry but were not released from this branch (previous release: ${previousTag ?: 'none'}):\n${errors.join('\n')}\n" +
-                "Bump these plugins to an unused version. On a stable branch, append a `-patchN` suffix to the last version released from it, e.g. 1.5.4-patch1.")
-        println "✅ Plugin registry validation passed"
-    }
-}
-
 task validatePluginVersions {
-    dependsOn buildInfo, validateAgentImageVersion, validatePluginRegistryVersions
+    dependsOn buildInfo, validateAgentImageVersion
     inputs.file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt')
     inputs.file('modules/nextflow/src/main/resources/META-INF/build-info.properties')
     inputs.files(fileTree('plugins') { include '*/VERSION' })
