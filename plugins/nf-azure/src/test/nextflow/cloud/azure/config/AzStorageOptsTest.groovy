@@ -49,6 +49,16 @@ class AzStorageOptsTest extends Specification {
         opts3.accountKey == 'env-key'
     }
 
+    def 'should get storage endpoint'() {
+        expect:
+        new AzStorageOpts([:], [:]).endpoint == null
+        new AzStorageOpts([accountName: 'xyz'], [:]).endpoint == 'https://xyz.blob.core.windows.net'
+        and:
+        def opts = new AzStorageOpts([accountName: 'onelake', endpoint: 'https://onelake.blob.fabric.microsoft.com'], [:])
+        opts.endpoint == 'https://onelake.blob.fabric.microsoft.com'
+        opts.getEnv().AZURE_STORAGE_ENDPOINT == 'https://onelake.blob.fabric.microsoft.com'
+    }
+
     def 'should get azure files name, root path & options'() {
 
         given:
