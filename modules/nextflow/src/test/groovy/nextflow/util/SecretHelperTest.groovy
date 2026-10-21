@@ -124,4 +124,34 @@ class SecretHelperTest extends BaseSpec {
         SecretHelper.secureEnvString('API_URL=https://api.openai.com/v1') == 'API_URL=https://api.openai.com/v1'
     }
 
+    def 'should hide secrets with the same name rule as stripSecrets' () {
+        given:
+        def obj = [
+                azure: [storage: [accountName: 'store', accountKey: 'k1'], batch: [accountKey: 'k2']],
+                tower: [license: 'l1', basicAuth: 'a1'],
+                db: [passwd: 'p1', credentials: 'c1', privateKey: 'pk'],
+                aws: [region: 'eu-west-1'] ]
+
+        expect:
+        SecretHelper.hideSecrets(obj) == [
+                azure: [storage: [accountName: 'store', accountKey: '[secret]'], batch: [accountKey: '[secret]']],
+                tower: [license: '[secret]', basicAuth: '[secret]'],
+                db: [passwd: '[secret]', credentials: '[secret]', privateKey: '[secret]'],
+                aws: [region: 'eu-west-1'] ]
+    }
+
+    def 'should secure env lines with the same name rule as stripSecrets' () {
+        expect:
+        SecretHelper.secureEnvString('DB_PASSWORD=p1') == 'DB_PASSWORD=[secure]'
+        SecretHelper.secureEnvString('AZURE_STORAGE_ACCOUNT_KEY=k1==') == 'AZURE_STORAGE_ACCOUNT_KEY=[secure]'
+        SecretHelper.secureEnvString('TOWER_LICENSE=l1') == 'TOWER_LICENSE=[secure]'
+        SecretHelper.secureEnvString('GITHUB_CREDENTIALS=c1') == 'GITHUB_CREDENTIALS=[secure]'
+        and: 'the whole value is masked, also when it contains `=`'
+        SecretHelper.secureEnvString('AZURE_STORAGE_SAS_TOKEN=sv=2020&sig=abc') == 'AZURE_STORAGE_SAS_TOKEN=[secure]'
+        and: 'a secret after another assignment on the same line'
+        SecretHelper.secureEnvString('FOO=bar MY_TOKEN=xyz') == 'FOO=bar MY_TOKEN=[secure]'
+        and: 'not secrets'
+        SecretHelper.secureEnvString('FOO=bar\nKEY_ID=x\nREGION=eu') == 'FOO=bar\nKEY_ID=x\nREGION=eu'
+    }
+
 }
