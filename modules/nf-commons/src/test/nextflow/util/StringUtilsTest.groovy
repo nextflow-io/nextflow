@@ -131,6 +131,15 @@ class StringUtilsTest extends Specification {
         'password\n=abc'                                 | 'password\n=********'
         'password="abc'                                  | 'password="********'
         'password=\'abc'                                 | 'password=\'********'
+        'Authorization: Bearer abc.def'                 | 'Authorization: ********'
+        'authorization=abc'                             | 'authorization=********'
+        'oauth=abc x_auth=def'                          | 'oauth=******** x_auth=********'
+        'X-Api-Key: abc'                                | 'X-Api-Key: ********'
+        'api-key=abc'                                   | 'api-key=********'
+        'access_tokens=abc'                             | 'access_tokens=********'
+        'password=abc,def'                              | 'password=********'
+        'password: \'a,b'                               | 'password: \'********'
+        '[A_TOKEN:x, NAME:foo]'                         | '[A_TOKEN:********, NAME:foo]'
         // not secrets
         'monkey: banana, Author: Paolo'                 | 'monkey: banana, Author: Paolo'
         'sortKey=name tokens: 5'                        | 'sortKey=name tokens: 5'
@@ -180,7 +189,7 @@ class StringUtilsTest extends Specification {
     @Timeout(5)
     def 'should strip secrets of long strings in linear time' () {
         expect:
-        [ 'a' * 100_000, 'key' * 30_000, 'password' * 10_000, 'x=' * 50_000 ].every { StringUtils.stripSecrets(it) == it }
+        [ 'a' * 100_000, 'key' * 30_000, 'password' * 10_000, 'x=' * 50_000, 'a-' * 50_000 ].every { StringUtils.stripSecrets(it) == it }
     }
 
     @Unroll
