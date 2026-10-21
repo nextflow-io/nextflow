@@ -15,3 +15,5 @@ topic-channel-typed.nf
 type-annotations.nf
 workflow-entry.nf
 workflow-oncomplete-v2.nf
+stage-nested-collection.nf
+stage-record-collection.nf

@@ -226,9 +226,50 @@ class AgentToGroovyTest extends Specification {
             'vcfs*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
             'vcfs*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
             'vcfs*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.flatten()*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.flatten()*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.flatten()*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.sum([])*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.sum([])*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.sum([])*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })',
+        ]
+    }
+
+    def 'should generate stagers for the files in nested collections and tuples'() {
+        given:
+        final source = analyze('''
+            nextflow.enable.types = true
+
+            record Vcf {
+                id: String
+                vcf: Path
+            }
+
+            process CHECK {
+                input:
+                batches: List<List<Vcf>>
+                chunks: List<List<Path>>
+                t: Tuple<String,Path>
+                ts: List<Tuple<String,Path>>
+                tss: List<List<Tuple<String,Path>>>
+                tuple(id: String, reads: Tuple<Path,Path>)
+                output:
+                'x'
+                script:
+                'true'
+            }
+            ''')
+
+        when:
+        final process = new ProcessToGroovyVisitorV2(source)
+            .transform((ProcessNodeV2) source.getAST().getProcesses().first())
+
+        then:
+        stagerTargets(blockAt(process, 1)) == [
+            'batches?.sum([])*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'chunks?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            't?.getAt(1)',
+            'ts*.getAt(1)?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'tss?.sum([])*.getAt(1)?.flatten()?.findAll({ java.lang.Object p -> ... })',
+            'reads?.getAt(0)',
+            'reads?.getAt(1)',
         ]
     }
 

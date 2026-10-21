@@ -17,8 +17,10 @@ package nextflow.script.control;
 
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 
 import nextflow.script.ast.RecordNode;
+import nextflow.script.types.Tuple;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Variable;
@@ -48,7 +50,9 @@ class ImplicitStagers {
      * - Inputs with a record type are recursively inspected for nested
      *   file inputs based on the record type definition.
      *
-     * - Inputs with a record collection type (e.g. List&lt;Sample&gt;) are
+     * - Inputs with a tuple type are inspected component by component.
+     *
+     * - Inputs with a collection type (e.g. List&lt;Sample&gt;) are
      *   inspected in the same way, staging the files of every element.
      *
      * @param param
@@ -72,8 +76,18 @@ class ImplicitStagers {
                 visitInputType(fn.getType(), property, spread, stagers);
             }
         }
-        else if( isRecordCollectionType(cn) ) {
-            var elements = spread ? safeCallX(target, "flatten") : target;
+        else if( isTupleType(cn) ) {
+            var components = cn.getGenericsTypes();
+            for( int i = 0; i < components.length; i++ ) {
+                var component = callX(target, "getAt", args(constX(i)));
+                component.setSafe(!spread);
+                component.setSpreadSafe(spread);
+                visitInputType(components[i].getType(), component, spread, stagers);
+            }
+        }
+        else if( isCollectionType(cn) ) {
+            // flatten one level only, so that tuples (which are lists) are kept intact
+            var elements = spread ? safeCallX(target, "sum", args(listX(List.of()))) : target;
             visitInputType(cn.getGenericsTypes()[0].getType(), elements, true, stagers);
         }
     }
@@ -118,12 +132,12 @@ class ImplicitStagers {
         return cn.redirect() instanceof RecordNode;
     }
 
-    private static boolean isRecordCollectionType(ClassNode cn) {
-        if( !cn.isResolved() || !cn.isUsingGenerics() )
-            return false;
-        if( !Collection.class.isAssignableFrom(cn.getTypeClass()) )
-            return false;
-        return isRecordType(cn.getGenericsTypes()[0].getType());
+    private static boolean isTupleType(ClassNode cn) {
+        return cn.isResolved() && cn.isUsingGenerics() && Tuple.class.isAssignableFrom(cn.getTypeClass());
+    }
+
+    private static boolean isCollectionType(ClassNode cn) {
+        return cn.isResolved() && cn.isUsingGenerics() && Collection.class.isAssignableFrom(cn.getTypeClass());
     }
 
 }
