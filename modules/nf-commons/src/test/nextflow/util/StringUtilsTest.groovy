@@ -93,6 +93,8 @@ class StringUtilsTest extends Specification {
         [url: 'redis://secret@host:port']       | [url: 'redis://****@host:port']
         [url: 'ftp://secretlong@host:port/x/y'] | [url: 'ftp://sec****@host:port/x/y']
         [providers:[github:[auth:'12345']]]     | [providers:[github:[auth:'****']]]
+        [AZURE_STORAGE_ACCOUNT_KEY:'1234567890'] | [AZURE_STORAGE_ACCOUNT_KEY:'123****']
+        [azure:[storage:[accountKey:'xyz']]]    | [azure:[storage:[accountKey:'****']]]
     }
 
     @Unroll
@@ -110,6 +112,10 @@ class StringUtilsTest extends Specification {
         'Hi\n \'password\' :\'1\' \n \'token\': \'123\''| 'Hi\n \'password\' :\'********\' \n \'token\': \'********\''
         'Hi\n password :"1"\nsecret: "345"'             | 'Hi\n password :"********"\nsecret: "********"'
         'secret="abc" password:"1" more text'           | 'secret="********" password:"********" more text'
+        'providers.github.auth=\'user:ghp_a-b\''        | 'providers.github.auth=\'********\''
+        'docker run -e "AWS_SECRET_ACCESS_KEY=a/b+c" -e "FUSION_LICENSE_TOKEN=x.y-z" -e "FOO=bar"' | 'docker run -e "AWS_SECRET_ACCESS_KEY=********" -e "FUSION_LICENSE_TOKEN=********" -e "FOO=bar"'
+        '[AZURE_STORAGE_ACCOUNT_KEY:abc==, NAME:foo]'   | '[AZURE_STORAGE_ACCOUNT_KEY:********, NAME:foo]'
+        'token: "********"'                             | 'token: "********"'
     }
 
     @Unroll

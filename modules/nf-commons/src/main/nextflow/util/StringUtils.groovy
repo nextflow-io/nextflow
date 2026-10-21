@@ -55,7 +55,8 @@ class StringUtils {
         return m.matches() ? m.group(1).toLowerCase() : null
     }
 
-    static private Pattern multilinePattern = ~/["']?(password|token|secret|license)["']?\s?[:=]\s?["']?(\w+)["']?/
+    // value excludes `*` so a redacted value is not matched again, which would loop forever
+    static private Pattern multilinePattern = ~/(?i)["']?(\w*(?:password|token|secret|license|auth|key)\w*)["']?\s?[:=]\s?["']?([^\s"',*\]]+)["']?/
 
     static String stripSecrets(String message) {
         if (message == null) {
@@ -81,7 +82,8 @@ class StringUtils {
             || str.contains('token') \
             || str.contains('secret') \
             || str.contains('license') \
-            || str.contains('auth')
+            || str.contains('auth') \
+            || str.contains('key')
     }
 
 
