@@ -1237,6 +1237,20 @@ class TypeCheckingTest extends Specification {
         checkType(exp, Object)
     }
 
+    @Unroll
+    def 'should resolve a getter property with generic type' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                          | ERROR
+        "[a: 1].entrySet().each { e -> def k: String = e.key }"         | null
+        "[a: 1].entrySet().each { e -> def v: Integer = e.value }"      | null
+        "[a: 1].entrySet().each { e -> e.key.nope }"                    | "Unrecognized property `nope` for type String"
+        "[a: 1].entrySet().each { e -> e.value.nope }"                  | "Unrecognized property `nope` for type Integer"
+        "[a: 1].entrySet().each { e -> e.nope }"                        | "Unrecognized property `nope` for type Entry<String, Integer>"
+    }
+
     def 'should check a workflow call' () {
         expect:
         check(
