@@ -30,10 +30,11 @@ jobs:
       - name: Install dependencies
         run: pip install 'azure-storage-blob>=12.19,<13' 'google-cloud-storage>=2.14,<4'
 
-      # empties the `my-data` container and deletes the `nf-az-blob-*` containers leaked by tests
+      # deletes the blobs older than 7 days in `my-data` (CI work dir and cache, see validation/azure.config)
+      # and the `nf-az-blob-*` containers leaked by tests
       - name: Clean up Azure storage
         if: always()
-        run: python3 .github/scripts/azure-storage-cleanup.py --empty my-data --max-age-hours 24 $DELETE_FLAG
+        run: python3 .github/scripts/azure-storage-cleanup.py --container my-data --max-age-days 7 --max-age-hours 24 $DELETE_FLAG
         env:
           AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
           AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}

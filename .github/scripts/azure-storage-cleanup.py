@@ -17,7 +17,8 @@
 """
 Clean up the Azure storage account used by the Nextflow tests:
 
-  - delete all blobs of the given containers, page by page (the containers are kept)
+  - delete the blobs older than --max-age-days in the given containers, page by page
+    (the containers are kept)
   - delete the `nf-az-blob-*` containers older than --max-age-hours, leaked by tests
     that failed or timed out before their cleanup
 
@@ -37,11 +38,11 @@ BATCH_SIZE = 256          # max sub-requests per blob batch call
 TEST_CONTAINER_PREFIX = 'nf-az-blob-'
 
 
-def empty_container(service, name, delete):
+def clean_container(service, name, cutoff, delete):
     client = service.get_container_client(name)
     total = failed = size = 0
     for page_num, page in enumerate(client.list_blobs(results_per_page=PAGE_SIZE).by_page(), start=1):
-        blobs = list(page)
+        blobs = [b for b in page if b.last_modified < cutoff]
         names = [b.name for b in blobs]
         size += sum(b.size or 0 for b in blobs)
         if delete:
@@ -54,8 +55,8 @@ def empty_container(service, name, delete):
                         failed += 1
                         print(f'  failed {resp.status_code}: {name}/{blob_name}', file=sys.stderr)
         total += len(names)
-        print(f'{name} page {page_num}: {len(names)} blobs (total {total}, {size / 1e9:.2f} GB)', flush=True)
-    print(f'{name}: {total - failed} blobs, {size / 1e9:.2f} GB; {failed} failed', flush=True)
+        print(f'{name} page {page_num}: {len(names)} stale blobs (total {total}, {size / 1e9:.2f} GB)', flush=True)
+    print(f'{name}: {total - failed} blobs older than {cutoff:%Y-%m-%d}, {size / 1e9:.2f} GB; {failed} failed', flush=True)
     return failed
 
 
@@ -79,8 +80,10 @@ def delete_test_containers(service, max_age, delete):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--empty', action='append', default=[], metavar='CONTAINER',
-                        help='container whose blobs are all deleted (repeatable)')
+    parser.add_argument('--container', action='append', default=[], metavar='CONTAINER',
+                        help='container whose old blobs are deleted (repeatable)')
+    parser.add_argument('--max-age-days', type=int, default=7,
+                        help='only delete blobs older than this (default: 7)')
     parser.add_argument('--max-age-hours', type=int, default=24,
                         help=f'only delete {TEST_CONTAINER_PREFIX}* containers older than this (default: 24)')
     parser.add_argument('--delete', action='store_true', help='delete for real (default is a dry run)')
@@ -92,7 +95,8 @@ def main():
         credential=os.environ['AZURE_STORAGE_ACCOUNT_KEY'])
     print(f'[{"DELETING" if args.delete else "DRY RUN"}] storage account {account}', flush=True)
 
-    failed = sum(empty_container(service, name, args.delete) for name in args.empty)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=args.max_age_days)
+    failed = sum(clean_container(service, name, cutoff, args.delete) for name in args.container)
     failed += delete_test_containers(service, timedelta(hours=args.max_age_hours), args.delete)
     return 1 if failed else 0
 
