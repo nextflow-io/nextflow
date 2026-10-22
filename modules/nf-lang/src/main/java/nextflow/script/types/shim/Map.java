@@ -92,13 +92,13 @@ public interface Map<K,V> {
 
         @Constant("key")
         @Description("""
-            Returns the key of the entry.
+            The key of the entry.
         """)
-        K getKey();
+K getKey();
 
         @Constant("value")
         @Description("""
-            Returns the value of the entry.
+            The value of the entry.
         """)
         V getValue();
 
