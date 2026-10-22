@@ -286,4 +286,26 @@ class CacheDBTest extends Specification {
         0 * store.writeIndex(task.hash, _)
     }
 
+    def 'a replaced entry keeps the references of the runs that listed it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cache = new CacheDB(new DefaultCacheStore(UUID.randomUUID(), 'test_1', folder)).open()
+        def hash = HashCode.fromInt(100)
+        def proc = Mock(TaskProcessor) { getConfig() >> new ProcessConfig([:]) }
+        def handler = new CachedTaskHandler(Mock(TaskRun) { getProcessor() >> proc; getHash() >> hash }, new TraceRecord())
+
+        when: 'a completed task is re-executed, e.g. its outputs could not be resumed'
+        cache.writeTaskEntry0(handler, new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef']))
+        cache.writeTaskEntry0(handler, new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef-2']))
+        then:
+        cache.getTraceRecord(hash).workDir == '/work/ab/cdef-2'
+        and: 'cleaning one of the two runs keeps the entry'
+        !cache.removeTaskEntry(hash)
+        cache.removeTaskEntry(hash)
+
+        cleanup:
+        cache?.close()
+        folder?.deleteDir()
+    }
+
 }

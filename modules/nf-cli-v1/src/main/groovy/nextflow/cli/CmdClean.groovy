@@ -192,7 +192,7 @@ class CmdClean extends CmdBase implements CacheBase {
         if( dryRun ) {
             if( wouldRemove(hash,refCount) ) {
                 printMessage(record.workDir,true)
-                if( !keepLogs && record.isCompleted() )
+                if( !keepLogs && isCompleted(record) )
                     previousAttempts(hash, FileHelper.asPath(record.workDir)).each { dir -> printMessage(dir.toUriString(),true) }
             }
             return
@@ -205,13 +205,20 @@ class CmdClean extends CmdBase implements CacheBase {
             if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
                 if(!quiet) printMessage(record.workDir,false)
             }
-            if( !keepLogs && record.isCompleted() ) {
+            if( !keepLogs && isCompleted(record) ) {
                 for( Path dir : previousAttempts(hash, FileHelper.asPath(record.workDir)) ) {
                     if( deleteFolder(dir, false) && !quiet )
                         printMessage(dir.toUriString(),false)
                 }
             }
         }
+    }
+
+    /**
+     * Whether the record is of a completed attempt, also when listed by a run that resumed it
+     */
+    private static boolean isCompleted(TraceRecord record) {
+        return record.isCompleted() || record.isCached()
     }
 
     /**

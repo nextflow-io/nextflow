@@ -130,8 +130,8 @@ class CmdCleanTest extends Specification {
         def cleaner = new CmdClean(quiet: true, force: true)
         cleaner.@currentCacheDb = db
 
-        when:
-        cleaner.removeRecord(key, db.getTraceRecord(key), refCount)
+        when: 'the record is listed by the run that completed it, or by one that resumed it'
+        cleaner.removeRecord(key, db.getTraceRecord(key).setCached(cached), refCount)
 
         then: 'attempt 1 and 3 are removed along with attempt 4, the others are kept'
         dirs.collect { Files.exists(it) } == EXISTS
@@ -141,9 +141,10 @@ class CmdCleanTest extends Specification {
         folder?.deleteDir()
 
         where:
-        refCount | EXISTS
-        1        | [false, true, false, false, true]
-        2        | [true, true, true, true, true]
+        refCount | cached | EXISTS
+        1        | false  | [false, true, false, false, true]
+        1        | true   | [false, true, false, false, true]
+        2        | false  | [true, true, true, true, true]
     }
 
     def 'should not remove the previous attempts of a failed task' () {

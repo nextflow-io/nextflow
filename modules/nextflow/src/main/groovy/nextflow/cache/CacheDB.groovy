@@ -192,11 +192,20 @@ class CacheDB implements Closeable {
         def record = new ArrayList(3)
         record[0] = trace.serialize()
         record[1] = ctx != null ? ctx.serialize() : null
-        record[2] = 1
+        record[2] = refCount(key) + 1
 
         // -- save in the db
         store.putEntry( key, KryoHelper.serialize(record) )
 
+    }
+
+    /**
+     * The reference count of the entry a new one replaces, e.g. a completed task re-executed because
+     * its outputs could not be resumed: the runs that listed the previous entry now list this one.
+     */
+    private int refCount(HashCode key) {
+        final payload = store.getEntry(key)
+        return payload ? (Integer)((List)KryoHelper.deserialize(payload))[2] : 0
     }
 
     /**
