@@ -73,6 +73,20 @@ fi
 
 echo "✅ All required environment variables are set"
 
+# A release must run once. GitHub can deliver the same push twice, and re-running a CI run
+# re-runs its release job: either would re-publish artifacts over an existing release.
+VERSION=$(cat VERSION)
+# --exit-code returns 2 when the tag is missing, anything else is a network or auth error
+rc=0
+git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null || rc=$?
+if [ $rc -eq 0 ]; then
+    echo "❌ ERROR: Tag v$VERSION already exists -- this version has already been released"
+    exit 1
+elif [ $rc -ne 2 ]; then
+    echo "❌ ERROR: Cannot check tag v$VERSION on origin (git exit $rc)"
+    exit 1
+fi
+
 echo "🔧 === Step 1: Assemble, upload, and deploy ==="
 make assemble upload deploy
 echo "✅ Step 1 completed successfully"
