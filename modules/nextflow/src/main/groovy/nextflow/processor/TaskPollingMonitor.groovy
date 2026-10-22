@@ -680,7 +680,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 submit(handler)
             }
             catch ( Throwable e ) {
-                handleException(handler, e)
+                handleSubmitException(handler, e)
                 notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
@@ -691,6 +691,26 @@ class TaskPollingMonitor implements TaskMonitor {
         return count
     }
 
+
+    /**
+     * Handle an error raised while submitting a task. Since the task
+     * never ran, it is finalized here unless it is retried.
+     *
+     * A task array is handled as the failure of each of its child tasks.
+     */
+    final protected void handleSubmitException( TaskHandler handler, Throwable error ) {
+        if( evict(handler) ) {
+            handler.decProcessForks()
+        }
+        final handlers = handler.task instanceof TaskArrayRun
+            ? (handler.task as TaskArrayRun).children
+            : List.of(handler)
+        for( TaskHandler it : handlers ) {
+            final fault = it.task.processor.finalizeFailedTask(it, error)
+            if( fault instanceof TaskFault )
+                session.fault(fault, it)
+        }
+    }
 
     final protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
