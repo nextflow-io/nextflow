@@ -21,6 +21,8 @@ import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzStorageOpts
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
@@ -60,6 +62,10 @@ class AzFusionEnv implements FusionEnv {
 
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
 
+        final endpoint = cfg.storage().endpoint
+        if( endpoint != AzStorageOpts.parseEndpoint(null, cfg.storage().accountName) )
+            result.AZURE_STORAGE_ENDPOINT = endpoint
+
         // If pool has a managed identity, ONLY add the MSI client ID
         // DO NOT add any SAS token or reference cfg.storage().sasToken
         if (managedIdentityId) {
@@ -73,6 +79,10 @@ class AzFusionEnv implements FusionEnv {
             // No SAS token is added or generated
             return result
         }
+
+        // OneLake only accepts Entra tokens, so a SAS token cannot be used
+        if( AzFileSystemProvider.isOneLake(endpoint) )
+            throw new IllegalArgumentException("Fusion with OneLake requires a managed identity -- set `azure.batch.poolIdentityClientId`")
 
         // If no managed identity, use the standard environment with SAS token
         result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
