@@ -18,6 +18,7 @@ package nextflow.processor
 
 
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.locks.ReentrantLock
 
 import nextflow.Session
 import nextflow.exception.ProcessFailedException
@@ -473,5 +474,76 @@ class TaskPollingMonitorTest extends Specification {
         0 * handler.submit()
         processor.state.val.completed == 1
         processor.forksCount.sum() == 0
+    }
+    @Unroll
+    def 'should finalize task when checking its status fails [errorStrategy: #STRATEGY]' () {
+        given:
+        def session = Mock(Session) {
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        processor.forksCount.increment()
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: STRATEGY, maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            checkIfRunning() >> { throw new ProcessFailedException("Process 'foo' failed") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingLock = new ReentrantLock()
+        monitor.@slotAvail = monitor.@pendingLock.newCondition()
+        monitor.runningQueue.add(handler)
+
+        when:
+        monitor.checkAllTasks([handler])
+        processor.state.await()
+        then:
+        1 * handler.kill()
+        1 * session.notifyTaskComplete(handler)
+        and:
+        task.errorAction == ErrorStrategy.valueOf(STRATEGY.toUpperCase())
+        processor.state.val.completed == COMPLETED
+        processor.forksCount.sum() == 0
+        monitor.runningQueue.isEmpty()
+
+        where:
+        STRATEGY    | COMPLETED
+        'ignore'    | 1
+        'retry'     | 0
+    }
+
+    def 'should not finalize task twice when an error is raised after it was finalized' () {
+        given:
+        def session = Mock(Session) {
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+        task.error = new Exception('Task failed')
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            checkIfCompleted() >> true
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingLock = new ReentrantLock()
+        monitor.@slotAvail = monitor.@pendingLock.newCondition()
+        monitor.@enableAsyncFinalizer = false
+        monitor.runningQueue.add(handler)
+
+        when:
+        monitor.checkAllTasks([handler])
+        processor.state.await()
+        then:
+        1 * session.notifyTaskComplete(handler) >> { throw new RuntimeException('Failed to notify task completion') }
+        and:
+        task.errorAction == ErrorStrategy.TERMINATE
+        processor.state.val.completed == 1
     }
 }
