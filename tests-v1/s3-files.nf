@@ -37,8 +37,8 @@ process bar {
 }
 
 workflow {
-  def s3file = file('s3://nextflow-ci-rnaseq-nf/data/ggal/transcript.fa')
-  def s3glob = Channel.fromFilePairs('s3://nextflow-ci-rnaseq-nf/data/ggal/*_{1,2}.fq')
+  def s3file = file('s3://rnaseq-nf/data/ggal/transcript.fa')
+  def s3glob = Channel.fromFilePairs('s3://rnaseq-nf/data/ggal/*_{1,2}.fq')
 
   foo(s3file)
   bar(s3glob)
