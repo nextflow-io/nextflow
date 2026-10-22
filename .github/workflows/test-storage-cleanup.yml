@@ -1,0 +1,51 @@
+name: 'Clean up cloud test storage'
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only report what would be deleted'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    # secrets are only available in the upstream repository
+    if: ${{ github.repository == 'nextflow-io/nextflow' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # scheduled runs delete for real, manual runs default to a dry run
+      DELETE_FLAG: ${{ (github.event_name == 'schedule' || inputs.dry_run == false) && '--delete' || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: pip install 'azure-storage-blob>=12.19,<13' 'google-cloud-storage>=2.14,<4'
+
+      # empties the `my-data` container and deletes the `nf-az-blob-*` containers leaked by tests
+      - name: Clean up Azure storage
+        if: always()
+        run: python3 .github/scripts/azure-storage-cleanup.py --empty my-data --max-age-hours 24 $DELETE_FLAG
+        env:
+          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
+          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+
+      # deletes the objects older than 7 days, except the test input data listed after each bucket name
+      - name: Clean up Google storage
+        if: always()
+        run: |
+          printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
+          python3 .github/scripts/gcs-storage-cleanup.py --max-age-days 7 $DELETE_FLAG \
+            --bucket 'rnaseq-nf:data/,multiqc/,chipseq/,fetchngs/,viralrecon/,hello' \
+            --bucket 'nf-data:covid-input/,rnaseq/'
+        env:
+          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
