@@ -97,7 +97,6 @@ jobs:
         run: |
             # the OIDC credentials step sets AWS_REGION/AWS_DEFAULT_REGION, but unit tests expect none (e.g. `aws` cli without `--region`)
             unset AWS_REGION AWS_DEFAULT_REGION
-            env | sort
             # configure test env
             if [[ "$GOOGLE_SECRET" ]]; then
             echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
@@ -195,7 +194,6 @@ jobs:
 
       - name: Run tests
         run: |
-          env | sort
           # configure test env
           if [[ "$GOOGLE_SECRET" ]]; then
           echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
