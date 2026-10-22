@@ -657,17 +657,13 @@ class AzNioTest extends Specification implements AzBaseSpec {
         when:
         Set<String> dirs = []
         Set<String> files = []
-        // only descend into the containers created by this test, the account may hold any other data
-        Set<String> ownBuckets = ["/$bucketName1", "/$bucketName2", "/$bucketName3"].collect { it.toString() }
-        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+        def visitor = new SimpleFileVisitor<Path>() {
 
             @Override
             FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
                     throws IOException
             {
                 dirs << dir.toString()
-                if( dir.nameCount == 1 && !ownBuckets.contains(dir.toString()) )
-                    return FileVisitResult.SKIP_SUBTREE
                 return FileVisitResult.CONTINUE;
             }
 
@@ -678,11 +674,15 @@ class AzNioTest extends Specification implements AzBaseSpec {
                 return FileVisitResult.CONTINUE;
             }
 
-        })
+        }
+        // walk each container created by this test rather than the whole account from the root:
+        // walking the root reads the attributes of every container, which fails when a concurrent
+        // test run deletes its own containers meanwhile, and it's slow when the account holds other data
+        for( String bucket : [bucketName1, bucketName2, bucketName3] )
+            Files.walkFileTree(Paths.get(new URI("az://$bucket/")), visitor)
         then:
         println dirs
         println files
-        dirs.contains('/')
         dirs.contains("/$bucketName1" as String)
         dirs.contains("/$bucketName2" as String)
         dirs.contains("/$bucketName2/foo" as String)
