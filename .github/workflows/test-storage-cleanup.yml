@@ -39,14 +39,14 @@ jobs:
           AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
           AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
 
-      # deletes the objects older than 1 day, except the test input data listed after each bucket name
+      # deletes the objects older than 1 day under the CI work dirs and caches
       - name: Clean up Google storage
         if: always()
         run: |
           printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
           python3 .github/scripts/gcs-storage-cleanup.py --max-age-days 1 $DELETE_FLAG \
-            --bucket 'rnaseq-nf:data/,multiqc/,chipseq/,fetchngs/,viralrecon/,hello' \
-            --bucket 'nf-data:covid-input/,rnaseq/'
+            --path gs://rnaseq-nf/scratch/ \
+            --path gs://rnaseq-nf/cache/
         env:
           GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
