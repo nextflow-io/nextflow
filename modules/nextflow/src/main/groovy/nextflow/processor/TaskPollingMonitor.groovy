@@ -671,16 +671,18 @@ class TaskPollingMonitor implements TaskMonitor {
         while( itr.hasNext() && session.canSubmitTasks() ) {
             final handler = itr.next()
             submitRateLimit?.acquire()
+            boolean forked = false
             try {
                 if( !canSubmit(handler) )
                     continue
 
                 count++
                 handler.incProcessForks()
+                forked = true
                 submit(handler)
             }
             catch ( Throwable e ) {
-                handleSubmitException(handler, e)
+                handleSubmitException(handler, e, forked)
                 notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
@@ -697,9 +699,14 @@ class TaskPollingMonitor implements TaskMonitor {
      * never ran, it is finalized here unless it is retried.
      *
      * A task array is handled as the failure of each of its child tasks.
+     *
+     * @param forked Whether a fork slot was acquired for the task, i.e. the
+     *      error was raised after the task was accepted for submission
      */
-    final protected void handleSubmitException( TaskHandler handler, Throwable error ) {
-        if( evict(handler) ) {
+    final protected void handleSubmitException( TaskHandler handler, Throwable error, boolean forked ) {
+        // release the fork slot even if the task never reached the running queue
+        if( forked ) {
+            evict(handler)
             handler.decProcessForks()
         }
         final handlers = handler.task instanceof TaskArrayRun
