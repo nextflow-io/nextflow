@@ -210,8 +210,15 @@ class CacheDB implements Closeable {
             return task.hash
         final suffix = task.workDir?.fileName?.toString() =~ /-(\d+)$/
         final attempt = suffix.find() ? suffix.group(1) as int : 1
+        return attemptKey(task.hash, attempt)
+    }
+
+    /**
+     * The key of a failed or aborted attempt of the task with the given hash.
+     */
+    static HashCode attemptKey(HashCode hash, int attempt) {
         // negative, so it never matches a key of the per-attempt hash chain of previous versions
-        return HashBuilder.defaultHasher().putBytes(task.hash.asBytes()).putInt(-attempt).hash()
+        return HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(-attempt).hash()
     }
 
     /**
