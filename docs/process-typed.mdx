@@ -316,7 +316,7 @@ process cat_samples {
 In this example, the files are staged as `fastq1/<name>`, `fastq2/<name>`, and so on.
 
 :::note
-Wildcards in a file pattern are numbered separately for each `stageAs` directive, based on the files staged by that directive. If a directive stages the values of a nullable field, the files are numbered after `null` values are removed, so the files of a record might not have the same number in each directive.
+The `stageAs` directive doesn't accept `null` values. To stage a nullable field, remove the `null` values first, e.g. `stageAs samples*.idx.findAll { idx -> idx != null }, 'idx?/*'`. Wildcards are numbered separately for each `stageAs` directive, after the `null` values are removed, so the files of a record might not have the same number in each directive.
 :::
 
 For more information about the available stage directives, see [Inputs and outputs (typed)][process-reference-typed].
