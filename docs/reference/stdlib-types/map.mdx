@@ -39,9 +39,9 @@ Returns `true` if the map maps one or more keys to the given value.
 
 Invokes the given closure for each key-value pair in the map. The closure should accept two parameters corresponding to the key and value of an entry.
 
-##### `entrySet() -> Set<(K,V)>`
+##### `entrySet() -> Set<Map.Entry<K,V>>`
 
-Returns a set of the key-value pairs in the map.
+Returns a set of the key-value pairs in the map. See [Map.Entry](#map-entry) for the operations available for each entry.
 
 ##### `every( condition: (K,V) -> Boolean ) -> Boolean`
 
@@ -70,5 +70,24 @@ Returns a collection of the values in the map.
 :::note
 Maps in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
+
+## Map.Entry\<K,V\> {#map-entry}
+
+A map entry is a key-value pair in a map. Map entries are returned by `Map.entrySet()`:
+
+```nextflow
+def m = [a: 1, b: 2]
+m.entrySet().collect { e -> "${e.key}:${e.value}" }   // -> ['a:1', 'b:2']
+```
+
+The following properties are available for a map entry:
+
+##### `key: K`
+
+The key of the entry.
+
+##### `value: V`
+
+The value of the entry.
 
 [script-map]: ../../script#maps
