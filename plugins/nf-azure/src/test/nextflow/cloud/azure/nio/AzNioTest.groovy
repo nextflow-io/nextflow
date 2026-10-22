@@ -634,8 +634,6 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucketName)
     }
 
-    // test fails on GHA, likely due to concurrent execution
-    @IgnoreIf({ System.getenv('GITHUB_ACTIONS') })
     def 'should list root directory' () {
         given:
         def bucketName1 = createBucket()
@@ -659,6 +657,8 @@ class AzNioTest extends Specification implements AzBaseSpec {
         when:
         Set<String> dirs = []
         Set<String> files = []
+        // only descend into the containers created by this test, the account may hold any other data
+        Set<String> ownBuckets = ["/$bucketName1", "/$bucketName2", "/$bucketName3"].collect { it.toString() }
         Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
 
             @Override
@@ -666,6 +666,8 @@ class AzNioTest extends Specification implements AzBaseSpec {
                     throws IOException
             {
                 dirs << dir.toString()
+                if( dir.nameCount == 1 && !ownBuckets.contains(dir.toString()) )
+                    return FileVisitResult.SKIP_SUBTREE
                 return FileVisitResult.CONTINUE;
             }
 
