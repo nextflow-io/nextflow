@@ -18,6 +18,7 @@
 package nextflow.exception
 
 import groovy.transform.CompileStatic
+import nextflow.util.StringUtils
 /**
  * Thrown the submission to a grid scheduler returned an error condition
  *
@@ -38,7 +39,8 @@ class ProcessNonZeroExitStatusException extends RuntimeException {
         super(message)
         this.reason = reason
         this.exitStatus = exitStatus
-        this.command = command
+        // the command is only reported (logs, task script) and may embed credentials, e.g. the Fusion env
+        this.command = StringUtils.stripSecrets(command)
     }
 
 }

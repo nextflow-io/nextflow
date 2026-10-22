@@ -36,6 +36,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
+import nextflow.util.StringUtils
 /**
  * A process wrapper adding the ability to access to the Posix PID
  * and the {@code hasExited} flag
@@ -158,7 +159,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final config = task.getContainerConfig()
         final containerOpts = task.config.getContainerOptions()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
-        log.debug "Launch cmd line: ${cmd}"
+        log.debug "Launch cmd line: ${StringUtils.stripSecrets(cmd)}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 

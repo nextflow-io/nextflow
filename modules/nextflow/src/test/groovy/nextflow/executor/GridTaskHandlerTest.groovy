@@ -51,6 +51,13 @@ class GridTaskHandlerTest extends Specification {
 
     }
 
+    def 'should strip secrets from submit error command' () {
+        when:
+        def error = new ProcessNonZeroExitStatusException('Error', 'reason', 1, 'docker run -e "AWS_SECRET_ACCESS_KEY=xyz" -e "FOO=bar" image:1')
+        then:
+        error.command == 'docker run -e "AWS_SECRET_ACCESS_KEY=********" -e "FOO=bar" image:1'
+    }
+
     def 'should capture error cause' () {
         given:
         def task = new TaskRun(name: 'foo', workDir: Paths.get('/some/work'))
