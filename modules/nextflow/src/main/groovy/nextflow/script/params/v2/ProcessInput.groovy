@@ -50,6 +50,12 @@ class ProcessInput implements InParam {
      */
     DataflowReadChannel channel
 
+    /**
+     * Channel (or value) given to the process when it is invoked,
+     * which is used to connect the process in the DAG.
+     */
+    Object rawChannel
+
     ProcessInput(String name, Class type, boolean optional) {
         this.name = name
         this.type = type
@@ -79,11 +85,6 @@ class ProcessInput implements InParam {
     @Override
     DataflowReadChannel getInChannel() {
         return channel
-    }
-
-    @Override
-    Object getRawChannel() {
-        throw new UnsupportedOperationException()
     }
 
     @Override

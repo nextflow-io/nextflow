@@ -204,6 +204,31 @@ class TaskFileCollectorTest extends Specification {
     }
 
     @Unroll
+    def 'should collect deleted output files' () {
+        given:
+        def task = new TaskRun(
+                name: 'foo',
+                config: new TaskConfig(),
+                workDir: Path.of('/work'),
+                deletedOutputs: [Path.of('/work/A.txt'), Path.of('/work/B.bam')] as Set )
+        and:
+        def collector = Spy(new TaskFileCollector([FILE_NAME], [:], task))
+
+        when:
+        def result = collector.collect()
+        then:
+        collector.fetchResultFiles(_,_) >> RESULTS
+        collector.checkFileExists(_) >> false
+        and:
+        result == EXPECTED
+
+        where:
+        FILE_NAME       | RESULTS                       | EXPECTED
+        'A.txt'         | []                            | [Path.of('/work/A.txt')]
+        '*.txt'         | []                            | [Path.of('/work/A.txt')]
+        '*'             | [Path.of('/work/C.txt')]      | [Path.of('/work/A.txt'), Path.of('/work/B.bam'), Path.of('/work/C.txt')]
+    }
+
     def 'should report missing output file error' () {
         given:
         def task = new TaskRun(

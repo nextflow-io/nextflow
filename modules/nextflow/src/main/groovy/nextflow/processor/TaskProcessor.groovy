@@ -1952,6 +1952,8 @@ class TaskProcessor {
             task.config.exitStatus = task.exitStatus
             // -- if it's OK collect results and finalize
             collectOutputs(task)
+            if( task.restoreDir )
+                restoreOutputs(task)
         }
         catch ( Throwable error ) {
             fault = resumeOrDie(task, error, handler.getTraceRecord())
@@ -1963,6 +1965,25 @@ class TaskProcessor {
             finalizeTask0(task)
 
         return fault
+    }
+
+    /**
+     * Move the output files of a restored task to its original work
+     * directory, keeping any original files that were not deleted,
+     * and delete the temporary work directory.
+     *
+     * @param task
+     */
+    @CompileStatic
+    protected void restoreOutputs(TaskRun task) {
+        for( final source : getPublishFiles(task) ) {
+            if( !source.startsWith(task.workDir) )
+                continue
+            final target = task.restoreDir.resolve(task.workDir.relativize(source).toString())
+            if( !target.exists() )
+                FileHelper.movePath(source, target)
+        }
+        FileHelper.deletePath(task.workDir)
     }
 
     /**
@@ -1985,6 +2006,10 @@ class TaskProcessor {
      */
     private void finalizeTask0( TaskRun task ) {
         log.trace "Finalize process > ${safeTaskName(task)}"
+
+        // -- the outputs of a restored task were already bound when it was resumed
+        if( task.restoreDir )
+            return
 
         // -- bind output (files)
         if( task.canBind ) {

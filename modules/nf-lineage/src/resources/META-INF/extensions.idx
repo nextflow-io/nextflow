@@ -18,3 +18,5 @@ nextflow.lineage.DefaultLinStoreFactory
 nextflow.lineage.LinExtensionImpl
 nextflow.lineage.LinObserverFactory
 nextflow.lineage.config.LineageConfig
+nextflow.lineage.cleanup.CleanupCacheStrategy
+nextflow.lineage.cleanup.CleanupTaskHasherFactory

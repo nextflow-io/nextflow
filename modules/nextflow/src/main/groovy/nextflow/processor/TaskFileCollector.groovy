@@ -63,6 +63,8 @@ class TaskFileCollector {
             final splitter = opts.glob ? FilePatternSplitter.glob().parse(filePattern) : null
             if( splitter?.isPattern() ) {
                 result = fetchResultFiles(filePattern, workDir)
+                if( task.deletedOutputs )
+                    result = addDeletedFiles(result, filePattern)
                 if( result && !opts.includeInputs ) {
                     result = excludeStagedInputs(result)
                     log.trace "Process ${task.lazyName()} > after removing staged inputs: ${result}"
@@ -72,7 +74,7 @@ class TaskFileCollector {
             else {
                 final path = opts.glob ? splitter.strip(filePattern) : filePattern
                 final file = workDir.resolve(path)
-                final exists = checkFileExists(file)
+                final exists = checkFileExists(file) || task.deletedOutputs?.contains(file)
                 if( exists )
                     result = List.of(file)
                 else
@@ -112,6 +114,23 @@ class TaskFileCollector {
         }
 
         return files.sort()
+    }
+
+    /**
+     * Add the deleted output files that match the given glob pattern
+     * to the collected files.
+     *
+     * @param files
+     * @param pattern
+     */
+    protected List<Path> addDeletedFiles(List<Path> files, String pattern) {
+        final matcher = FileHelper.getPathMatcherFor("glob:${pattern}", workDir.fileSystem)
+        final result = new TreeSet<Path>(files)
+        for( final file : task.deletedOutputs ) {
+            if( file.startsWith(workDir) && matcher.matches(workDir.relativize(file)) )
+                result.add(file)
+        }
+        return new ArrayList<Path>(result)
     }
 
     protected Map<String,?> visitOptions(String pattern) {

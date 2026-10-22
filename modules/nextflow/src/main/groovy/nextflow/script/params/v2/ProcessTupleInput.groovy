@@ -52,11 +52,6 @@ class ProcessTupleInput extends ProcessInput {
     }
 
     @Override
-    Object getRawChannel() {
-        throw new UnsupportedOperationException()
-    }
-
-    @Override
     def decodeInputs( List values ) {
         throw new UnsupportedOperationException()
     }
