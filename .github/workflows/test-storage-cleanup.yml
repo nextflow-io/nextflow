@@ -30,22 +30,22 @@ jobs:
       - name: Install dependencies
         run: pip install 'azure-storage-blob>=12.19,<13' 'google-cloud-storage>=2.14,<4'
 
-      # deletes the blobs older than 7 days in `my-data` (CI work dir and cache, see validation/azure.config)
+      # deletes the blobs older than 1 day in `my-data` (CI work dir and cache, see validation/azure.config)
       # and the `nf-az-blob-*` containers leaked by tests
       - name: Clean up Azure storage
         if: always()
-        run: python3 .github/scripts/azure-storage-cleanup.py --container my-data --max-age-days 7 --max-age-hours 24 $DELETE_FLAG
+        run: python3 .github/scripts/azure-storage-cleanup.py --container my-data --max-age-days 1 --max-age-hours 24 $DELETE_FLAG
         env:
           AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
           AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
 
-      # deletes the objects older than 7 days, except the test input data listed after each bucket name
+      # deletes the objects older than 1 day, except the test input data listed after each bucket name
       - name: Clean up Google storage
         if: always()
         run: |
           printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
-          python3 .github/scripts/gcs-storage-cleanup.py --max-age-days 7 $DELETE_FLAG \
+          python3 .github/scripts/gcs-storage-cleanup.py --max-age-days 1 $DELETE_FLAG \
             --bucket 'rnaseq-nf:data/,multiqc/,chipseq/,fetchngs/,viralrecon/,hello' \
             --bucket 'nf-data:covid-input/,rnaseq/'
         env:
