@@ -534,7 +534,10 @@ class AzBatchService implements Closeable {
         final container = task.getContainer()
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
-        final taskId = "nf-${task.hash.toString()}"
+        // every attempt of a task shares its hash: the work dir's attempt suffix (`-N`) keeps their ids
+        // apart, since a failed task is kept in the job by default
+        final suffix = task.workDir?.fileName?.toString() =~ /-\d+$/
+        final taskId = "nf-${task.hash.toString()}${suffix.find() ? suffix.group() : ''}"
         // get the pool config
         final pool = getPoolSpec(poolId)
         if( !pool )

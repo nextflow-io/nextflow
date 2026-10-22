@@ -26,9 +26,8 @@ import nextflow.util.HashBuilder
 import spock.lang.Specification
 
 /**
- * The default resolution loop, as it was in {@code TaskProcessor.checkCachedOrLaunchTask}: the
- * {@code tries} fold, the entry lookup, the resume, the bump past an existing work dir, the
- * creation of the first free one.
+ * The default resolution: one key for every attempt of a task, the resume from the work dir its entry
+ * names, the attempt suffix of the work dir, and the retry chain of caches written by previous versions.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -41,10 +40,8 @@ class DefaultTaskCacheStrategyTest extends Specification {
     def cleanup() { root?.deleteDir() }
 
     /**
-     * The per-attempt hash the loop derives for attempt {@code tries}: the task hash folded with the
-     * attempt number, CHAINED -- each attempt re-hashes the previous attempt's hash, so attempt 2 is
-     * {@code H(H(hash,1),2)}, and a task retried after {@code failCount} failures starts the chain at
-     * {@code H(hash, failCount+1)}.
+     * The per-attempt hash of previous versions: the task hash folded with the attempt number, CHAINED,
+     * so attempt 2 is {@code H(H(hash,1),2)}. Attempt 1 is the key of every attempt now.
      */
     private static HashCode attempt(HashCode hash, int tries, int failCount = 0) {
         def h = hash
@@ -56,6 +53,7 @@ class DefaultTaskCacheStrategyTest extends Specification {
     private TaskRun task(int failCount = 0) {
         Mock(TaskRun) {
             getFailCount() >> failCount
+            getRunType() >> (failCount ? TaskProcessor.RunType.RETRY : TaskProcessor.RunType.SUBMIT)
         }
     }
 
@@ -65,8 +63,8 @@ class DefaultTaskCacheStrategyTest extends Specification {
 
     def 'is always enabled: it is the fallback, not an extension'() {
         expect:
-        new DefaultTaskCacheStrategy().isEnabled(Mock(Session))
         new DefaultTaskCacheStrategy().isEnabled(null)
+        new DefaultTaskCacheStrategy().isEnabled(Mock(Session))
     }
 
     def 'creates the work dir of the first attempt and launches there when nothing is cached'() {
@@ -79,7 +77,7 @@ class DefaultTaskCacheStrategyTest extends Specification {
         when:
         new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
 
-        then: 'attempt 1 is looked up under the folded hash, not the task hash'
+        then: 'the task is keyed by the hash folded with 1, as a first attempt always was'
         1 * resolver.entry(attempt(hash, 1)) >> null
         1 * resolver.workDirFor(attempt(hash, 1)) >> workDir
         and: 'the directory is created here, before the launch, and nothing is resumed'
@@ -88,106 +86,124 @@ class DefaultTaskCacheStrategyTest extends Specification {
         0 * resolver.entry(_)
     }
 
-    def 'resumes from a completed entry whose work dir exists'() {
+    def 'resumes from the work dir named by the entry, whichever attempt completed'() {
         given:
         def resolver = Mock(TaskResolver)
         def task = task()
         def hash = HashCode.fromInt(100)
-        def resumeDir = Files.createDirectories(root.resolve('ab').resolve('cdef'))
+        def resumeDir = Files.createDirectories(root.resolve('ab').resolve('cdef-3'))
         def entry = entryIn(resumeDir)
 
         when:
         new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
 
-        then: 'the task is handed to the resolver, which resumes a copy of it (see TaskResolver.resume)'
+        then: 'ONE lookup -- the failed attempts are not needed'
         1 * resolver.entry(attempt(hash, 1)) >> entry
         1 * resolver.resume(task, attempt(hash, 1), resumeDir, entry) >> true
+        0 * resolver.entry(_)
         0 * resolver.launch(*_)
         0 * resolver.workDirFor(_)
     }
 
-    def 'bumps past an attempt whose work dir exists: not resuming, a stale entry, or a failed resume'() {
+    def 'launches in the next free work dir when the entry cannot be resumed'() {
         given:
         def resolver = Mock(TaskResolver)
         def task = task()
         def hash = HashCode.fromInt(100)
-        def usedDir = Files.createDirectories(root.resolve('ab').resolve('cdef'))
-        def freeDir = root.resolve('gh').resolve('ijkl')
+        def first = Files.createDirectories(root.resolve('ab').resolve('cdef'))
+        def next = root.resolve('ab').resolve('cdef-2')
 
         when: 'the run is not resuming'
         new DefaultTaskCacheStrategy().resolve(task, hash, false, resolver)
-        then: 'the existing entry is skipped without a resume and the next attempt is launched'
-        1 * resolver.entry(attempt(hash, 1)) >> entryIn(usedDir)
-        0 * resolver.resume(*_)
-        1 * resolver.entry(attempt(hash, 2)) >> null
-        1 * resolver.workDirFor(attempt(hash, 2)) >> freeDir
-        1 * resolver.launch(task, attempt(hash, 2), freeDir)
+        then: 'no lookup, and the existing directory is skipped'
+        0 * resolver.entry(_)
+        1 * resolver.workDirFor(attempt(hash, 1)) >> first
+        1 * resolver.launch(task, attempt(hash, 1), next)
 
-        when: 'the entry did not complete'
-        freeDir.deleteDir()
+        when: 'the completed entry names a work dir that is gone'
+        next.deleteDir()
         new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
         then:
-        1 * resolver.entry(attempt(hash, 1)) >> entryIn(usedDir, false)
+        1 * resolver.entry(attempt(hash, 1)) >> entryIn(root.resolve('gone'))
         0 * resolver.resume(*_)
-        1 * resolver.entry(attempt(hash, 2)) >> null
-        1 * resolver.workDirFor(attempt(hash, 2)) >> freeDir
-        1 * resolver.launch(task, attempt(hash, 2), freeDir)
+        1 * resolver.workDirFor(attempt(hash, 1)) >> first
+        1 * resolver.launch(task, attempt(hash, 1), next)
 
-        when: 'the entry completed but its outputs cannot be resumed'
-        freeDir.deleteDir()
+        when: 'its outputs cannot be resumed'
+        next.deleteDir()
         new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
         then:
-        1 * resolver.entry(attempt(hash, 1)) >> entryIn(usedDir)
-        1 * resolver.resume(task, attempt(hash, 1), usedDir, _) >> false
-        1 * resolver.entry(attempt(hash, 2)) >> null
-        1 * resolver.workDirFor(attempt(hash, 2)) >> freeDir
-        1 * resolver.launch(task, attempt(hash, 2), freeDir)
+        1 * resolver.entry(attempt(hash, 1)) >> entryIn(first)
+        1 * resolver.resume(task, attempt(hash, 1), first, _) >> false
+        1 * resolver.workDirFor(attempt(hash, 1)) >> first
+        1 * resolver.launch(task, attempt(hash, 1), next)
 
         when: 'the resume blows up'
-        freeDir.deleteDir()
+        next.deleteDir()
         new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
-        then: 'it is a warning, and the task re-executes in the next attempt'
-        1 * resolver.entry(attempt(hash, 1)) >> entryIn(usedDir)
-        1 * resolver.resume(task, attempt(hash, 1), usedDir, _) >> { throw new IOException('transient 500') }
-        1 * resolver.entry(attempt(hash, 2)) >> null
-        1 * resolver.workDirFor(attempt(hash, 2)) >> freeDir
-        1 * resolver.launch(task, attempt(hash, 2), freeDir)
+        then: 'it is a warning, and the task re-executes'
+        1 * resolver.entry(attempt(hash, 1)) >> entryIn(first)
+        1 * resolver.resume(task, attempt(hash, 1), first, _) >> { throw new IOException('transient 500') }
+        1 * resolver.workDirFor(attempt(hash, 1)) >> first
+        1 * resolver.launch(task, attempt(hash, 1), next)
         noExceptionThrown()
     }
 
-    def 'bumps past a work dir that exists without an entry -- an identical instance of this run'() {
+    def 'a retry keeps the key of the task and starts at the work dir of its attempt'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def key = attempt(HashCode.fromInt(100), 1)
+        def first = root.resolve('ab').resolve('cdef')
+
+        when: 'retried after two failures: the key passed in is the task key, not folded again'
+        new DefaultTaskCacheStrategy().resolve(task(2), key, false, resolver)
+        then:
+        1 * resolver.workDirFor(key) >> first
+        1 * resolver.launch(_, key, root.resolve('ab').resolve('cdef-3'))
+        0 * resolver.entry(_)
+
+        when: 'that work dir is in use -- e.g. by an identical task instance of this run'
+        Files.createDirectories(root.resolve('ab').resolve('cdef-4'))
+        new DefaultTaskCacheStrategy().resolve(task(3), key, false, resolver)
+        then:
+        1 * resolver.workDirFor(key) >> first
+        1 * resolver.launch(_, key, root.resolve('ab').resolve('cdef-5'))
+    }
+
+    def 'resumes a retry from a cache written by a previous version'() {
         given:
         def resolver = Mock(TaskResolver)
         def task = task()
         def hash = HashCode.fromInt(100)
-        def usedDir = Files.createDirectories(root.resolve('ab').resolve('cdef'))
-        def freeDir = root.resolve('gh').resolve('ijkl')
+        def resumeDir = Files.createDirectories(root.resolve('ij').resolve('klmn'))
+        def entry = entryIn(resumeDir)
+
+        when:
+        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
+
+        then: 'a failed entry under the task key is followed along the old per-attempt chain'
+        1 * resolver.entry(attempt(hash, 1)) >> entryIn(root.resolve('ab').resolve('cdef'), false)
+        1 * resolver.entry(attempt(hash, 2)) >> entryIn(root.resolve('ef').resolve('ghij'), false)
+        1 * resolver.entry(attempt(hash, 3)) >> entry
+        1 * resolver.resume(task, attempt(hash, 3), resumeDir, entry) >> true
+        0 * resolver.launch(*_)
+    }
+
+    def 'launches when the old per-attempt chain has no completed entry'() {
+        given:
+        def resolver = Mock(TaskResolver)
+        def task = task()
+        def hash = HashCode.fromInt(100)
+        def first = Files.createDirectories(root.resolve('ab').resolve('cdef'))
 
         when:
         new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
 
         then:
-        1 * resolver.entry(attempt(hash, 1)) >> null
-        1 * resolver.workDirFor(attempt(hash, 1)) >> usedDir
+        1 * resolver.entry(attempt(hash, 1)) >> entryIn(first, false)
         1 * resolver.entry(attempt(hash, 2)) >> null
-        1 * resolver.workDirFor(attempt(hash, 2)) >> freeDir
-        1 * resolver.launch(task, attempt(hash, 2), freeDir)
-    }
-
-    def 'starts counting attempts after the failures of a retried task'() {
-        given:
-        def resolver = Mock(TaskResolver)
-        def task = task(2)
-        def hash = HashCode.fromInt(100)
-        def workDir = root.resolve('ab').resolve('cdef')
-
-        when:
-        new DefaultTaskCacheStrategy().resolve(task, hash, false, resolver)
-
-        then:
-        1 * resolver.entry(attempt(hash, 3, 2)) >> null
-        1 * resolver.workDirFor(attempt(hash, 3, 2)) >> workDir
-        1 * resolver.launch(task, attempt(hash, 3, 2), workDir)
+        1 * resolver.workDirFor(attempt(hash, 1)) >> first
+        1 * resolver.launch(task, attempt(hash, 1), root.resolve('ab').resolve('cdef-2'))
     }
 
     def 'fails when the work dir cannot be created'() {
@@ -201,73 +217,10 @@ class DefaultTaskCacheStrategyTest extends Specification {
         new DefaultTaskCacheStrategy().resolve(task, hash, false, resolver)
 
         then:
-        1 * resolver.entry(_) >> null
         1 * resolver.workDirFor(_) >> blocker.resolve('xy')
         0 * resolver.launch(*_)
         def err = thrown(IOException)
         err.message.startsWith('Unable to create directory=')
-    }
-
-    def 'resumes from the realized-hash index, skipping the attempt walk'() {
-        given:
-        def resolver = Mock(TaskResolver)
-        def task = Spy(new TaskRun()) { lazyName() >> 'foo' }
-        def hash = HashCode.fromInt(100)
-        def realized = HashCode.fromInt(200)
-        def resumeDir = Files.createDirectories(root.resolve('cd').resolve('ef01'))
-        def entry = entryIn(resumeDir)
-
-        when:
-        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
-
-        then: 'the task hash is kept as the index key and the indexed entry is resumed, flagged as such'
-        task.contentHash == hash
-        1 * resolver.realizedHash(hash) >> realized
-        1 * resolver.entry(realized) >> entry
-        1 * resolver.resume(task, realized, resumeDir, entry) >> { assert task.resumedFromIndex; true }
-        0 * resolver.launch(*_)
-        and: 'the flag does not outlive the resume'
-        !task.resumedFromIndex
-    }
-
-    def 'falls back to the attempt walk when the realized hash is stale'() {
-        given:
-        def resolver = Mock(TaskResolver)
-        def task = Spy(new TaskRun()) { lazyName() >> 'foo' }
-        def hash = HashCode.fromInt(100)
-        def stale = HashCode.fromInt(200)
-        def workDir = root.resolve('ab').resolve('cdef')
-
-        when:
-        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
-
-        then: 'a missing entry, or one whose work dir is gone, is not resumed'
-        1 * resolver.realizedHash(hash) >> stale
-        1 * resolver.entry(stale) >> entryIn(root.resolve('gone'))
-        and: 'the walk launches attempt 1'
-        1 * resolver.entry(attempt(hash, 1)) >> null
-        1 * resolver.workDirFor(attempt(hash, 1)) >> workDir
-        1 * resolver.launch(task, attempt(hash, 1), workDir)
-        0 * resolver.resume(*_)
-    }
-
-    def 'does not consult the realized-hash index when not resuming, and keeps the content hash on a retry'() {
-        given:
-        def resolver = Mock(TaskResolver)
-        def content = HashCode.fromInt(100)
-        def task = Spy(new TaskRun(contentHash: content)) { lazyName() >> 'foo'; getFailCount() >> 1 }
-        def hash = HashCode.fromInt(300)
-
-        when:
-        new DefaultTaskCacheStrategy().resolve(task, hash, false, resolver)
-
-        then:
-        0 * resolver.realizedHash(_)
-        1 * resolver.entry(attempt(hash, 2, 1)) >> null
-        1 * resolver.workDirFor(_) >> root.resolve('ab').resolve('cdef')
-        1 * resolver.launch(*_)
-        and:
-        task.contentHash == content
     }
 
 }

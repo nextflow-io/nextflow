@@ -28,7 +28,9 @@ import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
+import nextflow.util.HashBuilder
 import nextflow.util.KryoHelper
 /**
  * Manages nextflow cache DB
@@ -96,7 +98,7 @@ class CacheDB implements Closeable {
      *
      * <p>What a dropped write costs depends on which one it was, so the message stays neutral:
      * a failed {@code putTaskAsync} leaves the task non-resumable, so it re-executes on the next
-     * resume; a failed {@code putIndexAsync} only affects {@code nextflow log} and {@code clean},
+     * resume, and its index row is lost, which only affects {@code nextflow log} and {@code clean},
      * since resume reads the entry through {@link #getTaskEntry}; a failed {@code cacheTaskAsync}
      * leaves the reference count stale. Surfacing the error makes all three visible (and is the
      * natural hook for a future retry at the store level).
@@ -113,25 +115,6 @@ class CacheDB implements Closeable {
                 log.warn("Unable to persist cache record for ${what}", e)
             }
         }
-    }
-
-    /**
-     * Retrieve the final hash of a successful execution for the given content hash.
-     *
-     * @param contentHash The content-based task hash (before try-mixing)
-     * @return The {@link HashCode} of a successful execution, or {@code null} if absent
-     */
-    HashCode getRealizedHash(HashCode contentHash) {
-        return store.getRealizedHash(contentHash)
-    }
-
-    /**
-     * Asynchronously write the realized-hash index pointer. Enqueued on the
-     * same writer agent as {@link #putTaskAsync}, so it is serialized AFTER the
-     * corresponding entry write (commit-marker discipline).
-     */
-    void putRealizedHashAsync(HashCode contentHash, HashCode finalHash) {
-        dispatchWrite("realized-hash index ${contentHash}") { store.putRealizedHash(contentHash, finalHash) }
     }
 
     /**
@@ -185,19 +168,6 @@ class CacheDB implements Closeable {
         }
         else {
             store.deleteEntry(hash)
-            // -- remove the realized-hash index pointer, but only when it
-            //    targets this very entry (a failed attempt shares the same
-            //    content hash, yet the pointer aims at the successful one).
-            //    Best-effort: a bad/unreadable pointer must never derail entry
-            //    removal -- it self-heals on the next resume.
-            try {
-                final contentHash = record.size()>3 && record[3]!=null ? HashCode.fromBytes((byte[])record[3]) : null
-                if( contentHash != null && store.getRealizedHash(contentHash) == hash )
-                    store.deleteRealizedHash(contentHash)
-            }
-            catch( Exception e ) {
-                log.debug "Unable to clean realized-hash index pointer for entry $hash -- ${e.message}"
-            }
             return true
         }
     }
@@ -213,27 +183,47 @@ class CacheDB implements Closeable {
 
         final task = handler.task
         final proc = task.processor
-        final key = task.hash
+        final key = entryKey(task, trace)
 
         // save the context map for caching purpose
         // only the 'cache' is active and
         TaskContext ctx = proc.isCacheable() && task.hasCacheableValues() ? task.context : null
 
-        def record = new ArrayList(4)
+        def record = new ArrayList(3)
         record[0] = trace.serialize()
         record[1] = ctx != null ? ctx.serialize() : null
         record[2] = 1
-        // fourth slot keeps the task content hash so the realized-hash index
-        // pointer can be located and removed when this entry is deleted
-        record[3] = task.contentHash?.asBytes()
 
         // -- save in the db
         store.putEntry( key, KryoHelper.serialize(record) )
 
     }
 
+    /**
+     * The key a task attempt is recorded under: the task hash, which is what resume looks up, unless
+     * the attempt failed or was aborted: then a key of its own, so that a later attempt of the same
+     * task does not replace it -- every attempt shares the task hash, see
+     * {@link nextflow.processor.DefaultTaskCacheStrategy}.
+     */
+    static HashCode entryKey(TaskRun task, TraceRecord trace) {
+        if( trace.get('status') !in ['FAILED', 'ABORTED'] )
+            return task.hash
+        final suffix = task.workDir?.fileName?.toString() =~ /-(\d+)$/
+        final attempt = suffix.find() ? suffix.group(1) as int : 1
+        // negative, so it never matches a key of the per-attempt hash chain of previous versions
+        return HashBuilder.defaultHasher().putBytes(task.hash.asBytes()).putInt(-attempt).hash()
+    }
+
+    /**
+     * Record a task attempt and its index row. The index row is written here rather than on submit,
+     * since its key depends on the outcome -- see {@link #entryKey}.
+     */
     void putTaskAsync( TaskHandler handler, TraceRecord trace ) {
-        dispatchWrite("task entry ${handler.task.hash}") { writeTaskEntry0(handler, trace) }
+        final key = entryKey(handler.task, trace)
+        dispatchWrite("task entry ${key}") {
+            writeTaskEntry0(handler, trace)
+            store.writeIndex(key, false)
+        }
     }
 
     void cacheTaskAsync( TaskHandler handler ) {
@@ -243,8 +233,11 @@ class CacheDB implements Closeable {
         }
     }
 
+    /**
+     * No-op: the index row of a task is written on completion by {@link #putTaskAsync}, once its key
+     * is known. A task that never completes has no entry, so it would not be listed anyway.
+     */
     void putIndexAsync(TaskHandler handler ) {
-        dispatchWrite("task index ${handler.task.hash}") { writeTaskIndex0(handler) }
     }
 
     @PackageScope

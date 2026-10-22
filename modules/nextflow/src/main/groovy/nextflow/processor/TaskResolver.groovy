@@ -77,13 +77,4 @@ interface TaskResolver {
      */
     Path workDirFor(HashCode key)
 
-    /**
-     * The hash of the successful execution recorded for a task content hash, if any -- see
-     * {@link TaskRun#contentHash}.
-     *
-     * @param contentHash The task hash before it is folded with the attempt number.
-     * @return The key of the successful entry, or {@code null} when none is indexed.
-     */
-    default HashCode realizedHash(HashCode contentHash) { null }
-
 }
