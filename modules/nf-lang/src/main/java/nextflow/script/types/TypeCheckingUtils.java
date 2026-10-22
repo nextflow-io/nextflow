@@ -167,13 +167,13 @@ public class TypeCheckingUtils {
     }
 
     public static FieldNode resolveProperty(ClassNode receiverType, String property) {
-        receiverType = Types.normalize(receiverType);
-        if( receiverType == null )
+        var cn = Types.normalize(receiverType);
+        if( cn == null )
             return null;
-        var result = receiverType.getField(property);
+        var result = cn.getField(property);
         if( result != null )
             return result;
-        return receiverType.getMethods().stream()
+        return cn.getMethods().stream()
             .filter((mn) -> {
                 if( !mn.isPublic() )
                     return false;
@@ -183,13 +183,14 @@ public class TypeCheckingUtils {
                 return property.equals(an.get().getMember("value").getText());
             })
             .map((mn) -> {
-                var fn = new FieldNode(property, 0xF, mn.getReturnType(), mn.getDeclaringClass(), null);
+                var type = resolveGenericType(mn.getReturnType(), cn);
+                var fn = new FieldNode(property, 0xF, type, mn.getDeclaringClass(), null);
                 findAnnotation(mn, Description.class).ifPresent((an) -> {
                     fn.addAnnotation(an);
                 });
                 return fn;
             })
-            .findFirst().orElse(resolveMapProperty(receiverType, property));
+            .findFirst().orElse(resolveMapProperty(cn, property));
     }
 
     private static FieldNode resolveMapProperty(ClassNode cn, String name) {
