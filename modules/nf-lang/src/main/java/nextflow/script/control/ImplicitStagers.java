@@ -23,7 +23,6 @@ import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
@@ -61,7 +60,10 @@ class ImplicitStagers {
 
     private static void visitInputType(ClassNode cn, Expression target, boolean spread, BlockStatement stagers) {
         if( isPathType(cn) ) {
-            var value = spread ? flattenNonNull(target) : target;
+            var value =
+                !spread ? target :
+                isCollection(cn) ? flattenOneLevel(target) :
+                filterNonNull(target);
             var stager = stmt(callThisX("stageAs", args(closureX(stmt(value)))));
             stagers.addStatement(stager);
         }
@@ -79,25 +81,26 @@ class ImplicitStagers {
         }
     }
 
+    /**
+     * Flatten a collection of collections by one level,
+     * skipping null values (i.e. from nullable fields).
+     *
+     * @param target
+     */
     private static Expression flattenOneLevel(Expression target) {
         var e = param(ClassHelper.dynamicType(), "e");
         return safeCallX(target, "collectMany", args(closureX(params(e), stmt(varX(e)))));
     }
 
     /**
-     * Flatten the values collected from a record collection and
-     * discard null values (i.e. from nullable fields).
+     * Discard null values (i.e. from nullable fields).
      *
      * @param target
      */
-    private static Expression flattenNonNull(Expression target) {
+    private static Expression filterNonNull(Expression target) {
         var p = param(ClassHelper.dynamicType(), "p");
         var notNull = closureX(params(p), stmt(notNullX(varX(p))));
-        return safeCallX(safeCallX(target, "flatten"), "findAll", args(notNull));
-    }
-
-    private static Expression safeCallX(Expression target, String name) {
-        return safeCallX(target, name, MethodCallExpression.NO_ARGUMENTS);
+        return safeCallX(target, "findAll", args(notNull));
     }
 
     private static Expression safeCallX(Expression target, String name, Expression args) {
@@ -118,6 +121,10 @@ class ImplicitStagers {
             return Path.class.isAssignableFrom(elementType.getTypeClass());
         }
         return false;
+    }
+
+    private static boolean isCollection(ClassNode cn) {
+        return Collection.class.isAssignableFrom(cn.getTypeClass());
     }
 
     private static boolean isRecordType(ClassNode cn) {

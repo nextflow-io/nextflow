@@ -79,19 +79,19 @@ class ImplicitStagersTest extends Specification {
         'vcf: Vcf'                              || ['vcf?.vcf', 'vcf?.tbi', 'vcf?.extra']
         'vcf: Vcf?'                             || ['vcf?.vcf', 'vcf?.tbi', 'vcf?.extra']
         'vcfs: List<Vcf>'                       || [
-            'vcfs*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'vcfs*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'vcfs*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })'
+            'vcfs*.vcf?.findAll({ java.lang.Object p -> ... })',
+            'vcfs*.tbi?.findAll({ java.lang.Object p -> ... })',
+            'vcfs*.extra?.collectMany({ java.lang.Object e -> ... })'
         ]
         'record(id: String, vcfs: List<Vcf>)'  || [
-            'vcfs*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'vcfs*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'vcfs*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })'
+            'vcfs*.vcf?.findAll({ java.lang.Object p -> ... })',
+            'vcfs*.tbi?.findAll({ java.lang.Object p -> ... })',
+            'vcfs*.extra?.collectMany({ java.lang.Object e -> ... })'
         ]
         'cohorts: List<Cohort>'                 || [
-            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.vcf?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.tbi?.flatten()?.findAll({ java.lang.Object p -> ... })',
-            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.extra?.flatten()?.findAll({ java.lang.Object p -> ... })'
+            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.vcf?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.tbi?.findAll({ java.lang.Object p -> ... })',
+            'cohorts*.vcfs?.collectMany({ java.lang.Object e -> ... })*.extra?.collectMany({ java.lang.Object e -> ... })'
         ]
     }
 
