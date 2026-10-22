@@ -34,6 +34,7 @@ import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.SecretHelper
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
@@ -44,8 +45,11 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    // note: ?i stands for ignore case - ?m stands for multiline
-    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*)=(.*)$/
+    /**
+     * @deprecated Use {@link SecretHelper#SECRET_REGEX} instead
+     */
+    @Deprecated
+    static public final Pattern SECRET_REGEX = SecretHelper.SECRET_REGEX
 
     TraceRecord() {
         this.store = new LinkedHashMap<>(FIELDS.size())
@@ -280,7 +284,7 @@ class TraceRecord implements Serializable {
     }
 
     protected String secureEnvString( String str ) {
-        str.replaceAll(SECRET_REGEX, '$1=[secure]')
+        SecretHelper.secureEnvString(str)
     }
 
 
