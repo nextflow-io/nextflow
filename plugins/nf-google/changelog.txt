@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.27.3-patch1 - 22 Oct 2026
+- Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
+
 1.27.4 - 8 Oct 2026
 - Bump vulnerable dependencies to patched releases (#7598) [2ade9fa99]
 
