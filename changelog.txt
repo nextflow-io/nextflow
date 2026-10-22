@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.9 - 22 Oct 2026
+- Improve redaction of sensitive values in logs (#7879) [d3cdded24]
+- Bump nf-google@1.27.3-patch1
+- Bump nf-k8s@1.5.4-patch1
+
 26.04.8 - 20 Oct 2026
 - Keep Bitbucket API token out of git clone URL and logs (#7870) [72e825ef1]
 - Prevent leaking environment secrets in CI (#7873) [a0ba70834]
