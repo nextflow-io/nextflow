@@ -315,6 +315,10 @@ Azure virtual machines come with fixed storage disks that are not expandable. Ta
 
 By default, Docker and containerd store image layers on the OS disk, which can fill up quickly when pulling large container images. On VMs with an attached data disk (for example, `Standard_E16ds_v5`), you can use a pool [start task](#start-tasks) to relocate Docker and containerd storage to `$AZ_BATCH_NODE_ROOT_DIR`. This directory uses the larger data disk.
 
+## File staging
+
+Unless you are using [Fusion](#fusion-file-system), tasks stage their files with AzCopy. When a task specifies [memory][process-memory], Nextflow limits the AzCopy buffer to fit it. Set the `AZCOPY_BUFFER_GB` environment variable to override it.
+
 ## Task containers
 
 Every process in your pipeline must specify a container to run on Azure Batch.
