@@ -27,6 +27,7 @@ import com.google.api.gax.rpc.ApiException
 import com.google.api.gax.rpc.Callables
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.InvalidArgumentException
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.StatusCode
 import com.google.api.gax.rpc.UnaryCallable
 import com.google.api.gax.rpc.UnavailableException
@@ -174,6 +175,37 @@ class BatchClientTest extends Specification{
         then:
         def name = JobName.of('project-id', 'location-id', 'job-1').toString()
         requests == [name, name]
+    }
+
+    def 'should not retry the deletion of a job that does not exist' () {
+        given:
+        def requests = []
+        def stub = new BatchServiceStub() {
+            @Override
+            UnaryCallable<DeleteJobRequest, Operation> deleteJobCallable() {
+                return new UnaryCallable<DeleteJobRequest, Operation>() {
+                    @Override
+                    ApiFuture<Operation> futureCall(DeleteJobRequest request, ApiCallContext context) {
+                        requests << request.getName()
+                        return ApiFutures.<Operation>immediateFailedFuture(new NotFoundException('not found', null, GrpcStatusCode.of(Status.Code.NOT_FOUND), false))
+                    }
+                }
+            }
+            @Override void close() {}
+            @Override void shutdown() {}
+            @Override boolean isShutdown() { false }
+            @Override boolean isTerminated() { false }
+            @Override void shutdownNow() {}
+            @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
+        }
+        def client = createClient(BatchServiceClient.create(stub))
+
+        when:
+        client.deleteJob('job-1')
+
+        then:
+        noExceptionThrown()
+        requests.size() == 1
     }
 
     def 'should return task status with getTaskInArray' () {

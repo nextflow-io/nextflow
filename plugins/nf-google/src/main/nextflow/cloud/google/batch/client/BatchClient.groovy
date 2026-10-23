@@ -168,7 +168,16 @@ class BatchClient {
             .setName(JobName.of(projectId, location, jobId).toString())
             .build()
         // wait for the deletion request to be accepted, but not for the deletion to complete
-        apply(()-> batchServiceClient.deleteJobCallable().call(request))
+        apply(()-> {
+            try {
+                return batchServiceClient.deleteJobCallable().call(request)
+            }
+            catch( NotFoundException e ) {
+                // the job no longer exists, there is nothing to delete or retry
+                log.debug "[GOOGLE BATCH] Job $jobId not found -- skipping deletion"
+                return null
+            }
+        })
     }
 
     TaskStatus getTaskStatus(String jobId, String taskId) {
