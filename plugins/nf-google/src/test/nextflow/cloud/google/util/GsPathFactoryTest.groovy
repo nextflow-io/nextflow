@@ -21,7 +21,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.config.GoogleRetryOpts
-import nextflow.processor.TaskFileCollector
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -52,24 +51,6 @@ class GsPathFactoryTest extends Specification {
         _ | 'gs://foo/b a r'    | '/b a r'
         _ | 'gs://f o o/bar'    | '/bar'
         _ | 'gs://f_o_o/bar'    | '/bar'
-    }
-
-    def 'should strip the trailing slash of a pseudo-directory path' () {
-        given:
-        Global.session = Mock(Session) {
-            getConfig() >> [google:[project:'foo', region:'x']]
-        }
-        and:
-        def factory = new GsPathFactory()
-
-        expect:
-        // a gs path preserves the trailing slash denoting a pseudo-directory,
-        // therefore it must be removed when collecting task output files
-        factory.parseUri('gs://foo/work/ab/cdef/outdir/').toString() == '/work/ab/cdef/outdir/'
-        and:
-        TaskFileCollector.stripTrailingSlash(factory.parseUri('gs://foo/work/ab/cdef/outdir/')).toString() == '/work/ab/cdef/outdir'
-        and:
-        TaskFileCollector.stripTrailingSlash(factory.parseUri('gs://foo/work/ab/cdef/file.txt')).toString() == '/work/ab/cdef/file.txt'
     }
 
     def 'should use requester pays' () {

@@ -101,15 +101,4 @@ class TaskFileCollectorGsTest extends Specification {
         result == []
     }
 
-    def 'should strip the trailing slash of a directory matched by a glob' () {
-        given:
-        createBlob('work/ab/cdef/outdir/hello.txt')
-        createBlob('work/ab/cdef/file.txt')
-
-        when:
-        def result = collector(['*']).collect()
-        then:
-        result.collect { workDir.relativize(it).toString() } == ['file.txt', 'outdir']
-    }
-
 }

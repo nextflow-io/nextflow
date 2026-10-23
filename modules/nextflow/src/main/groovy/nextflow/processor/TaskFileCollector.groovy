@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
+import org.apache.commons.lang3.StringUtils
 /**
  * Implements the collection of output files from a task
  * work directory.
@@ -71,7 +72,8 @@ class TaskFileCollector {
             }
             else {
                 final path = opts.glob ? splitter.strip(filePattern) : filePattern
-                final file = stripTrailingSlash(workDir.resolve(path))
+                // strip any trailing slash, cloud storage (e.g. GCS) would report it as an existing directory
+                final file = workDir.resolve(StringUtils.stripEnd(path, '/'))
                 final exists = checkFileExists(file)
                 if( exists )
                     result = List.of(file)
@@ -105,33 +107,13 @@ class TaskFileCollector {
 
         List<Path> files = []
         try {
-            FileHelper.visitFiles(opts, workDir, pattern) { Path it -> files.add(stripTrailingSlash(it)) }
+            FileHelper.visitFiles(opts, workDir, pattern) { Path it -> files.add(it) }
         }
         catch( NoSuchFileException e ) {
             throw new MissingFileException("Cannot access directory: '$workDir'", e)
         }
 
         return files.sort()
-    }
-
-    /**
-     * Remove the trailing slash of a directory path, if any.
-     *
-     * NOTE: the trailing slash of a directory path is preserved by some remote file
-     * systems (e.g. Google Cloud Storage), where it denotes a "pseudo-directory",
-     * but not by the local file system. Removing it makes an output directory
-     * consistent across file systems, which matters because the relative path of an
-     * output file is used as a lookup key when publishing it (see PublishOp) and
-     * when excluding staged inputs. It also ensures that the existence check queries
-     * the storage, since GCS reports any path with a trailing slash as existing.
-     *
-     * @param path
-     */
-    static protected Path stripTrailingSlash(Path path) {
-        final str = path.toString()
-        return path.nameCount>0 && str.endsWith('/')
-            ? path.getFileSystem().getPath(str.replaceAll('/+$', ''))
-            : path
     }
 
     protected Map<String,?> visitOptions(String pattern) {
