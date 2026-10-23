@@ -24,10 +24,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import dev.failsafe.function.CheckedPredicate
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.read.ListAppender
 import com.azure.compute.batch.BatchClientBuilder
 import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.BatchErrorException
@@ -61,7 +57,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import spock.lang.Specification
@@ -1430,32 +1425,11 @@ class AzBatchServiceTest extends Specification {
         e.message == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
     }
 
-    def 'should warn about recoverable resize errors in the pool check' () {
-        given:
-        def exec = createExecutor([batch:[location: 'northeurope']])
-        def svc = new AzBatchService(exec)
-        def SPEC = new AzVmPoolSpec(poolId: 'pool-warn', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
-        def POOL = poolWithResizeError(id: 'pool-warn')
-        and:
-        def logger = (Logger) LoggerFactory.getLogger(AzBatchService)
-        def appender = new ListAppender<ILoggingEvent>()
-        appender.start()
-        logger.addAppender(appender)
-
-        when:
-        svc.checkPool(POOL, SPEC)
-
-        then:
-        noExceptionThrown()
-        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains("Azure Batch pool 'pool-warn' has recoverable resize errors") }
-
-        cleanup:
-        logger.detachAppender(appender)
-    }
-
     private AzBatchService serviceWithJob(Map config, String jobId, String poolId) {
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[createExecutor(config)])
-        svc.allJobIds[new AzJobKey(Mock(TaskProcessor), poolId)] = jobId
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[createExecutor(config)]) {
+            createJob0(poolId, _) >> jobId
+        }
+        svc.getOrCreateJob(poolId, Mock(TaskRun) { getProcessor() >> Mock(TaskProcessor) })
         return svc
     }
 

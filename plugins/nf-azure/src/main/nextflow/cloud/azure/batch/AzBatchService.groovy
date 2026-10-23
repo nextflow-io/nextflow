@@ -79,7 +79,6 @@ import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonSlurper
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -123,7 +122,9 @@ class AzBatchService implements Closeable {
 
     Map<AzJobKey,String> allJobIds = new HashMap<>(50)
 
-    private final Map<String,PoolAllocation> poolAllocations = new ConcurrentHashMap<>()
+    private final Map<String,String> jobPoolIds = new ConcurrentHashMap<>()
+
+    private final Map<String,Optional<String>> poolAllocationErrors = new ConcurrentHashMap<>()
 
     private final Map<String,Long> poolAllocationChecks = new ConcurrentHashMap<>()
 
@@ -437,6 +438,7 @@ class AzBatchService implements Closeable {
         final jobId = createJob0(poolId,task)
         // add to the map
         allJobIds[mapKey] = jobId
+        jobPoolIds[jobId] = poolId
         return jobId
     }
 
@@ -782,11 +784,6 @@ class AzBatchService implements Closeable {
 
     private static final Duration POOL_ALLOCATION_CHECK_INTERVAL = Duration.ofMinutes(1)
 
-    @Canonical
-    protected static class PoolAllocation {
-        String error
-    }
-
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
@@ -811,7 +808,7 @@ class AzBatchService implements Closeable {
         // For a steady autoscale pool carrying only transient errors, a pending task is what triggers
         // a fresh resize (which clears the stale error), so do not block recovery.
         if( isRecoverableResizeError(pool) ) {
-            log.warn1 "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; waiting for a fresh resize - ${pool.resizeErrors*.code}"
+            log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; waiting for a fresh resize - ${pool.resizeErrors*.code}"
             return null
         }
         final errors = pool.resizeErrors.collect { it.message ? "${it.code}: ${it.message}".toString() : it.code }
@@ -829,34 +826,23 @@ class AzBatchService implements Closeable {
      * @return The pool resize error message, or {@code null} when the task can keep waiting
      */
     String poolAllocationError(AzTaskKey key) {
-        final poolId = poolIdForJob(key.jobId)
+        final poolId = jobPoolIds.get(key.jobId)
         if( !poolId )
             return null
-        final known = poolAllocations.get(poolId)
-        if( known )
-            return known.error
+        final known = poolAllocationErrors.get(poolId)
+        if( known != null )
+            return known.orElse(null)
         final now = System.currentTimeMillis()
         final last = poolAllocationChecks.get(poolId)
         if( last!=null && now - last < getPoolAllocationCheckInterval().toMillis() )
             return null
         poolAllocationChecks.put(poolId, now)
-        final result = poolAllocation(fetchPoolQuietly(poolId))
-        if( result )
-            poolAllocations.put(poolId, result)
-        return result?.error
-    }
-
-    /**
-     * @return The allocation outcome of the pool, or {@code null} when it is not known yet
-     */
-    protected PoolAllocation poolAllocation(BatchPool pool) {
-        if( !pool )
+        final pool = fetchPoolQuietly(poolId)
+        if( !pool || (!pool.isEnableAutoScale() && pool.allocationState != AllocationState.STEADY) )
             return null
-        if( pool.isEnableAutoScale() )
-            return new PoolAllocation()
-        if( pool.allocationState != AllocationState.STEADY )
-            return null
-        return new PoolAllocation(resizeError(pool))
+        final error = pool.isEnableAutoScale() ? null : resizeError(pool)
+        poolAllocationErrors.put(poolId, Optional.ofNullable(error))
+        return error
     }
 
     protected Duration getPoolAllocationCheckInterval() {
@@ -871,10 +857,6 @@ class AzBatchService implements Closeable {
             log.debug "[AZURE BATCH] Unable to fetch pool '$poolId' - ${e.message}"
             return null
         }
-    }
-
-    protected synchronized String poolIdForJob(String jobId) {
-        return allJobIds.find { Map.Entry<AzJobKey,String> entry -> entry.value == jobId }?.key?.poolId
     }
 
     /**
