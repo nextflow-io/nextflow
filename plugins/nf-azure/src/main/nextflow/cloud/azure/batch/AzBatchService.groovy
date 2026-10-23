@@ -69,7 +69,6 @@ import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.credential.TokenCredential
 import com.azure.core.exception.ClientAuthenticationException
 import com.azure.core.exception.HttpResponseException
-import com.azure.core.exception.ResourceNotFoundException
 import com.azure.core.http.rest.PagedIterable
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
@@ -876,8 +875,10 @@ class AzBatchService implements Closeable {
         catch (IllegalArgumentException | ClientAuthenticationException e) {
             throw e
         }
-        catch (ResourceNotFoundException ignored) {
-            return null
+        catch (HttpResponseException e) {
+            if( e.response?.statusCode == 404 )
+                return null
+            throw e
         }
     }
 
