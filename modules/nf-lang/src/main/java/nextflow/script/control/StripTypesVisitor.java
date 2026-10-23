@@ -88,6 +88,10 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
             if( isNamedRecordType(param.getType()) )
                 param.setType(ClassHelper.dynamicType());
         }
+        // Erase record return type so that records are not coerced
+        // into instances of the record class
+        if( isNamedRecordType(node.getReturnType()) )
+            node.setReturnType(ClassHelper.dynamicType());
         super.visitMethod(node);
     }
 
