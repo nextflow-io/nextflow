@@ -101,6 +101,7 @@ class FusionScriptLauncherTest extends Specification {
         expect:
         FusionScriptLauncher.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
+
     def 'should link a local input where it is' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }

@@ -540,7 +540,6 @@ class TaskInputResolverTest extends Specification {
     def 'should not ask the filters for a local file' () {
         given:
         def executor = Mock(Executor)
-        def filter = Mock(ForeignFileFilter)
         def PATH = Path.of('/some/path')
         def resolver = new TaskInputResolver(Mock(TaskRun), Mock(FilePorter.Batch), executor)
 
@@ -549,7 +548,6 @@ class TaskInputResolverTest extends Specification {
         then:
         1 * executor.isForeignFile(PATH) >> false
         0 * executor.getForeignFileFilters()
-        0 * filter.isTaskAccessible(_, _)
     }
 
 }

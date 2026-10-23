@@ -167,7 +167,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     /**
      * Stage the input file with the default mechanism, which subclasses cannot override
      */
-    protected final String stageLocalFile( Path path, String targetName ) {
+    private String stageLocalFile( Path path, String targetName ) {
         def cmd = ''
         def p = targetName.lastIndexOf('/')
         if( p>0 ) {
