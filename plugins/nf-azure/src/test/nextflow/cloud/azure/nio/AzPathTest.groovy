@@ -417,4 +417,23 @@ class AzPathTest extends Specification {
         attrs.size() == 42L
     }
 
+    def 'should keep the directory hint once the cached attributes are read'() {
+        given:
+        def path = azpath('/pipeline/output')
+        path.setAttributes(new AzFileAttributes(directory: DIR))
+
+        expect:
+        path.directoryHint() == null
+
+        when:
+        path.fileSystem.readAttributes(path)
+
+        then:
+        path.attributesCache() == null
+        path.directoryHint() == DIR
+
+        where:
+        DIR << [true, false]
+    }
+
 }

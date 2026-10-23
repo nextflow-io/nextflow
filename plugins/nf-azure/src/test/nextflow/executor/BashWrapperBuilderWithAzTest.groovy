@@ -104,24 +104,24 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 mkdir -p "$basedir"
 
                 out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                [[ $ret == 0 ]] && return 0
-                ## killed by a signal, e.g. out of memory
-                if (( ret > 128 )); then
-                    >&2 echo "Unable to download path: $source"
+                if [[ $ret != 0 ]]; then
+                    >&2 echo "Unable to download file: $source"
                     nxf_az_log "$out"
                     return $ret
                 fi
+            }
 
-                ## the source may be a directory
-                local file_out=$out
-                [[ -f "$target" ]] && rm -f "$target"
+            nxf_az_download_dir() {
+                local source=$1
+                local target=$2
+                local out
+                local ret=0
                 mkdir -p "$target"
-                ret=0
+
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
                 if [[ $ret != 0 ]]; then
                     rm -rf "$target"
-                    >&2 echo "Unable to download path: $source"
-                    nxf_az_log "$file_out"
+                    >&2 echo "Unable to download directory: $source"
                     nxf_az_log "$out"
                     return $ret
                 fi
@@ -264,24 +264,24 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 mkdir -p "$basedir"
 
                 out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                [[ $ret == 0 ]] && return 0
-                ## killed by a signal, e.g. out of memory
-                if (( ret > 128 )); then
-                    >&2 echo "Unable to download path: $source"
+                if [[ $ret != 0 ]]; then
+                    >&2 echo "Unable to download file: $source"
                     nxf_az_log "$out"
                     return $ret
                 fi
+            }
 
-                ## the source may be a directory
-                local file_out=$out
-                [[ -f "$target" ]] && rm -f "$target"
+            nxf_az_download_dir() {
+                local source=$1
+                local target=$2
+                local out
+                local ret=0
                 mkdir -p "$target"
-                ret=0
+
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
                 if [[ $ret != 0 ]]; then
                     rm -rf "$target"
-                    >&2 echo "Unable to download path: $source"
-                    nxf_az_log "$file_out"
+                    >&2 echo "Unable to download directory: $source"
                     nxf_az_log "$out"
                     return $ret
                 fi
