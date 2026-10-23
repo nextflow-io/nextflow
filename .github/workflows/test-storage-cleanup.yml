@@ -19,8 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      # scheduled runs delete for real, manual runs default to a dry run
-      DELETE_FLAG: ${{ (github.event_name == 'schedule' || inputs.dry_run == false) && '--delete' || '' }}
+      # scheduled runs delete for real, manual runs default to a dry run, any other event is a dry run
+      # (the event check is required: `inputs` is null outside workflow_dispatch and `null == false` is true)
+      DELETE_FLAG: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)) && '--delete' || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
