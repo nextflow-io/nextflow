@@ -264,7 +264,7 @@ class AzBatchTaskHandlerTest extends Specification {
         }
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
-        def taskKey = new AzTaskKey('job-1', 'task-1', 'pool-1')
+        def taskKey = new AzTaskKey('job-1', 'task-1')
         def batchService = Mock(AzBatchService)
         def executor = Mock(AzBatchExecutor){
             getBatchService() >> batchService
@@ -278,7 +278,7 @@ class AzBatchTaskHandlerTest extends Specification {
 
         then:
         1 * batchService.getTask(taskKey) >> new BatchTask(state: BatchTaskState.ACTIVE)
-        1 * batchService.checkPoolResizeErrors('pool-1') >> "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached"
+        1 * batchService.poolAllocationError(taskKey) >> "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached"
         1 * batchService.terminate(taskKey)
         !running
         handler.status == TaskStatus.COMPLETED
@@ -300,7 +300,7 @@ class AzBatchTaskHandlerTest extends Specification {
         }
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
-        def taskKey = new AzTaskKey('job-1', 'task-1', 'pool-1')
+        def taskKey = new AzTaskKey('job-1', 'task-1')
         def batchService = Mock(AzBatchService)
         def executor = Mock(AzBatchExecutor){
             getBatchService() >> batchService
@@ -314,7 +314,7 @@ class AzBatchTaskHandlerTest extends Specification {
 
         then:
         1 * batchService.getTask(taskKey) >> new BatchTask(state: STATE)
-        CHECKS * batchService.checkPoolResizeErrors('pool-1') >> null
+        CHECKS * batchService.poolAllocationError(taskKey) >> null
         running == RUNNING
         handler.status == (RUNNING ? TaskStatus.RUNNING : TaskStatus.SUBMITTED)
 

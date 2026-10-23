@@ -1415,82 +1415,6 @@ class AzBatchServiceTest extends Specification {
         poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
     }
 
-    def 'should report non-recoverable resize errors of a pool without nodes' () {
-        given:
-        def exec = createExecutor([batch:[location: 'northeurope']])
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-        def POOL = poolWithResizeError(id: 'pool-x', enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached', message: 'Core quota reached') ])
-
-        when:
-        def result = svc.checkPoolResizeErrors('pool-x')
-
-        then:
-        1 * svc.getPool('pool-x') >> POOL
-        result == "Azure Batch pool 'pool-x' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
-    }
-
-    def 'should not report resize errors of a recoverable or healthy pool' () {
-        given:
-        def exec = createExecutor([batch:[location: 'northeurope']])
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-
-        when:
-        def result = svc.checkPoolResizeErrors('pool-1')
-
-        then:
-        1 * svc.getPool('pool-1') >> POOL
-        result == null
-
-        where:
-        POOL << [
-            poolWithResizeError(),
-            poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationFailed') ]),
-            poolWithResizeError(enableAutoScale: false, currentDedicatedNodes: 1),
-            poolWithResizeError(enableAutoScale: false, resizeErrors: []),
-            null
-        ]
-    }
-
-    def 'should not report resize errors when the pool cannot be fetched' () {
-        given:
-        def exec = createExecutor([batch:[location: 'northeurope']])
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-
-        when:
-        def result = svc.checkPoolResizeErrors('pool-1')
-
-        then:
-        1 * svc.getPool('pool-1') >> { throw new IllegalStateException('Service unavailable') }
-        result == null
-    }
-
-    def 'should throttle pool resize error checks per pool' () {
-        given:
-        def exec = createExecutor([batch:[location: 'northeurope']])
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-        def BROKEN = poolWithResizeError(id: 'pool-1', enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ])
-
-        when:
-        def first = svc.checkPoolResizeErrors('pool-1')
-        def second = svc.checkPoolResizeErrors('pool-1')
-        def other = svc.checkPoolResizeErrors('pool-2')
-
-        then:
-        1 * svc.getPool('pool-1') >> BROKEN
-        1 * svc.getPool('pool-2') >> poolWithResizeError(id: 'pool-2')
-        first.contains('AccountVMSeriesCoreQuotaReached')
-        second == first
-        other == null
-
-        when:
-        def third = svc.checkPoolResizeErrors('pool-1')
-
-        then:
-        svc.getPoolResizeCheckInterval() >> JavaDuration.ZERO
-        1 * svc.getPool('pool-1') >> poolWithResizeError(id: 'pool-1', enableAutoScale: false, currentDedicatedNodes: 1)
-        third == null
-    }
-
     def 'should include resize error codes in the pool check error' () {
         given:
         def exec = createExecutor([batch:[location: 'northeurope']])
@@ -1504,19 +1428,6 @@ class AzBatchServiceTest extends Specification {
         then:
         def e = thrown(IllegalStateException)
         e.message == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
-    }
-
-    def 'should report transient resize errors of an autoscale pool that is not steady' () {
-        given:
-        def exec = createExecutor([batch:[location: 'northeurope']])
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-
-        when:
-        def result = svc.checkPoolResizeErrors('pool-1')
-
-        then:
-        1 * svc.getPool('pool-1') >> poolWithResizeError(allocationState: AllocationState.RESIZING)
-        result == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AllocationTimedout"
     }
 
     def 'should warn about recoverable resize errors in the pool check' () {
@@ -1540,5 +1451,104 @@ class AzBatchServiceTest extends Specification {
 
         cleanup:
         logger.detachAppender(appender)
+    }
+
+    private AzBatchService serviceWithJob(Map config, String jobId, String poolId) {
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[createExecutor(config)])
+        svc.allJobIds[new AzJobKey(Mock(TaskProcessor), poolId)] = jobId
+        return svc
+    }
+
+    def 'should fail queued tasks on a fixed pool that cannot allocate nodes' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        def KEY = new AzTaskKey('job-1', 'task-1')
+        def POOL = poolWithResizeError(enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached', message: 'Core quota reached') ])
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def retried = svc.poolAllocationError(new AzTaskKey('job-1', 'task-2'))
+
+        then:
+        1 * svc.getPool('pool-1') >> POOL
+        first == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
+        retried == first
+    }
+
+    def 'should stop checking a fixed pool once it is allocated' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def second = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> POOL
+        first == null
+        second == null
+
+        where:
+        POOL << [
+            poolWithResizeError(enableAutoScale: false, resizeErrors: null, currentDedicatedNodes: 1),
+            poolWithResizeError(enableAutoScale: false, currentDedicatedNodes: 1),
+        ]
+    }
+
+    def 'should keep tasks waiting on an autoscale pool with resize errors' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def second = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ])
+        first == null
+        second == null
+    }
+
+    def 'should wait until a fixed pool allocation is steady' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def throttled = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(enableAutoScale: false, allocationState: AllocationState.RESIZING, resizeErrors: null)
+        first == null
+        throttled == null
+
+        when:
+        def failedLookup = svc.poolAllocationError(KEY)
+        def steady = svc.poolAllocationError(KEY)
+
+        then:
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        1 * svc.getPool('pool-1') >> { throw new IllegalStateException('Service unavailable') }
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AllocationFailed') ])
+        failedLookup == null
+        steady == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AllocationFailed"
+    }
+
+    def 'should not check the pool of an unknown job' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+
+        when:
+        def result = svc.poolAllocationError(new AzTaskKey('job-2', 'task-1'))
+
+        then:
+        0 * svc.getPool(_)
+        result == null
     }
 }

@@ -28,7 +28,6 @@ import groovy.transform.CompileStatic
 class AzTaskKey {
     String jobId
     String taskId
-    String poolId
 
     String keyPair() {
         "$jobId/$taskId"
