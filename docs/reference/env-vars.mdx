@@ -335,7 +335,7 @@ The `NXF_SINGULARITY_CACHEDIR` variable is not applied to Singularity native ima
 Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes.
 
 :::note
-The `NXF_SINGULARITY_LIBRARYDIR` variable is not applied to Singularity native images built by [Wave](../wave.mdx#build-singularity-native-images). These images are passed to Singularity as `oras://` URIs, and Singularity manages its own image cache.
+The `NXF_SINGULARITY_LIBRARYDIR` variable is not applied to Singularity native images built dynamically by [Wave](../wave.mdx#build-singularity-native-images). These on-the-fly images are passed to Singularity as `oras://` URIs, and Singularity manages its own image cache.
 :::
 
 ##### `NXF_SPACK_CACHEDIR`
