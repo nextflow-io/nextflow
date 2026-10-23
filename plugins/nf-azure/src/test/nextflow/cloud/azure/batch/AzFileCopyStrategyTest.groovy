@@ -129,7 +129,7 @@ class AzFileCopyStrategyTest extends Specification {
                         exitCode=\$?
                       fi
                       attempt=\$(( attempt + 1 ))
-                      if (( \$attempt >= \$max_attempts ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
@@ -268,7 +268,7 @@ class AzFileCopyStrategyTest extends Specification {
                         exitCode=\$?
                       fi
                       attempt=\$(( attempt + 1 ))
-                      if (( \$attempt >= \$max_attempts ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
@@ -431,7 +431,7 @@ class AzFileCopyStrategyTest extends Specification {
                             exitCode=\$?
                           fi
                           attempt=\$(( attempt + 1 ))
-                          if (( \$attempt >= \$max_attempts ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
