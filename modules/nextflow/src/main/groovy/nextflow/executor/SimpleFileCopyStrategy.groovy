@@ -60,6 +60,12 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     Path workDir
 
+    /**
+     * Local inputs linked where they are, set by a launcher that remaps every other input to a
+     * container path. When {@code null}, they are the local inputs with a remote work dir
+     */
+    Set<Path> localInputs
+
     SimpleFileCopyStrategy() { }
 
     SimpleFileCopyStrategy( TaskBean bean ) {
@@ -134,7 +140,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
                 delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
-            links << ( isLocalInput(storePath) ? stageLocalFile(storePath, stageName) : stageInputFile(storePath, stageName) )
+            links << ( isLocalInput(storePath) ? stageInPlaceFile(storePath, stageName) : stageInputFile(storePath, stageName) )
         }
 
         // return a big string containing the command
@@ -153,7 +159,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return The script which will apply the staging for this file in the main script
      */
     String stageInputFile( Path path, String targetName ) {
-        return stageLocalFile(path, targetName)
+        return stageLocalFile(path, targetName, stageinMode)
     }
 
     /**
@@ -161,19 +167,34 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * and is linked where it is, whatever staging mechanism the executor uses
      */
     private boolean isLocalInput( Path path ) {
+        if( localInputs != null )
+            return localInputs.contains(path)
         return workDir != null && workDir.fileSystem != FileSystems.default && path.fileSystem == FileSystems.default
+    }
+
+    /**
+     * Link a local input where it is, checking first that the task can read it, because
+     * {@code ln -s} succeeds on a missing target and the task would fail later with a generic error
+     */
+    private String stageInPlaceFile( Path path, String targetName ) {
+        // a hard link cannot cross file systems, and a relative link is computed against the work dir
+        final mode = stageinMode in ['link','rellink'] ? 'symlink' : stageinMode
+        if( mode != stageinMode )
+            log.warn1 "Input files outside the work directory do not support stageInMode '$stageinMode' -- using 'symlink'"
+        final source = Escape.path(path)
+        return "test -e ${source} || { echo \"Input file not accessible on host \$(hostname): \"${source} >&2; exit 1; }\n" + stageLocalFile(path, targetName, mode)
     }
 
     /**
      * Stage the input file with the default mechanism, which subclasses cannot override
      */
-    private String stageLocalFile( Path path, String targetName ) {
+    private String stageLocalFile( Path path, String targetName, String mode ) {
         def cmd = ''
         def p = targetName.lastIndexOf('/')
         if( p>0 ) {
             cmd += "mkdir -p ${Escape.path(targetName.substring(0,p))} && "
         }
-        cmd += stageInCommand(path.toAbsolutePath().toString(), targetName, stageinMode)
+        cmd += stageInCommand(path.toAbsolutePath().toString(), targetName, mode)
 
         return cmd
     }

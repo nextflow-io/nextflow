@@ -532,6 +532,7 @@ class AzFileCopyStrategyTest extends Specification {
                 downloads=(true)
                 rm -f ref.fa
                 rm -f file1.txt
+                test -e /mnt/shared/ref.fa || { echo "Input file not accessible on host \$(hostname): "/mnt/shared/ref.fa >&2; exit 1; }
                 ln -sfn /mnt/shared/ref.fa ref.fa
                 downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
                 nxf_parallel "${downloads[@]}"
