@@ -123,7 +123,9 @@ class AzBatchService implements Closeable {
 
     Map<AzJobKey,String> allJobIds = new HashMap<>(50)
 
-    private final Map<String,PoolResizeCheck> poolResizeChecks = new ConcurrentHashMap<>()
+    private final Map<String,PoolAllocation> poolAllocations = new ConcurrentHashMap<>()
+
+    private final Map<String,Long> poolAllocationChecks = new ConcurrentHashMap<>()
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -626,7 +628,7 @@ class AzBatchService implements Closeable {
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
         final taskToAdd = createTask(poolId, jobId, task)
         apply(() -> client.createTask(jobId, taskToAdd))
-        return new AzTaskKey(jobId, taskToAdd.getId(), poolId)
+        return new AzTaskKey(jobId, taskToAdd.getId())
     }
 
     protected List<String> getShareVolumeMounts(AzVmPoolSpec spec) {
@@ -778,11 +780,10 @@ class AzBatchService implements Closeable {
      */
     private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
 
-    private static final Duration POOL_RESIZE_CHECK_INTERVAL = Duration.ofMinutes(1)
+    private static final Duration POOL_ALLOCATION_CHECK_INTERVAL = Duration.ofMinutes(1)
 
     @Canonical
-    private static class PoolResizeCheck {
-        long timestamp
+    protected static class PoolAllocation {
         String error
     }
 
@@ -818,35 +819,62 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Check a pool used by submitted tasks for resize errors that prevent it from allocating any node.
-     * The pool is fetched at most once per {@link #POOL_RESIZE_CHECK_INTERVAL} and the outcome is
-     * shared by all tasks on the same pool.
+     * Check whether the pool of a queued task failed to allocate any node.
      *
-     * @return The resize error message as returned by {@link #resizeError(BatchPool)}, or {@code null}
+     * Only fixed-size pools are checked, because they never retry a failed resize, while an
+     * autoscale pool can still grow once quota or capacity frees up. The pool is looked up at
+     * most once per {@link #POOL_ALLOCATION_CHECK_INTERVAL} until its allocation is steady,
+     * then the outcome is kept for the rest of the run and shared by all tasks on that pool.
+     *
+     * @return The pool resize error message, or {@code null} when the task can keep waiting
      */
-    String checkPoolResizeErrors(String poolId) {
+    String poolAllocationError(AzTaskKey key) {
+        final poolId = poolIdForJob(key.jobId)
+        if( !poolId )
+            return null
+        final known = poolAllocations.get(poolId)
+        if( known )
+            return known.error
         final now = System.currentTimeMillis()
-        final prev = poolResizeChecks.get(poolId)
-        if( prev && now - prev.timestamp < getPoolResizeCheckInterval().toMillis() )
-            return prev.error
-        final result = new PoolResizeCheck(now, fetchResizeError(poolId))
-        poolResizeChecks.put(poolId, result)
-        return result.error
+        final last = poolAllocationChecks.get(poolId)
+        if( last!=null && now - last < getPoolAllocationCheckInterval().toMillis() )
+            return null
+        poolAllocationChecks.put(poolId, now)
+        final result = poolAllocation(fetchPoolQuietly(poolId))
+        if( result )
+            poolAllocations.put(poolId, result)
+        return result?.error
     }
 
-    protected Duration getPoolResizeCheckInterval() {
-        return POOL_RESIZE_CHECK_INTERVAL
+    /**
+     * @return The allocation outcome of the pool, or {@code null} when it is not known yet
+     */
+    protected PoolAllocation poolAllocation(BatchPool pool) {
+        if( !pool )
+            return null
+        if( pool.isEnableAutoScale() )
+            return new PoolAllocation()
+        if( pool.allocationState != AllocationState.STEADY )
+            return null
+        return new PoolAllocation(resizeError(pool))
     }
 
-    protected String fetchResizeError(String poolId) {
+    protected Duration getPoolAllocationCheckInterval() {
+        return POOL_ALLOCATION_CHECK_INTERVAL
+    }
+
+    protected BatchPool fetchPoolQuietly(String poolId) {
         try {
-            final pool = getPool(poolId)
-            return pool ? resizeError(pool) : null
+            return getPool(poolId)
         }
         catch( Exception e ) {
-            log.debug "[AZURE BATCH] Unable to check resize errors for pool '$poolId' - ${e.message}"
+            log.debug "[AZURE BATCH] Unable to fetch pool '$poolId' - ${e.message}"
             return null
         }
+    }
+
+    protected synchronized String poolIdForJob(String jobId) {
+        return allJobIds.find { Map.Entry<AzJobKey,String> entry -> entry.value == jobId }?.key?.poolId
     }
 
     /**

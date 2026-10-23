@@ -104,7 +104,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( running )
             this.status = TaskStatus.RUNNING
         else if( state==BatchTaskState.ACTIVE )
-            checkPoolResizeErrors()
+            checkPoolAllocation()
         return running
     }
 
@@ -114,8 +114,8 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * In that case the task is terminated and marked as completed with an error, so that
      * {@link #checkIfCompleted()} reports it to the task monitor
      */
-    protected void checkPoolResizeErrors() {
-        final error = taskKey.poolId ? batchService.checkPoolResizeErrors(taskKey.poolId) : null
+    protected void checkPoolAllocation() {
+        final error = batchService.poolAllocationError(taskKey)
         if( !error )
             return
         log.debug "[AZURE BATCH] Terminating task $task.name taskId=$taskKey - $error"
