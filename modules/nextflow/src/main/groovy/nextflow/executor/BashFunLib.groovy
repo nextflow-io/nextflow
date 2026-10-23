@@ -76,10 +76,15 @@ class BashFunLib<V extends BashFunLib> {
               then
                 break
               fi
-              nxf_sleep \$timeout
               attempt=\$(( attempt + 1 ))
+              if (( \$attempt >= \$max_attempts ))
+              then
+                break
+              fi
+              nxf_sleep \$timeout
               timeout=\$(( timeout * 2 ))
             done
+            return \$exitCode
         }
 
         nxf_parallel() {

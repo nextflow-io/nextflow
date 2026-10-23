@@ -50,10 +50,15 @@ class BashFunLibTest extends Specification {
                   then
                     break
                   fi
-                  nxf_sleep $timeout
                   attempt=$(( attempt + 1 ))
+                  if (( $attempt >= $max_attempts ))
+                  then
+                    break
+                  fi
+                  nxf_sleep $timeout
                   timeout=$(( timeout * 2 ))
                 done
+                return $exitCode
             }
 
             nxf_parallel() {
@@ -150,6 +155,70 @@ class BashFunLibTest extends Specification {
 
         expect:
         process.exitValue() == 0
+
+        cleanup:
+        if( scriptFile ) Files.delete(scriptFile)
+
+    }
+
+    def 'should retry with nxf_cp_retry and return the last exit status' () {
+
+        given:
+        def workDir = Files.createTempDirectory('cp-retry')
+        def scriptFile = workDir.resolve('test.sh')
+        scriptFile.text = BashFunLib.body(1, 3, Duration.of('1 sec')) + """
+            nxf_sleep() { echo \$1 >> sleeps; }
+            flaky() { echo x >> calls; (( \$(wc -l < calls) >= ${SUCCEED_ON_CALL} )) || return 3; }
+            nxf_cp_retry flaky && echo 0 > status || echo \$? > status
+            """.stripIndent()
+
+        when:
+        def process = ['bash', scriptFile.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('status').text.trim() as int == STATUS
+        workDir.resolve('calls').readLines().size() == CALLS
+        (Files.exists(workDir.resolve('sleeps')) ? workDir.resolve('sleeps').readLines() : []) == SLEEPS
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
+
+        where:
+        SUCCEED_ON_CALL | STATUS | CALLS | SLEEPS
+        1               | 0      | 1     | []
+        3               | 0      | 3     | ['1', '2']
+        99              | 3      | 3     | ['1', '2']
+    }
+
+    def 'should fail nxf_parallel when nxf_cp_retry exhausts its attempts' () {
+
+        given:
+        def scriptFile = Files.createTempFile("test", "sh")
+        def script = """
+        #!/bin/bash
+
+        set -e
+        """.stripIndent() +
+
+        BashFunLib.body(5, 3, Duration.of('1 sec')) +
+
+        """
+        nxf_sleep() { :; }
+        cmds=()
+        cmds+=("nxf_cp_retry false")
+        cmds+=("true")
+        nxf_parallel "\${cmds[@]}"
+        """.stripIndent()
+
+        scriptFile.text = script
+
+        def process = "bash ${scriptFile}".execute()
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        expect:
+        process.exitValue() == 1
 
         cleanup:
         if( scriptFile ) Files.delete(scriptFile)
