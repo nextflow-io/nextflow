@@ -46,6 +46,25 @@ $NXF_CMD -C ./azure.config run ./test-complexpaths.nf -resume
 ## run test-subdirs inputs/outputs
 $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
+## pool creation: the pool must not exist before the run
+POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
+cat > pool-create.config <<EOF
+includeConfig 'azure.config'
+process.queue = '$POOL_ID'
+azure {
+  batch {
+    deletePoolsOnCompletion = true
+    pools {
+      '$POOL_ID' {
+          vmCount = 1
+      }
+    }
+  }
+}
+EOF
+$NXF_CMD -C ./pool-create.config run ./test-subdirs.nf
+[[ `grep -c "pool with id: $POOL_ID" .nextflow.log` == 1 ]] || false
+
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -c ./azure.config \
     run nextflow-io/rnaseq-nf \
