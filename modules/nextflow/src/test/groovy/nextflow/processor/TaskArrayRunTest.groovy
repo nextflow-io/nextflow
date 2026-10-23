@@ -46,6 +46,26 @@ class TaskArrayRunTest extends Specification {
         info == new ContainerInfo('ubuntu','ubuntu','ubuntu')
     }
 
+    def 'should prepare children only once' () {
+        given:
+        def executor = Mock(TestExecutor)
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor }
+        def children = [Mock(TaskHandler), Mock(TaskHandler)]
+        def task = new TaskArrayRun(processor: processor, children: children)
+
+        when:
+        task.prepareChildren()
+        then:
+        1 * executor.prepareArrayChildren(children) >> { throw new IOException('boom') }
+        thrown(IOException)
+
+        when:
+        task.prepareChildren()
+        task.prepareChildren()
+        then:
+        1 * executor.prepareArrayChildren(children)
+    }
+
     def 'should be an array' () {
         given:
         def task = new TaskArrayRun()

@@ -133,11 +133,8 @@ class TaskArrayCollector {
      * @param tasks
      */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
-        // prepare child job launcher scripts
+        // create child task handlers
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
-        for( TaskHandler handler : handlers ) {
-            handler.prepareLauncher()
-        }
 
         // create work directory
         // from the work dirs rather than the hashes, which every attempt of a task shares
@@ -177,6 +174,10 @@ class TaskArrayCollector {
         // the array job is submitted as a task on its own, therefore it needs the auto-derived
         // resource labels as much as the tasks it wraps -- see TaskProcessor#createTaskRun
         taskArray.config.setAutoResourceLabels(processor.session?.getAutoResourceLabels())
+
+        // prepare child launchers, unless the executor prepares them at submit time
+        if( !executor.prepareArrayChildrenOnSubmit() )
+            taskArray.prepareChildren()
 
         return taskArray
     }

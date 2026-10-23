@@ -21,6 +21,10 @@ import java.nio.file.Path
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.logging.BatchLogging
+import nextflow.executor.ArrayLauncherPool
+import nextflow.util.ThrottlingExecutor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -156,4 +160,27 @@ class GoogleBatchExecutorTest extends Specification {
         !executor.shouldDeleteJob('job-3')
         !executor.shouldDeleteJob('job-3')
     }
+
+    def 'should prepare job array children with the launcher pool' () {
+        given:
+        def pool = Mock(ArrayLauncherPool)
+        def executor = Spy(GoogleBatchExecutor) { awaitCompletion(_,_,_,_) >> null }
+        executor.@arrayLaunchers = pool
+        executor.@submitter = Mock(ThrottlingExecutor)
+        executor.@reaper = Mock(ThrottlingExecutor)
+        executor.@client = Mock(BatchClient)
+        executor.@logging = Mock(BatchLogging)
+        def children = [Mock(TaskHandler), Mock(TaskHandler)]
+
+        when:
+        executor.prepareArrayChildren(children)
+        then:
+        1 * pool.prepare(children)
+
+        when:
+        executor.shutdown()
+        then:
+        1 * pool.shutdown()
+    }
+
 }

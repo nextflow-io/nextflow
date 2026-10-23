@@ -57,6 +57,24 @@ interface TaskArrayExecutor {
      */
     String getArrayTaskId(String jobId, int index)
 
+    /**
+     * Prepare the launcher scripts of the child tasks of a job array.
+     *
+     * @param children
+     */
+    default void prepareArrayChildren(List<TaskHandler> children) {
+        for( final child : children )
+            child.prepareLauncher()
+    }
+
+    /**
+     * Whether the child launchers of a job array are prepared when the array
+     * is submitted, rather than when it is created by the process.
+     */
+    default boolean prepareArrayChildrenOnSubmit() {
+        return false
+    }
+
     default boolean isWorkDirDefaultFS() {
         getWorkDir().fileSystem== FileSystems.default
     }
