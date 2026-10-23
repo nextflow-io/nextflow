@@ -22,7 +22,6 @@ import java.util.List;
 
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.RecordNode;
-import nextflow.script.ast.ScriptNode;
 import nextflow.script.types.Channel;
 import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
@@ -56,8 +55,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
  *
  * - Function parameter and return types are verified by the type
  *   checker, and would otherwise be coerced by the Groovy runtime
- *   (e.g. BigInteger -> Integer). They are preserved for functions
- *   that are overloaded with the same number of arguments.
+ *   (e.g. BigInteger -> Integer). Parameter types are preserved for
+ *   functions that are overloaded with the same number of arguments.
  *
  * - User-defined record types are only used to validate records
  *   with type RecordMap. Casts and instanceof expressions must
@@ -90,10 +89,12 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public void visitMethod(MethodNode node) {
-        if( node instanceof FunctionNode fn && isTypingEnabled() && !isOverloaded(fn) ) {
-            // Erase function types so that values are not coerced at runtime
-            for( var param : fn.getParameters() )
-                param.setType(ClassHelper.dynamicType());
+        // Erase function types so that values are not coerced at runtime
+        if( node instanceof FunctionNode fn ) {
+            if( !isOverloaded(fn) ) {
+                for( var param : fn.getParameters() )
+                    param.setType(ClassHelper.dynamicType());
+            }
             fn.setReturnType(ClassHelper.dynamicType());
         }
         // Erase record type parameters so that records (with type Record)
@@ -103,10 +104,6 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
                 param.setType(ClassHelper.dynamicType());
         }
         super.visitMethod(node);
-    }
-
-    private boolean isTypingEnabled() {
-        return sourceUnit.getAST() instanceof ScriptNode sn && sn.isTypingEnabled();
     }
 
     /**

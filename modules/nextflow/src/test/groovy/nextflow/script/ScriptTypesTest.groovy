@@ -392,34 +392,12 @@ class ScriptTypesTest extends Dsl2Spec {
         type.getField('reads').getGenericType().getRawType() == List
         type.getField('reads').getGenericType().getActualTypeArguments()[0] instanceof Class
         type.getField('reads').getGenericType().getActualTypeArguments()[0] == Path
-
-        when:
-        script = loadScript(
-            '''\
-            def greet(message: String, names: List<String>) {
-            }
-            ''',
-            module: true
-        )
-        def method = script.getClass().getDeclaredMethods().find { m -> m.name == 'greet' }
-        def params = method.getParameters()
-        then:
-        params[0].getType() == String
-        params[0].getParameterizedType() instanceof Class
-        params[0].getParameterizedType() == String
-        params[1].getType() == List
-        params[1].getParameterizedType() instanceof ParameterizedType
-        params[1].getParameterizedType().getRawType() == List
-        params[1].getParameterizedType().getActualTypeArguments()[0] instanceof Class
-        params[1].getParameterizedType().getActualTypeArguments()[0] == String
     }
 
     def 'should not coerce arguments or return values of typed functions' () {
         when:
         def result = runScript(
             '''\
-            nextflow.enable.types = true
-
             workflow {
                 [
                     half: half(5),
@@ -457,16 +435,23 @@ class ScriptTypesTest extends Dsl2Spec {
         when:
         def result = runScript(
             '''\
-            nextflow.enable.types = true
-
             workflow {
                 [
                     kind(1),
                     kind('a'),
                     pad(1),
                     pad('a'),
-                    pad('a', 'b')
+                    pad('a', 'b'),
+                    big(1)
                 ]
+            }
+
+            def big(x: Integer) -> Integer {
+                100000000000000000000
+            }
+
+            def big(x: String) -> Integer {
+                0
             }
 
             def kind(x: Integer) -> String {
@@ -487,6 +472,6 @@ class ScriptTypesTest extends Dsl2Spec {
             '''
         )
         then:
-        result == ['int', 'str', 'int 1', 'str a!', 'str ab']
+        result == ['int', 'str', 'int 1', 'str a!', 'str ab', 100000000000000000000]
     }
 }
