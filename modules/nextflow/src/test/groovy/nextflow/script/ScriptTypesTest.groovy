@@ -392,25 +392,86 @@ class ScriptTypesTest extends Dsl2Spec {
         type.getField('reads').getGenericType().getRawType() == List
         type.getField('reads').getGenericType().getActualTypeArguments()[0] instanceof Class
         type.getField('reads').getGenericType().getActualTypeArguments()[0] == Path
+    }
 
+    def 'should not coerce arguments or return values of typed functions' () {
         when:
-        script = loadScript(
+        def result = runScript(
             '''\
-            def greet(message: String, names: List<String>) {
+            workflow {
+                [
+                    half: half(5),
+                    halfPrecise: half(16777217),
+                    halfDouble: half(5d),
+                    incBig: inc(100000000000000000000),
+                    incLong: inc(5L),
+                    nested: incNested()
+                ]
             }
-            ''',
-            module: true
+
+            def half(x: Float) -> Float {
+                x / 2
+            }
+
+            def inc(x: Integer) -> Integer {
+                x + 1
+            }
+
+            def incNested() -> Integer {
+                inc(100000000000000000000)
+            }
+            '''
         )
-        def method = script.getClass().getDeclaredMethods().find { m -> m.name == 'greet' }
-        def params = method.getParameters()
         then:
-        params[0].getType() == String
-        params[0].getParameterizedType() instanceof Class
-        params[0].getParameterizedType() == String
-        params[1].getType() == List
-        params[1].getParameterizedType() instanceof ParameterizedType
-        params[1].getParameterizedType().getRawType() == List
-        params[1].getParameterizedType().getActualTypeArguments()[0] instanceof Class
-        params[1].getParameterizedType().getActualTypeArguments()[0] == String
+        result.half == 2.5
+        result.halfPrecise == 8388608.5
+        result.halfDouble == 2.5
+        result.incBig == 100000000000000000001
+        result.incLong == 6L
+        result.nested == 100000000000000000001
+    }
+
+    def 'should dispatch overloaded typed functions' () {
+        when:
+        def result = runScript(
+            '''\
+            workflow {
+                [
+                    kind(1),
+                    kind('a'),
+                    pad(1),
+                    pad('a'),
+                    pad('a', 'b'),
+                    big(1)
+                ]
+            }
+
+            def big(x: Integer) -> Integer {
+                100000000000000000000
+            }
+
+            def big(x: String) -> Integer {
+                0
+            }
+
+            def kind(x: Integer) -> String {
+                'int'
+            }
+
+            def kind(x: String) -> String {
+                'str'
+            }
+
+            def pad(x: Integer) -> String {
+                "int ${x}"
+            }
+
+            def pad(x: String, suffix: String = '!') -> String {
+                "str ${x}${suffix}"
+            }
+            '''
+        )
+        then:
+        result == ['int', 'str', 'int 1', 'str a!', 'str ab', 100000000000000000000]
     }
 }

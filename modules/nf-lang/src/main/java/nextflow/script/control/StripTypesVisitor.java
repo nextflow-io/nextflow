@@ -17,8 +17,10 @@
 package nextflow.script.control;
 
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.List;
 
+import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.types.Channel;
 import nextflow.script.types.Record;
@@ -51,6 +53,11 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
  * - The Tuple type can be specified with variable type arguments,
  *   but this is not supported by the JVM.
  *
+ * - Function parameter and return types are verified by the type
+ *   checker, and would otherwise be coerced by the Groovy runtime
+ *   (e.g. BigInteger -> Integer). Parameter types are preserved for
+ *   functions that are overloaded with the same number of arguments.
+ *
  * - User-defined record types are only used to validate records
  *   with type RecordMap. Casts and instanceof expressions must
  *   be replaced with runtime checks.
@@ -82,6 +89,14 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public void visitMethod(MethodNode node) {
+        // Erase function types so that values are not coerced at runtime
+        if( node instanceof FunctionNode fn ) {
+            if( !isOverloaded(fn) ) {
+                for( var param : fn.getParameters() )
+                    param.setType(ClassHelper.dynamicType());
+            }
+            fn.setReturnType(ClassHelper.dynamicType());
+        }
         // Erase record type parameters so that records (with type Record)
         // can be dispatched to these methods at runtime
         for( var param : node.getParameters() ) {
@@ -89,6 +104,28 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
                 param.setType(ClassHelper.dynamicType());
         }
         super.visitMethod(node);
+    }
+
+    /**
+     * Determine whether a function has an overload that accepts the
+     * same number of arguments, in which case the parameter types
+     * are needed to dispatch the call at runtime.
+     *
+     * @param node
+     */
+    private static boolean isOverloaded(FunctionNode node) {
+        return node.getDeclaringClass().getDeclaredMethods(node.getName()).stream()
+            .anyMatch(other -> other != node && other instanceof FunctionNode && aritiesOverlap(node, other));
+    }
+
+    private static boolean aritiesOverlap(MethodNode a, MethodNode b) {
+        return minArity(a) <= b.getParameters().length && minArity(b) <= a.getParameters().length;
+    }
+
+    private static int minArity(MethodNode node) {
+        return (int) Arrays.stream(node.getParameters())
+            .filter(param -> !param.hasInitialExpression())
+            .count();
     }
 
     @Override
