@@ -346,15 +346,16 @@ class AzPath implements Path {
 
     /**
      * Whether storage reported this path as a directory the last time its attributes
-     * were read, or {@code null} if they have not been read. Unlike the attributes cache
-     * it is not cleared by the read, so it can be used after task hashing has read them.
+     * were read, or {@code null} if they have not been read or the path was not found.
+     * Unlike the attributes cache it is not cleared by the read, so it can be used after
+     * task hashing has read them.
      */
     Boolean directoryHint() {
         return directoryHint
     }
 
     @PackageScope
-    void setDirectoryHint(boolean value) {
+    void setDirectoryHint(Boolean value) {
         this.directoryHint = value
     }
 

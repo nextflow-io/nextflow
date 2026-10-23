@@ -88,6 +88,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
             out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
             if [[ $ret != 0 ]]; then
+                rm -f "$target"
                 >&2 echo "Unable to download file: $source"
                 nxf_az_log "$out"
                 return $ret

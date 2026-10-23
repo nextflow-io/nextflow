@@ -69,6 +69,7 @@ class AzBashLibTest extends Specification {
 
                 out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
                 if [[ $ret != 0 ]]; then
+                    rm -f "$target"
                     >&2 echo "Unable to download file: $source"
                     nxf_az_log "$out"
                     return $ret
@@ -192,6 +193,7 @@ class AzBashLibTest extends Specification {
 
                 out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
                 if [[ $ret != 0 ]]; then
+                    rm -f "$target"
                     >&2 echo "Unable to download file: $source"
                     nxf_az_log "$out"
                     return $ret
@@ -315,6 +317,7 @@ class AzBashLibTest extends Specification {
 
                 out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
                 if [[ $ret != 0 ]]; then
+                    rm -f "$target"
                     >&2 echo "Unable to download file: $source"
                     nxf_az_log "$out"
                     return $ret
@@ -395,7 +398,9 @@ class AzBashLibTest extends Specification {
         script.text = 'set -eu\n' + AzBashLib.script() + """
             export AZ_SAS=token
             export PATH=${bin}:\$PATH
-            ${DOWNLOAD} 'https://acct.blob.core.windows.net/c/${SOURCE}' target 2> stderr && echo 0 > status || echo \$? > status
+            set +e
+            ( set -eu; ${DOWNLOAD} 'https://acct.blob.core.windows.net/c/${SOURCE}' target ) 2> stderr
+            echo \$? > status
             """.stripIndent()
 
         when:
@@ -420,7 +425,7 @@ class AzBashLibTest extends Specification {
         'nxf_az_download'       | 'file.txt'    | 0      | 'file'                | ''
         'nxf_az_download'       | 'missing.txt' | 1      | 'none'                | 'Unable to download file'
         'nxf_az_download'       | 'denied.txt'  | 1      | 'none'                | 'AuthenticationFailed'
-        'nxf_az_download'       | 'oom.txt'     | 137    | 'file'                | 'Unable to download file'
+        'nxf_az_download'       | 'oom.txt'     | 137    | 'none'                | 'Unable to download file'
         'nxf_az_download_dir'   | 'dir'         | 0      | 'dir:a.txt'           | ''
         'nxf_az_download_dir'   | 'marker'      | 0      | 'dir:.azure_blob_dir' | ''
         'nxf_az_download_dir'   | 'empty'       | 0      | 'dir:'                | ''

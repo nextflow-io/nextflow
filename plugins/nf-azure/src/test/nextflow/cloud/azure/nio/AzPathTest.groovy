@@ -436,4 +436,19 @@ class AzPathTest extends Specification {
         DIR << [true, false]
     }
 
+    def 'should clear the directory hint when the path is not found'() {
+        given:
+        def fs = Spy(AzFileSystem, constructorArgs: [Spy(AzFileSystemProvider), GroovyMock(BlobServiceClient), 'pipeline'])
+        def path = new AzPath(fs, '/pipeline/output')
+        path.setDirectoryHint(true)
+
+        when:
+        def attrs = fs.readAttributes(path)
+
+        then:
+        1 * fs.readAttributes0(path) >> null
+        attrs == null
+        path.directoryHint() == null
+    }
+
 }
