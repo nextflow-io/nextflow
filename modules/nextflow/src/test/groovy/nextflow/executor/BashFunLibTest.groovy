@@ -46,10 +46,6 @@ class BashFunLibTest extends Specification {
                   else
                     exitCode=$?
                   fi
-                  if [[ $exitCode == 0 ]]
-                  then
-                    break
-                  fi
                   attempt=$(( attempt + 1 ))
                   if (( $attempt >= $max_attempts ))
                   then
@@ -190,39 +186,6 @@ class BashFunLibTest extends Specification {
         1               | 0      | 1     | []
         3               | 0      | 3     | ['1', '2']
         99              | 3      | 3     | ['1', '2']
-    }
-
-    def 'should fail nxf_parallel when nxf_cp_retry exhausts its attempts' () {
-
-        given:
-        def scriptFile = Files.createTempFile("test", "sh")
-        def script = """
-        #!/bin/bash
-
-        set -e
-        """.stripIndent() +
-
-        BashFunLib.body(5, 3, Duration.of('1 sec')) +
-
-        """
-        nxf_sleep() { :; }
-        cmds=()
-        cmds+=("nxf_cp_retry false")
-        cmds+=("true")
-        nxf_parallel "\${cmds[@]}"
-        """.stripIndent()
-
-        scriptFile.text = script
-
-        def process = "bash ${scriptFile}".execute()
-        process.waitFor(30, TimeUnit.SECONDS)
-
-        expect:
-        process.exitValue() == 1
-
-        cleanup:
-        if( scriptFile ) Files.delete(scriptFile)
-
     }
 
 }

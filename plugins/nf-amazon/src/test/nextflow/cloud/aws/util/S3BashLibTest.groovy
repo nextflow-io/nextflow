@@ -57,10 +57,6 @@ class S3BashLibTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
-                          then
-                            break
-                          fi
                           attempt=\$(( attempt + 1 ))
                           if (( \$attempt >= \$max_attempts ))
                           then
@@ -160,10 +156,6 @@ class S3BashLibTest extends Specification {
                               return 0
                           else
                             exitCode=\$?
-                          fi
-                          if [[ \$exitCode == 0 ]]
-                          then
-                            break
                           fi
                           attempt=\$(( attempt + 1 ))
                           if (( \$attempt >= \$max_attempts ))
@@ -413,10 +405,6 @@ class S3BashLibTest extends Specification {
                   else
                     exitCode=$?
                   fi
-                  if [[ $exitCode == 0 ]]
-                  then
-                    break
-                  fi
                   attempt=$(( attempt + 1 ))
                   if (( $attempt >= $max_attempts ))
                   then
@@ -508,10 +496,6 @@ class S3BashLibTest extends Specification {
                       return 0
                   else
                     exitCode=$?
-                  fi
-                  if [[ $exitCode == 0 ]]
-                  then
-                    break
                   fi
                   attempt=$(( attempt + 1 ))
                   if (( $attempt >= $max_attempts ))
@@ -607,10 +591,6 @@ class S3BashLibTest extends Specification {
                       return 0
                   else
                     exitCode=$?
-                  fi
-                  if [[ $exitCode == 0 ]]
-                  then
-                    break
                   fi
                   attempt=$(( attempt + 1 ))
                   if (( $attempt >= $max_attempts ))
@@ -710,10 +690,6 @@ class S3BashLibTest extends Specification {
                       return 0
                   else
                     exitCode=$?
-                  fi
-                  if [[ $exitCode == 0 ]]
-                  then
-                    break
                   fi
                   attempt=$(( attempt + 1 ))
                   if (( $attempt >= $max_attempts ))

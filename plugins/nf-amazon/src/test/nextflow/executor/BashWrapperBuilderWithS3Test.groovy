@@ -144,10 +144,6 @@ class BashWrapperBuilderWithS3Test extends Specification {
                   else
                     exitCode=\$?
                   fi
-                  if [[ \$exitCode == 0 ]]
-                  then
-                    break
-                  fi
                   attempt=\$(( attempt + 1 ))
                   if (( \$attempt >= \$max_attempts ))
                   then
