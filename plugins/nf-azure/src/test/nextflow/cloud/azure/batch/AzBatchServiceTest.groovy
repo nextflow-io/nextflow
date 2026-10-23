@@ -323,7 +323,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
-        configuredStartTask.commandLine == 'bash -c "mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy"'
+        configuredStartTask.commandLine == 'bash -c "mkdir -p $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy"'
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy.tar.gz'
     }
@@ -337,7 +337,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy" && bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == 'bash -c "mkdir -p $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy" && bash -c \'echo hello-world\''
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy.tar.gz'

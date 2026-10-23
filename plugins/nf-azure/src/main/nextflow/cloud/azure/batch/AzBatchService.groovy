@@ -927,7 +927,7 @@ class AzBatchService implements Closeable {
 
         // If enabled, append azcopy installer to start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
-            startCmd << "bash -c \"mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C \$AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 ${AZCOPY_TAR_ENTRY}\"".toString()
+            startCmd << "bash -c \"mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C \$AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 ${AZCOPY_TAR_ENTRY}\"".toString()
             resourceFiles << new ResourceFile()
                 .setHttpUrl(AZCOPY_URL)
                 .setFilePath('azcopy.tar.gz')
