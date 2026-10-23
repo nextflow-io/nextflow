@@ -236,6 +236,32 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should link a local input after checking it exists' () {
+        given:
+        def inputs = ['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'x/other.txt': Paths.get('/work/other.txt')]
+        def strategy = new SimpleFileCopyStrategy(new TaskBean(stageInMode: MODE, workDir: Paths.get('/work')))
+        strategy.localInputs = [Paths.get('/mnt/shared/ref.fa')] as Set
+
+        when:
+        def script = strategy.getStageInputFilesScript(inputs)
+        then:
+        script == """
+                rm -f ref.fa
+                rm -f x/other.txt
+                test -e /mnt/shared/ref.fa || { echo "Input file not accessible on host \$(hostname): "/mnt/shared/ref.fa >&2; exit 1; }
+                $CMD /mnt/shared/ref.fa ref.fa
+                mkdir -p x && $OTHER
+                """.stripIndent().trim()
+
+        where:
+        MODE        | CMD           | OTHER
+        null        | 'ln -sfn'     | 'ln -sfn /work/other.txt x/other.txt'
+        'copy'      | 'cp -fRL'     | 'cp -fRL /work/other.txt x/other.txt'
+        'link'      | 'ln -sfn'     | 'ln -f /work/other.txt x/other.txt'
+        'rellink'   | 'ln -sfn'     | 'ln -sfn ../other.txt x/other.txt'
+    }
+
     def 'should return stage-in script with copy' () {
 
         given:

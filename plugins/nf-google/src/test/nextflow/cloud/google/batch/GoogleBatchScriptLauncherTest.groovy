@@ -136,8 +136,9 @@ class GoogleBatchScriptLauncherTest extends Specification{
         bean.inputFiles['a.bam'] == Paths.get('/mnt/disks/alpha/data/a.bam')
         and:
         def script = launcher.copyStrategy.getStageInputFilesScript(bean.inputFiles)
-        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('test -e /mnt/shared/ref.fa || { echo "Input file not accessible on host $(hostname): "/mnt/shared/ref.fa >&2; exit 1; }\nln -sfn /mnt/shared/ref.fa ref.fa')
         script.contains('ln -sfn /mnt/disks/alpha/data/a.bam a.bam')
+        !script.contains('test -e /mnt/disks')
     }
 
 }
