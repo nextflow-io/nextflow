@@ -898,7 +898,7 @@ class FileHelper {
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
-                    def result = relative ? path : fullPath
+                    def result = relative ? path : stripTrailingSlash(fullPath)
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
@@ -938,6 +938,18 @@ class FileHelper {
             }
       })
 
+    }
+
+    /**
+     * Strip the trailing slash that some cloud storage providers (e.g. GCS)
+     * preserve in the path of a directory
+     *
+     * @param dir
+     */
+    static protected Path stripTrailingSlash(Path dir) {
+        return dir.toString().endsWith('/')
+            ? dir.resolveSibling(dir.getFileName())
+            : dir
     }
 
     static protected Path relativize0(Path folder, Path fullPath) {
