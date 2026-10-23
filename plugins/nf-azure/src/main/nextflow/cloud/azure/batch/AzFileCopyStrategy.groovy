@@ -53,7 +53,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
-        this.azcopyLimits = AzCopyLimits.of(bean.containerMemory, maxParallelTransfers, (int)Math.ceil(Double.parseDouble(config.azcopy().blockSize)))
+        this.azcopyLimits = AzCopyLimits.of(bean.containerMemory, maxParallelTransfers, config.azcopy().blockSize)
     }
 
     @Override

@@ -369,6 +369,7 @@ class AzBashLibTest extends Specification {
               */oom.txt)     echo partial > \$dst; exit 137 ;;
               */partial.txt) echo partial > \$dst; echo 'connection reset'; exit 1 ;;
               */partial.txt/\\*) echo 'Total Number of Transfers: 0' ;;
+              */oomdir/\\*)  echo a > \$dst/a.txt; exit 137 ;;
               */dir/\\*)      echo a > \$dst/a.txt ;;
               */missing/\\*)  echo "Total Number of Transfers: 0" ;;
               */denied/\\*)   echo "X-Ms-Error-Code: [AuthenticationFailed]"; exit 1 ;;
@@ -377,7 +378,7 @@ class AzBashLibTest extends Specification {
             """.stripIndent()
         azcopy.toFile().setExecutable(true)
         def script = workDir.resolve('test.sh')
-        script.text = AzBashLib.script() + """
+        script.text = 'set -eu\n' + AzBashLib.script() + """
             export PATH=${bin}:\$PATH
             nxf_az_download 'https://acct.blob.core.windows.net/c/${SOURCE}' target 2> stderr && echo 0 > status || echo \$? > status
             """.stripIndent()
@@ -406,6 +407,7 @@ class AzBashLibTest extends Specification {
         'denied'    | 1      | 'none' | 'AuthenticationFailed'
         'oom.txt'   | 137    | 'file' | 'Unable to download path'
         'partial.txt' | 1    | 'none' | 'connection reset'
+        'oomdir'    | 137    | 'none' | 'Unable to download path'
     }
 
 }

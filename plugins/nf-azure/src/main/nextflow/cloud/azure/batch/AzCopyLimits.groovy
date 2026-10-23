@@ -56,17 +56,18 @@ class AzCopyLimits {
     /**
      * @param memory The task memory, or {@code null} when not specified
      * @param maxParallelTransfers The configured maximum number of parallel transfers
-     * @param blockSizeMb The azcopy block size in MB
+     * @param blockSize The azcopy block size in MB
      * @return The azcopy limits for the task, or {@code null} when the task memory is not specified
      */
-    static AzCopyLimits of(MemoryUnit memory, int maxParallelTransfers, int blockSizeMb) {
+    static AzCopyLimits of(MemoryUnit memory, int maxParallelTransfers, String blockSize) {
         if( !memory )
             return null
+        final blockSizeMb = blockSize?.isNumber() ? (long)Math.ceil(blockSize as double) : 0L
         final budget = memory.toMega().intdiv(2) - RESERVED_MB
         final parallel = budget > 0
                 ? Math.max(1, Math.min(maxParallelTransfers, (int)(budget.intdiv(MIN_TRANSFER_MB))))
                 : 1
-        final minBuffer = Math.max(MIN_BUFFER_MB, (long)MIN_BLOCKS_IN_BUFFER * blockSizeMb)
+        final minBuffer = Math.max(MIN_BUFFER_MB, MIN_BLOCKS_IN_BUFFER * blockSizeMb)
         final buffer = budget > 0
                 ? Math.max(minBuffer, budget.intdiv(parallel) - PROCESS_OVERHEAD_MB)
                 : minBuffer
@@ -77,6 +78,6 @@ class AzCopyLimits {
      * @return The buffer size in the format expected by the {@code AZCOPY_BUFFER_GB} variable
      */
     String getBufferGb() {
-        return new BigDecimal(bufferMb).divide(new BigDecimal(1024), 3, RoundingMode.DOWN).stripTrailingZeros().toPlainString()
+        return new BigDecimal(bufferMb).divide(new BigDecimal(1024), 3, RoundingMode.UP).stripTrailingZeros().toPlainString()
     }
 }
