@@ -48,26 +48,27 @@ $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
 ## pool creation: the pool must not exist before the run
 ## first remove pools and jobs left by runs interrupted before deleting their pool
-{ set +x; } 2>/dev/null
-if command -v az >/dev/null && [[ -n "${AZURE_BATCH_ACCOUNT_KEY:-}" ]]; then
-  BATCH_OPTS=(--account-name "$AZURE_BATCH_ACCOUNT_NAME" --account-key "$AZURE_BATCH_ACCOUNT_KEY" --account-endpoint "https://$AZURE_BATCH_ACCOUNT_NAME.westeurope.batch.azure.com")
+if command -v az >/dev/null && [[ -n "${AZURE_BATCH_ACCOUNT_KEY:+set}" ]]; then (
+  { set +x; } 2>/dev/null
+  export AZURE_BATCH_ACCOUNT="$AZURE_BATCH_ACCOUNT_NAME"
+  export AZURE_BATCH_ACCESS_KEY="$AZURE_BATCH_ACCOUNT_KEY"
+  export AZURE_BATCH_ENDPOINT="https://$AZURE_BATCH_ACCOUNT_NAME.westeurope.batch.azure.com"
   CUTOFF=$(( $(date +%s) - 3*3600 ))
-  for P in $(az batch pool list "${BATCH_OPTS[@]}" --query "[?starts_with(id,'nextflow-ci-')].id" -o tsv 2>/dev/null); do
+  POOLS=$(timeout 120 az batch pool list --query "[?starts_with(id,'nextflow-ci-')].id" -o tsv) || { echo "WARN: unable to list pools for cleanup"; exit 0; }
+  for P in $POOLS; do
     TS=${P#nextflow-ci-}; TS=${TS%%-*}
-    if [[ $TS =~ ^[0-9]+$ ]] && (( TS < CUTOFF )); then
-      for J in $(az batch job list "${BATCH_OPTS[@]}" --query "[?poolInfo.poolId=='$P'].id" -o tsv 2>/dev/null); do
-        az batch job delete "${BATCH_OPTS[@]}" --job-id "$J" --yes || true
-      done
-      az batch pool delete "${BATCH_OPTS[@]}" --pool-id "$P" --yes || true
-      echo "Removed stale pool $P"
-    fi
+    [[ $TS =~ ^[0-9]+$ ]] && (( 10#$TS < CUTOFF )) || continue
+    for J in $(timeout 120 az batch job list --filter "executionInfo/poolId eq '$P'" --query "[].id" -o tsv); do
+      timeout 120 az batch job delete --job-id "$J" --yes || true
+    done
+    timeout 120 az batch pool delete --pool-id "$P" --yes && echo "Removed stale pool $P" || true
   done
-fi
-set -x
+) fi
 
 POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
 POOL_CONFIG=$(mktemp)
-cat > $POOL_CONFIG <<EOF
+trap 'rm -f "$POOL_CONFIG"' EXIT
+cat > "$POOL_CONFIG" <<EOF
 includeConfig '$PWD/azure.config'
 process.queue = '$POOL_ID'
 azure {
@@ -83,9 +84,8 @@ azure {
   }
 }
 EOF
-$NXF_CMD -C $POOL_CONFIG run ./test-subdirs.nf
-rm -f $POOL_CONFIG
-grep -q "pool with id: $POOL_ID" .nextflow.log
+$NXF_CMD -C "$POOL_CONFIG" run ./test-subdirs.nf
+grep -q "pool with id: $POOL_ID" .nextflow.log || { echo "Pool $POOL_ID was not created"; exit 1; }
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -c ./azure.config \
