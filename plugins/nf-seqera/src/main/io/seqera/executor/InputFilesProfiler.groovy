@@ -53,7 +53,7 @@ class InputFilesProfiler {
     private final Cache<URI,long[]> cache
 
     /** Paths whose stat failure has already been warned about, so a failing path is warned once */
-    private final Cache<URI,Boolean> warned
+    private final Set<URI> warned
 
     /** Executor to stat the files of a task in parallel, or null to stat them sequentially */
     private final ExecutorService executor
@@ -71,9 +71,10 @@ class InputFilesProfiler {
         this.cache = CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
             .build()
-        this.warned = CacheBuilder.newBuilder()
+        this.warned = Collections.newSetFromMap(CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
-            .build()
+            .<URI,Boolean>build()
+            .asMap())
     }
 
     /**
@@ -153,11 +154,11 @@ class InputFilesProfiler {
         }
         catch( Exception e ) {
             final cause = e.cause ?: e
-            final msg = "Unable to determine size for input file: ${path} - ${cause.message}"
-            if( warned.asMap().putIfAbsent(uri, Boolean.TRUE) == null )
-                log.warn msg
+            // @Slf4j guards the debug message, so it is only built when debug logging is enabled
+            if( warned.add(uri) )
+                log.warn "Unable to determine size for input file: ${path} - ${cause.message}"
             else
-                log.debug msg
+                log.debug "Unable to determine size for input file: ${path} - ${cause.message}"
             return new long[]{1, 0}
         }
     }
