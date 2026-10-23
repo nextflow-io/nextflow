@@ -28,22 +28,42 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SecretHelper {
 
-    // NOTE: `api_?key` covers `agent.apiKey` and the `*_API_KEY` environment spellings; without it
-    // a resolved provider credential is persisted verbatim by the lineage observer and shipped as
-    // `workflow.configText` (`accessKey` does NOT match `apiKey`)
+    /**
+     * @deprecated Use {@link StringUtils#isSensitiveName(java.lang.String)} instead
+     */
+    @Deprecated
     static public final Pattern SECRET_KEYS = ~/(?im)^AWS.+|.*TOKEN.*|.*PASSWORD.*|.*SECRET.*|.*accessKey.*|.*api_?key.*/
 
-    // note: ?i stands for ignore case - ?m stands for multiline
-    // NOTE: `api_?key` mirrors SECRET_KEYS above. The two must agree: SECRET_KEYS masks a config
-    // MAP entry while this masks a `NAME=value` environment line, and the out-of-band credential
-    // channel the agent docs still recommend (`env { OPENAI_API_KEY = ... }`,
-    // `agent.containerOptions = '-e OPENAI_API_KEY'`) is delivered as exactly such a line -- so a
-    // pattern that covers only one of the two masks the credential in only half the places it
-    // appears. Kept in sync with the identical twin in {@code nextflow.trace.TraceRecord}.
+    /**
+     * @deprecated Use {@link #secureEnvString(java.lang.String)} instead
+     */
+    @Deprecated
     static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*|.*API_?KEY[^=]*)=(.*)$/
 
+    // `NAME=` starting only at the beginning of a `[\w.-]` run, possessive, so scanning stays linear
+    static private final Pattern ENV_NAME = ~/(?<![\w.-])([\w.-]++)[ \t]*+=/
+
+    /**
+     * Mask, up to the end of the line, the value of each `NAME=value` whose name is sensitive
+     * by {@link StringUtils#isSensitiveName(java.lang.String)}
+     */
     static String secureEnvString( String str ) {
-        str.replaceAll(SECRET_REGEX, '$1=[secure]')
+        final result = new StringBuilder()
+        final matcher = ENV_NAME.matcher(str)
+        int last = 0
+        while( matcher.find() ) {
+            // a bare `AWS` is not a sensitive config name (it is the `aws` scope) but it was always masked as env var
+            final name = matcher.group(1)
+            if( !StringUtils.isSensitiveName(name) && !name.equalsIgnoreCase('aws') )
+                continue
+            int eol = str.indexOf('\n', matcher.end())
+            if( eol < 0 )
+                eol = str.length()
+            result.append(str, last, matcher.end()).append('[secure]')
+            last = eol
+            matcher.region(eol, str.length())
+        }
+        return result.append(str, last, str.length()).toString()
     }
 
     static Object hideSecrets( obj ) {
@@ -53,7 +73,10 @@ class SecretHelper {
         if( obj instanceof Map ) {
             final names = obj.keySet()
             for( String n : names )  {
-                if( SECRET_KEYS.matcher(n).find() ) {
+                // manifest values, e.g. author and license, describe the pipeline and are never credentials
+                if( n == 'manifest' )
+                    continue
+                if( StringUtils.isSensitiveName(n) ) {
                     obj.put(n, '[secret]')
                 }
                 else {

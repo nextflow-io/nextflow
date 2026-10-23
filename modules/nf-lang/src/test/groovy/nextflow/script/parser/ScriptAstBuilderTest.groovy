@@ -57,6 +57,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 14
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 15
         errors[0].getOriginalMessage() == "Unexpected input: '3'"
 
         when:
@@ -76,6 +78,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 16
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 17
         errors[0].getOriginalMessage() == "Unexpected input: '\\n'"
 
         when:
@@ -96,6 +100,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 24
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 27
         errors[0].getOriginalMessage() == "Unexpected input: 'val'"
 
         when:
@@ -116,6 +122,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 40
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 44
         errors[0].getOriginalMessage() == "Unexpected input: 'emit'"
 
         when:
@@ -136,6 +144,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 4
         errors[0].getStartColumn() == 6
+        errors[0].getEndLine() == 4
+        errors[0].getEndColumn() == 7
         errors[0].getOriginalMessage() == "Unexpected input: ','"
     }
 

@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     timeout-minutes: 100
     strategy:
       fail-fast: false
@@ -41,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
         with:
           fetch-depth: 1
           submodules: true
@@ -68,14 +69,23 @@ jobs:
 
       - name: Setup env
         run: |
-             rm -f $HOME/.gitconfig;
-             mkdir -p "$HOME/.nextflow";
-             echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+          rm -f $HOME/.gitconfig;
+          mkdir -p "$HOME/.nextflow";
+          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
+      # Random per-run value that looks like a secret, scanned for in test reports
+      # and artifacts before upload to detect tests that dump the environment.
+      # Generated in-job so it also works for fork PRs, which get no secrets.
+      - name: Setup leak canary
+        run: |
+          canary="nxfcanary-$(openssl rand -hex 16)"
+          echo "::add-mask::$canary"
+          echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
+
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
         with:
           java-version: ${{matrix.java_version}}
           distribution: 'corretto'
@@ -85,20 +95,29 @@ jobs:
       - name: Compile
         run: make assemble
 
+      # Assume the CI test role via GitHub OIDC. Fork PRs get no OIDC token, so this is
+      # skipped and so are the AWS tests.
+      - name: Configure AWS credentials
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.SEQERA_NEXTFLOW_TEST_ROLE_ARN }}
+          aws-region: eu-west-1
+
       - name: Test
         run: |
-            # configure test env
-            if [ -n "$GOOGLE_SECRET" ]; then
-              printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
-              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
-            fi
-            # run tests
-            make test
+          # the OIDC credentials step sets AWS_REGION/AWS_DEFAULT_REGION, but unit tests expect none (e.g. `aws` cli without `--region`)
+          unset AWS_REGION AWS_DEFAULT_REGION
+          # configure test env
+          if [ -n "$GOOGLE_SECRET" ]; then
+            printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
+          fi
+          # run tests
+          make test
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_S3FS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_S3FS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # run the nf-amazon tests against real S3 with the CI role credentials
+          ENABLE_S3FS_TEST: true
           NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
           NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
@@ -109,9 +128,19 @@ jobs:
           AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-      - name: Publish tests report
+      - name: Scan tests report for leaks
+        id: leak_scan
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        run: |
+          shopt -s globstar nullglob
+          if ! .github/scripts/check-leaks.sh ./**/build/reports/tests/test; then
+            echo "::error::A test leaked the job environment (incl. secrets) into the tests report. The report artifact was withheld; fix the test before re-running."
+            exit 1
+          fi
+
+      - name: Publish tests report
+        if: always() && steps.leak_scan.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
           path: |
@@ -126,6 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -138,7 +168,7 @@ jobs:
             test_mode: test_agent
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
         with:
           fetch-depth: 1
           submodules: true
@@ -152,8 +182,17 @@ jobs:
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
+      # Random per-run value that looks like a secret, scanned for in test reports
+      # and artifacts before upload to detect tests that dump the environment.
+      # Generated in-job so it also works for fork PRs, which get no secrets.
+      - name: Setup leak canary
+        run: |
+          canary="nxfcanary-$(openssl rand -hex 16)"
+          echo "::add-mask::$canary"
+          echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
+
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
         with:
           java-version: ${{matrix.java_version}}
           distribution: 'corretto'
@@ -166,18 +205,27 @@ jobs:
       # Fork PRs get no secrets, so these are skipped and so are the tests.
       - name: Docker Login to Docker Hub
         if: ${{ matrix.test_mode == 'test_agent' && vars.DOCKERHUB_USERNAME != '' && github.event.pull_request.head.repo.fork != true }}
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker Login to Seqera stage CR
         if: ${{ matrix.test_mode == 'test_agent' && vars.SEQERA_STAGE_CR_USERNAME != '' && github.event.pull_request.head.repo.fork != true }}
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
         with:
           registry: "public.cr.stage-seqera.io"
           username: ${{ vars.SEQERA_STAGE_CR_USERNAME }}
           password: ${{ secrets.SEQERA_STAGE_CR_PASSWORD }}
+
+      # Assume the CI test role via GitHub OIDC (S3, Batch, KMS, CodeCommit tests).
+      # Fork PRs get no OIDC token, so this is skipped and so are the tests.
+      - name: Configure AWS credentials
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.SEQERA_NEXTFLOW_TEST_ROLE_ARN }}
+          aws-region: eu-west-1
 
       - name: Run tests
         run: |
@@ -195,9 +243,6 @@ jobs:
           TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SEQERA_STAGE_CR_PASSWORD: ${{ secrets.SEQERA_STAGE_CR_PASSWORD }}
-          AWS_DEFAULT_REGION: eu-west-1
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
           NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
@@ -210,13 +255,22 @@ jobs:
 
       - name: Tar integration tests
         if: always()
-        run: | 
-            tar -cvf integration-tests.tar.gz tests/checks
-            tar -cvf validation-tests.tar.gz validation
+        run: |
+          tar -cvf integration-tests.tar.gz tests/checks
+          tar -cvf validation-tests.tar.gz validation
+
+      - name: Scan integration tests for leaks
+        id: leak_scan
+        if: always()
+        run: |
+          if ! .github/scripts/check-leaks.sh integration-tests.tar.gz validation-tests.tar.gz; then
+            echo "::error::A test leaked the job environment (incl. secrets) into the integration tests output. The report artifact was withheld; fix the test before re-running."
+            exit 1
+          fi
 
       - name: Publish tests report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
+        if: always() && steps.leak_scan.outcome == 'success'
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
@@ -224,58 +278,58 @@ jobs:
             integration-tests.tar.gz
 
   test-e2e:
-      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
-      needs: build
-      runs-on: ubuntu-latest
-      timeout-minutes: 10
-      steps:
-          - name: Checkout
-            uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-            with:
-                fetch-depth: 1
-                submodules: true
-                persist-credentials: false
-                
-          - name: Setup Java 17
-            uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-            with:
-                java-version: 17
-                distribution: 'corretto'
-                architecture: x64
-                cache: gradle
+    if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: true
+          persist-credentials: false
 
-          - name: Setup env
-            env:
-              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
-            run: |
-                wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
-                chmod +x wave
-                mv wave /usr/local/bin/
-                # Use heredoc-style delimiter so multi-line / quote-containing
-                # commit messages survive intact (run.sh greps for `[e2e prod]`).
-                {
-                  echo "COMMIT_MESSAGE<<NXF_EOF"
-                  echo "$NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE"
-                  echo "NXF_EOF"
-                } >> "$GITHUB_ENV"
+      - name: Setup Java 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
+        with:
+          java-version: 17
+          distribution: 'corretto'
+          architecture: x64
+          cache: gradle
 
-          - name : Docker Login to Seqera public CR
-            uses : docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-            with :
-                registry : "public.cr.seqera.io"
-                username : "public-cr-admin"
-                password : ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+      - name: Setup env
+        env:
+          NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
+        run: |
+          wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+          chmod +x wave
+          mv wave /usr/local/bin/
+          # Use heredoc-style delimiter so multi-line / quote-containing
+          # commit messages survive intact (run.sh greps for `[e2e prod]`).
+          {
+            echo "COMMIT_MESSAGE<<NXF_EOF"
+            echo "$NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE"
+            echo "NXF_EOF"
+          } >> "$GITHUB_ENV"
 
-          - name: Launch tests
-            run: |
-                cd test-e2e
-                bash run.sh
-            env:
-                GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
-                GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+      - name: Docker Login to Seqera public CR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
+        with:
+          registry: "public.cr.seqera.io"
+          username: "public-cr-admin"
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      - name: Launch tests
+        run: |
+          cd test-e2e
+          bash run.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
   release:
-    if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    if: ${{ always() && github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/STABLE-')) && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     needs: [build, test]
     runs-on: ubuntu-latest
     # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
@@ -291,19 +345,20 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+      id-token: write  # OIDC token to assume the AWS release role
     steps:
       # Intentionally persists credentials: the `release` task in
       # packing.gradle runs `git push origin vX.Y.Z` against this repo,
       # which relies on actions/checkout having written the token into
       # .git/config as http.extraheader.
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           submodules: true
 
       - name: Setup Java 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
         with:
           java-version: 17
           distribution: 'corretto'
@@ -319,7 +374,7 @@ jobs:
           git config --global user.email "$GIT_USER_EMAIL"
 
       - name: Docker Login to Docker Hub
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -329,7 +384,7 @@ jobs:
       # `nextflow/nextflow` to (docker/Makefile). No new credential, and this login runs before
       # `Run release`, so build-image.sh needs none of its own.
       - name: Docker Login to Seqera public CR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
         with:
           registry: "public.cr.seqera.io"
           username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
@@ -345,12 +400,27 @@ jobs:
       # the docker-container builder it then passes to --builder, so the action's builder would
       # be created and never used.
       - name: Set up QEMU for the runner image build
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # ratchet:docker/setup-qemu-action@v4.4.0
         with:
           # Digest-pinned like every action in this file. The input's default is a floating
           # docker.io/tonistiigi/binfmt:latest, which would otherwise be the only unpinned
           # thing the release newly depends on.
           image: docker.io/tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
+
+      # Short-lived credentials to publish nextflow assets to the nextflow bucket, obtained by
+      # assuming the release role via GitHub OIDC (no static keys). Exposed ONLY as step outputs:
+      # `output-env-credentials: false` keeps AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+      # AWS_SESSION_TOKEN out of GITHUB_ENV. `Run release` also sets AWS_ACCESS_KEY_ID /
+      # AWS_SECRET_ACCESS_KEY to the (static) Maven credentials, and a stray AWS_SESSION_TOKEN
+      # from the role would be paired with them and break Maven authentication.
+      - name: Assume AWS release role
+        id: aws_release_role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # ratchet:aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.SEQERA_NEXTFLOW_RELEASE_ROLE_ARN }}
+          aws-region: eu-west-1
+          output-credentials: true
+          output-env-credentials: false
 
       - name: Run release
         run: |
@@ -361,9 +431,10 @@ jobs:
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: 'true'
-          # credentials to pubslish nextflow assets
-          NXF_AWS_ACCESS: ${{ vars.NXF_AWS_ACCESS }}
-          NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
+          # temporary credentials (assumed role) to publish nextflow assets
+          NXF_AWS_ACCESS: ${{ steps.aws_release_role.outputs.aws-access-key-id }}
+          NXF_AWS_SECRET: ${{ steps.aws_release_role.outputs.aws-secret-access-key }}
+          NXF_AWS_SESSION_TOKEN: ${{ steps.aws_release_role.outputs.aws-session-token }}
           # credentials to publish maven libraries
           AWS_ACCESS_KEY_ID: ${{ vars.SEQERA_MAVEN_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SEQERA_MAVEN_SECRET_KEY }}

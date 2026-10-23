@@ -37,11 +37,15 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessConfigV1
+import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
+import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.types.Tuple
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -636,6 +640,141 @@ class TaskProcessorTest extends Specification {
         'f*'            | '/some/file.txt'                          | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
         'f*'            | ['/some/file.txt']                        | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
         'f*'            | ['/a','/b']                               | '3'       | 'Incorrect number of input files for process `foo` -- expected 3, found 2'
+    }
+
+    @Unroll
+    def 'should allow the same input file to be staged by multiple inputs in typed process' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Y, true], Mock(FilePorter.Batch))
+        then:
+        task.inputFilesMap == EXPECTED
+
+        where:
+        Y                                                   | EXPECTED
+        Path.of('/b/other.fq')                              | ['reads.fq': Path.of('/a/reads.fq'), 'other.fq': Path.of('/b/other.fq')]
+        [Path.of('/a/reads.fq')]                            | ['reads.fq': Path.of('/a/reads.fq')]
+        [Path.of('/a/reads.fq'), Path.of('/b/other.fq')]    | ['reads.fq': Path.of('/a/reads.fq'), 'other.fq': Path.of('/b/other.fq')]
+    }
+
+    @Unroll
+    def 'should report input file name collision for typed process' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(PATTERN, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Y, true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/reads.fq)'
+
+        where:
+        Y                                                   | PATTERN
+        Path.of('/b/reads.fq')                              | null
+        [Path.of('/b/reads.fq')] as Set                     | null
+        [Path.of('/a/reads.fq'), Path.of('/b/reads.fq')]    | null
+        Path.of('/b/reads.fq')                              | '*'
+        [Path.of('/b/reads.fq')]                            | '*'
+    }
+
+    def 'should truncate input file name collision message' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('xs', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> xs }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+        and:
+        def files = (1..12).collectMany { i -> (1..5).collect { j -> Path.of("/work/${j}/file${i}.txt") } }
+
+        when:
+        processor.resolveTaskInputs(task, [files, true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        def names = (1..10).collect { i -> "file${i}.txt (/work/1/file${i}.txt, /work/2/file${i}.txt, /work/3/file${i}.txt, ... 2 more)" }
+        e.message == "Process `foo` input file name collision -- There are multiple input files for each of the following file names: ${names.join(', ')}, ... 2 more"
+    }
+
+    def 'should report input file name collision for typed process with explicit stage name' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Path, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput('reads.fq', { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Path.of('/b/other.fq'), true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/other.fq)'
+    }
+
+    def 'should report input file name collision for typed process with tuple input' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addTupleParam([new ProcessInput('x', Path, false), new ProcessInput('y', Path, false)], Tuple)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [[Path.of('/a/reads.fq'), Path.of('/b/reads.fq')], true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/reads.fq)'
     }
 
     def 'should submit a task' () {

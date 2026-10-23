@@ -50,4 +50,15 @@ class SpecNodeTest extends Specification {
         scope.children.get('time').types == [ Duration ]
     }
 
+    def 'should define nextflow retry policy config options' () {
+        expect:
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','delay']).types == [ Duration ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','maxDelay']).types == [ Duration ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','maxAttempts']).types == [ Integer ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','jitter']).types == [ Double ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','multiplier']).types == [ Double ]
+        and:
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','delay']).description
+    }
+
 }

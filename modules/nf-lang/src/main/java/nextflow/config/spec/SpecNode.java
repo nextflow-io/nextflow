@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import nextflow.config.scopes.Config;
+import nextflow.config.scopes.RetryPolicyConfig;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.DslScope;
 import nextflow.script.dsl.FeatureFlag;
@@ -44,7 +45,7 @@ public sealed interface SpecNode {
 
     private static Scope rootScope() {
         var result = Scope.of(Config.class, "");
-        // derive `nextflow` config options from feature flags.
+        // derive `nextflow` config options from feature flags and the retry policy.
         result.children().put("nextflow", nextflowScope());
         // derive `process` and `agent` config options from process directives: an agent
         // task accepts the same task directives, in its own independent scope.
@@ -88,7 +89,8 @@ public sealed interface SpecNode {
             "",
             Map.ofEntries(
                 Map.entry("enable", (SpecNode) new Scope("", enableOpts)),
-                Map.entry("preview", (SpecNode) new Scope("", previewOpts))
+                Map.entry("preview", (SpecNode) new Scope("", previewOpts)),
+                Map.entry("retryPolicy", (SpecNode) Scope.of(RetryPolicyConfig.class, ""))
             )
         );
     }

@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 
 import groovy.json.JsonOutput
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.agent.AgentOutputMode
 import nextflow.agent.AgentOutputPlan
@@ -41,11 +42,15 @@ class AgentDefTest extends Specification {
         // exported in the developer's shell would silently answer the second rung of the ladder for
         // every feature below, hiding the rung actually under test
         SysEnv.push([:])
+        // any test that creates a Session leaves it in Global, and its `agent` scope or baseDir
+        // would change how run() resolves the executor and skills
+        Global.session = null
     }
 
     def cleanup() {
         SysEnv.pop()
         AgentRpcHostResolver.reset()
+        Global.session = null
     }
 
     private AgentDef makeAgent(BaseScript script, String name) {

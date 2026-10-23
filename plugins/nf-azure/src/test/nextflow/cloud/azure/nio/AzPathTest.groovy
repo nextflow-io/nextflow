@@ -22,6 +22,8 @@ import java.time.OffsetDateTime
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobItem
 import com.azure.storage.blob.models.BlobItemProperties
+import nextflow.Global
+import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -33,6 +35,14 @@ class AzPathTest extends Specification {
 
     @Shared
     Map<String,AzFileSystem> cache = new HashMap<>()
+
+    def setup() {
+        Global.session = Mock(Session) { getConfig() >> [:] }
+    }
+
+    def cleanup() {
+        Global.session = null
+    }
 
     private AzPath azpath(String path) {
         def container = path.tokenize('/')[0]
