@@ -17,19 +17,26 @@
 package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import dev.failsafe.function.CheckedPredicate
 
+import com.azure.compute.batch.BatchClientBuilder
 import com.azure.compute.batch.models.AllocationState
+import com.azure.compute.batch.models.BatchErrorException
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchJobCreateParameters
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.ResizeError
+import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.exception.HttpResponseException
+import com.azure.core.http.HttpClient
+import com.azure.core.http.HttpHeaders
+import com.azure.core.http.HttpRequest
 import com.azure.core.http.HttpResponse
 import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
@@ -50,6 +57,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -315,9 +323,9 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.commandLine == 'bash -c "mkdir -p $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy"'
         configuredStartTask.resourceFiles.size()==1
-        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy.tar.gz'
     }
 
     def 'should configure custom startTask' () {
@@ -329,10 +337,10 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/" && bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == 'bash -c "mkdir -p $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy" && bash -c \'echo hello-world\''
         and:
         configuredStartTask.resourceFiles.size()==1
-        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy.tar.gz'
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
@@ -756,7 +764,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-01000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy && bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -800,7 +808,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy && bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '--cpu-shares 4096 --memory 8192m -v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -845,7 +853,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy && bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
@@ -1045,6 +1053,51 @@ class AzBatchServiceTest extends Specification {
         then: 'exception is not caught'
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
+    }
+
+    private static HttpClient stubHttpClient(int statusCode, String errorCode) {
+        final body = """{"odata.metadata":"x","code":"${errorCode}","message":{"lang":"en-US","value":"error"}}""".getBytes(StandardCharsets.UTF_8)
+        final headers = new HttpHeaders().set('Content-Type', 'application/json;odata=minimalmetadata')
+        return { HttpRequest request ->
+            Mono.just(new HttpResponse(request) {
+                int getStatusCode() { statusCode }
+                String getHeaderValue(String name) { headers.getValue(name) }
+                HttpHeaders getHeaders() { headers }
+                Flux<ByteBuffer> getBody() { Flux.just(ByteBuffer.wrap(body)) }
+                Mono<byte[]> getBodyAsByteArray() { Mono.just(body) }
+                Mono<String> getBodyAsString() { Mono.just(new String(body, StandardCharsets.UTF_8)) }
+                Mono<String> getBodyAsString(Charset charset) { Mono.just(new String(body, charset)) }
+            } as HttpResponse)
+        } as HttpClient
+    }
+
+    @Unroll
+    def 'should handle pool lookup response with status #STATUS' () {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def client = new BatchClientBuilder()
+            .endpoint('https://acct.westeurope.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('acct', Base64.encoder.encodeToString('key'.bytes)))
+            .httpClient(stubHttpClient(STATUS, CODE))
+            .buildClient()
+        service.getClient() >> client
+
+        when:
+        def result = null
+        Throwable error = null
+        try { result = service.getPool('test-pool') }
+        catch (Throwable t) { error = t }
+
+        then:
+        result == null
+        error?.class == ERROR
+
+        where:
+        STATUS | CODE                   | ERROR
+        404    | 'PoolNotFound'         | null
+        403    | 'AuthorizationFailure' | BatchErrorException
+        401    | 'AuthenticationFailed' | BatchErrorException
     }
 
     def 'should test createJobConstraints method with Duration input' () {
