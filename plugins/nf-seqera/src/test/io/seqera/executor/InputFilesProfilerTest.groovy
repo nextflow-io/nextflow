@@ -22,9 +22,14 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import nextflow.file.FileHolder
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import org.slf4j.LoggerFactory
 import spock.lang.TempDir
 
 /**
@@ -282,5 +287,24 @@ class InputFilesProfilerTest extends Specification {
 
         cleanup:
         pool.shutdown()
+    }
+
+    def 'should warn once per failing path'() {
+        given:
+        def missing = tempDir.resolve('missing.txt')
+        def profiler = new InputFilesProfiler()
+        def logger = (Logger) LoggerFactory.getLogger(InputFilesProfiler)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+
+        when: 'three tasks use the same missing file'
+        3.times { profiler.compute([new FileHolder(missing)]) }
+
+        then: 'the failure is warned about once'
+        appender.list.findAll { it.level == Level.WARN && it.formattedMessage.contains('missing.txt') }.size() == 1
+
+        cleanup:
+        logger.detachAppender(appender)
     }
 }

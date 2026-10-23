@@ -19,10 +19,12 @@ package io.seqera.executor
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
@@ -31,7 +33,6 @@ import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.client.SchedClient
 import nextflow.SysEnv
 import nextflow.processor.TaskRun
-import nextflow.util.CustomThreadFactory
 import nextflow.util.Duration
 import nextflow.util.Threads
 
@@ -111,9 +112,19 @@ class SeqeraBatchSubmitter {
         this.keepAliveInterval = keepAliveInterval
         this.onError = onError
         // Fixed size pools: a ThreadPoolExecutor with an unbounded queue never grows beyond its core size
-        this.metricsExecutor = Executors.newFixedThreadPool(METRICS_POOL_SIZE, new CustomThreadFactory('seqera-metrics'))
-        this.statExecutor = Executors.newFixedThreadPool(METRICS_STAT_POOL_SIZE, new CustomThreadFactory('seqera-metrics-stat'))
+        this.metricsExecutor = Executors.newFixedThreadPool(METRICS_POOL_SIZE, daemonThreadFactory('seqera-metrics'))
+        this.statExecutor = Executors.newFixedThreadPool(METRICS_STAT_POOL_SIZE, daemonThreadFactory('seqera-metrics-stat'))
         this.profiler = new InputFilesProfiler(statExecutor)
+    }
+
+    /**
+     * Daemon threads, so idle pool threads never keep the JVM alive if {@link #shutdown()} is skipped
+     */
+    private static ThreadFactory daemonThreadFactory(String name) {
+        return new ThreadFactoryBuilder()
+                .setNameFormat("${name}-%d".toString())
+                .setDaemon(true)
+                .build()
     }
 
     /**

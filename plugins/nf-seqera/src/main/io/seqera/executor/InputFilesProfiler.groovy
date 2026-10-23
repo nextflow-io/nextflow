@@ -52,6 +52,9 @@ class InputFilesProfiler {
     /** Keyed by URI rather than Path, to avoid retaining heavyweight cloud path objects */
     private final Cache<URI,long[]> cache
 
+    /** Paths whose stat failure has already been warned about, so a failing path is warned once */
+    private final Cache<URI,Boolean> warned
+
     /** Executor to stat the files of a task in parallel, or null to stat them sequentially */
     private final ExecutorService executor
 
@@ -66,6 +69,9 @@ class InputFilesProfiler {
     InputFilesProfiler(ExecutorService executor, long cacheSize) {
         this.executor = executor
         this.cache = CacheBuilder.newBuilder()
+            .maximumSize(cacheSize)
+            .build()
+        this.warned = CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
             .build()
     }
@@ -141,12 +147,17 @@ class InputFilesProfiler {
         if( path == null )
             return new long[]{0, 0}
 
+        final uri = path.toUri()
         try {
-            return cache.get(path.toUri(), { statPath(path) } as Callable<long[]>)
+            return cache.get(uri, { statPath(path) } as Callable<long[]>)
         }
         catch( Exception e ) {
             final cause = e.cause ?: e
-            log.warn "Unable to determine size for input file: ${path} - ${cause.message}"
+            final msg = "Unable to determine size for input file: ${path} - ${cause.message}"
+            if( warned.asMap().putIfAbsent(uri, Boolean.TRUE) == null )
+                log.warn msg
+            else
+                log.debug msg
             return new long[]{1, 0}
         }
     }
