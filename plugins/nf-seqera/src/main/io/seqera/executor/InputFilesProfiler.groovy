@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -36,7 +37,8 @@ import nextflow.processor.TaskRun
  * Follows symlinks and recursively computes directory sizes.
  *
  * Stats are cached per path, because the same reference files are
- * usually shared by many tasks of the same run.
+ * usually shared by many tasks of the same run. When an executor is
+ * given, the files of a task are statted in parallel on it.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -50,11 +52,19 @@ class InputFilesProfiler {
     /** Keyed by URI rather than Path, to avoid retaining heavyweight cloud path objects */
     private final Cache<URI,long[]> cache
 
+    /** Executor to stat the files of a task in parallel, or null to stat them sequentially */
+    private final ExecutorService executor
+
     InputFilesProfiler() {
-        this(DEFAULT_CACHE_SIZE)
+        this(null)
     }
 
-    InputFilesProfiler(long cacheSize) {
+    InputFilesProfiler(ExecutorService executor) {
+        this(executor, DEFAULT_CACHE_SIZE)
+    }
+
+    InputFilesProfiler(ExecutorService executor, long cacheSize) {
+        this.executor = executor
         this.cache = CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
             .build()
@@ -93,8 +103,7 @@ class InputFilesProfiler {
         long maxFileBytes = Long.MIN_VALUE
         long minFileBytes = Long.MAX_VALUE
 
-        for( FileHolder fh : files ) {
-            final long[] result = getFileStats(fh.storePath)
+        for( long[] result : statAll(files) ) {
             final count = (int) result[0]
             final size = result[1]
             totalCount += count
@@ -110,6 +119,14 @@ class InputFilesProfiler {
             .totalBytes(totalBytes)
             .maxFileBytes(maxFileBytes)
             .minFileBytes(minFileBytes)
+    }
+
+    private List<long[]> statAll(List<FileHolder> files) {
+        final List<Callable<long[]>> tasks = files.collect { FileHolder fh -> { getFileStats(fh.storePath) } as Callable<long[]> }
+        if( executor == null || tasks.size() == 1 )
+            return tasks.collect { it.call() }
+        // invokeAll waits interruptibly and cancels pending stats on interrupt
+        return executor.invokeAll(tasks).collect { it.get() }
     }
 
     /**

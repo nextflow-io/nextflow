@@ -58,6 +58,9 @@ class SeqeraBatchSubmitter {
     /** Number of threads computing input files metrics */
     static final int METRICS_POOL_SIZE = Math.max(1, SysEnv.getInteger('NXF_SEQERA_METRICS_POOL_SIZE', 10))
 
+    /** Number of threads statting input files, shared by the metrics computations of all tasks */
+    static final int METRICS_STAT_POOL_SIZE = Math.max(1, SysEnv.getInteger('NXF_SEQERA_METRICS_STAT_POOL_SIZE', 20))
+
     /**
      * Holds a task handler, its prepared Task object, and async metrics computation
      */
@@ -80,8 +83,14 @@ class SeqeraBatchSubmitter {
     /** Executor pool for async input file metrics computation */
     private final ExecutorService metricsExecutor
 
+    /**
+     * Executor pool statting the files of each task in parallel. It is separate from
+     * {@link #metricsExecutor} because a computation blocks waiting on its file stats
+     */
+    private final ExecutorService statExecutor
+
     /** Computes input files metrics, caching file stats across the tasks of the run */
-    private final InputFilesProfiler profiler = new InputFilesProfiler()
+    private final InputFilesProfiler profiler
 
     /** Maximum time a batch waits for metrics, see {@link #METRICS_TIMEOUT} */
     protected Duration metricsTimeout = METRICS_TIMEOUT
@@ -109,6 +118,14 @@ class SeqeraBatchSubmitter {
                 .withKeepAliveTime(60_000L)
                 .withAllowCoreThreadTimeout(true)
                 .build()
+        this.statExecutor = new ThreadPoolBuilder()
+                .withName('seqera-metrics-stat')
+                .withMinSize(METRICS_STAT_POOL_SIZE)
+                .withMaxSize(METRICS_STAT_POOL_SIZE)
+                .withKeepAliveTime(60_000L)
+                .withAllowCoreThreadTimeout(true)
+                .build()
+        this.profiler = new InputFilesProfiler(statExecutor)
     }
 
     /**
@@ -151,18 +168,23 @@ class SeqeraBatchSubmitter {
         if (sender) {
             sender.join()
         }
-        // Shutdown metrics executor
-        metricsExecutor.shutdown()
+        // Shutdown the metrics executor before the stat executor its computations wait on
+        shutdownExecutor(metricsExecutor)
+        shutdownExecutor(statExecutor)
+        log.debug "[SEQERA] Batch submitter shutdown complete"
+    }
+
+    private static void shutdownExecutor(ExecutorService executor) {
+        executor.shutdown()
         try {
-            if (!metricsExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-                metricsExecutor.shutdownNow()
+            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+                executor.shutdownNow()
             }
         }
         catch (InterruptedException e) {
-            metricsExecutor.shutdownNow()
+            executor.shutdownNow()
             Thread.currentThread().interrupt()
         }
-        log.debug "[SEQERA] Batch submitter shutdown complete"
     }
 
     /**

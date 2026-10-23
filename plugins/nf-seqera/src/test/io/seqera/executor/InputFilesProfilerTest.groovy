@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 import nextflow.file.FileHolder
 import nextflow.processor.TaskRun
@@ -243,5 +244,43 @@ class InputFilesProfilerTest extends Specification {
         then:
         first.totalBytes == 0
         second.totalBytes == 42
+    }
+
+    def 'should stat the files of a task in parallel'() {
+        given:
+        def files = (1..10).collect { i ->
+            def f = tempDir.resolve("input-${i}.txt")
+            Files.write(f, new byte[i])
+            new FileHolder(f)
+        }
+        def running = new AtomicInteger()
+        def maxRunning = new AtomicInteger()
+        def pool = Executors.newFixedThreadPool(10)
+        def profiler = new InputFilesProfiler(pool) {
+            @Override
+            protected long[] statPath(Path path) {
+                maxRunning.accumulateAndGet(running.incrementAndGet(), Math::max)
+                sleep(200)
+                running.decrementAndGet()
+                return super.statPath(path)
+            }
+        }
+
+        when:
+        def start = System.currentTimeMillis()
+        def metrics = profiler.compute(files)
+        def elapsed = System.currentTimeMillis() - start
+
+        then: 'ten 200ms stats take about one stat, not ten'
+        maxRunning.get() == 10
+        elapsed < 1000
+        and:
+        metrics.count == 10
+        metrics.totalBytes == 55
+        metrics.maxFileBytes == 10
+        metrics.minFileBytes == 1
+
+        cleanup:
+        pool.shutdown()
     }
 }
