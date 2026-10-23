@@ -292,11 +292,11 @@ class CacheDBTest extends Specification {
         def cache = new CacheDB(new DefaultCacheStore(UUID.randomUUID(), 'test_1', folder)).open()
         def hash = HashCode.fromInt(100)
         def proc = Mock(TaskProcessor) { getConfig() >> new ProcessConfig([:]) }
-        def handler = new CachedTaskHandler(Mock(TaskRun) { getProcessor() >> proc; getHash() >> hash }, new TraceRecord())
+        def handler = { String dir -> new CachedTaskHandler(Mock(TaskRun) { getProcessor() >> proc; getHash() >> hash; getWorkDir() >> Paths.get(dir) }, new TraceRecord()) }
 
         when: 'a completed task is re-executed, e.g. its outputs could not be resumed'
-        cache.writeTaskEntry0(handler, new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef']))
-        cache.writeTaskEntry0(handler, new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef-2']))
+        cache.writeTaskEntry0(handler('/work/ab/cdef'), new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef']))
+        cache.writeTaskEntry0(handler('/work/ab/cdef-2'), new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef-2']))
         then:
         cache.getTraceRecord(hash).workDir == '/work/ab/cdef-2'
         and: 'cleaning one of the two runs keeps the entry'
@@ -306,6 +306,50 @@ class CacheDBTest extends Specification {
         cleanup:
         cache?.close()
         folder?.deleteDir()
+    }
+
+    def 'reads the entry it replaces only for a later attempt' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        def proc = Mock(TaskProcessor) { getConfig() >> new ProcessConfig([:]) }
+        def task = new TaskRun(hash: HashCode.fromInt(100), workDir: Paths.get(DIR), processor: proc)
+
+        when:
+        cache.writeTaskEntry0(new CachedTaskHandler(task, new TraceRecord()), new TraceRecord([status: 'COMPLETED']))
+        then:
+        READS * store.getEntry(task.hash)
+        1 * store.putEntry(task.hash, _)
+
+        where:
+        DIR                 | READS
+        '/work/ab/cdef'     | 0
+        '/work/ab/cdef-2'   | 1
+    }
+
+    def 'a task without a trace record is logged, without failing the run' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        def handler = Mock(TaskHandler) { getTask() >> new TaskRun(hash: HashCode.fromInt(1), workDir: Paths.get('/work/ab/cdef')) }
+        and:
+        def logger = (Logger) org.slf4j.LoggerFactory.getLogger(CacheDB)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+
+        when: 'the trace record could not be built, see TaskHandler#safeTraceRecord'
+        cache.putTaskAsync(handler, null)
+        cache.close()
+
+        then:
+        noExceptionThrown()
+        0 * store.putEntry(_, _)
+        0 * store.writeIndex(_, _)
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Unable to persist cache record') }
+
+        cleanup:
+        logger.detachAppender(appender)
     }
 
 }

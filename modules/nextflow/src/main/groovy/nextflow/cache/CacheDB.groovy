@@ -24,6 +24,7 @@ import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
+import nextflow.file.FileHelper
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
 import nextflow.processor.TaskHandler
@@ -192,7 +193,8 @@ class CacheDB implements Closeable {
         def record = new ArrayList(3)
         record[0] = trace.serialize()
         record[1] = ctx != null ? ctx.serialize() : null
-        record[2] = refCount(key) + 1
+        // an entry is only replaced by a re-execution, which runs in an attempt dir since the first exists
+        record[2] = FileHelper.getAttemptFromPath(task.workDir) > 1 ? refCount(key) + 1 : 1
 
         // -- save in the db
         store.putEntry( key, KryoHelper.serialize(record) )
@@ -217,9 +219,7 @@ class CacheDB implements Closeable {
     static HashCode entryKey(TaskRun task, TraceRecord trace) {
         if( trace.get('status') !in ['FAILED', 'ABORTED'] )
             return task.hash
-        final suffix = task.workDir?.fileName?.toString() =~ /-(\d+)$/
-        final attempt = suffix.find() ? suffix.group(1) as int : 1
-        return attemptKey(task.hash, attempt)
+        return attemptKey(task.hash, FileHelper.getAttemptFromPath(task.workDir))
     }
 
     /**
@@ -235,10 +235,10 @@ class CacheDB implements Closeable {
      * since its key depends on the outcome -- see {@link #entryKey}.
      */
     void putTaskAsync( TaskHandler handler, TraceRecord trace ) {
-        final key = entryKey(handler.task, trace)
-        dispatchWrite("task entry ${key}") {
+        // the key is computed on the writer thread: a null trace must fail the write, not the run
+        dispatchWrite("task entry ${handler.task.hash}") {
             writeTaskEntry0(handler, trace)
-            store.writeIndex(key, false)
+            store.writeIndex(entryKey(handler.task, trace), false)
         }
     }
 

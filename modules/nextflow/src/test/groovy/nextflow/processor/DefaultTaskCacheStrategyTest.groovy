@@ -18,6 +18,7 @@ package nextflow.processor
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 
 import com.google.common.hash.HashCode
 import nextflow.Session
@@ -221,6 +222,29 @@ class DefaultTaskCacheStrategyTest extends Specification {
         0 * resolver.launch(*_)
         def err = thrown(IOException)
         err.message.startsWith('Unable to create directory=')
+    }
+
+    def 'identical instances launched at once claim one work dir each'() {
+        given:
+        def hash = HashCode.fromInt(100)
+        def first = root.resolve('ab').resolve('cdef')
+        def launched = Collections.synchronizedList(new ArrayList<Path>())
+        def resolver = new TaskResolver() {
+            TaskEntry entry(HashCode key) { null }
+            boolean resume(TaskRun task, HashCode key, Path workDir, TaskEntry entry) { false }
+            void launch(TaskRun task, HashCode key, Path workDir) { launched.add(workDir) }
+            Path workDirFor(HashCode key) { first }
+        }
+        def strategy = new DefaultTaskCacheStrategy()
+        def start = new CountDownLatch(1)
+
+        when:
+        def threads = (1..8).collect { Thread.start { start.await(); strategy.resolve(new TaskRun(), hash, true, resolver) } }
+        start.countDown()
+        threads*.join()
+
+        then:
+        launched.toSet() == ([first] + (2..8).collect { first.resolveSibling("cdef-$it") }).toSet()
     }
 
 }

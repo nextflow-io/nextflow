@@ -231,11 +231,11 @@ class CmdClean extends CmdBase implements CacheBase {
      */
     @PackageScope
     List<Path> previousAttempts(HashCode hash, Path workDir) {
-        final match = workDir.fileName.toString() =~ /^([0-9a-f]+)-(\d+)$/
-        if( !match.find() )
+        final last = FileHelper.getAttemptFromPath(workDir)
+        if( last == 1 )
             return List.<Path>of()
-        final name = match.group(1)
-        final last = match.group(2) as int
+        final leaf = workDir.fileName.toString()
+        final name = leaf.substring(0, leaf.lastIndexOf('-'))
         final result = new ArrayList<Path>()
         for( int attempt = 1; attempt < last; attempt++ ) {
             final dir = workDir.resolveSibling(attempt == 1 ? name : "${name}-${attempt}".toString())

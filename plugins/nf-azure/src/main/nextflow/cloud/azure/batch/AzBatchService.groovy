@@ -93,6 +93,7 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.platform.ResourceLabelPolicy
@@ -536,8 +537,8 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException("Missing container image for process: $task.name")
         // every attempt of a task shares its hash: the work dir's attempt suffix (`-N`) keeps their ids
         // apart, since a failed task is kept in the job by default
-        final suffix = task.workDir?.fileName?.toString() =~ /-\d+$/
-        final taskId = "nf-${task.hash.toString()}${suffix.find() ? suffix.group() : ''}"
+        final attempt = FileHelper.getAttemptFromPath(task.workDir)
+        final taskId = "nf-${task.hash.toString()}${attempt > 1 ? "-${attempt}" : ''}"
         // get the pool config
         final pool = getPoolSpec(poolId)
         if( !pool )

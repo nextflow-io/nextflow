@@ -91,11 +91,11 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
             int tries = 1
             TaskEntry entry
             while( (entry = resolver.entry(key)) != null ) {
-                final resumeDir = FileHelper.asPath(entry.trace.getWorkDir())
-                final exists = resumeDir.exists()
-                log.trace "[${task.lazyName()}] Cacheable folder=${resumeDir.toUriString()} -- exists=$exists; try=$tries; entry=$entry"
-                if( entry.trace.isCompleted() )
-                    return exists && resolver.resume(task, key, resumeDir, entry)
+                log.trace "[${task.lazyName()}] Cacheable folder=${entry.trace.getWorkDir()} -- try=$tries; entry=$entry"
+                if( entry.trace.isCompleted() ) {
+                    final resumeDir = FileHelper.asPath(entry.trace.getWorkDir())
+                    return resumeDir.exists() && resolver.resume(task, key, resumeDir, entry)
+                }
                 key = HashBuilder.defaultHasher().putBytes(key.asBytes()).putInt(++tries).hash()
             }
         }
