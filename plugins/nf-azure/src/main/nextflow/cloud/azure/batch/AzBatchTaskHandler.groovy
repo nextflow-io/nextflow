@@ -103,12 +103,37 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.trace "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
         if( running )
             this.status = TaskStatus.RUNNING
+        else if( state==BatchTaskState.ACTIVE )
+            checkPoolResizeErrors()
         return running
+    }
+
+    /**
+     * A task waiting on a pool that cannot allocate any node would otherwise stay queued
+     * until the job max wall clock time, since the task wall clock only starts when it runs.
+     * In that case the task is terminated and marked as completed with an error, so that
+     * {@link #checkIfCompleted()} reports it to the task monitor
+     */
+    protected void checkPoolResizeErrors() {
+        final error = taskKey.poolId ? batchService.checkPoolResizeErrors(taskKey.poolId) : null
+        if( !error )
+            return
+        log.debug "[AZURE BATCH] Terminating task $task.name taskId=$taskKey - $error"
+        task.error = new ProcessException(error)
+        status = TaskStatus.COMPLETED
+        try {
+            kill()
+        }
+        catch( Throwable e ) {
+            log.warn "Unable to terminate Azure Batch task $taskKey - ${e.message}", e
+        }
     }
 
     @Override
     boolean checkIfCompleted() {
         assert taskKey
+        if( isCompleted() )
+            return true
         if( !isRunning() )
             return false
         final done = taskState0(taskKey)==BatchTaskState.COMPLETED
