@@ -56,6 +56,8 @@ azure {
     deletePoolsOnCompletion = true
     pools {
       '$POOL_ID' {
+          // a VM family whose core quota the shared nextflow-ci pool doesn't use
+          vmType = 'Standard_D2d_v4'
           autoScale = true
       }
     }
