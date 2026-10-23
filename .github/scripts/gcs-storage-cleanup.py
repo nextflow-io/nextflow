@@ -53,16 +53,23 @@ def clean_path(client, bucket, prefix, cutoff, delete):
             for i in range(0, len(stale), BATCH_SIZE):
                 chunk = stale[i:i + BATCH_SIZE]
                 try:
-                    with client.batch(raise_exception=False):
+                    with client.batch(raise_exception=False) as batch:
                         for blob in chunk:
                             blob.delete()
                 except Exception as e:
                     failed += len(chunk)
                     print(f'  failed batch in {name}: {e}', file=sys.stderr)
+                    continue
+                # with raise_exception=False the sub-request errors are only reported in the responses
+                for blob, resp in zip(chunk, batch._responses):
+                    # 404 means already gone, which is fine
+                    if not 200 <= resp.status_code < 300 and resp.status_code != 404:
+                        failed += 1
+                        print(f'  failed {resp.status_code}: gs://{bucket}/{blob.name}', file=sys.stderr)
         total += len(stale)
         size += sum(b.size or 0 for b in stale)
         print(f'{name} page {page_num}: {len(stale)} stale objects (total {total}, {size / 1e9:.2f} GB)', flush=True)
-    print(f'{name}: {total - failed} objects, {size / 1e9:.2f} GB; {failed} failed', flush=True)
+    print(f'{name}: {total - failed} objects older than {cutoff:%Y-%m-%d}, {size / 1e9:.2f} GB; {failed} failed', flush=True)
     return failed
 
 
