@@ -18,6 +18,7 @@ package io.seqera.executor
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -30,8 +31,8 @@ import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.client.SchedClient
 import nextflow.SysEnv
 import nextflow.processor.TaskRun
+import nextflow.util.CustomThreadFactory
 import nextflow.util.Duration
-import nextflow.util.ThreadPoolBuilder
 import nextflow.util.Threads
 
 /**
@@ -109,22 +110,9 @@ class SeqeraBatchSubmitter {
         this.requestInterval = requestInterval
         this.keepAliveInterval = keepAliveInterval
         this.onError = onError
-        // Create a thread pool for metrics computation. The core size must match the max size:
-        // with an unbounded queue the pool never grows beyond its core threads
-        this.metricsExecutor = new ThreadPoolBuilder()
-                .withName('seqera-metrics')
-                .withMinSize(METRICS_POOL_SIZE)
-                .withMaxSize(METRICS_POOL_SIZE)
-                .withKeepAliveTime(60_000L)
-                .withAllowCoreThreadTimeout(true)
-                .build()
-        this.statExecutor = new ThreadPoolBuilder()
-                .withName('seqera-metrics-stat')
-                .withMinSize(METRICS_STAT_POOL_SIZE)
-                .withMaxSize(METRICS_STAT_POOL_SIZE)
-                .withKeepAliveTime(60_000L)
-                .withAllowCoreThreadTimeout(true)
-                .build()
+        // Fixed size pools: a ThreadPoolExecutor with an unbounded queue never grows beyond its core size
+        this.metricsExecutor = Executors.newFixedThreadPool(METRICS_POOL_SIZE, new CustomThreadFactory('seqera-metrics'))
+        this.statExecutor = Executors.newFixedThreadPool(METRICS_STAT_POOL_SIZE, new CustomThreadFactory('seqera-metrics-stat'))
         this.profiler = new InputFilesProfiler(statExecutor)
     }
 
