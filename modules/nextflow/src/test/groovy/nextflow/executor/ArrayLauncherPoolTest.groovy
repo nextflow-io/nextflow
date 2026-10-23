@@ -96,7 +96,8 @@ class ArrayLauncherPoolTest extends Specification {
         given:
         def pool = new ArrayLauncherPool('test', 1)
         def started = new CountDownLatch(1)
-        def slow = Mock(TaskHandler) { prepareLauncher() >> { started.countDown(); sleep 60_000 } }
+        def blocked = new CountDownLatch(1)
+        def slow = Mock(TaskHandler) { prepareLauncher() >> { started.countDown(); blocked.await() } }
         def queued = Mock(TaskHandler)
         Throwable error = null
         def caller = Thread.start {

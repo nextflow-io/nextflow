@@ -67,6 +67,14 @@ interface TaskArrayExecutor {
             child.prepareLauncher()
     }
 
+    /**
+     * Whether the child launchers of a job array are prepared when the array
+     * is submitted, rather than when it is created by the process.
+     */
+    default boolean prepareArrayChildrenOnSubmit() {
+        return false
+    }
+
     default boolean isWorkDirDefaultFS() {
         getWorkDir().fileSystem== FileSystems.default
     }

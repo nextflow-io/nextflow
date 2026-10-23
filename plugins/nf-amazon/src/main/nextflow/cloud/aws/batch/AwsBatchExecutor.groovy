@@ -81,7 +81,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     /**
      * Thread pool to prepare job array child launchers
      */
-    private final ArrayLauncherPool arrayLaunchers = new ArrayLauncherPool('AwsBatch-array-launcher')
+    private ArrayLauncherPool arrayLaunchers = new ArrayLauncherPool('AwsBatch-array-launcher')
 
     /**
      * A S3 path where executable scripts need to be uploaded
@@ -314,6 +314,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     @Override
     void prepareArrayChildren(List<TaskHandler> children) {
         arrayLaunchers.prepare(children)
+    }
+
+    @Override
+    boolean prepareArrayChildrenOnSubmit() {
+        return true
     }
 
     @Override

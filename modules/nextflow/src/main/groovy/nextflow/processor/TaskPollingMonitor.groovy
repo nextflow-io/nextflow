@@ -279,6 +279,12 @@ class TaskPollingMonitor implements TaskMonitor {
             final task = handler.task as TaskArrayRun
             task.prepareChildren()
             handler.prepareLauncher()
+            // the session may have been aborted while preparing the children -- submitting
+            // now would create a job array that the shutdown kill sweep has already missed
+            if( !session.canSubmitTasks() ) {
+                log.debug "Skipping job array submission -- session no longer accepting submissions > $handler"
+                return
+            }
             handler.submit()
             resourceTracker?.acquire(handler)
             // add each child task to the running queue before notifying,

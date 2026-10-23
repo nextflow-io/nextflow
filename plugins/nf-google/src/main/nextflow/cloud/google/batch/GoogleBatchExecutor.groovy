@@ -76,7 +76,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     /**
      * Thread pool to prepare job array child launchers
      */
-    private final ArrayLauncherPool arrayLaunchers = new ArrayLauncherPool('GoogleBatch-array-launcher')
+    private ArrayLauncherPool arrayLaunchers = new ArrayLauncherPool('GoogleBatch-array-launcher')
 
     private final Set<String> deletedJobs = ConcurrentHashMap.<String>newKeySet()
 
@@ -202,6 +202,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     @Override
     void prepareArrayChildren(List<TaskHandler> children) {
         arrayLaunchers.prepare(children)
+    }
+
+    @Override
+    boolean prepareArrayChildrenOnSubmit() {
+        return true
     }
 
     @Override

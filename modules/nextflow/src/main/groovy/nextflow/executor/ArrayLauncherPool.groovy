@@ -90,7 +90,9 @@ class ArrayLauncherPool {
                 return null
             }
             catch( Throwable e ) {
-                log.warn "Unable to prepare launcher for job array task `${child.task.lazyName()}` -- work-dir=${child.task.getWorkDirStr()}"
+                // siblings cancelled after another child failed are not worth a warning
+                if( !Thread.currentThread().isInterrupted() )
+                    log.warn "Unable to prepare launcher for job array task `${child.task.lazyName()}` -- work-dir=${child.task.getWorkDirStr()}; cause: ${e.message}"
                 throw e
             }
         } as Callable<Object>

@@ -133,7 +133,7 @@ class TaskArrayCollector {
      * @param tasks
      */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
-        // create child task handlers -- launchers are prepared at submit time
+        // create child task handlers
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
 
         // create work directory
@@ -173,6 +173,10 @@ class TaskArrayCollector {
         // the array job is submitted as a task on its own, therefore it needs the auto-derived
         // resource labels as much as the tasks it wraps -- see TaskProcessor#createTaskRun
         taskArray.config.setAutoResourceLabels(processor.session?.getAutoResourceLabels())
+
+        // prepare child launchers, unless the executor prepares them at submit time
+        if( !executor.prepareArrayChildrenOnSubmit() )
+            taskArray.prepareChildren()
 
         return taskArray
     }
