@@ -48,7 +48,7 @@ class BashFunLibTest extends Specification {
                     exitCode=$?
                   fi
                   attempt=$(( attempt + 1 ))
-                  if (( $attempt >= $max_attempts ))
+                  if (( $attempt >= $max_attempts || $exitCode > 128 ))
                   then
                     break
                   fi
@@ -165,7 +165,7 @@ class BashFunLibTest extends Specification {
         def scriptFile = workDir.resolve('test.sh')
         scriptFile.text = BashFunLib.body(1, 3, Duration.of('1 sec')) + """
             nxf_sleep() { echo \$1 >> sleeps; }
-            flaky() { echo x >> calls; (( \$(wc -l < calls) >= ${SUCCEED_ON_CALL} )) || return 3; }
+            flaky() { echo x >> calls; (( \$(wc -l < calls) >= ${SUCCEED_ON_CALL} )) || return ${FAIL_STATUS}; }
             nxf_cp_retry flaky && echo 0 > status || echo \$? > status
             """.stripIndent()
 
@@ -183,10 +183,11 @@ class BashFunLibTest extends Specification {
         workDir?.toFile()?.deleteDir()
 
         where:
-        SUCCEED_ON_CALL | STATUS | CALLS | SLEEPS
-        1               | 0      | 1     | []
-        3               | 0      | 3     | ['1', '2']
-        99              | 3      | 3     | ['1', '2']
+        SUCCEED_ON_CALL | FAIL_STATUS | STATUS | CALLS | SLEEPS
+        1               | 3           | 0      | 1     | []
+        3               | 3           | 0      | 3     | ['1', '2']
+        99              | 3           | 3      | 3     | ['1', '2']
+        99              | 137         | 137    | 1     | []
     }
 
     def 'should cap the delay between nxf_cp_retry attempts' () {
