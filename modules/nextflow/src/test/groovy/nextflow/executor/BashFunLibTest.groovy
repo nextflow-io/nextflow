@@ -36,6 +36,7 @@ class BashFunLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=321
                 local timeout=1
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -46,14 +47,15 @@ class BashFunLibTest extends Specification {
                   else
                     exitCode=$?
                   fi
-                  if [[ $exitCode == 0 ]]
+                  attempt=$(( attempt + 1 ))
+                  if (( $attempt >= $max_attempts || $exitCode > 128 ))
                   then
                     break
                   fi
                   nxf_sleep $timeout
-                  attempt=$(( attempt + 1 ))
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
+                return $exitCode
             }
 
             nxf_parallel() {
@@ -154,6 +156,60 @@ class BashFunLibTest extends Specification {
         cleanup:
         if( scriptFile ) Files.delete(scriptFile)
 
+    }
+
+    def 'should retry with nxf_cp_retry and return the last exit status' () {
+
+        given:
+        def workDir = Files.createTempDirectory('cp-retry')
+        def scriptFile = workDir.resolve('test.sh')
+        scriptFile.text = BashFunLib.body(1, 3, Duration.of('1 sec')) + """
+            nxf_sleep() { echo \$1 >> sleeps; }
+            flaky() { echo x >> calls; (( \$(wc -l < calls) >= ${SUCCEED_ON_CALL} )) || return ${FAIL_STATUS}; }
+            nxf_cp_retry flaky && echo 0 > status || echo \$? > status
+            """.stripIndent()
+
+        when:
+        def process = ['bash', scriptFile.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('status').text.trim() as int == STATUS
+        workDir.resolve('calls').readLines().size() == CALLS
+        (Files.exists(workDir.resolve('sleeps')) ? workDir.resolve('sleeps').readLines() : []) == SLEEPS
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
+
+        where:
+        SUCCEED_ON_CALL | FAIL_STATUS | STATUS | CALLS | SLEEPS
+        1               | 3           | 0      | 1     | []
+        3               | 3           | 0      | 3     | ['1', '2']
+        99              | 3           | 3      | 3     | ['1', '2']
+        99              | 137         | 137    | 1     | []
+    }
+
+    def 'should cap the delay between nxf_cp_retry attempts' () {
+
+        given:
+        def workDir = Files.createTempDirectory('cp-retry')
+        def scriptFile = workDir.resolve('test.sh')
+        scriptFile.text = BashFunLib.body(1, 12, Duration.of('1 sec')) + """
+            nxf_sleep() { echo \$1 >> sleeps; }
+            nxf_cp_retry false || true
+            """.stripIndent()
+
+        when:
+        def process = ['bash', scriptFile.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('sleeps').readLines() == ['1', '2', '4', '8', '16', '32', '64', '128', '256', '300', '300']
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
     }
 
 }

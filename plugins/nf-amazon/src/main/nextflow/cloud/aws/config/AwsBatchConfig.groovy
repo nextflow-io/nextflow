@@ -48,7 +48,7 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Delay between download attempts from S3 (default: `10 sec`).
+        Delay between download attempts from S3 (default: `10 sec`). The delay doubles after each failed attempt, up to 5 minutes or the configured value, whichever is larger.
     """)
     final Duration delayBetweenAttempts
 
@@ -90,7 +90,7 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Max number of downloads attempts from S3 (default: `1`).
+        Max number of attempts for S3 transfers (default: `5`, or the value of the `AWS_MAX_ATTEMPTS` environment variable in the Nextflow launch environment). The value is passed to the AWS CLI as `AWS_MAX_ATTEMPTS`, which applies to both uploads and downloads. When `aws.batch.retryMode` is `built-in`, Nextflow also retries each failed download up to this many times, on top of the AWS CLI retries.
     """)
     final int maxTransferAttempts
 
