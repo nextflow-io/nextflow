@@ -46,10 +46,10 @@ class TaskFileCollectorGsTest extends Specification {
         storage.create(BlobInfo.newBuilder(BlobId.of('bucket', name)).build(), 'hello'.bytes)
     }
 
-    private TaskFileCollector collector(List<String> patterns, Map opts=[:]) {
+    private TaskFileCollector collector(List<String> patterns, Map opts=[:], List<String> staged=[]) {
         final task = Mock(TaskRun) {
             getTargetDir() >> workDir
-            getStagedInputs() >> []
+            getStagedInputs() >> staged
         }
         return new TaskFileCollector(patterns, opts, task)
     }
@@ -99,6 +99,28 @@ class TaskFileCollectorGsTest extends Specification {
         def result = collector(['outdir/'], [optional: true]).collect()
         then:
         result == []
+    }
+
+    def 'should strip the trailing slash of a directory matched by a glob' () {
+        given:
+        createBlob('work/ab/cdef/outdir/hello.txt')
+        createBlob('work/ab/cdef/file.txt')
+
+        when:
+        def result = collector(['*']).collect()
+        then:
+        result.collect { workDir.relativize(it).toString() } == ['file.txt', 'outdir']
+    }
+
+    def 'should exclude a staged input directory matched by a glob' () {
+        given:
+        createBlob('work/ab/cdef/outdir/hello.txt')
+        createBlob('work/ab/cdef/file.txt')
+
+        when:
+        def result = collector(['*'], [:], ['outdir']).collect()
+        then:
+        result.collect { workDir.relativize(it).toString() } == ['file.txt']
     }
 
 }
