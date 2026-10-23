@@ -380,4 +380,16 @@ class AwsBatchFileCopyStrategyTest extends Specification {
 
     }
 
+    def 'should link a local input and download the others'() {
+        given:
+        def remote = TestHelper.createInMemTempFile('foo.txt')
+        def copy = new AwsBatchFileCopyStrategy(new TaskBean(workDir: remote.parent), new AwsOptions())
+
+        when:
+        def script = copy.getStageInputFilesScript(['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'foo.txt': remote])
+        then:
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains("downloads+=(\"nxf_s3_download s3:/$remote foo.txt\")")
+    }
+
 }

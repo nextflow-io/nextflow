@@ -120,4 +120,24 @@ class GoogleBatchScriptLauncherTest extends Specification{
         launcher.makeBinding().task_env == 'export MY_ENV_VAR="my_value"\n'
     }
 
+    def 'should link a local input where it is' () {
+        given:
+        def LOCAL = Paths.get('/mnt/shared/ref.fa')
+        def bucket = CloudStorageFileSystem.forBucket('alpha')
+        def bean = new TaskBean(
+            workDir: bucket.getPath('/work/dir'),
+            targetDir: bucket.getPath('/work/dir'),
+            inputFiles: ['ref.fa': LOCAL, 'a.bam': bucket.getPath('/data/a.bam')] )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        then:
+        bean.inputFiles['ref.fa'] == LOCAL
+        bean.inputFiles['a.bam'] == Paths.get('/mnt/disks/alpha/data/a.bam')
+        and:
+        def script = launcher.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('ln -sfn /mnt/disks/alpha/data/a.bam a.bam')
+    }
+
 }

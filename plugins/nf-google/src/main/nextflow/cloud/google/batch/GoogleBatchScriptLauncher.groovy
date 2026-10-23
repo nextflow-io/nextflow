@@ -16,6 +16,7 @@
 
 package nextflow.cloud.google.batch
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -74,12 +75,14 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         // add input file mounts
         if( bean.arrayInputFiles ) {
             for( Path it : bean.arrayInputFiles )
-                toContainerMount(it)
+                if( it.fileSystem != FileSystems.default )
+                    toContainerMount(it)
         }
 
-        // remap input files to container mounted paths
+        // remap input files to container mounted paths; a local one was accepted by a ForeignFileFilter and is linked where it is
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
+            if( entry.value.fileSystem != FileSystems.default )
+                bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
         }
 
         // include task script as an input to force its staging in the container work directory

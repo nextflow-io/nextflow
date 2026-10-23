@@ -641,8 +641,8 @@ class AwsBatchScriptLauncherTest extends Specification {
         def workDir = S3PathFactory.parse('s3://my-bucket/work')
         and:
         def inputFiles = [
-                'sample_1.fq': Paths.get('/my-bucket/data/sample_1.fq'),
-                'sample_2.fq': Paths.get('/my-bucket/data/sample_2.fq'),
+                'sample_1.fq': S3PathFactory.parse('s3://my-bucket/data/sample_1.fq'),
+                'sample_2.fq': S3PathFactory.parse('s3://my-bucket/data/sample_2.fq'),
         ]
         def stageScript = '''\
                 # stage input files
