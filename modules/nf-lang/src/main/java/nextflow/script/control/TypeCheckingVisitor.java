@@ -19,8 +19,11 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -110,6 +113,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     private SourceUnit sourceUnit;
 
     private ErrorCollector errorCollector;
+
+    // named closure arguments that are visited after the target method is resolved
+    private Set<ClosureExpression> deferredClosures = Collections.newSetFromMap(new IdentityHashMap<>());
 
     public TypeCheckingVisitor(SourceUnit sourceUnit) {
         this(sourceUnit, sourceUnit.getErrorCollector());
@@ -577,9 +583,31 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitMethodCallExpression(MethodCallExpression node) {
+        var namedClosures = namedClosureArguments(node);
+        deferredClosures.addAll(namedClosures);
+        checkMethodCall(node);
+
+        // visit named closure arguments that were not visited with the target method
+        for( var closure : namedClosures ) {
+            if( deferredClosures.remove(closure) )
+                closure.visit(this);
+        }
+    }
+
+    private static List<ClosureExpression> namedClosureArguments(MethodCallExpression node) {
+        var arguments = asMethodCallArguments(node);
+        if( arguments.isEmpty() || !(arguments.get(0) instanceof MapExpression me) )
+            return Collections.emptyList();
+        return me.getMapEntryExpressions().stream()
+            .filter(entry -> entry.getValueExpression() instanceof ClosureExpression)
+            .map(entry -> (ClosureExpression) entry.getValueExpression())
+            .toList();
+    }
+
+    private void checkMethodCall(MethodCallExpression node) {
         // resolve argument types (except for closures)
         var arguments = asMethodCallArguments(node);
-        boolean hasClosureArgs = false;
+        boolean hasClosureArgs = !namedClosureArguments(node).isEmpty();
         for( var argument : arguments ) {
             if( argument instanceof ClosureExpression ) {
                 hasClosureArgs = true;
@@ -874,12 +902,29 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var parameters = method.getParameters();
         for( int i = 0; i < arguments.size(); i++ ) {
             var argument = arguments.get(i);
+            if( i == 0 && argument instanceof MapExpression me ) {
+                visitNamedClosureArguments(receiverType, me, method, arguments);
+                continue;
+            }
             if( !(argument instanceof ClosureExpression source) )
                 continue;
             var target = parameters[i];
             var resolvedPlaceholders = resolveGenericsConnections(receiverType, method, arguments);
             var samParameterTypes = resolveClosureParameterTypes(source, target, resolvedPlaceholders);
             argument.visit(this);
+        }
+    }
+
+    private void visitNamedClosureArguments(ClassNode receiverType, MapExpression namedArgs, MethodNode method, List<Expression> arguments) {
+        for( var entry : namedArgs.getMapEntryExpressions() ) {
+            if( !(entry.getValueExpression() instanceof ClosureExpression closure) )
+                continue;
+            if( CHANNEL_TYPE.equals(receiverType) || VALUE_TYPE.equals(receiverType) ) {
+                var name = entry.getKeyExpression().getText();
+                new DataflowOpResolver(receiverType, sourceUnit, errorCollector).inferNamedClosureParameterTypes(elementType(receiverType), method, name, closure, arguments);
+            }
+            deferredClosures.remove(closure);
+            closure.visit(this);
         }
     }
 
@@ -1381,6 +1426,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitClosureExpression(ClosureExpression node) {
+        if( deferredClosures.contains(node) )
+            return;
         super.visitClosureExpression(node);
 
         // resolve return type and check against declared return type. A closure

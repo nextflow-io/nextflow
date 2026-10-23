@@ -24,6 +24,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.util.ArrayBag
 import spock.lang.Specification
 
+import static nextflow.Nextflow.record
 import static test.ScriptHelper.runDataflow
 /**
  *
@@ -47,6 +48,20 @@ class JoinOpTest extends Specification {
     }
 
 
+
+    def 'should join records by closure' () {
+
+        when:
+        def result = runDataflow {
+            def ch1 = Channel.of(record(sample: 'X', genome: 'g1'), record(sample: 'Y', genome: 'g2'))
+            def ch2 = Channel.of(record(id: 'g2', ref: 5), record(id: 'g1', ref: 4))
+            ch1.join(ch2, by: { s, g -> s.genome == g.id }).toList()
+        }.getVal()
+        then:
+        result.size() == 2
+        result.contains( record(sample: 'X', genome: 'g1', id: 'g1', ref: 4) )
+        result.contains( record(sample: 'Y', genome: 'g2', id: 'g2', ref: 5) )
+    }
 
     def 'should join entries by index' () {
 

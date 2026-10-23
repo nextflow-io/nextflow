@@ -1,0 +1,2 @@
+[meta:[id:Y, strandedness:reverse], fastq:Y.fq, bam:Y.bam]
+[meta:[id:X, strandedness:forward], fastq:X.fq, bam:X.bam]
