@@ -118,8 +118,9 @@ class FusionScriptLauncherTest extends Specification {
         bean.inputFiles['c.txt'] == Path.of('/fusion/http/foo/a/c.txt')
         and:
         def script = fusion.copyStrategy.getStageInputFilesScript(bean.inputFiles)
-        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('test -e /mnt/shared/ref.fa || { echo "Input file not accessible on host $(hostname): "/mnt/shared/ref.fa >&2; exit 1; }\nln -sfn /mnt/shared/ref.fa ref.fa')
         script.contains('ln -sfn /fusion/http/foo/a/c.txt c.txt')
+        !script.contains('test -e /fusion')
     }
 
 }

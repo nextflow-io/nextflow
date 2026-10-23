@@ -388,7 +388,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         def script = copy.getStageInputFilesScript(['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'foo.txt': remote])
         then:
-        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('test -e /mnt/shared/ref.fa || { echo "Input file not accessible on host $(hostname): "/mnt/shared/ref.fa >&2; exit 1; }\nln -sfn /mnt/shared/ref.fa ref.fa')
         script.contains("downloads+=(\"nxf_s3_download s3:/$remote foo.txt\")")
     }
 
