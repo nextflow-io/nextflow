@@ -64,6 +64,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
+        // azcopy defaults its job plan dir to $HOME, which may not be writable on Batch nodes
+        copy.put('AZCOPY_JOB_PLAN_LOCATION', '$PWD/.azcopy_log')
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
