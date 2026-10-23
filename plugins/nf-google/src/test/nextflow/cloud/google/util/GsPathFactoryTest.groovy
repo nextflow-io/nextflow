@@ -47,7 +47,7 @@ class GsPathFactoryTest extends Specification {
         _ | PATH                | STR
         _ | 'gs://foo'          | ''
         _ | 'gs://foo/bar'      | '/bar'
-        _ | 'gs://foo/bar/'     | '/bar/'   // <-- bug or feature ?
+        _ | 'gs://foo/bar/'     | '/bar/'   // Google SDK preserves trailing slash for pseudo-directories
         _ | 'gs://foo/b a r'    | '/b a r'
         _ | 'gs://f o o/bar'    | '/bar'
         _ | 'gs://f_o_o/bar'    | '/bar'
