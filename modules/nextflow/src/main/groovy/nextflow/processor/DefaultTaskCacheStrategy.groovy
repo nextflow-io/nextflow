@@ -29,14 +29,17 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * The default {@link TaskCacheStrategy}: the per-run, local resolution loop as it has always been in
- * {@code TaskProcessor.checkCachedOrLaunchTask}, relocated here unchanged.
+ * The default {@link TaskCacheStrategy}.
  *
- * <p>The task hash is folded with the attempt number ({@code tries}) into the per-attempt hash that
- * names the work directory and keys the cache entry. For each attempt the entry is looked up and, when
- * resuming, the task is resumed from it; an attempt whose work directory already exists -- a previous
- * failure, or an identical task instance of this run -- bumps to the next one; the first free work
- * directory is created under an in-process lock and the task is launched there.
+ * <p>Every attempt of a task is keyed by the same hash -- the task hash folded with {@code 1}, as it
+ * always was for a first attempt -- so a task resumes with ONE lookup: the entry under that key names
+ * the work directory of the attempt that completed. The attempt is a suffix of the work directory
+ * instead: {@code ab/cdef…} for the first, {@code ab/cdef…-N} after it. A failed attempt is recorded
+ * under a key of its own by {@link nextflow.cache.CacheDB#putTaskAsync}, so the task key only ever
+ * holds a completed attempt.
+ *
+ * <p>Caches written before this layout keyed attempt {@code N} by {@code H(H(h,1),…,N)} instead: a
+ * failed entry under the task key is followed along that chain, so their retries resume too.
  *
  * <p>This strategy is not a plugin extension: it is the fallback {@link TaskProcessor} uses when no
  * registered {@link TaskCacheStrategy} applies to the session, so {@link #isEnabled} is always true.
@@ -67,55 +70,62 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
 
     @Override
     void resolve(TaskRun task, HashCode hash, boolean shouldTryCache, TaskResolver resolver) {
+        // a retry receives the key it was launched under, a first attempt the task hash
+        final key = task.runType == TaskProcessor.RunType.RETRY
+            ? hash
+            : HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(1).hash()
 
-        int tries = task.failCount +1
-        while( true ) {
-            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
+        if( shouldTryCache && resume(task, key, resolver) )
+            return
 
-            Path resumeDir = null
-            boolean exists = false
-            try {
-                final entry = resolver.entry(hash)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
+        final workDir = claimWorkDir(resolver.workDirFor(key), task.failCount + 1)
+        resolver.launch(task, key, workDir)
+    }
 
-                log.trace "[${task.lazyName()}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                final cached = shouldTryCache && exists && entry.trace.isCompleted() && resolver.resume(task, hash, resumeDir, entry)
-                if( cached )
-                    break
-            }
-            catch (Throwable t) {
-                log.warn1("[${task.lazyName()}] Unable to resume cached task -- See log file for details", causedBy: t)
-            }
-
-            if( exists ) {
-                tries++
-                continue
-            }
-
-            final workDir = resolver.workDirFor(hash)
-            final lock = locks.get(hash)
-            lock.lock()
-            try {
-                if( resumeDir != workDir )
-                    exists = workDir.exists()
-                if( exists ) {
-                    tries++
-                    continue
+    /**
+     * Resume a task from the entry under its key, or, when that entry is a failed attempt written by
+     * a previous version, from the retry chain of that version.
+     */
+    private static boolean resume(TaskRun task, HashCode key, TaskResolver resolver) {
+        try {
+            int tries = 1
+            TaskEntry entry
+            while( (entry = resolver.entry(key)) != null ) {
+                log.trace "[${task.lazyName()}] Cacheable folder=${entry.trace.getWorkDir()} -- try=$tries; entry=$entry"
+                if( entry.trace.isCompleted() ) {
+                    final resumeDir = FileHelper.asPath(entry.trace.getWorkDir())
+                    return resumeDir.exists() && resolver.resume(task, key, resumeDir, entry)
                 }
-                else if( !workDir.mkdirs() )
-                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
+                key = HashBuilder.defaultHasher().putBytes(key.asBytes()).putInt(++tries).hash()
             }
-            finally {
-                lock.unlock()
-            }
-
-            // submit task for execution
-            resolver.launch( task, hash, workDir )
-            break
         }
+        catch (Throwable t) {
+            log.warn1("[${task.lazyName()}] Unable to resume cached task -- See log file for details", causedBy: t)
+        }
+        return false
+    }
 
+    /**
+     * Create the first free work directory of a task, starting at {@code attempt}: an existing one
+     * belongs to a previous attempt, or to an identical task instance of this run.
+     */
+    private static Path claimWorkDir(Path first, int attempt) {
+        final lock = locks.get(first)
+        lock.lock()
+        try {
+            while( true ) {
+                final workDir = attempt == 1 ? first : first.resolveSibling("${first.fileName}-${attempt}".toString())
+                if( !workDir.exists() ) {
+                    if( !workDir.mkdirs() )
+                        throw new IOException("Unable to create directory=$workDir -- check file system permissions")
+                    return workDir
+                }
+                attempt++
+            }
+        }
+        finally {
+            lock.unlock()
+        }
     }
 
 }
