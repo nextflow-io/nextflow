@@ -711,6 +711,122 @@ class ConfigParserV2Test extends Specification {
         config.params.input == 'foo'
     }
 
+    def 'should apply profiles from included config files in the order they are specified at runtime' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        folder.resolve('included.config').text = '''
+            profiles {
+                bar {
+                    params.input = 'bar'
+                    process.cpus = 2
+                }
+            }
+            '''
+        main.text = '''
+            profiles {
+                foo {
+                    params.input = 'foo'
+                    process.cpus = 1
+                }
+            }
+
+            includeConfig 'included.config'
+            '''
+
+        when:
+        def config = new ConfigParserV2().setProfiles(['bar', 'foo']).parse(main)
+        then:
+        config.params.input == 'foo'
+        config.process.cpus == 1
+
+        when:
+        config = new ConfigParserV2().setProfiles(['foo', 'bar']).parse(main)
+        then:
+        config.params.input == 'bar'
+        config.process.cpus == 2
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should apply profiles after the rest of the config' () {
+        given:
+        def CONFIG = '''
+            profiles {
+                foo {
+                    process {
+                        cpus = 8
+                        withLabel: 'big' {
+                            memory = '16 GB'
+                        }
+                    }
+                }
+            }
+
+            process {
+                cpus = 2
+                withLabel: 'big' {
+                    memory = '4 GB'
+                }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserV2().setProfiles(['foo']).parse(CONFIG)
+        then:
+        config.process.cpus == 8
+        config.process.'withLabel:big'.memory == '16 GB'
+
+        when:
+        config = new ConfigParserV2().setProfiles([]).parse(CONFIG)
+        then:
+        config.process.cpus == 2
+        config.process.'withLabel:big'.memory == '4 GB'
+    }
+
+    def 'should make profile params available to the rest of the config' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        folder.resolve('test.config').text = '''
+            params.skip = true
+            '''
+        main.text = '''
+            params.skip = false
+            params.other = 'base'
+
+            profiles {
+                test {
+                    includeConfig 'test.config'
+                }
+                other {
+                    params.other = 'other'
+                }
+            }
+
+            process.ext.skip = params.skip
+            params.other = 'override'
+            '''
+
+        when:
+        def config = new ConfigParserV2().setProfiles(['test', 'other']).parse(main)
+        then:
+        config.params.skip == true
+        config.process.ext.skip == true
+        config.params.other == 'other'
+
+        when:
+        config = new ConfigParserV2().setProfiles(['test']).setParams([skip: false]).parse(main)
+        then:
+        config.params.skip == false
+        config.process.ext.skip == false
+        config.params.other == 'override'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should allow mixed use of dot and block syntax in a profile' () {
         given:
         def CONFIG = '''
