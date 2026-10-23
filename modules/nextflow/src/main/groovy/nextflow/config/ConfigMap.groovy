@@ -60,6 +60,14 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
     """)
     final String workDir
 
+    @ConfigOption
+    @Description("""
+        Emit OSC 7501 program-status reports while a run is in progress (default: `true` when ANSI logging is enabled and standard output is a terminal).
+
+        Set to `false` to opt out. `NXF_OSC7501=false` also opts out.
+    """)
+    final Boolean osc7501
+
     ConfigMap() {
     }
 
@@ -74,6 +82,7 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
         outputDir = opts.outputDir
         resume = opts.resume as boolean
         workDir = opts.workDir
+        osc7501 = opts.containsKey('osc7501') ? opts.osc7501 as Boolean : null
     }
 
 }
