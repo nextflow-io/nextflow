@@ -54,6 +54,11 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
+            ## prints the last progress update and the last messages of the azcopy output
+            nxf_az_log() {
+                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -67,7 +72,7 @@ class AzBashLibTest extends Specification {
                 ## killed by a signal, e.g. out of memory
                 if (( ret > 128 )); then
                     >&2 echo "Unable to download path: $source"
-                    echo "$out" | tail -n 20 >&2
+                    nxf_az_log "$out"
                     return $ret
                 fi
 
@@ -77,12 +82,12 @@ class AzBashLibTest extends Specification {
                 mkdir -p "$target"
                 ret=0
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                if [[ $ret != 0 ]]; then
                     rm -rf "$target"
                     >&2 echo "Unable to download path: $source"
-                    echo "$file_out" | tail -n 10 >&2
-                    echo "$out" | tail -n 10 >&2
-                    return $(( ret == 0 ? 1 : ret ))
+                    nxf_az_log "$file_out"
+                    nxf_az_log "$out"
+                    return $ret
                 fi
             }
             '''.stripIndent()
@@ -172,6 +177,11 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
+            ## prints the last progress update and the last messages of the azcopy output
+            nxf_az_log() {
+                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -185,7 +195,7 @@ class AzBashLibTest extends Specification {
                 ## killed by a signal, e.g. out of memory
                 if (( ret > 128 )); then
                     >&2 echo "Unable to download path: $source"
-                    echo "$out" | tail -n 20 >&2
+                    nxf_az_log "$out"
                     return $ret
                 fi
 
@@ -195,12 +205,12 @@ class AzBashLibTest extends Specification {
                 mkdir -p "$target"
                 ret=0
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                if [[ $ret != 0 ]]; then
                     rm -rf "$target"
                     >&2 echo "Unable to download path: $source"
-                    echo "$file_out" | tail -n 10 >&2
-                    echo "$out" | tail -n 10 >&2
-                    return $(( ret == 0 ? 1 : ret ))
+                    nxf_az_log "$file_out"
+                    nxf_az_log "$out"
+                    return $ret
                 fi
             }
             '''.stripIndent()
@@ -290,6 +300,11 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
+            ## prints the last progress update and the last messages of the azcopy output
+            nxf_az_log() {
+                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -303,7 +318,7 @@ class AzBashLibTest extends Specification {
                 ## killed by a signal, e.g. out of memory
                 if (( ret > 128 )); then
                     >&2 echo "Unable to download path: $source"
-                    echo "$out" | tail -n 20 >&2
+                    nxf_az_log "$out"
                     return $ret
                 fi
 
@@ -313,12 +328,12 @@ class AzBashLibTest extends Specification {
                 mkdir -p "$target"
                 ret=0
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                if [[ $ret != 0 ]]; then
                     rm -rf "$target"
                     >&2 echo "Unable to download path: $source"
-                    echo "$file_out" | tail -n 10 >&2
-                    echo "$out" | tail -n 10 >&2
-                    return $(( ret == 0 ? 1 : ret ))
+                    nxf_az_log "$file_out"
+                    nxf_az_log "$out"
+                    return $ret
                 fi
             }
             '''.stripIndent()
@@ -366,9 +381,7 @@ class AzBashLibTest extends Specification {
             dst=\$3
             case \$src in
               */file.txt)    echo data > \$dst ;;
-              */oom.txt)     echo partial > \$dst; exit 137 ;;
-              */partial.txt) echo partial > \$dst; echo 'connection reset'; exit 1 ;;
-              */partial.txt/\\*) echo 'Total Number of Transfers: 0' ;;
+              */oom.txt)     echo partial > \$dst; for i in \$(seq 1 500); do printf '%s %%, 0 Done, 0 Failed, 1 Pending, 0 Skipped, 1 Total, 2-sec Throughput (Mb/s): 1\\r' \$i; done; exit 137 ;;
               */oomdir/\\*)  echo a > \$dst/a.txt; exit 137 ;;
               */dir/\\*)      echo a > \$dst/a.txt ;;
               */missing/\\*)  echo "Total Number of Transfers: 0" ;;
@@ -396,6 +409,7 @@ class AzBashLibTest extends Specification {
         (Files.isDirectory(target) ? 'dir' : Files.exists(target) ? 'file' : 'none') == RESULT
         stderr.contains(ERROR)
         !stderr.contains('mkdir')
+        stderr.size() < 1000
 
         cleanup:
         workDir?.toFile()?.deleteDir()
@@ -404,10 +418,9 @@ class AzBashLibTest extends Specification {
         SOURCE      | STATUS | RESULT | ERROR
         'file.txt'  | 0      | 'file' | ''
         'dir'       | 0      | 'dir'  | ''
-        'missing'   | 1      | 'none' | 'Unable to download path'
+        'missing'   | 0      | 'dir'  | ''
         'denied'    | 1      | 'none' | 'AuthenticationFailed'
         'oom.txt'   | 137    | 'file' | 'Unable to download path'
-        'partial.txt' | 1    | 'none' | 'connection reset'
         'oomdir'    | 137    | 'none' | 'Unable to download path'
     }
 

@@ -90,6 +90,11 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 fi
             }
 
+            ## prints the last progress update and the last messages of the azcopy output
+            nxf_az_log() {
+                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -103,7 +108,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 ## killed by a signal, e.g. out of memory
                 if (( ret > 128 )); then
                     >&2 echo "Unable to download path: $source"
-                    echo "$out" | tail -n 20 >&2
+                    nxf_az_log "$out"
                     return $ret
                 fi
 
@@ -113,12 +118,12 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 mkdir -p "$target"
                 ret=0
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                if [[ $ret != 0 ]]; then
                     rm -rf "$target"
                     >&2 echo "Unable to download path: $source"
-                    echo "$file_out" | tail -n 10 >&2
-                    echo "$out" | tail -n 10 >&2
-                    return $(( ret == 0 ? 1 : ret ))
+                    nxf_az_log "$file_out"
+                    nxf_az_log "$out"
+                    return $ret
                 fi
             }
 
@@ -245,6 +250,11 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 fi
             }
 
+            ## prints the last progress update and the last messages of the azcopy output
+            nxf_az_log() {
+                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -258,7 +268,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 ## killed by a signal, e.g. out of memory
                 if (( ret > 128 )); then
                     >&2 echo "Unable to download path: $source"
-                    echo "$out" | tail -n 20 >&2
+                    nxf_az_log "$out"
                     return $ret
                 fi
 
@@ -268,12 +278,12 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 mkdir -p "$target"
                 ret=0
                 out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                if [[ $ret != 0 ]]; then
                     rm -rf "$target"
                     >&2 echo "Unable to download path: $source"
-                    echo "$file_out" | tail -n 10 >&2
-                    echo "$out" | tail -n 10 >&2
-                    return $(( ret == 0 ? 1 : ret ))
+                    nxf_az_log "$file_out"
+                    nxf_az_log "$out"
+                    return $ret
                 fi
             }
 

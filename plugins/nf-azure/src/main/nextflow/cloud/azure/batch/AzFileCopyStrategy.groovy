@@ -54,6 +54,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
         this.azcopyLimits = AzCopyLimits.of(bean.containerMemory, maxParallelTransfers, config.azcopy().blockSize)
+        if( azcopyLimits?.overBudget )
+            log.warn1 "The azcopy block size (azure.azcopy.blockSize = ${config.azcopy().blockSize} MB) is too large for the memory of some tasks, which may fail while staging files -- Use a smaller block size or give these tasks more memory"
     }
 
     @Override

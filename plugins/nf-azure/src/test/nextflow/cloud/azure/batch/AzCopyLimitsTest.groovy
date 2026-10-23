@@ -40,18 +40,20 @@ class AzCopyLimitsTest extends Specification {
         limits.parallelTransfers == PARALLEL
         limits.bufferMb == BUFFER_MB
         limits.bufferGb == BUFFER_GB
+        limits.overBudget == OVER_BUDGET
 
         where:
-        MEM      | MAX_PARALLEL | BLOCK_SIZE | PARALLEL | BUFFER_MB | BUFFER_GB
-        '128 MB' | 4            | '4'        | 1        | 32        | '0.032'
-        '512 MB' | 4            | '4'        | 1        | 64        | '0.063'
-        '1 GB'   | 4            | '4'        | 2        | 128       | '0.125'
-        '2 GB'   | 4            | '4'        | 4        | 160       | '0.157'
-        '4 GB'   | 4            | '4'        | 4        | 416       | '0.407'
-        '16 GB'  | 4            | '4'        | 4        | 1952      | '1.907'
-        '16 GB'  | 2            | '4'        | 2        | 3968      | '3.875'
-        '512 MB' | 4            | '100'      | 1        | 400       | '0.391'
-        '512 MB' | 4            | '12.5'     | 1        | 64        | '0.063'
-        '512 MB' | 4            | 'bad'      | 1        | 64        | '0.063'
+        MEM      | MAX_PARALLEL | BLOCK_SIZE | PARALLEL | BUFFER_MB | BUFFER_GB | OVER_BUDGET
+        '128 MB' | 4            | '4'        | 1        | 32        | '0.032'   | false
+        '512 MB' | 4            | '4'        | 1        | 64        | '0.063'   | false
+        '1 GB'   | 4            | '4'        | 2        | 128       | '0.125'   | false
+        '2 GB'   | 4            | '4'        | 4        | 160       | '0.157'   | false
+        '4 GB'   | 4            | '4'        | 4        | 416       | '0.407'   | false
+        '16 GB'  | 4            | '4'        | 4        | 1952      | '1.907'   | false
+        '16 GB'  | 2            | '4'        | 2        | 3968      | '3.875'   | false
+        '256 GB' | 4            | '4'        | 4        | 16384     | '16'      | false
+        '512 MB' | 4            | '100'      | 1        | 400       | '0.391'   | true
+        '512 MB' | 4            | '12.5'     | 1        | 64        | '0.063'   | false
+        '512 MB' | 4            | 'bad'      | 1        | 64        | '0.063'   | false
     }
 }

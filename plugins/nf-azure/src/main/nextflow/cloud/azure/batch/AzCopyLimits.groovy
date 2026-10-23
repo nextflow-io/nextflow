@@ -41,16 +41,20 @@ class AzCopyLimits {
     static final long RESERVED_MB = 128
     static final long PROCESS_OVERHEAD_MB = 64
     static final long MIN_BUFFER_MB = 32
+    // the largest buffer azcopy uses by default
+    static final long MAX_BUFFER_MB = 16 * 1024
     // azcopy waits indefinitely for buffer space when a block does not fit
     static final int MIN_BLOCKS_IN_BUFFER = 4
     static final long MIN_TRANSFER_MB = 192
 
     final int parallelTransfers
     final long bufferMb
+    final boolean overBudget
 
-    AzCopyLimits(int parallelTransfers, long bufferMb) {
+    AzCopyLimits(int parallelTransfers, long bufferMb, boolean overBudget) {
         this.parallelTransfers = parallelTransfers
         this.bufferMb = bufferMb
+        this.overBudget = overBudget
     }
 
     /**
@@ -67,11 +71,11 @@ class AzCopyLimits {
         final parallel = budget > 0
                 ? Math.max(1, Math.min(maxParallelTransfers, (int)(budget.intdiv(MIN_TRANSFER_MB))))
                 : 1
+        final fitted = budget > 0 ? budget.intdiv(parallel) - PROCESS_OVERHEAD_MB : 0L
         final minBuffer = Math.max(MIN_BUFFER_MB, MIN_BLOCKS_IN_BUFFER * blockSizeMb)
-        final buffer = budget > 0
-                ? Math.max(minBuffer, budget.intdiv(parallel) - PROCESS_OVERHEAD_MB)
-                : minBuffer
-        return new AzCopyLimits(parallel, buffer)
+        final buffer = Math.min(MAX_BUFFER_MB, Math.max(minBuffer, fitted))
+        final overBudget = minBuffer > Math.max(MIN_BUFFER_MB, fitted)
+        return new AzCopyLimits(parallel, buffer, overBudget)
     }
 
     /**
