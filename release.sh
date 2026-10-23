@@ -12,8 +12,9 @@
 # REQUIRED SECRETS/ENVIRONMENT VARIABLES FOR GITHUB ACTIONS:
 #
 # AWS S3 Deployment:
-#   NXF_AWS_ACCESS       - AWS Access Key for deploying to s3://www2.nextflow.io
-#   NXF_AWS_SECRET       - AWS Secret Key for S3 deployment
+#   NXF_AWS_ACCESS        - Temporary AWS Access Key (assumed role) for deploying to s3://www2.nextflow.io
+#   NXF_AWS_SECRET        - Temporary AWS Secret Key for S3 deployment
+#   NXF_AWS_SESSION_TOKEN - Session token matching the temporary credentials above
 #
 # Maven Repository (Seqera S3-based):
 #   AWS_ACCESS_KEY_ID    - AWS credentials for Maven repository access
@@ -49,6 +50,7 @@ echo "=== Checking required environment variables ==="
 REQUIRED_VARS=(
     "NXF_AWS_ACCESS"
     "NXF_AWS_SECRET"
+    "NXF_AWS_SESSION_TOKEN"
     "AWS_ACCESS_KEY_ID"
     "AWS_SECRET_ACCESS_KEY"
     "GITHUB_TOKEN"
@@ -77,6 +79,20 @@ if [ ${#MISSING_VARS[@]} -ne 0 ]; then
 fi
 
 echo "✅ All required environment variables are set"
+
+# A release must run once. GitHub can deliver the same push twice, and re-running a CI run
+# re-runs its release job: either would re-publish artifacts over an existing release.
+VERSION=$(cat VERSION)
+# --exit-code returns 2 when the tag is missing, anything else is a network or auth error
+rc=0
+git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null || rc=$?
+if [ $rc -eq 0 ]; then
+    echo "❌ ERROR: Tag v$VERSION already exists -- this version has already been released"
+    exit 1
+elif [ $rc -ne 2 ]; then
+    echo "❌ ERROR: Cannot check tag v$VERSION on origin (git exit $rc)"
+    exit 1
+fi
 
 echo "🐳 === Step 1: Publish the pi agent runner image ==="
 # FIRST, before anything is published: `deploy` (step 2) uploads to s3://www2.nextflow.io,

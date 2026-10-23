@@ -47,7 +47,8 @@ echo "commit id: $commitId"
 # build a scratch container image with assembled nextflow runtime and plugins
 #
 tag=${version}-${commitId}
-base=${base:-'public.cr.seqera.io/platform/nf-launcher:j17-base'}
+base=${base:-'public.cr.seqera.io/platform/nf-launcher:j21-base'}
+base_dind=${base_dind:-'public.cr.seqera.io/platform/nf-launcher:j21-dind-base'}
 repository=${repository:-'public.cr.seqera.io/snapshots/nextflow-scratch'}
 image=${repository}:${tag}
 
@@ -61,10 +62,14 @@ docker buildx build \
 echo "Nextflow snapshots launcher image $image"
 
 #
-# Create an ephemeral container with the scratch image and base Platform launcher image
+# Create ephemeral containers with the scratch image and the base Platform launcher images.
+# As in Platform, the dind launcher (including the Docker client) is used by cloud compute
+# environments, the plain launcher by all others
 #
 launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v1)
+launcher_dind=$(wave -i ${base_dind} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v1)
 echo "Running Platform tests using image launcher: $launcher"
+echo "Running Platform tests using image launcher (dind): $launcher_dind"
 
 # determining the e2e test environment checking the $COMMIT_MESSAGE
 # that is set by GitHub action workflow. If it does not exist fallback
@@ -88,5 +93,6 @@ echo "Launching seqera-showcase-${ENVIRONMENT}"
 gh workflow run \
   seqera-showcase-${ENVIRONMENT}.yml \
   --repo seqeralabs/showcase-automation \
-  -f launch_container=${launcher}
+  -f launch_container=${launcher} \
+  -f launch_container_dind=${launcher_dind}
 
