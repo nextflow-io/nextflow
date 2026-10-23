@@ -48,8 +48,9 @@ $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
 ## pool creation: the pool must not exist before the run
 POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
-cat > pool-create.config <<EOF
-includeConfig 'azure.config'
+POOL_CONFIG=$(mktemp)
+cat > $POOL_CONFIG <<EOF
+includeConfig '$PWD/azure.config'
 process.queue = '$POOL_ID'
 azure {
   batch {
@@ -64,8 +65,9 @@ azure {
   }
 }
 EOF
-$NXF_CMD -C ./pool-create.config run ./test-subdirs.nf
-[[ `grep -c "pool with id: $POOL_ID" .nextflow.log` == 1 ]] || false
+$NXF_CMD -C $POOL_CONFIG run ./test-subdirs.nf
+rm -f $POOL_CONFIG
+grep -q "pool with id: $POOL_ID" .nextflow.log
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -c ./azure.config \
