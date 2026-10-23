@@ -379,6 +379,7 @@ class AzBashLibTest extends Specification {
         azcopy.toFile().setExecutable(true)
         def script = workDir.resolve('test.sh')
         script.text = 'set -eu\n' + AzBashLib.script() + """
+            export AZ_SAS=token
             export PATH=${bin}:\$PATH
             nxf_az_download 'https://acct.blob.core.windows.net/c/${SOURCE}' target 2> stderr && echo 0 > status || echo \$? > status
             """.stripIndent()
