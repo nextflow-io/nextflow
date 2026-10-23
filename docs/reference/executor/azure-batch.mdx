@@ -315,6 +315,14 @@ Azure virtual machines come with fixed storage disks that are not expandable. Ta
 
 By default, Docker and containerd store image layers on the OS disk, which can fill up quickly when pulling large container images. On VMs with an attached data disk (for example, `Standard_E16ds_v5`), you can use a pool [start task](#start-tasks) to relocate Docker and containerd storage to `$AZ_BATCH_NODE_ROOT_DIR`. This directory uses the larger data disk.
 
+## File staging
+
+Unless you are using [Fusion](#fusion-file-system), tasks download their input files and upload their outputs with `azcopy`, inside the task container. The transfers count towards the task's [memory][process-memory] limit.
+
+`azcopy` sizes its memory buffer from the CPUs of the node, not from the task's memory limit. When a task specifies `memory`, Nextflow sizes `azcopy` for the task instead: it sets the `AZCOPY_BUFFER_GB` environment variable from the task's `memory`, and transfers fewer files in parallel for tasks with little memory. Tasks without a `memory` directive use the `azcopy` defaults.
+
+Small buffers make transfers slower, so tasks with little memory take longer to stage large inputs. To override the buffer size, set `AZCOPY_BUFFER_GB` with the [env][config-env] scope or in a [beforeScript][process-beforescript].
+
 ## Task containers
 
 Every process in your pipeline must specify a container to run on Azure Batch.
@@ -500,7 +508,9 @@ See [Azure Batch](https://docs.seqera.io/fusion/guide/azure-batch) for more info
 [azure-blob-page]: ../../azure-blob
 [azure-blob-permissions]: ../../azure-blob#required-permissions
 [config-azure]: ../config/azure
+[config-env]: ../config/env
 [fusion-page]: ../../fusion
+[process-beforescript]: ../process/directives/before-script
 [process-container]: ../process/directives/container
 [process-containeroptions]: ../process/directives/container-options
 [process-cpus]: ../process/directives/cpus

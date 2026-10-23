@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import nextflow.cloud.azure.config.AzCopyOpts
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -57,18 +58,32 @@ class AzBashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname $2)
-                local ret
+                local out
+                local ret=0
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
-                        >&2 echo "Unable to download path: $source"
-                        return 1
-                    }
-                }
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+                [[ $ret == 0 ]] && return 0
+                ## killed by a signal, e.g. out of memory
+                if (( ret > 128 )); then
+                    >&2 echo "Unable to download path: $source"
+                    echo "$out" | tail -n 20 >&2
+                    return $ret
+                fi
+
+                ## the source may be a directory
+                local file_out=$out
+                [[ -f "$target" ]] && rm -f "$target"
+                mkdir -p "$target"
+                ret=0
+                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                    rm -rf "$target"
+                    >&2 echo "Unable to download path: $source"
+                    echo "$file_out" | tail -n 10 >&2
+                    echo "$out" | tail -n 10 >&2
+                    return $(( ret == 0 ? 1 : ret ))
+                fi
             }
             '''.stripIndent()
     }
@@ -161,18 +176,32 @@ class AzBashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname $2)
-                local ret
+                local out
+                local ret=0
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
-                        >&2 echo "Unable to download path: $source"
-                        return 1
-                    }
-                }
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+                [[ $ret == 0 ]] && return 0
+                ## killed by a signal, e.g. out of memory
+                if (( ret > 128 )); then
+                    >&2 echo "Unable to download path: $source"
+                    echo "$out" | tail -n 20 >&2
+                    return $ret
+                fi
+
+                ## the source may be a directory
+                local file_out=$out
+                [[ -f "$target" ]] && rm -f "$target"
+                mkdir -p "$target"
+                ret=0
+                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                    rm -rf "$target"
+                    >&2 echo "Unable to download path: $source"
+                    echo "$file_out" | tail -n 10 >&2
+                    echo "$out" | tail -n 10 >&2
+                    return $(( ret == 0 ? 1 : ret ))
+                fi
             }
             '''.stripIndent()
     }
@@ -265,18 +294,32 @@ class AzBashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname $2)
-                local ret
+                local out
+                local ret=0
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
-                        >&2 echo "Unable to download path: $source"
-                        return 1
-                    }
-                }
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+                [[ $ret == 0 ]] && return 0
+                ## killed by a signal, e.g. out of memory
+                if (( ret > 128 )); then
+                    >&2 echo "Unable to download path: $source"
+                    echo "$out" | tail -n 20 >&2
+                    return $ret
+                fi
+
+                ## the source may be a directory
+                local file_out=$out
+                [[ -f "$target" ]] && rm -f "$target"
+                mkdir -p "$target"
+                ret=0
+                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+                if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                    rm -rf "$target"
+                    >&2 echo "Unable to download path: $source"
+                    echo "$file_out" | tail -n 10 >&2
+                    echo "$out" | tail -n 10 >&2
+                    return $(( ret == 0 ? 1 : ret ))
+                fi
             }
             '''.stripIndent()
     }
@@ -307,6 +350,62 @@ class AzBashLibTest extends Specification {
 
         cleanup:
         workDir?.toFile()?.deleteDir()
+    }
+
+    @Unroll
+    def 'should download #SOURCE and return #STATUS' () {
+        given:
+        def workDir = Files.createTempDirectory('az-download')
+        def bin = Files.createDirectory(workDir.resolve('bin'))
+        def azcopy = bin.resolve('azcopy')
+        // mimics azcopy 10.8: a directory, a missing blob and an unreadable blob all
+        // fail the non-recursive copy with the same error
+        azcopy.text = """\
+            #!/bin/bash
+            src=\${2%%\\?*}
+            dst=\$3
+            case \$src in
+              */file.txt)    echo data > \$dst ;;
+              */oom.txt)     echo partial > \$dst; exit 137 ;;
+              */partial.txt) echo partial > \$dst; echo 'connection reset'; exit 1 ;;
+              */partial.txt/\\*) echo 'Total Number of Transfers: 0' ;;
+              */dir/\\*)      echo a > \$dst/a.txt ;;
+              */missing/\\*)  echo "Total Number of Transfers: 0" ;;
+              */denied/\\*)   echo "X-Ms-Error-Code: [AuthenticationFailed]"; exit 1 ;;
+              *)             echo "failed to perform copy command due to error: cannot use directory as source without --recursive or a trailing wildcard (/*)"; exit 1 ;;
+            esac
+            """.stripIndent()
+        azcopy.toFile().setExecutable(true)
+        def script = workDir.resolve('test.sh')
+        script.text = AzBashLib.script() + """
+            export PATH=${bin}:\$PATH
+            nxf_az_download 'https://acct.blob.core.windows.net/c/${SOURCE}' target 2> stderr && echo 0 > status || echo \$? > status
+            """.stripIndent()
+
+        when:
+        def process = ['bash', script.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+        def target = workDir.resolve('target')
+        def stderr = workDir.resolve('stderr').text
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('status').text.trim() as int == STATUS
+        (Files.isDirectory(target) ? 'dir' : Files.exists(target) ? 'file' : 'none') == RESULT
+        stderr.contains(ERROR)
+        !stderr.contains('mkdir')
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
+
+        where:
+        SOURCE      | STATUS | RESULT | ERROR
+        'file.txt'  | 0      | 'file' | ''
+        'dir'       | 0      | 'dir'  | ''
+        'missing'   | 1      | 'none' | 'Unable to download path'
+        'denied'    | 1      | 'none' | 'AuthenticationFailed'
+        'oom.txt'   | 137    | 'file' | 'Unable to download path'
+        'partial.txt' | 1    | 'none' | 'connection reset'
     }
 
 }

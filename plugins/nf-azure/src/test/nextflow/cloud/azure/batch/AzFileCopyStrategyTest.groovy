@@ -28,6 +28,7 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzFileSystem
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -197,18 +198,32 @@ class AzFileCopyStrategyTest extends Specification {
                     local source=$1
                     local target=$2
                     local basedir=$(dirname $2)
-                    local ret
+                    local out
+                    local ret=0
                     mkdir -p "$basedir"
 
-                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                        ## if fails check if it was trying to download a directory
-                        mkdir -p $target
-                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                            rm -rf $target
-                            >&2 echo "Unable to download path: $source"
-                            return 1
-                        }
-                    }
+                    out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+                    [[ $ret == 0 ]] && return 0
+                    ## killed by a signal, e.g. out of memory
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source"
+                        echo "$out" | tail -n 20 >&2
+                        return $ret
+                    fi
+
+                    ## the source may be a directory
+                    local file_out=$out
+                    [[ -f "$target" ]] && rm -f "$target"
+                    mkdir -p "$target"
+                    ret=0
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+                    if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source"
+                        echo "$file_out" | tail -n 10 >&2
+                        echo "$out" | tail -n 10 >&2
+                        return $(( ret == 0 ? 1 : ret ))
+                    fi
                 }
 
                 '''.stripIndent(true)
@@ -336,18 +351,32 @@ class AzFileCopyStrategyTest extends Specification {
                     local source=$1
                     local target=$2
                     local basedir=$(dirname $2)
-                    local ret
+                    local out
+                    local ret=0
                     mkdir -p "$basedir"
 
-                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                        ## if fails check if it was trying to download a directory
-                        mkdir -p $target
-                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                            rm -rf $target
-                            >&2 echo "Unable to download path: $source"
-                            return 1
-                        }
-                    }
+                    out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+                    [[ $ret == 0 ]] && return 0
+                    ## killed by a signal, e.g. out of memory
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source"
+                        echo "$out" | tail -n 20 >&2
+                        return $ret
+                    fi
+
+                    ## the source may be a directory
+                    local file_out=$out
+                    [[ -f "$target" ]] && rm -f "$target"
+                    mkdir -p "$target"
+                    ret=0
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+                    if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source"
+                        echo "$file_out" | tail -n 10 >&2
+                        echo "$out" | tail -n 10 >&2
+                        return $(( ret == 0 ? 1 : ret ))
+                    fi
                 }
 
                 '''.stripIndent(true)
@@ -499,22 +528,91 @@ class AzFileCopyStrategyTest extends Specification {
                         local source=$1
                         local target=$2
                         local basedir=$(dirname $2)
-                        local ret
+                        local out
+                        local ret=0
                         mkdir -p "$basedir"
 
-                        ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                            ## if fails check if it was trying to download a directory
-                            mkdir -p $target
-                            azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                                rm -rf $target
-                                >&2 echo "Unable to download path: $source"
-                                return 1
-                            }
-                        }
+                        out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+                        [[ $ret == 0 ]] && return 0
+                        ## killed by a signal, e.g. out of memory
+                        if (( ret > 128 )); then
+                            >&2 echo "Unable to download path: $source"
+                            echo "$out" | tail -n 20 >&2
+                            return $ret
+                        fi
+
+                        ## the source may be a directory
+                        local file_out=$out
+                        [[ -f "$target" ]] && rm -f "$target"
+                        mkdir -p "$target"
+                        ret=0
+                        out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+                        if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                            rm -rf "$target"
+                            >&2 echo "Unable to download path: $source"
+                            echo "$file_out" | tail -n 10 >&2
+                            echo "$out" | tail -n 10 >&2
+                            return $(( ret == 0 ? 1 : ret ))
+                        fi
                     }
 
                     '''.stripIndent(true)
 
+    }
+
+    def 'should size azcopy from the task resources' () {
+        given:
+        def workDir = mockAzPath( 'az://my-data/work/dir' )
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def executor = Mock(AzBatchExecutor) {
+            getAzConfig() >> config
+        }
+
+        when:
+        def binding = new AzBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: workDir,
+                script: 'echo Hello world!',
+                environment: ENV,
+                containerMemory: MemoryUnit.of('1 GB') ] as TaskBean, executor) .makeBinding()
+
+        then:
+        binding.task_env == EXPECTED
+        binding.helpers_script.contains('local max=$(if (( cpus>2 )); then echo 2; else echo $cpus; fi)')
+
+        where:
+        ENV                           | EXPECTED
+        [:]                           | '''\
+                                        export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
+                                        export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                                        export AZCOPY_BUFFER_GB="${AZCOPY_BUFFER_GB:-0.125}"
+                                        export AZ_SAS="12345"
+                                        '''.stripIndent()
+        [AZCOPY_BUFFER_GB: '0.5']     | '''\
+                                        export AZCOPY_BUFFER_GB="0.5"
+                                        export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
+                                        export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                                        export AZ_SAS="12345"
+                                        '''.stripIndent()
+    }
+
+    def 'should not size azcopy when the task memory is not specified' () {
+        given:
+        def workDir = mockAzPath( 'az://my-data/work/dir' )
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def executor = Mock(AzBatchExecutor) {
+            getAzConfig() >> config
+        }
+
+        when:
+        def binding = new AzBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: workDir,
+                script: 'echo Hello world!' ] as TaskBean, executor) .makeBinding()
+
+        then:
+        !binding.task_env.contains('AZCOPY_BUFFER_GB')
+        binding.helpers_script.contains('local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)')
     }
 
 }

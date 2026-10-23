@@ -41,6 +41,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private Duration delayBetweenAttempts
     private String sasToken
     private Path remoteBinDir
+    private AzCopyLimits azcopyLimits
 
     protected AzFileCopyStrategy() {}
 
@@ -52,6 +53,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
+        this.azcopyLimits = AzCopyLimits.of(bean.containerMemory, maxParallelTransfers, (int)Math.ceil(Double.parseDouble(config.azcopy().blockSize)))
     }
 
     @Override
@@ -64,6 +66,9 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
+        // the before script runs first, so a value exported there takes precedence
+        if( azcopyLimits )
+            copy.putIfAbsent('AZCOPY_BUFFER_GB', '${AZCOPY_BUFFER_GB:-' + azcopyLimits.bufferGb + '}')
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
@@ -80,7 +85,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        AzBashLib.script(config.azcopy(), maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts)
+        final parallel = azcopyLimits ? azcopyLimits.parallelTransfers : maxParallelTransfers
+        AzBashLib.script(config.azcopy(), parallel, maxTransferAttempts, delayBetweenAttempts)
     }
 
     @Override

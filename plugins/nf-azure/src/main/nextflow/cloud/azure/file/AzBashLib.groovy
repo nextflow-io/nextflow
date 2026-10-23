@@ -77,18 +77,32 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             local source=$1
             local target=$2
             local basedir=$(dirname $2)
-            local ret
+            local out
+            local ret=0
             mkdir -p "$basedir"
 
-            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                ## if fails check if it was trying to download a directory
-                mkdir -p $target
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                    rm -rf $target
-                    >&2 echo "Unable to download path: $source"
-                    return 1
-                }
-            }
+            out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
+            [[ $ret == 0 ]] && return 0
+            ## killed by a signal, e.g. out of memory
+            if (( ret > 128 )); then
+                >&2 echo "Unable to download path: $source"
+                echo "$out" | tail -n 20 >&2
+                return $ret
+            fi
+
+            ## the source may be a directory
+            local file_out=$out
+            [[ -f "$target" ]] && rm -f "$target"
+            mkdir -p "$target"
+            ret=0
+            out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
+            if [[ $ret != 0 || -z "$(ls -A "$target")" ]]; then
+                rm -rf "$target"
+                >&2 echo "Unable to download path: $source"
+                echo "$file_out" | tail -n 10 >&2
+                echo "$out" | tail -n 10 >&2
+                return $(( ret == 0 ? 1 : ret ))
+            fi
         }
         '''.stripIndent(true)
     }
