@@ -413,4 +413,80 @@ class ScriptTypesTest extends Dsl2Spec {
         params[1].getParameterizedType().getActualTypeArguments()[0] instanceof Class
         params[1].getParameterizedType().getActualTypeArguments()[0] == String
     }
+
+    def 'should not coerce arguments or return values of typed functions' () {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                [
+                    half: half(5),
+                    halfPrecise: half(16777217),
+                    halfDouble: half(5d),
+                    incBig: inc(100000000000000000000),
+                    incLong: inc(5L),
+                    nested: incNested()
+                ]
+            }
+
+            def half(x: Float) -> Float {
+                x / 2
+            }
+
+            def inc(x: Integer) -> Integer {
+                x + 1
+            }
+
+            def incNested() -> Integer {
+                inc(100000000000000000000)
+            }
+            '''
+        )
+        then:
+        result.half == 2.5
+        result.halfPrecise == 8388608.5
+        result.halfDouble == 2.5
+        result.incBig == 100000000000000000001
+        result.incLong == 6L
+        result.nested == 100000000000000000001
+    }
+
+    def 'should dispatch overloaded typed functions' () {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                [
+                    kind(1),
+                    kind('a'),
+                    pad(1),
+                    pad('a'),
+                    pad('a', 'b')
+                ]
+            }
+
+            def kind(x: Integer) -> String {
+                'int'
+            }
+
+            def kind(x: String) -> String {
+                'str'
+            }
+
+            def pad(x: Integer) -> String {
+                "int ${x}"
+            }
+
+            def pad(x: String, suffix: String = '!') -> String {
+                "str ${x}${suffix}"
+            }
+            '''
+        )
+        then:
+        result == ['int', 'str', 'int 1', 'str a!', 'str ab']
+    }
 }

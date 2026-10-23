@@ -1019,7 +1019,7 @@ def n = '42' as Integer
 
 A value is also cast *implicitly* in the following situations:
 
-- **Numeric coercion** -- an integer is coerced to a floating-point number when an [arithmetic operation](#arithmetic-operators) mixes it with a floating-point operand, or when it is used where a `Float` is expected, such as a `Float` variable, function argument, or return value.
+- **Numeric coercion** -- when an [arithmetic operation](#arithmetic-operators) mixes an integer and a floating-point operand, the integer is coerced to a floating-point number.
 
 - **Boolean coercion** -- in a condition, such as [if/else](#ifelse), [assertions](#assertions), or the [logical operators](#logical-operators), any value is coerced to a boolean according to its [truthiness](#booleans).
 

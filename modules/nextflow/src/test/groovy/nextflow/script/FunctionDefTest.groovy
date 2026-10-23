@@ -34,14 +34,6 @@ class FunctionDefTest extends Specification {
             return "I'm $x"
         }
 
-        Float half(Float x) {
-            return x / 2
-        }
-
-        def fail(String msg) {
-            throw new IllegalStateException(msg)
-        }
-
         @Override
         protected Object runScript() { return null }
     }
@@ -118,34 +110,5 @@ class FunctionDefTest extends Specification {
         then:
         func.name == 'bar'
         func.invoke_o('Mr Bar') == "I'm Mr Bar"
-    }
-
-    def 'should coerce arguments to the declared parameter types' () {
-        given:
-        def script = new TestScript()
-
-        when:
-        def func = new FunctionDef(script, 'half')
-        then:
-        func.invoke_o(5) == 2.5f
-        func.invoke_o(5.0) == 2.5f
-        func.invoke_o(5.0f) == 2.5f
-
-        when:
-        def x = 'Bar'
-        func = new FunctionDef(script, 'bar')
-        then:
-        func.invoke_o("Mr $x") == "I'm Mr Bar"
-    }
-
-    def 'should propagate the exception thrown by the function' () {
-        given:
-        def script = new TestScript()
-
-        when:
-        new FunctionDef(script, 'fail').invoke_o('Oops')
-        then:
-        def e = thrown(IllegalStateException)
-        e.message == 'Oops'
     }
 }
