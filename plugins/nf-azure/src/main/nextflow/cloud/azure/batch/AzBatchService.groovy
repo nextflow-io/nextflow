@@ -112,7 +112,7 @@ import reactor.core.publisher.Flux
 @CompileStatic
 class AzBatchService implements Closeable {
 
-    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy'
+    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.16.0/azcopy'
 
     static private final long _1GB = 1 << 30
 
