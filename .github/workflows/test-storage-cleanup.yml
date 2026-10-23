@@ -34,7 +34,7 @@ jobs:
       # and the `nf-az-blob-*` containers leaked by tests
       - name: Clean up Azure storage
         if: always()
-        run: python3 .github/scripts/azure-storage-cleanup.py --container my-data --max-age-days 1 --max-age-hours 24 $DELETE_FLAG
+        run: python3 .github/scripts/azure-storage-cleanup.py --container my-data --max-age-days 1 $DELETE_FLAG
         env:
           AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
           AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}

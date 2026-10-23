@@ -19,7 +19,7 @@ Clean up the Azure storage account used by the Nextflow tests:
 
   - delete the blobs older than --max-age-days in the given containers, page by page
     (the containers are kept)
-  - delete the `nf-az-blob-*` containers older than --max-age-hours, leaked by tests
+  - delete the `nf-az-blob-*` containers older than --max-age-days, leaked by tests
     that failed or timed out before their cleanup
 
 Dry run unless --delete is given.
@@ -60,8 +60,7 @@ def clean_container(service, name, cutoff, delete):
     return failed
 
 
-def delete_test_containers(service, max_age, delete):
-    cutoff = datetime.now(timezone.utc) - max_age
+def delete_test_containers(service, cutoff, delete):
     found = failed = 0
     for container in service.list_containers(name_starts_with=TEST_CONTAINER_PREFIX):
         if container.last_modified >= cutoff:
@@ -74,7 +73,7 @@ def delete_test_containers(service, max_age, delete):
             except Exception as e:
                 failed += 1
                 print(f'  failed: {container.name}: {e}', file=sys.stderr)
-    print(f'{TEST_CONTAINER_PREFIX}*: {found - failed} containers older than {max_age}; {failed} failed', flush=True)
+    print(f'{TEST_CONTAINER_PREFIX}*: {found - failed} containers older than {cutoff:%Y-%m-%d}; {failed} failed', flush=True)
     return failed
 
 
@@ -83,9 +82,7 @@ def main():
     parser.add_argument('--container', action='append', default=[], metavar='CONTAINER',
                         help='container whose old blobs are deleted (repeatable)')
     parser.add_argument('--max-age-days', type=int, default=7,
-                        help='only delete blobs older than this (default: 7)')
-    parser.add_argument('--max-age-hours', type=int, default=24,
-                        help=f'only delete {TEST_CONTAINER_PREFIX}* containers older than this (default: 24)')
+                        help=f'only delete blobs and {TEST_CONTAINER_PREFIX}* containers older than this (default: 7)')
     parser.add_argument('--delete', action='store_true', help='delete for real (default is a dry run)')
     args = parser.parse_args()
 
@@ -97,7 +94,7 @@ def main():
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=args.max_age_days)
     failed = sum(clean_container(service, name, cutoff, args.delete) for name in args.container)
-    failed += delete_test_containers(service, timedelta(hours=args.max_age_hours), args.delete)
+    failed += delete_test_containers(service, cutoff, args.delete)
     return 1 if failed else 0
 
 
