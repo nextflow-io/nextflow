@@ -113,9 +113,7 @@ Azure Batch enforces quotas on resources like pools, jobs, and VMs.
 
 - **Active jobs:** Azure Batch limits the number of active jobs. Terminate completed jobs. If you reach this limit, Nextflow throws an error. Terminate or delete jobs before you run additional pipelines.
 
-- **VM cores:** Each Azure VM family has a maximum core quota. If you request a VM family size for which you lack sufficient core quota, any jobs and tasks that Nextflow creates remain pending because the quota prevents the pool from scaling. This can cause your pipeline to hang indefinitely.
-
-  Tasks on a fixed-size pool that cannot allocate any node fail with the resize error reported by the pool. Tasks on an auto-scaling pool remain pending, since the pool can scale once quota becomes available. Use the [maxSubmitAwait][process-maxsubmitawait] directive to limit how long tasks remain pending, and optionally `task.submitAttempt` to re-submit them to a different pool.
+- **VM cores:** Each Azure VM family has a maximum core quota. If you request a VM family size for which you lack sufficient core quota, the pool cannot allocate nodes. Tasks on a fixed-size pool fail with the resize error reported by the pool. Tasks on an auto-scaling pool remain pending until quota becomes available, which can cause your pipeline to hang indefinitely. Use the [maxSubmitAwait][process-maxsubmitawait] directive to limit how long tasks remain pending, and optionally `task.submitAttempt` to re-submit them to a different pool.
 
 To increase your quota, open your Batch account in the Azure portal, select **Quotas** in the left-hand menu, and request an increase.
 
