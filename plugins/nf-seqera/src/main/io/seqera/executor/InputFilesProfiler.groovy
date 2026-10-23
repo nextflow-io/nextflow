@@ -22,7 +22,8 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -37,8 +38,9 @@ import nextflow.processor.TaskRun
  * Follows symlinks and recursively computes directory sizes.
  *
  * Stats are cached per path, because the same reference files are
- * usually shared by many tasks of the same run. When an executor is
- * given, the files of a task are statted in parallel on it.
+ * usually shared by many tasks of the same run. Each file is statted
+ * as its own job on the given executor, so the files of a task are
+ * statted in parallel and no thread blocks waiting for the others.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -55,18 +57,19 @@ class InputFilesProfiler {
     /** Paths whose stat failure has already been warned about, so a failing path is warned once */
     private final Set<URI> warned
 
-    /** Executor to stat the files of a task in parallel, or null to stat them sequentially */
-    private final ExecutorService executor
+    /** Executor statting the input files */
+    private final Executor executor
 
+    /** Stats files on the calling thread, one at a time */
     InputFilesProfiler() {
-        this(null)
+        this({ Runnable r -> r.run() } as Executor)
     }
 
-    InputFilesProfiler(ExecutorService executor) {
+    InputFilesProfiler(Executor executor) {
         this(executor, DEFAULT_CACHE_SIZE)
     }
 
-    InputFilesProfiler(ExecutorService executor, long cacheSize) {
+    InputFilesProfiler(Executor executor, long cacheSize) {
         this.executor = executor
         this.cache = CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
@@ -84,11 +87,7 @@ class InputFilesProfiler {
      * @return InputFilesMetrics or null if no input files
      */
     InputFilesMetrics compute(TaskRun task) {
-        final files = task?.inputFiles
-        if( !files || files.isEmpty() )
-            return null
-
-        return compute0(files)
+        return compute(task?.inputFiles)
     }
 
     /**
@@ -98,19 +97,34 @@ class InputFilesProfiler {
      * @return InputFilesMetrics or null if list is empty
      */
     InputFilesMetrics compute(List<FileHolder> files) {
-        if( !files || files.isEmpty() )
-            return null
-
-        return compute0(files)
+        return computeAsync(files).join()
     }
 
-    private InputFilesMetrics compute0(List<FileHolder> files) {
+    /**
+     * Compute input files metrics asynchronously, statting each file on the executor.
+     *
+     * @param files List of FileHolder objects
+     * @return A future completing with the InputFilesMetrics, or with null if the list is empty
+     */
+    CompletableFuture<InputFilesMetrics> computeAsync(List<FileHolder> files) {
+        if( !files )
+            return CompletableFuture.completedFuture(null)
+
+        final List<CompletableFuture<long[]>> stats = files.collect { FileHolder fh ->
+            CompletableFuture.supplyAsync({ getFileStats(fh.storePath) }, executor)
+        }
+        return CompletableFuture
+            .allOf(stats as CompletableFuture[])
+            .thenApply { aggregate(stats.collect { it.join() }) }
+    }
+
+    private static InputFilesMetrics aggregate(List<long[]> stats) {
         int totalCount = 0
         long totalBytes = 0
         long maxFileBytes = Long.MIN_VALUE
         long minFileBytes = Long.MAX_VALUE
 
-        for( long[] result : statAll(files) ) {
+        for( long[] result : stats ) {
             final count = (int) result[0]
             final size = result[1]
             totalCount += count
@@ -126,14 +140,6 @@ class InputFilesProfiler {
             .totalBytes(totalBytes)
             .maxFileBytes(maxFileBytes)
             .minFileBytes(minFileBytes)
-    }
-
-    private List<long[]> statAll(List<FileHolder> files) {
-        final List<Callable<long[]>> tasks = files.collect { FileHolder fh -> { getFileStats(fh.storePath) } as Callable<long[]> }
-        if( executor == null || tasks.size() == 1 )
-            return tasks.collect { it.call() }
-        // invokeAll waits interruptibly and cancels pending stats on interrupt
-        return executor.invokeAll(tasks).collect { it.get() }
     }
 
     /**

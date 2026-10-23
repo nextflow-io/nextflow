@@ -18,7 +18,9 @@ package io.seqera.executor
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import io.seqera.sched.api.schema.v1a1.CreateTasksResponse
@@ -585,49 +587,26 @@ class SeqeraBatchSubmitterTest extends Specification {
         capturedTasks.size() == 1
     }
 
-    def 'should compute metrics of concurrent tasks in parallel'() {
+    def 'should run all the metrics pool threads at the same time'() {
         given:
+        def submitter = new SeqeraBatchSubmitter(Stub(SchedClient), TEST_RUN)
         def N = SeqeraBatchSubmitter.METRICS_POOL_SIZE
-        def running = new AtomicInteger()
-        def maxRunning = new AtomicInteger()
-        def capturedTasks = [].asSynchronized()
-        def submittedAt = 0L
-        def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String runId, List<Task> tasks ->
-                submittedAt = System.currentTimeMillis()
-                capturedTasks.addAll(tasks)
-                Stub(CreateTasksResponse) {
-                    getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
-                }
-            }
-        }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms')) {
-            @Override
-            protected InputFilesMetrics computeMetrics(TaskRun task) {
-                maxRunning.accumulateAndGet(running.incrementAndGet(), Math::max)
-                sleep(500)
-                running.decrementAndGet()
-                return new InputFilesMetrics().count(1)
-            }
-        }
+        def started = new CountDownLatch(N)
+        def release = new CountDownLatch(1)
 
-        when: 'N tasks with a slow (500ms) metrics computation are submitted'
-        submitter.start()
-        def start = System.currentTimeMillis()
-        N.times { submitter.submit(createNamedHandler("t$it"), new Task().image("img$it")) }
-        sleep(1500)
+        when: 'N blocking jobs are queued on the pool'
+        N.times { submitter.@metricsExecutor.execute({ started.countDown(); release.await() } as Runnable) }
+
+        then: 'they all start, the pool is not stuck at one thread'
+        started.await(5, TimeUnit.SECONDS)
+
+        cleanup:
+        release.countDown()
         submitter.shutdown()
-
-        then: 'they run concurrently and the batch is sent after about one computation, not N'
-        maxRunning.get() == N
-        capturedTasks.size() == N
-        capturedTasks.every { it.inputFiles?.count == 1 }
-        submittedAt - start < 1500
     }
 
     def 'should bound the metrics wait with a single deadline per batch'() {
         given:
-        def release = new CountDownLatch(1)
         def capturedTasks = [].asSynchronized()
         def submittedAt = 0L
         def client = Stub(SchedClient) {
@@ -641,9 +620,8 @@ class SeqeraBatchSubmitterTest extends Specification {
         }
         def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms')) {
             @Override
-            protected InputFilesMetrics computeMetrics(TaskRun task) {
-                release.await()
-                return new InputFilesMetrics().count(1)
+            protected CompletableFuture<InputFilesMetrics> computeMetrics(TaskRun task) {
+                return new CompletableFuture<InputFilesMetrics>()
             }
         }
         submitter.metricsTimeout = Duration.of('300ms')
@@ -653,7 +631,6 @@ class SeqeraBatchSubmitterTest extends Specification {
         def start = System.currentTimeMillis()
         5.times { submitter.submit(createNamedHandler("t$it"), new Task().image("img$it")) }
         sleep(1500)
-        release.countDown()
         submitter.shutdown()
 
         then: 'the batch waits one timeout in total (not one per task) and is sent without metrics'
@@ -664,7 +641,6 @@ class SeqeraBatchSubmitterTest extends Specification {
 
     def 'should attach metrics that are ready by the deadline and skip the others'() {
         given:
-        def release = new CountDownLatch(1)
         def capturedTasks = [].asSynchronized()
         def client = Stub(SchedClient) {
             createTasks(_, _) >> { String runId, List<Task> tasks ->
@@ -676,10 +652,10 @@ class SeqeraBatchSubmitterTest extends Specification {
         }
         def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms')) {
             @Override
-            protected InputFilesMetrics computeMetrics(TaskRun task) {
-                if( task.name == 'slow' )
-                    release.await()
-                return new InputFilesMetrics().count(1)
+            protected CompletableFuture<InputFilesMetrics> computeMetrics(TaskRun task) {
+                return task.name == 'slow'
+                    ? new CompletableFuture<InputFilesMetrics>()
+                    : CompletableFuture.completedFuture(new InputFilesMetrics().count(1))
             }
         }
         submitter.metricsTimeout = Duration.of('300ms')
@@ -690,7 +666,6 @@ class SeqeraBatchSubmitterTest extends Specification {
         submitter.submit(createNamedHandler('fast1'), new Task().image('fast1'))
         submitter.submit(createNamedHandler('fast2'), new Task().image('fast2'))
         sleep(1000)
-        release.countDown()
         submitter.shutdown()
 
         then: 'only the slow task is sent without metrics'

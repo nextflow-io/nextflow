@@ -20,7 +20,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -57,11 +56,8 @@ class SeqeraBatchSubmitter {
     /** Maximum time a batch waits for the input files metrics of its tasks */
     static final Duration METRICS_TIMEOUT = SysEnv.get('NXF_SEQERA_METRICS_TIMEOUT', '30 sec') as Duration
 
-    /** Number of threads computing input files metrics */
-    static final int METRICS_POOL_SIZE = Math.max(1, SysEnv.getInteger('NXF_SEQERA_METRICS_POOL_SIZE', 10))
-
     /** Number of threads statting input files, shared by the metrics computations of all tasks */
-    static final int METRICS_STAT_POOL_SIZE = Math.max(1, SysEnv.getInteger('NXF_SEQERA_METRICS_STAT_POOL_SIZE', 20))
+    static final int METRICS_POOL_SIZE = Math.max(1, SysEnv.getInteger('NXF_SEQERA_METRICS_POOL_SIZE', 20))
 
     /**
      * Holds a task handler, its prepared Task object, and async metrics computation
@@ -82,14 +78,8 @@ class SeqeraBatchSubmitter {
     private Thread sender
     private volatile boolean completed = false
 
-    /** Executor pool for async input file metrics computation */
+    /** Executor pool statting input files for the metrics computation */
     private final ExecutorService metricsExecutor
-
-    /**
-     * Executor pool statting the files of each task in parallel. It is separate from
-     * {@link #metricsExecutor} because a computation blocks waiting on its file stats
-     */
-    private final ExecutorService statExecutor
 
     /** Computes input files metrics, caching file stats across the tasks of the run */
     private final InputFilesProfiler profiler
@@ -111,20 +101,14 @@ class SeqeraBatchSubmitter {
         this.requestInterval = requestInterval
         this.keepAliveInterval = keepAliveInterval
         this.onError = onError
-        // Fixed size pools: a ThreadPoolExecutor with an unbounded queue never grows beyond its core size
-        this.metricsExecutor = Executors.newFixedThreadPool(METRICS_POOL_SIZE, daemonThreadFactory('seqera-metrics'))
-        this.statExecutor = Executors.newFixedThreadPool(METRICS_STAT_POOL_SIZE, daemonThreadFactory('seqera-metrics-stat'))
-        this.profiler = new InputFilesProfiler(statExecutor)
-    }
-
-    /**
-     * Daemon threads, so idle pool threads never keep the JVM alive if {@link #shutdown()} is skipped
-     */
-    private static ThreadFactory daemonThreadFactory(String name) {
-        return new ThreadFactoryBuilder()
-                .setNameFormat("${name}-%d".toString())
+        // Fixed size pool: a ThreadPoolExecutor with an unbounded queue never grows beyond its core size.
+        // Daemon threads, so idle pool threads never keep the JVM alive if shutdown() is skipped
+        final threadFactory = new ThreadFactoryBuilder()
+                .setNameFormat('seqera-metrics-%d')
                 .setDaemon(true)
                 .build()
+        this.metricsExecutor = Executors.newFixedThreadPool(METRICS_POOL_SIZE, threadFactory)
+        this.profiler = new InputFilesProfiler(metricsExecutor)
     }
 
     /**
@@ -144,18 +128,20 @@ class SeqeraBatchSubmitter {
             throw new IllegalStateException("Batch submitter has been shutdown")
         }
 
-        // Start async metrics computation
-        final taskRun = handler.task
-        final metricsFuture = CompletableFuture.supplyAsync(
-            ()-> computeMetrics(taskRun),
-            metricsExecutor
-        )
-
-        pendingQueue.add(new PendingTask(handler, task, metricsFuture))
+        pendingQueue.add(new PendingTask(handler, task, computeMetrics(handler.task)))
     }
 
-    protected InputFilesMetrics computeMetrics(TaskRun task) {
-        return profiler.compute(task)
+    /**
+     * Start the async computation of the input files metrics of a task
+     */
+    protected CompletableFuture<InputFilesMetrics> computeMetrics(TaskRun task) {
+        try {
+            return profiler.computeAsync(task?.inputFiles)
+        }
+        catch (Exception e) {
+            // a failure must not prevent the task submission, resolveMetrics reports it
+            return CompletableFuture.<InputFilesMetrics>failedFuture(e)
+        }
     }
 
     /**
@@ -167,23 +153,18 @@ class SeqeraBatchSubmitter {
         if (sender) {
             sender.join()
         }
-        // Shutdown the metrics executor before the stat executor its computations wait on
-        shutdownExecutor(metricsExecutor)
-        shutdownExecutor(statExecutor)
-        log.debug "[SEQERA] Batch submitter shutdown complete"
-    }
-
-    private static void shutdownExecutor(ExecutorService executor) {
-        executor.shutdown()
+        // Shutdown metrics executor
+        metricsExecutor.shutdown()
         try {
-            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
-                executor.shutdownNow()
+            if (!metricsExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                metricsExecutor.shutdownNow()
             }
         }
         catch (InterruptedException e) {
-            executor.shutdownNow()
+            metricsExecutor.shutdownNow()
             Thread.currentThread().interrupt()
         }
+        log.debug "[SEQERA] Batch submitter shutdown complete"
     }
 
     /**
