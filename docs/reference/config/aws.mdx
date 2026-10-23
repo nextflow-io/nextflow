@@ -65,7 +65,7 @@ Max number of execution attempts of a job interrupted by a EC2 Spot reclaim even
 
 ##### `aws.batch.maxTransferAttempts`
 
-Max number of downloads attempts from S3 (default: `1`).
+Max number of attempts for S3 transfers (default: `5`, or the value of the `AWS_MAX_ATTEMPTS` environment variable in the Nextflow launch environment). The value is passed to the AWS CLI as `AWS_MAX_ATTEMPTS`, which applies to both uploads and downloads. When `aws.batch.retryMode` is `built-in`, Nextflow also retries each failed download up to this many times, on top of the AWS CLI retries.
 
 ##### `aws.batch.platformType`
 
