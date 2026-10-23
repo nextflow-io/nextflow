@@ -36,6 +36,22 @@ class WaveAssetsTest extends Specification {
 
     }
 
+    def 'should compute task hash key' () {
+        given:
+        def IMAGE = 'foo:latest'
+        def config1 = new ContainerConfig(env: ['FOO=1'])
+        def config2 = new ContainerConfig(env: ['FOO=1', 'FUSION_SNAPSHOT_ENABLED=true'])
+
+        expect:
+        new WaveAssets(IMAGE).taskHashKey() == new WaveAssets(IMAGE).fingerprint()
+        new WaveAssets(IMAGE, null, null, config1).taskHashKey() == new WaveAssets(IMAGE, null, null, config1).fingerprint()
+        and:
+        new WaveAssets(IMAGE, null, null, config1).fingerprint() != new WaveAssets(IMAGE, null, null, config2).fingerprint()
+        new WaveAssets(IMAGE, null, null, config1).taskHashKey() == new WaveAssets(IMAGE, null, null, config2).taskHashKey()
+        and:
+        new WaveAssets(IMAGE, 'linux/amd64', null, config1).taskHashKey() != new WaveAssets(IMAGE, 'linux/arm64', null, config2).taskHashKey()
+    }
+
     def 'should validate container name' () {
         when:
         WaveAssets.validateContainerName('ubuntu')
