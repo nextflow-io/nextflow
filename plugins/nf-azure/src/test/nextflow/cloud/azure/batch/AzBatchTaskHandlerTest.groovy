@@ -17,6 +17,7 @@
 package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.models.BatchTask
+import com.azure.compute.batch.models.BatchTaskState
 import com.azure.json.JsonProviders
 import com.sun.jna.platform.unix.X11
 import nextflow.processor.TaskStatus
@@ -25,6 +26,7 @@ import java.nio.file.Path
 
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.Executor
@@ -253,5 +255,74 @@ class AzBatchTaskHandlerTest extends Specification {
         handler.task.exitStatus == Integer.MAX_VALUE
         handler.status == TaskStatus.COMPLETED
         handler.task.error.message == 'Unknown error'
+    }
+
+    def 'should fail a waiting task when its pool cannot allocate nodes' () {
+        given:
+        def task = Spy(new TaskRun()){
+            getContainer() >> 'ubuntu'
+        }
+        task.name = 'foo'
+        task.workDir = Path.of('/tmp/wdir')
+        def taskKey = new AzTaskKey('job-1', 'task-1', 'pool-1')
+        def batchService = Mock(AzBatchService)
+        def executor = Mock(AzBatchExecutor){
+            getBatchService() >> batchService
+        }
+        def handler = new AzBatchTaskHandler(task, executor)
+        handler.status = TaskStatus.SUBMITTED
+        handler.taskKey = taskKey
+
+        when:
+        def running = handler.checkIfRunning()
+
+        then:
+        1 * batchService.getTask(taskKey) >> new BatchTask(state: BatchTaskState.ACTIVE)
+        1 * batchService.checkPoolResizeErrors('pool-1') >> "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached"
+        1 * batchService.terminate(taskKey)
+        !running
+        handler.status == TaskStatus.COMPLETED
+        task.error instanceof ProcessException
+        task.error.message == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached"
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        0 * batchService.getTask(_)
+        completed
+    }
+
+    def 'should keep waiting when the pool has no blocking resize errors' () {
+        given:
+        def task = Spy(new TaskRun()){
+            getContainer() >> 'ubuntu'
+        }
+        task.name = 'foo'
+        task.workDir = Path.of('/tmp/wdir')
+        def taskKey = new AzTaskKey('job-1', 'task-1', 'pool-1')
+        def batchService = Mock(AzBatchService)
+        def executor = Mock(AzBatchExecutor){
+            getBatchService() >> batchService
+        }
+        def handler = new AzBatchTaskHandler(task, executor)
+        handler.status = TaskStatus.SUBMITTED
+        handler.taskKey = taskKey
+
+        when:
+        def running = handler.checkIfRunning()
+
+        then:
+        1 * batchService.getTask(taskKey) >> new BatchTask(state: STATE)
+        CHECKS * batchService.checkPoolResizeErrors('pool-1') >> null
+        running == RUNNING
+        handler.status == (RUNNING ? TaskStatus.RUNNING : TaskStatus.SUBMITTED)
+
+        where:
+        STATE                       | CHECKS | RUNNING
+        BatchTaskState.ACTIVE       | 1      | false
+        BatchTaskState.PREPARING    | 0      | false
+        BatchTaskState.RUNNING      | 0      | true
+        BatchTaskState.COMPLETED    | 0      | true
     }
 }

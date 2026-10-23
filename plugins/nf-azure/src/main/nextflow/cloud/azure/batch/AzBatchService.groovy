@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import dev.failsafe.function.CheckedPredicate
 
@@ -78,6 +79,7 @@ import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonSlurper
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -120,6 +122,8 @@ class AzBatchService implements Closeable {
     AzConfig config
 
     Map<AzJobKey,String> allJobIds = new HashMap<>(50)
+
+    private final Map<String,PoolResizeCheck> poolResizeChecks = new ConcurrentHashMap<>()
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -622,7 +626,7 @@ class AzBatchService implements Closeable {
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
         final taskToAdd = createTask(poolId, jobId, task)
         apply(() -> client.createTask(jobId, taskToAdd))
-        return new AzTaskKey(jobId, taskToAdd.getId())
+        return new AzTaskKey(jobId, taskToAdd.getId(), poolId)
     }
 
     protected List<String> getShareVolumeMounts(AzVmPoolSpec spec) {
@@ -774,23 +778,74 @@ class AzBatchService implements Closeable {
      */
     private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
 
+    private static final Duration POOL_RESIZE_CHECK_INTERVAL = Duration.ofMinutes(1)
+
+    @Canonical
+    private static class PoolResizeCheck {
+        long timestamp
+        String error
+    }
+
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
         }
-        else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 && pool.currentLowPriorityNodes==0 ) {
-            // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
-            // For a steady autoscale pool carrying only transient errors, submitting the task is what triggers
-            // a fresh resize (which clears the stale error), so warn and proceed instead of blocking recovery.
-            if( isRecoverableResizeError(pool) ) {
-                log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; submitting task to trigger a fresh resize - ${pool.resizeErrors*.code}"
-            }
-            else {
-                throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
-            }
+        final resizeError = resizeError(pool)
+        if( resizeError ) {
+            throw new IllegalStateException(resizeError)
         }
         if( pool.taskSlotsPerNode != spec.vmType.numberOfCores ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' slots per node does not match the VM num cores (slots: ${pool.taskSlotsPerNode}, cores: ${spec.vmType.numberOfCores})")
+        }
+    }
+
+    /**
+     * @return A message describing the pool resize errors when they leave the pool without
+     *      any node and cannot be recovered, or {@code null} otherwise
+     */
+    protected String resizeError(BatchPool pool) {
+        if( !pool.resizeErrors || pool.currentDedicatedNodes!=0 || pool.currentLowPriorityNodes!=0 )
+            return null
+        // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
+        // For a steady autoscale pool carrying only transient errors, a pending task is what triggers
+        // a fresh resize (which clears the stale error), so do not block recovery.
+        if( isRecoverableResizeError(pool) ) {
+            log.warn1 "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; waiting for a fresh resize - ${pool.resizeErrors*.code}"
+            return null
+        }
+        final errors = pool.resizeErrors.collect { it.message ? "${it.code}: ${it.message}".toString() : it.code }
+        return "Azure Batch pool '${pool.id}' has resize errors and no agents are available - ${errors.join('; ')}"
+    }
+
+    /**
+     * Check a pool used by submitted tasks for resize errors that prevent it from allocating any node.
+     * The pool is fetched at most once per {@link #POOL_RESIZE_CHECK_INTERVAL} and the outcome is
+     * shared by all tasks on the same pool.
+     *
+     * @return The resize error message as returned by {@link #resizeError(BatchPool)}, or {@code null}
+     */
+    String checkPoolResizeErrors(String poolId) {
+        final now = System.currentTimeMillis()
+        final prev = poolResizeChecks.get(poolId)
+        if( prev && now - prev.timestamp < getPoolResizeCheckInterval().toMillis() )
+            return prev.error
+        final result = new PoolResizeCheck(now, fetchResizeError(poolId))
+        poolResizeChecks.put(poolId, result)
+        return result.error
+    }
+
+    protected Duration getPoolResizeCheckInterval() {
+        return POOL_RESIZE_CHECK_INTERVAL
+    }
+
+    protected String fetchResizeError(String poolId) {
+        try {
+            final pool = getPool(poolId)
+            return pool ? resizeError(pool) : null
+        }
+        catch( Exception e ) {
+            log.debug "[AZURE BATCH] Unable to check resize errors for pool '$poolId' - ${e.message}"
+            return null
         }
     }
 
