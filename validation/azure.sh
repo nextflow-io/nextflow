@@ -56,7 +56,7 @@ azure {
     deletePoolsOnCompletion = true
     pools {
       '$POOL_ID' {
-          vmCount = 1
+          autoScale = true
       }
     }
   }
