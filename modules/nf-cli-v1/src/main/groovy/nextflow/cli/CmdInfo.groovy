@@ -26,11 +26,13 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
+import nextflow.util.StringUtils
 import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
 /**
@@ -268,10 +270,12 @@ class CmdInfo extends CmdBase {
 
         // Env
         result << BLANK << "Environment:" << NEWLINE
-        def entries = System.getenv().keySet().sort()
+        final env = SysEnv.get()
+        def entries = env.keySet().sort()
         for( def key : entries ) {
             if( key.startsWith('NXF_') || level>1 ) {
-                dump(  key, System.getenv().get(key), 2, result )
+                final value = StringUtils.isSensitiveName(key) ? '[secret]' : env.get(key)
+                dump(  key, value, 2, result )
             }
         }
 

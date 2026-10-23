@@ -480,4 +480,25 @@ class CmdRunTest extends Specification {
         e.message.contains('automatic download from remote repositories is disabled')
     }
 
+    private static <T extends CmdRun> T withFakeEnv(T cmd) {
+        final field = CmdRun.getDeclaredField('sysEnv')
+        field.setAccessible(true)
+        field.set(cmd, [FAKE_SECRET: 's3cr3t-canary'])
+        return cmd
+    }
+
+    def 'should not render the environment in the iteration name #CMD' () {
+        expect:
+        CMD.toString() == EXPECTED
+        "$CMD".toString() == EXPECTED
+        and:
+        !specificationContext.currentIteration.displayName.contains('s3cr3t-canary')
+        !specificationContext.currentIteration.displayName.contains('sysEnv')
+
+        where:
+        CMD                                                          | EXPECTED
+        withFakeEnv(new CmdRun(args: ['hello'], params: [foo: 1]))   | 'CmdRun[name=run]'
+        withFakeEnv(new CmdKubeRun(args: ['hello'], namespace: 'x')) | 'CmdKubeRun[name=kuberun]'
+    }
+
 }

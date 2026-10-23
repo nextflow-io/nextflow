@@ -710,6 +710,18 @@ class TypeCheckingTest extends Specification {
         "file('input.txt', checkIfExists: true)"    | null
     }
 
+    @Unroll
+    def 'should accept a boolean or a list of columns for splitCsv header' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                  | ERROR
+        "file('input.csv').splitCsv(header: true)"              | null
+        "file('input.csv').splitCsv(header: ['id', 'fastq'])"   | null
+        "file('input.csv').splitCsv(header: true, skip: 'x')"   | "Named param `skip` expects a Integer but received a String"
+    }
+
     def 'should check a function call with record parameters' () {
         expect:
         check(
@@ -1056,6 +1068,36 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should prefer the comparator variant over tuple destructuring' () {
+        when:
+        def exp = parseExpression(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """
+        )
+        def method = exp.getNodeMetaData(ASTNodeMarker.METHOD_TARGET)
+        then:
+        Types.getName(method.getParameters().last().getType()) == '(Tuple<String, Integer>, Tuple<String, Integer>) -> Integer'
+        Types.getName(getType(exp)) == TYPE
+
+        and:
+        check(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """,
+            null
+        )
+
+        where:
+        METHOD      | TYPE
+        'toSorted'  | 'List<Tuple<String, Integer>>'
+        'max'       | 'Tuple<String, Integer>'
+        'min'       | 'Tuple<String, Integer>'
+    }
+
+    @Unroll
     def 'should check a unary expression' () {
         expect:
         check(SOURCE, ERROR)
@@ -1193,6 +1235,20 @@ class TypeCheckingTest extends Specification {
         )
         then:
         checkType(exp, Object)
+    }
+
+    @Unroll
+    def 'should resolve a getter property with generic type' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                          | ERROR
+        "[a: 1].entrySet().each { e -> def k: String = e.key }"         | null
+        "[a: 1].entrySet().each { e -> def v: Integer = e.value }"      | null
+        "[a: 1].entrySet().each { e -> e.key.nope }"                    | "Unrecognized property `nope` for type String"
+        "[a: 1].entrySet().each { e -> e.value.nope }"                  | "Unrecognized property `nope` for type Integer"
+        "[a: 1].entrySet().each { e -> e.nope }"                        | "Unrecognized property `nope` for type Entry<String, Integer>"
     }
 
     def 'should check a workflow call' () {
