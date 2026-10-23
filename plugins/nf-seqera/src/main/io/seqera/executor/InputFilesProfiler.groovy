@@ -21,7 +21,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.Callable
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.InputFilesMetrics
@@ -32,11 +35,30 @@ import nextflow.processor.TaskRun
  * Computes input files metrics for a task.
  * Follows symlinks and recursively computes directory sizes.
  *
+ * Stats are cached per path, because the same reference files are
+ * usually shared by many tasks of the same run.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
 class InputFilesProfiler {
+
+    /** Maximum number of paths whose stats are kept in the cache */
+    static final long DEFAULT_CACHE_SIZE = 50_000
+
+    /** Keyed by URI rather than Path, to avoid retaining heavyweight cloud path objects */
+    private final Cache<URI,long[]> cache
+
+    InputFilesProfiler() {
+        this(DEFAULT_CACHE_SIZE)
+    }
+
+    InputFilesProfiler(long cacheSize) {
+        this.cache = CacheBuilder.newBuilder()
+            .maximumSize(cacheSize)
+            .build()
+    }
 
     /**
      * Compute input files metrics for a task.
@@ -44,7 +66,7 @@ class InputFilesProfiler {
      * @param task The task to compute metrics for
      * @return InputFilesMetrics or null if no input files
      */
-    static InputFilesMetrics compute(TaskRun task) {
+    InputFilesMetrics compute(TaskRun task) {
         final files = task?.inputFiles
         if( !files || files.isEmpty() )
             return null
@@ -58,14 +80,14 @@ class InputFilesProfiler {
      * @param files List of FileHolder objects
      * @return InputFilesMetrics or null if list is empty
      */
-    static InputFilesMetrics compute(List<FileHolder> files) {
+    InputFilesMetrics compute(List<FileHolder> files) {
         if( !files || files.isEmpty() )
             return null
 
         return compute0(files)
     }
 
-    private static InputFilesMetrics compute0(List<FileHolder> files) {
+    private InputFilesMetrics compute0(List<FileHolder> files) {
         int totalCount = 0
         long totalBytes = 0
         long maxFileBytes = Long.MIN_VALUE
@@ -93,25 +115,34 @@ class InputFilesProfiler {
     /**
      * Get file stats for a path: file count and total size.
      * For regular files, count is 1. For directories, count is the number of files within.
+     * Results are cached; failures are not, so a transient error is retried by the next task.
      *
      * @param path The path to measure
      * @return A two-element array: [fileCount, totalSize]
      */
-    private static long[] getFileStats(Path path) {
+    private long[] getFileStats(Path path) {
         if( path == null )
             return new long[]{0, 0}
 
         try {
-            if( Files.isDirectory(path) ) {
-                return computeDirStats(path)
-            }
-            // Files.size() follows symlinks by default
-            return new long[]{1, Files.size(path)}
+            return cache.get(path.toUri(), { statPath(path) } as Callable<long[]>)
         }
         catch( Exception e ) {
-            log.warn "Unable to determine size for input file: ${path} - ${e.message}"
+            final cause = e.cause ?: e
+            log.warn "Unable to determine size for input file: ${path} - ${cause.message}"
             return new long[]{1, 0}
         }
+    }
+
+    /**
+     * Read file stats for a path from its file system, bypassing the cache.
+     */
+    protected long[] statPath(Path path) {
+        if( Files.isDirectory(path) ) {
+            return computeDirStats(path)
+        }
+        // Files.size() follows symlinks by default
+        return new long[]{1, Files.size(path)}
     }
 
     /**

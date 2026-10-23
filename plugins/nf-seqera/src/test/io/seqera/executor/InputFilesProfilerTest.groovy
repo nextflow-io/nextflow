@@ -18,6 +18,8 @@ package io.seqera.executor
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 
 import nextflow.file.FileHolder
 import nextflow.processor.TaskRun
@@ -36,7 +38,7 @@ class InputFilesProfilerTest extends Specification {
 
     def 'should return null for null task'() {
         expect:
-        InputFilesProfiler.compute((TaskRun) null) == null
+        new InputFilesProfiler().compute((TaskRun) null) == null
     }
 
     def 'should return null for task with no input files'() {
@@ -46,17 +48,17 @@ class InputFilesProfilerTest extends Specification {
         }
 
         expect:
-        InputFilesProfiler.compute(task) == null
+        new InputFilesProfiler().compute(task) == null
     }
 
     def 'should return null for empty file list'() {
         expect:
-        InputFilesProfiler.compute([]) == null
+        new InputFilesProfiler().compute([]) == null
     }
 
     def 'should return null for null file list'() {
         expect:
-        InputFilesProfiler.compute((List) null) == null
+        new InputFilesProfiler().compute((List) null) == null
     }
 
     def 'should compute metrics for single small file'() {
@@ -66,7 +68,7 @@ class InputFilesProfilerTest extends Specification {
         def files = [new FileHolder(file)]
 
         when:
-        def metrics = InputFilesProfiler.compute(files)
+        def metrics = new InputFilesProfiler().compute(files)
 
         then:
         metrics.count == 1
@@ -93,7 +95,7 @@ class InputFilesProfilerTest extends Specification {
         ]
 
         when:
-        def metrics = InputFilesProfiler.compute(files)
+        def metrics = new InputFilesProfiler().compute(files)
 
         then:
         metrics.count == 3
@@ -116,7 +118,7 @@ class InputFilesProfilerTest extends Specification {
         def files = [new FileHolder(dir)]
 
         when:
-        def metrics = InputFilesProfiler.compute(files)
+        def metrics = new InputFilesProfiler().compute(files)
 
         then:
         metrics.count == 3  // 3 actual files inside the directory
@@ -138,7 +140,7 @@ class InputFilesProfilerTest extends Specification {
         def files = [new FileHolder(file1), new FileHolder(dir)]
 
         when:
-        def metrics = InputFilesProfiler.compute(files)
+        def metrics = new InputFilesProfiler().compute(files)
 
         then:
         metrics.count == 3  // 1 regular file + 2 files in directory
@@ -158,7 +160,7 @@ class InputFilesProfilerTest extends Specification {
         def files = [new FileHolder(symlink)]
 
         when:
-        def metrics = InputFilesProfiler.compute(files)
+        def metrics = new InputFilesProfiler().compute(files)
 
         then:
         metrics.count == 1
@@ -173,7 +175,7 @@ class InputFilesProfilerTest extends Specification {
         def files = [new FileHolder(missingFile)]
 
         when:
-        def metrics = InputFilesProfiler.compute(files)
+        def metrics = new InputFilesProfiler().compute(files)
 
         then:
         metrics.count == 1
@@ -190,12 +192,54 @@ class InputFilesProfilerTest extends Specification {
         }
 
         when:
-        def metrics = InputFilesProfiler.compute(task)
+        def metrics = new InputFilesProfiler().compute(task)
 
         then:
         metrics.count == 1
         metrics.totalBytes == 2048
         metrics.maxFileBytes == 2048
         metrics.minFileBytes == 2048
+    }
+
+    def 'should stat repeated paths only once'() {
+        given:
+        def shared = tempDir.resolve('ref.fa')
+        Files.write(shared, new byte[1000])
+        def own = (1..20).collect { i ->
+            def f = tempDir.resolve("chunk-${i}.bam")
+            Files.write(f, new byte[i])
+            f
+        }
+        def profiler = Spy(InputFilesProfiler)
+        def pool = Executors.newFixedThreadPool(10)
+
+        when: 'twenty tasks sharing the same reference file are profiled concurrently'
+        def results = pool.invokeAll(own.collect { f ->
+            { -> profiler.compute([new FileHolder(shared), new FileHolder(f)]) } as Callable
+        })*.get()
+
+        then: 'the shared file is statted once and every task file once'
+        1 * profiler.statPath(shared)
+        own.each { f -> 1 * profiler.statPath(f) }
+        and:
+        results.every { it.count == 2 && it.maxFileBytes == 1000 }
+
+        cleanup:
+        pool.shutdown()
+    }
+
+    def 'should not cache failed stats'() {
+        given:
+        def file = tempDir.resolve('late.txt')
+        def profiler = new InputFilesProfiler()
+
+        when:
+        def first = profiler.compute([new FileHolder(file)])
+        Files.write(file, new byte[42])
+        def second = profiler.compute([new FileHolder(file)])
+
+        then:
+        first.totalBytes == 0
+        second.totalBytes == 42
     }
 }
