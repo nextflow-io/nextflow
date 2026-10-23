@@ -1,0 +1,22 @@
+{
+  "description": "Nextflow Fusion snapshots e2e: interrupt the spot instance tagged by the test task",
+  "roleArn": "arn:aws:iam::${ACCOUNT_ID}:role/nf-fis-snapshot-e2e",
+  "stopConditions": [{ "source": "none" }],
+  "targets": {
+    "TaggedSpot": {
+      "resourceType": "aws:ec2:spot-instance",
+      "resourceTags": { "fis-target": "nf-snapshot-e2e" },
+      "filters": [{ "path": "State.Name", "values": ["running"] }],
+      "selectionMode": "ALL"
+    }
+  },
+  "actions": {
+    "InterruptSpot": {
+      "actionId": "aws:ec2:send-spot-instance-interruptions",
+      "parameters": { "durationBeforeInterruption": "PT2M" },
+      "targets": { "SpotInstances": "TaggedSpot" }
+    }
+  },
+  "experimentOptions": { "emptyTargetResolutionMode": "fail" },
+  "tags": { "Name": "nf-fusion-snapshot-e2e" }
+}
