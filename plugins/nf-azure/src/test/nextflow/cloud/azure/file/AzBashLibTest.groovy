@@ -62,7 +62,7 @@ class AzBashLibTest extends Specification {
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$2")
                 local out
                 local ret=0
                 mkdir -p "$basedir"
@@ -186,7 +186,7 @@ class AzBashLibTest extends Specification {
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$2")
                 local out
                 local ret=0
                 mkdir -p "$basedir"
@@ -310,7 +310,7 @@ class AzBashLibTest extends Specification {
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$2")
                 local out
                 local ret=0
                 mkdir -p "$basedir"
@@ -375,8 +375,9 @@ class AzBashLibTest extends Specification {
         def workDir = Files.createTempDirectory('az-download')
         def bin = Files.createDirectory(workDir.resolve('bin'))
         def azcopy = bin.resolve('azcopy')
-        // mimics azcopy 10.8: a non-recursive copy of a missing blob fails as if it were a
-        // directory, and a recursive copy of a missing or empty prefix transfers nothing
+        // mimics azcopy: a non-recursive copy of a missing blob fails (10.8 reports it as a
+        // directory, 10.34 as not found), and a recursive copy of a missing or empty prefix
+        // transfers nothing and exits 0
         azcopy.text = """\
             #!/bin/bash
             src=\${2%%\\?*}
