@@ -327,7 +327,7 @@ Maximum time Nextflow waits for the shutdown to complete before exiting, when th
 Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 :::note
-The `NXF_SINGULARITY_CACHEDIR` variable is not applied to Singularity native images built by [Wave](../wave.mdx#build-singularity-native-images). These images are passed to Singularity as `oras://` URIs, and Singularity manages its own image cache.
+The `NXF_SINGULARITY_CACHEDIR` variable is not applied to Singularity native images dynamically built by [Wave](../wave.mdx#build-singularity-native-images). These images are passed to Singularity as `oras://` URIs, and Singularity manages its own image cache.
 :::
 
 ##### `NXF_SINGULARITY_LIBRARYDIR`
