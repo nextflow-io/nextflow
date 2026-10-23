@@ -203,10 +203,12 @@ class InputFilesProfilerTest extends Specification {
 
     def 'should stat repeated paths only once'() {
         given:
-        def shared = tempDir.resolve('ref.fa')
+        // FileHolder resolves local paths to their real path (e.g. /private/var on macOS)
+        def dir = tempDir.toRealPath()
+        def shared = dir.resolve('ref.fa')
         Files.write(shared, new byte[1000])
         def own = (1..20).collect { i ->
-            def f = tempDir.resolve("chunk-${i}.bam")
+            def f = dir.resolve("chunk-${i}.bam")
             Files.write(f, new byte[i])
             f
         }
