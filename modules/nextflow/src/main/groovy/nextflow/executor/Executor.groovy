@@ -26,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.file.FileHelper
+import nextflow.plugin.Plugins
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
@@ -131,6 +132,17 @@ abstract class Executor {
 
     boolean isForeignFile(Path path) {
         path.scheme != getStageDir().scheme
+    }
+
+    private volatile List<ForeignFileFilter> foreignFileFilters
+
+    /**
+     * The {@link ForeignFileFilter} extensions, looked up once per run
+     */
+    List<ForeignFileFilter> getForeignFileFilters() {
+        if( foreignFileFilters == null )
+            foreignFileFilters = Plugins.getExtensions(ForeignFileFilter) ?: Collections.<ForeignFileFilter>emptyList()
+        return foreignFileFilters
     }
 
     /**

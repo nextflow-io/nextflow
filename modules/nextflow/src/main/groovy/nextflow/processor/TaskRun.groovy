@@ -125,12 +125,6 @@ class TaskRun implements Cloneable {
     List<FileHolder> inputFiles = new ArrayBag()
 
     /**
-     * Store paths of the input files a {@link nextflow.executor.ForeignFileFilter} declared
-     * readable by the task where they are, so they are linked instead of staged
-     */
-    Set<Path> inPlaceInputs = new HashSet<>()
-
-    /**
      * The value to be piped to the process stdin
      *
      * @see TaskProcessor#resolveTaskInputs()

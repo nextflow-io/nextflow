@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -59,11 +60,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     Path workDir
 
-    /**
-     * Input files linked where they are instead of staged, see {@link TaskBean#inPlaceInputs}
-     */
-    Set<Path> inPlaceInputs = Collections.<Path>emptySet()
-
     SimpleFileCopyStrategy() { }
 
     SimpleFileCopyStrategy( TaskBean bean ) {
@@ -71,7 +67,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.stageoutMode = bean.stageOutMode
         this.targetDir = bean.targetDir
         this.workDir = bean.workDir
-        this.inPlaceInputs = bean.inPlaceInputs
     }
 
     /**
@@ -139,30 +134,13 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
                 delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
-            links << ( inPlaceInputs.contains(storePath) ? stageInPlaceFile(storePath, stageName) : stageInputFile(storePath, stageName) )
+            links << ( isLocalInput(storePath) ? stageLocalFile(storePath, stageName) : stageInputFile(storePath, stageName) )
         }
 
         // return a big string containing the command
         return (delete + links).join(separatorChar)
     }
 
-
-    /**
-     * Link an input file where it is, checking first that the task can read it, because
-     * {@code ln -s} succeeds on a missing target and the task would fail later with a generic error
-     */
-    protected String stageInPlaceFile( Path path, String targetName ) {
-        // a hard link cannot cross file systems, and a relative link is computed against the work dir
-        final mode = stageinMode in ['link','rellink'] ? 'symlink' : stageinMode
-        if( mode != stageinMode )
-            log.warn1 "Input files linked in place do not support stageInMode '$stageinMode' -- using 'symlink'"
-        final source = Escape.path(path)
-        def cmd = "test -e ${source} || { echo \"Input file not accessible on host \$(hostname): \"${source} >&2; exit 1; }\n"
-        final p = targetName.lastIndexOf('/')
-        if( p>0 )
-            cmd += "mkdir -p ${Escape.path(targetName.substring(0,p))} && "
-        return cmd + stageInCommand(path.toString(), targetName, mode)
-    }
 
     /**
      * Stage the input file into the task working area. By default it creates a symlink
@@ -175,6 +153,21 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return The script which will apply the staging for this file in the main script
      */
     String stageInputFile( Path path, String targetName ) {
+        return stageLocalFile(path, targetName)
+    }
+
+    /**
+     * A local input with a remote work dir was accepted by a {@link ForeignFileFilter}
+     * and is linked where it is, whatever staging mechanism the executor uses
+     */
+    private boolean isLocalInput( Path path ) {
+        return workDir != null && workDir.fileSystem != FileSystems.default && path.fileSystem == FileSystems.default
+    }
+
+    /**
+     * Stage the input file with the default mechanism, which subclasses cannot override
+     */
+    protected final String stageLocalFile( Path path, String targetName ) {
         def cmd = ''
         def p = targetName.lastIndexOf('/')
         if( p>0 ) {

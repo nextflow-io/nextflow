@@ -27,14 +27,14 @@ import org.pf4j.ExtensionPoint
  * <p>It can only veto the executor's decision: it is asked only for files the executor
  * considers foreign, and it cannot make a local file foreign.
  *
- * <p><b>Implementations must be stateless / thread-safe</b>: a single instance is shared by
- * every task of every run in the JVM.
+ * <p><b>Implementations must be thread-safe</b>: a single instance is shared by every task of
+ * every run in the JVM. The run context is available from the given executor.
  */
 interface ForeignFileFilter extends ExtensionPoint {
 
     /**
      * @return {@code true} when every task can read {@code path} at the same absolute path
      */
-    boolean isTaskAccessible(Path path)
+    boolean isTaskAccessible(Path path, Executor executor)
 
 }

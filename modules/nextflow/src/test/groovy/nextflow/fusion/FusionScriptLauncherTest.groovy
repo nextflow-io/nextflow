@@ -101,15 +101,14 @@ class FusionScriptLauncherTest extends Specification {
         expect:
         FusionScriptLauncher.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
-    def 'should link an in-place input where it is' () {
+    def 'should link a local input where it is' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
         def LOCAL = Path.of('/mnt/shared/ref.fa')
         def bean = new TaskBean(
             workDir: XPath.get('http://foo/work'),
             targetDir: XPath.get('http://foo/work'),
-            inputFiles: ['ref.fa': LOCAL, 'c.txt': XPath.get('http://foo/a/c.txt')],
-            inPlaceInputs: [LOCAL] as Set )
+            inputFiles: ['ref.fa': LOCAL, 'c.txt': XPath.get('http://foo/a/c.txt')] )
 
         when:
         def fusion = FusionScriptLauncher.create(bean, 'http')
@@ -118,13 +117,8 @@ class FusionScriptLauncherTest extends Specification {
         bean.inputFiles['c.txt'] == Path.of('/fusion/http/foo/a/c.txt')
         and:
         def script = fusion.copyStrategy.getStageInputFilesScript(bean.inputFiles)
-        script.contains('test -e /mnt/shared/ref.fa ||')
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
         script.contains('ln -sfn /fusion/http/foo/a/c.txt c.txt')
-
-        when: 'a local input no filter accepted'
-        FusionScriptLauncher.create(new TaskBean(workDir: XPath.get('http://foo/work'), targetDir: XPath.get('http://foo/work'), inputFiles: ['x': Path.of('/data/x')]), 'http')
-        then:
-        thrown(IllegalArgumentException)
     }
 
 }

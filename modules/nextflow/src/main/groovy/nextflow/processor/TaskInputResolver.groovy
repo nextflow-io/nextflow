@@ -54,15 +54,12 @@ class TaskInputResolver {
 
     private Executor executor
 
-    private List<ForeignFileFilter> filters
-
     private int count = 0
 
-    TaskInputResolver(TaskRun task, FilePorter.Batch foreignFiles, Executor executor, List<ForeignFileFilter> filters=Collections.<ForeignFileFilter>emptyList()) {
+    TaskInputResolver(TaskRun task, FilePorter.Batch foreignFiles, Executor executor) {
         this.task = task
         this.foreignFiles = foreignFiles
         this.executor = executor
-        this.filters = filters
     }
 
     /**
@@ -149,12 +146,10 @@ class TaskInputResolver {
 
             if( item instanceof Path || coerceToPath ) {
                 final path = normalizeToPath(item)
-                final foreign = executor.isForeignFile(path)
                 // a filter can only veto an upload, so it is asked only for foreign files
-                final inPlace = foreign && isTaskAccessible(path)
-                final holder = new FileHolder(path, foreign && !inPlace ? foreignFiles.addToForeign(path) : path)
-                if( inPlace )
-                    task.inPlaceInputs.add(holder.storePath)
+                final foreign = executor.isForeignFile(path) && !isTaskAccessible(path)
+                final target = foreign ? foreignFiles.addToForeign(path) : path
+                final holder = new FileHolder(path, target)
                 files << holder
             }
             else {
@@ -166,8 +161,8 @@ class TaskInputResolver {
     }
 
     protected boolean isTaskAccessible(Path path) {
-        for( ForeignFileFilter it : filters ) {
-            if( it.isTaskAccessible(path) )
+        for( ForeignFileFilter it : executor.getForeignFileFilters() ) {
+            if( it.isTaskAccessible(path, executor) )
                 return true
         }
         return false

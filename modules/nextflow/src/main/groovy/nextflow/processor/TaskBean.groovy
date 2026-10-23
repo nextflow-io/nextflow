@@ -117,9 +117,6 @@ class TaskBean implements Serializable, Cloneable {
 
     List<Path> arrayInputFiles
 
-    /** Input files linked where they are instead of staged, see {@link TaskRun#inPlaceInputs} */
-    Set<Path> inPlaceInputs = Collections.<Path>emptySet()
-
     Boolean stageFileEnabled
 
     @PackageScope
@@ -172,7 +169,6 @@ class TaskBean implements Serializable, Cloneable {
         this.fusionEnabled = task.getProcessor().isFusionEnabled()
 
         this.inputFiles = task.getInputFilesMap()
-        this.inPlaceInputs = task.inPlaceInputs
         this.outputFiles = task.getOutputFilesNames()
         this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
@@ -186,8 +182,7 @@ class TaskBean implements Serializable, Cloneable {
             this.arrayIndexName = executor.getArrayIndexName()
             this.arrayIndexStart = executor.getArrayIndexStart()
             this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
-            // in-place inputs are not in a bucket, so they need no array mount
-            this.arrayInputFiles = task.children.collectMany { h -> h.task.getInputFilesMap().values().findAll { !h.task.inPlaceInputs.contains(it) } }
+            this.arrayInputFiles = task.children.collectMany { h -> h.task.getInputFilesMap().values() }
         }
     }
 

@@ -61,7 +61,6 @@ import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
-import nextflow.executor.ForeignFileFilter
 import nextflow.executor.StoredTaskHandler
 import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
@@ -212,9 +211,6 @@ class TaskProcessor {
      * once, on the first task resolved by this processor. See {@link #getCacheStrategy}.
      */
     @PackageScope volatile List<TaskCacheStrategy> cacheStrategies
-
-    /** The {@link ForeignFileFilter} extensions registered by plugins, resolved on first use. */
-    @PackageScope volatile List<ForeignFileFilter> foreignFileFilters
 
     /** The strategy chosen among {@link #cacheStrategies} for this run, else the default. */
     private volatile TaskCacheStrategy cacheStrategy
@@ -722,13 +718,6 @@ class TaskProcessor {
      * @param task The task to be hashed.
      * @return The hasher computing the cache key of {@code task}.
      */
-    @CompileStatic
-    protected List<ForeignFileFilter> getForeignFileFilters() {
-        if( foreignFileFilters == null )
-            foreignFileFilters = Plugins.getExtensions(ForeignFileFilter) ?: Collections.<ForeignFileFilter>emptyList()
-        return foreignFileFilters
-    }
-
     @CompileStatic
     protected TaskHasher createTaskHasher(TaskRun task) {
         if( hasherFactories == null )
@@ -1691,7 +1680,7 @@ class TaskProcessor {
 
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
-        final resolver = new TaskInputResolver(task, foreignFiles, executor, getForeignFileFilters())
+        final resolver = new TaskInputResolver(task, foreignFiles, executor)
 
         for( Map.Entry<FileInParam,?> entry : fileParams.entrySet() ) {
             final param = entry.getKey()
@@ -1777,7 +1766,7 @@ class TaskProcessor {
         task.stdin = ctx.resolveLazy(declaredInputs.stdin)
 
         // -- resolve input files
-        final resolver = new TaskInputResolver(task, foreignFiles, executor, getForeignFileFilters())
+        final resolver = new TaskInputResolver(task, foreignFiles, executor)
         final resolvedValues = new HashSet<>()
 
         for( final fileInput : declaredInputs.getFiles() ) {
