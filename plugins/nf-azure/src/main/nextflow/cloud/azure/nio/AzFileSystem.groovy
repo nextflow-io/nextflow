@@ -458,6 +458,13 @@ class AzFileSystem extends FileSystem {
 
     @PackageScope
     AzFileAttributes readAttributes(AzPath path) {
+        final result = readAttributes0(path)
+        path.setDirectoryHint(result?.isDirectory())
+        return result
+    }
+
+    @PackageScope
+    AzFileAttributes readAttributes0(AzPath path) {
         final cache = path.attributesCache()
         if( cache )
             return cache

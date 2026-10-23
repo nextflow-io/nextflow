@@ -45,6 +45,8 @@ class AzPath implements Path {
 
     private AzFileAttributes attributes
 
+    private volatile Boolean directoryHint
+
     /**
      * Records the trailing slash used to build this path, *not* whether the object
      * store holds a directory at this location — blob storage has no directories,
@@ -340,6 +342,21 @@ class AzPath implements Path {
         def result = attributes
         attributes = null
         return result
+    }
+
+    /**
+     * Whether storage reported this path as a directory the last time its attributes
+     * were read, or {@code null} if they have not been read or the path was not found.
+     * Unlike the attributes cache it is not cleared by the read, so it can be used after
+     * task hashing has read them.
+     */
+    Boolean directoryHint() {
+        return directoryHint
+    }
+
+    @PackageScope
+    void setDirectoryHint(Boolean value) {
+        this.directoryHint = value
     }
 
 }
