@@ -29,7 +29,7 @@ The path where the AWS command line tool is installed in the host AMI.
 
 ##### `aws.batch.delayBetweenAttempts`
 
-Delay between download attempts from S3 (default: `10 sec`).
+Delay between download attempts from S3 (default: `10 sec`). The delay doubles after each failed attempt, up to 5 minutes or the configured value, whichever is larger.
 
 ##### `aws.batch.executionRole`
 

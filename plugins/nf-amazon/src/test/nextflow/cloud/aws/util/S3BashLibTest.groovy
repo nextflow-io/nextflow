@@ -47,6 +47,7 @@ class S3BashLibTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -63,7 +64,7 @@ class S3BashLibTest extends Specification {
                             break
                           fi
                           nxf_sleep \$timeout
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
                         return \$exitCode
                     }
@@ -147,6 +148,7 @@ class S3BashLibTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -163,7 +165,7 @@ class S3BashLibTest extends Specification {
                             break
                           fi
                           nxf_sleep \$timeout
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
                         return \$exitCode
                     }
@@ -395,6 +397,7 @@ class S3BashLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=10
                 local timeout=20
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -411,7 +414,7 @@ class S3BashLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }
@@ -487,6 +490,7 @@ class S3BashLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=1
                 local timeout=10
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -503,7 +507,7 @@ class S3BashLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }
@@ -582,6 +586,7 @@ class S3BashLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=5
                 local timeout=10
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -598,7 +603,7 @@ class S3BashLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }
@@ -681,6 +686,7 @@ class S3BashLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=5
                 local timeout=10
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -697,7 +703,7 @@ class S3BashLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }

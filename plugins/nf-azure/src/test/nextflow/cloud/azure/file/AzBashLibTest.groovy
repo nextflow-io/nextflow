@@ -17,6 +17,9 @@
 package nextflow.cloud.azure.file
 
 
+import java.nio.file.Files
+import java.util.concurrent.TimeUnit
+
 import nextflow.cloud.azure.config.AzCopyOpts
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -63,7 +66,7 @@ class AzBashLibTest extends Specification {
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
-                        exit 1
+                        return 1
                     }
                 }
             }
@@ -78,6 +81,7 @@ class AzBashLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=20
                 local timeout=30
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -94,7 +98,7 @@ class AzBashLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }
@@ -166,7 +170,7 @@ class AzBashLibTest extends Specification {
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
-                        exit 1
+                        return 1
                     }
                 }
             }
@@ -181,6 +185,7 @@ class AzBashLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=20
                 local timeout=30
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -197,7 +202,7 @@ class AzBashLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }
@@ -269,10 +274,39 @@ class AzBashLibTest extends Specification {
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
-                        exit 1
+                        return 1
                     }
                 }
             }
             '''.stripIndent()
     }
+
+    def 'should retry failed downloads' () {
+        given:
+        def workDir = Files.createTempDirectory('az-retry')
+        def bin = Files.createDirectory(workDir.resolve('bin'))
+        def azcopy = bin.resolve('azcopy')
+        azcopy.text = '#!/bin/bash\necho x >> calls\nexit 1\n'
+        azcopy.toFile().setExecutable(true)
+        def script = workDir.resolve('test.sh')
+        script.text = AzBashLib.script(new AzCopyOpts(), 4, 3, Duration.of('1 sec')) + """
+            nxf_sleep() { :; }
+            export PATH=${bin}:\$PATH
+            nxf_cp_retry nxf_az_download 'https://acct.blob.core.windows.net/c/file.txt' file.txt 2>/dev/null && echo 0 > status || echo \$? > status
+            """.stripIndent()
+
+        when:
+        def process = ['bash', script.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('status').text.trim() == '1'
+        // each attempt tries the file copy and then the directory copy
+        workDir.resolve('calls').readLines().size() == 6
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
+    }
+
 }

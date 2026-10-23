@@ -36,6 +36,7 @@ class BashFunLibTest extends Specification {
             nxf_cp_retry() {
                 local max_attempts=321
                 local timeout=1
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( $attempt < $max_attempts ))
@@ -52,7 +53,7 @@ class BashFunLibTest extends Specification {
                     break
                   fi
                   nxf_sleep $timeout
-                  timeout=$(( timeout * 2 ))
+                  timeout=$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
                 return $exitCode
             }
@@ -186,6 +187,28 @@ class BashFunLibTest extends Specification {
         1               | 0      | 1     | []
         3               | 0      | 3     | ['1', '2']
         99              | 3      | 3     | ['1', '2']
+    }
+
+    def 'should cap the delay between nxf_cp_retry attempts' () {
+
+        given:
+        def workDir = Files.createTempDirectory('cp-retry')
+        def scriptFile = workDir.resolve('test.sh')
+        scriptFile.text = BashFunLib.body(1, 12, Duration.of('1 sec')) + """
+            nxf_sleep() { echo \$1 >> sleeps; }
+            nxf_cp_retry false || true
+            """.stripIndent()
+
+        when:
+        def process = ['bash', scriptFile.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('sleeps').readLines() == ['1', '2', '4', '8', '16', '32', '64', '128', '256', '300', '300']
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
     }
 
 }
