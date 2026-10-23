@@ -34,6 +34,7 @@ import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.SecretHelper
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
@@ -44,13 +45,11 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    // note: ?i stands for ignore case - ?m stands for multiline
-    // NOTE: `API_?KEY` is the twin of the same alternative in {@code SecretHelper.SECRET_REGEX} and
-    // of `api_?key` in {@code SecretHelper.SECRET_KEYS}. This one masks the `env` field of a trace
-    // record, which is where an out-of-band provider credential (`env { OPENAI_API_KEY = ... }`,
-    // `agent.containerOptions = '-e OPENAI_API_KEY'`) shows up -- and a trace record is persisted
-    // in the resume cache and forwarded to Seqera Platform.
-    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*|.*API_?KEY[^=]*)=(.*)$/
+    /**
+     * @deprecated Use {@link SecretHelper#SECRET_REGEX} instead
+     */
+    @Deprecated
+    static public final Pattern SECRET_REGEX = SecretHelper.SECRET_REGEX
 
     TraceRecord() {
         this.store = new LinkedHashMap<>(FIELDS.size())
@@ -287,7 +286,7 @@ class TraceRecord implements Serializable {
     }
 
     protected String secureEnvString( String str ) {
-        str.replaceAll(SECRET_REGEX, '$1=[secure]')
+        SecretHelper.secureEnvString(str)
     }
 
 
