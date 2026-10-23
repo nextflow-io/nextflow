@@ -1,5 +1,8 @@
 name: 'Clean up cloud test storage'
 on:
+  # temporary, to test the workflow before merging: runs a dry run
+  push:
+    branches: [ci-azure-storage-cleanup]
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
