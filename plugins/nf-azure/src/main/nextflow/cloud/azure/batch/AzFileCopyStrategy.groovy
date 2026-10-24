@@ -21,6 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzBashLib
+import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -36,10 +38,10 @@ import nextflow.util.Escape
 class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     private AzConfig config
+    private AzFileSystemProvider azProvider
     private int maxTransferAttempts
     private int maxParallelTransfers
     private Duration delayBetweenAttempts
-    private String sasToken
     private Path remoteBinDir
 
     protected AzFileCopyStrategy() {}
@@ -48,10 +50,18 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         super(bean)
         this.config = executor.azConfig
         this.remoteBinDir = executor.remoteBinDir
-        this.sasToken = config.storage().sasToken
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
+        if( bean.workDir instanceof AzPath )
+            this.azProvider = (AzFileSystemProvider) ((AzPath) bean.workDir).fileSystem.provider()
+        // Pre-warm the per-container SAS token cache for all paths this task will access.
+        // getSasForPath() generates and registers a token on first call for each container.
+        final List<Path> paths = []
+        if( remoteBinDir ) paths << remoteBinDir
+        if( bean.workDir ) paths << bean.workDir
+        paths.addAll( bean.inputFiles.values() )
+        prewarmSasTokenCache(paths)
     }
 
     @Override
@@ -64,9 +74,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        copy.put('AZ_SAS', sasToken)
 
-        // finally render the environment
         final envSnippet = super.getEnvScript(copy,false)
         if( envSnippet )
             result << envSnippet
@@ -74,8 +82,44 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     }
 
-    static String uploadCmd(String source, Path targetDir) {
-        "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir)}'"
+    protected String getSasForPath(Path path) {
+        if( !(path instanceof AzPath) )
+            return null
+        final AzPath azPath = (AzPath) path
+        final container = azPath.getContainerName() as String
+        if( !container )
+            return null
+        String sas = azProvider?.getSasToken(container) ?: config.storage().sasToken
+        if( sas )
+            return sas
+        final duration = config.storage().tokenDuration
+        if( config.activeDirectory().isConfigured() || config.managedIdentity().isConfigured() ) {
+            log.debug "Generating SAS token for Azure container: $container"
+            sas = AzHelper.generateContainerSasWithActiveDirectory(path, duration)
+            azProvider?.setSasToken(container, sas)
+        }
+        else if( config.storage().accountKey ) {
+            log.debug "Generating SAS token for Azure container: $container"
+            sas = AzHelper.generateContainerSasWithAccountKey(azPath.containerClient(), duration)
+            azProvider?.setSasToken(container, sas)
+        }
+        return sas
+    }
+
+    private void prewarmSasTokenCache(List<Path> paths) {
+        for( Path p : paths ) getSasForPath(p)
+    }
+
+    protected String httpUrl(Path path) {
+        AzHelper.toHttpUrl(path, getSasForPath(path))
+    }
+
+    String uploadCmd(String source, Path targetDir) {
+        "nxf_az_upload ${Escape.path(source)} '${httpUrl(targetDir)}'"
+    }
+
+    static String uploadCmdWithSas(String source, Path targetDir, String sas) {
+        "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir, sas)}'"
     }
 
     @Override
@@ -86,7 +130,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
         String result = ( remoteBinDir ? """\
-            nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
+            nxf_az_download '${httpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
             chmod +x \$PWD/.nextflow-bin/* || true
             """.stripIndent(true) : '' )
 
@@ -103,8 +147,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${httpUrl(path)}' ${Escape.path(targetName)}\")"
+                : "downloads+=(\"nxf_az_download '${httpUrl(path)}' ${Escape.path(targetName)}\")"
         return stage_cmd
     }
 
@@ -128,7 +172,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(targetDir)}'")
+                uploads+=("nxf_az_upload '\$name' '${httpUrl(targetDir)}'")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
@@ -156,7 +200,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "nxf_az_upload ${Escape.path(name)} '${AzHelper.toHttpUrl(target.parent)}'"
+        "nxf_az_upload ${Escape.path(name)} '${httpUrl(target.parent)}'"
     }
 
     /**
