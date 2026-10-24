@@ -27,6 +27,10 @@ The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/acc
 
 The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: `4`).
 
+##### `azure.azcopy.opts`
+
+Extra command line options appended to the `azcopy` upload and download commands e.g. `'--put-md5 --log-level ERROR'`.
+
 ##### `azure.batch.accountKey`
 
 The batch service account key. Defaults to environment variable `AZURE_BATCH_ACCOUNT_KEY`.
