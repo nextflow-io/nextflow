@@ -209,6 +209,7 @@ module.exports = {
                                     "reference/process/directives/queue",
                                     "reference/process/directives/resource-labels",
                                     "reference/process/directives/resource-limits",
+                                    "reference/process/directives/retry-on",
                                     "reference/process/directives/scratch",
                                     "reference/process/directives/secret",
                                     "reference/process/directives/shell",
