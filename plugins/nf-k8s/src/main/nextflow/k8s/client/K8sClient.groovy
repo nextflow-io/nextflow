@@ -395,12 +395,10 @@ class K8sClient {
             try {
                 return podState(podName)
             }
-            /* pod might be deleted by control plane just after findPodNameForJob() call
-             * so try fallback to jobState
-             */
+            // pod gone (evicted or cleaned up by the control plane): fall back to the Job
+            // status, passing the exception so a node termination can be re-surfaced
             catch (NodeTerminationException err) {
-                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
-                return jobStateFallback0(jobName)
+                return jobStateFallback0(jobName, err)
             }
         }
         else {
@@ -408,7 +406,7 @@ class K8sClient {
         }
     }
 
-    protected Map jobStateFallback0(String jobName) {
+    protected Map jobStateFallback0(String jobName, NodeTerminationException original=null) {
         final K8sResponseJson jobResp = jobStatus(jobName)
         final jobStatus = jobResp.status as Map
         if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
@@ -431,6 +429,11 @@ class K8sClient {
         }
 
         if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
+            // re-surface a node termination as an infrastructure failure rather than the Job's
+            // generic `backoffLimit` failure: the disruption signal lived on the (now gone) pod
+            // and cannot be recovered from the Job status alone
+            if( original != null )
+                throw original
             String message = 'unknown'
             if( jobStatus.conditions instanceof List ) {
                 final allConditions = jobStatus.conditions as List<Map>
@@ -473,6 +476,15 @@ class K8sClient {
         final K8sResponseJson resp = podStatus0(podName)
         final status = resp.status as Map
         final containerStatuses = status?.containerStatuses as List<Map>
+
+        // best-effort detection of an involuntary node disruption (e.g. Spot/preemptible node
+        // preemption or graceful node shutdown), signalled by the `DisruptionTarget` pod condition.
+        // When present -- and the container has not already exited successfully -- surface it as a
+        // node termination so that Nextflow retries the task. This complements the `Shutdown` and
+        // pod-not-found (404) detections, which do not fire reliably for graceful preemptions.
+        // See https://kubernetes.io/docs/concepts/workloads/pods/pod-condition/
+        if( isNodeDisruption(status) && !isSuccessfullyTerminated(containerStatuses) )
+            throw new NodeTerminationException("K8s pod '$podName' was terminated due to a node disruption event")
 
         if( containerStatuses?.size()>0 ) {
             final container = containerStatuses.get(0)
@@ -521,6 +533,37 @@ class K8sClient {
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
+    }
+
+    /**
+     * Determine whether the pod status carries a `DisruptionTarget` condition set to `True`,
+     * which K8s adds when a pod is about to be deleted due to an involuntary disruption such
+     * as node preemption or graceful node shutdown.
+     *
+     * @param status The pod `status` object
+     * @return {@code true} when a `DisruptionTarget` condition with status `True` is present
+     */
+    protected static boolean isNodeDisruption(Map status) {
+        final conditions = status?.conditions
+        if( !(conditions instanceof List) )
+            return false
+        for( Object it : (List) conditions ) {
+            if( it instanceof Map && it.type == 'DisruptionTarget' && it.status == 'True' )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * @param containerStatuses The pod `containerStatuses` list
+     * @return {@code true} when the first container has already terminated with exit code {@code 0}
+     */
+    protected static boolean isSuccessfullyTerminated(List<Map> containerStatuses) {
+        if( !containerStatuses )
+            return false
+        final state = containerStatuses.get(0)?.state as Map
+        final terminated = state?.terminated as Map
+        return terminated != null && (terminated.exitCode as Integer) == 0
     }
 
     protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {
