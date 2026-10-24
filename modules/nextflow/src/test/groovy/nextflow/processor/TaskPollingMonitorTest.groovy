@@ -17,9 +17,14 @@
 package nextflow.processor
 
 
+import java.util.concurrent.ExecutorService
+
 import nextflow.Session
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.ExecutorConfig
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
@@ -308,5 +313,165 @@ class TaskPollingMonitorTest extends Specification {
         then:
         tracker.availableCpus() == 8
         tracker.availableMemory() == MemoryUnit.of('16GB').toBytes()
+    }
+
+    @Unroll
+    def 'should finalize task when submission fails [errorStrategy: #STRATEGY]' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: STRATEGY, maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        task.errorAction == ErrorStrategy.valueOf(STRATEGY.toUpperCase())
+        processor.state.val.completed == COMPLETED
+
+        where:
+        STRATEGY    | COMPLETED
+        'ignore'    | 1
+        'retry'     | 0
+    }
+
+    def 'should finalize each child task when task array submission fails' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> 3.times { n -> it.incSubmitted() } }
+        and:
+        def children = (1..3).collect {
+            def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+            Mock(TaskHandler, constructorArgs: [task]) { getTask() >> task }
+        }
+        def array = new TaskArrayRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1), children: children)
+        def handler = Mock(TaskHandler, constructorArgs: [array]) {
+            getTask() >> array
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        children.every { it.task.errorAction == ErrorStrategy.IGNORE }
+        processor.state.val.completed == 3
+    }
+    @Unroll
+    def 'should release fork slot when submission fails [errorStrategy: #STRATEGY]' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: STRATEGY, maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        then:
+        processor.forksCount.sum() == 0
+
+        where:
+        STRATEGY << ['ignore', 'retry']
+    }
+
+    def 'should release fork slot when task array submission fails' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> 3.times { n -> it.incSubmitted() } }
+        and:
+        def children = (1..3).collect {
+            def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+            Mock(TaskHandler, constructorArgs: [task]) { getTask() >> task }
+        }
+        def array = new TaskArrayRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1), children: children)
+        def handler = Mock(TaskHandler, constructorArgs: [array]) {
+            getTask() >> array
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        processor.state.val.completed == 3
+        processor.forksCount.sum() == 0
+    }
+
+    def 'should not release fork slot when task is rejected before submission' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1, cpus: 16))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceTracker: new ResourceTracker(8, 0))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        0 * handler.submit()
+        processor.state.val.completed == 1
+        processor.forksCount.sum() == 0
     }
 }

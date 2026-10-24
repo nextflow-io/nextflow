@@ -17,10 +17,14 @@
 package nextflow.processor
 
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import nextflow.Session
+import nextflow.exception.ProcessFailedException
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
@@ -186,6 +190,41 @@ class ParallelPollingMonitorTest extends Specification {
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains("Process 'oversized_array' declares array size (10) which exceeds the executor queue size (5)")
+    }
+
+    def 'should release fork slot and submit permit when submission fails' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            isSuccess() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def exec = ThrottlingExecutor.create(new ThrottlingExecutor.Options().withRateLimit('100/sec'))
+        def mon = new ParallelPollingMonitor(exec, [session: session, name: 'foo', pollInterval: '1sec', capacity: 1])
+        mon.getPendingQueue() << handler
+
+        when:
+        mon.submitPendingTasks()
+        exec.shutdown()
+        exec.awaitTermination(1, TimeUnit.MINUTES)
+        processor.state.await()
+        then:
+        task.errorAction == ErrorStrategy.IGNORE
+        processor.state.val.completed == 1
+        processor.forksCount.sum() == 0
+        mon.@semaphore.availablePermits() == 1
     }
 
 }
