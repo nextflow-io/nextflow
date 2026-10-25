@@ -203,14 +203,14 @@ function launch_nextflow() {
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
       cmdline+=("${args[@]}")
-      exec "${cmdline[@]}" &
+      exec -a nextflow "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
     cmdline+=("${args[@]}")
-    exec "${cmdline[@]}"
+    exec -a nextflow "${cmdline[@]}"
     exit 1
 }
 
