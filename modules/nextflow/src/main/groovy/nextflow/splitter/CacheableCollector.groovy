@@ -16,7 +16,10 @@
 
 package nextflow.splitter
 
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
@@ -44,7 +47,23 @@ trait CacheableCollector  {
         // save the list of all chunks
         def marker = getMarkerFile()
         log.trace "Caching chunk paths > marker=$marker; chunks=$allPaths"
-        KryoHelper.serialize(allPaths, marker)
+        // The marker may be shared by concurrent splitter calls on the same input, and
+        // `checkCached` reads it without any locking. Write it to a temporary file and
+        // move it into place, so that a reader never sees a partially written marker.
+        def temp = marker.resolveSibling("${marker.name}.${UUID.randomUUID()}.tmp".toString())
+        try {
+            KryoHelper.serialize(allPaths, temp)
+            try {
+                Files.move(temp, marker, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            }
+            catch( AtomicMoveNotSupportedException e ) {
+                // file system without atomic rename (e.g. some object stores)
+                Files.move(temp, marker, StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+        finally {
+            Files.deleteIfExists(temp)
+        }
     }
 
     Path getMarkerFile() {

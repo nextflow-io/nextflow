@@ -18,6 +18,8 @@ package nextflow.splitter
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import spock.lang.Specification
 
@@ -180,6 +182,48 @@ class TextFileCollectorTest extends Specification {
         base.resolveSibling(".chunks.sample.fasta.$hash").exists()
         collector.checkCached()
         collector.getAllChunks()*.name == ['sample.1.fasta','sample.2.fasta','sample.3.fasta']
+
+        cleanup:
+        base?.parent?.deleteDir()
+    }
+
+    def 'should never expose a partially written marker file' () {
+
+        given:
+        def base = Files.createTempDirectory('test').resolve('sample.fasta')
+        def writer = new TextFileCollector(new CachePath(base))
+        writer.allPaths = (1..20_000).collect { Paths.get("/some/dir/sample.${it}.fasta") }
+        def reader = new TextFileCollector(new CachePath(base))
+        def failure = new AtomicReference<Throwable>()
+        def done = new AtomicBoolean()
+
+        when:
+        // one thread keeps (re)writing the marker, as concurrent splitter calls on the same
+        // input do, while another one keeps checking for it, as `AbstractSplitter#apply` does
+        def thread = Thread.start {
+            try {
+                100.times { writer.markComplete() }
+            }
+            finally {
+                done.set(true)
+            }
+        }
+        while( !done.get() ) {
+            try {
+                reader.checkCached()
+            }
+            catch( Throwable e ) {
+                failure.compareAndSet(null, e)
+            }
+        }
+        thread.join()
+
+        then:
+        failure.get() == null
+        reader.checkCached()
+        reader.allChunks.size() == 20_000
+        and: 'no temporary file is left behind'
+        base.parent.toFile().listFiles().findAll { it.name.endsWith('.tmp') }.isEmpty()
 
         cleanup:
         base?.parent?.deleteDir()
