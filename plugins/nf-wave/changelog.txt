@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.22.4 - 26 Oct 2026
+- Make Wave optional for the Seqera executor and skip the Wave Fusion layer (#7744) [fbcac2df0]
+
 1.22.3 - 15 Oct 2026
 - Build plugin commands config in the CLI (#7834) [1f805db0d]
 
