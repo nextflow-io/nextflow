@@ -37,7 +37,7 @@ Platform no longer uses the config parser. It reads the pipeline config without 
 
 ## Non-goals
 
-- **Moving SCM support out of the Nextflow repository** or removing the `nf-scm` → `nf-commons` dependency. This would make Platform independent of Nextflow versions, but it needs larger changes on both sides (see Rationale).
+- **Moving SCM support out of the Nextflow repository** or removing the `nf-scm` → `nf-commons` dependency. This would make Platform independent of Nextflow versions, but it needs larger changes on both sides.
 - **Reading the manifest without evaluating it in Nextflow.** It would remove the parser need for the manifest, but it changes behaviour, so it is left for a separate change.
 - **Migrating Platform.** Platform switches to `nf-scm` in its own change, after a Nextflow release that includes the module.
 
@@ -162,11 +162,6 @@ For a consumer that depends on `nf-scm` instead of `nextflow` (measured with Gra
 - the `nextflow` and `nf-httpfs` jars are no longer included.
 
 A consumer that relied on those libraries arriving through `nextflow` must now declare them. For Platform, that means `groovy-xml` and `nf-httpfs`.
-
-### Future work
-
-- Read the manifest without evaluating it, from the syntax tree built by `nf-lang`. Nextflow would then not run repository code to read it, as Platform already does. The SCM file would still need the evaluating parser.
-- Moving SCM support out of the Nextflow repository would let Platform stop following Nextflow versions. It needs Option 3's redesign of `AssetManager`, and removing the `nf-commons` dependency (`Const`, `SysEnv`, `AbortOperationException`, `RetryConfig`, `Plugins`). On the Platform side it needs `PipelineAssets` and `StudioAssetsManager` to stop subclassing `AssetManager`, and `SsrfGuardedRepositoryProvider` to stop relying on package `nextflow.scm` to reach the protected `getAuth()`.
 
 ## Links
 
