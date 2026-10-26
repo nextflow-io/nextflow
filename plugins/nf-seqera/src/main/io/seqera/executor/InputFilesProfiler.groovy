@@ -21,7 +21,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.Callable
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.InputFilesMetrics
@@ -32,11 +37,48 @@ import nextflow.processor.TaskRun
  * Computes input files metrics for a task.
  * Follows symlinks and recursively computes directory sizes.
  *
+ * Stats are cached per path, because the same reference files are
+ * usually shared by many tasks of the same run. Each file is statted
+ * as its own job on the given executor, so the files of a task are
+ * statted in parallel and no thread blocks waiting for the others.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
 class InputFilesProfiler {
+
+    /** Maximum number of paths whose stats are kept in the cache */
+    static final long DEFAULT_CACHE_SIZE = 50_000
+
+    /** Keyed by URI rather than Path, to avoid retaining heavyweight cloud path objects */
+    private final Cache<URI,long[]> cache
+
+    /** Paths whose stat failure has already been warned about, so a failing path is warned once */
+    private final Set<URI> warned
+
+    /** Executor statting the input files */
+    private final Executor executor
+
+    /** Stats files on the calling thread, one at a time */
+    InputFilesProfiler() {
+        this({ Runnable r -> r.run() } as Executor)
+    }
+
+    InputFilesProfiler(Executor executor) {
+        this(executor, DEFAULT_CACHE_SIZE)
+    }
+
+    InputFilesProfiler(Executor executor, long cacheSize) {
+        this.executor = executor
+        this.cache = CacheBuilder.newBuilder()
+            .maximumSize(cacheSize)
+            .build()
+        this.warned = Collections.newSetFromMap(CacheBuilder.newBuilder()
+            .maximumSize(cacheSize)
+            .<URI,Boolean>build()
+            .asMap())
+    }
 
     /**
      * Compute input files metrics for a task.
@@ -44,12 +86,8 @@ class InputFilesProfiler {
      * @param task The task to compute metrics for
      * @return InputFilesMetrics or null if no input files
      */
-    static InputFilesMetrics compute(TaskRun task) {
-        final files = task?.inputFiles
-        if( !files || files.isEmpty() )
-            return null
-
-        return compute0(files)
+    InputFilesMetrics compute(TaskRun task) {
+        return compute(task?.inputFiles)
     }
 
     /**
@@ -58,21 +96,35 @@ class InputFilesProfiler {
      * @param files List of FileHolder objects
      * @return InputFilesMetrics or null if list is empty
      */
-    static InputFilesMetrics compute(List<FileHolder> files) {
-        if( !files || files.isEmpty() )
-            return null
-
-        return compute0(files)
+    InputFilesMetrics compute(List<FileHolder> files) {
+        return computeAsync(files).join()
     }
 
-    private static InputFilesMetrics compute0(List<FileHolder> files) {
+    /**
+     * Compute input files metrics asynchronously, statting each file on the executor.
+     *
+     * @param files List of FileHolder objects
+     * @return A future completing with the InputFilesMetrics, or with null if the list is empty
+     */
+    CompletableFuture<InputFilesMetrics> computeAsync(List<FileHolder> files) {
+        if( !files )
+            return CompletableFuture.completedFuture(null)
+
+        final List<CompletableFuture<long[]>> stats = files.collect { FileHolder fh ->
+            CompletableFuture.supplyAsync({ getFileStats(fh.storePath) }, executor)
+        }
+        return CompletableFuture
+            .allOf(stats as CompletableFuture[])
+            .thenApply { aggregate(stats.collect { it.join() }) }
+    }
+
+    private static InputFilesMetrics aggregate(List<long[]> stats) {
         int totalCount = 0
         long totalBytes = 0
         long maxFileBytes = Long.MIN_VALUE
         long minFileBytes = Long.MAX_VALUE
 
-        for( FileHolder fh : files ) {
-            final long[] result = getFileStats(fh.storePath)
+        for( long[] result : stats ) {
             final count = (int) result[0]
             final size = result[1]
             totalCount += count
@@ -93,25 +145,39 @@ class InputFilesProfiler {
     /**
      * Get file stats for a path: file count and total size.
      * For regular files, count is 1. For directories, count is the number of files within.
+     * Results are cached; failures are not, so a transient error is retried by the next task.
      *
      * @param path The path to measure
      * @return A two-element array: [fileCount, totalSize]
      */
-    private static long[] getFileStats(Path path) {
+    private long[] getFileStats(Path path) {
         if( path == null )
             return new long[]{0, 0}
 
+        final uri = path.toUri()
         try {
-            if( Files.isDirectory(path) ) {
-                return computeDirStats(path)
-            }
-            // Files.size() follows symlinks by default
-            return new long[]{1, Files.size(path)}
+            return cache.get(uri, { statPath(path) } as Callable<long[]>)
         }
         catch( Exception e ) {
-            log.warn "Unable to determine size for input file: ${path} - ${e.message}"
+            final cause = e.cause ?: e
+            // @Slf4j guards the debug message, so it is only built when debug logging is enabled
+            if( warned.add(uri) )
+                log.warn "Unable to determine size for input file: ${path} - ${cause.message}"
+            else
+                log.debug "Unable to determine size for input file: ${path} - ${cause.message}"
             return new long[]{1, 0}
         }
+    }
+
+    /**
+     * Read file stats for a path from its file system, bypassing the cache.
+     */
+    protected long[] statPath(Path path) {
+        if( Files.isDirectory(path) ) {
+            return computeDirStats(path)
+        }
+        // Files.size() follows symlinks by default
+        return new long[]{1, Files.size(path)}
     }
 
     /**

@@ -134,6 +134,8 @@ of your choice and stored as a [ORAS artifact](https://oras.land/).
 
 :::note
 This feature requires Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
+
+Nextflow passes the `oras://` image URI directly to Singularity, which pulls and caches the image itself. The `singularity.cacheDir` and `singularity.libraryDir` settings and the corresponding `NXF_SINGULARITY_CACHEDIR` and `NXF_SINGULARITY_LIBRARYDIR` environment variables are not applied.
 :::
 
 For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
