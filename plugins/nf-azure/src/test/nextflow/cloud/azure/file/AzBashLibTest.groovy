@@ -18,6 +18,7 @@ package nextflow.cloud.azure.file
 
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 import nextflow.cloud.azure.config.AzCopyOpts
@@ -54,42 +55,33 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
-            ## prints the last progress update and the last messages of the azcopy output
-            nxf_az_log() {
-                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
-            }
-
             nxf_az_download() {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local out
                 local ret=0
                 mkdir -p "$basedir"
 
-                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
+                    ret=$?
                     rm -f "$target"
-                    >&2 echo "Unable to download file: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             nxf_az_download_dir() {
                 local source=$1
                 local target=$2
-                local out
                 local ret=0
                 mkdir -p "$target"
 
-                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
             '''.stripIndent()
     }
@@ -178,42 +170,33 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
-            ## prints the last progress update and the last messages of the azcopy output
-            nxf_az_log() {
-                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
-            }
-
             nxf_az_download() {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local out
                 local ret=0
                 mkdir -p "$basedir"
 
-                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
+                    ret=$?
                     rm -f "$target"
-                    >&2 echo "Unable to download file: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             nxf_az_download_dir() {
                 local source=$1
                 local target=$2
-                local out
                 local ret=0
                 mkdir -p "$target"
 
-                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
             '''.stripIndent()
     }
@@ -302,42 +285,33 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
-            ## prints the last progress update and the last messages of the azcopy output
-            nxf_az_log() {
-                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
-            }
-
             nxf_az_download() {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local out
                 local ret=0
                 mkdir -p "$basedir"
 
-                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
+                    ret=$?
                     rm -f "$target"
-                    >&2 echo "Unable to download file: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             nxf_az_download_dir() {
                 local source=$1
                 local target=$2
-                local out
                 local ret=0
                 mkdir -p "$target"
 
-                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
             '''.stripIndent()
     }
@@ -369,39 +343,45 @@ class AzBashLibTest extends Specification {
         workDir?.toFile()?.deleteDir()
     }
 
+    private static final String FAKE_AZCOPY = '''\
+        #!/bin/bash
+        echo "$2" >> calls
+        src=${2%%\\?*}
+        dst=$3
+        case $src in
+          */file.txt)    echo data > "$dst" ;;
+          */partial.txt) echo partial > "$dst"; exit 1 ;;
+          */oom.txt)     echo partial > "$dst"; kill -KILL $$ ;;
+          */term.txt)    echo partial > "$dst"; kill -TERM $$ ;;
+          */int.txt)     exit 130 ;;
+          */dir/\\*)      echo a > "$dst/a.txt" ;;
+          */marker/\\*)   touch "$dst/.azure_blob_dir" ;;
+          */oomdir/\\*)   echo a > "$dst/a.txt"; kill -KILL $$ ;;
+          */\\*)          echo "Total Number of Transfers: 0" ;;
+          *)             echo "failed to perform copy command due to error: The specified file was not found."; exit 1 ;;
+        esac
+        '''.stripIndent()
+
+    private Path createFakeAzcopy(Path workDir) {
+        def bin = Files.createDirectory(workDir.resolve('bin'))
+        def azcopy = bin.resolve('azcopy')
+        azcopy.text = FAKE_AZCOPY
+        azcopy.toFile().setExecutable(true)
+        return bin
+    }
+
     @Unroll
     def 'should #DOWNLOAD #SOURCE and return #STATUS' () {
         given:
         def workDir = Files.createTempDirectory('az-download')
-        def bin = Files.createDirectory(workDir.resolve('bin'))
-        def azcopy = bin.resolve('azcopy')
-        // mimics azcopy: a non-recursive copy of a missing blob fails (10.8 reports it as a
-        // directory, 10.34 as not found), and a recursive copy of a missing or empty prefix
-        // transfers nothing and exits 0
-        azcopy.text = """\
-            #!/bin/bash
-            src=\${2%%\\?*}
-            dst=\$3
-            case \$src in
-              */file.txt)       echo data > \$dst ;;
-              */oom.txt)        echo partial > \$dst; for i in \$(seq 1 500); do printf '%s %%, 0 Done, 0 Failed, 1 Pending, 0 Skipped, 1 Total, 2-sec Throughput (Mb/s): 1\\r' \$i; done; exit 137 ;;
-              */denied.txt)     echo "X-Ms-Error-Code: [AuthenticationFailed]"; exit 1 ;;
-              */dir/\\*)        echo a > \$dst/a.txt ;;
-              */marker/\\*)     touch \$dst/.azure_blob_dir ;;
-              */oomdir/\\*)     echo a > \$dst/a.txt; exit 137 ;;
-              */denied/\\*)     echo "X-Ms-Error-Code: [AuthenticationFailed]"; exit 1 ;;
-              */\\*)            echo "Total Number of Transfers: 0" ;;
-              *)                echo "failed to perform copy command due to error: cannot use directory as source without --recursive or a trailing wildcard (/*)"; exit 1 ;;
-            esac
-            """.stripIndent()
-        azcopy.toFile().setExecutable(true)
+        def bin = createFakeAzcopy(workDir)
         def script = workDir.resolve('test.sh')
+        // run in the background, as nxf_parallel does, so that errexit applies inside the function
         script.text = 'set -eu\n' + AzBashLib.script() + """
             export AZ_SAS=token
             export PATH=${bin}:\$PATH
-            set +e
-            ( set -eu; ${DOWNLOAD} 'https://acct.blob.core.windows.net/c/${SOURCE}' target ) 2> stderr
-            echo \$? > status
+            ${DOWNLOAD} 'https://acct.blob.core.windows.net/c/${SOURCE}' target 2> stderr &
+            wait \$! && echo 0 > status || echo \$? > status
             """.stripIndent()
 
         when:
@@ -414,24 +394,50 @@ class AzBashLibTest extends Specification {
         process.exitValue() == 0
         workDir.resolve('status').text.trim() as int == STATUS
         (Files.isDirectory(target) ? "dir:${target.toFile().list().sort().join(',')}" : Files.exists(target) ? 'file' : 'none') == RESULT
-        stderr.contains(ERROR)
-        !stderr.contains('mkdir')
-        stderr.size() < 1000
+        workDir.resolve('calls').readLines().size() == 1
+        ERROR ? stderr.endsWith(ERROR) : stderr.isEmpty()
+        !stderr.contains('File exists')
 
         cleanup:
         workDir?.toFile()?.deleteDir()
 
         where:
-        DOWNLOAD                | SOURCE        | STATUS | RESULT                | ERROR
-        'nxf_az_download'       | 'file.txt'    | 0      | 'file'                | ''
-        'nxf_az_download'       | 'missing.txt' | 1      | 'none'                | 'Unable to download file'
-        'nxf_az_download'       | 'denied.txt'  | 1      | 'none'                | 'AuthenticationFailed'
-        'nxf_az_download'       | 'oom.txt'     | 137    | 'none'                | 'Unable to download file'
-        'nxf_az_download_dir'   | 'dir'         | 0      | 'dir:a.txt'           | ''
-        'nxf_az_download_dir'   | 'marker'      | 0      | 'dir:.azure_blob_dir' | ''
-        'nxf_az_download_dir'   | 'empty'       | 0      | 'dir:'                | ''
-        'nxf_az_download_dir'   | 'denied'      | 1      | 'none'                | 'Unable to download directory'
-        'nxf_az_download_dir'   | 'oomdir'      | 137    | 'none'                | 'Unable to download directory'
+        DOWNLOAD              | SOURCE        | STATUS | RESULT                | ERROR
+        'nxf_az_download'     | 'file.txt'    | 0      | 'file'                | ''
+        'nxf_az_download'     | 'missing.txt' | 1      | 'none'                | 'Unable to download file: https://acct.blob.core.windows.net/c/missing.txt (azcopy exit status 1)\n'
+        'nxf_az_download'     | 'partial.txt' | 1      | 'none'                | 'Unable to download file: https://acct.blob.core.windows.net/c/partial.txt (azcopy exit status 1)\n'
+        'nxf_az_download'     | 'oom.txt'     | 137    | 'none'                | 'Unable to download file: https://acct.blob.core.windows.net/c/oom.txt (azcopy exit status 137)\n'
+        'nxf_az_download'     | 'term.txt'    | 143    | 'none'                | 'Unable to download file: https://acct.blob.core.windows.net/c/term.txt (azcopy exit status 143)\n'
+        'nxf_az_download'     | 'int.txt'     | 130    | 'none'                | 'Unable to download file: https://acct.blob.core.windows.net/c/int.txt (azcopy exit status 130)\n'
+        'nxf_az_download_dir' | 'dir'         | 0      | 'dir:a.txt'           | ''
+        'nxf_az_download_dir' | 'marker'      | 0      | 'dir:.azure_blob_dir' | ''
+        'nxf_az_download_dir' | 'empty'       | 0      | 'dir:'                | ''
+        'nxf_az_download_dir' | 'oomdir'      | 137    | 'none'                | 'Unable to download directory: https://acct.blob.core.windows.net/c/oomdir (azcopy exit status 137)\n'
+    }
+
+    def 'should not retry downloads killed by a signal' () {
+        given:
+        def workDir = Files.createTempDirectory('az-retry')
+        def bin = createFakeAzcopy(workDir)
+        def script = workDir.resolve('test.sh')
+        script.text = AzBashLib.script(new AzCopyOpts(), 4, 3, Duration.of('1 sec')) + """
+            nxf_sleep() { :; }
+            export AZ_SAS=token
+            export PATH=${bin}:\$PATH
+            nxf_cp_retry nxf_az_download 'https://acct.blob.core.windows.net/c/oom.txt' oom.txt 2>/dev/null && echo 0 > status || echo \$? > status
+            """.stripIndent()
+
+        when:
+        def process = ['bash', script.toString()].execute(null as List, workDir.toFile())
+        process.waitFor(30, TimeUnit.SECONDS)
+
+        then:
+        process.exitValue() == 0
+        workDir.resolve('status').text.trim() == '137'
+        workDir.resolve('calls').readLines().size() == 1
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
     }
 
 }

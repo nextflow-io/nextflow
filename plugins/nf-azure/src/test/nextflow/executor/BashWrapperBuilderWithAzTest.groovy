@@ -90,42 +90,33 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 fi
             }
 
-            ## prints the last progress update and the last messages of the azcopy output
-            nxf_az_log() {
-                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
-            }
-
             nxf_az_download() {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local out
                 local ret=0
                 mkdir -p "$basedir"
 
-                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
+                    ret=$?
                     rm -f "$target"
-                    >&2 echo "Unable to download file: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             nxf_az_download_dir() {
                 local source=$1
                 local target=$2
-                local out
                 local ret=0
                 mkdir -p "$target"
 
-                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             '''.stripIndent(true)
@@ -251,42 +242,33 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 fi
             }
 
-            ## prints the last progress update and the last messages of the azcopy output
-            nxf_az_log() {
-                printf '%s\\n' "$1" | tr '\\r' '\\n' | sed 's/[[:space:]]*$//' | grep -v '^$' | awk '/^[0-9.]+ %, /{p=$0; next} {l[n++]=$0} END {if(p!="") print p; for(i=(n>10?n-10:0);i<n;i++) print l[i]}' >&2 || true
-            }
-
             nxf_az_download() {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local out
                 local ret=0
                 mkdir -p "$basedir"
 
-                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
+                    ret=$?
                     rm -f "$target"
-                    >&2 echo "Unable to download file: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             nxf_az_download_dir() {
                 local source=$1
                 local target=$2
-                local out
                 local ret=0
                 mkdir -p "$target"
 
-                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || ret=$?
-                if [[ $ret != 0 ]]; then
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source"
-                    nxf_az_log "$out"
+                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
                     return $ret
-                fi
+                }
             }
 
             '''.stripIndent(true)
