@@ -65,26 +65,8 @@ if command -v az >/dev/null && [[ -n "${AZURE_BATCH_ACCOUNT_KEY:+set}" ]]; then 
   done
 ) fi
 
-POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
-POOL_CONFIG=$(mktemp)
-trap 'rm -f "$POOL_CONFIG"' EXIT
-cat > "$POOL_CONFIG" <<EOF
-includeConfig '$PWD/azure.config'
-process.queue = '$POOL_ID'
-azure {
-  batch {
-    deletePoolsOnCompletion = true
-    pools {
-      '$POOL_ID' {
-          // a VM family whose core quota the shared nextflow-ci pool doesn't use
-          vmType = 'Standard_D2d_v4'
-          autoScale = true
-      }
-    }
-  }
-}
-EOF
-$NXF_CMD -C "$POOL_CONFIG" run ./test-subdirs.nf
+export POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
+$NXF_CMD -C ./pool-create.config run ./test-subdirs.nf
 grep -q "pool with id: $POOL_ID" .nextflow.log || { echo "Pool $POOL_ID was not created"; exit 1; }
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
