@@ -1,5 +1,34 @@
 # Nextflow change-log
 
+## [Version 26.10.4](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.4) - 26 Oct 2026
+
+- Allow list of columns for splitCsv header in type checker (#7871) [a5df4b3ab]
+- Build plain and dind launchers for e2e tests (#7835) [6fe1590d5]
+- Bump nf-azure@1.24.3 [2214c0369]
+- Bump nf-k8s@1.6.2 [ed4b77162]
+- Bump nf-seqera@0.26.1 [ce6d630f3]
+- Bump nf-tower@1.32.2 [fa52e742e]
+- Bump nf-wave@1.22.4 [ca45ef85a]
+- Bump sched-client to 0.111.0 in nf-seqera [1c83f9e7f]
+- Cap the lifetime of Azure Batch jobs created by CI (#7935) [afc52d83f]
+- Check equality between records, maps, lists, and tuples (#7852) [0bafa9fda]
+- Detect input file name collisions in typed processes (#7859) [fc0fb2753]
+- Document -patchN plugin versions for stable releases and harden release job (#7876) [6df0e0887]
+- Fix Azure Batch pool creation when the pool does not exist (#7904) [b3f0f6c42]
+- Fix serial input files metrics computation in nf-seqera (#7899) [eed39756b]
+- Fix task hash of records returned by typed functions (#7887) [e6dd1ce8c]
+- Fix type checking of comparator closures on lists of tuples (#7869) [68aed7503]
+- Fix type checking of `key` / `value` properties on map entries (#7875) [030fbc932]
+- Highlight entire token on parse error (#7877) [6fca81a8b]
+- Improve redaction of sensitive values in logs (#7879) [71d698d57]
+- Make Wave optional for the Seqera executor and skip the Wave Fusion layer (#7744) [fbcac2df0]
+- Preserve generic return type in plugin function specs (#7910) [9ea3f9177]
+- Prevent leaking environment secrets in CI (#7873) [5aabd84b3]
+- Retry Wave validation tasks when Docker exits 125 (#7898) [46d2f0c2d]
+- Stage files in record collection inputs (#7866) [b30a9db2f]
+- Strip trailing slash from task output paths on GCS (#7888) [b446ee828]
+- Type process.secret config option as a list (#7911) [d92712792]
+
 ## [Version 26.10.3](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.3) - 20 Oct 2026
 
 - Apply Harshil alignment to trailing comments, not annotations (#7832) [4bcfeb315]
