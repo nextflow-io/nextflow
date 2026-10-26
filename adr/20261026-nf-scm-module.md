@@ -53,7 +53,7 @@ The class moves are the same in every option. The options differ in how `nf-scm`
 
 ### Option 1: Service lookup
 
-`nf-commons` defines a one-method interface next to the existing `ConfigParser` interface. `nextflow` implements it and registers the implementation in `META-INF/services`.
+`nf-commons` defines a one-method interface next to the existing `ConfigParser` interface. The existing `ConfigParserFactory` in `nextflow` implements it, and is registered in `META-INF/services`. `ConfigParserProvider.createParser()` becomes the single way to get a parser, for the runtime too.
 
 ```java
 // nf-commons
@@ -64,14 +64,15 @@ public interface ConfigParserProvider {
 ```
 
 ```groovy
-// nextflow
-class DefaultConfigParserProvider implements ConfigParserProvider {
-    ConfigParser create() { ConfigParserFactory.create() }
+// nextflow: create() changes from a static method to the service method
+class ConfigParserFactory implements ConfigParserProvider {
+    @Override
+    ConfigParser create() { /* picks the v1 or v2 parser, as before */ }
 }
 ```
 
 - Good, because `nf-scm` has no compile or runtime dependency on the parser.
-- Good, because no caller changes: `AssetManager` and `ProviderConfig` call `ConfigParserProvider.createParser()` where they called `ConfigParserFactory.create()`.
+- Good, because there is one entry point and one implementation, with no adapter class. The few callers of `ConfigParserFactory.create()` (`AssetManager`, `ProviderConfig`, `ConfigBuilder` and two test helpers) switch to `ConfigParserProvider.createParser()`.
 - Good, because it follows an existing pattern: `nf-lang` loads `RemoteModuleResolver` the same way.
 - Good, because the fat jar already merges service files (`mergeServiceFiles()` in `nf-cli-v1`).
 - Bad, because a missing registration is only found at runtime. A test in `nextflow` checks that the provider is found, and reading a manifest fails with an error instead of returning an empty manifest.
@@ -126,7 +127,7 @@ Package names do not change, so Platform and plugins need no source changes.
 
 ### The config parser link
 
-The service lookup was chosen because it keeps the parser out of `nf-scm` (the main driver) without changing any caller, and it follows a pattern already used in the codebase.
+The service lookup was chosen because it keeps the parser out of `nf-scm` (the main driver) with a one-line change per caller, and it follows a pattern already used in the codebase.
 
 Option 2 fails the main driver: it ships the parsers to every consumer. Option 3 meets the drivers, but it is a redesign of `AssetManager` with breaking constructor changes, which is out of scope for a module extraction.
 
@@ -146,11 +147,11 @@ These tests stay in `nextflow`:
 
 - `ProviderPathTest`, because it uses `ConfigBuilder`;
 - `ScriptFileTest`, for `ScriptFile.of`;
-- `DefaultConfigParserProviderTest`, which checks that the provider is found when the runtime is on the classpath.
+- `ConfigParserFactoryTest`, which checks that the provider is found when the runtime is on the classpath. Since `ConfigBuilder` also uses the lookup, a broken registration also fails most runtime tests.
 
 ### Packaging
 
-No packaging change is needed. The distribution takes `nf-cli-v1`'s dependencies, and `nextflow` re-exports `nf-scm`, so the module is included. The fat jar merges `META-INF/services` files and appends all `extensions.idx` files, so both `DefaultConfigParserProvider` and `RepositoryFactory` are registered.
+No packaging change is needed. The distribution takes `nf-cli-v1`'s dependencies, and `nextflow` re-exports `nf-scm`, so the module is included. The fat jar merges `META-INF/services` files and appends all `extensions.idx` files, so both `ConfigParserFactory` and `RepositoryFactory` are registered.
 
 ### Impact on consumers
 

@@ -349,7 +349,7 @@ class ConfigBuilderTest extends Specification {
     def 'should collect config files' () {
 
         given:
-        def slurper = ConfigParserFactory.create()
+        def slurper = ConfigParserProvider.createParser()
         def file1 = Files.createTempFile('test1', null)
         def file2 = Files.createTempFile('test2', null)
         def result = new ConfigObject()

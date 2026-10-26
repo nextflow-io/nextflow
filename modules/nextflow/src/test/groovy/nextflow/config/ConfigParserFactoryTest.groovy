@@ -16,16 +16,12 @@
 
 package nextflow.config
 
-import groovy.transform.CompileStatic
+import spock.lang.Specification
 
-/**
- * Provides the runtime config parser to the nf-scm module
- */
-@CompileStatic
-class DefaultConfigParserProvider implements ConfigParserProvider {
+class ConfigParserFactoryTest extends Specification {
 
-    @Override
-    ConfigParser create() {
-        return ConfigParserFactory.create()
+    def 'should find the runtime config parser as a service' () {
+        expect:
+        ConfigParserProvider.createParser() instanceof ConfigParser
     }
 }
