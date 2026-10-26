@@ -29,11 +29,10 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.config.ConfigParserProvider
+import nextflow.config.ManifestParser
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
-import nextflow.scm.HubOptions
 import nextflow.SysEnv
 import nextflow.util.HttpClientOpts
 import nextflow.util.IniFile
@@ -107,25 +106,17 @@ class AssetManager implements Closeable {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager( String pipelineName, HubOptions hubOpts = null) {
-        assert pipelineName
-        // read the default config file (if available)
-        def config = ProviderConfig.getDefault()
-        // build the object
-        build(pipelineName, config, hubOpts)
-    }
-
     AssetManager( String pipelineName, Map config ) {
         assert pipelineName
         // build the object
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null ) {
+    /**
+     * @param config The SCM configuration, e.g. as read from the {@link ProviderConfig#DEFAULT_SCM_FILE} file
+     */
+    AssetManager( String pipelineName, Map config, HubOptions hubOpts, String revision = null, String mainScript = null ) {
         assert pipelineName
-        // read the default config file (if available)
-        def config = ProviderConfig.getDefault()
-        // build the object
         build(pipelineName, config, hubOpts, revision, mainScript)
     }
 
@@ -599,7 +590,7 @@ class AssetManager implements Closeable {
 
     protected Manifest getManifest0() {
         String text = null
-        ConfigObject result = null
+        Manifest result = null
         try {
             text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
         }
@@ -610,23 +601,15 @@ class AssetManager implements Closeable {
             log.warn "Cannot read project manifest -- Cause: ${e.message ?: e}", e
         }
 
-        if( text ) {
-            // outside the try: a missing parser must fail, not silently yield an empty manifest
-            final parser = ConfigParserProvider.createParser()
-            try {
-                def config = parser.setIgnoreIncludes(true).setStrict(false).parse(text)
-                result = (ConfigObject)config.manifest
-            }
-            catch( Exception e ) {
-                log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
-            }
+        if( text ) try {
+            result = ManifestParser.parse(text)
+        }
+        catch( Exception e ) {
+            log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
         }
 
         // by default return an empty object
-        if( result == null )
-            result = new ConfigObject()
-
-        return new Manifest(result)
+        return result ?: new Manifest([:])
     }
 
     Path getConfigFile() {

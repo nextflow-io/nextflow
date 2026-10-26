@@ -102,7 +102,7 @@ class UpdateModuleTest extends Specification {
         AssetManager.root = target.toFile()
 
         when: 'legacy'
-        def manager = new AssetManager("file:${baseFolder}/pipe_x")
+        def manager = new AssetManager("file:${baseFolder}/pipe_x", [:])
         manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
         manager.download()
         manager.updateModules()
@@ -121,7 +121,7 @@ class UpdateModuleTest extends Specification {
         target.resolve('local/pipe_x/prj_bbb/file2.log').text == 'Mondo'
 
         when: 'multi-revision'
-        manager = new AssetManager("file:${baseFolder}/pipe_x")
+        manager = new AssetManager("file:${baseFolder}/pipe_x", [:])
         manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download()
         manager.updateModules()
@@ -160,7 +160,7 @@ class UpdateModuleTest extends Specification {
         AssetManager.root = target.toFile()
 
         when:'legacy'
-        def manager = new AssetManager( "file:${baseFolder}/pipe_2" )
+        def manager = new AssetManager("file:${baseFolder}/pipe_2", [:])
         manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
         manager.download()
         manager.updateModules()
@@ -174,7 +174,7 @@ class UpdateModuleTest extends Specification {
         target.resolve('local/pipe_2/prj_bbb').list().size()==0
 
         when: 'multi-revision'
-        manager = new AssetManager( "file:${baseFolder}/pipe_2" )
+        manager = new AssetManager("file:${baseFolder}/pipe_2", [:])
         manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download()
         manager.updateModules()
@@ -209,7 +209,7 @@ class UpdateModuleTest extends Specification {
         AssetManager.root = target.toFile()
 
         when:
-        def manager = new AssetManager( "file:${baseFolder}/pipe_3" )
+        def manager = new AssetManager("file:${baseFolder}/pipe_3", [:])
         manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
         manager.download()
         manager.updateModules()
@@ -228,7 +228,7 @@ class UpdateModuleTest extends Specification {
         target.resolve('local/pipe_3/prj_ccc/file-x.txt').text == 'x'
 
         when: 'multi-revision'
-        manager = new AssetManager( "file:${baseFolder}/pipe_3" )
+        manager = new AssetManager("file:${baseFolder}/pipe_3", [:])
         manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download()
         manager.updateModules()

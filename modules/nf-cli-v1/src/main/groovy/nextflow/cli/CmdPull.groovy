@@ -19,6 +19,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.config.ProviderConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -84,7 +85,7 @@ class CmdPull extends CmdBase implements HubAware {
 
         for( String proj : list ) {
             if( all ) {
-                try (def mgr = new AssetManager(proj)) {
+                try (def mgr = new AssetManager(proj, ProviderConfigParser.getDefault())) {
                     def branches = mgr.getBranchesAndTags(false).pulled as List<String>
                     branches.each { rev -> pullProjectRevision(proj, rev) }
                 }
@@ -95,7 +96,7 @@ class CmdPull extends CmdBase implements HubAware {
     }
 
     private pullProjectRevision(String project, String revision) {
-        try (final manager = new AssetManager(project, toHubOptions())) {
+        try (final manager = new AssetManager(project, ProviderConfigParser.getDefault(), toHubOptions())) {
             if( manager.isUsingLegacyStrategy() ) {
                 if( migrate ) {
                     log.info "Migrating ${project} revision ${revision} to multi-revision strategy"

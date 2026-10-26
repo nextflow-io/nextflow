@@ -21,7 +21,7 @@ import java.nio.file.Path
 import groovy.transform.InheritConstructors
 import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.Session
-import nextflow.config.ConfigParserProvider
+import nextflow.config.ConfigParserFactory
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
 import nextflow.dataflow.ChannelImpl
@@ -54,7 +54,7 @@ class ScriptHelper {
      * @param text
      */
     static Map loadConfig(String text) {
-        return ConfigParserProvider.createParser().parse(text)
+        return ConfigParserFactory.create().parse(text)
     }
 
     /**

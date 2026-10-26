@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.config.ProviderConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -54,7 +55,7 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        try (final manager = new AssetManager(args[0], revision)) {
+        try (final manager = new AssetManager(args[0], ProviderConfigParser.getDefault(), null, revision)) {
             if( !manager.isLocal() )
                 throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
             if( revision && manager.isUsingLegacyStrategy()){

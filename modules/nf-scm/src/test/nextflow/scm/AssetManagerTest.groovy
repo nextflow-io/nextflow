@@ -561,7 +561,7 @@ class AssetManagerTest extends Specification {
 
         when:
         // exercise the new (pipelineName, revision, scriptFile, cliOpts) constructor
-        holder = new AssetManager('foo/bar', null, 'sub/entry.nf')
+        holder = new AssetManager('foo/bar', [:], null, null, 'sub/entry.nf')
         then:
         holder.getMainScriptName() == 'sub/entry.nf'
     }
@@ -686,22 +686,22 @@ class AssetManagerTest extends Specification {
 
     def 'should detect local scm for pipelineNames' () {
         when:
-        def manager = new AssetManager('my-repo', new HubOptions(null, null))
+        def manager = new AssetManager('my-repo', [:], new HubOptions(null, null))
         then:
         !manager.isLocalScmSource()
 
         when:
-        manager = new AssetManager('my-project/repo',  new HubOptions(null, null))
+        manager = new AssetManager('my-project/repo', [:], new HubOptions(null, null))
         then:
         !manager.isLocalScmSource()
 
         when:
-        manager = new AssetManager('https://github.com/nextflow-io/socks.git',  new HubOptions(null, null))
+        manager = new AssetManager('https://github.com/nextflow-io/socks.git', [:], new HubOptions(null, null))
         then:
         !manager.isLocalScmSource()
 
         when:
-        manager = new AssetManager( 'file:/path/my-project/repo.git', new HubOptions(null, null))
+        manager = new AssetManager('file:/path/my-project/repo.git', [:], new HubOptions(null, null))
         then:
         manager.isLocalScmSource()
     }

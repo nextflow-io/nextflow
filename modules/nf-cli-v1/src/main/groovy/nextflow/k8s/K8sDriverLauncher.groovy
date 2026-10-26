@@ -27,6 +27,7 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
+import nextflow.config.ProviderConfigParser
 import nextflow.cli.CmdKubeRun
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
@@ -274,7 +275,7 @@ class K8sDriverLauncher {
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
-            final pipelineConfig = new AssetManager(pipelineName, cmd.revision, cmd.mainScript, cmd.toHubOptions()).getConfigFile()
+            final pipelineConfig = new AssetManager(pipelineName, ProviderConfigParser.getDefault(), cmd.toHubOptions(), cmd.revision, cmd.mainScript).getConfigFile()
             if( pipelineConfig )
                 adapter.setUserConfigFiles(pipelineConfig)
         }

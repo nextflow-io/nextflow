@@ -31,6 +31,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import nextflow.config.ProviderConfigParser
 import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
@@ -630,7 +631,7 @@ class CmdRun extends CmdBase implements HubAware {
         /*
          * try to look for a pipeline in the repository
          */
-        try( final manager = new AssetManager(pipelineName, revision, mainScript, toHubOptions()) ) {
+        try( final manager = new AssetManager(pipelineName, ProviderConfigParser.getDefault(), toHubOptions(), revision, mainScript) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 

@@ -174,7 +174,7 @@ class ConfigBuilder {
     ConfigObject build(Map<String,String> env=[:], List configEntries)  {
         assert env != null
 
-        final parser = ConfigParserProvider.createParser()
+        final parser = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
