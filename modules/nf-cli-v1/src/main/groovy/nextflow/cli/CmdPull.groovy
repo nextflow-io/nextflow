@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.script.ScriptFile
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -113,7 +114,7 @@ class CmdPull extends CmdBase implements HubAware {
             def result = manager.download(revision, deep)
             manager.updateModules()
 
-            def scriptFile = manager.getScriptFile()
+            def scriptFile = ScriptFile.of(manager)
             String message = !result ? " done" : " $result"
             message += " - revision: ${scriptFile.revisionInfo}"
             log.info message

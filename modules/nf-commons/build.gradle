@@ -29,6 +29,8 @@ dependencies {
     api "ch.qos.logback:logback-classic:${logbackVersion}"
     api "org.apache.groovy:groovy:${groovyVersion}"
     api "org.apache.groovy:groovy-nio:${groovyVersion}"
+    api "org.apache.groovy:groovy-json:${groovyVersion}"
+    api "org.yaml:snakeyaml:${snakeyamlVersion}"
     api "org.apache.commons:commons-lang3:${commonsLang3Version}"
     api 'com.google.guava:guava:33.0.0-jre'
     api "org.pf4j:pf4j:${pf4jVersion}"

@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.config.ConfigParserFactory
+import nextflow.config.ConfigParserProvider
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
@@ -246,7 +246,7 @@ class ProviderConfig {
 
     @PackageScope
     static Map parse(String text) {
-        def slurper = ConfigParserFactory.create()
+        def slurper = ConfigParserProvider.createParser()
         slurper.setBinding(env)
         return slurper.parse(text)
     }
