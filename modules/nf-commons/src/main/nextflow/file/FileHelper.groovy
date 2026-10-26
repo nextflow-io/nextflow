@@ -1027,7 +1027,7 @@ class FileHelper {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
-                sourceProvider.copy(source, target, options);
+                sourceProvider.copy(source, target, SkipDirOption.strip(options));
             }
         }
         else {
@@ -1296,6 +1296,18 @@ class FileHelper {
             log.debug("String '${strHash}' is not a valid hash", e)
             return null
         }
+    }
+
+    /**
+     * The attempt of the task run in the given work directory: {@code N} for {@code <30hex>-N},
+     * 1 when the leaf has no attempt suffix.
+     */
+    static int getAttemptFromPath(Path workDir) {
+        final leaf = workDir?.getFileName()?.toString()
+        if( !leaf )
+            return 1
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        return suffix.find() ? Integer.parseInt(leaf.substring(suffix.start() + 1)) : 1
     }
 
     /**

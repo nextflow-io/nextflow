@@ -225,8 +225,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
+        var aligner = fmt.commentAligner();
         for( var param : node.declarations ) {
             fmt.appendLeadingComments(param);
+            aligner.begin();
             fmt.appendIndent();
             fmt.append(param.getName());
             if( fmt.hasType(param) ) {
@@ -237,9 +239,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.append(" = ");
                 fmt.visit(param.getInitialExpression());
             }
+            aligner.end(param);
             fmt.appendTrailingComment(param);
             fmt.appendNewLine();
         }
+        aligner.apply();
         fmt.appendDanglingComments(node);
         fmt.decIndent();
         fmt.append("}");
@@ -324,8 +328,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     }
 
     private void visitTypedInputs(Parameter[] inputs) {
+        var aligner = fmt.commentAligner();
         for( var input : inputs ) {
             fmt.appendLeadingComments(input);
+            aligner.begin();
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
                 visitStructuredInput(tp);
@@ -333,9 +339,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else {
                 visitTypedInput(input);
             }
+            aligner.end(input);
             fmt.appendTrailingComment(input);
             fmt.appendNewLine();
         }
+        aligner.apply();
     }
 
     private void visitStructuredInput(TupleParameter tp) {
@@ -381,6 +389,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             ? maxParameterWidth(outputs)
             : 0;
 
+        var aligner = fmt.commentAligner();
         for( var stmt : outputs ) {
             var stmtX = (ExpressionStatement)stmt;
             var output = stmtX.getExpression();
@@ -394,8 +403,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
             if( target != null ) {
                 fmt.appendLeadingComments(stmt);
+                aligner.begin();
                 fmt.appendIndent();
                 visitOutputAssignment(target, source, alignmentWidth);
+                aligner.end(stmt);
                 fmt.appendTrailingComment(stmt);
                 fmt.appendNewLine();
             }
@@ -403,6 +414,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.visit(stmt);
             }
         }
+        aligner.apply();
     }
 
     private void visitWorkflowPublishers(List<Statement> publishers) {
@@ -410,6 +422,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             ? maxParameterWidth(publishers)
             : 0;
 
+        var aligner = fmt.commentAligner();
         for( var stmt : publishers ) {
             var stmtX = (ExpressionStatement)stmt;
             var emit = (AssignmentExpression)stmtX.getExpression();
@@ -417,14 +430,17 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             var source = emit.getRightExpression();
 
             fmt.appendLeadingComments(stmt);
+            aligner.begin();
             fmt.appendIndent();
             visitOutputAssignment(target, source, alignmentWidth);
+            aligner.end(stmt);
             fmt.appendTrailingComment(stmt);
             fmt.appendNewLine();
         }
+        aligner.apply();
     }
 
-    private static int maxParameterWidth(List<Statement> statements) {
+    private int maxParameterWidth(List<Statement> statements) {
         if( statements.size() == 1 )
             return 0;
 
@@ -432,12 +448,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             .map((stmt) -> {
                 var stmtX = (ExpressionStatement)stmt;
                 var emit = stmtX.getExpression();
-                if( emit instanceof VariableExpression ve ) {
+                if( emit instanceof VariableExpression ve && !fmt.hasType(ve) ) {
                     return ve.getName().length();
                 }
                 if( emit instanceof AssignmentExpression assign ) {
                     var target = (VariableExpression)assign.getLeftExpression();
-                    return target.getName().length();
+                    return fmt.hasType(target) ? 0 : target.getName().length();
                 }
                 return 0;
             })
@@ -446,13 +462,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private void visitOutputAssignment(VariableExpression target, Expression source, int alignmentWidth) {
         fmt.append(target.getText());
-        if( (fmt.hasType(target) || source != null) && alignmentWidth > 0 ) {
+        if( !fmt.hasType(target) && source != null && alignmentWidth > 0 ) {
             var padding = alignmentWidth - target.getName().length();
             fmt.append(" ".repeat(padding));
         }
         if( fmt.hasType(target) ) {
-            if( alignmentWidth > 0 )
-                fmt.append(' ');
             fmt.append(": ");
             fmt.visitTypeAnnotation(target.getType());
         }
@@ -664,17 +678,21 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     private void visitRecordBody(RecordNode node) {
         fmt.append(" {\n");
         fmt.incIndent();
+        var aligner = fmt.commentAligner();
         for( var fn : node.getFields() ) {
             fmt.appendLeadingComments(fn);
+            aligner.begin();
             fmt.appendIndent();
             fmt.append(fn.getName());
             if( fmt.hasType(fn) ) {
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(fn.getType());
             }
+            aligner.end(fn);
             fmt.appendTrailingComment(fn);
             fmt.appendNewLine();
         }
+        aligner.apply();
         fmt.appendDanglingComments(node);
         fmt.decIndent();
         fmt.appendIndent();

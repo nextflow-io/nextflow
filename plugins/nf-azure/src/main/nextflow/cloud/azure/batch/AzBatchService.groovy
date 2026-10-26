@@ -69,7 +69,6 @@ import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.credential.TokenCredential
 import com.azure.core.exception.ClientAuthenticationException
 import com.azure.core.exception.HttpResponseException
-import com.azure.core.exception.ResourceNotFoundException
 import com.azure.core.http.rest.PagedIterable
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
@@ -93,6 +92,7 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.platform.ResourceLabelPolicy
@@ -534,7 +534,10 @@ class AzBatchService implements Closeable {
         final container = task.getContainer()
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
-        final taskId = "nf-${task.hash.toString()}"
+        // every attempt of a task shares its hash: the work dir's attempt suffix (`-N`) keeps their ids
+        // apart, since a failed task is kept in the job by default
+        final attempt = FileHelper.getAttemptFromPath(task.workDir)
+        final taskId = "nf-${task.hash.toString()}${attempt > 1 ? "-${attempt}" : ''}"
         // get the pool config
         final pool = getPoolSpec(poolId)
         if( !pool )
@@ -868,8 +871,10 @@ class AzBatchService implements Closeable {
         catch (IllegalArgumentException | ClientAuthenticationException e) {
             throw e
         }
-        catch (ResourceNotFoundException ignored) {
-            return null
+        catch (HttpResponseException e) {
+            if( e.response?.statusCode == 404 )
+                return null
+            throw e
         }
     }
 

@@ -101,4 +101,8 @@ class TowerFactory implements TraceObserverFactoryV2 {
     static TowerClient client() {
         return client(Global.session as Session, SysEnv.get())
     }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 }

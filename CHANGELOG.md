@@ -1,5 +1,42 @@
 # Nextflow change-log
 
+## [Version 26.10.3](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.3) - 20 Oct 2026
+
+- Apply Harshil alignment to trailing comments, not annotations (#7832) [4bcfeb315]
+- Escape control characters in task metadata and job names (#7764) [f26218342]
+- Fix cascading type errors from inconsistently typed expressions (#7851) [a53283b7c]
+- Fix hang in preview mode with workflow outputs (#7838) [b5fbdf1dd]
+- Fix onError section in entry workflow (#7831) [64c574e11]
+- Fix stdlib typos (#7863) [b09af93c1]
+- Fix type checking of function calls that omit default params (#7860) [b2e18bded]
+- Fix type of task.label in language definitions (#7857) [625721007]
+- Fix unrecognized config warnings for nextflow.retryPolicy options (#7843) [830fe609d]
+- Keep Bitbucket API token out of git clone URL and logs (#7870) [6985ffe2e]
+- Update Grengine to 3.1.2 (group ID and package ch.grengine) (#7842) [11888daed]
+
+## [Version 26.10.2](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.2) - 15 Oct 2026
+
+- Build plugin commands config in the CLI (#7834) [1f805db0d]
+- Bump nf-tower@1.32.1 [2454be6be]
+- Bump nf-wave@1.22.3 [a3347f1e6]
+- Fix formatter treating comment-like GString text as a comment (#7828) [a002ed880]
+
+## [Version 26.10.1](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.1) - 15 Oct 2026
+
+- Bump nf-amazon@3.12.1 [95b076bbd]
+- Bump nf-azure@1.24.2 [934f50269]
+- Bump nf-google@1.29.1 [37393d550]
+- Fetch Google Batch task status once per trace record (#7807) [36e08de58]
+- Fix file-handling bugs in native processes (#7789) [223df42a8]
+- Fix Google Batch array job deleted when a single array task is killed (#7808) [139910816]
+- Fix unit tests that depend on global state from other tests (#7804) [49bdb37ee]
+- Fix workflow output path closure returning an empty map (#7823) [e7a303cc0]
+- Fix workflow variables named `published` or `owner` (#7814) [4894fec67]
+- Load the config files in plugin commands session (#7815) [936138a13]
+- Retry foreign file staging on connection reset (#7799) [565603922]
+- Retry INTERNAL errors from the Google Batch API (#7805) [24d78183e]
+- Skip Fusion .fusion dirs when publishing directories (#7811) [d69ed57a8]
+
 ## [Version 26.10.0](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) - 12 Oct 2026
 
 - Add deprecations page to docs (#7766) [af85789fc]

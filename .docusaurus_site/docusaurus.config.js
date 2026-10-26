@@ -31,7 +31,11 @@ export default async function createConfigAsync() {
       },
       ['docusaurus-plugin-llms', {
         id: 'llms-nextflow',
-        docsDir: 'docs',
+        // The plugin writes each Markdown copy to build/<docsDir>/ and links it
+        // from there, ignoring routeBasePath. `nextflow` is a second symlink to
+        // ../docs so the copies land under /nextflow/, the only path that
+        // docs.seqera.io proxies to this site.
+        docsDir: 'nextflow',
         llmsTxtFilename: 'llms-nextflow.txt',
         llmsFullTxtFilename: 'llms-nextflow-full.txt',
         title: 'Nextflow',
