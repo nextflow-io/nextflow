@@ -9,7 +9,7 @@ Technical Story: supersedes [#6719](https://github.com/nextflow-io/nextflow/pull
 
 ## Summary
 
-Move the `nextflow.scm` package and `Manifest` into a new `nf-scm` module that depends only on `nf-commons` and JGit. The config parser stays in the `nextflow` runtime, and `nf-scm` finds it at runtime through a `ServiceLoader` hook. Library consumers such as Seqera Platform can then use SCM support without the whole runtime.
+Move the `nextflow.scm` package and `Manifest` into a new `nf-scm` module that depends only on `nf-commons` and JGit. `nf-scm` no longer uses the evaluating config parser: the SCM file is parsed in the `nextflow` runtime and passed in as a `Map`, and the manifest is read from the config syntax tree without evaluating it. Library consumers such as Seqera Platform can then use SCM support without the whole runtime.
 
 ## Problem Statement
 
@@ -31,51 +31,34 @@ Platform no longer uses the config parser. It reads the pipeline config without 
 
 - **Smaller dependency for library consumers**: Platform should get SCM support without the runtime.
 - **No config parser in `nf-scm`**: the module must not ship code that evaluates repository config files, since Platform deliberately avoids it.
-- **No behaviour change for Nextflow users**: the manifest and the SCM file are parsed exactly as today.
-- **No source change for Platform and plugins**: keep the package names (`nextflow.scm`, `nextflow.config.Manifest`), and keep `nextflow` re-exporting the new module.
-- **Small change**: mostly class moves, so the change is easy to review and rebase.
+- **No new extension mechanism**: avoid adding a public lookup API whose only purpose is to reach back into the runtime.
+- **Keep user-facing behaviour**: the SCM file is parsed exactly as today. The manifest may change only where it holds values that are not literals.
+- **No source change for Platform**: keep the package names (`nextflow.scm`, `nextflow.config.Manifest`) and the `AssetManager(String, Map)` constructor, and keep `nextflow` re-exporting the new module.
 
 ## Non-goals
 
 - **Moving SCM support out of the Nextflow repository** or removing the `nf-scm` → `nf-commons` dependency. This would make Platform independent of Nextflow versions, but it needs larger changes on both sides.
-- **Reading the manifest without evaluating it in Nextflow.** It would remove the parser need for the manifest, but it changes behaviour, so it is left for a separate change.
 - **Migrating Platform.** Platform switches to `nf-scm` in its own change, after a Nextflow release that includes the module.
 
 ## Considered Options
 
-The class moves are the same in every option. The options differ in how `nf-scm` gets the config parser.
+The class moves are the same in every option. The options differ in how `nf-scm` handles config parsing.
 
 1. **Service lookup**: the parser stays in `nextflow`, and `nf-scm` finds it with `java.util.ServiceLoader`.
 2. **Move the config and secrets packages too**: new `nf-config` and `nf-secrets` modules, and `nf-scm` depends on `nf-config` (the approach of [#6719](https://github.com/nextflow-io/nextflow/pull/6719)).
-3. **Move the parsing out of `nf-scm`**: `nf-scm` keeps only the models, and the code that parses files moves to `nextflow`.
+3. **Remove config evaluation from `nf-scm`**: the SCM file is parsed in `nextflow` and passed in as a `Map`, and the manifest is read without evaluating it.
 
 ## Pros and Cons of the Options
 
 ### Option 1: Service lookup
 
-`nf-commons` defines a one-method interface next to the existing `ConfigParser` interface. The existing `ConfigParserFactory` in `nextflow` implements it, and is registered in `META-INF/services`. `ConfigParserProvider.createParser()` becomes the single way to get a parser, for the runtime too.
+`nf-commons` defines a `ConfigParserProvider` interface with a static `createParser()` lookup. `ConfigParserFactory` in `nextflow` implements it and is registered in `META-INF/services`, and every caller gets its parser through `ConfigParserProvider.createParser()`.
 
-```java
-// nf-commons
-public interface ConfigParserProvider {
-    ConfigParser create();
-    static ConfigParser createParser() { /* ServiceLoader lookup, error if none found */ }
-}
-```
-
-```groovy
-// nextflow: create() changes from a static method to the service method
-class ConfigParserFactory implements ConfigParserProvider {
-    @Override
-    ConfigParser create() { /* picks the v1 or v2 parser, as before */ }
-}
-```
-
-- Good, because `nf-scm` has no compile or runtime dependency on the parser.
-- Good, because there is one entry point and one implementation, with no adapter class. The few callers of `ConfigParserFactory.create()` (`AssetManager`, `ProviderConfig`, `ConfigBuilder` and two test helpers) switch to `ConfigParserProvider.createParser()`.
+- Good, because no caller of `AssetManager` changes, and user-facing behaviour does not change at all.
 - Good, because it follows an existing pattern: `nf-lang` loads `RemoteModuleResolver` the same way.
-- Good, because the fat jar already merges service files (`mergeServiceFiles()` in `nf-cli-v1`).
-- Bad, because a missing registration is only found at runtime. A test in `nextflow` checks that the provider is found, and reading a manifest fails with an error instead of returning an empty manifest.
+- Bad, because it adds a public extension point to `nf-commons` whose only purpose is to reach back into the runtime.
+- Bad, because a missing registration is only found at runtime, so it needs a guard test and an explicit failure in `getManifest0()`.
+- Bad, because `nf-scm` still evaluates repository config to read a manifest whenever it runs inside Nextflow.
 
 ### Option 2: Move the config and secrets packages too
 
@@ -87,18 +70,21 @@ Three new modules: `nf-secrets` (the `secret` package), `nf-config` (the whole `
 - Bad, because it is a much larger change (122 files in #6719), touching `ConfigBuilder` and many CLI commands.
 - Bad, because it was designed when Platform still used `ConfigBuilder`, which is no longer true.
 
-### Option 3: Move the parsing out of nf-scm
+### Option 3: Remove config evaluation from nf-scm
 
-Split `ProviderConfig` into a model (in `nf-scm`) and a factory that reads and parses the SCM file (in `nextflow`). Take the manifest handling out of `AssetManager`: either make `getManifest0()` abstract with a runtime subclass, or pass the manifest in from outside.
+- **SCM file**: split `ProviderConfig` into the model (stays in `nf-scm`) and a `ProviderConfigParser` (in `nextflow`) that finds, reads and parses the file. Callers parse the file and pass the result to `AssetManager` as a `Map`, as Platform already does.
+- **Manifest**: a `ManifestParser` in `nf-scm` reads the `manifest` scope from the syntax tree built by `nf-lang`'s `ConfigParser`, without evaluating it.
 
-- Good, because the dependency direction is explicit, with no runtime lookup.
-- Good, because it moves towards an `AssetManager` that does not depend on the config parser at all, which a later move out of the Nextflow repository would need.
-- Bad, because the `AssetManager` constructors that read the SCM file are called in 10 places (CLI commands, `K8sDriverLauncher`, `nf-tower`). All of them, and any external plugin calling `new AssetManager(...)`, must change.
-- Bad, because `AssetManager` reads the manifest in many places, including its constructor, so taking it out is a redesign rather than a move.
+- Good, because `nf-scm` contains no code that evaluates config, and needs no lookup or registration.
+- Good, because the config parser classes stay in `nextflow`, unchanged.
+- Good, because Nextflow no longer runs repository code just to read a manifest (`pull`, `info`, `clone`). Platform already reads the pipeline config this way.
+- Good, because the CLI and Platform use `AssetManager` the same way: the caller supplies the SCM configuration.
+- Bad, because two `AssetManager` constructors are removed, so 10 calls (CLI commands, `K8sDriverLauncher`, `nf-tower`) and any external code calling them must change.
+- Bad, because manifest values that are not literals are no longer read (see below).
 
 ## Solution or decision outcome
 
-Option 1: a new `nf-scm` module, with the config parser found at runtime through `ConfigParserProvider`.
+Option 3: a new `nf-scm` module with no config evaluation. The SCM file is parsed by `ProviderConfigParser` in the runtime, and the manifest is read by `ManifestParser` without evaluating it.
 
 ## Rationale & discussion
 
@@ -109,49 +95,65 @@ nf-cli-v1 ──► nextflow (runtime) ──► nf-scm ──► nf-commons ─
                                        └──► JGit
 ```
 
-- **`nf-scm`**: the whole `nextflow.scm` package and `nextflow.config.Manifest`. It has its own `META-INF/extensions.idx` that registers `RepositoryFactory`.
+- **`nf-scm`**: the whole `nextflow.scm` package, `nextflow.config.Manifest` and the new `nextflow.config.ManifestParser`. It has its own `META-INF/extensions.idx` that registers `RepositoryFactory`.
 - **Moved to `nf-commons`**, because Platform uses them and they have no runtime dependencies:
   - `BashTemplateEngine` and `MustacheTemplateEngine`;
   - `ConfigHelper` and `ConfigClosurePlaceholder`;
-  - the `ConfigParser` interface, and the new `ConfigParserProvider`;
-  - the exceptions `ConfigParseException`, `HttpResponseLengthExceedException`, `MissingCredentialsException`, `RateLimitExceededException` and `AmbiguousPipelineNameException`.
+  - the exceptions `HttpResponseLengthExceedException`, `MissingCredentialsException`, `RateLimitExceededException` and `AmbiguousPipelineNameException`.
 
   `nf-commons` now also exports `groovy-json` and `snakeyaml`, which `ConfigHelper` needs. Both are already on every Nextflow classpath.
-- **`nextflow`** declares `api project(':nf-scm')`, so plugins and the CLI see the same classes as before.
+- **`nextflow`** declares `api project(':nf-scm')`, so plugins and the CLI see the same classes as before. The new `nextflow.config.ProviderConfigParser` lives here.
 
-Package names do not change, so Platform and plugins need no source changes.
+Package names do not change, so Platform and plugins need no source changes beyond the `AssetManager` constructors described below.
 
 ### The ScriptFile link
 
 `AssetManager.getScriptFile()` is replaced by a static factory in the runtime, `ScriptFile.of(AssetManager, String)`. `CmdRun` and `CmdPull` are its only callers. This is a small API break for external code that calls `getScriptFile()`. No plugin in this repository does.
 
-### The config parser link
+### The SCM file
 
-The service lookup was chosen because it keeps the parser out of `nf-scm` (the main driver) with a one-line change per caller, and it follows a pattern already used in the codebase.
+`ProviderConfig` keeps the model: the provider attributes, `createFromMap()`, `createDefault()` and `getScmConfigPath()`. Reading and parsing the file (`getDefault()`, `getFromFile()`, `parse()`) moves unchanged to `ProviderConfigParser` in `nextflow`. Its behaviour does not change: the same evaluating parser, the same `env('NAME')` support, and the same handling of a missing file.
 
-Option 2 fails the main driver: it ships the parsers to every consumer. Option 3 meets the drivers, but it is a redesign of `AssetManager` with breaking constructor changes, which is out of scope for a module extraction.
+`AssetManager` no longer reads the SCM file itself:
 
-Three details of the lookup:
+- **Removed**: `AssetManager(String, HubOptions)` and `AssetManager(String, String revision, String mainScript, HubOptions)`. This also removes the one-argument form `new AssetManager(name)`.
+- **Added**: `AssetManager(String, Map scmConfig, HubOptions, String revision = null, String mainScript = null)`.
+- **Unchanged**: `AssetManager(String, Map)`, which Platform uses.
 
-- **Class loader**: it uses `ConfigParserProvider`'s own class loader, not the thread context one, so code running in plugin threads finds the service too.
-- **Fail loudly**: `getManifest0()` gets the parser outside its `try` block. Without this, a missing parser would be caught and turned into an empty manifest. Nextflow would then silently use `main.nf`, the remote default branch and no submodules.
-- **Where the SCM file fails**: a missing parser fails only when an SCM file exists. When the file is absent, `ProviderConfig` returns an empty configuration without parsing.
+Callers in the runtime pass `ProviderConfigParser.getDefault()`:
 
-A class-name lookup (`Class.forName('nextflow.config.ConfigParserFactory')`) was also tried. It was rejected because a rename would still compile and only fail at runtime, and the dependency would be hidden in a string.
+```groovy
+new AssetManager(pipelineName, ProviderConfigParser.getDefault(), hubOpts, revision, mainScript)
+```
+
+### The manifest
+
+`ManifestParser` parses the config text with `nf-lang`'s `ConfigParser`, which only builds the syntax tree, and collects the `manifest.*` assignments, written either as a `manifest { }` block or as dotted names. It keeps literal values: strings, numbers, booleans, lists and maps. Assignments inside other scopes, such as `profiles`, are ignored. Includes are ignored, as before.
+
+The v2 syntax is now the default, and the v2 parser is built on the same `nf-lang` grammar. So any `nextflow.config` that Nextflow can parse is also readable here. The differences are in evaluation only:
+
+| Case | Before | After |
+|---|---|---|
+| Literal values (almost all manifests) | Read | Read, unchanged |
+| Value that is not a literal, e.g. `version = "1.0-${suffix}"` | Evaluated | Ignored (debug log). For `mainScript` or `defaultBranch`, the default is used |
+| `nextflow.config` with v1-only syntax (`NXF_SYNTAX_PARSER=v1`) | Read | Syntax error, so an empty manifest and a warning |
+| Repository code run to read the manifest | Yes | No |
+
+`getManifest0()` stays `protected`, so existing overrides keep working.
 
 ### Tests
 
-The SCM tests move to `nf-scm`. They use `testImplementation(testFixtures(project(':nextflow')))` for `TemporaryPath` and for the runtime parser. This is test scope only, and does not change what `nf-scm` brings to consumers.
+The SCM tests move to `nf-scm`, together with the new `ManifestParserTest`. They use `testImplementation(testFixtures(project(':nextflow')))` for the `TemporaryPath` helper only. This is test scope only, and does not change what `nf-scm` brings to consumers.
 
 These tests stay in `nextflow`:
 
 - `ProviderPathTest`, because it uses `ConfigBuilder`;
 - `ScriptFileTest`, for `ScriptFile.of`;
-- `ConfigParserFactoryTest`, which checks that the provider is found when the runtime is on the classpath. Since `ConfigBuilder` also uses the lookup, a broken registration also fails most runtime tests.
+- `ProviderConfigParserTest`, for parsing the SCM file.
 
 ### Packaging
 
-No packaging change is needed. The distribution takes `nf-cli-v1`'s dependencies, and `nextflow` re-exports `nf-scm`, so the module is included. The fat jar merges `META-INF/services` files and appends all `extensions.idx` files, so both `ConfigParserFactory` and `RepositoryFactory` are registered.
+No packaging change is needed. The distribution takes `nf-cli-v1`'s dependencies, and `nextflow` re-exports `nf-scm`, so the module is included. The fat jar appends all `extensions.idx` files, so `RepositoryFactory` is registered.
 
 ### Impact on consumers
 
