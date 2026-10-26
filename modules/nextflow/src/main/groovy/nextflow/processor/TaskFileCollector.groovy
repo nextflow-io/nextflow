@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
+import org.apache.commons.lang3.StringUtils
 /**
  * Implements the collection of output files from a task
  * work directory.
@@ -71,7 +72,8 @@ class TaskFileCollector {
             }
             else {
                 final path = opts.glob ? splitter.strip(filePattern) : filePattern
-                final file = workDir.resolve(path)
+                // strip any trailing slash, cloud storage (e.g. GCS) would report it as an existing directory
+                final file = workDir.resolve(StringUtils.stripEnd(path, '/'))
                 final exists = checkFileExists(file)
                 if( exists )
                     result = List.of(file)

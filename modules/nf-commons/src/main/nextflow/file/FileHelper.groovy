@@ -1299,6 +1299,18 @@ class FileHelper {
     }
 
     /**
+     * The attempt of the task run in the given work directory: {@code N} for {@code <30hex>-N},
+     * 1 when the leaf has no attempt suffix.
+     */
+    static int getAttemptFromPath(Path workDir) {
+        final leaf = workDir?.getFileName()?.toString()
+        if( !leaf )
+            return 1
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        return suffix.find() ? Integer.parseInt(leaf.substring(suffix.start() + 1)) : 1
+    }
+
+    /**
      * The work directory of the task {@code sourcePath} lives in, i.e. the
      * {@code <workPath>/<2hex>/<30hex>[-N]} prefix of it, <b>attempt suffix included</b>.
      *
