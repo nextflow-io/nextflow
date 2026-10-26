@@ -48,16 +48,6 @@ jobs:
           submodules: true
           persist-credentials: false
 
-      # The sched runner image (stock actions-runner) lacks tools that ubuntu-latest ships
-      - name: Setup sched runner
-        run: |
-          nproc && free -m && df -h / && docker info --format 'dockerd {{.ServerVersion}}'
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends make wget zip gh
-          curl -sSfL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "$RUNNER_TEMP/awscli.zip"
-          unzip -q "$RUNNER_TEMP/awscli.zip" -d "$RUNNER_TEMP"
-          sudo "$RUNNER_TEMP/aws/install"
-
       - name: Get the commit message
         id: get_commit_message
         env:
@@ -183,16 +173,6 @@ jobs:
           fetch-depth: 1
           submodules: true
           persist-credentials: false
-
-      # The sched runner image (stock actions-runner) lacks tools that ubuntu-latest ships
-      - name: Setup sched runner
-        run: |
-          nproc && free -m && df -h / && docker info --format 'dockerd {{.ServerVersion}}'
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends make wget zip gh
-          curl -sSfL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "$RUNNER_TEMP/awscli.zip"
-          unzip -q "$RUNNER_TEMP/awscli.zip" -d "$RUNNER_TEMP"
-          sudo "$RUNNER_TEMP/aws/install"
 
       - name: Setup env
         run: |
