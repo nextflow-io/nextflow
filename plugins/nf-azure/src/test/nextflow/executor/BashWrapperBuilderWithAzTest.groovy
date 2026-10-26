@@ -97,24 +97,21 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local ret=0
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
-                    ret=$?
-                    rm -f "$target"
-                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
+                [[ $ret == 0 ]] && return 0
+                ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                if (( ret > 128 )); then
+                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
-                }
-            }
+                fi
 
-            nxf_az_download_dir() {
-                local source=$1
-                local target=$2
-                local ret=0
+                ## if fails check if it was trying to download a directory
+                [[ -d "$target" ]] || rm -f "$target"
                 mkdir -p "$target"
-
                 azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                     ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
+                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
                 }
             }
@@ -249,24 +246,21 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local ret=0
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
-                    ret=$?
-                    rm -f "$target"
-                    >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
+                [[ $ret == 0 ]] && return 0
+                ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                if (( ret > 128 )); then
+                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
-                }
-            }
+                fi
 
-            nxf_az_download_dir() {
-                local source=$1
-                local target=$2
-                local ret=0
+                ## if fails check if it was trying to download a directory
+                [[ -d "$target" ]] || rm -f "$target"
                 mkdir -p "$target"
-
                 azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                     ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
+                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
                 }
             }

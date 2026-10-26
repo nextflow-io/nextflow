@@ -20,12 +20,12 @@ package nextflow.cloud.azure.batch
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.spi.FileSystemProvider
 
 import com.azure.storage.blob.BlobClient
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzFileSystem
-import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
 import spock.lang.Specification
@@ -35,7 +35,7 @@ import spock.lang.Specification
  */
 class AzFileCopyStrategyTest extends Specification {
 
-    protected Path mockAzPath(String path, boolean isDir=false, Boolean directoryHint=null) {
+    protected Path mockAzPath(String path, boolean isDir=false) {
         assert path.startsWith('az://')
 
         def tokens = path.tokenize('/')
@@ -47,10 +47,9 @@ class AzFileCopyStrategyTest extends Specification {
         attr.isRegularFile() >> !isDir
         attr.isSymbolicLink() >> false
 
-        def provider = Mock(AzFileSystemProvider)
+        def provider = Mock(FileSystemProvider)
         provider.getScheme() >> 'az'
         provider.readAttributes(_, _, _) >> attr
-        provider.readAttributesIfExists(_, _, _) >> attr
 
         def fs = Mock(AzFileSystem)
         fs.provider() >> provider
@@ -74,7 +73,6 @@ class AzFileCopyStrategyTest extends Specification {
         result.getFileName() >> { Paths.get(tokens[-1]) }
         result.getName() >> tokens[1]
         result.blobClient() >> BLOB_CLIENT
-        result.directoryHint() >> directoryHint
         return result
     }
 
@@ -202,24 +200,21 @@ class AzFileCopyStrategyTest extends Specification {
                     local ret=0
                     mkdir -p "$basedir"
 
-                    azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
-                        ret=$?
-                        rm -f "$target"
-                        >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
+                    azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
+                    [[ $ret == 0 ]] && return 0
+                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                         return $ret
-                    }
-                }
+                    fi
 
-                nxf_az_download_dir() {
-                    local source=$1
-                    local target=$2
-                    local ret=0
+                    ## if fails check if it was trying to download a directory
+                    [[ -d "$target" ]] || rm -f "$target"
                     mkdir -p "$target"
-
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         ret=$?
                         rm -rf "$target"
-                        >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                         return $ret
                     }
                 }
@@ -249,7 +244,7 @@ class AzFileCopyStrategyTest extends Specification {
         then:
         binding.stage_inputs == '''\
                 # stage input files
-                nxf_az_download_dir 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
+                nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
                 chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
 
@@ -352,24 +347,21 @@ class AzFileCopyStrategyTest extends Specification {
                     local ret=0
                     mkdir -p "$basedir"
 
-                    azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
-                        ret=$?
-                        rm -f "$target"
-                        >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
+                    azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
+                    [[ $ret == 0 ]] && return 0
+                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                         return $ret
-                    }
-                }
+                    fi
 
-                nxf_az_download_dir() {
-                    local source=$1
-                    local target=$2
-                    local ret=0
+                    ## if fails check if it was trying to download a directory
+                    [[ -d "$target" ]] || rm -f "$target"
                     mkdir -p "$target"
-
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         ret=$?
                         rm -rf "$target"
-                        >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                         return $ret
                     }
                 }
@@ -526,47 +518,27 @@ class AzFileCopyStrategyTest extends Specification {
                         local ret=0
                         mkdir -p "$basedir"
 
-                        azcopy cp "$source?$AZ_SAS" "$target" >/dev/null || {
-                            ret=$?
-                            rm -f "$target"
-                            >&2 echo "Unable to download file: $source (azcopy exit status $ret)"
+                        azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
+                        [[ $ret == 0 ]] && return 0
+                        ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                        if (( ret > 128 )); then
+                            >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                             return $ret
-                        }
-                    }
+                        fi
 
-                    nxf_az_download_dir() {
-                        local source=$1
-                        local target=$2
-                        local ret=0
+                        ## if fails check if it was trying to download a directory
+                        [[ -d "$target" ]] || rm -f "$target"
                         mkdir -p "$target"
-
                         azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             ret=$?
                             rm -rf "$target"
-                            >&2 echo "Unable to download directory: $source (azcopy exit status $ret)"
+                            >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                             return $ret
                         }
                     }
 
                     '''.stripIndent(true)
 
-    }
-
-    def 'should stage a #KIND input with #EXPECTED' () {
-        given:
-        def strategy = new AzFileCopyStrategy()
-        strategy.@maxTransferAttempts = ATTEMPTS
-
-        expect:
-        strategy.stageInputFile(mockAzPath('az://my-data/in/foo', STORED_DIR, HINT), 'foo') == EXPECTED
-
-        where:
-        KIND               | STORED_DIR | HINT  | ATTEMPTS | EXPECTED
-        'file'             | false      | null  | 1        | "downloads+=(\"nxf_az_download 'http://account.blob.core.windows.net/my-data/in/foo' foo\")"
-        'directory'        | true       | null  | 1        | "downloads+=(\"nxf_az_download_dir 'http://account.blob.core.windows.net/my-data/in/foo' foo\")"
-        'directory'        | true       | null  | 3        | "downloads+=(\"nxf_cp_retry nxf_az_download_dir 'http://account.blob.core.windows.net/my-data/in/foo' foo\")"
-        'hashed file'      | true       | false | 1        | "downloads+=(\"nxf_az_download 'http://account.blob.core.windows.net/my-data/in/foo' foo\")"
-        'hashed directory' | false      | true  | 1        | "downloads+=(\"nxf_az_download_dir 'http://account.blob.core.windows.net/my-data/in/foo' foo\")"
     }
 
 }

@@ -15,14 +15,12 @@
  */
 package nextflow.cloud.azure.batch
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzBashLib
-import nextflow.cloud.azure.nio.AzPath
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -88,7 +86,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
         String result = ( remoteBinDir ? """\
-            nxf_az_download_dir '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
+            nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
             chmod +x \$PWD/.nextflow-bin/* || true
             """.stripIndent(true) : '' )
 
@@ -103,19 +101,11 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
-        final download = isDirectory(path) ? 'nxf_az_download_dir' : 'nxf_az_download'
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry ${download} '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
-                : "downloads+=(\"${download} '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                : "downloads+=(\"nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
         return stage_cmd
-    }
-
-    // wrappers are built one at a time by the task submitter, so avoid a storage call
-    // per input when task hashing has already read the path attributes
-    static protected boolean isDirectory(Path path) {
-        final hint = path instanceof AzPath ? ((AzPath)path).directoryHint() : null
-        return hint != null ? hint : Files.isDirectory(path)
     }
 
     /**
