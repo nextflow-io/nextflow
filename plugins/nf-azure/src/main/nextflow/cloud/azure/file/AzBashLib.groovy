@@ -76,7 +76,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         nxf_az_download() {
             local source=$1
             local target=$2
-            local basedir=$(dirname $2)
+            local basedir=$(dirname "$2")
             local ret=0
             mkdir -p "$basedir"
 
@@ -94,7 +94,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                 ret=$?
                 rm -rf "$target"
-                >&2 echo "Unable to download path: $source"
+                >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                 return $ret
             }
         }
