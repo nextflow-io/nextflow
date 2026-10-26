@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.24.3 - 26 Oct 2026
+- Fix Azure Batch pool creation when the pool does not exist (#7904) [b3f0f6c42]
+- Prevent leaking environment secrets in CI (#7873) [5aabd84b3]
+
 1.24.2 - 15 Oct 2026
 - Update azure-identity to 1.18.7 (#7796) [f1c2234a6]
 - Fix unit tests that depend on global state from other tests (#7804) [49bdb37ee]
