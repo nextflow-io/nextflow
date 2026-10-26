@@ -944,9 +944,11 @@ class FileHelper {
      * Strip the trailing slash that some cloud storage providers (e.g. GCS)
      * preserve in the path of a directory
      *
-     * @param dir
+     * @param dir A directory path, possibly with a trailing slash
+     * @return The directory path without the trailing slash
      */
     static protected Path stripTrailingSlash(Path dir) {
+        // the file name of a GCS path does not include the trailing slash
         return dir.toString().endsWith('/')
             ? dir.resolveSibling(dir.getFileName())
             : dir
