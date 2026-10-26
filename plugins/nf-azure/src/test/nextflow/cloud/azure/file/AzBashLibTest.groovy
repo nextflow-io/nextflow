@@ -79,6 +79,11 @@ class AzBashLibTest extends Specification {
                     >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
                 }
+                ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
+                if rmdir "$target" 2>/dev/null; then
+                    >&2 echo "Unable to download path: $source (not found)"
+                    return 1
+                fi
             }
             '''.stripIndent()
     }
@@ -191,6 +196,11 @@ class AzBashLibTest extends Specification {
                     >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
                 }
+                ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
+                if rmdir "$target" 2>/dev/null; then
+                    >&2 echo "Unable to download path: $source (not found)"
+                    return 1
+                fi
             }
             '''.stripIndent()
     }
@@ -303,6 +313,11 @@ class AzBashLibTest extends Specification {
                     >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                     return $ret
                 }
+                ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
+                if rmdir "$target" 2>/dev/null; then
+                    >&2 echo "Unable to download path: $source (not found)"
+                    return 1
+                fi
             }
             '''.stripIndent()
     }
@@ -348,6 +363,9 @@ class AzBashLibTest extends Specification {
           */int.txt)     exit 130 ;;
           */dir/\\*)      echo a > "$dst/a.txt" ;;
           */oomdir/\\*)   echo a > "$dst/a.txt"; kill -KILL $$ ;;
+          */emptydir/\\*) echo -n > "$dst/.azure_blob_dir" ;;
+          */denied/\\*)   exit 1 ;;
+          */\\*)          ;;
           *)             echo "failed to perform copy command due to error: cannot use directory as source without --recursive or a trailing wildcard (/*)"; exit 1 ;;
         esac
         '''.stripIndent()
@@ -395,8 +413,10 @@ class AzBashLibTest extends Specification {
         SOURCE        | STATUS | RESULT | CALLS | ERROR
         'file.txt'    | 0      | 'file' | 1     | ''
         'dir'         | 0      | 'dir'  | 2     | ''
-        'missing'     | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (azcopy exit status 1)\n'
-        'partial.txt' | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/partial.txt (azcopy exit status 1)\n'
+        'emptydir'    | 0      | 'dir'  | 2     | ''
+        'missing'     | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (not found)\n'
+        'partial.txt' | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/partial.txt (not found)\n'
+        'denied'      | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/denied (azcopy exit status 1)\n'
         'oom.txt'     | 137    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/oom.txt (azcopy exit status 137)\n'
         'term.txt'    | 143    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/term.txt (azcopy exit status 143)\n'
         'int.txt'     | 130    | 'none' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/int.txt (azcopy exit status 130)\n'

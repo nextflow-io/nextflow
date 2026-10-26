@@ -97,6 +97,11 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                 return $ret
             }
+            ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
+            if rmdir "$target" 2>/dev/null; then
+                >&2 echo "Unable to download path: $source (not found)"
+                return 1
+            fi
         }
         '''.stripIndent(true)
     }
