@@ -150,6 +150,51 @@ Names are case-insensitive. A memory size in the name is ignored, so `nvidia-a10
 
 Only NVIDIA GPUs are supported. A task that requests an unknown GPU, or a GPU of another vendor such as `amd.com/gpu`, fails when it is submitted. A task that requests a GPU not offered in the compute environment region cannot be scheduled. Tasks that request different GPU models run on separate instances.
 
+### Available GPUs
+
+The following GPUs are available on each cloud provider. Use the GPU model ID or the short name as the `type` option. Availability varies by region.
+
+**AWS**
+
+| GPU model ID | Short name | Instance families |
+| --- | --- | --- |
+| `nvidia-t4` | `t4` | g4dn |
+| `nvidia-a10g` | `a10g` | g5 |
+| `nvidia-l4` | `l4` | g6, gr6 |
+| `nvidia-l40s` | `l40s` | g6e |
+| `nvidia-rtx-pro-4500` | `rtx-pro-4500` | g7 |
+| `nvidia-v100` | `v100` | p3dn |
+| `nvidia-a100` | `a100` | p4d |
+| `nvidia-h100` | `h100` | p5 |
+| `nvidia-b200` | `b200` | p6-b200 |
+
+**Azure**
+
+| GPU model ID | Short name | VM series |
+| --- | --- | --- |
+| `nvidia-m60` | `m60` | NVv3 |
+| `nvidia-t4` | `t4` | NCasT4_v3 |
+| `nvidia-v100` | `v100` | NCv3, NDv2 |
+| `nvidia-a10` | `a10` | NCads_A10_v4, NVads_A10_v5 |
+| `nvidia-a100` | `a100` | NCads_A100_v4, NDasr_A100_v4, NDm_A100_v4 |
+| `nvidia-h100` | `h100` | ND_H100_v5 |
+| `nvidia-h100-nvl` | `h100-nvl` | NCads_H100_v5, NCCads_H100_v5 |
+| `nvidia-h200` | `h200` | ND_H200_v5 |
+| `nvidia-rtx-pro-6000` | `rtx-pro-6000` | NCds_RTXPRO6000BSE_v6 |
+
+**Google Cloud**
+
+| GPU model ID | Short name | Machine series |
+| --- | --- | --- |
+| `nvidia-l4` | `l4` | G2 |
+| `nvidia-rtx-pro-6000` | `rtx-pro-6000` | G4 |
+| `nvidia-a100` | `a100` | A2 |
+| `nvidia-h100` | `h100` | A3 |
+| `nvidia-h200` | `h200` | A3 Ultra |
+| `nvidia-b200` | `b200` | A4 |
+
+On Google Cloud, only machine series with built-in GPUs are available. GPUs attached to N1 machine types, such as the T4 and V100, are not supported.
+
 ## Disk support
 
 When a process specifies the [disk][process-disk] directive, the Seqera executor provisions storage for the task container. It supports two disk allocation strategies:
