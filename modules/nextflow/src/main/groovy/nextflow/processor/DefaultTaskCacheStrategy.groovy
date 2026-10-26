@@ -78,7 +78,7 @@ class DefaultTaskCacheStrategy implements TaskCacheStrategy {
         if( shouldTryCache && resume(task, key, resolver) )
             return
 
-        final workDir = claimWorkDir(resolver.workDirFor(key), task.failCount + 1)
+        final workDir = claimWorkDir(resolver.workDirFor(key), task.failCount + task.rerunCount + 1)
         resolver.launch(task, key, workDir)
     }
 

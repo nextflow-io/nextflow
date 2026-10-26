@@ -339,6 +339,13 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
+     * The number of times the task has been rerun because of a retryable error e.g. a node or
+     * spot termination. Unlike {@link #failCount} it does not count against the {@code maxRetries}
+     * directive and does not increase {@code task.attempt}
+     */
+    volatile int rerunCount
+
+    /**
      * The number of times the submit of the task has been retried
      */
     volatile int submitRetries

@@ -447,6 +447,65 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedError == null
     }
 
+    @Unroll
+    def 'should handle the scheduler retry verdict [status=#STATUS; retryable=#RETRYABLE; rerunCount=#RERUN_COUNT]'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            getRerunCount() >> RERUN_COUNT
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(STATUS)
+            .exitCode(EXIT)
+            .errorMessage('Fusion snapshot restore failed')
+        def describeResponse = new DescribeTaskResponse()
+            .taskState(taskState)
+            .retryable(RETRYABLE)
+            .retryReason(RETRYABLE ? 'SNAPSHOT_RESTORE_FAILED' : null)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+        handler.setBatchTaskId('task-175')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == EXIT
+        (capturedError instanceof SeqeraRetryableException) == RERUN
+        0 * taskRun.setAborted(_)
+        and:
+        !RERUN || capturedError.message == 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        RERUN || capturedError == null
+
+        where:
+        STATUS                    | EXIT | RETRYABLE | RERUN_COUNT                                 | RERUN
+        SchedTaskStatus.FAILED    | 175  | true      | 0                                           | true
+        SchedTaskStatus.FAILED    | 175  | true      | SeqeraTaskHandler.MAX_RETRYABLE_RERUNS - 1  | true
+        SchedTaskStatus.FAILED    | 175  | true      | SeqeraTaskHandler.MAX_RETRYABLE_RERUNS      | false
+        SchedTaskStatus.FAILED    | 175  | false     | 0                                           | false
+        SchedTaskStatus.FAILED    | 175  | null      | 0                                           | false
+        SchedTaskStatus.SUCCEEDED | 0    | true      | 0                                           | false
+    }
+
     def 'should use scheduler API exit code when exit file is not available on a failed task'() {
         given:
         Throwable capturedError = null

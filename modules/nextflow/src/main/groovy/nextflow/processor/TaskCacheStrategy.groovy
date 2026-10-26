@@ -58,7 +58,7 @@ interface TaskCacheStrategy extends ExtensionPoint {
      *
      * @param task The task to resolve.
      * @param hash On a first attempt, the task hash as computed by its {@link TaskHasher}. On a
-     *      <b>retry</b> ({@code tryCache == false} and {@code task.failCount > 0}) it is instead the
+     *      <b>retry</b> ({@code tryCache == false} and {@code task.failCount + task.rerunCount > 0}) it is instead the
      *      key this strategy passed to {@link TaskResolver#launch launch} for the previous attempt:
      *      {@code TaskProcessor} retries with {@code taskCopy.hash}, which {@code submitTask} set
      *      from that key. For {@link DefaultTaskCacheStrategy} that is the task key shared by every
