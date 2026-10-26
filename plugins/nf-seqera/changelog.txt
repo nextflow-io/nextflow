@@ -1,5 +1,10 @@
 nf-seqera changelog
 ====================
+0.26.1 - 26 Oct 2026
+- Bump sched-client to 0.111.0 in nf-seqera [1c83f9e7f]
+- Make Wave optional for the Seqera executor and skip the Wave Fusion layer (#7744) [fbcac2df0]
+- Fix serial input files metrics computation in nf-seqera (#7899) [eed39756b]
+
 0.26.0 - 6 Oct 2026
 - Bump sched-client to 0.100.0 in nf-seqera [fe446ce6d]
 - Report sched multi-attempt tasks with the final attempt's start time (#7755) [ab6f7c60a]
