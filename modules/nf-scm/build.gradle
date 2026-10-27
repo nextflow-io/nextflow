@@ -28,6 +28,6 @@ dependencies {
     api project(':nf-commons')
     api('org.eclipse.jgit:org.eclipse.jgit:7.1.1.202505221757-r')
 
-    // TemporaryPath and the runtime config parser used by the manifest and SCM file tests
+    // TemporaryPath test helper
     testImplementation(testFixtures(project(':nextflow')))
 }

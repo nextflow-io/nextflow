@@ -212,7 +212,7 @@ class ProviderConfigTest extends Specification {
     def 'should create all config providers'() {
 
         when:
-        def result = ProviderConfig.createFromText(CONFIG)
+        def result = ProviderConfig.createFromMap(new ConfigSlurper().parse(CONFIG))
         then:
         result.size() == 7
 

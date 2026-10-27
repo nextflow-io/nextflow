@@ -25,6 +25,7 @@ import com.sun.management.OperatingSystemMXBean
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.config.ProviderConfigParser
 import nextflow.BuildInfo
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
@@ -77,7 +78,7 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        try (final manager = new AssetManager(args[0])) {
+        try (final manager = new AssetManager(args[0], ProviderConfigParser.getDefault())) {
             if( manager.isNotInitialized() ) {
                 throw new AbortOperationException("Unknown project `${args[0]}`")
             }

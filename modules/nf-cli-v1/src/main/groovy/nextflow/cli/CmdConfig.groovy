@@ -24,6 +24,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.config.ProviderConfigParser
 import nextflow.NF
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigCmdAdapter
@@ -235,7 +236,7 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        try (final manager = new AssetManager(path, revision)) {
+        try (final manager = new AssetManager(path, ProviderConfigParser.getDefault(), null, revision)) {
             if( revision && manager.isUsingLegacyStrategy() ){
                 log.warn("The local asset for ${path} does not support multi-revision - 'revision' option is ignored\n" +
                     "Consider updating the project using 'nextflow pull ${path} -r $revision -migrate'")
