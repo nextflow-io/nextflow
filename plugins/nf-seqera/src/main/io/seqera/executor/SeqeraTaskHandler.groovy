@@ -60,13 +60,6 @@ import nextflow.trace.TraceRecord
 @CompileStatic
 class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
-    /**
-     * Max number of times a task the scheduler reports as retryable is rerun as a new task.
-     * Checked against {@code task.rerunCount}. Past it the failure goes through {@code errorStrategy}
-     * on its exit code
-     */
-    static final int MAX_RETRYABLE_RERUNS = 3
-
     private SchedClient client
 
     private SeqeraExecutor executor
@@ -410,13 +403,14 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      * Whether the failed task must be rerun as a new task, in a new work dir. The scheduler marks
      * a failure retryable when it was caused by the infrastructure (e.g. a failed Fusion snapshot
      * restore) rather than by the workload. A scheduler not reporting the field, or a task that
-     * already reached {@link #MAX_RETRYABLE_RERUNS}, falls back to {@code errorStrategy}.
+     * was already rerun as many times as the {@code maxRetries} directive, falls back to {@code errorStrategy}.
      */
     protected boolean isRetryable() {
         if( !cachedTaskResponse?.getRetryable() )
             return false
-        if( task.rerunCount >= MAX_RETRYABLE_RERUNS ) {
-            log.debug "[SEQERA] Process `${task.lazyName()}` - retryable failure (${cachedTaskResponse.getRetryReason()}) exceeded max reruns ${MAX_RETRYABLE_RERUNS} -- using errorStrategy"
+        final maxReruns = task.config.getMaxRetries()
+        if( task.rerunCount >= maxReruns ) {
+            log.debug "[SEQERA] Process `${task.lazyName()}` - retryable failure (${cachedTaskResponse.getRetryReason()}) exceeded max reruns ${maxReruns} -- using errorStrategy"
             return false
         }
         return true
