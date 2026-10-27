@@ -30,7 +30,7 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: sched-8c
+    runs-on: sched/run=${{ github.run_id }}-build-${{ matrix.java_version }}/cpu=8/mem=32
     permissions:
       contents: read
       id-token: write
@@ -152,7 +152,7 @@ jobs:
   test:
     if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
     needs: build
-    runs-on: sched-8c
+    runs-on: sched/run=${{ github.run_id }}-${{ matrix.java_version }}-${{ matrix.test_mode }}/cpu=8/mem=32
     permissions:
       contents: read
       id-token: write
