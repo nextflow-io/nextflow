@@ -126,7 +126,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         // escaped twice because `eval "..."` parses the patterns twice
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.doubleQuoted(Escape.path(it)) )
+            escape.add( Escape.doubleQuoted(Escape.pattern(it)) )
 
         return """\
             uploads=()

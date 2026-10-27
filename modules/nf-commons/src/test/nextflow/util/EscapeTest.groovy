@@ -145,4 +145,30 @@ class EscapeTest extends Specification {
         'printf %s NAME'        | { String it -> Escape.path(it) }
         'eval "printf %s NAME"' | { String it -> Escape.doubleQuoted(Escape.path(it)) }
     }
+
+    @Unroll
+    def 'should match glob pattern #PATTERN in eval' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        folder.resolve(FILE).text = 'x'
+
+        when:
+        def script = 'eval "ls -1d ' + Escape.doubleQuoted(Escape.pattern(PATTERN)) + '"'
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+
+        then:
+        proc.inputStream.text == FILE + '\n'
+        proc.waitFor() == 0
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        PATTERN             | FILE
+        'g\\[1\\].txt'      | 'g[1].txt'
+        'x\\\\y.txt'        | 'x\\y.txt'
+        '*.csv'             | 'data.csv'
+        'a b;c `d` "e".txt' | 'a b;c `d` "e".txt'
+        'n\nm.txt'          | 'n\nm.txt'
+    }
 }
