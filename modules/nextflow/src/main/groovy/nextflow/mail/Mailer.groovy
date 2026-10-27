@@ -125,7 +125,7 @@ class Mailer {
             final props = cfg.toProperties()
             props.setProperty('mail.transport.protocol', 'smtp')
             // -- check proxy configuration
-            if( !props.contains('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
+            if( !props.containsKey('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
                 props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
                 props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
             }
