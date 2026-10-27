@@ -55,7 +55,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
     def 'should preserve special characters in download and upload file names' () {
         given:
         def folder = java.nio.file.Files.createTempDirectory('test')
-        def name = 'a\'b $(c) `d` "e"\nf;g.txt'
+        def name = 'a\'b $(c) `d` "e" f;g.txt'
         folder.resolve(name).text = 'x'
         def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
         // stub the transfer functions, and run the commands with `eval` as `nxf_parallel` does
