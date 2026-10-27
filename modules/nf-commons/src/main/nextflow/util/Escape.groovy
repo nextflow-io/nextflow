@@ -36,6 +36,8 @@ class Escape {
 
     final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', '\n']
 
+    final private static List<String> LITERAL_CHARS = SPECIAL_CHARS + ["*", "?", "{", "}", "[", "]"]
+
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false, boolean keepEscapes=false) {
         def copy = new StringBuilder(str.size() +10)
         for( int i=0; i<str.size(); i++) {
@@ -80,7 +82,7 @@ class Escape {
         final splitter = FilePatternSplitter.glob().parse(val)
         return splitter.isPattern()
             ? replace(SPECIAL_CHARS, val, true, true)
-            : path(splitter.strip(val))
+            : replace(LITERAL_CHARS, splitter.strip(val))
     }
 
     static String path(Path val) {
