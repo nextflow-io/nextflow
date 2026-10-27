@@ -125,6 +125,10 @@ public sealed interface SpecNode {
             var paramType = method.getParameterTypes()[0];
             option.types.add(paramType);
         }
+        // the `secret` directive is repeatable in a process definition,
+        // but must be a list in the configuration
+        var secret = children.get("secret");
+        children.put("secret", new Option(secret.description(), List.of(List.class)));
         return new Scope(description, children);
     }
 

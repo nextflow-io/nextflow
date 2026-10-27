@@ -15,6 +15,13 @@ The `seqera` executor runs pipeline tasks using [Seqera Intelligent Compute](htt
 
 To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be in an S3 bucket.
 
+The executor requires [Fusion](https://docs.seqera.io/fusion) (`fusion.enabled = true`). By default, [Wave](https://docs.seqera.io/wave) is also required, because it adds the Fusion client to the task containers.
+
+:::warning{title="Experimental: may change in a future release."}
+:::
+
+Set `seqera.executor.fusionMode = 'native'` to have the compute hosts provide the Fusion client instead. In this mode Wave is optional. When Wave is enabled, it works as usual, including the Fusion layer, which the compute hosts override with their own Fusion client. When Wave is disabled, tasks run with their container image as-is, and the project `bin` directory is not made available to them.
+
 Use the following process directives to control resource requests and other job characteristics:
 
 - [arch][process-arch]
@@ -116,6 +123,20 @@ process align {
 
 Tasks with different limits run on separate clusters. Tasks that set a limit, including `0`, do not use the compute environment's warm pool.
 
+## Infrastructure failures
+
+When a task fails because of the infrastructure rather than the task itself, for example when a [Fusion Snapshot](https://docs.seqera.io/fusion/guide/snapshots) cannot be restored, the scheduler reports the failure as retryable. Nextflow then reruns the task in a new work directory, whatever the [errorStrategy][process-errorstrategy] directive says.
+
+Each rerun counts as one task failure towards the [maxRetries][process-maxretries] directive (default: `1`). The rerun keeps the same `task.attempt`, but if the task later fails and is retried by the `errorStrategy` directive, the reruns are included in the new `task.attempt`. Once the task has failed `maxRetries` times, an infrastructure failure is no longer rerun and is handled by the `errorStrategy` directive as usual.
+
+To allow more reruns, increase `maxRetries`. For example:
+
+```nextflow
+process {
+    maxRetries = 3
+}
+```
+
 ## Disk support
 
 When a process specifies the [disk][process-disk] directive, the Seqera executor provisions storage for the task container. It supports two disk allocation strategies:
@@ -170,7 +191,9 @@ The EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEn
 [process-containeroptions]: ../process/directives/container-options
 [process-cpus]: ../process/directives/cpus
 [process-disk]: ../process/directives/disk
+[process-errorstrategy]: ../process/directives/error-strategy
 [process-hints]: ../process/directives/hints
+[process-maxretries]: ../process/directives/max-retries
 [process-memory]: ../process/directives/memory
 [process-secret]: ../process/directives/secret
 [process-time]: ../process/directives/time
