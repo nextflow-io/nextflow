@@ -147,10 +147,11 @@ class EscapeTest extends Specification {
     }
 
     @Unroll
-    def 'should match glob pattern #PATTERN in eval' () {
+    def 'should match output pattern #PATTERN in eval as the output file collector does' () {
         given:
         def folder = java.nio.file.Files.createTempDirectory('test')
         folder.resolve(FILE).text = 'x'
+        def splitter = nextflow.file.FilePatternSplitter.glob().parse(PATTERN)
 
         when:
         def script = 'eval "ls -1d ' + Escape.doubleQuoted(Escape.pattern(PATTERN)) + '"'
@@ -159,6 +160,10 @@ class EscapeTest extends Specification {
         then:
         proc.inputStream.text == FILE + '\n'
         proc.waitFor() == 0
+        and:
+        splitter.isPattern()
+            ? java.nio.file.FileSystems.default.getPathMatcher('glob:' + PATTERN).matches(Paths.get(FILE))
+            : splitter.strip(PATTERN) == FILE
 
         cleanup:
         folder?.deleteDir()
@@ -166,9 +171,12 @@ class EscapeTest extends Specification {
         where:
         PATTERN             | FILE
         'g\\[1\\].txt'      | 'g[1].txt'
-        'x\\\\y.txt'        | 'x\\y.txt'
+        'x\\\\y.txt'        | 'x\\\\y.txt'
         'x\\:y\\!z.txt'     | 'x\\:y\\!z.txt'
         '*.csv'             | 'data.csv'
+        '*\\.txt'           | 'a.txt'
+        'a\\b*'             | 'ab.txt'
+        'x\\\\y*'           | 'x\\y.txt'
         'a b;c `d` "e".txt' | 'a b;c `d` "e".txt'
         'n\nm.txt'          | 'n\nm.txt'
     }

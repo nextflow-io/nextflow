@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.extension.FilesEx
+import nextflow.file.FilePatternSplitter
 
 /**
  * Escape helper class
@@ -35,16 +36,14 @@ class Escape {
 
     final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', '\n']
 
-    // characters a backslash escapes in an output glob pattern, see FilePatternSplitter
-    final private static String GLOB_ESCAPED = '*?[]{}\\'
-
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false, boolean keepEscapes=false) {
         def copy = new StringBuilder(str.size() +10)
         for( int i=0; i<str.size(); i++) {
             def ch = str[i]
-            // in a glob pattern a backslash makes the next glob character literal, so keep the pair
-            if( keepEscapes && ch == '\\' && i+1 < str.size() && GLOB_ESCAPED.contains(str[i+1]) ) {
-                copy.append('\\').append(str[++i])
+            // in a glob pattern a backslash makes the next character literal, so keep the pair
+            if( keepEscapes && ch == '\\' && i+1 < str.size() ) {
+                final next = str[++i]
+                copy.append( next == '\n' ? '$\'\\n\'' : '\\' + next )
                 continue
             }
             def p = special.indexOf(ch)
@@ -74,10 +73,14 @@ class Escape {
     }
 
     /**
-     * Escape a glob pattern, keeping its backslash escapes, e.g. `file\[1\].txt`
+     * Escape an output file pattern the way the output file collector reads it:
+     * a glob pattern keeps its backslash escapes, e.g. `file\[1\].txt`, any other value is a literal file name
      */
     static String pattern(String val) {
-        replace(SPECIAL_CHARS, val, true, true)
+        final splitter = FilePatternSplitter.glob().parse(val)
+        return splitter.isPattern()
+            ? replace(SPECIAL_CHARS, val, true, true)
+            : path(splitter.strip(val))
     }
 
     static String path(Path val) {
