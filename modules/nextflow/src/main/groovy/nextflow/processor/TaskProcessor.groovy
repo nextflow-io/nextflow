@@ -1124,7 +1124,7 @@ class TaskProcessor {
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
-                task.rerunCount+=1
+                task.failCount+=1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
                     try {

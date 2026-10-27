@@ -22,8 +22,7 @@ import nextflow.exception.ProcessRetryableException
 
 /**
  * Signals a task the Seqera scheduler failed for an infrastructure reason and reported as
- * retryable, so it is rerun as a new task, in a new work dir, regardless of the
- * {@code errorStrategy} directive
+ * retryable, so it is rerun in a new work dir regardless of the {@code errorStrategy} directive
  */
 @InheritConstructors
 @CompileStatic

@@ -27,8 +27,6 @@ import nextflow.Session
 import nextflow.cache.CacheDB
 import nextflow.trace.TraceRecord
 import nextflow.exception.IllegalArityException
-import nextflow.exception.NodeTerminationException
-import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -415,29 +413,6 @@ class TaskProcessorTest extends Specification {
                 3   |       -1      |               0   |               0   | 2                 | ErrorStrategy.RETRY
                 3   |       -1      |               0   |               0   | 4                 | ErrorStrategy.TERMINATE
 
-    }
-
-    def 'should rerun a task failed with a retryable error without counting it as a failure' () {
-        given:
-        def session = Mock(Session)
-        def proc = [:] as TaskProcessor
-        proc.session = session
-        and:
-        def task = new TaskRun(name: 'foo', context: new TaskContext(holder: [:]))
-        task.config = new TaskConfig(errorStrategy: 'retry', maxRetries: 1, attempt: 1)
-        task.failCount = 1
-        def error = new ProcessFailedException('Process `foo` failed', new NodeTerminationException('Node terminated'))
-
-        when:
-        def result = proc.resumeOrDie(task, error)
-
-        then:
-        1 * session.getExecService() >> Mock(ExecutorService)
-        result == ErrorStrategy.RETRY
-        task.rerunCount == 1
-        and: 'the user retries and the attempt are untouched'
-        task.failCount == 1
-        task.config.attempt == 1
     }
 
     def 'should export env vars' () {

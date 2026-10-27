@@ -448,7 +448,7 @@ class SeqeraTaskHandlerTest extends Specification {
     }
 
     @Unroll
-    def 'should handle the scheduler retry verdict [status=#STATUS; exit=#EXIT; retryable=#RETRYABLE; rerunCount=#RERUN_COUNT]'() {
+    def 'should handle the scheduler retry verdict [status=#STATUS; exit=#EXIT; retryable=#RETRYABLE; failCount=#FAIL_COUNT]'() {
         given:
         Throwable capturedError = null
         Integer capturedExitStatus = null
@@ -457,7 +457,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getWorkDirStr() >> '/work/ab/cd1234'
             getConfig() >> Mock(TaskConfig) { getMaxRetries() >> 3 }
             lazyName() >> 'test_task'
-            getRerunCount() >> RERUN_COUNT
+            getFailCount() >> FAIL_COUNT
             setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
             getExitStatus() >> { capturedExitStatus }
             setError(_) >> { args -> capturedError = args[0] }
@@ -495,7 +495,7 @@ class SeqeraTaskHandlerTest extends Specification {
         0 * taskRun.setAborted(_)
 
         where:
-        STATUS                    | EXIT | RETRYABLE | RERUN_COUNT | ERROR                    | MESSAGE
+        STATUS                    | EXIT | RETRYABLE | FAIL_COUNT  | ERROR                    | MESSAGE
         SchedTaskStatus.FAILED    | 175  | true      | 0           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
         SchedTaskStatus.FAILED    | 175  | true      | 2           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
         SchedTaskStatus.FAILED    | 175  | true      | 3           | null                     | null

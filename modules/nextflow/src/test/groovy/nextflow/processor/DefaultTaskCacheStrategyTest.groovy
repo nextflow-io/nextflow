@@ -171,25 +171,6 @@ class DefaultTaskCacheStrategyTest extends Specification {
         1 * resolver.launch(_, key, root.resolve('ab').resolve('cdef-5'))
     }
 
-    def 'a rerun after a retryable error starts past the work dirs of the failed and rerun attempts'() {
-        given:
-        def resolver = Mock(TaskResolver)
-        def key = attempt(HashCode.fromInt(100), 1)
-        def first = root.resolve('ab').resolve('cdef')
-        def task = Mock(TaskRun) {
-            getFailCount() >> 1
-            getRerunCount() >> 2
-            getRunType() >> TaskProcessor.RunType.RETRY
-        }
-
-        when:
-        new DefaultTaskCacheStrategy().resolve(task, key, false, resolver)
-        then:
-        1 * resolver.workDirFor(key) >> first
-        1 * resolver.launch(_, key, root.resolve('ab').resolve('cdef-4'))
-        0 * resolver.entry(_)
-    }
-
     def 'resumes a retry from a cache written by a previous version'() {
         given:
         def resolver = Mock(TaskResolver)
