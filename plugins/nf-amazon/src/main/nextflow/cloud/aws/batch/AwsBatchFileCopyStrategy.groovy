@@ -94,9 +94,12 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
+        // escaped twice because `nxf_parallel` runs each command with `eval`
+        final source = Escape.doubleQuoted(Escape.path(path))
+        final target = Escape.doubleQuoted(Escape.path(targetName))
         def stage_cmd = opts.maxTransferAttempts > 1 && !opts.retryMode
-                ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${source} ${target}\")"
+                : "downloads+=(\"nxf_s3_download s3:/${source} ${target}\")"
         return stage_cmd
     }
 
@@ -113,15 +116,16 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( !patterns )
             return null
 
+        // escaped twice because `eval "..."` parses the patterns twice
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.path(it) )
+            escape.add( Escape.doubleQuoted(Escape.path(it)) )
 
         return """\
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
+                uploads+=("nxf_s3_upload \$(printf %q "\$name") s3:/${Escape.doubleQuoted(Escape.path(targetDir))}")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"

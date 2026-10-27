@@ -116,4 +116,33 @@ class EscapeTest extends Specification {
         and:
         '$foo'      | '\\$foo'
     }
+
+    def 'should escape newlines' () {
+        expect:
+        Escape.path('a\nb') == 'a$\'\\n\'b'
+        Escape.wildcards('a\nb') == 'a$\'\\n\'b'
+    }
+
+    def 'should escape double-quoted string' () {
+        expect:
+        Escape.doubleQuoted('a\\b"c$d`e f') == 'a\\\\b\\"c\\$d\\`e f'
+    }
+
+    @Unroll
+    def 'should preserve a file name with special characters in bash' () {
+        given:
+        def name = 'a\nb c;d `e` $(f) "g" \'h'
+
+        when:
+        def proc = ['bash', '-c', CMD.replace('NAME', ARG(name))].execute()
+
+        then:
+        proc.text == name
+        proc.waitFor() == 0
+
+        where:
+        CMD                     | ARG
+        'printf %s NAME'        | { String it -> Escape.path(it) }
+        'eval "printf %s NAME"' | { String it -> Escape.doubleQuoted(Escape.path(it)) }
+    }
 }

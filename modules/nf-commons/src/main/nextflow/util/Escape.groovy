@@ -29,17 +29,22 @@ import nextflow.extension.FilesEx
 @CompileStatic
 class Escape {
 
-    final private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';']
+    final private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';', '\n']
 
     final private static List<String> VAR_CHARS = ['$']
 
-    final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
+    final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', '\n']
 
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false) {
         def copy = new StringBuilder(str.size() +10)
         for( int i=0; i<str.size(); i++) {
             def ch = str[i]
             def p = special.indexOf(ch)
+            // a backslash-newline is a line continuation, so use ANSI-C quoting; it also survives `eval "..."`
+            if( p != -1 && ch == '\n' ) {
+                copy.append('$\'\\n\'')
+                continue
+            }
             if( p != -1 ) {
                 // when ! is the first character after a `[` it should not be escaped
                 // see http://man7.org/linux/man-pages/man7/glob.7.html
@@ -108,5 +113,12 @@ class Escape {
 
     static String variable(String val) {
         replace(VAR_CHARS, val, false)
+    }
+
+    /**
+     * Escape the characters that are special inside a bash double-quoted string, e.g. the argument of `eval "..."`
+     */
+    static String doubleQuoted(String val) {
+        val.replaceAll('[\\\\"$`]', '\\\\$0')
     }
 }

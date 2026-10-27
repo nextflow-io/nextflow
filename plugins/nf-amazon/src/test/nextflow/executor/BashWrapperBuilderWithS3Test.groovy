@@ -57,7 +57,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
         then:
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai bla\\ nk.txt" | sort | uniq); do
+                    for name in $(eval "ls -1d test.bam test.bai bla\\\\ nk.txt" | sort | uniq); do
                         nxf_s3_upload $name s3://some/buck\\ et
                     done
                     unset IFS
@@ -123,7 +123,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://some/bucket")
+                        uploads+=("nxf_s3_upload $(printf %q "$name") s3://some/bucket")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"

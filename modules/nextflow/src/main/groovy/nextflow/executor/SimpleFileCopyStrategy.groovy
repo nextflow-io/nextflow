@@ -175,9 +175,10 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( !patterns )
             return null
 
+        // escaped twice because `eval "..."` parses the patterns twice
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.path(it) )
+            escape.add( Escape.doubleQuoted(Escape.path(it)) )
 
         final mode = stageoutMode ?: ( this.targetDir==null || this.workDir==this.targetDir ? 'copy' : 'move' )
         return """\

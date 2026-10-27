@@ -43,12 +43,41 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                                         uploads=()
                                         IFS=$'\\n'
                                         for name in $(eval "ls -1d outputs_* final_folder" | sort | uniq); do
-                                            uploads+=("nxf_s3_upload '$name' s3://data/results")
+                                            uploads+=("nxf_s3_upload $(printf %q "$name") s3://data/results")
                                         done
                                         unset IFS
                                         nxf_parallel "${uploads[@]}"
                                         '''
                                         .stripIndent().leftTrim()
+    }
+
+    def 'should preserve special characters in download and upload file names' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def name = 'a\'b $(c) `d` "e"\nf;g.txt'
+        folder.resolve(name).text = 'x'
+        def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
+        // stub the transfer functions, and run the commands with `eval` as `nxf_parallel` does
+        def script = '''
+            nxf_s3_download() { printf '%s\\n' "$2" >> downloads.log; }
+            nxf_s3_upload() { printf '%s\\n' "$1" >> uploads.log; }
+            nxf_parallel() { for cmd in "$@"; do eval "$cmd"; done; }
+            downloads=()
+            '''.stripIndent()
+        script += copy.stageInputFile(Paths.get('/bucket', name), name) + '\n'
+        script += 'nxf_parallel "${downloads[@]}"\n'
+        script += copy.getUnstageOutputFilesScript(['*.txt'], Paths.get('/bucket/out'))
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('downloads.log').text == name + '\n'
+        folder.resolve('uploads.log').text == name + '\n'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should return unstage script' () {
@@ -63,7 +92,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d file.txt" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                        uploads+=("nxf_s3_upload $(printf %q "$name") s3://foo/bar")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"
@@ -77,7 +106,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         uploads=()
                         IFS=$'\\n'
                         for name in $(eval "ls -1d file-*.txt" | sort | uniq); do
-                            uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                            uploads+=("nxf_s3_upload $(printf %q "$name") s3://foo/bar")
                         done
                         unset IFS
                         nxf_parallel "${uploads[@]}"
@@ -91,7 +120,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d file-[a,b].txt" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                        uploads+=("nxf_s3_upload $(printf %q "$name") s3://foo/bar")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"
@@ -104,8 +133,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script.trim() == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d file-01\\(A\\).txt f\\ o\\ o.txt" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    for name in $(eval "ls -1d file-01\\\\(A\\\\).txt f\\\\ o\\\\ o.txt" | sort | uniq); do
+                        uploads+=("nxf_s3_upload $(printf %q "$name") s3://foo/bar")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"
