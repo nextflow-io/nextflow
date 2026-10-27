@@ -49,6 +49,27 @@ class MailerTest extends Specification {
 
     }
 
+    def 'should set default smtp timeouts' () {
+        when:
+        def props = new Mailer( [smtp: [host: 'gmail.com']] ).createProps()
+        then:
+        props.'mail.smtp.connectiontimeout' == '30000'
+        props.'mail.smtp.timeout' == '30000'
+        props.'mail.smtp.writetimeout' == '30000'
+
+        when:
+        props = new Mailer( [smtp: [host: 'gmail.com', connectiontimeout: 5000, timeout: 1000]] ).createProps()
+        then:
+        props.'mail.smtp.connectiontimeout' == '5000'
+        props.'mail.smtp.timeout' == '1000'
+        props.'mail.smtp.writetimeout' == '30000'
+
+        when:
+        props = new Mailer( [:] ).createProps()
+        then:
+        props.isEmpty()
+    }
+
     @RestoreSystemProperties
     def 'should configure proxy setting' () {
 

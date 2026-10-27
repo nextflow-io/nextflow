@@ -39,6 +39,18 @@ Host name of an HTTP web proxy server that will be used for connections to the m
 
 Port number for the HTTP web proxy server.
 
+##### `mail.smtp.connectiontimeout`
+
+Socket connection timeout in milliseconds (default: `30000`).
+
+##### `mail.smtp.timeout`
+
+Socket read timeout in milliseconds (default: `30000`).
+
+##### `mail.smtp.writetimeout`
+
+Socket write timeout in milliseconds (default: `30000`).
+
 ##### `mail.smtp.*`
 
 Any SMTP configuration property supported by the [Java Mail API](https://javaee.github.io/javamail/), which Nextflow uses to send emails. See the table of available properties [here](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
