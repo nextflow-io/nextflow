@@ -700,6 +700,31 @@ class BashWrapperBuilderTest extends Specification {
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
+    @Unroll
+    def 'should export env inputs verbatim and expand other env values [container: #CONTAINER]' () {
+        given:
+        def value = 'a $(b) `c` "d" \\ $HOME'
+        def opts = [environment: [FOO: value, BAR: '$HOME'], inputEnvNames: ['FOO'] as Set]
+        if( CONTAINER )
+            opts += [containerEnabled: true, containerImage: 'foo', containerConfig: new DockerConfig([:])]
+        def binding = newBashWrapperBuilder(opts).makeBinding()
+        def script = CONTAINER
+                ? binding.container_env + 'eval $(nxf_container_env)\n'
+                : binding.task_env
+        script += 'printf "%s|%s" "$FOO" "$BAR"'
+
+        when:
+        def proc = ['bash', '-c', script].execute()
+        def out = proc.inputStream.text
+
+        then:
+        proc.waitFor() == 0
+        out == value + '|' + System.getenv('HOME')
+
+        where:
+        CONTAINER << [false, true]
+    }
+
     def 'should create secret env' () {
         when:
         def binding0 = newBashWrapperBuilder().makeBinding()

@@ -359,7 +359,7 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames, runWithContainer), runWithContainer)
         if( runWithContainer ) {
             binding.task_env = null
             binding.container_env = env
@@ -425,6 +425,27 @@ class BashWrapperBuilder {
     protected String getTraceScript(Map binding) {
         def res = BashWrapperBuilder.class.getResource('command-trace.txt')
         engine.render(res.newReader(), binding)
+    }
+
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names, boolean container) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            String value = result.get(name)
+            if( !value )
+                continue
+            // `export NAME="value"` is evaluated once ...
+            value = Escape.doubleQuoted(value)
+            // ... the container env twice: by the heredoc on the host, then by `eval` in the container
+            if( container )
+                value = value.replaceAll('[\\\\`]', '\\\\$0')
+            result.put(name, value)
+        }
+        return result
     }
 
     @PackageScope String buildNew0(BufferedReader template) {

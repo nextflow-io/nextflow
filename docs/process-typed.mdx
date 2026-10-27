@@ -232,6 +232,10 @@ process echo_env {
 }
 ```
 
+:::note
+The variable is set to the value verbatim. Shell syntax in the value, such as `$VAR` or `$(command)`, is not evaluated.
+:::
+
 ### Standard input (stdin)
 
 The `stdin` directive defines the standard input of the task script:
