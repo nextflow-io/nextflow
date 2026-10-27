@@ -238,4 +238,26 @@ class FileHelperGsTest extends Specification {
         thrown(CloudStoragePseudoDirectoryException)
     }
 
+    def 'should strip the trailing slash of a directory matched by a glob' () {
+        given:
+        def opts = LocalStorageHelper.getOptions()
+        def storage = opts.getService()
+        def fs = CloudStorageFileSystem.forBucket('fake', CloudStorageConfiguration.DEFAULT, opts)
+        def base = fs.getPath('/work/ee/ff')
+        and:
+        storage.create(BlobInfo.newBuilder(BlobId.of('fake', 'work/ee/ff/outdir/hello.txt')).build(), 'hello'.bytes)
+        storage.create(BlobInfo.newBuilder(BlobId.of('fake', 'work/ee/ff/file.txt')).build(), 'hello'.bytes)
+
+        when:
+        def result = []
+        FileHelper.visitFiles([type: TYPE], base, '*') { Path it -> result.add(it.toString()) }
+        then:
+        result.sort() == EXPECTED
+
+        where:
+        TYPE    | EXPECTED
+        'dir'   | ['/work/ee/ff/outdir']
+        'any'   | ['/work/ee/ff/file.txt', '/work/ee/ff/outdir']
+    }
+
 }
