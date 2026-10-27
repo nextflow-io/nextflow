@@ -35,14 +35,16 @@ class Escape {
 
     final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', '\n']
 
+    // characters a backslash escapes in an output glob pattern, see FilePatternSplitter
+    final private static String GLOB_ESCAPED = '*?[]{}\\'
+
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false, boolean keepEscapes=false) {
         def copy = new StringBuilder(str.size() +10)
         for( int i=0; i<str.size(); i++) {
             def ch = str[i]
-            // in a glob pattern a backslash makes the next character literal, so keep the pair
-            if( keepEscapes && ch == '\\' && i+1 < str.size() ) {
-                final next = str[++i]
-                copy.append( next == '\n' ? '$\'\\n\'' : '\\' + next )
+            // in a glob pattern a backslash makes the next glob character literal, so keep the pair
+            if( keepEscapes && ch == '\\' && i+1 < str.size() && GLOB_ESCAPED.contains(str[i+1]) ) {
+                copy.append('\\').append(str[++i])
                 continue
             }
             def p = special.indexOf(ch)

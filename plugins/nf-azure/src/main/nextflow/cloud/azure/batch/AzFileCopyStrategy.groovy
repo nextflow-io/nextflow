@@ -132,7 +132,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload \$(printf %q "\$name") '${AzHelper.toHttpUrl(targetDir)}'")
+                printf -v qname %q "\$name"
+                uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(targetDir)}'")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"

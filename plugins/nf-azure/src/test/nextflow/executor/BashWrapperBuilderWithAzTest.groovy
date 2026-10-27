@@ -144,7 +144,8 @@ class BashWrapperBuilderWithAzTest extends Specification {
                     uploads=()
                     IFS=\$'\\n'
                     for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}'")
+                        printf -v qname %q "\$name"
+                        uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(target)}'")
                     done
                     unset IFS
                     nxf_parallel "\${uploads[@]}"

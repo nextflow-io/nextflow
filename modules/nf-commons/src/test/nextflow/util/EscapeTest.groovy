@@ -167,6 +167,7 @@ class EscapeTest extends Specification {
         PATTERN             | FILE
         'g\\[1\\].txt'      | 'g[1].txt'
         'x\\\\y.txt'        | 'x\\y.txt'
+        'x\\:y\\!z.txt'     | 'x\\:y\\!z.txt'
         '*.csv'             | 'data.csv'
         'a b;c `d` "e".txt' | 'a b;c `d` "e".txt'
         'n\nm.txt'          | 'n\nm.txt'

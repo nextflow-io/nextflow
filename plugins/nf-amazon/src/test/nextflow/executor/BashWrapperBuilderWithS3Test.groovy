@@ -123,7 +123,8 @@ class BashWrapperBuilderWithS3Test extends Specification {
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_s3_upload $(printf %q "$name") s3://some/bucket")
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://some/bucket")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"

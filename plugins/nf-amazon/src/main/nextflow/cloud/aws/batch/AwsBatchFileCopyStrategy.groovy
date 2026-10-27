@@ -125,7 +125,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_s3_upload \$(printf %q "\$name") s3:/${Escape.doubleQuoted(Escape.path(targetDir))}")
+                printf -v qname %q "\$name"
+                uploads+=("nxf_s3_upload \$qname s3:/${Escape.doubleQuoted(Escape.path(targetDir))}")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
