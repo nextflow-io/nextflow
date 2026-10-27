@@ -195,6 +195,20 @@ The following GPUs are available on each cloud provider. Use the GPU model ID or
 
 On Google Cloud, only machine series with built-in GPUs are available. GPUs attached to N1 machine types, such as the T4 and V100, are not supported.
 
+## Infrastructure failures
+
+When a task fails because of the infrastructure rather than the task itself, for example when a [Fusion Snapshot](https://docs.seqera.io/fusion/guide/snapshots) cannot be restored, the scheduler reports the failure as retryable. Nextflow then reruns the task in a new work directory, whatever the [errorStrategy][process-errorstrategy] directive says.
+
+Each rerun counts as one task failure towards the [maxRetries][process-maxretries] directive (default: `1`). The rerun keeps the same `task.attempt`, but if the task later fails and is retried by the `errorStrategy` directive, the reruns are included in the new `task.attempt`. Once the task has failed `maxRetries` times, an infrastructure failure is no longer rerun and is handled by the `errorStrategy` directive as usual.
+
+To allow more reruns, increase `maxRetries`. For example:
+
+```nextflow
+process {
+    maxRetries = 3
+}
+```
+
 ## Disk support
 
 When a process specifies the [disk][process-disk] directive, the Seqera executor provisions storage for the task container. It supports two disk allocation strategies:
@@ -250,7 +264,9 @@ The EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEn
 [process-containeroptions]: ../process/directives/container-options
 [process-cpus]: ../process/directives/cpus
 [process-disk]: ../process/directives/disk
+[process-errorstrategy]: ../process/directives/error-strategy
 [process-hints]: ../process/directives/hints
+[process-maxretries]: ../process/directives/max-retries
 [process-memory]: ../process/directives/memory
 [process-secret]: ../process/directives/secret
 [process-time]: ../process/directives/time
