@@ -811,6 +811,7 @@ class AzBatchService implements Closeable {
         // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
         // For a steady autoscale pool carrying only transient errors, a pending task is what triggers
         // a fresh resize (which clears the stale error), so do not block recovery.
+        // Only reachable from checkPool, since queued task checks skip autoscale pools.
         if( isRecoverableResizeError(pool) ) {
             log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; waiting for a fresh resize - ${pool.resizeErrors*.code}"
             return null
@@ -842,9 +843,17 @@ class AzBatchService implements Closeable {
             return null
         poolAllocationChecks.put(poolId, now)
         final pool = fetchPoolQuietly(poolId)
-        if( !pool || (!pool.isEnableAutoScale() && pool.allocationState != AllocationState.STEADY) )
+        if( !pool )
             return null
-        final error = pool.isEnableAutoScale() ? null : resizeError(pool)
+        // an autoscale pool can still grow once quota or capacity frees up, so its tasks keep waiting
+        if( pool.isEnableAutoScale() ) {
+            poolAllocationErrors.put(poolId, Optional.empty())
+            return null
+        }
+        // a pool just created is still resizing, check it again later
+        if( pool.allocationState != AllocationState.STEADY )
+            return null
+        final error = resizeError(pool)
         poolAllocationErrors.put(poolId, Optional.ofNullable(error))
         return error
     }
