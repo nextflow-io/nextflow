@@ -179,7 +179,6 @@ allprojects {
             '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
             '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
             '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-            '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
         ])
     }
 

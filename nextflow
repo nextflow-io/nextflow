@@ -420,7 +420,6 @@ launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
 launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
 launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
 launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
 launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
 if [[ "$JAVA_VER" =~ ^(24|25|26) ]]; then
     launcher+=(--enable-native-access=ALL-UNNAMED)
