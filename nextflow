@@ -284,6 +284,14 @@ done
 NXF_PACK=one
 NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
+
+# use the Java runtime and the jar of the bundle that contains this script, when it provides NXF_VER
+NXF_BUNDLE=''
+if [[ ! $NXF_BIN ]] && bundle_home="$(dirname "$(resolve_link "$0")")/.." && [[ -x $bundle_home/runtime/bin/java && -f $bundle_home/lib/$NXF_JAR ]]; then
+    NXF_BUNDLE="$(cd "$bundle_home" && pwd -P)"
+    NXF_BIN="$NXF_BUNDLE/lib/$NXF_JAR"
+    [[ ! "$NXF_JAVA_HOME" ]] && JAVA_CMD="$NXF_BUNDLE/runtime/bin/java"
+fi
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
@@ -429,6 +437,12 @@ if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
   if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
   elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25|26) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
   fi
+fi
+# the startup cache of the bundle: it is only valid for the same runtime, jar and module options,
+# and with compressed oops, which the JVM disables for a default heap of 32 GB or more (i.e. 128 GB RAM)
+if [[ $NXF_BUNDLE && $JAVA_CMD == "$NXF_BUNDLE/runtime/bin/java" ]]; then
+    [[ "$NXF_OPTS $NXF_JVM_ARGS" =~ -Xmx|MaxHeapSize ]] || launcher+=(-XX:+UseCompressedOops)
+    [[ -f $NXF_BUNDLE/lib/nextflow.aot ]] && launcher+=(-XX:AOTCache="$NXF_BUNDLE/lib/nextflow.aot" -Xlog:aot=off)
 fi
 launcher+=("${cmd_tail[@]}")
 
