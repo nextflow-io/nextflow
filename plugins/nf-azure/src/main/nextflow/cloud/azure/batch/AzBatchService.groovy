@@ -51,6 +51,8 @@ import com.azure.compute.batch.models.BatchContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.ImageVerificationType
+import com.azure.compute.batch.models.BatchVmImageReference
 import com.azure.compute.batch.models.BatchMetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -67,7 +69,6 @@ import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.credential.TokenCredential
 import com.azure.core.exception.ClientAuthenticationException
 import com.azure.core.exception.HttpResponseException
-import com.azure.core.exception.ResourceNotFoundException
 import com.azure.core.http.rest.PagedIterable
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
@@ -91,6 +92,7 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.platform.ResourceLabelPolicy
@@ -532,7 +534,10 @@ class AzBatchService implements Closeable {
         final container = task.getContainer()
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
-        final taskId = "nf-${task.hash.toString()}"
+        // every attempt of a task shares its hash: the work dir's attempt suffix (`-N`) keeps their ids
+        // apart, since a failed task is kept in the job by default
+        final attempt = FileHelper.getAttemptFromPath(task.workDir)
+        final taskId = "nf-${task.hash.toString()}${attempt > 1 ? "-${attempt}" : ''}"
         // get the pool config
         final pool = getPoolSpec(poolId)
         if( !pool )
@@ -705,7 +710,7 @@ class AzBatchService implements Closeable {
                 continue
             if( it.osType != opts.osType )
                 continue
-            if( it.verificationType != opts.verification )
+            if( !opts.allowUnverifiedImages && it.verificationType != ImageVerificationType.VERIFIED )
                 continue
             if( !it.imageReference.publisher.equalsIgnoreCase(opts.publisher) )
                 continue
@@ -713,8 +718,12 @@ class AzBatchService implements Closeable {
                 return it
         }
 
-        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification - supported images: $available"
-        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; allow unverified images=${opts.allowUnverifiedImages} - supported images: $available"
+        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; allow unverified images=${opts.allowUnverifiedImages}")
+    }
+
+    protected BatchVmImageReference customImageReference(AzPoolOpts opts) {
+        return new BatchVmImageReference().setVirtualMachineImageId(opts.virtualMachineImageId)
     }
 
     protected AzVmPoolSpec specFromPoolConfig(String poolId) {
@@ -862,8 +871,10 @@ class AzBatchService implements Closeable {
         catch (IllegalArgumentException | ClientAuthenticationException e) {
             throw e
         }
-        catch (ResourceNotFoundException ignored) {
-            return null
+        catch (HttpResponseException e) {
+            if( e.response?.statusCode == 404 )
+                return null
+            throw e
         }
     }
 
@@ -887,9 +898,20 @@ class AzBatchService implements Closeable {
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
-        final image = getImage(opts)
+        final BatchVmImageReference imageRef
+        final String nodeAgentSkuId
+        if( opts.virtualMachineImageId ) {
+            imageRef = customImageReference(opts)
+            nodeAgentSkuId = opts.sku
+            log.debug "[AZURE BATCH] Using custom VM image from Compute Gallery: $opts.virtualMachineImageId (node agent SKU: $nodeAgentSkuId)"
+        }
+        else {
+            final image = getImage(opts)
+            imageRef = image.imageReference
+            nodeAgentSkuId = image.nodeAgentSkuId
+        }
 
-        new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
+        new VirtualMachineConfiguration(imageRef, nodeAgentSkuId)
                 .setContainerConfiguration(containerConfig)
     }
 

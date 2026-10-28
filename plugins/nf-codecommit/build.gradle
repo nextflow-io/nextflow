@@ -48,16 +48,16 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.14.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
-    api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:codecommit:2.53.1')
-    api ('software.amazon.awssdk:sso:2.53.1')
-    api ('software.amazon.awssdk:ssooidc:2.53.1')
+    api ("javax.xml.bind:jaxb-api:${jaxbApiVersion}")
+    api ("software.amazon.awssdk:codecommit:${awsSdkVersion}")
+    api ("software.amazon.awssdk:sso:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ssooidc:${awsSdkVersion}")
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.33"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
 }

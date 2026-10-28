@@ -45,7 +45,7 @@ process META_FETCH {
     accession: String
 
     output:
-    meta: String = stdout()
+    stdout()
 
     script:
         def fields = 'run_accession,sample_accession,sample_title,scientific_name,tax_id,' +
@@ -112,7 +112,7 @@ agent audit {
         '''.stripIndent()
 
     input:
-    cohort: List<SampleLabels>   // fan-in of all labels, deterministically ordered (see toSortedList below)
+    cohort: List<SampleLabels>   // fan-in of all labels, deterministically ordered (see the workflow below)
     output:
     report: HarmonizedCohort
 
@@ -145,11 +145,13 @@ workflow {
     // still take the legacy serial path.
     def labels = classify(meta)
 
-    // Gather all labels into ONE list for the reduce. `toSortedList` (vs `collect()`) fixes the
-    // fan-in order by accession, so the output TSV is deterministically ordered. (With `classify`
+    // Gather all labels into ONE list for the reduce. `collect()` emits a Bag, whose order is
+    // undefined, so sort by accession to make the output TSV deterministic. (With `classify`
     // on the task path its output is a task, so the reduce upstream has a stable resume hash and
     // caches too. The expensive map calls are what -resume saves.)
-    audit(labels.toSortedList { it.accession }).view { r ->   // REDUCE (gather -> one agent call)
+    def cohort = labels.collect().map { ls -> ls.toSorted { l -> l.accession } }
+
+    audit(cohort).view { r ->                                // REDUCE (gather -> one agent call)
         file("${projectDir}/harmonized.tsv").text = r.tsv
         """\
         Wrote ${projectDir}/harmonized.tsv

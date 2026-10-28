@@ -156,9 +156,7 @@ workflow {
 }
 ```
 
-:::note
-Files that do not originate from the work directory are not published.
-:::
+Files that do not originate from the work directory are not published by default. Set [`workflow.output.includeInputs`](./reference/config/workflow#workflowoutputincludeinputs)  to `true` to publish them by file name. For example, `/data/1.txt` is published to `results/1.txt`.
 
 **Dynamic publish path**
 
@@ -200,6 +198,21 @@ output {
 Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, Nextflow treats it as the directory in which to publish source files.
 
 When using this syntax, only files captured with the `>>` operator are saved to the output directory.
+
+<AddedInVersion version="26.10" />
+
+The closure can also return a map of source files to publish targets, which is equivalent to the `>>` syntax:
+
+```nextflow
+output {
+    samples {
+        path { sample -> [
+            (sample.fastq_1): "fastq/${sample.id}/",
+            (sample.fastq_2): "fastq/${sample.id}/"
+        ] }
+    }
+}
+```
 
 **Conditional publishing**
 
@@ -250,9 +263,9 @@ output {
 The above example writes the following CSV file to `results/samples.csv`:
 
 ```
-"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
-"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq",""
+1,sample 1,results/fastq/1a.fastq,results/fastq/1b.fastq
+2,sample 2,results/fastq/2a.fastq,results/fastq/2b.fastq
+3,sample 3,results/fastq/3a.fastq,
 ```
 
 You can customize the index file with additional directives, for example:
@@ -273,10 +286,6 @@ This example produces the following index file:
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
 "3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
-
-:::note
-Files that do not originate from the work directory are not published, but are included in the index file.
-:::
 
 See [Output directives](#output-directives) for the list of available index directives.
 
@@ -307,7 +316,7 @@ The following directives are available in an index definition:
 
 ###### `header`
 
-When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
+When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names (e.g., `header 'id', 'fastq_1', 'fastq_2'`). Only used for CSV files.
 
 ###### `path`
 
@@ -332,6 +341,7 @@ Additionally, the following options from the [workflow][config-workflow] config 
 - `contentType`
 - `enabled`
 - `ignoreErrors`
+- `includeInputs`
 - `mode`
 - `overwrite`
 - `storageClass`
@@ -408,18 +418,15 @@ workflow {
 }
 ```
 
-The name should be omitted when only one output is declared:
+The name can be omitted when only one output is declared:
 
 ```nextflow
 workflow my_workflow {
     take:
     data
 
-    main:
-    ch_bye = bye(hello(data))
-
     emit:
-    ch_bye
+    bye(hello(data))
 }
 
 workflow {
@@ -658,9 +665,9 @@ The fully qualified process name can be used as a [process selector][config-proc
 
 ### Special operators (`|` and `&`)
 
-<DeprecatedInVersion version="26.04">
+:::note
 These operators are not supported when [static typing][preparing-static-types] is enabled. Use standard method calls and assignments instead.
-</DeprecatedInVersion>
+:::
 
 The following operators have a special meaning when used with process and workflow calls in a workflow:
 
@@ -762,7 +769,6 @@ Workflows can also be invoked recursively:
 [config-workflow]: ./reference/config/workflow
 [data-lineage-page]: ./tutorials/data-lineage
 [data-lineage-workflow-outputs]: ./tutorials/data-lineage
-[dsl1-page]: ./migrations/dsl1
 [migrating-workflow-outputs]: ./tutorials/workflow-outputs
 [operator-collect]: ./reference/operator#collect
 [operator-combine]: ./reference/operator#combine
@@ -774,7 +780,7 @@ Workflows can also be invoked recursively:
 [operator-mix]: ./reference/operator#mix
 [operator-page]: ./reference/operator
 [operator-view]: ./reference/operator#view
-[preparing-static-types]: ./tutorials/static-types
+[preparing-static-types]: ./static-typing-prep
 [process-naming-outputs]: ./process#naming-outputs
 [process-out-singleton]: ./process#singleton-outputs
 [process-page]: ./process

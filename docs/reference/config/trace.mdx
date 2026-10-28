@@ -7,6 +7,12 @@ description: Reference for the trace config scope, which controls the generation
 
 The `trace` scope controls the generation of the [trace file][trace-report].
 
+##### `trace.directory`
+
+<AddedInVersion version="26.10" />
+
+The directory where the trace file should be saved. The path is resolved against the workflow output directory (`outputDir`). It must be a relative path within the output directory, and it cannot be used when `trace.file` is an absolute path. By default, it is not used and `trace.file` is resolved against the launch directory.
+
 ##### `trace.enabled`
 
 Create the trace file on workflow completion (default: `false`).
@@ -95,7 +101,7 @@ Time elapsed to complete since the submission.
 
 ###### `realtime`
 
-Task execution time i.e. delta between completion and start timestamp.
+Wall-clock time of the task script. It excludes other activities in the wrapper script such as input staging, container setup, `beforeScript`, output unstaging, and `afterScript`. If the task trace file is not available, `realtime` falls back to `complete - start`.
 
 ###### `queue`
 
@@ -103,7 +109,7 @@ The queue that the executor attempted to run the process on.
 
 ###### `%cpu`
 
-Percentage of CPU used by the process.
+Percentage of CPU used by the task, relative to a single CPU. For example, a task that keeps four CPUs busy reports approximately `400%`.
 
 ###### `%mem`
 

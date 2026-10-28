@@ -16,6 +16,8 @@
 
 package nextflow.cloud.azure.config
 
+import com.google.common.hash.Hashing
+import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -48,6 +50,52 @@ class AzPoolOptsTest extends Specification {
         !opts.lowPriority
         !opts.startTask.script
         !opts.startTask.privileged
+        !opts.virtualMachineImageId
+        !opts.allowUnverifiedImages
+    }
+
+    def 'should configure a custom compute gallery image' () {
+        when:
+        def opts = new AzPoolOpts([
+            virtualMachineImageId: '/subscriptions/abc/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1.0.0',
+            sku: 'batch.node.ubuntu 24.04',
+            allowUnverifiedImages: true,
+        ])
+        then:
+        opts.virtualMachineImageId == '/subscriptions/abc/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1.0.0'
+        opts.sku == 'batch.node.ubuntu 24.04'
+        opts.allowUnverifiedImages
+    }
+
+    def 'should require sku for a compute gallery image' () {
+        when:
+        new AzPoolOpts([virtualMachineImageId: '/subscriptions/abc/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1.0.0'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('sku')
+    }
+
+    private static String hash(AzPoolOpts opts) {
+        opts.funnel(Hashing.murmur3_128().newHasher(), CacheHelper.HashMode.STANDARD).hash().toString()
+    }
+
+    def 'pool hash should differ when image config differs' () {
+        given:
+        def base = new AzPoolOpts()
+        def gallery = new AzPoolOpts([virtualMachineImageId: '/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1', sku: 'batch.node.ubuntu 24.04'])
+        def unverified = new AzPoolOpts([allowUnverifiedImages: true])
+        expect:
+        hash(base) != hash(gallery)
+        hash(base) != hash(unverified)
+    }
+
+    def 'pool hash should ignore allowUnverifiedImages for a gallery image' () {
+        given:
+        def opts = [virtualMachineImageId: '/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1', sku: 'batch.node.ubuntu 24.04']
+        def a = new AzPoolOpts(opts)
+        def b = new AzPoolOpts(opts + [allowUnverifiedImages: true])
+        expect:
+        hash(a) == hash(b)
     }
 
     def 'should create pool with custom options' () {

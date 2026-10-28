@@ -30,6 +30,7 @@ import nextflow.script.control.Compiler
 import nextflow.script.control.PhaseAware
 import nextflow.script.control.Phases
 import nextflow.script.control.ScriptParser
+import nextflow.script.control.SeverityAware
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
@@ -79,7 +80,8 @@ class TestUtils {
     }
 
     /**
-     * Get the list of compiler errors for a source file.
+     * Get the list of compiler errors for a source file. Soft errors are
+     * excluded -- they are reported as warnings (see CmdLint).
      *
      * @param source
      */
@@ -90,6 +92,7 @@ class TestUtils {
         return errorCollector.getErrors().stream()
             .filter(e -> e instanceof SyntaxErrorMessage)
             .map(e -> e.cause)
+            .filter(e -> !SeverityAware.isSoftError(e))
             .sorted(ERROR_COMPARATOR)
             .toList()
     }

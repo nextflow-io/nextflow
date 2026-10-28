@@ -24,7 +24,11 @@ import java.util.concurrent.ExecutorService
 import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.cache.CacheDB
+import nextflow.trace.TraceRecord
 import nextflow.exception.IllegalArityException
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -35,11 +39,15 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessConfigV1
+import nextflow.script.ProcessConfigV2
+import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
-import nextflow.script.params.FileOutParam
+import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.types.Tuple
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -62,6 +70,68 @@ class TaskProcessorTest extends Specification {
 
         @Override
         protected void createOperator() { }
+    }
+
+    /** A task hashable by the default {@link TaskHasher} without touching the file system. */
+    private TaskRun hashableTask() {
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+            getOwnerScript() >> Mock(BaseScript) { getBinding() >> new ScriptBinding() }
+        }
+        return Mock(TaskRun) {
+            getSource() >> 'hello world'
+            isContainerEnabled() >> false
+            getConfig() >> Mock(TaskConfig)
+            getProcessor() >> processor
+            getGlobalVars(_) >> [:]
+            getVariableNames() >> ([] as Set)
+        }
+    }
+
+    def 'uses the hasher of the first TaskHasherFactory that answers, and TaskHasher when all abstain'() {
+        given:
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        def task = hashableTask()
+        def custom = Mock(TaskHasher)
+        def abstaining = Mock(TaskHasherFactory) { create(_) >> null }
+        def answering = Mock(TaskHasherFactory) { create(task) >> custom }
+
+        when: 'factories are asked in order; the first non-null answer wins'
+        processor.hasherFactories = [abstaining, answering]
+        then:
+        processor.createTaskHasher(task).is(custom)
+
+        when: 'every factory abstains'
+        processor.hasherFactories = [abstaining]
+        def hasher = processor.createTaskHasher(task)
+        then: 'the default hasher is used'
+        hasher.getClass() == TaskHasher
+
+        when: 'no factory is registered at all'
+        processor.hasherFactories = []
+        then:
+        processor.createTaskHasher(task).getClass() == TaskHasher
+    }
+
+    def 'resolves the hasher factories lazily and defaults to TaskHasher when none is registered'() {
+        given: 'a processor that has not hashed anything yet, in a JVM with no plugin system initialised'
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        def task = hashableTask()
+
+        expect:
+        processor.hasherFactories == null
+
+        when:
+        def hasher = processor.createTaskHasher(task)
+        then: 'the registry was consulted once and yielded the default'
+        processor.hasherFactories != null
+        hasher.getClass() == TaskHasher
     }
 
 
@@ -347,6 +417,28 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    def 'should rerun a task failed with a retryable error regardless the error strategy' () {
+        given:
+        def executor = Mock(ExecutorService)
+        def session = Mock(Session) { getExecService() >> executor }
+        def proc = [:] as TaskProcessor
+        proc.session = session
+        and:
+        def task = new TaskRun(name: 'foo', context: new TaskContext(holder: [:]))
+        task.config = new TaskConfig(errorStrategy: 'terminate')
+        def error = new ProcessFailedException('Process `foo` failed', new NodeTerminationException('Node terminated'))
+
+        when:
+        def result = proc.resumeOrDie(task, error)
+
+        then:
+        1 * executor.submit(_)
+        result == ErrorStrategy.RETRY
+        task.failCount == 1
+        task.failed
+        task.errorAction == ErrorStrategy.RETRY
+    }
+
     def 'should export env vars' () {
 
         given:
@@ -574,88 +666,139 @@ class TaskProcessorTest extends Specification {
         'f*'            | ['/a','/b']                               | '3'       | 'Incorrect number of input files for process `foo` -- expected 3, found 2'
     }
 
-    def 'should collect output files' () {
+    @Unroll
+    def 'should allow the same input file to be staged by multiple inputs in typed process' () {
         given:
         def executor = Mock(Executor)
-        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
-        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
         and:
-        def context = new TaskContext(holder: new HashMap<String, Object>())
         def task = new TaskRun(
                 name: 'foo',
                 type: ScriptType.SCRIPTLET,
-                context: context,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
                 config: new TaskConfig())
-        and:
-        def workDir = Path.of('/work')
 
         when:
-        def param = new FileOutParam(new Binding(), [])
-                .setPathQualifier(true)
-                .optional(OPTIONAL)
-                .bind(FILE_NAME) as FileOutParam
-        if( ARITY )
-            param.setArity(ARITY)
-        and:
-        processor.collectOutFiles(task, param, workDir)
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Y, true], Mock(FilePorter.Batch))
         then:
-        processor.collectOutFiles0(_,_,_) >> RESULTS
-        and:
-        task.getOutputs().get(param) == EXPECTED
+        task.inputFilesMap == EXPECTED
 
         where:
-        FILE_NAME       | RESULTS                                   | OPTIONAL  | ARITY         | EXPECTED
-        'file.txt'      | [Path.of('/work/file.txt')]               | false     | null          | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/file.txt')]               | false     | null          | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | false     | null          | [Path.of('/work/A'), Path.of('/work/B')]
-        '*'             | []                                        | true      | null          | []
-        and:
-        'file.txt'      | [Path.of('/work/file.txt')]               | false     | '1'           | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/file.txt')]               | false     | '1'           | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/file.txt')]               | false     | '1..*'        | [Path.of('/work/file.txt')]
-        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | false     | '2'           | [Path.of('/work/A'), Path.of('/work/B')]
-        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | false     | '1..*'        | [Path.of('/work/A'), Path.of('/work/B')]
-        '*'             | []                                        | false     | '0..*'        | []
+        Y                                                   | EXPECTED
+        Path.of('/b/other.fq')                              | ['reads.fq': Path.of('/a/reads.fq'), 'other.fq': Path.of('/b/other.fq')]
+        [Path.of('/a/reads.fq')]                            | ['reads.fq': Path.of('/a/reads.fq')]
+        [Path.of('/a/reads.fq'), Path.of('/b/other.fq')]    | ['reads.fq': Path.of('/a/reads.fq'), 'other.fq': Path.of('/b/other.fq')]
     }
 
     @Unroll
-    def 'should report output file arity error' () {
+    def 'should report input file name collision for typed process' () {
         given:
         def executor = Mock(Executor)
-        def session = Mock(Session)
-        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(PATTERN, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
         and:
-        def context = new TaskContext(holder: new HashMap<String, Object>())
         def task = new TaskRun(
                 name: 'foo',
                 type: ScriptType.SCRIPTLET,
-                context: context,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
                 config: new TaskConfig())
-        and:
-        def workDir = Path.of('/work')
 
         when:
-        def param = new FileOutParam(new Binding(), [])
-                .setPathQualifier(true)
-                .optional(OPTIONAL)
-                .bind(FILE_NAME) as FileOutParam
-        if( ARITY )
-            param.setArity(ARITY)
-        and:
-        processor.collectOutFiles(task, param, workDir)
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Y, true], Mock(FilePorter.Batch))
         then:
-        processor.collectOutFiles0(_,_,_) >> RESULTS
-        and:
-        def e = thrown(EXCEPTION)
-        e.message == ERROR
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/reads.fq)'
 
         where:
-        FILE_NAME       | RESULTS                                   | OPTIONAL  | ARITY         | EXCEPTION             | ERROR
-        'file.txt'      | [Path.of('/work/file.txt')]               | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
-        '*'             | [Path.of('/work/file.txt')]               | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
-        '*'             | [Path.of('/work/file.txt')]               | false     | '2..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2..*, found 1"
-        '*'             | []                                        | true      | '1..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 1..*, found 0"
+        Y                                                   | PATTERN
+        Path.of('/b/reads.fq')                              | null
+        [Path.of('/b/reads.fq')] as Set                     | null
+        [Path.of('/a/reads.fq'), Path.of('/b/reads.fq')]    | null
+        Path.of('/b/reads.fq')                              | '*'
+        [Path.of('/b/reads.fq')]                            | '*'
+    }
 
+    def 'should truncate input file name collision message' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('xs', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> xs }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+        and:
+        def files = (1..12).collectMany { i -> (1..5).collect { j -> Path.of("/work/${j}/file${i}.txt") } }
+
+        when:
+        processor.resolveTaskInputs(task, [files, true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        def names = (1..10).collect { i -> "file${i}.txt (/work/1/file${i}.txt, /work/2/file${i}.txt, /work/3/file${i}.txt, ... 2 more)" }
+        e.message == "Process `foo` input file name collision -- There are multiple input files for each of the following file names: ${names.join(', ')}, ... 2 more"
+    }
+
+    def 'should report input file name collision for typed process with explicit stage name' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Path, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput('reads.fq', { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Path.of('/b/other.fq'), true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/other.fq)'
+    }
+
+    def 'should report input file name collision for typed process with tuple input' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addTupleParam([new ProcessInput('x', Path, false), new ProcessInput('y', Path, false)], Tuple)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [[Path.of('/a/reads.fq'), Path.of('/b/reads.fq')], true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/reads.fq)'
     }
 
     def 'should submit a task' () {
@@ -700,5 +843,90 @@ class TaskProcessorTest extends Specification {
         and:
         0 * collector.collect(task)
         1 * exec.submit(task)
+    }
+
+    def 'dispatches the task resolution to the first enabled TaskCacheStrategy'() {
+        given:
+        def session = Mock(Session)
+        def processor = new TaskProcessor(session: session, executor: Mock(Executor))
+        def task = Mock(TaskRun)
+        def hash = HashCode.fromInt(1)
+        def disabled = Mock(TaskCacheStrategy)
+        def enabled = Mock(TaskCacheStrategy)
+
+        when: 'strategies are asked in priority order; the first one enabled for the session wins'
+        processor.cacheStrategies = [disabled, enabled]
+        processor.checkCachedOrLaunchTask(task, hash, true)
+        then:
+        1 * disabled.isEnabled(session) >> false
+        1 * enabled.isEnabled(session) >> true
+        1 * enabled.resolve(task, hash, true, { it instanceof TaskResolver })
+        0 * disabled.resolve(*_)
+
+        when: 'the choice is made once per processor'
+        processor.checkCachedOrLaunchTask(task, hash, false)
+        then:
+        0 * _.isEnabled(_)
+        1 * enabled.resolve(task, hash, false, processor.getTaskResolver())
+    }
+
+    def 'uses the default strategy when no registered strategy is enabled, and resolves them lazily'() {
+        given: 'a processor that has not resolved anything yet, in a JVM with no plugin system initialised'
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+
+        expect:
+        processor.cacheStrategies == null
+
+        when:
+        def strategy = processor.getCacheStrategy()
+        then: 'the registry was consulted once and yielded the default'
+        processor.cacheStrategies != null
+        strategy instanceof DefaultTaskCacheStrategy
+        processor.getCacheStrategy().is(strategy)
+
+        when: 'every registered strategy abstains'
+        def other = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        other.cacheStrategies = [ Mock(TaskCacheStrategy) { isEnabled(_) >> false } ]
+        then:
+        other.getCacheStrategy() instanceof DefaultTaskCacheStrategy
+    }
+
+    def 'the task resolver adapts the primitives of the processor'() {
+        given:
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def exec = Mock(Executor) { getWorkDir() >> Paths.get('/work') }
+        def processor = new TaskProcessor(session: session, executor: exec)
+        def resolver = processor.getTaskResolver()
+        def hash = HashCode.fromString('0123456789abcdef')
+        def entry = new TaskEntry(Mock(TraceRecord), null)
+        def task = Mock(TaskRun) { getConfig() >> new TaskConfig() }
+
+        when: 'an entry lookup'
+        def found = resolver.entry(hash)
+        then: 'goes to the session cache, on behalf of this processor'
+        1 * cache.getTaskEntry(hash, processor) >> entry
+        found.is(entry)
+
+        expect: 'the work dir of a hash is the one the executor work root maps it to'
+        resolver.workDirFor(hash) == Paths.get('/work/01/23456789abcdef')
+
+        when: 'a launch'
+        resolver.launch(task, hash, Paths.get('/work/01/23456789abcdef'))
+        then: 'submits the task'
+        1 * exec.submit(task)
+
+        when: 'a resume of a work dir with no exit file'
+        def folder = Files.createTempDirectory('wd')
+        def copy = new TaskRun(type: ScriptType.SCRIPTLET, config: new TaskConfig(), name: 'foo')
+        def cloned = 0
+        def original = Mock(TaskRun) { clone() >> { cloned++; copy } }
+        def resumed = resolver.resume(original, hash, folder, entry)
+        then: 'is the cached-output check on a COPY of the task (the original stays launchable), which reports it as not resumable'
+        cloned == 1
+        !resumed
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

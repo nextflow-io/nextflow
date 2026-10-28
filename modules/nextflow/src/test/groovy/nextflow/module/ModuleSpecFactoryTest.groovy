@@ -641,6 +641,38 @@ class ModuleSpecFactoryTest extends Specification {
         spec.topics[0].components[2].type == 'string'
     }
 
+    def 'should infer output types for stdout, env, and eval'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            process ALIGN {
+                input:
+                sample_id: String
+
+                output:
+                record(log: stdout(), genome: env('GENOME'), version: eval('align --version'))
+
+                script:
+                "align ${sample_id}"
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then: 'none of the three carry a type annotation, so the types come from the checker'
+        spec.outputs.size() == 1
+        spec.outputs[0].components.size() == 3
+        spec.outputs[0].components[0].name == 'log'
+        spec.outputs[0].components[0].type == 'string'
+        spec.outputs[0].components[1].name == 'genome'
+        spec.outputs[0].components[1].type == 'string'
+        spec.outputs[0].components[2].name == 'version'
+        spec.outputs[0].components[2].type == 'string'
+    }
+
     def 'should map a user-defined record type to the record documentation tag'() {
         given:
         def mainNf = tempDir.resolve('main.nf')
@@ -812,10 +844,10 @@ class ModuleSpecFactoryTest extends Specification {
                 count: Integer
 
                 main:
-                message = greeting
+                result = greeting
 
                 emit:
-                result: String = message
+                result
             }
             '''.stripIndent()
 

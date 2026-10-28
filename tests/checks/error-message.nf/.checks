@@ -1,5 +1,5 @@
 set +e
-$NXF_RUN | tee stdout
+$NXF_RUN 2>&1 | tee stdout
 set -e
 
 if [[ "$NXF_SYNTAX_PARSER" == "v2" ]] ; then

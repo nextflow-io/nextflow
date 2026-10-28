@@ -61,7 +61,6 @@ import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
-import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
@@ -71,6 +70,7 @@ import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -131,7 +131,16 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null )
                 continue;
-            if( entry.getTarget() instanceof ClassNode && entry.alias != null ) {
+            // the parts of an included pipeline must be aliased, whereas other
+            // types cannot be aliased
+            var target = entry.getTarget();
+            var isPipelinePart = target instanceof WorkflowNode wn && wn.isEntry()
+                || target instanceof ClassNode cn && ScriptNode.isPipelineParams(cn);
+            if( isPipelinePart && entry.alias == null ) {
+                vsc.addError("An included pipeline must be aliased, e.g. `" + entry.name + " as MY_PIPELINE`", entry);
+                continue;
+            }
+            if( !isPipelinePart && target instanceof ClassNode && entry.alias != null ) {
                 vsc.addError("Included types cannot be aliased", entry);
                 continue;
             }
@@ -268,7 +277,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         var classScope = workflowDsl(node.isEntry());
         if( node.isEntry() && paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
@@ -284,8 +292,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( node.main instanceof BlockStatement block )
             copyVariableScope(block.getVariableScope());
 
-        visitTypedOutputs(node.emits, "Workflow emit");
-        visitTypedOutputs(node.publishers, "Workflow output");
+        visitTypedOutputs(node.emits, "Workflow emit", true);
+        visitTypedOutputs(node.publishers, "Workflow output", true);
 
         visit(node.onComplete);
         visit(node.onError);
@@ -313,18 +321,31 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitTypedOutputs(Statement outputs, String typeLabel) {
+    private void visitTypedOutputs(Statement outputs, String typeLabel, boolean hasBody) {
         var declaredOutputs = new HashMap<String,ASTNode>();
         for( var stmt : asBlockStatements(outputs) ) {
             var es = (ExpressionStatement)stmt;
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
-                // a bare name without a type (e.g. `x`) is an output expression
-                // and should be resolved as a variable reference; a name with a type
-                // (e.g. `x: String`) declares a named output and should not be visited
-                if( ClassHelper.isDynamicTyped(ve.getOriginType()) )
+                // a bare name is a named output that implies `x = x`, so it is
+                // visited as a variable reference and takes the inferred type
+                if( ClassHelper.isDynamicTyped(ve.getOriginType()) ) {
                     visit(ve);
+                }
+                // a name-type pair is implicitly assigned to a variable in the body,
+                // e.g. `x: T` implies `x: T = x`. it is resolved here rather than
+                // visited because the accessed variable would override the declared
+                // type, so the variable is saved for the type checker instead.
+                // agent outputs are not defined in the agent body, so there is no
+                // assignment to resolve
+                else if( hasBody ) {
+                    var variable = vsc.findVariableDeclaration(ve.getName(), ve);
+                    if( variable != null )
+                        ve.putNodeMetaData(ASTNodeMarker.OUTPUT_SOURCE, variable);
+                    else
+                        vsc.addError("`" + ve.getName() + "` is not defined", ve);
+                }
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
@@ -369,7 +390,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         // mirrors visitProcessV2: `file(...)`/`files(...)` in an agent output collect from the
         // task work dir, so they must NOT resolve to the driver-side global ScriptDsl.file
         vsc.pushScope(AgentDsl.AgentOutputDsl.class);
-        visitTypedOutputs(node.outputs, "Agent output");
+        visitTypedOutputs(node.outputs, "Agent output", false);
         vsc.popScope();
 
         currentDefinition = null;
@@ -393,10 +414,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
 
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addWarning("Process `when` section will not be supported in a future version", "", node.when);
-        visit(node.when);
-
         visit(node.exec);
         visit(node.stub);
 
@@ -405,7 +422,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         vsc.popScope();
 
         vsc.pushScope(ProcessDsl.OutputDslV2.class);
-        visitTypedOutputs(node.outputs, "Process output");
+        visitTypedOutputs(node.outputs, "Process output", true);
         visit(node.topics);
         vsc.popScope();
 
@@ -425,8 +442,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.inputs, "process input qualifier", false);
         vsc.popScope();
 
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addParanoidWarning("Process `when` section will not be supported in a future version", node.when);
         visit(node.when);
 
         visit(node.exec);
@@ -543,9 +558,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
-        var classScope = ClassHelper.makeCached(OutputDsl.class);
+        var classScope = new ClassNode(OutputDsl.class);
         if( paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
@@ -711,6 +725,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             vsc.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target.getName(), target);
     }
 
+    @Override
+    public void visitReturnStatement(ReturnStatement node) {
+        if( currentDefinition instanceof WorkflowNode && currentClosure == null )
+            vsc.addError("Return statement cannot be used in a workflow body -- use `exit()` instead", node);
+        super.visitReturnStatement(node);
+    }
+
     // expressions
 
     private static final List<String> KEYWORDS = List.of(
@@ -850,11 +871,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "args".equals(name) ) {
-                vsc.addParanoidWarning("The use of `args` outside the entry workflow will not be supported in a future version", node);
-            }
-            else if( "params".equals(name) ) {
-                vsc.addParanoidWarning("The use of `params` outside the entry workflow will not be supported in a future version", node);
+            if( "args".equals(name) || "params".equals(name) ) {
+                vsc.addParanoidWarning("The use of `" + name + "` outside the entry workflow is discouraged", name, node);
             }
             else if( isStdinStdout(name) ) {
                 // stdin, stdout can be declared without parentheses
@@ -868,8 +886,17 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         if( variable != null ) {
             checkGlobalVariableInProcess(variable, node);
+            checkDataflowMethodAsVariable(variable, node);
             node.setAccessedVariable(variable);
         }
+    }
+
+    private void checkDataflowMethodAsVariable(Variable variable, ASTNode context) {
+        if( !typingEnabled )
+            return;
+        var mn = asMethodVariable(variable);
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode )
+            vsc.addError(methodType(mn) + " `" + variable.getName() + "` cannot be used as a variable", context);
     }
 
     private boolean isStdinStdout(String name) {

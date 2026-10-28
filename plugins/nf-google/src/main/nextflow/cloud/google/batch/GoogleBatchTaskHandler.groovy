@@ -19,6 +19,7 @@ package nextflow.cloud.google.batch
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import com.google.api.gax.rpc.ResourceExhaustedException
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
@@ -31,6 +32,7 @@ import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
+import com.google.cloud.batch.v1.TaskStatus as BatchTaskStatus
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import com.google.protobuf.Duration
@@ -128,6 +130,21 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     private volatile boolean noTaskJobfailure
 
+    /**
+     * The handlers of all tasks in the same job array (including this one), when this is an array child
+     */
+    private List<GoogleBatchTaskHandler> arraySiblings
+
+    /**
+     * Flag to indicate that this task has been killed
+     */
+    private volatile boolean killRequested
+
+    /**
+     * The task status fetched once the task has completed, since it no longer changes
+     */
+    private volatile BatchTaskStatus completedTaskStatus
+
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
         this.client = executor.getClient()
@@ -203,19 +220,27 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected void updateStatus(String jobId, String taskId, String uid) {
+    @PackageScope void setArraySiblings(List<GoogleBatchTaskHandler> siblings) {
+        this.arraySiblings = siblings
+    }
+
+    protected void updateStatus(String jobId, String taskId, String uid, CloudMachineInfo machineInfo=null) {
         if( task instanceof TaskArrayRun ) {
-            // update status for children
+            // update status for children, propagating the machine info resolved for the
+            // array job so each child trace record reports its machine type and cost
             for( int i=0; i<task.children.size(); i++ ) {
                 final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
-                handler.updateStatus(jobId, arrayTaskId, uid)
+                handler.setArraySiblings(task.children as List<GoogleBatchTaskHandler>)
+                handler.updateStatus(jobId, arrayTaskId, uid, this.machineInfo)
             }
         }
         else {
             this.jobId = jobId
             this.taskId = taskId
             this.uid = uid
+            if( machineInfo != null )
+                this.machineInfo = machineInfo
             this.status = TaskStatus.SUBMITTED
         }
     }
@@ -729,8 +754,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            if( isArrayChild )
+            if( isArrayChild ) {
                 client.removeFromArrayTasks(jobId, taskId)
+                // delete the job when a sibling task was killed and this was the last active one
+                if( shouldDeleteArrayJob() )
+                    deleteJob()
+            }
             return true
         }
 
@@ -745,7 +774,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return exit code if found, otherwise Integer.MAX_VALUE
      */
     protected Integer getExitCode(){
-        final events = client.getTaskStatus(jobId, taskId)?.getStatusEventsList()
+        final events = getCompletedTaskStatus()?.getStatusEventsList()
         if( events ) {
             // Find the most recent event that contains a TaskExecution with an exit code.
             // Events are not guaranteed to be in chronological order, so we iterate through
@@ -777,7 +806,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             final events = noTaskJobfailure
                 ? client.getJobStatus(jobId).getStatusEventsList()
-                : client.getTaskStatus(jobId, taskId).getStatusEventsList()
+                : getCompletedTaskStatus().getStatusEventsList()
             final lastEvent = events?.get(events.size() - 1)
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
@@ -793,6 +822,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return null
     }
 
+    private BatchTaskStatus getCompletedTaskStatus() {
+        if( completedTaskStatus == null )
+            completedTaskStatus = client.getTaskStatus(jobId, taskId)
+        return completedTaskStatus
+    }
+
     @PackageScope Integer readExitFile() {
         try {
             exitFile.text as Integer
@@ -806,14 +841,57 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     protected void killTask() {
-        if( isActive() ) {
-            log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
-            if( executor.shouldDeleteJob(jobId) )
-                executor.reaper.submit({ client.deleteJob(jobId) })
-        }
-        else {
+        if( !isActive() ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"
+            return
         }
+        killRequested = true
+        if( isArrayChild && !shouldDeleteArrayJob() ) {
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job=$jobId is shared with other active array tasks, deferring its deletion"
+            return
+        }
+        deleteJob()
+    }
+
+    protected void deleteJob() {
+        log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
+        if( executor.shouldDeleteJob(jobId) )
+            executor.reaper.submit({ deleteJob0(jobId) })
+    }
+
+    private void deleteJob0(String jobId) {
+        try {
+            client.deleteJob(jobId)
+        }
+        catch( ResourceExhaustedException e ) {
+            // let the reaper throttle and retry the deletion
+            throw e
+        }
+        catch( Exception e ) {
+            // a failed deletion must not abort the run, but the job may still be running
+            log.warn "[GOOGLE BATCH] Unable to delete job $jobId -- ${e.message}"
+        }
+    }
+
+    /**
+     * The tasks of a job array share the same Batch job, which cannot be deleted
+     * for a single task without aborting the other ones. Therefore the job is deleted
+     * only once all its tasks are either completed or killed, and at least one was killed
+     * (when all tasks complete, the job terminates on its own).
+     *
+     * @return {@code true} when the job shared by the array tasks should be deleted
+     */
+    protected boolean shouldDeleteArrayJob() {
+        if( !arraySiblings )
+            return killRequested
+        boolean anyKilled = false
+        for( GoogleBatchTaskHandler it : arraySiblings ) {
+            if( it.killRequested )
+                anyKilled = true
+            else if( !it.isCompleted() )
+                return false
+        }
+        return anyKilled
     }
 
     /**
@@ -837,7 +915,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     private void updateZoneFromEvents() {
         try {
-            final events = client.getTaskStatus(jobId, taskId)?.statusEventsList
+            final events = getCompletedTaskStatus()?.statusEventsList
             final zone = resolveZoneFromEvents(events)
             if( zone ) {
                 machineInfo = new CloudMachineInfo(
@@ -871,17 +949,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Count the number of spot instance reclamations for this task by examining
      * the task status events and checking for preemption exit codes
      *
-     * @param jobId The Google Batch Job Id
      * @return The number of times this task was retried due to spot instance reclamation
      */
-
-    protected Integer getNumSpotInterruptions(String jobId) {
+    protected Integer getNumSpotInterruptions() {
         if (!jobId || !taskId  || !isCompleted()) {
             return null
         }
 
         try {
-            final status = client.getTaskStatus(jobId, taskId)
+            final status = getCompletedTaskStatus()
 
             if (!status)
                 return null
@@ -912,7 +988,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( jobId && uid )
             result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
-        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
+        result.numSpotInterruptions = getNumSpotInterruptions()
         return result
     }
 
@@ -928,9 +1004,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
+        final exactType = machineType && !machineType.contains(',') && !machineType.contains('*')
 
         try {
             if( executor.isCloudinfoEnabled() ) {
+                if( !exactType )
+                    log.warn1 "Google Batch machine type selection via the Cloud Info service is deprecated -- use the `machineType` directive to choose a machine type, or set NXF_CLOUDINFO_ENABLED=false to let Google Batch choose one"
                 return bestMachineType0(cpus, memory, location, spot, localSSD, families)
             }
         }
@@ -939,7 +1018,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // Check if a specific machine type was provided by the user
-        if( machineType && !machineType.contains(',') && !machineType.contains('*') )
+        if( exactType )
             return new GoogleBatchMachineTypeSelector.MachineType(
                 type: machineType,
                 location: location,

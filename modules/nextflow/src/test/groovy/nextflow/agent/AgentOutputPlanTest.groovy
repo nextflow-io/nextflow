@@ -16,6 +16,9 @@
 
 package nextflow.agent
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
 
@@ -122,11 +125,6 @@ class AgentOutputPlanTest extends Specification {
         plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame('{"answer":"yes"}'), 'answer', String) == 'yes'
     }
 
-    def 'should unwrap the declared output for a wrapped record'() {
-        expect:
-        plan(AgentOutputMode.WRAPPED).decode(frame('{"total":7,"other":1}'), 'total', Integer) == 7
-    }
-
     def 'should reject a scalar contract whose object lacks the declared output'() {
         when:
         plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame(output), 'answer', String)
@@ -139,15 +137,6 @@ class AgentOutputPlanTest extends Specification {
         output << ['{"different":1}', '"a bare string"', '[1,2]', '42']
     }
 
-    def 'should reject a wrapped answer that is not a JSON object'() {
-        when:
-        plan(AgentOutputMode.WRAPPED).decode(frame('[1,2]'), 'answer', String)
-
-        then:
-        final e = thrown(ScriptRuntimeException)
-        e.message == 'Canonical agent structured output must be a JSON object'
-    }
-
     def 'should reject a record answer that is not a JSON object'() {
         when:
         plan(AgentOutputMode.RECORD).decode(frame('"a bare string"'), 'answer', String)
@@ -157,18 +146,67 @@ class AgentOutputPlanTest extends Specification {
         e.message == 'Canonical agent record output must be a JSON object'
     }
 
-    // --- mode predicates ---------------------------------------------------------------------
+    // --- paths ---------------------------------------------------------------------------------
 
-    def 'should report which modes are structured and which are wrapped'() {
-        expect:
-        plan(mode).isStructured() == structured
-        plan(mode).isWrapped() == wrapped
+    static class Report implements nextflow.script.types.Record {
+        Path summary
+        List<Path> files
+    }
 
-        where:
-        mode                              | structured | wrapped
-        AgentOutputMode.TEXT              | false      | false
-        AgentOutputMode.SCALAR_CONTRACT   | false      | false
-        AgentOutputMode.RECORD            | true       | false
-        AgentOutputMode.WRAPPED           | true       | true
+    static class Holder {
+        public List<Path> files
+    }
+
+    def 'should resolve relative paths against the agent work dir'() {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def other = Files.createTempFile('other', '.txt')
+        Files.createFile(workDir.resolve('a.txt'))
+        Files.createFile(workDir.resolve('b.txt'))
+
+        when:
+        final path = plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame('{"report":"a.txt"}'), 'report', Path, workDir)
+        then:
+        path == workDir.resolve('a.txt')
+
+        when:
+        final json = groovy.json.JsonOutput.toJson([summary: 'a.txt', files: ['b.txt', other.toString()]])
+        final rec = plan(AgentOutputMode.RECORD).decode(frame(json), 'report', Report, workDir)
+        then:
+        rec.summary == workDir.resolve('a.txt')
+        rec.files == [workDir.resolve('b.txt'), other]
+
+        cleanup:
+        workDir?.deleteDir()
+        Files.deleteIfExists(other)
+    }
+
+    def 'should decode a list output with its element type'() {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        Files.createFile(workDir.resolve('a.txt'))
+        final type = Holder.getField('files').getGenericType()
+
+        when:
+        final files = plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame('{"files":["a.txt"]}'), 'files', type, workDir)
+        then:
+        files == [workDir.resolve('a.txt')]
+
+        cleanup:
+        workDir?.deleteDir()
+    }
+
+    def 'should report a missing output path'() {
+        given:
+        def workDir = Files.createTempDirectory('test')
+
+        when:
+        plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame('{"report":"missing.txt"}'), 'report', Path, workDir)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == "Agent output path 'missing.txt' does not exist"
+
+        cleanup:
+        workDir?.deleteDir()
     }
 }

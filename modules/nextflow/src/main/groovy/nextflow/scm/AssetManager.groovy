@@ -18,6 +18,7 @@ package nextflow.scm
 
 import static nextflow.Const.*
 import static GitReferenceHelper.*
+import static nextflow.util.StringUtils.redactUrlPassword
 
 import java.nio.file.Path
 
@@ -53,6 +54,7 @@ import org.eclipse.jgit.merge.MergeStrategy
  * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
  * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
  * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
+ * Setting `NXF_SCM_LEGACY=true` forces the {@link LegacyRepositoryStrategy}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -757,6 +759,7 @@ class AssetManager implements Closeable {
         // Fallback to legacy behavior if strategy not initialized
         if( !_git ) {
             _git = Git.open(localPath)
+            AbstractRepositoryStrategy.removeBitbucketToken(_git, provider)
         }
         return _git
     }
@@ -790,7 +793,7 @@ class AssetManager implements Closeable {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -1091,7 +1094,7 @@ class AssetManager implements Closeable {
         final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
     }
 

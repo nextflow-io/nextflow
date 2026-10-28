@@ -35,14 +35,13 @@ runs in the `pi` runner image, as every agent does.
    1. call the `word_stats` tool to get the counts;
    2. **write** them as `report.json` in the work directory (the `write` tool);
    3. **read** `report.json` back to confirm it is there (the `read` tool);
-   4. reply with a one-line summary that includes the absolute report path.
+   4. reply with a one-line summary of the counts.
 
-3. **The sandbox:** the `fs:` writes land in the agent's work dir, so the
-   final answer can quote a real, existing absolute path. Writes outside the
-   sandbox are rejected.
+3. **The sandbox:** the `fs:` writes land in the agent's work dir. Writes outside
+   the sandbox are rejected.
 
-4. **Plain output:** as with any tool-using agent, the output is a plain
-   `summary: String` (the model's reply), not a record.
+4. **Composed output:** the output is `record(summary: stdout(), report: file('report.json'))`,
+   the model's reply plus the report file it wrote, collected just like a process output file.
 
 ## Key concepts
 
@@ -68,7 +67,7 @@ nextflow run main.nf
 Expected output (path varies):
 
 ```
-RESULT: Stats: 9 words, 43 chars. Report written to /…/work/<hash>/report.json
+RESULT: Stats: 9 words, 43 chars. REPORT: /…/work/<hash>/report.json
 ```
 
 See [examples/agents/README.md](../README.md) for the dev-build (run-from-repo)

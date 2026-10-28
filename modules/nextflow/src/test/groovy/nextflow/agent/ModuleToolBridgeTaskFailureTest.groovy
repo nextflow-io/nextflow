@@ -53,7 +53,7 @@ class ModuleToolBridgeTaskFailureTest extends Dsl2Spec {
             name: String
 
             output:
-            greeting: String
+            greeting: String = 'unreachable'
 
             exec:
             throw new IllegalStateException('tool failed')
@@ -68,7 +68,7 @@ class ModuleToolBridgeTaskFailureTest extends Dsl2Spec {
             request: String
 
             output:
-            answer: String
+            stdout()
 
             prompt:
             """

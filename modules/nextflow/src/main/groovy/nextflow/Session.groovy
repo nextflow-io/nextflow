@@ -20,8 +20,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
@@ -32,7 +34,6 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
@@ -88,6 +89,7 @@ import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ClassLoaderFactory
 import nextflow.util.CustomThreadFactory
+import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -120,8 +122,6 @@ class Session implements ISession {
      * been consumed.
      */
     private volatile boolean dataflowNetworkFired
-
-    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors
@@ -243,7 +243,12 @@ class Session implements ISession {
     boolean debug
 
     /**
-     * Defines the cloud path where store cache meta-data
+     * Defines the cloud path where store cache meta-data.
+     *
+     * Resolved in the constructor rather than in {@link #init}, because {@code CloudCacheFactory}
+     * reads it while the cache is being built. It therefore derives from the CONFIGURED work dir and
+     * does not follow a factory that writes a different one back into the session -- consistent,
+     * since such a factory is itself the cloud cache and does not read this.
      */
     Path cloudCachePath
 
@@ -287,6 +292,26 @@ class Session implements ISession {
     private volatile Throwable error
 
     private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
+
+    /**
+     * Released by the thread running the shutdown once it has completed, including the error
+     * notification when the shutdown is triggered by {@link #abort(java.lang.Throwable)}
+     */
+    private final CountDownLatch shutdownCompleted = new CountDownLatch(1)
+
+    /**
+     * The thread running the shutdown i.e. the one that won the {@link #shutdownInitiated} race
+     */
+    private volatile Thread shutdownThread
+
+    /**
+     * Max time the main thread waits for a shutdown running on another thread before letting the
+     * JVM exit. The default covers the Seqera Platform completion request, which is retried with
+     * backoff and can take minutes on a slow network, while still bounding the wait when an
+     * observer is stuck. Configurable via {@code NXF_SHUTDOWN_TIMEOUT}
+     */
+    @PackageScope
+    Duration shutdownTimeout = shutdownTimeout0()
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -370,6 +395,14 @@ class Session implements ISession {
     int getPoolSize() { poolSize }
 
     CacheDB getCache() { cache }
+
+    /**
+     * Open this run's cache. A separate method so a test can substitute a factory that writes back
+     * into the session the way a real one may — see {@link CacheFactory#newInstance}.
+     */
+    protected CacheDB createCache() {
+        return CacheFactory.create(uniqueId, runName).open()
+    }
 
     /**
      * Creates a new session using the configuration properties provided
@@ -461,6 +494,32 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
+        // -- create the cache FIRST: a factory may resolve a work dir of its own and write it back
+        //    here (see CacheFactory.newInstance), so whatever is derived from `workDir` has to be
+        //    derived BELOW this line -- the work dir creation, the observers, the WorkflowMetadata
+        //    snapshot -- or `workflow.workDir` reports a directory the tasks never use. The one
+        //    deliberate exception is `cloudCachePath`, which the constructor resolves from the
+        //    CONFIGURED work dir because CloudCacheFactory reads it while the cache is being built;
+        //    see its field. SessionTest locks this ordering.
+        cache = createCache()
+        try {
+            return init0(scriptFile, args, cliParams, configParams)
+        }
+        catch( Throwable t ) {
+            // Everything below createCache() can throw -- the work dir may be unwritable, an observer
+            // factory may abort -- and ScriptRunner calls init() OUTSIDE the try that later closes the
+            // session, so an abort here would leave the cache open. For the default cache that means a
+            // LevelDB index already truncated by open() and never closed; for a plugin cache it means
+            // whatever that cache holds. Close it and let the original failure propagate.
+            try { cache?.close() }
+            catch( Exception e ) { log.debug "Unable to close the cache after a failed session init -- ${e.message}" }
+            cache = null
+            throw t
+        }
+    }
+
+    private Session init0( ScriptFile scriptFile, List<String> args, Map<String,?> cliParams, Map<String,?> configParams ) {
+
         if(!workDir.mkdirs())
             throw new AbortOperationException("Cannot create work-dir '${FilesEx.toUriString(workDir)}' -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
@@ -492,7 +551,6 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = CacheFactory.create(uniqueId,runName).open()
 
         return this
     }
@@ -789,13 +847,31 @@ class Session implements ISession {
     }
 
     void destroy() {
+        boolean interrupted = false
         try {
             log.trace "Session > destroying"
+            // wait for a shutdown started by another thread (e.g. an abort) to complete before
+            // shutting down the thread pools: when the session is aborted they are shut down hard,
+            // which interrupts their threads, and the abort may be running on one of them
+            awaitShutdown()
+            // clear the interrupt flag, if any, so the cleanup below does not fail with
+            // ClosedByInterruptException - it is restored once the session is destroyed
+            interrupted = Thread.interrupted()
             // shutdown thread pools
             finalizePoolManager?.shutdownOrAbort(aborted,this)
             publishPoolManager?.shutdownOrAbort(aborted,this)
             // invoke shutdown callbacks
-            shutdown0()
+            try {
+                shutdown0()
+            }
+            finally {
+                releaseShutdown()
+            }
+            // wait for a shutdown started by another thread in the meantime, unless interrupted already
+            if( !interrupted ) {
+                awaitShutdown()
+                interrupted = Thread.interrupted()
+            }
             log.trace "Session > after cleanup"
             // shutdown executors
             executorFactory?.shutdown()
@@ -819,6 +895,8 @@ class Session implements ISession {
                 HistoryFile.DEFAULT.update(runName,isSuccess())
             }
             log.trace "Session destroyed"
+            if( interrupted )
+                Thread.currentThread().interrupt()
         }
     }
 
@@ -842,6 +920,7 @@ class Session implements ISession {
         // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
         if( !shutdownInitiated.compareAndSet(false, true) )
             return
+        shutdownThread = Thread.currentThread()
         log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
@@ -855,6 +934,55 @@ class Session implements ISession {
 
         // -- invoke observers completion handlers
         notifyFlowComplete()
+    }
+
+    /**
+     * Release the threads waiting in {@link #awaitShutdown()}. Only the thread that ran the
+     * shutdown can release it
+     */
+    private void releaseShutdown() {
+        if( Thread.currentThread() == shutdownThread )
+            shutdownCompleted.countDown()
+    }
+
+    /**
+     * Wait for a shutdown started by another thread to complete. The session can be aborted
+     * on any thread (e.g. by an operator, a task finalizer or an observer error), which then
+     * runs the shutdown callbacks and the observers completion handlers. The main thread must
+     * call this before letting the JVM exit, otherwise those handlers are cut off.
+     * <p>
+     * Only the main thread should wait: other threads gain nothing by blocking, and an observer
+     * completion handler may be joining the very thread that calls {@link #abort(java.lang.Throwable)}.
+     * <p>
+     * The wait is bounded by {@link #shutdownTimeout}. When the thread is interrupted, the
+     * interrupt flag is restored and the method returns without waiting further.
+     */
+    void awaitShutdown() {
+        // nothing to wait for, or this thread is the one running the shutdown (e.g. re-entrant call).
+        // An abort sets `aborted` before initiating the shutdown, and always gets to release it
+        if( !(aborted || shutdownInitiated.get()) || Thread.currentThread() == shutdownThread )
+            return
+        try {
+            if( !shutdownCompleted.await(shutdownTimeout.millis, TimeUnit.MILLISECONDS) )
+                log.warn "Timed out after ${shutdownTimeout} waiting for the session shutdown to complete -- increase it setting the variable NXF_SHUTDOWN_TIMEOUT"
+        }
+        catch( InterruptedException e ) {
+            log.debug "Interrupted while waiting for the session shutdown to complete"
+            Thread.currentThread().interrupt()
+        }
+    }
+
+    static private Duration shutdownTimeout0() {
+        final value = SysEnv.get('NXF_SHUTDOWN_TIMEOUT')
+        if( value ) {
+            try {
+                return Duration.of(value)
+            }
+            catch( IllegalArgumentException e ) {
+                log.warn "Invalid value for NXF_SHUTDOWN_TIMEOUT variable: '$value' -- using default: 5m"
+            }
+        }
+        return Duration.of('5m')
     }
 
     /**
@@ -901,16 +1029,27 @@ class Session implements ISession {
         error = cause
         LoggerHelper.aborted = true
         try {
-            // log the dataflow network status
-            def status = dumpNetworkStatus()
-            if( status )
-                log.debug(status)
-            // dump threads status
-            if( log.isTraceEnabled() )
-                log.trace(SysHelper.dumpThreads())
-            // invoke shutdown callbacks
-            shutdown0()
-            notifyError(null)
+            // log the dataflow network status and dump the threads status. These are only
+            // diagnostics: an error must not skip the shutdown, which awaitShutdown() waits for
+            try {
+                def status = dumpNetworkStatus()
+                if( status )
+                    log.debug(status)
+                if( log.isTraceEnabled() )
+                    log.trace(SysHelper.dumpThreads())
+            }
+            catch( Throwable e ) {
+                log.debug "Unable to dump the execution status", e
+            }
+            // invoke shutdown callbacks and notify the error, then release the main thread
+            // waiting in awaitShutdown() - see #7780
+            try {
+                shutdown0()
+                notifyError(null)
+            }
+            finally {
+                releaseShutdown()
+            }
             // force termination
             logObserver?.forceTermination()
             executorFactory?.signalExecutors()
@@ -1383,10 +1522,6 @@ class Session implements ISession {
             config.process.each { String name, value ->
                 if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
-                }
-                else if( name.startsWith('$') ) {
-                    name = name.substring(1)
-                    log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
                 }
 
                 if( value instanceof Map && value.container ) {

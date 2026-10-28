@@ -112,7 +112,7 @@ class TypeHelper {
             return asRecordType(value as Map, (Class) type)
 
         if( type == Path )
-            return TypeHelper.asPathType(value.toString())
+            return value instanceof Path ? value : asPathType(value.toString())
 
         final rawType = getRawType(type)
 

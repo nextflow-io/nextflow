@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -162,6 +163,47 @@ public class Formatter extends CodeVisitorSupport {
             this.comments.markEmitted(comment);
             append(' ');
             append(comment.text.replace('\n', ' '));
+        }
+    }
+
+    public CommentAligner commentAligner() {
+        return new CommentAligner();
+    }
+
+    /**
+     * Align the trailing comments of a group of entries to the
+     * same column when Harshil alignment is enabled. Multi-line
+     * entries are excluded.
+     */
+    public class CommentAligner {
+
+        private record Entry(int end, int width, boolean hasComment) {}
+
+        private final List<Entry> entries = new ArrayList<>();
+
+        private int start;
+
+        public void begin() {
+            start = builder.length();
+        }
+
+        public void end(ASTNode node) {
+            if( !options.harshilAlignment() )
+                return;
+            var end = builder.length();
+            var newline = builder.indexOf("\n", start);
+            if( newline != -1 && newline < end )
+                return;
+            entries.add(new Entry(end, end - start, hasTrailingComment(node)));
+        }
+
+        public void apply() {
+            var width = entries.stream().mapToInt(Entry::width).max().orElse(0);
+            for( int i = entries.size() - 1; i >= 0; i-- ) {
+                var entry = entries.get(i);
+                if( entry.hasComment() )
+                    builder.insert(entry.end(), " ".repeat(width - entry.width()));
+            }
         }
     }
 
@@ -512,7 +554,13 @@ public class Formatter extends CodeVisitorSupport {
                 incIndent();
             else
                 append(' ');
+            var start = builder.length();
             visitArguments(arguments, wrap);
+            // `name [...]` would be parsed as an index expression
+            if( !wrap && builder.charAt(start) == '[' ) {
+                builder.setCharAt(start - 1, '(');
+                append(')');
+            }
             if( wrap ) {
                 appendNewLine();
                 appendDanglingComments(call);

@@ -64,7 +64,12 @@ class AzFileSystem extends FileSystem {
         boolean empty
     }
 
-    private static String EMPTY_DIR_MARKER = '.azure_blob_dir'
+    /**
+     * Object written inside a folder to materialise it, since blob storage has no directories.
+     * It is a placeholder, NOT content: anything enumerating a folder's members must skip it
+     * (see {@code AzObjectStoreReader}).
+     */
+    static final String EMPTY_DIR_MARKER = '.azure_blob_dir'
 
     private static String SLASH = '/'
 

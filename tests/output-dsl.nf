@@ -86,7 +86,7 @@ process summary {
 
 workflow {
   main:
-  ids = channel.of(1..params.n_samples).map { i -> "sample${i}" }
+  ids = channel.fromList(1..params.n_samples).map { i -> "sample${i}" }
   ch_fastqc = fastqc(ids)
   ch_align = align(ids)
   ch_quant = quant(ids)

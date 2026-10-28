@@ -50,7 +50,8 @@ class RecordMapTest extends Specification {
         when:
         record.foo = 'bar'
         then:
-        thrown(UnsupportedOperationException)
+        def e = thrown(UnsupportedOperationException)
+        e.message == "Cannot set record field 'foo' -- records are immutable"
 
         when:
         record.put('foo', 'bar')

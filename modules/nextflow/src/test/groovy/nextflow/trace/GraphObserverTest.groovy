@@ -39,7 +39,7 @@ class GraphObserverTest extends Specification {
     DAG test_dag
 
     def createObserver(Path file) {
-        new GraphObserver(new DagConfig(file: file.toString()))
+        new GraphObserver(new DagConfig(file: file.toString()), file)
     }
 
     def setup() {

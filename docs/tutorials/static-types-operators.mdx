@@ -231,7 +231,7 @@ These operators are [non-deterministic][cache-nondeterministic-inputs]. Use `gro
 
 ```nextflow
 // before
-channel.of(1..9)
+channel.fromList(1..9)
     .collate(3)
     .view()
 
@@ -240,7 +240,7 @@ channel.of(1..9)
 // [7, 8, 9]
 
 // after
-channel.of(1..9)
+channel.fromList(1..9)
     .map { i -> tuple((i - 1).intdiv(3) + 1, i) }
     .groupBy()
     .view()

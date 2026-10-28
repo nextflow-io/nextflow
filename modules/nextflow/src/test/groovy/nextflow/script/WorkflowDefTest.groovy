@@ -114,7 +114,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         workflow.declaredInputs*.name == ['foo']
-        workflow.declaredOutputs == ['bar', 'baz']
+        workflow.declaredOutputs*.name == ['bar', 'baz']
 
     }
 
@@ -135,7 +135,7 @@ class WorkflowDefTest extends Dsl2Spec {
         loadScript(SCRIPT)
         then:
         def e = thrown(ScriptCompilationException)
-        e.cause.message.contains('Invalid workflow definition')
+        e.cause.message.contains("Unexpected input: ':' @ line 6, column 19")
 
     }
 
@@ -160,16 +160,48 @@ class WorkflowDefTest extends Dsl2Spec {
         noExceptionThrown()
     }
 
+    def 'should allow workflow variables named after binding fields' () {
+        given:
+        def SCRIPT = '''
+        workflow STAGE1 {
+            main:
+            ch = channel.of(1)
+
+            emit:
+            published = ch
+        }
+
+        workflow STAGE2 {
+            main:
+            ch = channel.of(2)
+
+            emit:
+            owner = ch
+        }
+
+        workflow {
+            published = STAGE1().mix(STAGE2()).toSortedList()
+            published
+        }
+        '''
+
+        when:
+        def result = runScript(SCRIPT)
+
+        then:
+        result.val == [1, 2]
+    }
+
     def 'should validate collect output'() {
         given:
         def ch1 = new DataflowQueue(); ch1 << 'blah blah'
         def ch2 = new DataflowQueue(); ch2 << 'xxx'
 
-        def binding = new WorkflowBinding(foo: 'Hello', bar: 'world', ch1: ch1, ch2: new ChannelOut([ch2]))
+        def binding = new WorkflowBinding(foo: 'Hello', bar: 'world', ch1: ch1, ch2: new ChannelOut([ch2]), nil: null)
         def workflow = new WorkflowDef(binding: binding)
 
         when:
-        def result = workflow.collectOutputs(['foo'])
+        def result = workflow.collectOutputs([new Param('foo')])
         then:
         result instanceof ChannelOut
         result.size()==1
@@ -178,7 +210,7 @@ class WorkflowDefTest extends Dsl2Spec {
         result.foo.val == 'Hello'
 
         when:
-        result = workflow.collectOutputs(['foo', 'bar'])
+        result = workflow.collectOutputs([new Param('foo'), new Param('bar')])
         then:
         result instanceof ChannelOut
         result.size()==2
@@ -188,7 +220,7 @@ class WorkflowDefTest extends Dsl2Spec {
         result.bar.val == 'world'
 
         when:
-        result = workflow.collectOutputs(['ch1'])
+        result = workflow.collectOutputs([new Param('ch1')])
         then:
         result instanceof ChannelOut
         result.size()==1
@@ -197,12 +229,24 @@ class WorkflowDefTest extends Dsl2Spec {
 
 
         when:
-        result = workflow.collectOutputs(['ch2'])
+        result = workflow.collectOutputs([new Param('ch2')])
         then:
         result instanceof ChannelOut
         result.size()==1
         result[0] instanceof DataflowQueue
         result[0].val == 'xxx'
+
+        when:
+        result = workflow.collectOutputs([new Param('nil', null, true)])
+        then:
+        result.size()==1
+        result.nil == null
+
+        when:
+        result = workflow.collectOutputs([new Param('nil')])
+        then:
+        result.nil instanceof DataflowVariable
+        result.nil.val == null
 
     }
 

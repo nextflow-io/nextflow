@@ -113,7 +113,7 @@ class ScriptResolveTest extends Specification {
                 input:
                 x: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 script:
                 "true"
             }
@@ -267,6 +267,30 @@ class ScriptResolveTest extends Specification {
         errors[1].getOriginalMessage() == '`y` is not defined'
     }
 
+    def 'should warn about a process `when` section' () {
+        given:
+        def source = '''\
+            nextflow.enable.types = true
+
+            process hello {
+                when:
+                task.ext.when
+
+                exec:
+                println 'hello!'
+            }
+            '''
+        when:
+        def result = scriptParser.parse('main.nf', source.stripIndent())
+        scriptParser.analyze()
+        def errors = TestUtils.getErrors(result)
+        def warnings = TestUtils.getWarnings(result)
+        then:
+        errors.size() == 0
+        warnings.size() == 1
+        warnings[0].contains('The `when` section is deprecated')
+    }
+
     def 'should not warn when a workflow emits a channel by name' () {
         given:
         def source = '''\
@@ -286,6 +310,129 @@ class ScriptResolveTest extends Specification {
         then:
         errors.size() == 0
         warnings.size() == 0
+    }
+
+    def 'should not warn when a typed output names a variable from the body' () {
+        given:
+        def source = '''\
+            nextflow.enable.types = true
+
+            process foo {
+                output:
+                message: String
+
+                exec:
+                message = 'hi'
+            }
+
+            workflow example {
+                main:
+                result = foo()
+
+                emit:
+                result: Value<String>
+            }
+            '''
+        when:
+        def result = scriptParser.parse('main.nf', source.stripIndent())
+        scriptParser.analyze()
+        def errors = TestUtils.getErrors(result)
+        def warnings = TestUtils.getWarnings(result)
+        then:
+        errors.size() == 0
+        warnings.size() == 0
+    }
+
+    def 'should report an error when a typed output names an undefined variable' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                emit:
+                x: Channel<String>
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == '`x` is not defined'
+    }
+
+    def 'should report an error when a process or workflow is used as a variable in a typed script' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                exec:
+                true
+            }
+
+            workflow greet {
+            }
+
+            workflow {
+                channel.empty().mix(hello)
+                def x = greet
+            }
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 12
+        errors[0].getStartColumn() == 25
+        errors[0].getOriginalMessage() == 'Process `hello` cannot be used as a variable'
+        errors[1].getStartLine() == 13
+        errors[1].getStartColumn() == 13
+        errors[1].getOriginalMessage() == 'Workflow `greet` cannot be used as a variable'
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                exec:
+                true
+            }
+
+            workflow {
+                channel.empty().mix(hello)
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for process .out property in a typed script' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                stdout()
+
+                script:
+                ''
+            }
+
+            workflow {
+                hello()
+                hello.out
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 13
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == 'Process `hello` cannot be used as a variable'
     }
 
     def 'should report an error for an undefined function' () {
@@ -399,6 +546,48 @@ class ScriptResolveTest extends Specification {
         errors[0].getStartLine() == 10
         errors[0].getStartColumn() == 9
         errors[0].getOriginalMessage() == 'Processes cannot be called from within a closure'
+    }
+
+    def 'should report an error for a return statement in a workflow body' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                if( params.help )
+                    return
+
+                publish:
+                nums = channel.of(1, 2, 3)
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 4
+        errors[0].getStartColumn() == 9
+        errors[0].getOriginalMessage() == 'Return statement cannot be used in a workflow body -- use `exit()` instead'
+    }
+
+    def 'should not report an error for a return statement in a closure' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                nums = channel.of(1, 2, 3).map { v ->
+                    if( v == 2 )
+                        return 0
+                    return v
+                }
+
+                publish:
+                out = nums
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
     def 'should report an error for an invalid workflow invocation' () {
@@ -584,6 +773,23 @@ class ScriptResolveTest extends Specification {
             }
             ''')
 
+        then:
+        errors.size() == 0
+    }
+
+    def 'should resolve piped operators in the entry workflow with a params block' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                greeting: String = 'hello'
+            }
+
+            workflow {
+                channel.of(1, 2) | view
+            }
+            '''
+        )
         then:
         errors.size() == 0
     }

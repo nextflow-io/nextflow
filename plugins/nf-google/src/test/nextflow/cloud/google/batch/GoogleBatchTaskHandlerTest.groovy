@@ -18,6 +18,8 @@ package nextflow.cloud.google.batch
 
 import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.NotFoundException
+import com.google.api.gax.rpc.PermissionDeniedException
+import com.google.api.gax.rpc.ResourceExhaustedException
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskExecution
@@ -44,6 +46,7 @@ import nextflow.executor.Executor
 import nextflow.executor.ExecutorConfig
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -480,6 +483,76 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.numSpotInterruptions == 1
     }
 
+    def 'should fetch task status once when creating the trace record' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> new TaskConfig()
+        and:
+        def client = Mock(BatchClient)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@client = client
+        handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
+        handler.@uid = '789'
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        and:
+        def taskStatus = TaskStatus.newBuilder()
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setDescription('Task state is updated from RUNNING to FAILED on zones/europe-west2-a/instances/i-abc123')
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .build()
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        handler.isCompleted() >> true
+        1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
+        and:
+        trace.machineInfo.zone == 'europe-west2-a'
+        trace.numSpotInterruptions == 1
+    }
+
+    def 'should fetch task status once across completion and trace record' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor) { getLogging() >> Mock(BatchLogging) }
+        def task = new TaskRun(name: 'hello')
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: 'job-1', taskId: '0', client: client, task: task, isArrayChild: true, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        and:
+        def status = TaskStatus.newBuilder()
+            .setState(TaskStatus.State.FAILED)
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setDescription('Task failed due to Spot VM preemption with exit code 50001 on zones/europe-west2-a/instances/i-abc123')
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+                .build())
+            .build()
+
+        when:
+        def completed = handler.checkIfCompleted()
+        def machineInfo = handler.getMachineInfo()
+        def numSpotInterruptions = handler.getNumSpotInterruptions()
+        then:
+        1 * client.getTaskInArrayStatus('job-1', '0') >> status
+        1 * client.getTaskStatus('job-1', '0') >> status
+        and:
+        completed
+        task.exitStatus == 50001
+        task.error.message.contains('Spot VM preemption')
+        machineInfo.zone == 'europe-west2-a'
+        numSpotInterruptions == 1
+    }
+
     def 'should create submit request with fusion enabled' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
@@ -599,13 +672,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
 
         when:
-        client.getTaskStatus(jobId, taskId) >>> [
-            makeTaskStatus(null,'Task failed due to Spot VM preemption with exit code 50001.'),
-            makeTaskStatus(null, 'Task succeeded')
-        ]
+        client.getTaskStatus(jobId, taskId) >> makeTaskStatus(null, DESC)
         then:
-        handler.getJobError().message == "Task failed due to Spot VM preemption with exit code 50001."
-        handler.getJobError() == null
+        handler.getJobError()?.message == EXPECTED
+
+        where:
+        DESC                                                          | EXPECTED
+        'Task failed due to Spot VM preemption with exit code 50001.' | 'Task failed due to Spot VM preemption with exit code 50001.'
+        'Task succeeded'                                              | null
     }
 
     def 'should find best instance type' () {
@@ -703,6 +777,145 @@ class GoogleBatchTaskHandlerTest extends Specification {
         1 * executor.shouldDeleteJob('job1') >> false
         and:
         0 * client.deleteJob('job1') >> null
+    }
+
+    def 'should not fail when the job deletion fails' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@executor = executor
+        handler.@client = client
+        handler.task = Mock(TaskRun)
+        handler.@jobId = 'job1'
+
+        when:
+        handler.killTask()
+        then:
+        handler.isActive() >> true
+        1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
+        1 * client.deleteJob('job1') >> { throw new PermissionDeniedException('denied', null, GrpcStatusCode.of(Status.Code.PERMISSION_DENIED), false) }
+        noExceptionThrown()
+    }
+
+    def 'should let the reaper retry a throttled job deletion' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@executor = executor
+        handler.@client = client
+        handler.task = Mock(TaskRun)
+        handler.@jobId = 'job1'
+
+        when:
+        handler.killTask()
+        then:
+        handler.isActive() >> true
+        1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
+        1 * client.deleteJob('job1') >> { throw new ResourceExhaustedException('quota', null, GrpcStatusCode.of(Status.Code.RESOURCE_EXHAUSTED), true) }
+        thrown(ResourceExhaustedException)
+    }
+
+    private List<GoogleBatchTaskHandler> makeArrayChildren(int size, BatchClient client, GoogleBatchExecutor executor) {
+        final children = (0..<size).collect { int i ->
+            final handler = Spy(new GoogleBatchTaskHandler(jobId: 'job1', taskId: "$i".toString(), client: client, task: Mock(TaskRun)))
+            handler.@executor = executor
+            handler.isArrayChild = true
+            handler.status = nextflow.processor.TaskStatus.SUBMITTED
+            handler.getTaskState() >> 'SUCCEEDED'
+            handler.getExitCode() >> 0
+            return handler
+        }
+        children.each { it.setArraySiblings(children) }
+        return children
+    }
+
+    def 'should not delete the job shared by an array while other array tasks are active' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
+        def (a, b, c) = makeArrayChildren(3, client, executor)
+
+        when: 'one array task is killed while the others are active'
+        a.kill()
+        then:
+        0 * executor.shouldDeleteJob(_)
+        0 * client.deleteJob(_)
+
+        when: 'another array task completes while one is still active'
+        b.checkIfCompleted()
+        then:
+        0 * executor.shouldDeleteJob(_)
+        0 * client.deleteJob(_)
+
+        when: 'the last active array task is killed'
+        c.kill()
+        then:
+        1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
+        1 * client.deleteJob('job1')
+    }
+
+    def 'should delete the job shared by an array when the last task completes after a sibling was killed' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
+        def (a, b) = makeArrayChildren(2, client, executor)
+
+        when:
+        a.kill()
+        then:
+        0 * client.deleteJob(_)
+
+        when:
+        b.checkIfCompleted()
+        then:
+        1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
+        1 * client.deleteJob('job1')
+    }
+
+    def 'should not delete the job shared by an array when all tasks complete' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def (a, b) = makeArrayChildren(2, client, executor)
+
+        when:
+        a.checkIfCompleted()
+        b.checkIfCompleted()
+        then:
+        0 * executor.shouldDeleteJob(_)
+        0 * client.deleteJob(_)
+    }
+
+    def 'should set the array siblings of each array task' () {
+        given:
+        def executor = Mock(GoogleBatchExecutor) {
+            getArrayTaskId('job1', _) >> { List args -> args[1].toString() }
+        }
+        def a = Spy(new GoogleBatchTaskHandler(task: Mock(TaskRun)))
+        def b = Spy(new GoogleBatchTaskHandler(task: Mock(TaskRun)))
+        def task = Mock(TaskArrayRun) { getChildren() >> [a, b] }
+        def handler = new GoogleBatchTaskHandler(task: task)
+        handler.@executor = executor
+
+        when:
+        handler.updateStatus('job1', '0', 'uid1')
+        then:
+        1 * a.setArraySiblings([a, b])
+        1 * b.setArraySiblings([a, b])
     }
 
     JobStatus makeJobStatus(JobStatus.State state, String desc = null) {
@@ -963,13 +1176,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should return zero when no status events exist'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
         handler.@client = Mock(BatchClient) {
             getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder().build()
         }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> true
@@ -979,6 +1193,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should count spot interruptions correctly from status events'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
         handler.@client = Mock(BatchClient) {
             getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder()
@@ -1001,7 +1216,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> true
@@ -1014,8 +1229,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.@taskId = 'task-123'
 
         when:
-        def resultNullJobId = handler.getNumSpotInterruptions(null)
-        def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
+        def resultNullJobId = handler.getNumSpotInterruptions()
+        handler.@jobId = 'job-123'
+        def resultIncompleteTask = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> false
@@ -1026,13 +1242,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should return null when an exception occurs while fetching task status'() {
         given:
         def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
         handler.@taskId = 'task-123'
         handler.@client = Mock(BatchClient) {
             getTaskStatus('job-123', 'task-123') >> { throw new RuntimeException("Error") }
         }
 
         when:
-        def result = handler.getNumSpotInterruptions('job-123')
+        def result = handler.getNumSpotInterruptions()
 
         then:
         handler.isCompleted() >> true
@@ -1243,6 +1460,29 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--foo'
         result.getContainer().getVolumesList() == ['/mnt:/mnt:rw']
         result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+    }
+
+    def 'should propagate machine info to array child tasks on update status' () {
+        given:
+        def machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        def child0 = Spy(GoogleBatchTaskHandler)
+        def child1 = Spy(GoogleBatchTaskHandler)
+        def arrayTask = new TaskArrayRun(children: [child0, child1])
+        def exec = Mock(GoogleBatchExecutor) {
+            getArrayTaskId('job-1', 0) >> '0.0'
+            getArrayTaskId('job-1', 1) >> '0.1'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = arrayTask
+        handler.@executor = exec
+        handler.@machineInfo = machineInfo
+
+        when:
+        handler.updateStatus('job-1', '0', 'uid-1')
+
+        then:
+        child0.getMachineInfo() == machineInfo
+        child1.getMachineInfo() == machineInfo
     }
 
     def 'should resolve zone from status events: #DESCRIPTION' () {

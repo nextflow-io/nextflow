@@ -431,7 +431,7 @@ process SALMON {
 This syntax has several benefits:
 
 - The `map` operation is explicit, making process calls consistent with other operator logic
-- The process call matches the process definition, accepting and returning regular values rather than channels or dataflow values
+- The process call matches the process definition, accepting and returning plain values rather than channels or dataflow values
 - Processes can be chained without needing a pipe syntax (e.g. `ch.map(FOO).map(BAR).map(BAZ) ...`)
 - Processes could be composed with other operators (e.g. an iterative process with the `reduce` operator)
 - The closure around the process call can be used to handle process inputs and outputs without additional operator calls
@@ -528,13 +528,13 @@ vals.subscribe { _vals ->
 }
 ```
 
-It frustrates many users that dataflow values don't quite work like regular values, even though it seems like they should.
+It frustrates many users that dataflow values don't quite work like plain values, even though it seems like they should.
 
-A solution could be to make dataflow values *implicit*, so that users write them like regular values (i.e. the first example above) and the compiler translates that code into explicit dataflow logic (i.e. the second example).
+A solution could be to make dataflow values *implicit*, so that users write them like plain values (i.e. the first example above) and the compiler translates that code into explicit dataflow logic (i.e. the second example).
 
 To do this, the compiler would need to:
 
-1. distinguish implicit dataflow values from regular values via type inference (e.g. the result of a `collect` operator),
+1. distinguish implicit dataflow values from plain values via type inference (e.g. the result of a `collect` operator),
 
 2. wrap downstream code in `map` and/or `subscribe` operators as needed to produce the desired dataflow logic.
 
@@ -552,4 +552,4 @@ Type checking has also solved most of the problems that motivated this idea:
 
 - While users still can't use a dataflow value in an `if` statement, they can get clear and early feedback on whether their code is valid, which is what ultimately matters.
 
-- Being transparent about regular values vs dataflow values in the language may be for the best anyway. It gives a clear picture of how things work "under the hood", and it is still far simpler than the async programming models used by most languages.
+- Being transparent about plain values vs dataflow values in the language may be for the best anyway. It gives a clear picture of how things work "under the hood", and it is still far simpler than the async programming models used by most languages.

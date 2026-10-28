@@ -36,22 +36,22 @@ class ScriptFormatterTest extends Specification {
         scriptParser = new ScriptParser()
     }
 
-    String format(String contents) {
+    String format(String contents, FormattingOptions options = new FormattingOptions(4, true)) {
         scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         assert !TestUtils.hasSyntaxErrors(source)
-        def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true))
+        def formatter = new ScriptFormattingVisitor(source, options)
         formatter.visit()
         assert formatter.getMissingComments().isEmpty()
         return formatter.toString()
     }
 
-    boolean checkFormat(String input, String output) {
+    boolean checkFormat(String input, String output, FormattingOptions options = new FormattingOptions(4, true)) {
         input = input.stripIndent()
         output = output.stripIndent()
-        assert format(input) == output
-        assert format(output) == output
+        assert format(input, options) == output
+        assert format(output, options) == output
         return true
     }
 
@@ -60,6 +60,8 @@ class ScriptFormatterTest extends Specification {
         assert format(source) == source
         return true
     }
+
+    static final FormattingOptions HARSHIL = new FormattingOptions(4, true, true, false, false)
 
     def 'should format a code snippet' () {
         expect:
@@ -284,7 +286,7 @@ class ScriptFormatterTest extends Specification {
                 depth: Integer
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 """
@@ -432,6 +434,28 @@ class ScriptFormatterTest extends Specification {
                     path 'bar'
                     index {
                         path 'index.csv'
+                    }
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow{}
+
+            output{
+            foo{index{header ( ['a','b'] );sep('\\t')}}
+            }
+            ''',
+            '''\
+            workflow {
+            }
+
+            output {
+                foo {
+                    index {
+                        header(['a', 'b'])
+                        sep '\\t'
                     }
                 }
             }
@@ -1226,6 +1250,18 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch = channel.fromFilePairs("${params.dir}/*.vcf.gz")
+                url = "${params.host}//path"
+            }
+            '''
+        )
+    }
+
     /// MULTI-LINE STRINGS
 
     def 'should re-indent a multi-line string with its statement' () {
@@ -1323,6 +1359,202 @@ class ScriptFormatterTest extends Specification {
                     }
             }
             '''
+        )
+    }
+
+    /// HARSHIL ALIGNMENT
+
+    def 'should align trailing comments in a legacy workflow' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow WORKFLOW {
+                take:
+                ch_input // channel: [ val(meta), [ fastq ] ]
+                val_reference //  string: the reference key
+
+                main:
+                ch_out = ch_input
+
+                emit:
+                ch_out // channel: out
+                versions = ch_out // channel: versions
+                summary = ch_out.map { v -> v } // channel: summary
+            }
+            ''',
+            '''\
+            workflow WORKFLOW {
+                take:
+                ch_input      // channel: [ val(meta), [ fastq ] ]
+                val_reference //  string: the reference key
+
+                main:
+                ch_out = ch_input
+
+                emit:
+                ch_out                           // channel: out
+                versions = ch_out                // channel: versions
+                summary  = ch_out.map { v -> v } // channel: summary
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should align trailing comments but not type annotations in a typed workflow' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            workflow WORKFLOW {
+                take:
+                samples: Channel<Tuple<String,Path>> // the samples
+                reference: Path // the reference
+                skip: Boolean
+
+                main:
+                result = samples
+
+                emit:
+                result: Channel<Tuple<String,Path>> = result // the result
+                count: Integer = 1 // the count
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            workflow WORKFLOW {
+                take:
+                samples: Channel<Tuple<String, Path>> // the samples
+                reference: Path                       // the reference
+                skip: Boolean
+
+                main:
+                result = samples
+
+                emit:
+                result: Channel<Tuple<String, Path>> = result // the result
+                count: Integer = 1                            // the count
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should align trailing comments in a typed process' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String, infile: Path) // the sample
+                index: Path // the index
+                opts: Map<String,String>? // extra options
+
+                output:
+                result: Path = file('output.txt') // the result
+                log = stdout() // the log
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String, infile: Path) // the sample
+                index: Path                     // the index
+                opts: Map<String, String>?      // extra options
+
+                output:
+                result: Path = file('output.txt') // the result
+                log = stdout()                    // the log
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should align trailing comments in a params block and record' () {
+        expect:
+        checkFormat(
+            '''\
+            params {
+                input: String // the input
+                save_intermeds: Boolean = false // save intermediates
+                outdir: String = 'results'
+            }
+
+            record FastqPair {
+                id: String // the sample id
+                fastq_1: Path // the first read
+                fastq_2: Path? // the second read
+            }
+
+            workflow {
+                println(params.input)
+            }
+            ''',
+            '''\
+            params {
+                input: String                   // the input
+                save_intermeds: Boolean = false // save intermediates
+                outdir: String = 'results'
+            }
+
+            record FastqPair {
+                id: String     // the sample id
+                fastq_1: Path  // the first read
+                fastq_2: Path? // the second read
+            }
+
+            workflow {
+                println(params.input)
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should not align trailing comments of multi-line entries' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(id: String, infile: Path) // the sample
+                index: Path // the index
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    infile: Path
+                ) // the sample
+                index: Path // the index
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            HARSHIL
         )
     }
 

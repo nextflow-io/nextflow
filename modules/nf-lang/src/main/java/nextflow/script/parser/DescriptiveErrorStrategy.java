@@ -71,18 +71,17 @@ public class DescriptiveErrorStrategy extends BailErrorStrategy {
     public void reportError(Parser recognizer, RecognitionException e) {
     }
 
+    private static final String EOF_ERROR_MESSAGE = "Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string";
+
     protected String createNoViableAlternativeErrorMessage(Parser recognizer, NoViableAltException e) {
-        TokenStream tokens = recognizer.getInputStream();
-        String input;
-        if (tokens != null) {
-            if (e.getStartToken().getType() == Token.EOF) {
-                input = "<EOF>";
-            } else {
-                input = e.getOffendingToken().getText();
-            }
-        } else {
-            input = "<unknown input>";
+        if (e.getOffendingToken().getType() == Token.EOF) {
+            return EOF_ERROR_MESSAGE;
         }
+
+        TokenStream tokens = recognizer.getInputStream();
+        String input = tokens != null
+            ? e.getOffendingToken().getText()
+            : "<unknown input>";
 
         return "Unexpected input: " + escapeWSAndQuote(input);
     }
@@ -96,6 +95,10 @@ public class DescriptiveErrorStrategy extends BailErrorStrategy {
 
     protected String createInputMismatchErrorMessage(Parser recognizer,
                                                      InputMismatchException e) {
+        if (e.getOffendingToken().getType() == Token.EOF) {
+            return EOF_ERROR_MESSAGE;
+        }
+
         return "Unexpected input: " + getTokenErrorDisplay(e.getOffendingToken());
     }
 
