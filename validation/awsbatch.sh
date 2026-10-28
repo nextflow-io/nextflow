@@ -46,7 +46,6 @@ $NXF_CMD run test-subdirs.nf -c awsbatch.config
 NXF_CLOUDCACHE_PATH=s3://nextflow-ci-oss/cache \
 $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
-    -c s3-data.config \
     -w s3://nextflow-ci-oss/work \
     -with-report \
     -with-trace \
@@ -56,7 +55,6 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
 NXF_CLOUDCACHE_PATH=s3://nextflow-ci-oss/cache \
 $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
-    -c s3-data.config \
     -w s3://nextflow-ci-oss/work \
     -with-report \
     -with-trace \
@@ -71,7 +69,7 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
     -w s3://nextflow-ci-oss/work \
     -plugins nf-cloudcache,nf-wave \
-    -c s3-data.config,awsfargate.config
+    -c awsfargate.config
 
 ## Test use of job array
 NXF_CLOUDCACHE_PATH=s3://nextflow-ci-oss/cache \

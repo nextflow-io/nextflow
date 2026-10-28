@@ -26,6 +26,12 @@ The project follows a modular architecture with a plugin-based system for cloud 
 - **Specific test class**: `./gradlew test --tests "SomeTestClass"`
 - **Specific module**: `make test module=nextflow`
 - **Smoke tests**: `make smoke` or `NXF_SMOKE=1 ./gradlew test` (skips long-running tests, network-dependent tests, and cloud provider integration tests)
+- **AWS (S3) integration tests**: they run only when `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` are set, otherwise they are silently skipped.
+  - `make test` exports them automatically from the `nextflow-oss` SSO profile (override with `aws_profile=<name>`) and prints which case applies.
+  - With `./gradlew` directly, check the session with `aws sts get-caller-identity --profile nextflow-oss`, then run
+    `eval "$(aws configure export-credentials --profile nextflow-oss --format env)"; unset AWS_PROFILE` in the same shell command.
+  - If the session is expired, ask the user to run `aws sso login --profile nextflow-oss`; do not try to log in yourself.
+  - Changing only env vars does not invalidate Gradle's test cache: pass `--no-build-cache` (e.g. `make test gradle="./gradlew --console=plain --no-build-cache"`) to force a real run.
 - **Integration tests**: Run from `tests/` directory using test runner scripts
 - **Cloud validation tests**: Located in `validation/` directory (requires credentials)
 
