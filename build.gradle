@@ -172,10 +172,6 @@ allprojects {
             '--add-opens=java.base/java.util=ALL-UNNAMED',
             '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
             '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-            '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
             '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
         ])
     }
