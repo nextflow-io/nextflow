@@ -229,17 +229,7 @@ class CmdInfo extends CmdBase {
         if( level == 0  )
             return result.toString()
 
-        List<String> capsule = []
-        List<String> args = []
-        ManagementFactory
-                .getRuntimeMXBean()
-                .getInputArguments()
-                .each { String it ->
-                        if( it.startsWith('-Dcapsule.'))
-                            capsule << it.substring(2)
-                        else
-                            args << it
-                    }
+        final args = ManagementFactory.getRuntimeMXBean().getInputArguments()
 
         // file system
         result << BLANK << "File systems: "
@@ -264,9 +254,6 @@ class CmdInfo extends CmdBase {
                 dump(entry,null,2, result)
             }
         }
-
-        // Capsule options
-        dump("Capsule", capsule, 1, result)
 
         // Env
         result << BLANK << "Environment:" << NEWLINE
