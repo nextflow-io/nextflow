@@ -18,8 +18,10 @@ package nextflow.splitter
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.locks.Lock
 import java.util.zip.GZIPInputStream
 
+import com.google.common.util.concurrent.Striped
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -38,6 +40,8 @@ import nextflow.util.CheckHelper
 @Slf4j
 @CompileStatic
 abstract class AbstractSplitter<T> implements SplitterStrategy {
+
+    private static final Striped<Lock> locks = Striped.lock(64)
 
     protected Map fOptionsMap
 
@@ -142,21 +146,15 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         setSource(source)
 
         this.collector = createCollector()
-        if( collector instanceof CacheableCollector && collector.checkCached() ) {
-            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.getBaseFile()}"
-            result = resumeFromCache(collector)
+        // concurrent splits of the same input share the same chunk files and marker,
+        // therefore they are serialised to let the first one create them and the others reuse them
+        final lock = collector instanceof CacheableCollector ? locks.get(collector.getMarkerFile()) : null
+        lock?.lock()
+        try {
+            result = applyOrResume(source)
         }
-        else {
-            try {
-                final stream = normalizeSource(source)
-                result = process(stream)
-
-                if( collector instanceof CacheableCollector )
-                    collector.markComplete()
-            }
-            catch ( StopSplitIterationException e ) {
-                log.trace 'Split iteration interrupted'
-            }
+        finally {
+            lock?.unlock()
         }
 
         /*
@@ -173,6 +171,23 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
             return into
 
         return result
+    }
+
+    private applyOrResume(source) {
+        if( collector instanceof CacheableCollector && collector.checkCached() ) {
+            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.getBaseFile()}"
+            return resumeFromCache(collector)
+        }
+        try {
+            final result = process(normalizeSource(source))
+            if( collector instanceof CacheableCollector )
+                collector.markComplete()
+            return result
+        }
+        catch ( StopSplitIterationException e ) {
+            log.trace 'Split iteration interrupted'
+            return null
+        }
     }
 
     /**
