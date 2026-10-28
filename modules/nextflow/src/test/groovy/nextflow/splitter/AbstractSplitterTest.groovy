@@ -121,7 +121,7 @@ class AbstractSplitterTest extends Specification {
 
     def 'test markComplete called when process succeeds'() {
         given:
-        def mockCollector = Mock(TextFileCollector)
+        def mockCollector = Mock(TextFileCollector) { getMarkerFile() >> Paths.get('/work/.chunks.test') }
         def splitter = new AbstractSplitter() {
             @Override
             protected Object process(Object targetObject) {
@@ -150,7 +150,7 @@ class AbstractSplitterTest extends Specification {
 
     def 'test markComplete not called when process fails'() {
         given:
-        def mockCollector = Mock(TextFileCollector)
+        def mockCollector = Mock(TextFileCollector) { getMarkerFile() >> Paths.get('/work/.chunks.test') }
         def splitter = new AbstractSplitter() {
             @Override
             protected Object process(Object targetObject) {
