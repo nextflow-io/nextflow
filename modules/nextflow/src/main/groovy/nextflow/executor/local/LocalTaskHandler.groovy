@@ -99,16 +99,16 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     void submit() {
-        // create the wrapper script
-        buildTaskWrapper()
-
-        // create the process builder to run the task in the local computer
-        final builder = createLaunchProcessBuilder()
-        final logFile = builder.redirectOutput().file()
-
-        // run async via thread pool
+        // run async via thread pool, including the wrapper creation, so that
+        // it does not run serially on the task monitor thread
         executor.getExecService().submit( {
+            File logFile = null
             try {
+                // create the wrapper script
+                buildTaskWrapper()
+                // create the process builder to run the task in the local computer
+                final builder = createLaunchProcessBuilder()
+                logFile = builder.redirectOutput().file()
                 // start the execution and notify the event to the monitor
                 process = builder.start()
                 final status = process.waitFor()
