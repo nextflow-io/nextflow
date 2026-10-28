@@ -128,6 +128,38 @@ function get_ver() {
     fi
 }
 
+# downloads the bundle of NXF_VER for this platform and installs it as the symlink $1,
+# returns 1 when it is not available (e.g. versions released without bundles)
+function get_bundle() {
+    local name="nextflow-$NXF_VER-$NXF_PLATFORM"
+    local url="${NXF_BUNDLE_BASE:-https://github.com/$NXF_ORG/nextflow/releases/download}/v$NXF_VER/$name.tar.gz"
+    local sum dir status
+    if command -v sha256sum &>/dev/null; then sum=sha256sum
+    elif command -v shasum &>/dev/null; then sum='shasum -a 256'
+    else return 1
+    fi
+    # mktemp creates a 0700 directory, which other users of a shared NXF_HOME could not use
+    mkdir -p "$(dirname "$1")" && dir=$(mktemp -d "$(dirname "$1")/.bundle.XXXXXX") && chmod 755 "$dir" || return 1
+    printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
+    get_file "$url" "$dir/$name.tar.gz" && get_file "$url.sha256" "$dir/sha256" \
+        && [[ $(cd "$dir" && $sum "$name.tar.gz" | cut -d' ' -f1) == "$(cut -d' ' -f1 "$dir/sha256")" ]] \
+        && tar -xzf "$dir/$name.tar.gz" -C "$dir" && [[ -f $dir/$name/lib/$NXF_JAR ]] \
+        && rm -f "$dir/$name.tar.gz" "$dir/sha256" \
+        && { ln -sn "$(basename "$dir")/$name" "$1" 2>/dev/null || [[ -d $1 ]]; }
+    status=$?
+    printf "\r\033[K"
+    # a symlink, because `mv` would nest the directory into the one of a concurrent launch
+    [[ $status -eq 0 && $(readlink "$1") == "$(basename "$dir")/$name" ]] || rm -rf "$dir"
+    return $status
+}
+
+function get_file() {
+    if command -v curl &>/dev/null; then curl -fsSL "$1" -o "$2"
+    elif command -v wget &>/dev/null; then wget -q "$1" -O "$2"
+    else return 1
+    fi
+}
+
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXXX" || exit $?
@@ -238,6 +270,7 @@ unset JAVA_TOOL_OPTIONS
 bg=''
 declare -a jvmopts=()
 declare -a args=("$@")
+declare -a launcher_args=("$@")
 declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
 # $NXF_CLI_OPTS allow to pass arbitrary cli opts via the environment
 # note: do not wrap with quotes because the variable can be used to specify more than on option separate by blanks
@@ -285,12 +318,28 @@ NXF_PACK=one
 NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 
-# use the Java runtime and the jar of the bundle that contains this script, when it provides NXF_VER
-NXF_BUNDLE=''
-if [[ ! $NXF_BIN ]] && bundle_home="$(dirname "$(resolve_link "$0")")/.." && [[ -x $bundle_home/runtime/bin/java && -f $bundle_home/lib/$NXF_JAR ]]; then
-    NXF_BUNDLE="$(cd "$bundle_home" && pwd -P)"
-    NXF_BIN="$NXF_BUNDLE/lib/$NXF_JAR"
-    [[ ! "$NXF_JAVA_HOME" ]] && JAVA_CMD="$NXF_BUNDLE/runtime/bin/java"
+# the platform of the bundles, which contain the Java runtime, jar and AOT cache of a version
+case "$OSTYPE/$HOSTTYPE" in
+  linux-gnu*/x86_64) NXF_PLATFORM=linux-x64 ;;
+  linux-gnu*/aarch64) NXF_PLATFORM=linux-arm64 ;;
+  darwin*/arm64|darwin*/aarch64) NXF_PLATFORM=macos-arm64 ;;
+  *) NXF_PLATFORM='' ;;
+esac
+
+# use the Java runtime and the jar of the bundle that contains this script when it provides NXF_VER,
+# otherwise hand off to the bundle of NXF_VER, which is downloaded instead of the jar when available
+bundle_home=''
+if [[ ! $NXF_BIN && $NXF_PACK != dist ]]; then
+    this_home="$(dirname "$(resolve_link "$0")")/.."
+    bundle_dir="$NXF_DIST/$NXF_VER/nextflow-$NXF_VER-$NXF_PLATFORM"
+    if [[ -x $this_home/runtime/bin/java && -f $this_home/lib/$NXF_JAR ]]; then
+        bundle_home="$(cd "$this_home" && pwd -P)"
+        NXF_BIN="$bundle_home/lib/$NXF_JAR"
+        [[ ! "$NXF_JAVA_HOME" ]] && JAVA_CMD="$bundle_home/runtime/bin/java"
+    elif [[ $NXF_PLATFORM && $NXF_BUNDLE != false ]]; then
+        [[ -e $bundle_dir || -f $NXF_DIST/$NXF_VER/$NXF_JAR ]] || get_bundle "$bundle_dir"
+        [[ -x $bundle_dir/bin/nextflow && -f $bundle_dir/lib/$NXF_JAR ]] && NXF_VER=$NXF_VER exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
+    fi
 fi
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
@@ -440,9 +489,9 @@ if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
 fi
 # the startup cache of the bundle: it is only valid for the same runtime, jar and module options,
 # and with compressed oops, which the JVM disables for a default heap of 32 GB or more (i.e. 128 GB RAM)
-if [[ $NXF_BUNDLE && $JAVA_CMD == "$NXF_BUNDLE/runtime/bin/java" ]]; then
+if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" ]]; then
     [[ "$NXF_OPTS $NXF_JVM_ARGS" =~ -Xmx|MaxHeapSize ]] || launcher+=(-XX:+UseCompressedOops)
-    [[ -f $NXF_BUNDLE/lib/nextflow.aot ]] && launcher+=(-XX:AOTCache="$NXF_BUNDLE/lib/nextflow.aot" -Xlog:aot=off)
+    [[ -f $bundle_home/lib/nextflow.aot ]] && launcher+=(-XX:AOTCache="$bundle_home/lib/nextflow.aot" -Xlog:aot=off)
 fi
 launcher+=("${cmd_tail[@]}")
 
