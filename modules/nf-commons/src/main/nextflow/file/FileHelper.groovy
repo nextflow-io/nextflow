@@ -16,7 +16,6 @@
 
 package nextflow.file
 
-import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.DirectoryStream
 import java.nio.file.FileSystem
@@ -677,32 +676,44 @@ class FileHelper {
     }
 
     /**
+     * Get the schemes of all available file system providers, including
+     * those registered with {@link #getOrInstallProvider(java.lang.Class)}
+     */
+    static Set<String> getProviderSchemes() {
+        final result = new LinkedHashSet<String>()
+        for( final provider : FileSystemProvider.installedProviders() )
+            result.add(provider.scheme)
+        synchronized (providersMap) {
+            result.addAll(providersMap.keySet())
+        }
+        return result
+    }
+
+    /**
      * Get the instance of the specified {@code FileSystemProvider} class. If the provider is not
-     * in the list of installed provided, it creates a new instance and add it to the list
+     * known, it creates a new instance and registers it so that it can be resolved by
+     * {@link #getProviderFor(java.lang.String)}.
      * <p>
-     * This method has been deprecated use {@link #getOrCreateFileSystemFor(java.lang.String)} instead
-     *
-     * @see {@code FileSystemProvider#installedProviders}
+     * Providers registered this way are not visible to {@code Paths.get(URI)}, use
+     * {@link #asPath(java.net.URI)} instead.
      *
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
-    synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+    static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+        synchronized (providersMap) {
+            FileSystemProvider result = providersMap.values().find { it.class == clazz }
+            if( result )
+                return (T)result
 
-        FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
-        if( result )
+            result = FileSystemProvider.installedProviders().find { it.class == clazz }
+            if( !result ) {
+                result = clazz.getDeclaredConstructor().newInstance()
+                log.debug "> Registered '${clazz.simpleName}' file system provider [${result.scheme}]"
+            }
+            providersMap[result.scheme] = result
             return (T)result
-
-        result = (T)clazz.newInstance()
-
-        // add it manually
-        Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
-        field.setAccessible(true)
-        List installedProviders = new ArrayList((List)field.get(null))
-        installedProviders.add( result )
-        field.set(this, Collections.unmodifiableList(installedProviders))
-        log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
-        return (T)result
+        }
     }
 
     private static Lock _fs_lock = new ReentrantLock()
