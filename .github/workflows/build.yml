@@ -68,7 +68,8 @@ jobs:
           echo "commit_message=$COMMIT_MESSAGE" >> "$GITHUB_OUTPUT"
 
       # docs/snippets is exercised by the `test_docs` mode, so a change there
-      # is not docs-only.
+      # is not docs-only. Any API failure, or a PR beyond the 3000-file
+      # limit of the files endpoint, falls back to a full build.
       - name: Check for docs-only changes
         id: docs_only
         if: github.event_name == 'pull_request'
@@ -77,11 +78,13 @@ jobs:
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          FILES=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].filename')
-          echo "Changed files:"; echo "$FILES"
-          CODE=$(printf '%s\n' "$FILES" | grep -vE '^docs/' || true)
+          COUNT=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.changed_files') || COUNT=''
+          FILES=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)') || FILES=''
+          # indent so that file names can't be interpreted as workflow commands
+          echo "Changed files ($COUNT):"; printf '%s\n' "$FILES" | sed 's/^/  /'
+          CODE=$(printf '%s\n' "$FILES" | grep -vE '^(docs|\.docusaurus_site)/' || true)
           SNIPPETS=$(printf '%s\n' "$FILES" | grep -E '^docs/snippets/' || true)
-          if [ -n "$FILES" ] && [ -z "$CODE$SNIPPETS" ]; then
+          if [ -n "$FILES" ] && [ "${COUNT:-0}" -gt 0 ] && [ "$COUNT" -le 3000 ] && [ -z "$CODE$SNIPPETS" ]; then
             echo "Docs-only change: skipping build and tests"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
