@@ -257,6 +257,26 @@ class SimpleFileCopyStrategyTest extends Specification {
     }
 
 
+    def 'should unstage only the files matching the output patterns' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        ['g[1].txt', 'g1.txt', 'a.csv'].each { folder.resolve(it).text = 'x' }
+        def strategy = new SimpleFileCopyStrategy(new TaskBean(workDir: folder, targetDir: folder))
+        // stub the copy function to record the names it receives
+        def script = 'nxf_fs_copy() { printf "%s\\n" "$1" >> copied.log; }\n'
+        script += strategy.getUnstageOutputFilesScript(['g\\[1\\].txt', '*.csv'], folder)
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('copied.log').readLines().sort() == ['a.csv', 'g[1].txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should return cp script to unstage output files' () {
 
         given:
@@ -270,9 +290,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
                     nxf_fs_copy "$name" /target/work\\ dir
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -311,9 +333,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
                     nxf_fs_move "$name" /target/store
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -333,9 +357,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
                     nxf_fs_rsync "$name" /target/work\\'s
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()

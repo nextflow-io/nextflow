@@ -395,10 +395,12 @@ class AzFileCopyStrategyTest extends Specification {
         binding.unstage_outputs == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
+                    set -f
+                    for name in $(set +f; eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
                         printf -v qname %q "$name"
                         uploads+=("nxf_az_upload $qname 'http://account.blob.core.windows.net/my-data/work/dir'")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()

@@ -181,11 +181,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             escape.add( Escape.doubleQuoted(Escape.pattern(it)) )
 
         final mode = stageoutMode ?: ( this.targetDir==null || this.workDir==this.targetDir ? 'copy' : 'move' )
+        // names listed by `ls` are literal, so do not glob them again in the loop (`set -f`)
         return """\
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            set -f
+            for name in \$(set +f; eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
                 ${stageOutCommand('$name', unstageDir, mode)}
             done
+            set +f
             unset IFS""".stripIndent(true)
     }
 

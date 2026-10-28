@@ -62,9 +62,11 @@ class BashWrapperBuilderWithAzTest extends Specification {
         then:
         binding.unstage_outputs == """\
                     IFS=\$'\\n'
-                    for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    set -f
+                    for name in \$(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
                         nxf_az_upload "\$name" '${AzHelper.toHttpUrl(target)}'
                     done
+                    set +f
                     unset IFS
                     """.stripIndent().rightTrim()
 
@@ -143,10 +145,12 @@ class BashWrapperBuilderWithAzTest extends Specification {
         binding.unstage_outputs == """\
                     uploads=()
                     IFS=\$'\\n'
-                    for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    set -f
+                    for name in \$(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
                         printf -v qname %q "\$name"
                         uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(target)}'")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "\${uploads[@]}"
                     """.stripIndent()

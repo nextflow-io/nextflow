@@ -392,4 +392,9 @@ class ContainerHandlerTest extends Specification {
         "oras://quay.io/this/that:latest"   | "bar.io"      | "oras://bar.io/this/that:latest"
     }
 
+
+    def 'should keep shell variables in a container image path' () {
+        expect:
+        ContainerHandler.escapeImagePath('/scratch/$USER/my img.sif') == '/scratch/$USER/my\\ img.sif'
+    }
 }

@@ -129,13 +129,16 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         for( String it : patterns )
             escape.add( Escape.doubleQuoted(Escape.pattern(it)) )
 
+        // names listed by `ls` are literal, so do not glob them again in the loop (`set -f`)
         return """\
             uploads=()
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            set -f
+            for name in \$(set +f; eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
                 printf -v qname %q "\$name"
                 uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(targetDir)}'")
             done
+            set +f
             unset IFS
             nxf_parallel "\${uploads[@]}"
             """.stripIndent(true)

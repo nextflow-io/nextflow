@@ -70,7 +70,7 @@ class ContainerHandler {
             if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createSingularityCache(config, normalizedImageName) : normalizedImageName
-            return Escape.path(result)
+            return escapeImagePath(result)
         }
         if( config instanceof ApptainerConfig ) {
             final normalizedImageName = normalizeApptainerImageName(imageName)
@@ -82,7 +82,7 @@ class ContainerHandler {
             if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createApptainerCache(config, normalizedImageName) : normalizedImageName
-            return Escape.path(result)
+            return escapeImagePath(result)
         }
         if( config instanceof CharliecloudConfig ) {
             final normalizedImageName = normalizeCharliecloudImageName(imageName)
@@ -94,7 +94,7 @@ class ContainerHandler {
             if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createCharliecloudCache(config, normalizedImageName) : normalizedImageName
-            return Escape.path(result)
+            return escapeImagePath(result)
         }
         // fallback to docker
         return normalizeDockerImageName(imageName)
@@ -306,5 +306,10 @@ class ContainerHandler {
         return scheme
             ? scheme + "://" + result
             : result
+    }
+
+    // an image path is config, not data, so keep shell variables in it, e.g. `/scratch/$USER/img.sif`
+    static protected String escapeImagePath(String path) {
+        return Escape.path(path).replace('\\$', '$')
     }
 }
