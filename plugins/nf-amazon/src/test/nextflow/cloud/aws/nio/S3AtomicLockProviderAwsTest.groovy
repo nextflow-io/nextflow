@@ -32,7 +32,7 @@ import spock.lang.Specification
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-@Requires({System.getenv('ENABLE_S3FS_TEST') && System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
+@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec {
 
     private S3Client s3Client0
