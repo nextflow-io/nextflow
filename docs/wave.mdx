@@ -95,34 +95,27 @@ Packages from the [Python Package Index](https://pypi.org/) can also be added to
 
 <AddedInVersion version="26.04" />
 
-Wave supports different build templates for creating container images from Conda packages. Build templates control how packages are installed and how the final container image is structured.
-
-Multi-stage build templates (`conda/pixi:v1`, `conda/pixi:v1-fast`, `conda/micromamba:v2` and `conda/micromamba:v2-fast`) offer several advantages:
-
-- **Smaller images**: Build tools and package managers are excluded from the final image (30-50% size reduction typical).
-- **Reproducibility**: Lock files are generated for exact package version tracking.
-- **Security**: Fewer binaries in the final image reduces the attack surface.
-
-To use a specific build template, add the following to your configuration:
+Wave builds Conda containers from a *build template*, which selects the package manager and the image layout. The default is `conda/micromamba:v2`. To use a different template, set `wave.build.template`:
 
 ```groovy
-wave.enabled = true
-wave.strategy = ['conda']
 wave.build.template = 'conda/pixi:v1'
 ```
 
-Available templates:
-
 | Template | Description |
 |----------|-------------|
-| `conda/micromamba:v1` | Micromamba 1.x single-stage build. The final image includes the package manager. |
-| `conda/micromamba:v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. Default for Conda packages since Wave 1.34.0. |
-| `conda/micromamba:v2-fast` | Like `conda/micromamba:v2`, with the Conda environment split into multiple image layers grouped by package, each at most 512 MB. Use it when a registry or proxy rejects large layers, or to speed up pulls. Docker images only. |
-| `conda/pixi:v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces a `pixi.lock` file. |
-| `conda/pixi:v1-fast` | Like `conda/pixi:v1`, with the Conda environment split into multiple image layers grouped by package, each at most 512 MB. Use it when a registry or proxy rejects large layers, or to speed up pulls. Docker images only. |
-| `cran/installr:v1` | Build template for R/CRAN packages using installr. |
+| `conda/micromamba:v2` | Default. Builds the environment with Micromamba 2.x and copies it into a minimal base image, without the package manager. Produces an `environment.lock` file. |
+| `conda/pixi:v1` | Like `conda/micromamba:v2`, but builds the environment with [Pixi](https://pixi.sh/). Produces a `pixi.lock` file. |
+| `conda/micromamba:v2-fast` | Like `conda/micromamba:v2`, with the environment split into image layers of at most 512 MB. Docker images only. |
+| `conda/pixi:v1-fast` | Like `conda/pixi:v1`, with the environment split into image layers of at most 512 MB. Docker images only. |
+| `conda/micromamba:v1` | Legacy single-stage build. The image includes Micromamba 1.x. |
 
-When `wave.build.template` is not specified, Wave uses its default template: `conda/micromamba:v2` for Conda packages since Wave 1.34.0, `conda/micromamba:v1` with earlier Wave versions.
+Use a `-fast` template when a registry or proxy rejects large image layers, or to speed up image pulls.
+
+The `wave.build.conda.*` options only apply to the Micromamba templates. The Pixi templates ignore them.
+
+:::note
+Wave versions earlier than 1.34.0 use `conda/micromamba:v1` by default.
+:::
 
 ### Build Singularity native images
 
