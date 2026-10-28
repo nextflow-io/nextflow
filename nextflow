@@ -377,7 +377,9 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-JAVA_OPTS+=(-XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m -XX:+UseSerialGC)
+JAVA_OPTS+=(-XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m)
+# use the serial GC unless another one is specified
+[[ "$NXF_OPTS $NXF_JVM_ARGS" =~ -XX:\+Use[A-Za-z0-9]+GC ]] || JAVA_OPTS+=(-XX:+UseSerialGC)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
