@@ -355,8 +355,16 @@ final jdeps = tasks.register('jdeps', JdepsModules) {
     classpath.from(shadowJar)
     jdkHome = hostJdk
     release = javaVersion
-    // jdk.zipfs: loaded via ServiceLoader, used by Groovy to find the default imports in the jar
-    extraModules = ['jdk.zipfs']
+    extraModules = [
+        // loaded via ServiceLoader: Groovy uses jdk.zipfs to find the default imports in the jar,
+        // the others provide charsets, locales and DNS lookups
+        'jdk.zipfs', 'jdk.charsets', 'jdk.localedata', 'jdk.naming.dns',
+        // used by the core plugins, which are not scanned by jdeps: jdk.net by the AWS SDK HTTP
+        // client (nf-amazon), jdk.httpserver by the login callback servers (nf-tower, nf-azure)
+        'jdk.net', 'jdk.httpserver',
+        // the `-remote-debug` launcher option
+        'jdk.jdwp.agent',
+    ]
     modulesFile = layout.buildDirectory.file('jdeps/modules.txt')
 }
 
