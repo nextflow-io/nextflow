@@ -97,6 +97,19 @@ jobs:
           "$home/runtime/bin/java" -version
           # -XX:AOTMode=on: the JVM fails to start if the cache is rejected
           NXF_JVM_ARGS=-XX:AOTMode=on bundle/train.sh --verify "$home" "$dir/work"
+          echo "BUNDLE_HOME=$home" >> "$GITHUB_ENV"
+
+      # HTTPS with the trust store of the OS (the macOS keychain or the Java trust store of the Linux distro)
+      - name: HTTPS test
+        run: |
+          dir=$(mktemp -d)
+          cat > "$dir/main.nf" <<'EOF'
+          workflow {
+              println file('https://raw.githubusercontent.com/nextflow-io/nextflow/master/VERSION').text.trim()
+          }
+          EOF
+          cd "$dir"
+          NXF_HOME=$dir/home "$BUNDLE_HOME/bin/nextflow" run main.nf
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
         with:

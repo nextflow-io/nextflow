@@ -129,7 +129,8 @@ function get_ver() {
 }
 
 # downloads the bundle of NXF_VER for this platform and installs it as the symlink $1,
-# returns 1 when it is not available (e.g. versions released without bundles)
+# returns 1 when it is not available (e.g. versions released without bundles), without errors
+# since the jar and the system Java are used instead
 function get_bundle() {
     local name="nextflow-$NXF_VER-$NXF_PLATFORM"
     local url="${NXF_BUNDLE_BASE:-https://github.com/$NXF_ORG/nextflow/releases/download}/v$NXF_VER/$name.tar.gz"
@@ -140,22 +141,24 @@ function get_bundle() {
     fi
     # mktemp creates a 0700 directory, which other users of a shared NXF_HOME could not use
     mkdir -p "$(dirname "$1")" && dir=$(mktemp -d "$(dirname "$1")/.bundle.XXXXXX") && chmod 755 "$dir" || return 1
-    printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
+    >&2 printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
+    # the runtime may not run, e.g. on a noexec mount, in which case the jar and the system Java are used
     get_file "$url" "$dir/$name.tar.gz" && get_file "$url.sha256" "$dir/sha256" \
         && [[ $(cd "$dir" && $sum "$name.tar.gz" | cut -d' ' -f1) == "$(cut -d' ' -f1 "$dir/sha256")" ]] \
         && tar -xzf "$dir/$name.tar.gz" -C "$dir" && [[ -f $dir/$name/lib/$NXF_JAR ]] \
+        && "$dir/$name/runtime/bin/java" -version &>/dev/null \
         && rm -f "$dir/$name.tar.gz" "$dir/sha256" \
         && { ln -sn "$(basename "$dir")/$name" "$1" 2>/dev/null || [[ -d $1 ]]; }
     status=$?
-    printf "\r\033[K"
+    >&2 printf "\r\033[K"
     # a symlink, because `mv` would nest the directory into the one of a concurrent launch
     [[ $status -eq 0 && $(readlink "$1") == "$(basename "$dir")/$name" ]] || rm -rf "$dir"
     return $status
 }
 
 function get_file() {
-    if command -v curl &>/dev/null; then curl -fsSL "$1" -o "$2"
-    elif command -v wget &>/dev/null; then wget -q "$1" -O "$2"
+    if command -v curl &>/dev/null; then curl -fsL --connect-timeout 10 "$1" -o "$2"
+    elif command -v wget &>/dev/null; then wget -q -T 10 "$1" -O "$2"
     else return 1
     fi
 }
@@ -430,6 +433,13 @@ fi
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
 JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcom.sun.security.enableAIAcaIssuers=true)
+# the bundled runtime has its own CA certificates: trust those of the OS instead (e.g. of a
+# corporate proxy), as the Java of the OS would, unless a trust store is specified
+if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" && ! "$NXF_OPTS $NXF_JVM_ARGS" =~ javax\.net\.ssl\.trustStore ]]; then
+  if [[ $OSTYPE == darwin* ]]; then JAVA_OPTS+=(-Djavax.net.ssl.trustStoreType=KeychainStore-ROOT)
+  else for f in /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts; do [[ -r $f && -s $f ]] && JAVA_OPTS+=(-Djavax.net.ssl.trustStore="$f") && break; done
+  fi
+fi
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
