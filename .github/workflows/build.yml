@@ -82,7 +82,7 @@ jobs:
           COUNT=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.changed_files') || COUNT=''
           FILES=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)') || FILES=''
           # indent so that file names can't be interpreted as workflow commands
-          echo "Changed files ($COUNT):"; printf '%s\n' "$FILES" | sed 's/^/  /'
+          echo "Changed files ($COUNT):"; printf '%s\n' "$FILES" | sed 's/^/- /'
           CODE=$(printf '%s\n' "$FILES" | grep -vE '^(docs|\.docusaurus_site)/' || true)
           SNIPPETS=$(printf '%s\n' "$FILES" | grep -E '^docs/snippets/' || true)
           if [ -n "$FILES" ] && [ "${COUNT:-0}" -gt 0 ] && [ "$COUNT" -le 3000 ] && [ -z "$CODE$SNIPPETS" ]; then
