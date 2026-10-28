@@ -157,8 +157,9 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
     }
 
+    // source is a shell variable reference, e.g. `$name`
     static String uploadCmd( String source, Path target ) {
-        "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}"
+        "nxf_s3_upload \"${source}\" s3:/${Escape.path(target)}"
     }
 
     /**

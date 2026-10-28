@@ -57,6 +57,7 @@ class EscapeTest extends Specification {
         Escape.path("hello`3.txt") == "hello\\`3.txt"
         Escape.path('hello:3.txt') == "hello\\:3.txt"
         Escape.path('hello;3.txt') == "hello\\;3.txt"
+        Escape.path('hello$3.txt') == 'hello\\$3.txt'
         Escape.path("/some'5/data'3/with/quote's/file's.txt") == "/some\\'5/data\\'3/with/quote\\'s/file\\'s.txt"
         Escape.path("Hello '$world'") == "Hello\\ \\'world\\'"
 
@@ -131,7 +132,7 @@ class EscapeTest extends Specification {
     @Unroll
     def 'should preserve a file name with special characters in bash' () {
         given:
-        def name = 'a\nb c;d `e` $(f) "g" \'h'
+        def name = 'a\nb c;d `e` $(f) "g" \'h ${i=$(j)}${i@P} $k'
 
         when:
         def proc = ['bash', '-c', CMD.replace('NAME', ARG(name))].execute()
@@ -180,6 +181,8 @@ class EscapeTest extends Specification {
         'f\\?.txt'          | 'f?.txt'              | ['f1.txt']
         'x\\\\y.txt'        | 'x\\\\y.txt'          | ['x\\y.txt']
         'x\\:y\\!z.txt'     | 'x\\:y\\!z.txt'       | ['x:y!z.txt']
+        'd$x.txt'           | 'd$x.txt'             | ['d.txt']
+        'd$*'               | 'd$x.txt'             | ['dx.txt']
         '*.csv'             | 'data.csv'            | ['data.txt']
         '*\\.txt'           | 'a.txt'               | ['a.csv']
         'a\\b*'             | 'ab.txt'              | ['a\\b.txt']

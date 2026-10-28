@@ -30,7 +30,7 @@ import nextflow.file.FilePatternSplitter
 @CompileStatic
 class Escape {
 
-    final private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';', '\n']
+    final private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';', '$', '\n']
 
     final private static List<String> VAR_CHARS = ['$']
 
