@@ -116,6 +116,10 @@ class BashWrapperBuilder {
 
     private String stageScript
 
+    private Path containerEnvFile
+
+    @PackageScope String containerEnvScript
+
     private BashTemplateEngine engine = new BashTemplateEngine()
 
     BashWrapperBuilder( TaskRun task ) {
@@ -294,6 +298,7 @@ class BashWrapperBuilder {
         exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
         stageFile = workDir.resolve(TaskRun.CMD_STAGE)
+        containerEnvFile = workDir.resolve(TaskRun.CMD_CONTAINER_ENV)
 
         // set true when running with through a container engine
         runWithContainer = containerEnabled && !containerNative
@@ -359,15 +364,10 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
-        if( runWithContainer ) {
-            binding.task_env = null
-            binding.container_env = env
-        }
-        else {
-            binding.task_env = env
-            binding.container_env = null
-        }
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames), false)
+        // with a container the env is written to a file and sourced inside the container, see getLaunchCommand
+        containerEnvScript = runWithContainer ? env : null
+        binding.task_env = runWithContainer ? null : env
 
         /*
          * add the task secrets
@@ -427,6 +427,22 @@ class BashWrapperBuilder {
         engine.render(res.newReader(), binding)
     }
 
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            final value = result.get(name)
+            // for one evaluation of `export NAME="value"`; line breaks as `$'\n'`/`$'\r'` keep it on one line in the indented template
+            if( value )
+                result.put(name, Escape.doubleQuoted(value).replace('\n', '"$\'\\n\'"').replace('\r', '"$\'\\r\'"'))
+        }
+        return result
+    }
+
     @PackageScope String buildNew0(BufferedReader template) {
         final binding = makeBinding()
         engine.render(template, binding)
@@ -450,6 +466,8 @@ class BashWrapperBuilder {
             write0(targetInputFile(), input.toString())
         if( stageScript != null )
             write0(targetStageFile(), stageScript)
+        if( containerEnvScript != null )
+            write0(targetContainerEnvFile(), containerEnvScript)
         return result
     }
 
@@ -460,6 +478,8 @@ class BashWrapperBuilder {
     protected Path targetInputFile() { return inputFile }
 
     protected Path targetStageFile() { return stageFile }
+
+    protected Path targetContainerEnvFile() { return containerEnvFile }
 
     private Path write0(Path path, String data) {
         int attempt=0
@@ -665,7 +685,7 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            String cmd = env ? "source ${fileStr(containerEnvFile)}; " + launcher : launcher
             // wrap the command with an extra bash invocation either :
             // - to propagate the container environment or
             // - to change in the task work directory as required by singularity

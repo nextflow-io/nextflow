@@ -591,6 +591,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_STAGE = '.command.stage'
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
+    static final public String CMD_CONTAINER_ENV = '.command.container_env'
     static final public String FUSION_TRACE = '.fusion/trace.json'
 
 

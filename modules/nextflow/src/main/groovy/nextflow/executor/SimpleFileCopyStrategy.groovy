@@ -403,19 +403,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( !environment )
             return null
 
-        // create the *bash* environment script
-        if( !container ) {
-            return TaskProcessor.bashEnvironmentScript(environment)
-        }
-        else {
-            final wrapper = new StringBuilder()
-            wrapper << "nxf_container_env() {\n"
-            wrapper << 'cat << EOF\n'
-            wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
-            wrapper << 'EOF\n'
-            wrapper << '}\n'
-            return wrapper.toString()
-        }
+        // the container env is sourced from a file inside the container, so it is the same script
+        return TaskProcessor.bashEnvironmentScript(environment)
     }
 
 }

@@ -41,6 +41,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Map<String,String> environment
 
+    Set<String> inputEnvNames
+
     String headerScript
 
     String containerImage
@@ -138,6 +140,7 @@ class TaskBean implements Serializable, Cloneable {
 
         // set the environment
         this.environment = task.getEnvironment()
+        this.inputEnvNames = task.inputEnv ? new HashSet<String>(task.inputEnv.keySet()) : null
 
         this.condaEnv = task.getCondaEnv()
         this.useMicromamba = task.getCondaConfig()?.useMicromamba()
