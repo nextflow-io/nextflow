@@ -437,9 +437,9 @@ class BashWrapperBuilder {
         final result = new LinkedHashMap<String,String>(environment)
         for( String name : names ) {
             final value = result.get(name)
-            // the env script line `export NAME="value"` is evaluated once
+            // for one evaluation of `export NAME="value"`; newlines as `$'\n'` keep it on one line in the indented template
             if( value )
-                result.put(name, Escape.doubleQuoted(value))
+                result.put(name, Escape.doubleQuoted(value).replace('\n', '"$\'\\n\'"'))
         }
         return result
     }

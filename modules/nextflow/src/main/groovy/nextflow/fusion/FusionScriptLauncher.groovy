@@ -111,11 +111,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
     }
 
-    @Override
-    protected Path targetContainerEnvFile() {
-        return remoteWorkDir.resolve(TaskRun.CMD_CONTAINER_ENV)
-    }
-
     List<String> fusionSubmitCli(TaskRun task) {
         final runFile = toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN), scheme)
         return List.of(FUSION_PATH, 'bash', runFile.toString())

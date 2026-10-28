@@ -700,7 +700,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def foo = 'a;b $(c) `d` "e" \\ $HOME'
-        def baz = 'x  y | z'
+        def baz = 'x  y | z\nw'
         def env = [BAR: 'w x:$PATH', FOO: foo, BAZ: baz, EMPTY: '']
         def opts = [workDir: folder, script: 'printf "%s|%s|%s|%s" "$BAR" "$FOO" "$BAZ" "$EMPTY"', environment: env, inputEnvNames: ['FOO', 'BAZ', 'EMPTY'] as Set]
         if( CONTAINER )
@@ -739,6 +739,13 @@ class BashWrapperBuilderTest extends Specification {
 
         where:
         CONTAINER << [false, true]
+    }
+
+    def 'should keep a multi-line env input value on one line' () {
+        when:
+        def binding = newBashWrapperBuilder(environment: [X: 'a\nb'], inputEnvNames: ['X'] as Set).makeBinding()
+        then:
+        binding.task_env == 'export X="a"$\'\\n\'"b"\n'
     }
 
     def 'should create secret env' () {
