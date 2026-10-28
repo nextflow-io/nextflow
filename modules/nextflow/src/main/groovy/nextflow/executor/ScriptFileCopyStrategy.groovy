@@ -80,7 +80,7 @@ interface ScriptFileCopyStrategy {
 
     /**
      * @param environment The task environment
-     * @param container Whenever the environment needs to be exported by a container engine
+     * @param container Whenever the task runs in a container; the core always passes {@code false} since the container env is sourced from a file
      * @return The environment initialisation snippet
      */
     String getEnvScript(Map environment, boolean container)

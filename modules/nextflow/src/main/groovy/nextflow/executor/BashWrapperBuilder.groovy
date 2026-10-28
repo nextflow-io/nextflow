@@ -368,7 +368,6 @@ class BashWrapperBuilder {
         // with a container the env is written to a file and sourced inside the container, see getLaunchCommand
         containerEnvScript = runWithContainer ? env : null
         binding.task_env = runWithContainer ? null : env
-        binding.container_env = null
 
         /*
          * add the task secrets
@@ -437,9 +436,9 @@ class BashWrapperBuilder {
         final result = new LinkedHashMap<String,String>(environment)
         for( String name : names ) {
             final value = result.get(name)
-            // for one evaluation of `export NAME="value"`; newlines as `$'\n'` keep it on one line in the indented template
+            // for one evaluation of `export NAME="value"`; line breaks as `$'\n'`/`$'\r'` keep it on one line in the indented template
             if( value )
-                result.put(name, Escape.doubleQuoted(value).replace('\n', '"$\'\\n\'"'))
+                result.put(name, Escape.doubleQuoted(value).replace('\n', '"$\'\\n\'"').replace('\r', '"$\'\\r\'"'))
         }
         return result
     }

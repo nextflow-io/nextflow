@@ -22,7 +22,6 @@ NXF_ENTRY=${1:-nxf_main}
 
 {{trace_script}}
 {{helpers_script}}
-{{container_env}}
 
 nxf_sleep() {
   sleep $1 2>/dev/null || sleep 1;

@@ -657,30 +657,25 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder().makeBinding()
         then:
         binding.containsKey('task_env')
-        binding.containsKey('container_env')
+        !binding.containsKey('container_env')
         binding.task_env == null
-        binding.container_env == null
         binding.sync_cmd == null
 
         when:
         binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb']).makeBinding()
         then:
         binding.containsKey('task_env')
-        binding.containsKey('container_env')
         binding.task_env == /\
                 export FOO="aa"
                 export BAR="bb"
                 /.stripIndent()
-        binding.container_env == null
 
         when:
         def builder = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb'], containerEnabled: true, containerImage: 'foo', containerConfig: new DockerConfig([:]))
         binding = builder.makeBinding()
         then:
         binding.containsKey('task_env')
-        binding.containsKey('container_env')
         binding.task_env == null
-        binding.container_env == null
         builder.@containerEnvScript == 'export FOO="aa"\nexport BAR="bb"\n'
         binding.launch_cmd.contains('source /work/dir/.command.container_env; ')
 
@@ -688,9 +683,7 @@ class BashWrapperBuilderTest extends Specification {
         binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb'], containerEnabled: true, containerImage: 'foo', containerNative: true).makeBinding()
         then:
         binding.containsKey('task_env')
-        binding.containsKey('container_env')
         binding.task_env == 'export FOO="aa"\nexport BAR="bb"\n'
-        binding.container_env == null
         !binding.launch_cmd.contains('.command.container_env')
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -700,18 +693,16 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def foo = 'a;b $(c) `d` "e" \\ $HOME'
-        def baz = 'x  y | z\nw'
+        def baz = 'x  y | z\nw\r\nv'
         def env = [BAR: 'w x:$PATH', FOO: foo, BAZ: baz, EMPTY: '']
         def opts = [workDir: folder, script: 'printf "%s|%s|%s|%s" "$BAR" "$FOO" "$BAZ" "$EMPTY"', environment: env, inputEnvNames: ['FOO', 'BAZ', 'EMPTY'] as Set]
         if( CONTAINER )
             opts += [containerEnabled: true, containerImage: 'img', containerConfig: new DockerConfig([:])]
-        def builder = newBashWrapperBuilder(opts)
-        builder.build()
-        def binding = builder.makeBinding()
+        newBashWrapperBuilder(opts).build()
         // fake docker: run the command with only the `-e` variables, like a container
         def docker = '''
-            nxf_mktemp() { mktemp -d; }
             docker() {
+                [[ $1 == run ]] || return 0
                 local envs=(); shift
                 while (( $# )); do
                     case "$1" in
@@ -723,16 +714,17 @@ class BashWrapperBuilderTest extends Specification {
                 done
                 env -i PATH="$PATH" "${envs[@]}" "$@"
             }
-            NXF_BOXID=box
+            export -f docker
             '''.stripIndent()
 
         when:
-        def proc = ['bash', '-c', (binding.task_env ?: '') + docker + binding.launch_cmd].execute()
-        def out = proc.inputStream.text
+        // run the rendered wrapper, so the template indentation of the env script is covered too
+        def proc = new ProcessBuilder('bash', '-c', docker + 'bash .command.run').directory(folder.toFile()).start()
+        proc.waitFor()
 
         then:
-        proc.waitFor() == 0
-        out == 'w x:' + System.getenv('PATH') + '|' + foo + '|' + baz + '|'
+        folder.resolve('.exitcode').text.trim() == '0'
+        folder.resolve('.command.out').text == 'w x:' + System.getenv('PATH') + '|' + foo + '|' + baz + '|'
 
         cleanup:
         folder?.deleteDir()
@@ -998,8 +990,6 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -c "source /work/dir/.command.container_env; /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
-        and:
-        binding.container_env == null
     }
 
     def 'should create wrapper with docker and legacy entrypoint false' () {
@@ -1027,8 +1017,6 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -c "source /work/dir/.command.container_env; /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
-        and:
-        binding.container_env == null
     }
 
     def 'should create wrapper with docker with sudo' () {
@@ -1163,8 +1151,6 @@ class BashWrapperBuilderTest extends Specification {
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
-        and:
-        binding.container_env == null
     }
 
     def 'should create wrapper with sarus with mount'() {
@@ -1289,12 +1275,10 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder().makeBinding()
         then:
         binding.task_env == null
-        binding.container_env == null
 
         when:
         binding = newBashWrapperBuilder(environment: ENV).makeBinding()
         then:
-        binding.container_env == null
         binding.task_env ==  '''
                 export FOO="hello"
                 export BAR="hello world"
@@ -1310,7 +1294,6 @@ class BashWrapperBuilderTest extends Specification {
         binding = builder.makeBinding()
         then:
         binding.task_env == null
-        binding.container_env == null
         builder.@containerEnvScript ==  '''
                 export FOO="hello"
                 export BAR="hello world"
