@@ -94,7 +94,42 @@ nextflow-<version>-<os>-<arch>/
 
 - **Runtime.** It contains the modules found by `jdeps` in the jar, plus those that `jdeps` can't see: service providers (`jdk.zipfs` for Groovy, `jdk.charsets`, `jdk.localedata`, `jdk.naming.dns`), modules used by the core plugins (`jdk.net` for the AWS SDK HTTP client, `jdk.httpserver` for the Seqera Platform and Azure login callbacks), and `jdk.jdwp.agent` for `-remote-debug`. Without `jdk.net`, nf-amazon can't read from S3 at all. The runtime is 124 MB (vs 392 MB for the full JDK). Corretto is used because Temurin 25 ships no `jmods`.
 - **AOT cache.** It is trained by running a small pipeline (`bundle/training`) with the bundle launcher, so that it is created with the same JVM options as when it is used. It can only be created by the target runtime, so each platform is built on a native CI runner.
-- **Size.** 80-97 MB per platform (tar.gz), of which the jar is 47 MB and the AOT cache ~12 MB.
+- **Size.** 80-97 MB per platform (tar.gz), of which the runtime is 42 MB, the jar 47 MB and the AOT cache ~12 MB.
+
+### jlink or a stock runtime
+
+The startup gains come from shipping a fixed runtime with a prebuilt AOT cache, which would work the same with a stock JRE: `jlink` itself does not change startup (within noise of a full JDK), nor the per-version runtime. What it provides is size, and control over what the runtime contains:
+
+| runtime (linux-x64) | tar.gz |
+|---|---|
+| `jlink` image (this bundle) | 42 MB |
+| Temurin 25 JRE | 58 MB (53-57 MB on other platforms) |
+| Temurin 25 JDK | 134 MB |
+
+The cost is that the module list must be maintained, and a missing module only fails at runtime, when a class of it is used. The basic list (`jdeps` + `jdk.zipfs`) broke S3 in nf-amazon (`NoClassDefFoundError: jdk/net/Sockets`). Third-party plugins run in the same JVM, so they can need a module that no core code or plugin uses. The vendor does not matter: either Corretto or Temurin works, but `jlink` needs the `jmods`, which Temurin 25 does not ship.
+
+`jlink` is kept for the smaller download. A stock JRE remains the fallback if the module list becomes a burden, and the rest of the design does not depend on it.
+
+### Trimming the runtime (follow-up)
+
+`jlink` makes the cost of each module visible, which is an opportunity to review the dependency tree. Compressed size of each module of the runtime, measured by linking it without that module:
+
+| module | tar.gz | used for |
+|---|---|---|
+| `java.base` | 18 MB | required |
+| `jdk.localedata` | 9.2 MB | formatting with non-English locales |
+| `java.desktop` native libs | 2.5 MB | never loaded: Groovy only uses `java.beans` (pure Java); excluded by the language server bundle |
+| `jdk.charsets` | 1.0 MB | non-standard charsets |
+| `jdk.management` | 0.4 MB | `jdeps` (management beans) |
+| `java.net.http` | 0.4 MB | `jdeps` (HTTP client) |
+| `java.security.jgss` | 0.3 MB | `jdeps` (Kerberos) |
+| `jdk.jdwp.agent` | 0.2 MB | `-remote-debug` |
+| others | < 0.1 MB each | |
+
+- `jdk.localedata` is most of the extra size. `jlink --include-locales` can keep a subset, if the locales that Nextflow formats with (dates, numbers) are known.
+- The `java.desktop` native libraries can be excluded as in the language server.
+- `-remote-debug` costs little in size (`jdk.jdwp.agent`), but the feature itself could be reviewed.
+- Removing dependencies from the jar (e.g. via `jdeps` per dependency) would shrink both the jar (47 MB) and the module list.
 
 ### Launcher
 
