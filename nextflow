@@ -377,7 +377,7 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
+JAVA_OPTS+=(-XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m -XX:+UseSerialGC)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
