@@ -56,7 +56,7 @@ import spock.lang.Unroll
 @Slf4j
 @Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-@Requires({System.getenv('ENABLE_S3FS_TEST') && System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
+@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
