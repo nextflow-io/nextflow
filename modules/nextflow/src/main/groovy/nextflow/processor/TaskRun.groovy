@@ -26,6 +26,7 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentOutputPlan
 import nextflow.agent.AgentTaskScript
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
@@ -206,6 +207,18 @@ class TaskRun implements Cloneable {
      * Print to the current system console the task produced stdout
      */
     void echoStdout(Session session) {
+
+        // print the final answer of an agent rather than the result frame,
+        // or the raw output if it doesn't contain a valid result frame
+        if( AgentTaskScript.isAgentTask(config) ) {
+            try {
+                session.printConsole(AgentOutputPlan.answer(stdout instanceof Path ? ((Path) stdout).text : stdout))
+                return
+            }
+            catch( Exception e ) {
+                log.debug "Unable to echo agent answer -- ${e.message}"
+            }
+        }
 
         // print the stdout
         if( stdout instanceof Path ) {
@@ -455,7 +468,7 @@ class TaskRun implements Cloneable {
         // cannot be re-derived on a cache hit (this is the in-JVM `agent` body too). A script task
         // instead re-evaluates its body -- and therefore rebuilds its context -- in
         // TaskProcessor.invokeTask, before the cache is consulted.
-        if( type == ScriptType.GROOVY )
+        if( type == ScriptType.GROOVY || type == ScriptType.PROMPT )
             return true
 
         for( OutParam it : outputs.keySet() ) {

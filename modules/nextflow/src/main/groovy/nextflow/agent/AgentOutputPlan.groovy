@@ -15,10 +15,16 @@
  */
 package nextflow.agent
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.nio.file.Files
+import java.nio.file.Path
+
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 
 import nextflow.exception.ScriptRuntimeException
+import nextflow.file.FileHelper
 import nextflow.script.AgentBuilder.AgentOutput
 import nextflow.util.TypeHelper
 
@@ -45,9 +51,6 @@ class AgentOutputPlan {
         this.schema = schema
     }
 
-    boolean isStructured() { mode == AgentOutputMode.RECORD || mode == AgentOutputMode.WRAPPED }
-    boolean isWrapped() { mode == AgentOutputMode.WRAPPED }
-
     /**
      * Decode a canonical terminal frame, including a scalar final_answer wrapper.
      *
@@ -55,7 +58,7 @@ class AgentOutputPlan {
      * frame fails with a frame-level message, and interpreting that answer per {@link #mode} fails
      * with an output-level one.
      */
-    Object decode(Object stdout, String outputName, Class outputType) {
+    Object decode(Object stdout, String outputName, Type outputType, Path workDir = null) {
         final String answer = terminalAnswer(stdout)
         if( mode == AgentOutputMode.TEXT )
             return TypeHelper.asType(answer, outputType)
@@ -63,11 +66,16 @@ class AgentOutputPlan {
         if( mode == AgentOutputMode.SCALAR_CONTRACT ) {
             if( !(value instanceof Map) || !((Map)value).containsKey(outputName) )
                 throw new ScriptRuntimeException('Canonical agent scalar output must be a JSON object containing the declared output')
-            return TypeHelper.asType(((Map)value).get(outputName), outputType)
+            return asOutputType(((Map)value).get(outputName), outputType, workDir)
         }
-        if( mode == AgentOutputMode.WRAPPED )
-            return TypeHelper.asType(requireJsonObject(value, 'structured').get(outputName), outputType)
-        return TypeHelper.asRecordType(requireJsonObject(value, 'record'), outputType)
+        return asOutputType(requireJsonObject(value, 'record'), outputType, workDir)
+    }
+
+    /**
+     * The final answer of an agent run, as returned by {@code stdout()} in an agent output.
+     */
+    static String answer(Object stdout) {
+        return terminalAnswer(stdout)
     }
 
     /**
@@ -99,27 +107,55 @@ class AgentOutputPlan {
 
     /**
      * Bind an in-JVM runner's result into the task context.
-     *
-     * <p>Note the asymmetry with {@link #decode}: this tests {@code isStructured()}, and
-     * {@code SCALAR_CONTRACT} is not structured -- so the in-JVM path binds the runner's raw JSON
-     * string verbatim where the canonical path unwraps {@code {outputName: value}}.
      */
-    void bind(Map ctx, Object result, List<AgentOutput> outputs) {
-        // no model-answered output: the model's text is EXPLICITLY discarded, and the agent's
-        // result is whatever it wrote into the work dir
-        if( !outputs )
+    void bind(Map ctx, Object result, AgentOutput output, Path workDir = null) {
+        // no model-answered output: the agent's result is the files it wrote
+        // and its final text, which is available through `stdout()`
+        if( output == null )
             return
-        if( !isStructured() ) {
-            ctx.put(outputs[0].name, result)
-            return
-        }
         final map = new JsonSlurper().parseText(stripFences(result as String)) as Map
-        if( !isWrapped() ) {
-            ctx.put(outputs[0].name, TypeHelper.asRecordType(map, outputs[0].type as Class))
-            return
+        final value = mode == AgentOutputMode.SCALAR_CONTRACT ? map[output.name] : map
+        ctx.put(output.name, asOutputType(value, output.type, workDir))
+    }
+
+    /**
+     * Convert a decoded answer to the declared output type, resolving
+     * relative paths against the agent work dir, since the model refers
+     * to files by their name in the work dir.
+     *
+     * @param value
+     * @param type
+     * @param workDir
+     */
+    private static Object asOutputType(Object value, Type type, Path workDir) {
+        return TypeHelper.asType(resolvePaths(value, type, workDir), type)
+    }
+
+    private static Object resolvePaths(Object value, Type type, Path workDir) {
+        if( value == null )
+            return value
+        if( type == Path && value instanceof CharSequence ) {
+            final str = value.toString()
+            final path = workDir == null || str.contains('://') || Path.of(str).isAbsolute()
+                ? FileHelper.asPath(str)
+                : workDir.resolve(str)
+            if( !Files.exists(path) )
+                throw new ScriptRuntimeException("Agent output path '${str}' does not exist")
+            return path
         }
-        for( final output : outputs )
-            ctx.put(output.name, TypeHelper.asType(map[output.name], output.type as Class))
+        if( TypeHelper.isCollectionType(type) && value instanceof Collection ) {
+            final elementType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[0] : Object
+            return ((Collection) value).collect { el -> resolvePaths(el, elementType, workDir) }
+        }
+        if( TypeHelper.isRecordType(type) && value instanceof Map ) {
+            final result = new LinkedHashMap((Map) value)
+            for( final field : ((Class) type).getDeclaredFields() ) {
+                if( !field.isSynthetic() && result.containsKey(field.getName()) )
+                    result.put(field.getName(), resolvePaths(result.get(field.getName()), field.getGenericType(), workDir))
+            }
+            return result
+        }
+        return value
     }
 
     /**

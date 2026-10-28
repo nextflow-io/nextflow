@@ -150,6 +150,18 @@ class CmdModulePublishTest extends Specification {
         noExceptionThrown()
     }
 
+    def 'should report missing local path' () {
+        given:
+        def cmd = new CmdModulePublish(args: ['./modules/nf-core/missing'], dryRun: true)
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Module path not found: ./modules/nf-core/missing'
+    }
+
     private String permissiveSchema() {
         final p = tempDir.resolve('schema.json')
         p.text = '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",' +

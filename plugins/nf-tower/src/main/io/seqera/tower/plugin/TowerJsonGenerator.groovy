@@ -86,6 +86,8 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
         }
         catch( Exception e ) {
             log.warn1 ("Unable to serialize key=$fqn; value=${safeString0(object)}; type=${object?.getClass()?.getName()} -- Cause: ${e.message ?: e}", causedBy: e)
+            // the key is already written, a value is required to keep the document valid
+            buffer.addNull()
         }
         finally {
             if(key) stack.remove(pos)

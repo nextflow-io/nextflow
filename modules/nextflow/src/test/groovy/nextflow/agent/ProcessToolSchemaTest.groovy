@@ -81,7 +81,7 @@ class ProcessToolSchemaTest extends Dsl2Spec {
                 input:
                 name: String
                 count: Integer?
-                score: Double
+                score: Float
                 flag: Boolean
 
                 output:
@@ -128,6 +128,33 @@ class ProcessToolSchemaTest extends Dsl2Spec {
             required: ['answer'],
             additionalProperties: false,
         ]
+    }
+
+    def 'should derive the output schema from an unannotated #OUTPUT output'() {
+        given:
+        def proc = loadProcess("""
+            process greet {
+                input:
+                name: String
+
+                output:
+                ${OUTPUT}
+
+                script:
+                "echo \${name}"
+            }
+            """)
+
+        expect: 'the output carries no type annotation, so its type comes from the checker'
+        ProcessToolSchema.outputSchema(proc) == [
+            type: 'object',
+            properties: [result: [type: 'string']],
+            required: ['result'],
+            additionalProperties: false,
+        ]
+
+        where:
+        OUTPUT << [ "stdout()", "env('GREETING')", "eval('echo hi')" ]
     }
 
     def 'should throw a loud error for a tuple input'() {

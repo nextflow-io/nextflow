@@ -202,7 +202,7 @@ class ScriptHelper {
         def session = opts.config ? new MockSession(opts.config) : new MockSession()
         session.setBinding(new ScriptBinding())
 
-        session.init( new ScriptFile(path), null, opts.params, null )
+        session.init( new ScriptFile(path), null, opts.params, opts.configParams )
         if( opts.moduleRun )
             session.setModuleRun(true)
         session.start()
@@ -352,7 +352,7 @@ class MockTaskHandler extends TaskHandler {
             task.exitStatus = 0
         }
         else {
-            task.code.call()
+            task.stdout = task.code.call()
         }
         status = TaskStatus.COMPLETED
         final fault = task.processor.finalizeTask(this)

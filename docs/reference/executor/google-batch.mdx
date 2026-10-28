@@ -1,0 +1,232 @@
+---
+title: Google Cloud Batch
+description: Reference for the google-batch executor, which submits tasks to Google Cloud Batch.
+---
+
+# Google Cloud Batch
+
+The `google-batch` executor runs pipeline tasks using [Google Cloud Batch](https://cloud.google.com/batch), a managed compute service that runs containerized workloads in Google Cloud. It submits each task as a Google Cloud Batch job.
+
+To enable this executor, set `process.executor = 'google-batch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or a Google Compute Engine VM. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be in a Google Cloud Storage bucket.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [accelerator][process-accelerator]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [machineType][process-machinetype]
+- [memory][process-memory]
+- [resourceLabels][process-resourcelabels]
+- [time][process-time]
+
+See [Google Cloud Storage][google-storage-page] for how to configure Google Cloud credentials and storage access. See the [google][config-google] config scope for the full list of configuration options.
+
+:::tip
+For automated Google Cloud infrastructure setup, consider using [Seqera Platform](https://seqera.io/platform/), which can create [Google Cloud Batch compute environments](https://docs.seqera.io/platform/latest/compute-envs/google-cloud-batch) for you.
+:::
+
+## Getting started
+
+1. Enable the Google Cloud Batch API in your project from the [APIs & Services](https://console.cloud.google.com/apis/dashboard) dashboard, and grant the roles described in [Required permissions](#required-permissions).
+
+2. Create a Google Cloud Storage bucket for the work directory.
+
+3. Make sure that every process in your pipeline specifies a container image with the [container][process-container] directive.
+
+4. Configure your Google Cloud credentials. See [Authentication][google-storage-auth] for details.
+
+5. Add the following settings to your Nextflow configuration:
+
+    - Set `process.executor` to `google-batch`.
+    - Set `google.project` to your Google Cloud project ID (not the project name).
+    - Set `google.location` to a location where Google Cloud Batch is available. See the [Google Cloud Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
+    - Set `workDir` to a Cloud Storage path, for example, `gs://<bucket>/work`.
+
+6. Launch your pipeline with the above configuration:
+
+    ```bash
+    nextflow run <pipeline-name>
+    ```
+
+For example:
+
+```groovy
+process {
+    executor = 'google-batch'
+    container = 'quay.io/biocontainers/salmon'
+}
+
+workDir = 'gs://<bucket>/work'
+
+google {
+    project = '<project-id>'
+    location = 'us-central1'
+}
+```
+
+:::warning
+The work directory must contain at least one subdirectory. Do not use only the bucket name, for example, `gs://<bucket>`.
+:::
+
+:::tip
+Nextflow automatically transfers any input data **not** stored in a Google Cloud Storage bucket to the pipeline work directory. Use this feature with caution to avoid unnecessary data transfers.
+:::
+
+## Required permissions
+
+The identity used to launch Nextflow requires the following roles:
+
+- Batch Job Editor (`roles/batch.jobsEditor`) on the project, to submit and manage jobs.
+- Service Account User (`roles/iam.serviceAccountUser`) on the service account used by the jobs, which is the default Compute Engine service account unless [`google.batch.serviceAccountEmail`][config-google] is set.
+
+The service account used by the jobs requires the following roles:
+
+- Batch Agent Reporter (`roles/batch.agentReporter`) on the project, to report the status of the job VMs.
+- Logs Writer (`roles/logging.logWriter`) on the project, to write task logs to Cloud Logging.
+
+Both identities also need access to the Cloud Storage buckets used by the pipeline. See [Required permissions][google-storage-permissions] for details.
+
+See [Orchestrate jobs by running Nextflow pipelines on Batch](https://cloud.google.com/batch/docs/nextflow) in the Google Cloud documentation for more information.
+
+## Quotas
+
+Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas), which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. GPU quotas are initially set to 0. You must request a quota increase to use GPUs. You can initially request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
+
+## Machine types and disks
+
+By default, Nextflow uses the `cpus` and `memory` directives to find the cheapest machine type that is available at the current location and fits the requested resources. If `memory` is not specified, Nextflow uses 1 GB when selecting the machine type.
+
+Use the `machineType` directive to request a specific VM instance type. It can be any predefined Google Compute Engine [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
+
+```nextflow
+process my_task {
+    cpus 8
+    memory '40 GB'
+
+    script:
+    """
+    your_command --here
+    """
+}
+
+process other_task {
+    machineType 'n1-highmem-8'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+### Machine type patterns
+
+<AddedInVersion version="23.04" />
+
+The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+
+```nextflow
+process my_task {
+    cpus 8
+    memory '20 GB'
+    machineType 'n2-*,c2-*,m3-*'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+### Instance templates
+
+<AddedInVersion version="24.04" />
+
+The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates), specified as `template://<instance-template>`. For example:
+
+```nextflow
+process my_task {
+    cpus 8
+    memory '20 GB'
+    machineType 'template://my-template'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Using an instance template overwrites the `accelerator` and `disk` directives, as well as the following Google Cloud Batch config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
+
+To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
+
+To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB. See the [Compute Engine documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
+
+### Disks
+
+<AddedInVersion version="23.10" />
+
+Use the `disk` directive to set the boot disk size or provision a disk for scratch storage. If you specify the disk type with the `type` option, a new disk is mounted to the task VM at `/tmp` with the requested size and type. Otherwise, the directive sets the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Compute Engine documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
+
+Examples:
+
+```nextflow
+// set the boot disk size
+disk 100.GB
+
+// mount a persistent disk at '/tmp'
+disk 100.GB, type: 'pd-standard'
+
+// mount a local SSD disk at '/tmp' (should be a multiple of 375 GB)
+disk 375.GB, type: 'local-ssd'
+```
+
+## Spot instances
+
+To use [Spot VMs](https://cloud.google.com/compute/docs/instances/spot), set `google.batch.spot = true` in the Nextflow configuration:
+
+```groovy
+google.batch.spot = true
+```
+
+Google Cloud can reclaim Spot VMs before the task completes. Set `google.batch.maxSpotAttempts` to instruct Google Cloud Batch to automatically retry a task when its VM is reclaimed:
+
+```groovy
+google.batch.maxSpotAttempts = 3
+```
+
+The default is `0` (no automatic retry), or `5` when Fusion snapshots are enabled. To customize which exit codes are retried, set `google.batch.autoRetryExitCodes` (default: `[50001]`).
+
+Alternatively, you can use the [errorStrategy][process-errorstrategy] directive to retry tasks that were terminated by a spot reclaim:
+
+```groovy
+process {
+    errorStrategy = { task.exitStatus == 50001 ? 'retry' : 'terminate' }
+    maxRetries = 5
+}
+```
+
+## Fusion file system
+
+The Google Cloud Batch executor supports [Fusion][fusion-page]. Fusion lets you use Google Cloud Storage as a virtual distributed file system. It optimizes data transfer and speeds up most task I/O operations.
+
+See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more information about configuring Fusion for Google Cloud Batch.
+
+[config-google]: ../config/google
+[fusion-page]: ../../fusion
+[google-storage-auth]: ../../google-storage#authentication
+[google-storage-page]: ../../google-storage
+[google-storage-permissions]: ../../google-storage#required-permissions
+[process-accelerator]: ../process/directives/accelerator
+[process-container]: ../process/directives/container
+[process-containeroptions]: ../process/directives/container-options
+[process-cpus]: ../process/directives/cpus
+[process-disk]: ../process/directives/disk
+[process-errorstrategy]: ../process/directives/error-strategy
+[process-machinetype]: ../process/directives/machine-type
+[process-memory]: ../process/directives/memory
+[process-resourcelabels]: ../process/directives/resource-labels
+[process-time]: ../process/directives/time

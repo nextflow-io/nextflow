@@ -137,6 +137,18 @@ if [[ $TEST_MODE == 'test_google' ]]; then
 fi
 
 #
+# Agent examples
+#
+if [[ $TEST_MODE == 'test_agent' ]]; then
+    if [ "$OPENAI_API_KEY" ] && [ "$SEQERA_STAGE_CR_PASSWORD" ]; then
+      echo "Agent tests"
+      bash agent.sh
+    else
+      echo "::warning file=$0,line=$LINENO::Missing OPENAI_API_KEY or SEQERA_STAGE_CR_PASSWORD variable -- Skipping agent tests"
+    fi
+fi
+
+#
 # Wave
 #
 if [[ $TEST_MODE == 'test_wave' ]]; then

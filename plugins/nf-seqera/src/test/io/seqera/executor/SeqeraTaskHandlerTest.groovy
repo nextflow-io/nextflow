@@ -49,6 +49,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.nio.file.Paths
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 /**
  * Tests for SeqeraTaskHandler metadata fetching functionality
@@ -264,6 +267,36 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getExecutorName() == 'seqera/aws'
     }
 
+    def 'should anchor the trace start on the last attempt and report the retry time: #desc'() {
+        given: 'Nextflow saw the task RUNNING at t=100s and complete at t=1000s'
+        def handler = createHandlerForTraceTest()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 50_000
+        handler.startTimeMillis = 100_000
+        handler.completeTimeMillis = 1_000_000
+        handler.cachedTaskState = new SchedTaskState().attempts(starts.collect { Long ms ->
+            new TaskAttempt().startedAt(ms != null ? OffsetDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneOffset.UTC) : null)
+        })
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.get('start') == start
+        trace.get('realtime') == realtime
+        trace.getNumAttempts() == attempts
+        trace.getRetryTime() == retry
+
+        where:
+        desc                        | starts                 || start      | realtime | attempts | retry
+        'single attempt'            | [100_000L]             || 100_000L   | 900_000L | 1        | null
+        'reclaimed, then succeeded' | [100_000L, 700_000L]   || 700_000L   | 300_000L | 2        | 600_000L
+        'last attempt never ran'    | [100_000L, null]       || 100_000L   | 900_000L | 2        | null
+        'last start after complete' | [100_000L, 1_200_000L] || 1_000_000L | 0L       | 2        | 900_000L
+        'last start not after seen' | [50_000L, 100_000L]    || 100_000L   | 900_000L | 2        | null
+    }
+
     def 'should detect completion when batch submission fails'() {
         given:
         def error = new RuntimeException('Batch submission failed')
@@ -412,6 +445,64 @@ class SeqeraTaskHandlerTest extends Specification {
         completed
         capturedExitStatus == 1
         capturedError == null
+    }
+
+    @Unroll
+    def 'should handle the scheduler retry verdict [status=#STATUS; exit=#EXIT; retryable=#RETRYABLE; failCount=#FAIL_COUNT]'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig) { getMaxRetries() >> 3 }
+            lazyName() >> 'test_task'
+            getFailCount() >> FAIL_COUNT
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(STATUS)
+            .exitCode(EXIT)
+            .errorMessage('Fusion snapshot restore failed')
+        def describeResponse = new DescribeTaskResponse()
+            .taskState(taskState)
+            .retryable(RETRYABLE)
+            .retryReason(RETRYABLE ? 'SNAPSHOT_RESTORE_FAILED' : null)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+        handler.setBatchTaskId('task-175')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == (EXIT != null ? EXIT : Integer.MAX_VALUE)
+        capturedError?.getClass() == ERROR
+        capturedError?.message == MESSAGE
+        0 * taskRun.setAborted(_)
+
+        where:
+        STATUS                    | EXIT | RETRYABLE | FAIL_COUNT  | ERROR                    | MESSAGE
+        SchedTaskStatus.FAILED    | 175  | true      | 0           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | true      | 2           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | true      | 3           | null                     | null
+        SchedTaskStatus.FAILED    | null | true      | 3           | ProcessException         | 'Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | false     | 0           | null                     | null
+        SchedTaskStatus.FAILED    | 175  | null      | 0           | null                     | null
+        SchedTaskStatus.SUCCEEDED | 0    | true      | 0           | null                     | null
     }
 
     def 'should use scheduler API exit code when exit file is not available on a failed task'() {

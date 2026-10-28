@@ -198,7 +198,7 @@ public class ConfigAstBuilder {
         if( !commentsEnabled )
             return;
         tokenStream.fill();
-        moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, Comments.collect(tokenStream.getTokens()));
+        moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, Comments.collect(tokenStream.getTokens(), ConfigLexer.NL));
     }
 
     /// CONFIG STATEMENTS
@@ -1395,7 +1395,11 @@ public class ConfigAstBuilder {
         return new ANTLRErrorListener() {
             @Override
             public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
-                collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
+                var startColumn = charPositionInLine + 1;
+                var endColumn = offendingSymbol instanceof Token t && t.getType() != Token.EOF && t.getText() != null
+                    ? startColumn + t.getText().length()
+                    : startColumn + 1;
+                collectSyntaxError(new SyntaxException(msg, line, startColumn, line, endColumn));
             }
         };
     }

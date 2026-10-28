@@ -198,22 +198,30 @@ class ScriptMetaTest extends Dsl2Spec {
             meta.addDefinition(processes.collect { n -> createProcessDef(script, n) } as ComponentDef[])
         if( workflows )
             meta.addDefinition(workflows.collect { n -> new WorkflowDef(name: n) } as ComponentDef[])
+        if( agents )
+            meta.addDefinition(agents.collect { n -> new AgentDef(script, n, [:], [], null, null) } as ComponentDef[])
         if( module )
             meta.setModule(true)
 
         expect:
         meta.hasExecutableWorkflows() == EXEC_WORKFLOW
         meta.hasExecutableProcesses() == EXEC_PROCESS
+        meta.hasExecutableAgents() == EXEC_AGENT
 
         where:
-        processes    | workflows    | module | EXEC_WORKFLOW | EXEC_PROCESS
-        []           | []           | false  | false         | false
-        ['p1']       | []           | false  | false         | true
-        ['p1', 'p2'] | []           | false  | false         | false
-        []           | ['w1']       | false  | true          | false
-        []           | ['w1', 'w2'] | false  | false         | false
-        ['p1']       | ['w1']       | false  | false         | false
-        ['p1']       | []           | true   | false         | false
-        []           | ['w1']       | true   | false         | false
+        processes    | workflows    | agents       | module | EXEC_WORKFLOW | EXEC_PROCESS | EXEC_AGENT
+        []           | []           | []           | false  | false         | false        | false
+        ['p1']       | []           | []           | false  | false         | true         | false
+        ['p1', 'p2'] | []           | []           | false  | false         | false        | false
+        []           | ['w1']       | []           | false  | true          | false        | false
+        []           | ['w1', 'w2'] | []           | false  | false         | false        | false
+        ['p1']       | ['w1']       | []           | false  | false         | false        | false
+        ['p1']       | []           | []           | true   | false         | false        | false
+        []           | ['w1']       | []           | true   | false         | false        | false
+        []           | []           | ['a1']       | false  | false         | false        | true
+        ['p1']       | []           | ['a1']       | false  | false         | false        | true
+        []           | []           | ['a1', 'a2'] | false  | false         | false        | false
+        []           | ['w1']       | ['a1']       | false  | true          | false        | false
+        []           | []           | ['a1']       | true   | false         | false        | false
     }
 }

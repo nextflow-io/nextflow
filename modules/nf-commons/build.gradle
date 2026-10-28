@@ -40,7 +40,7 @@ dependencies {
     // patch gson dependency required by pf4j
     api "com.google.code.gson:gson:${gsonVersion}"
     api "io.seqera:npr-api:${nprVersion}"
-    // jackson 2.21.5 addresses high-severity PolymorphicTypeValidator bypasses
+    // jackson 2.21.7 addresses high-severity PolymorphicTypeValidator bypasses
     // (GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm) and related @JsonView/@JsonIgnore
     // deserialization advisories; pinned here so it propagates to all downstream modules
     api "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"

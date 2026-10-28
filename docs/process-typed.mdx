@@ -34,6 +34,8 @@ For the complete syntax reference, see [Process (typed)][syntax-process-typed].
 The `input:` section declares process inputs. In typed processes, each input declaration consists of a name and type:
 
 ```nextflow
+nextflow.enable.types = true
+
 process fastqc {
     input:
     meta: Map
@@ -55,11 +57,29 @@ All [standard types][stdlib-types] except for the dataflow types (`Channel` and 
 
 Nextflow automatically stages `Path` inputs and `Path` collections (such as `Set<Path>`) into the task directory.
 
+Path collections are rendered like any other collection when interpolated into a script (e.g. `[a.fastq, b.fastq]`). Use `join()` to render them as a space-separated list:
+
+```nextflow
+nextflow.enable.types = true
+
+process cat {
+    input:
+    reads: List<Path>
+
+    script:
+    """
+    cat ${reads.join(' ')}
+    """
+}
+```
+
 ### Nullable inputs
 
 By default, tasks fail if any input receives a `null` value. To allow `null` values, add `?` to the type annotation:
 
 ```nextflow
+nextflow.enable.types = true
+
 process cat_opt {
     input:
     input: Path?
@@ -82,6 +102,8 @@ process cat_opt {
 Record inputs can be declared using a record type:
 
 ```nextflow
+nextflow.enable.types = true
+
 process fastqc {
     input:
     sample: Sample
@@ -104,9 +126,27 @@ Each field in the record type is staged into the task the same way as an individ
 
 When the process is invoked, the incoming record should contain the specified fields, or else the run will fail. If the incoming record has additional fields not declared by the process input, they are ignored.
 
+Record collections (such as `List<Sample>`) are staged the same way. Each `Path` field is staged as an input file for every record in the collection, and `null` values of nullable fields are skipped:
+
+```nextflow
+nextflow.enable.types = true
+
+process cat_samples {
+    input:
+    samples: List<Sample>
+
+    script:
+    """
+    cat ${samples*.fastq.join(' ')}
+    """
+}
+```
+
 Record inputs can also be declared as a *destructured* input:
 
 ```nextflow
+nextflow.enable.types = true
+
 process fastqc {
     input:
     record(
@@ -128,11 +168,31 @@ This pattern mirrors the standard `record()` function used to construct records.
 Record inputs are a useful way to select a subset of fields from a larger record. This way, the process stages only what it needs, keeping related data together in your workflow logic.
 :::
 
+Only the `Path` fields declared by the process input are staged. To avoid staging files that a process doesn't need, omit those fields from the input declaration. If the process needs the metadata of a record but none of its files, declare the input with the generic `Record` type:
+
+```nextflow
+nextflow.enable.types = true
+
+process report {
+    input:
+    samples: List<Record>
+
+    script:
+    """
+    echo 'ids: ${samples*.id.join(' ')}'
+    """
+}
+```
+
+In this example, the fields of each record can be accessed in the task, but no files are staged. Any `Path` fields still refer to the original file locations, so they shouldn't be used by the task script.
+
 ### Tuple inputs
 
 Tuple inputs can be declared as a *destructured* input:
 
 ```nextflow
+nextflow.enable.types = true
+
 process fastqc {
     input:
     tuple(id: String, fastq: Path)
@@ -156,6 +216,8 @@ The `stage:` section defines custom staging behavior using *stage directives*.  
 The `env` directive declares an environment variable in terms of task inputs:
 
 ```nextflow
+nextflow.enable.types = true
+
 process echo_env {
     input:
     hello: String
@@ -175,6 +237,8 @@ process echo_env {
 The `stdin` directive defines the standard input of the task script:
 
 ```nextflow
+nextflow.enable.types = true
+
 process cat {
     input:
     message: String
@@ -194,6 +258,8 @@ process cat {
 The `stageAs` directive stages an input file (or files) under a custom file pattern:
 
 ```nextflow
+nextflow.enable.types = true
+
 process blast {
     input:
     fasta: Path
@@ -211,6 +277,8 @@ process blast {
 The file pattern can also reference task inputs:
 
 ```nextflow
+nextflow.enable.types = true
+
 process grep {
     input:
     id: String
@@ -226,6 +294,31 @@ process grep {
 }
 ```
 
+Input files are staged under their original names by default, so two input files with the same name (e.g. from different records in a record collection) cause the task to fail with a file name collision error. Use a file pattern to stage each file in its own directory:
+
+```nextflow
+nextflow.enable.types = true
+
+process cat_samples {
+    input:
+    samples: List<Sample>
+
+    stage:
+    stageAs samples*.fastq, 'fastq?/*'
+
+    script:
+    """
+    cat ${samples*.fastq.join(' ')}
+    """
+}
+```
+
+In this example, the files are staged as `fastq1/<name>`, `fastq2/<name>`, and so on.
+
+:::note
+The `stageAs` directive doesn't accept `null` values. To stage a nullable field, remove the `null` values first, e.g. `stageAs samples*.idx.findAll { idx -> idx != null }, 'idx?/*'`. Wildcards are numbered separately for each `stageAs` directive, after the `null` values are removed, so the files of a record might not have the same number in each directive.
+:::
+
 For more information about the available stage directives, see [Inputs and outputs (typed)][process-reference-typed].
 
 ## Outputs
@@ -233,6 +326,8 @@ For more information about the available stage directives, see [Inputs and outpu
 The `output:` section declares the outputs of a typed process. Each output declaration consists of a name, an optional type, and an output value:
 
 ```nextflow
+nextflow.enable.types = true
+
 process echo {
     input:
     message: String
@@ -256,6 +351,8 @@ process echo {
 When there is only one output, the name can be omitted:
 
 ```nextflow
+nextflow.enable.types = true
+
 process echo {
     input:
     message: String
@@ -279,6 +376,8 @@ You can use the `file()` and `files()` functions in the `output:` section to get
 By default, the `file()` function fails if the specified file is not present in the task directory. You can specify `optional: true` to allow missing files. The `file()` function returns `null` for missing files. For example:
 
 ```nextflow
+nextflow.enable.types = true
+
 process foo {
     output:
     file('output.txt', optional: true)
@@ -290,13 +389,17 @@ process foo {
 }
 ```
 
+Similarly, the `files()` function fails if no files match the given pattern. You can specify `optional: true` to return an empty set instead.
+
 ### Structured outputs
 
-Whereas legacy process outputs could only be structured using specific qualifiers like `val` and `tuple`, typed process outputs are regular values.
+Whereas legacy process outputs could only be structured using specific qualifiers like `val` and `tuple`, typed process outputs are plain values.
 
 The `record()` standard library function can be used to create a record:
 
 ```nextflow
+nextflow.enable.types = true
+
 process fastqc {
     input:
     record(
@@ -318,6 +421,8 @@ process fastqc {
 The `tuple()` standard library function can be used to create a tuple:
 
 ```nextflow
+nextflow.enable.types = true
+
 process fastqc {
     input:
     tuple(id: String, fastq: Path)
@@ -337,6 +442,8 @@ process fastqc {
 The `topic:` section emits values to [topic channels][channel-topic]. A topic emission consists of an output value and a topic name:
 
 ```nextflow
+nextflow.enable.types = true
+
 process cat {
     input:
     message: Path
@@ -372,7 +479,6 @@ The `stub:` section behaves the same way as [legacy processes][process-stub].
 Directives behave the same way as [legacy processes][process-directives].
 
 [channel-topic]: ./reference/stdlib-namespaces/channel#topic
-[migrating-static-types]: ./tutorials/static-types
 [process-reference-typed]: ./reference/syntax#process-typed
 [process-directives]: ./process#directives
 [process-script]: ./process#script

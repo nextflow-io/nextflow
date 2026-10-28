@@ -52,7 +52,7 @@ class AgentModuleIncludeTest extends Dsl2Spec {
                 sample: String
 
                 output:
-                report: String
+                stdout()
 
                 prompt:
                 \"\"\"

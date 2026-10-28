@@ -103,29 +103,6 @@ class TypeCheckingTest extends Specification {
         return true
     }
 
-    def 'should warn about a process `when` section' () {
-        when:
-        def errors = getErrors(
-            '''\
-            nextflow.enable.types = true
-
-            process hello {
-                when:
-                task.ext.when
-
-                exec:
-                println 'hello!'
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 4
-        errors[0].getStartColumn() == 5
-        errors[0].isSoftError()
-        errors[0].getOriginalMessage() == "Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead"
-    }
-
     @Unroll
     def 'should report legacy type annotations' () {
         expect:
@@ -171,7 +148,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Parameter 'input' with type String cannot be assigned to default value with type Float"
+        errors[0].getOriginalMessage() == "Parameter `input` with type String cannot be assigned to default value with type Float"
 
         when:
         def exp = parseExpression(
@@ -191,6 +168,33 @@ class TypeCheckingTest extends Specification {
         cn.getField('input') != null
     }
 
+    def 'should check a parameter reference in the output block' () {
+        when:
+        def errors = getErrors(
+            '''\
+            params {
+                outdir: String = 'results'
+            }
+
+            workflow {
+                main:
+                ch = channel.of('a')
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples: Channel<String> {
+                    path params.outdir
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should check a workflow emit' () {
         when:
         def errors = getErrors(
@@ -199,8 +203,8 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                a: String = 42
-                b: Integer = 1
+                a: Value<String> = channel.value(42)
+                b: Value<Integer> = channel.value(1)
             }
             '''
         )
@@ -208,7 +212,24 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 5
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Assignment target with type String cannot be assigned to value with type Integer"
+        errors[0].getOriginalMessage() == "Assignment target with type Value<String> cannot be assigned to value with type Value<Integer>"
+
+        when:
+        errors = getErrors(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                emit:
+                a: Value<Integer> = channel.value(42)
+                b: Channel<Integer> = channel.of(1)
+                c: Value<Integer>? = null
+                d = 1
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
 
         when:
         errors = getErrors(
@@ -218,15 +239,18 @@ class TypeCheckingTest extends Specification {
             workflow hello {
                 emit:
                 a: Integer = 42
-                b: Integer = 1
+                b: Value<Integer> = channel.value(1)
             }
             '''
         )
         then:
-        errors.size() == 0
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Workflow emit `a` must be declared as a Channel or Value, not Integer"
     }
 
-    def 'should warn about a single named output' () {
+    def 'should allow a single named output' () {
         expect:
         check(
             '''\
@@ -234,16 +258,10 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                result: Integer = 42
+                result = 42
             }
-            ''',
-            "Name should be omitted for a single emit"
-        )
-        check(
-            '''\
-            nextflow.enable.types = true
 
-            process hello {
+            process bye {
                 output:
                 sample: String = 'hi'
 
@@ -251,7 +269,67 @@ class TypeCheckingTest extends Specification {
                 ''
             }
             ''',
-            "Name should be omitted for a single output"
+            null
+        )
+    }
+
+    def 'should check a typed output name against the body variable' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                main:
+                x = channel.of('a')
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            "Workflow emit `x` with type Channel<Integer> cannot be assigned to value with type Channel<String>"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                take:
+                x: Channel<String>
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            "Workflow emit `x` with type Channel<Integer> cannot be assigned to value with type Channel<String>"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                x: Integer
+
+                exec:
+                x = 'a'
+            }
+            ''',
+            "Process output `x` with type Integer cannot be assigned to value with type String"
+        )
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                main:
+                x = channel.of(1)
+
+                emit:
+                x: Channel<Integer>
+            }
+            ''',
+            null
         )
     }
 
@@ -389,6 +467,82 @@ class TypeCheckingTest extends Specification {
         errors[0].getOriginalMessage() == "Return value with type void does not match the declared return type (String)"
     }
 
+    def 'should report the position of a missing return statement' () {
+        when:
+        def errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String {
+                if( x > 1 ) {
+                    return 'big'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getOriginalMessage() == "Missing return statement"
+
+        when:
+        errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String {
+                if( x > 1 ) {
+                    def y = 'big'
+                } else {
+                    return 'small'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getOriginalMessage() == "Missing return statement"
+
+        when: 'the body is empty'
+        errors = getErrors(
+            '''\
+            def hello(x: Integer) -> String { }
+
+            workflow {
+                channel.of(1).map { x -> }
+            }
+            '''
+        )
+        then: 'the error is reported against the function or closure'
+        errors.size() == 2
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[1].getStartLine() == 4
+        errors[1].getStartColumn() == 23
+        errors.every { it.getOriginalMessage() == "Missing return statement" }
+    }
+
+    @Unroll
+    def 'should check for a missing return statement' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                                                  | ERROR
+        "def f(x: Integer) -> String { if( x > 1 ) { return 'a' } }"                            | "Missing return statement"
+        "def f(x: Integer) -> String { if( x > 1 ) { } else { return 'a' } }"                   | "Missing return statement"
+        "def f(x: Integer) -> String { if( x > 1 ) { def y = 'a' } else { return 'b' } }"       | "Missing return statement"
+        "def f(x: Integer) -> String { def y = 'a' ; if( x > 1 ) { y = 'b' } else { 'c' } }"    | "Missing return statement"
+        "def f(x: Integer) -> String { def y = 'a' }"                                           | "Missing return statement"
+        "def f(x: Integer) -> String { try { 'a' } catch( e: Exception ) { def y = 'b' } }"     | "Missing return statement"
+        "def f(x: Integer) -> String { if( x > 1 ) { return 'a' } ; return 'b' }"               | null
+        "def f(x: Integer) -> String { if( x > 1 ) { 'a' } else if( x > 0 ) { 'b' } else { 'c' } }" | null
+        "def f(x: Integer) -> String { if( x > 1 ) { return 'a' } else { throw new Exception() } }" | null
+        "def f(x: Integer) -> String { try { 'a' } catch( e: Exception ) { 'b' } }"             | null
+        "def f(x: Integer) { if( x > 1 ) { println 'a' } }"                                     | null
+        "def f(x: Integer) { if( x > 1 ) { def y = 'a' } }"                                     | null
+        "channel.of(1).map { x -> if( x > 1 ) { x } }"                                          | "Missing return statement"
+        "channel.of(1).map { x -> if( x > 1 ) { x } else { def y = 0 } }"                       | "Missing return statement"
+        "channel.of(1).map { x -> if( x > 1 ) { x } else { 0 } }"                               | null
+    }
+
     def 'should check an assignment' () {
         expect:
         check(SOURCE, ERROR)
@@ -416,6 +570,31 @@ class TypeCheckingTest extends Specification {
         'def d = 1.h ; d *= 2.0'        | null
         "def s = 'a' ; s *= 'b'"        | "The `*=` operator is not defined for operands with types String and String"
         "def x = 1 ; x += 'a'"          | "The `+=` operator is not defined for operands with types Integer and String"
+    }
+
+    def 'should report an error when assigning a record field' () {
+        expect:
+        check(
+            '''\
+            def person = record(name: 'Alice', age: 42)
+            person.age = 43
+            ''',
+            'Record fields cannot be assigned -- records are immutable'
+        )
+        check(
+            '''\
+            record Person {
+                name: String
+                age: Integer
+            }
+
+            workflow {
+                def person = record(name: 'Alice', age: 42) as Person
+                person.age += 1
+            }
+            ''',
+            'Record fields cannot be assigned -- records are immutable'
+        )
     }
 
     def 'should infer the type of a variable declaration or assignment' () {
@@ -476,6 +655,37 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a function call with default params' () {
+        expect:
+        check(
+            """\
+            def greet(name: String, greeting: String = 'Hello') -> String {
+                "\${greeting}, \${name}!"
+            }
+
+            def pad(prefix: String = '>', s: String) -> String {
+                prefix + s
+            }
+
+            workflow {
+                ${SOURCE}
+            }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                          | ERROR
+        "greet('world')"                | null
+        "greet('world', 'Hi')"          | null
+        "greet()"                       | "Function `greet` expects 1 to 2 argument(s) but received 0"
+        "greet('world', 'Hi', 'x')"     | "Function `greet` expects 1 to 2 argument(s) but received 3"
+        "greet(42)"                     | "Argument with type Integer is not compatible with parameter of type String"
+        "pad('x')"                      | null
+        "pad(42)"                       | "Argument with type Integer is not compatible with parameter of type String"
+    }
+
+    @Unroll
     def 'should check a function call with overloads' () {
         expect:
         check(SOURCE, ERROR)
@@ -498,6 +708,18 @@ class TypeCheckingTest extends Specification {
         "file('input.txt', checkIfExist: true)"     | "Named param `checkIfExist` is not defined"
         "file('input.txt', checkIfExists: 'true')"  | "Named param `checkIfExists` expects a Boolean but received a String"
         "file('input.txt', checkIfExists: true)"    | null
+    }
+
+    @Unroll
+    def 'should accept a boolean or a list of columns for splitCsv header' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                  | ERROR
+        "file('input.csv').splitCsv(header: true)"              | null
+        "file('input.csv').splitCsv(header: ['id', 'fastq'])"   | null
+        "file('input.csv').splitCsv(header: true, skip: 'x')"   | "Named param `skip` expects a Integer but received a String"
     }
 
     def 'should check a function call with record parameters' () {
@@ -535,6 +757,65 @@ class TypeCheckingTest extends Specification {
             ''',
             null
         )
+    }
+
+    @Unroll
+    def 'should check the type arguments of call arguments' () {
+        expect:
+        check(
+            '''\
+            nextflow.enable.types = true
+
+            def f(xs: List<String>) {
+            }
+
+            def g(n: Names) {
+            }
+
+            process P {
+                input:
+                xs: List<String>
+
+                script:
+                "echo ${xs}"
+            }
+
+            workflow W {
+                take:
+                s: Channel<Sample>
+
+                main:
+                s.view()
+            }
+
+            record Sample {
+                id: String
+                n: Integer
+            }
+
+            record Names {
+                xs: List<String>
+            }
+
+            workflow {
+            ''' + SOURCE + '''
+            }
+            ''',
+            ERROR
+        )
+
+        where:
+        SOURCE                                      | ERROR
+        "f( [1, 2] )"                               | "Argument with type List<Integer> is not compatible with parameter of type List<String>"
+        "f( ['a', 'b'] )"                           | null
+        "f( [] )"                                   | null
+        "W( channel.of(record(id: 'a')) )"          | "Argument with type Channel<Record {\n    id: String\n}> is not compatible with parameter of type Channel<Sample>"
+        "W( channel.of(record(id: 'a', n: 1)) )"    | null
+        "P( channel.of([1, 2]) )"                   | "Argument with type List<Integer> is not compatible with process input of type List<String>"
+        "P( channel.of(['a']) )"                    | null
+        "P( channel.empty() )"                      | null
+        "g( record(xs: [1, 2]) )"                   | "Argument with type Record {\n    xs: List<Integer>\n} is not compatible with parameter of type Names"
+        "g( record(xs: ['a']) )"                    | null
     }
 
     @Unroll
@@ -579,6 +860,19 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a record method call' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                      | ERROR
+        "record(id: '1', n: 1).subMap(['id'])"                      | null
+        "record(id: '1', n: 1).subMap('id')"                        | "Argument with type String is not compatible with parameter of type Iterable<String>"
+        "def r: Record = record(id: '1'); r.subMap(['id'])"         | null
+        "record Sample { id: String }\ndef f(s: Sample) { s.subMap(['id']) }" | null
+    }
+
+    @Unroll
     def 'should check a binary expression' () {
         expect:
         check(SOURCE, ERROR)
@@ -593,10 +887,30 @@ class TypeCheckingTest extends Specification {
         "2 in [2]"      | null
         "[2] == ['2']"  | "The `==` operator is not defined for operands with types List<Integer> and List<String>"
         "[2] == [2]"    | null
+        "[[1]] == [['a']]"              | "The `==` operator is not defined for operands with types List<List<Integer>> and List<List<String>>"
+        "[1] == [1.0]"                  | null
+        "[a: 1] == [a: 'x']"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<String, String>"
+        "[a: 1] == [(1): 1]"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<Integer, Integer>"
+        "[a: 1] == [a: 1.0]"            | null
+        "tuple(1, 2) == tuple('a', 2)"  | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<String, Integer>"
+        "tuple(1, 2) == tuple(1, 2, 3)" | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<Integer, Integer, Integer>"
+        "tuple(1, 2) == tuple(1.0, 2)"  | null
+        "record(id: 'a') == record(name: 'b')"  | null
+        "record(id: 'a') == record(id: 1)"      | null
+        "record(id: 'a') == [id: 'a']"          | "The `==` operator is not defined for operands with types Record {\n    id: String\n} and Map<String, String>"
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a') }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { record(id: 'a') != s }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(name: 'a') }"           | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a', extra: 1) }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: A, b: B) { a == b }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: List<A>, b: List<B>) { a == b }"   | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 1) }"               | null
+        "record A { id: String }\ndef f(a: A, m: Map<String,String>) { a == m }"              | "The `==` operator is not defined for operands with types A and Map<String, String>"
         "['a', 'b', 'c'][0]"        | null
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
         "['a', 'b', 'c'][1..<3]"    | null
+        "file('ab.txt') << 'a' << 'b'"  | null
     }
 
     @Unroll
@@ -611,6 +925,7 @@ class TypeCheckingTest extends Specification {
         '1 <=> 2'       | 'Integer'
         "'a' <=> 'b'"   | 'Integer'
         '1 < 2'         | 'Boolean'
+        "file('a.txt') << 'a'" | 'Path'
     }
 
     @Unroll
@@ -654,8 +969,10 @@ class TypeCheckingTest extends Specification {
         where:
         SOURCE                  | ERROR
         "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
-        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map"
+        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map<K, V>"
         "true ? 42 : null"      | null
+        "(true ? [1] : 'a').size()"                 | "Conditional expression has inconsistent types -- true branch has type List<Integer> but false branch has type String"
+        "def f(d) { (true ? d : 'a').size() }"      | null
     }
 
     def 'should resolve a ternary expression' () {
@@ -696,6 +1013,7 @@ class TypeCheckingTest extends Specification {
         SOURCE          | ERROR
         "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
         "[1, 2, 3]"     | null
+        "[1, 'a'].collect { v -> v.size() }"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
     }
 
     @Unroll
@@ -766,6 +1084,36 @@ class TypeCheckingTest extends Specification {
         then:
         Types.getName(method.getParameters().last().getType()) == '(Integer, Integer) -> Integer'
         Types.getName(getType(exp)) == 'List<Integer>'
+    }
+
+    @Unroll
+    def 'should prefer the comparator variant over tuple destructuring' () {
+        when:
+        def exp = parseExpression(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """
+        )
+        def method = exp.getNodeMetaData(ASTNodeMarker.METHOD_TARGET)
+        then:
+        Types.getName(method.getParameters().last().getType()) == '(Tuple<String, Integer>, Tuple<String, Integer>) -> Integer'
+        Types.getName(getType(exp)) == TYPE
+
+        and:
+        check(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """,
+            null
+        )
+
+        where:
+        METHOD      | TYPE
+        'toSorted'  | 'List<Tuple<String, Integer>>'
+        'max'       | 'Tuple<String, Integer>'
+        'min'       | 'Tuple<String, Integer>'
     }
 
     @Unroll
@@ -908,6 +1256,20 @@ class TypeCheckingTest extends Specification {
         checkType(exp, Object)
     }
 
+    @Unroll
+    def 'should resolve a getter property with generic type' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                          | ERROR
+        "[a: 1].entrySet().each { e -> def k: String = e.key }"         | null
+        "[a: 1].entrySet().each { e -> def v: Integer = e.value }"      | null
+        "[a: 1].entrySet().each { e -> e.key.nope }"                    | "Unrecognized property `nope` for type String"
+        "[a: 1].entrySet().each { e -> e.value.nope }"                  | "Unrecognized property `nope` for type Integer"
+        "[a: 1].entrySet().each { e -> e.nope }"                        | "Unrecognized property `nope` for type Entry<String, Integer>"
+    }
+
     def 'should check a workflow call' () {
         expect:
         check(
@@ -957,8 +1319,8 @@ class TypeCheckingTest extends Specification {
 
             workflow hello {
                 emit:
-                foo: String = 'hello'
-                bar: Integer = 42
+                foo = 'hello'
+                bar = 42
             }
 
             workflow {
@@ -1083,6 +1445,35 @@ class TypeCheckingTest extends Specification {
         )
     }
 
+    @Unroll
+    def 'should check a function that returns no value' () {
+        expect: 'a bare or implicit void return has no value to match the declared return type'
+        check(
+            """\
+            def hello() -> String {
+                ${BODY}
+            }
+            """,
+            'Return value with type void does not match the declared return type (String)'
+        )
+
+        where:
+        BODY << ['return', "println('Hello!')"]
+    }
+
+    @Unroll
+    def 'should check a closure that returns no value' () {
+        expect: 'a bare or implicit void return has no value to match the declared return type'
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                      | ERROR
+        "[1, 2].inject(0) { acc, v -> return }"     | 'Return value with type void does not match the declared return type (Integer)'
+        "[1, 2].inject(0) { acc, v -> println(v) }" | 'Return value with type void does not match the declared return type (Integer)'
+        "['a', 'b'].findAll { s -> return }"        | 'Return value with type void does not match the declared return type (Boolean)'
+        "['a', 'b'].findAll { s -> println(s) }"    | 'Return value with type void does not match the declared return type (Boolean)'
+    }
+
     def 'should treat a wildcard type argument as unknown' () {
         expect: 'channel.topic() returns Channel<?>, so the element type is not known'
         check(
@@ -1094,6 +1485,63 @@ class TypeCheckingTest extends Specification {
             "channel.of('a').view { v -> v.name }",
             'Unrecognized property `name` for type String'
         )
+    }
+
+    @Unroll
+    def 'should infer the element type of an empty channel' () {
+        expect:
+        check(
+            """\
+            def flag = true
+            ${SOURCE}
+            ch.map { r -> r.${FIELD} }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                                                          | FIELD     | ERROR
+        "def ch = flag ? channel.of(record(id: '1')) : channel.empty()" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = flag ? channel.empty() : channel.of(record(id: '1'))" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty().mix(channel.of(record(id: '1')))"    | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty().mix(channel.value(record(id: '1')))" | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; ch = ch.mix(channel.of(record(id: '1')))"                      | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; if( flag ) { ch = channel.of(record(id: '1')) }"               | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "if( !flag ) { ch = channel.empty() } else { ch = channel.of(record(id: '1')) }"           | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "if( flag ) { ch = channel.of(record(id: '1')) } else { ch = channel.empty() }"            | 'missing' | 'Unrecognized property `missing` for type Record {\n    id: String\n}'
+        "def ch = channel.empty() ; ch = channel.of(record(id: '1')) ; ch = channel.of('a')"       | 'id'      | 'Assignment target with type Channel<Record {\n    id: String\n}> cannot be assigned to value with type Channel<String>'
+        "def ch = channel.empty() ; ch = null ; ch = 42"                                           | 'id'      | 'Assignment target with type Channel<E> cannot be assigned to value with type Integer'
+    }
+
+    @Unroll
+    def 'should infer the type of an empty value' () {
+        expect:
+        check(
+            """\
+            def flag = true
+            ${SOURCE}
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                                                  | ERROR
+        "def xs = [] ; xs.each { s -> s.length() }"             | null
+        "def m = [:] ; m.each { k, v -> v.length() }"           | null
+        "def xs = [] ; if( flag ) { xs = ['a'] } ; xs.each { s -> s.missing }"         | 'Unrecognized property `missing` for type String'
+        "def m = [:] ; if( flag ) { m = [k: 'v'] } ; m.each { k, v -> v.missing }"     | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs = ['a'] ; xs = [1]"                                          | 'Assignment target with type List<String> cannot be assigned to value with type List<Integer>'
+        "def xs = [] ; xs = xs + ['a'] ; xs.each { s -> s.missing }"                   | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs += ['a'] ; xs.each { s -> s.missing }"                       | 'Unrecognized property `missing` for type String'
+        "def e = [] ; def xs = flag ? ['a'] : e ; xs.each { s -> s.missing }"          | 'Unrecognized property `missing` for type String'
+        "def xs = [[]] ; xs = [['a']] ; xs.each { ys -> ys.each { s -> s.missing } }"  | 'Unrecognized property `missing` for type String'
+        "def xs = flag ? [['a']] : [[]] ; xs.each { ys -> ys.each { s -> s.missing } }" | 'Unrecognized property `missing` for type String'
+        "def t = flag ? tuple(1, []) : tuple(1, ['a']) ; t[1].each { s -> s.missing }" | 'Unrecognized property `missing` for type String'
+        "def xs = [] ; xs = null ; xs = 'abc'"                                         | 'Assignment target with type List<E> cannot be assigned to value with type String'
+        "def xs = [] ; xs = [].first() ; xs = 'abc'"                                   | 'Assignment target with type List<E> cannot be assigned to value with type String'
+        "def ys = [] ; def zs = ys[[0]] ; zs.each { z -> z.length() }"                 | null
+        "channel.empty().mix(channel.of(1)).mix(channel.of('a'))"                      | 'Function `mix` (with multiple signatures) was called with incorrect number of arguments and/or incorrect argument types'
+        "channel.topic('x').mix(channel.of(1)).mix(channel.of('a'))"                   | null
     }
 
     @Unroll
@@ -1125,7 +1573,7 @@ class TypeCheckingTest extends Specification {
                 message: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 "say ${message}"
@@ -1147,7 +1595,7 @@ class TypeCheckingTest extends Specification {
                 message: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 "say ${message}"
@@ -1235,6 +1683,31 @@ class TypeCheckingTest extends Specification {
 
             process hello {
                 input:
+                target: String?
+
+                output:
+                "Hello, $target!"
+
+                exec:
+                true
+            }
+
+            workflow {
+                hello( null )
+            }
+            '''
+        )
+        type = getType(exp)
+        then:
+        Types.getName(type) == 'Value<String>'
+
+        when:
+        exp = parseExpression(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
                 target: String
 
                 output:
@@ -1279,27 +1752,38 @@ class TypeCheckingTest extends Specification {
         Types.getName(type) == 'Value<Record {\n    target: String\n    message: String\n}>'
     }
 
-    def 'should report error for process .out property' () {
-        expect:
-        check(
-            '''
+    @Unroll
+    def 'should recognize process output type with a null argument' () {
+        when:
+        def exp = parseExpression(
+            """\
             nextflow.enable.types = true
 
             process hello {
-                output:
-                stdout()
+                input:
+                greeting: String
+                target: String?
 
-                script:
-                ''
+                output:
+                "\$greeting, \$target!"
+
+                exec:
+                true
             }
 
             workflow {
-                hello()
-                hello.out
+                hello( ${ARG}, null )
             }
-            ''',
-            'Using the `.out` property to access process/workflow outputs is not supported with static typing -- assign the output to a variable instead'
+            """
         )
+        def type = getType(exp)
+        then:
+        Types.getName(type) == TYPE
+
+        where:
+        ARG                 | TYPE
+        "'foo'"             | 'Value<String>'
+        "channel.of('foo')" | 'Channel<String>'
     }
 
     def 'should not allow a void call result to be assigned to a variable' () {
@@ -1617,6 +2101,21 @@ class TypeCheckingTest extends Specification {
         errors.size() == 2
         errors[0].getOriginalMessage() == 'Join field `sample_id` is not present in left-hand side'
         errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
+    }
+
+    def 'should report a soft error for a `join` that overwrites left-hand fields' () {
+        when:
+        def errors = getErrors(
+            '''\
+            left  = channel.of( record(id: 42, name: 'hello', alive: false) )
+            right = channel.of( record(id: 42, alive: true) )
+            left.join(right, by: 'id')
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
 }

@@ -20,6 +20,7 @@ import static java.nio.file.LinkOption.*
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemLoopException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
@@ -705,6 +706,105 @@ class FileHelperTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should skip dirs when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('.fusion') {
+                        file('trace.json', '{}')
+                    }
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                        dir('.fusion') {
+                            dir('chks') {
+                                file('part_0', 'xxx')
+                            }
+                        }
+                    }
+                }
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        target = createInMemTempDir().resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        // the root dir is never skipped
+        target = root.resolve('copy-fusion')
+        FileHelper.copyPath(source.resolve('.fusion'), target, skip)
+        then:
+        target.resolve('trace.json').text == '{}'
+
+        when:
+        // the option is not passed to the provider when copying a file
+        target = root.resolve('file_1.copy')
+        FileHelper.copyPath(source.resolve('file_1'), target, skip)
+        then:
+        target.text == 'alpha'
+
+        when:
+        // without the option the dirs are copied
+        target = root.resolve('copy-all')
+        FileHelper.copyPath(source, target)
+        then:
+        target.resolve('dir1/.fusion/chks/part_0').text == 'xxx'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should skip dirs failing to be accessed when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                    }
+                }
+        // a link to an ancestor dir makes the walker fail before `preVisitDirectory` is invoked
+        Files.createSymbolicLink(source.resolve('dir1/.fusion'), source)
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        FileHelper.copyPath(source, root.resolve('copy-all'))
+        then:
+        thrown(FileSystemLoopException)
+
+        cleanup:
+        root?.deleteDir()
+    }
+
     def 'should copy path content' () {
 
         given:
@@ -1172,6 +1272,18 @@ class FileHelperTest extends Specification {
         's3://example.com////another///path//?and////'      | 's3://example.com/another/path/?and////'
         's3:///example.com////another///path'               | 's3:///example.com/another/path'
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
+    }
+
+    def 'getAttemptFromPath parses the attempt from the suffix of a work dir'() {
+        expect:
+        FileHelper.getAttemptFromPath(PATH == null ? null : Paths.get(PATH)) == ATTEMPT
+
+        where:
+        PATH                                            | ATTEMPT
+        null                                            | 1
+        '/work/ab/cdef0123456789abcdef0123456789'       | 1
+        '/work/ab/cdef0123456789abcdef0123456789-2'     | 2
+        '/work/ab/cdef0123456789abcdef0123456789-12'    | 12
     }
 
     def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {

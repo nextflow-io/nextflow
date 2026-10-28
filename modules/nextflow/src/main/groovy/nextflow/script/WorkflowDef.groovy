@@ -42,7 +42,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private List<Param> declaredInputs
 
-    private List<String> declaredOutputs
+    private List<Param> declaredOutputs
 
     private Set<String> variableNames
 
@@ -104,9 +104,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     @PackageScope List<Param> getDeclaredInputs() { declaredInputs }
 
-    @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
-
-    @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
+    @PackageScope List<Param> getDeclaredOutputs() { declaredOutputs }
 
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
@@ -128,7 +126,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() ) {
             final prefix = name ? "Workflow `$name`" : "Main workflow"
-            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were given")
+            final expected = declaredInputs.size()
+            final actual = params.size()
+            throw new IllegalArgumentException("$prefix declares ${expected} ${expected == 1 ? 'input' : 'inputs'} but was called with ${actual} ${actual == 1 ? 'argument' : 'arguments'}")
         }
 
         // attach declared inputs with the invocation arguments
@@ -138,14 +138,14 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         }
     }
 
-    protected ChannelOut collectOutputs(List<String> emissions) {
+    protected ChannelOut collectOutputs(List<Param> emissions) {
         // make sure feedback channel cardinality matches
         if( feedbackChannels && feedbackChannels.size() != emissions.size() )
             throw new ScriptRuntimeException("Workflow `$name` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
         final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
         for( int i=0; i<emissions.size(); i++ ) {
-            final targetName = emissions[i]
+            final targetName = emissions[i].name
             if( !binding.hasVariable(targetName) )
                 throw new MissingValueException("Missing workflow output parameter: $targetName")
             final obj = DataflowTypeHelper.normalizeV1(binding.getVariable(targetName))
@@ -165,6 +165,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             else {
                 if( feedbackChannels!=null )
                     throw new ScriptRuntimeException("Workflow `$name` static output is not allowed when using recursion - Check output: $targetName")
+                if( obj == null && emissions[i].optional ) {
+                    channels.put(targetName, null)
+                    continue
+                }
                 final value = CH.create(true)
                 value.bind(obj)
                 channels.put(targetName, value)
@@ -204,15 +208,12 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         final result = closure.call()
-        if( name == null ) {
-            // return the last statement if entry workflow (used for testing)
-            return result
-        }
-        else {
-            // otherwise collect the outputs from the workflow binding
-            output = collectOutputs(declaredOutputs)
-            return output
-        }
+        // the outputs of an entry workflow are its published outputs
+        this.output = declaredOutputs
+            ? collectOutputs(declaredOutputs)
+            : new ChannelOut(binding.getPublished())
+        // return the last statement if entry workflow (used for testing)
+        return name == null ? result : output
     }
 
 }
@@ -225,7 +226,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 class WorkflowParamsDsl {
 
     List<Param> takes = new ArrayList<>(10)
-    List<String> emits = new ArrayList<>(10)
+    List<Param> emits = new ArrayList<>(10)
 
     /**
      * Called by generated code for each workflow take parameter.
@@ -242,8 +243,8 @@ class WorkflowParamsDsl {
         takes.add(new Param(name, type != Object ? type : null, optional, null))
     }
 
-    void _emit_(String name) {
-        emits.add(name)
+    void _emit_(String name, boolean optional = false) {
+        emits.add(new Param(name, null, optional, null))
     }
 
 }

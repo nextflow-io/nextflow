@@ -48,12 +48,32 @@ class TypesTest extends Specification {
         Types.getName(cn) == 'Map<String, String>'
     }
 
+    static class Sample implements Record {}
+
+    def 'should render a runtime type' () {
+        expect:
+        Types.getName(TYPE) == NAME
+
+        where:
+        TYPE                                   | NAME
+        java.nio.file.Paths.get('/a').class    | 'Path'
+        ArrayList                              | 'List'
+        Sample                                 | 'Record'
+        Record                                 | 'Record'
+        String                                 | 'String'
+    }
+
     def 'should render the return type of a method' () {
         when:
         def cn = ClassHelper.makeCached(TaskConfig)
-        def returnType = cn.getDeclaredMethods('getExt')[0].getReturnType()
+        def returnType = cn.getDeclaredMethods(METHOD)[0].getReturnType()
         then:
-        Types.getName(returnType) == 'Map<String, String>'
+        Types.getName(returnType) == TYPE
+
+        where:
+        METHOD      | TYPE
+        'getExt'    | 'Map<String, String>'
+        'getLabel'  | 'List<String>'
     }
 
     def 'should render a functional type' () {

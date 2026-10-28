@@ -74,7 +74,7 @@ class AgentParserTest extends Specification {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -107,7 +107,7 @@ class AgentParserTest extends Specification {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -281,7 +281,7 @@ class AgentParserTest extends Specification {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -343,7 +343,7 @@ class AgentParserTest extends Specification {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -356,69 +356,30 @@ class AgentParserTest extends Specification {
         errors.isEmpty()
     }
 
-    def 'should reject destructured record agent I/O'() {
+    def 'should accept destructured agent inputs'() {
         when:
-        def errors = check('''\
-            nextflow.enable.types = true
-
-            record Answer {
-                answer: String
-            }
-
-            agent eval_agent {
-                model 'openai/gpt-5-mini'
-                instruction 'You are helpful.'
-                tools()
-
-                input:
-                record(text: String)
-
-                output:
-                a: Answer
-
-                prompt:
-                """
-                ${text}
-                """
-            }
-            ''')
-
-        then:
-        !errors.isEmpty()
-        errors.any { it.getOriginalMessage().contains('named record type') }
-    }
-
-    def 'should reject a tuple agent input'() {
-        when:
-        // a tuple input declares no context slot for its components, so an agent would
-        // half-ignore it: nothing in the input JSON and nothing staged
         def errors = check('''\
             nextflow.enable.types = true
 
             agent qa {
                 input:
+                record(id: String, reads: Path)
                 tuple(a: Integer, b: Path)
 
                 output:
-                answer: String
+                record(id: id, a: a, summary: stdout())
 
                 prompt:
-                "go"
+                "Summarize ${id} ${reads} ${a} ${b}"
             }
             ''')
 
         then:
-        errors.any { it.getOriginalMessage().contains('tuple inputs are not supported') }
-        and: 'the message identifies WHICH input, by its components -- a tuple parameter has no name'
-        errors.any { it.getOriginalMessage().contains('Agent input `tuple(a, b)`') }
-        and: 'the message says what to do instead'
-        errors.any { it.getOriginalMessage().contains('separate input') }
+        errors.isEmpty()
     }
 
-    def 'should reject a bare expression as an agent output'() {
+    def 'should accept a composed agent output'() {
         when:
-        // the shared `processOutput` rule admits a bare expression (a process lowers it to `$out`),
-        // and an agent has no such thing -- so it must be a diagnostic, not a dropped statement
         def errors = check('''\
             nextflow.enable.types = true
 
@@ -435,11 +396,11 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.any { it.getOriginalMessage().contains('Agent output must be declared as `name: Type`') }
+        errors.isEmpty()
     }
 
-    def 'should resolve file/files in an agent output but not the process-only directives'() {
-        when: 'the work-dir collectors are in scope'
+    def 'should reject multiple agent outputs'() {
+        when:
         def errors = check('''\
             nextflow.enable.types = true
 
@@ -448,8 +409,103 @@ class AgentParserTest extends Specification {
                 q: String
 
                 output:
+                count: Integer
                 report: Path = file('report.md')
-                notes: Set<Path> = files('*.txt')
+
+                prompt:
+                "go"
+            }
+            ''')
+
+        then:
+        errors.any { it.getOriginalMessage() == 'Agent should have only one output -- combine outputs into a record' }
+    }
+
+    def 'should allow a named output when it is the only agent output'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent qa {
+                input:
+                q: String
+
+                output:
+                summary: String = stdout()
+
+                prompt:
+                "go"
+            }
+            ''')
+
+        then:
+        errors.isEmpty()
+    }
+
+    def 'should check the types of model-answered agent outputs'() {
+        when:
+        def errors = check("""\
+            nextflow.enable.types = true
+
+            record Answer {
+                text: String
+            }
+
+            record BadAnswer {
+                text: String
+                meta: Map
+            }
+
+            agent qa {
+                input:
+                q: String
+
+                output:
+                ${declaration}
+
+                prompt:
+                "go"
+            }
+            """)
+
+        then:
+        errors.collect { it.getOriginalMessage() }.findAll { it.startsWith('Agent output') } == expected
+
+        where:
+        declaration                     || expected
+        'a: Answer'                     || []
+        'n: Integer'                    || []
+        'x: Float'                      || []
+        'ok: Boolean'                   || []
+        'f: Path'                       || []
+        's: String'                     || []
+        'items: List<String>'           || []
+        'answers: List<Answer>'         || []
+        'nested: List<List<Path>>'      || []
+        'items: List'                   || ['Agent output `items` has unsupported type List -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type']
+        'items: List<Map>'              || ['Agent output `items` has unsupported type List<Map> -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type']
+        'd: Double'                     || ['Agent output `d` has unsupported type Double -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type']
+        'm: Map'                        || ['Agent output `m` has unsupported type Map -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type']
+        'b: BadAnswer'                  || ['Agent output `b` has unsupported field `meta` with type Map -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type']
+        'bs: List<BadAnswer>'           || ['Agent output `bs` has unsupported field `meta` with type Map -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type']
+        'q'                             || ['Agent output `q` should declare a type -- typed outputs are answered by the model']
+    }
+
+    def 'should resolve file/files/stdout in an agent output but not the process-only directives'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent qa {
+                input:
+                q: String
+
+                output:
+                record(
+                    summary: stdout(),
+                    report: file('report.md'),
+                    notes: files('*.txt')
+                )
 
                 prompt:
                 "go"
@@ -459,7 +515,7 @@ class AgentParserTest extends Specification {
         then:
         errors.isEmpty()
 
-        when: 'stdout() is process-only, so it must not resolve in an agent output'
+        when: 'eval() is process-only, so it must not resolve in an agent output'
         errors = check('''\
             nextflow.enable.types = true
 
@@ -468,7 +524,7 @@ class AgentParserTest extends Specification {
                 q: String
 
                 output:
-                answer: String = stdout()
+                eval('date')
 
                 prompt:
                 "go"
@@ -476,6 +532,6 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.any { it.getOriginalMessage().contains('stdout') }
+        errors.any { it.getOriginalMessage().contains('eval') }
     }
 }

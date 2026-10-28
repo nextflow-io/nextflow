@@ -439,7 +439,11 @@ class WorkflowMetadata {
         setErrorAttributes()
         onErrorActions.each { Closure action ->
             try {
-                action.call(trace)
+                // handlers from an `onError:` section take no arguments
+                if( action.maximumNumberOfParameters > 0 )
+                    action.call(trace)
+                else
+                    action.call()
             }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onError` event handler", e)

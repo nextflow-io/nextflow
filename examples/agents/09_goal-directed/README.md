@@ -54,7 +54,7 @@ task simply doesn't exercise it.
 - **`Sample`** carries `sample_id` and `reads` (a FASTQ path handle).
 - **The `qc` agent** declares `model`, a role-only `instruction`, a `goal`
   describing the objective, `tools 'nf:module_run', 'fs:*'`, and
-  `maxIterations 15` as a safety cap. Its output is a plain `report: String`
+  `maxIterations 15` as a safety cap. Its output is `stdout()`
   (the model's free-text verdict).
 - `SKESA` and `ASSEMBLYSCAN` are `include`d, so `nf:module_run` advertises each as
   its own tool with a registry-derived input schema.

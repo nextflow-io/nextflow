@@ -15,8 +15,18 @@
  */
 package nextflow.script.types;
 
+import nextflow.script.dsl.Description;
+
 /**
  * Placeholder type used to model records.
  */
 public interface Record {
+
+    @Description("""
+        Returns a new record containing only the given fields.
+    """)
+    default Record subMap(Iterable<String> keys) {
+        throw new UnsupportedOperationException();
+    }
+
 }

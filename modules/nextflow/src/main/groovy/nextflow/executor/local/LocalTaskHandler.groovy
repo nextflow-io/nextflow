@@ -19,6 +19,7 @@ package nextflow.executor.local
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -35,6 +36,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
+import nextflow.util.StringUtils
 /**
  * A process wrapper adding the ability to access to the Posix PID
  * and the {@code hasExited} flag
@@ -163,7 +165,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final config = task.getContainerConfig()
         final containerOpts = task.config.getContainerOptions()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit, task.getContainerPlatform())
-        log.debug "Launch cmd line: ${cmd}"
+        log.debug "Launch cmd line: ${StringUtils.stripSecrets(cmd)}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 
@@ -231,7 +233,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
              */
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
-                task.exitStatus = process.exitValue()
+                // destroy() is async, so wait for the process to actually exit
+                task.exitStatus = process.waitFor(5, TimeUnit.SECONDS) ? process.exitValue() : Integer.MAX_VALUE
                 task.stdout = outputFile
                 task.stderr = errorFile
                 task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")

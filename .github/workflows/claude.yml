@@ -43,7 +43,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout PR head
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
         with:
           # Agent mode performs no branch setup of its own (unlike tag mode), and
           # a comment event points at the default branch — without an explicit ref
@@ -56,7 +56,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Claude PR Review
-        uses: anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de # v1.0.231
+        uses: anthropics/claude-code-action@a5a423f75c251dcbff8a74e99f83b2cb03c72bfa # ratchet:anthropics/claude-code-action@v1.0.256
         timeout-minutes: 60
         with:
           anthropic_api_key: ${{ secrets.NEXTFLOW_ANTHROPIC_API_KEY }}

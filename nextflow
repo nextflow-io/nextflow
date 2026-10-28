@@ -16,7 +16,7 @@
 #
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'26.09.1-edge'}
+NXF_VER=${NXF_VER:-'26.10.3'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -56,13 +56,6 @@ function cmp_ver() {
     # Versions are equal
     echo 0
 }
-
-# if the nextflow version is greater or equals to "24.07.0-edge" the new shadow jar launcher
-# should be used, otherwise fallback on the legacy behavior setting the variable NXF_LEGACY_LAUNCHER
-NXF_LEGACY_LAUNCHER=1
-if [[ $(cmp_ver "$NXF_VER" "24.07.0-edge") -ge 0 ]]; then
-  unset NXF_LEGACY_LAUNCHER
-fi
 
 export NXF_CLI
 export NXF_ORG
@@ -288,21 +281,12 @@ while [[ $# != 0 ]]; do
     shift
 done
 
-CAPSULE_LOG=${CAPSULE_LOG:=''}
-CAPSULE_RESET=${CAPSULE_RESET:=''}
-CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:="$NXF_HOME/capsule"}
-
 NXF_PACK=one
 NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
-NXF_HOST=${HOSTNAME:-localhost}
-[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
-# both NXF_GRAB and NXF_CLASSPATH are not supported any more as of version 24.04.7-edge
-NXF_GRAB=${NXF_GRAB:-''}
-NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # Determine the path to this file
 if [[ $NXF_PACK = dist ]]; then
@@ -359,6 +343,10 @@ if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
   echo_red "Not a valid Nextflow version: $NXF_VER"
   exit 1
 fi
+if [[ $(cmp_ver "$NXF_VER" "24.07.0-edge") -lt 0 ]]; then
+  echo_red "Nextflow version $NXF_VER is not supported by this launcher -- use version 24.07.0-edge or later"
+  exit 1
+fi
 major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
 version_check="^(17|18|19|20|21|22|23|24|25|26)"
@@ -384,132 +372,65 @@ fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
-JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD" -Dcom.sun.security.enableAIAcaIssuers=true)
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcom.sun.security.enableAIAcaIssuers=true)
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-if [[ $NXF_LEGACY_LAUNCHER ]]; then
-  [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
-  [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
-  [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
-fi
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
-[[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
-[[ "$NXF_GRAB" ]] && export NXF_GRAB
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
 export JAVA_CMD
-export CAPSULE_CACHE_DIR
 export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
 export NXF_PACK
 export NXF_ENABLE_VIRTUAL_THREADS
 
-# lookup the a `md5` command
-if hash md5sum 2>/dev/null; then MD5=md5sum;
-elif hash gmd5sum 2>/dev/null; then MD5=gmd5sum;
-elif hash md5 2>/dev/null; then MD5=md5;
-else MD5=''
+# parse the command and get the result classpath in the 'launcher'
+cli=("\"$JAVA_CMD\"" "${JAVA_OPTS[@]}" -jar "$NXF_BIN")
+
+# first string between double quotes is the full path to java, also blank spaces are included
+# remainder string are arguments
+# we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
+cmd_pattern='"([^"]*)"(.*)'
+[[ "${cli[@]}" =~ $cmd_pattern ]]
+declare -a cmd_base="(${BASH_REMATCH[1]})"
+declare -a cmd_tail="(${BASH_REMATCH[2]})"
+
+launcher="${cmd_base[@]}"
+[[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+[[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
+
+launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
+launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
+if [[ "$JAVA_VER" =~ ^(24|25|26) ]]; then
+    launcher+=(--enable-native-access=ALL-UNNAMED)
+    launcher+=(--sun-misc-unsafe-memory-access=allow)
 fi
-
-# when no md5 command is available fallback on default execution
-if [[ $NXF_LEGACY_LAUNCHER ]] && { [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; }; then
-    launcher=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-    launch_nextflow
-    exit 1
+if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
+  if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
+  elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25|26) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
+  fi
 fi
-
-# creates a md5 unique for the given variables
-env_md5() {
-cat <<EOF | $MD5 | cut -f1 -d' '
-$JAVA_CMD
-$JAVA_VER
-${JAVA_OPTS[@]}
-$NXF_HOME
-$NXF_VER
-$NXF_OPTS
-$NXF_GRAB
-$NXF_CLASSPATH
-$NXF_JVM_ARGS
-$NXF_ENABLE_VIRTUAL_THREADS
-EOF
-}
-
-# checked if a cached classpath file exists and it newer that the nextflow boot jar file
-LAUNCH_FILE=''
-[[ $NXF_LEGACY_LAUNCHER ]] && LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
-
-if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
-    declare -a launcher="($(cat "$LAUNCH_FILE"))"
-else
-    if [[ $NXF_LEGACY_LAUNCHER ]]; then
-      # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-      cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-      [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
-    else
-      # otherwise parse the command and get the result classpath in the 'launcher' and save it to a file
-      cli=("\"$JAVA_CMD\"" "${JAVA_OPTS[@]}" -jar "$NXF_BIN")
-    fi
-
-    # first string between double quotes is the full path to java, also blank spaces are included
-    # remainder string are arguments
-    # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
-    cmd_pattern='"([^"]*)"(.*)'
-    [[ "${cli[@]}" =~ $cmd_pattern ]]
-    declare -a cmd_base="(${BASH_REMATCH[1]})"
-    declare -a cmd_tail="(${BASH_REMATCH[2]})"
-
-    launcher="${cmd_base[@]}"
-    [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
-    [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
-
-    launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
-    if [[ "$JAVA_VER" =~ ^(24|25|26) ]]; then
-        launcher+=(--enable-native-access=ALL-UNNAMED)
-        launcher+=(--sun-misc-unsafe-memory-access=allow)
-    fi
-    if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
-      if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
-      elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25|26) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
-      fi
-    fi
-    launcher+=("${cmd_tail[@]}")
-
-    # create the launch file only when using the legacy launcher (capsule)
-    if [[ $NXF_LEGACY_LAUNCHER ]]; then
-    # Don't show errors if the LAUNCH_FILE can't be created
-    if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
-        STR=''
-        for x in "${launcher[@]}"; do
-        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && [[ ! "$x" == *"-agentlib:jdwp"* ]] && STR+=$(printf '%q ' "$x")
-        done
-        printf "$STR">"$LAUNCH_FILE"
-    else
-        echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable?"
-    fi
-    fi
-
-fi
+launcher+=("${cmd_tail[@]}")
 
 # check for latest version
 check_latest

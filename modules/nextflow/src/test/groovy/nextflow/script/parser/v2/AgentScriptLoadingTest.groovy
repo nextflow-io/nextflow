@@ -79,7 +79,7 @@ class AgentScriptLoadingTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 def topic = question.toUpperCase()
@@ -128,7 +128,7 @@ class AgentScriptLoadingTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -149,11 +149,10 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         def agent = definitions.find { it instanceof AgentDef && it.name == 'qa' } as AgentDef
         agent != null
         agent.inputs*.name == ['question']
-        agent.outputs*.name == ['answer']
+        agent.output.name == '$out'
         and:
         // val I/O resolve to scalar (String) types, not record classes
         (agent.inputs[0].type as Class) == String
-        (agent.outputs[0].type as Class) == String
 
         cleanup:
         file.parent.deleteDir()
@@ -168,7 +167,7 @@ class AgentScriptLoadingTest extends Dsl2Spec {
             nextflow.enable.types = true
 
             record Question { text: String; context: String? }
-            record Answer { answer: String; confidence: Double }
+            record Answer { answer: String; confidence: Float }
 
             agent eval_agent {
                 model 'openai/gpt-5-mini'
@@ -205,14 +204,14 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         agent.maxIterations == 20
         agent.tools == []
         agent.inputs*.name == ['q']
-        agent.outputs*.name == ['a']
+        agent.output.name == 'a'
         agent.prompt != null
         agent.prompt.source.contains('Question:')
         and:
         // I/O are named record types: the resolved output type is the compiled
         // record class (e.g. `Answer`) with the declared fields
         def inputType = agent.inputs[0].type as Class
-        def outputType = agent.outputs[0].type as Class
+        def outputType = agent.output.type as Class
         inputType.name.endsWith('Question')
         outputType.name.endsWith('Answer')
         (outputType.declaredFields*.name as Set).containsAll(['answer', 'confidence'])
@@ -244,7 +243,7 @@ class AgentScriptLoadingTest extends Dsl2Spec {
                 input:
                 text: String
                 output:
-                summary: String
+                stdout()
 
                 prompt:
                 """
@@ -289,7 +288,7 @@ class AgentScriptLoadingTest extends Dsl2Spec {
                 input:
                 question: String
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -332,7 +331,7 @@ class AgentScriptLoadingTest extends Dsl2Spec {
                 question: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """

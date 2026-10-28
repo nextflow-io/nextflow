@@ -179,7 +179,7 @@ class LinObserver implements TraceObserverV2 {
             workflow,
             session.uniqueId.toString(),
             session.runName,
-            getNormalizedParams(session.params, normalizer),
+            getNormalizedParams(session.params.toPlainMap(), normalizer),
             SecretHelper.hideSecrets(session.config.deepClone()) as Map,
             collectWorkflowMetadata(normalizer)
         )
@@ -200,7 +200,10 @@ class LinObserver implements TraceObserverV2 {
 
     @Override
     void onTaskComplete(TaskEvent event) {
-        storeTaskInfo(event.handler.task)
+        final task = event.handler.task
+        if( task.failed || task.aborted )
+            return
+        storeTaskInfo(task)
     }
 
     protected void storeTaskInfo(TaskRun task) {

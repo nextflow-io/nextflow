@@ -259,10 +259,7 @@ class AwsS3Config implements ConfigScope {
     }
 
     private String parseStorageClass(String value) {
-        if( value in [null, 'STANDARD', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING', 'REDUCED_REDUNDANCY' ]) {
-            if (value == 'REDUCED_REDUNDANCY') {
-                log.warn "AWS S3 Storage Class `REDUCED_REDUNDANCY` is deprecated (and more expensive than `STANDARD`). For cost savings, look to `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`."
-            }
+        if( value in [null, 'STANDARD', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING'] ) {
             return value
         } else {
             log.warn "Unsupported AWS storage-class: $value"
