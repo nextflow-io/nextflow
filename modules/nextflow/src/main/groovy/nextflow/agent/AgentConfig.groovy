@@ -192,13 +192,13 @@ class AgentConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The amount of time to wait for an LLM chat request to complete before failing (default: `120 sec`).
+        The amount of time to wait for an LLM chat request to complete before failing (default: `120.s`).
     """)
     final Duration requestTimeout
 
     @ConfigOption
     @Description("""
-        The maximum size of a structured tool-output file whose contents are passed to the LLM; larger outputs are returned as a path handle (default: `32 KB`).
+        The maximum size of a structured tool-output file whose contents are passed to the LLM; larger outputs are returned as a path handle (default: `32.KB`).
     """)
     final MemoryUnit maxToolOutputInlineSize
 

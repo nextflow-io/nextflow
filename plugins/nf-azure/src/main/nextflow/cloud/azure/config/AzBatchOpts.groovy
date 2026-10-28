@@ -104,7 +104,7 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     @ConfigOption
     @Description("""
-        The maximum elapsed time that jobs may run, measured from the time they are created (default: `30d`).
+        The maximum elapsed time that jobs may run, measured from the time they are created (default: `30.d`).
     """)
     final Duration jobMaxWallClockTime
 
@@ -137,7 +137,7 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     @ConfigOption
     @Description("""
-        The delay between attempts to create a job when the active job quota has been reached (default: `'2 min'`).
+        The delay between attempts to create a job when the active job quota has been reached (default: `2.m`).
     """)
     final Duration jobQuotaRetryDelay
 

@@ -79,7 +79,7 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval for batching task submissions (default: `5 sec`).
+        The interval for batching task submissions (default: `5.s`).
     """)
     final Duration batchFlushInterval
 
