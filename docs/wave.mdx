@@ -115,14 +115,14 @@ Available templates:
 
 | Template | Description |
 |----------|-------------|
-| `conda/micromamba:v1` | Standard Micromamba 1.x single-stage build. The final image includes the package manager. Default when unspecified. |
-| `conda/micromamba:v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. |
+| `conda/micromamba:v1` | Micromamba 1.x single-stage build. The final image includes the package manager. |
+| `conda/micromamba:v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. Default for Conda packages since Wave 1.34.0. |
 | `conda/micromamba:v2-fast` | Like `conda/micromamba:v2`, with the Conda environment split into multiple image layers grouped by package, each at most 512 MB. Use it when a registry or proxy rejects large layers, or to speed up pulls. Docker images only. |
-| `conda/pixi:v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces smaller images with faster dependency resolution. |
+| `conda/pixi:v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces a `pixi.lock` file. |
 | `conda/pixi:v1-fast` | Like `conda/pixi:v1`, with the Conda environment split into multiple image layers grouped by package, each at most 512 MB. Use it when a registry or proxy rejects large layers, or to speed up pulls. Docker images only. |
 | `cran/installr:v1` | Build template for R/CRAN packages using installr. |
 
-When `wave.build.template` is not specified, Wave uses the standard `conda/micromamba:v1` template.
+When `wave.build.template` is not specified, Wave uses its default template: `conda/micromamba:v2` for Conda packages since Wave 1.34.0, `conda/micromamba:v1` with earlier Wave versions.
 
 ### Build Singularity native images
 
