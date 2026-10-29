@@ -103,7 +103,7 @@ Use the `machineType` directive to request a specific VM instance type. It can b
 ```nextflow
 process my_task {
     cpus 8
-    memory '40 GB'
+    memory 40.GB
 
     script:
     """
@@ -130,7 +130,7 @@ The `machineType` directive can also be a comma-separated list of patterns. The 
 ```nextflow
 process my_task {
     cpus 8
-    memory '20 GB'
+    memory 20.GB
     machineType 'n2-*,c2-*,m3-*'
 
     script:
@@ -149,7 +149,7 @@ The `machineType` directive can also be an [Instance Template](https://cloud.goo
 ```nextflow
 process my_task {
     cpus 8
-    memory '20 GB'
+    memory 20.GB
     machineType 'template://my-template'
 
     script:

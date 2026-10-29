@@ -43,22 +43,22 @@ class HttpClientOpts implements ConfigScope {
     @ConfigOption
     @Description("""
         The maximum time to wait for a connection to the Seqera scheduler service to be
-        established, applied to a single attempt (default: `10 sec`). It bounds only reaching
+        established, applied to a single attempt (default: `10.s`). It bounds only reaching
         the service, never waiting for its response — see `requestTimeout` for that. A
         timed-out connection proves the request never arrived, so it is retried under
         `seqera.executor.retryPolicy` for every request, task submissions included. It must be
-        greater than zero — unlike `requestTimeout`, `0 sec` is not accepted as "unbounded".
+        greater than zero — unlike `requestTimeout`, `0.s` is not accepted as "unbounded".
     """)
     final private Duration connectTimeout
 
     @ConfigOption
     @Description("""
         The maximum time to wait for a response from the Seqera scheduler service, applied to
-        a single attempt (default: `45 sec`). A timed-out poll or cancel is retried under
+        a single attempt (default: `45.s`). A timed-out poll or cancel is retried under
         `seqera.executor.retryPolicy`, so the worst case for one call is `requestTimeout`
         times `retryPolicy.maxAttempts` plus the accumulated delays; a timed-out task
         submission is not re-sent, since the scheduler may already be creating the tasks.
-        Set to `0 sec` to wait indefinitely.
+        Set to `0.s` to wait indefinitely.
     """)
     final private Duration requestTimeout
 

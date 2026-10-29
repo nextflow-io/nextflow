@@ -85,7 +85,7 @@ class SingularityConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
-        The amount of time the Singularity pull can last, after which the process is terminated (default: `20 min`).
+        The amount of time the Singularity pull can last, after which the process is terminated (default: `20.m`).
     """)
     final Duration pullTimeout
 

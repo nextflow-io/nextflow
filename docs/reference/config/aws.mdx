@@ -29,7 +29,7 @@ The path where the AWS command line tool is installed in the host AMI.
 
 ##### `aws.batch.delayBetweenAttempts`
 
-Delay between download attempts from S3 (default: `10 sec`).
+Delay between download attempts from S3 (default: `10.s`).
 
 ##### `aws.batch.executionRole`
 
@@ -111,7 +111,7 @@ The maximum number of open HTTP connections used by the S3 client (default: `50`
 
 ##### `aws.client.maxDownloadHeapMemory`
 
-The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
+The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default: `400.MB`).
 
 ##### `aws.client.maxErrorRetry`
 
@@ -121,7 +121,7 @@ The maximum number of retry attempts for failed retryable requests (default: `-1
 
 <AddedInVersion version="25.10" />
 
-The minimum part size used for multipart S3 transfers (default: `8 MB`).
+The minimum part size used for multipart S3 transfers (default: `8.MB`).
 
 ##### `aws.client.multipartThreshold`
 
@@ -237,7 +237,7 @@ The HTTP user agent header passed with all HTTP requests.
 This option is no longer supported.
 </DeprecatedInVersion>
 
-The size of a single part in a multipart upload (default: `100 MB`).
+The size of a single part in a multipart upload (default: `100.MB`).
 
 ##### `aws.client.uploadMaxAttempts`
 
@@ -261,7 +261,7 @@ The maximum number of threads used for multipart upload (default: `10`).
 This option is no longer supported.
 </DeprecatedInVersion>
 
-The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+The time to wait after a failed upload attempt to retry the part upload (default: `500.ms`).
 
 ##### `aws.client.uploadStorageClass`
 
