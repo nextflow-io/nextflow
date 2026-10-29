@@ -438,7 +438,7 @@ class CleanupObserver implements TraceObserverV2 {
      * Get the output files of a task for each process output.
      *
      * The output files of a restored task are mapped to the original
-     * task directory.
+     * task directory. Files outside the task directory are excluded.
      *
      * Input files that are forwarded by a typed process are not
      * included, instead the consumers of the process output are added
@@ -459,6 +459,10 @@ class CleanupObserver implements TraceObserverV2 {
             for( final entry : task.getOutputsByType(FileOutParam) )
                 collectPaths(entry.value, result.computeIfAbsent((int) entry.key.index, k -> new HashSet<Path>()))
         }
+
+        // files outside the task directory (e.g. storeDir outputs) are not owned by the task
+        for( final files : result.values() )
+            files.removeIf( path -> !path.startsWith(task.workDir) )
 
         if( task.restoreDir ) {
             for( final files : result.values() ) {
