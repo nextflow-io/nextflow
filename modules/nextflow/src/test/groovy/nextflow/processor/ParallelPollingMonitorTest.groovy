@@ -192,11 +192,13 @@ class ParallelPollingMonitorTest extends Specification {
         e.message.contains("Process 'oversized_array' declares array size (10) which exceeds the executor queue size (5)")
     }
 
-    def 'should release fork slot and submit permit when submission fails' () {
+    @Unroll
+    def 'should release fork slot and submit permit when submission fails [success: #SUCCESS]' () {
         given:
+        // success is false when a task was ignored with failOnIgnore, but tasks can still be submitted
         def session = Mock(Session) {
             canSubmitTasks() >> true
-            isSuccess() >> true
+            isSuccess() >> SUCCESS
             getExecService() >> Mock(ExecutorService)
         }
         def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
@@ -225,6 +227,9 @@ class ParallelPollingMonitorTest extends Specification {
         processor.state.val.completed == 1
         processor.forksCount.sum() == 0
         mon.@semaphore.availablePermits() == 1
+
+        where:
+        SUCCESS << [true, false]
     }
 
 }
