@@ -178,6 +178,15 @@ class DeletedOutputs implements TraceObserverV2 {
      * @param task
      */
     void restoreInputs(TaskRun task) {
+        try {
+            restoreInputsAsync(task).get()
+        }
+        catch( ExecutionException e ) {
+            throw new ProcessException("Unable to restore input files deleted by eager cleanup for task `${task.lazyName()}`", e.cause)
+        }
+    }
+
+    private CompletableFuture<Void> restoreInputsAsync(TaskRun task) {
         final Set<Producer> producers = []
         for( final holder : task.inputFiles ) {
             final file = files.get(holder.sourceObj)
@@ -186,13 +195,7 @@ class DeletedOutputs implements TraceObserverV2 {
         }
 
         final futures = producers.collect( p -> restore(p) )
-        try {
-            for( final future : futures )
-                future.get()
-        }
-        catch( ExecutionException e ) {
-            throw new ProcessException("Unable to restore input files deleted by eager cleanup for task `${task.lazyName()}`", e.cause)
-        }
+        return CompletableFuture.allOf(futures as CompletableFuture[])
     }
 
     /**
@@ -201,6 +204,9 @@ class DeletedOutputs implements TraceObserverV2 {
      *
      * The task is not re-executed in its original work directory, since
      * other tasks might be using the outputs that were not deleted.
+     *
+     * The task is launched once its own deleted input files are restored,
+     * without waiting for them, so that independent restores run in parallel.
      *
      * @param producer
      */
@@ -217,10 +223,23 @@ class DeletedOutputs implements TraceObserverV2 {
             Files.createDirectories(workDir)
 
             log.debug "Restoring files deleted by eager cleanup > ${task.lazyName()}"
-            producer.future = new CompletableFuture<Void>()
+            final future = new CompletableFuture<Void>()
+            producer.future = future
             restoring.put(producer.workDir, producer)
-            producer.resolver.launch(task, key, workDir)
-            return producer.future
+            try {
+                restoreInputsAsync(task)
+                    .thenRunAsync( () -> producer.resolver.launch(task, key, workDir) )
+                    .exceptionally( (Throwable e) -> {
+                        restoring.remove(producer.workDir)
+                        future.completeExceptionally(e.cause ?: e)
+                        return null
+                    } )
+            }
+            catch( Throwable e ) {
+                restoring.remove(producer.workDir)
+                future.completeExceptionally(e)
+            }
+            return future
         }
     }
 

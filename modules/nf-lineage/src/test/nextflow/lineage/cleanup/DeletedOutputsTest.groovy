@@ -20,10 +20,15 @@ package nextflow.lineage.cleanup
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 
+import com.google.common.hash.HashCode
+import nextflow.exception.ProcessException
 import nextflow.file.FileHolder
+import nextflow.processor.TaskResolver
+import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.CacheHelper.HashMode
 import spock.lang.Specification
+import spock.lang.Timeout
 
 class DeletedOutputsTest extends Specification {
 
@@ -42,6 +47,34 @@ class DeletedOutputsTest extends Specification {
 
         where:
         mode << [HashMode.STANDARD, HashMode.LENIENT]
+    }
+
+    @Timeout(10)
+    def 'should fail to restore an input when an upstream restore fails to start' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def a = workDir.resolve('a.txt')
+        def b = workDir.resolve('b.txt')
+        def resolverA = Stub(TaskResolver) { workDirFor(_) >> { throw new IllegalStateException('boom') } }
+        def resolverB = Stub(TaskResolver) { workDirFor(_) >> workDir.resolve('restore-b') }
+        def taskA = Stub(TaskRun) { makeCopy() >> Stub(TaskRun) }
+        def taskB = Stub(TaskRun) { makeCopy() >> Stub(TaskRun) { getInputFiles() >> [new FileHolder(a)] } }
+        def producerA = new DeletedOutputs.Producer(taskA, HashCode.fromInt(1), workDir.resolve('task-a'), resolverA)
+        def producerB = new DeletedOutputs.Producer(taskB, HashCode.fromInt(2), workDir.resolve('task-b'), resolverB)
+        def deleted = new DeletedOutputs(null, null)
+        deleted.files.put(a, new DeletedOutputs.DeletedFile(a, 1, null, producerA))
+        deleted.files.put(b, new DeletedOutputs.DeletedFile(b, 1, null, producerB))
+        def task = Stub(TaskRun) { getInputFiles() >> [new FileHolder(b)] }
+
+        when:
+        deleted.restoreInputs(task)
+        then:
+        def e = thrown(ProcessException)
+        e.cause.message == 'boom'
+        deleted.restoring.isEmpty()
+
+        cleanup:
+        workDir.deleteDir()
     }
 
 }
