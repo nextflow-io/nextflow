@@ -131,8 +131,11 @@ class CleanupObserverTest extends Specification {
 
     Path workDir
 
+    Path taskDir
+
     def setup() {
         workDir = Files.createTempDirectory('cleanup')
+        taskDir = workDir
     }
 
     def cleanup() {
@@ -158,6 +161,7 @@ class CleanupObserverTest extends Specification {
             getErrorAction() >> errorAction
             getConfig() >> Stub(TaskConfig) { getPublishDir() >> publishDirs }
             getTargetDir() >> workDir
+            getWorkDir() >> taskDir
             getRestoreDir() >> null
             getOutputsByType(_) >> (outputs ? [(param): outputs] : [:])
             getInputFiles() >> inputFiles
@@ -206,6 +210,28 @@ class CleanupObserverTest extends Specification {
         !Files.exists(bam)
         observer.paths.isEmpty()
         observer.consumerTasks.isEmpty()
+    }
+
+    def 'should not delete an output file outside the task directory' () {
+        given:
+        def storeDir = Files.createTempDirectory('store')
+        def stored = storeDir.resolve('a.bam')
+        stored.text = 'a.bam'
+        def bai = file('a.bai')
+        def A = task('A', [stored, bai])
+        def observer = observer([
+            A: new ProcessState([ [] as Set ], [ false ]),
+        ])
+
+        when:
+        observer.onTaskComplete(event(A))
+        observer.handleEvents()
+        then:
+        Files.exists(stored)
+        !Files.exists(bai)
+
+        cleanup:
+        storeDir.deleteDir()
     }
 
     def 'should keep deleting files when a file cannot be deleted' () {
@@ -263,6 +289,7 @@ class CleanupObserverTest extends Specification {
     def 'should not delete a file when the work directory path contains a symlink' () {
         given:
         def link = Files.createSymbolicLink(Files.createTempDirectory('cleanup-link').resolve('work'), workDir)
+        taskDir = link
         def bam = link.resolve('a.bam')
         bam.text = 'a.bam'
         def A = task('A', [bam])
@@ -560,6 +587,7 @@ class CleanupObserverTest extends Specification {
             getIndex() >> 1
             isSuccess() >> true
             getConfig() >> Stub(TaskConfig) { getPublishDir() >> [] }
+            getWorkDir() >> workDir
             getRestoreDir() >> null
             getOutputs() >> [(param): [a, d]]
             getOutputFiles() >> ([d] as Set)
