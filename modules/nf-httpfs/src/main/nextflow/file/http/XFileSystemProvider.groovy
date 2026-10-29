@@ -196,7 +196,9 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         else {
             XAuthRegistry.instance.authorize(conn)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in REDIRECT_CODES && attempt < MAX_REDIRECT_HOPS ) {
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in REDIRECT_CODES ) {
+            if( attempt >= MAX_REDIRECT_HOPS )
+                throw new IOException("Too many redirects (max ${MAX_REDIRECT_HOPS}) - URL: $url")
             final header = InsensitiveMap.of(conn.getHeaderFields())
             final location = header.get("Location")?.get(0)
             log.debug "Remote redirect location=$location; attempt=$attempt"
@@ -486,7 +488,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             return null
         }
         try {
-            if( conn.getResponseCode() in [200, 301, 302, 307, 308] )
+            if( conn.getResponseCode() == 200 )
                 return readHttpAttributes(conn.getHeaderFields())
             return null
         }
