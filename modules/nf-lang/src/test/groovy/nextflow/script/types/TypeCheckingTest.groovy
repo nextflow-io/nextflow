@@ -887,6 +887,25 @@ class TypeCheckingTest extends Specification {
         "2 in [2]"      | null
         "[2] == ['2']"  | "The `==` operator is not defined for operands with types List<Integer> and List<String>"
         "[2] == [2]"    | null
+        "[[1]] == [['a']]"              | "The `==` operator is not defined for operands with types List<List<Integer>> and List<List<String>>"
+        "[1] == [1.0]"                  | null
+        "[a: 1] == [a: 'x']"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<String, String>"
+        "[a: 1] == [(1): 1]"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<Integer, Integer>"
+        "[a: 1] == [a: 1.0]"            | null
+        "tuple(1, 2) == tuple('a', 2)"  | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<String, Integer>"
+        "tuple(1, 2) == tuple(1, 2, 3)" | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<Integer, Integer, Integer>"
+        "tuple(1, 2) == tuple(1.0, 2)"  | null
+        "record(id: 'a') == record(name: 'b')"  | null
+        "record(id: 'a') == record(id: 1)"      | null
+        "record(id: 'a') == [id: 'a']"          | "The `==` operator is not defined for operands with types Record {\n    id: String\n} and Map<String, String>"
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a') }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { record(id: 'a') != s }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(name: 'a') }"           | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a', extra: 1) }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: A, b: B) { a == b }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: List<A>, b: List<B>) { a == b }"   | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 1) }"               | null
+        "record A { id: String }\ndef f(a: A, m: Map<String,String>) { a == m }"              | "The `==` operator is not defined for operands with types A and Map<String, String>"
         "['a', 'b', 'c'][0]"        | null
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
@@ -1235,6 +1254,20 @@ class TypeCheckingTest extends Specification {
         )
         then:
         checkType(exp, Object)
+    }
+
+    @Unroll
+    def 'should resolve a getter property with generic type' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                          | ERROR
+        "[a: 1].entrySet().each { e -> def k: String = e.key }"         | null
+        "[a: 1].entrySet().each { e -> def v: Integer = e.value }"      | null
+        "[a: 1].entrySet().each { e -> e.key.nope }"                    | "Unrecognized property `nope` for type String"
+        "[a: 1].entrySet().each { e -> e.value.nope }"                  | "Unrecognized property `nope` for type Integer"
+        "[a: 1].entrySet().each { e -> e.nope }"                        | "Unrecognized property `nope` for type Entry<String, Integer>"
     }
 
     def 'should check a workflow call' () {
