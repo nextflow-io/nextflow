@@ -1051,14 +1051,14 @@ public class ScriptAstBuilder {
             return null;
         }
         var target = nameTypePair(ctx.nameTypePair());
-        Statement result;
-        if( ctx.expression() != null ) {
-            var source = expression(ctx.expression());
-            result = stmt(ast( new AssignmentExpression(target, source), ctx ));
+        if( ctx.expression() == null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow publish statement -- must be an assignment", target));
+            return null;
         }
-        else {
-            result = stmt(target);
-        }
+        if( ctx.nameTypePair().type() != null )
+            collectWarning("Workflow output type should be declared in the output block -- the type annotation in the publish statement is ignored", target.getText(), target);
+        var source = expression(ctx.expression());
+        var result = stmt(ast( new AssignmentExpression(target, source), ctx ));
         return ast( result, ctx );
     }
 

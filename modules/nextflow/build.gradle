@@ -49,7 +49,7 @@ dependencies {
     api('org.iq80.leveldb:leveldb:0.12')
     api('org.eclipse.jgit:org.eclipse.jgit:7.1.1.202505221757-r')
     api ('javax.activation:activation:1.1.1')
-    api ('javax.mail:mail:1.4.7')
+    api ('com.sun.mail:javax.mail:1.6.2')
     api ("org.yaml:snakeyaml:${snakeyamlVersion}")
     api ('org.jsoup:jsoup:1.23.2')
     api 'jline:jline:2.9'

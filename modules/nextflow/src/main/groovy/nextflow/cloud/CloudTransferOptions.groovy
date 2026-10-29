@@ -31,6 +31,8 @@ interface CloudTransferOptions {
 
     static final public Duration DEFAULT_DELAY_BETWEEN_ATTEMPTS = Duration.of('10sec')
 
+    static final public Duration MAX_DELAY_BETWEEN_ATTEMPTS = Duration.of('5min')
+
     int getMaxParallelTransfers()
     int getMaxTransferAttempts()
     Duration getDelayBetweenAttempts()
