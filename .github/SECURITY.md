@@ -45,7 +45,7 @@ When reporting, please include:
 - Step-by-step reproduction instructions or a minimal proof-of-concept.
 - Any suggested mitigations you have identified.
 
-We aim to acknowledge receipt within **3 business days** and to provide an
+We aim to acknowledge receipt within **1 week** and to provide an
 initial assessment within **10 business days**. Coordinated disclosure is our
 default: we will work with you to agree a disclosure timeline before any
 public announcement.
