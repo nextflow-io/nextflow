@@ -48,7 +48,7 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Delay between download attempts from S3 (default: `10 sec`). The delay doubles after each failed attempt, up to 5 minutes or the configured value, whichever is larger.
+        Delay between download attempts from S3 (default: `10.s`). The delay doubles after each failed attempt, up to 5 minutes or the configured value, whichever is larger.
     """)
     final Duration delayBetweenAttempts
 

@@ -24,6 +24,7 @@ Set `seqera.executor.fusionMode = 'native'` to have the compute hosts provide th
 
 Use the following process directives to control resource requests and other job characteristics:
 
+- [accelerator][process-accelerator]
 - [arch][process-arch]
 - [container][process-container]
 - [containerOptions][process-containeroptions]
@@ -123,6 +124,91 @@ process align {
 
 Tasks with different limits run on separate clusters. Tasks that set a limit, including `0`, do not use the compute environment's warm pool.
 
+## GPUs
+
+Use the [accelerator][process-accelerator] directive to request GPUs. On AWS, Azure, and Google Cloud, the `type` option selects the GPU model. The scheduler only selects instance types with that GPU. For example:
+
+```nextflow
+process train {
+    accelerator 1, type: 'nvidia-l4'
+
+    script:
+    """
+    your_gpu_enabled --command --line
+    """
+}
+```
+
+The `type` option accepts:
+
+- A GPU model ID, such as `nvidia-t4`, `nvidia-l4`, `nvidia-a10g`, `nvidia-a100`, `nvidia-h100`, or `nvidia-h100-nvl`.
+- A Google Cloud accelerator name, such as `nvidia-tesla-t4` or `nvidia-h100-80gb`.
+- A short name, such as `t4`, `l4`, `a100`, or `h100`.
+- A vendor, such as `nvidia.com/gpu`, to accept any GPU of that vendor.
+
+Names are case-insensitive. The scheduler ignores any memory size in the name. For example, `nvidia-a100-80gb` selects any A100. The `h100` name also selects H100 NVL instances. If you omit `type`, the scheduler selects any GPU instance type.
+
+Only NVIDIA GPUs are supported. A task fails at submission if it requests an unknown GPU or a GPU from another vendor, such as `amd.com/gpu`. A task that requests a GPU the compute environment's region does not offer cannot be scheduled. Tasks that request different GPU models run on separate instances.
+
+### Available GPUs
+
+Each cloud provider offers the following GPUs. Set `type` to the GPU model ID or the short name. Availability varies by region.
+
+**AWS**
+
+| GPU model ID | Short name | Instance families |
+| --- | --- | --- |
+| `nvidia-t4` | `t4` | g4dn |
+| `nvidia-a10g` | `a10g` | g5 |
+| `nvidia-l4` | `l4` | g6, gr6 |
+| `nvidia-l40s` | `l40s` | g6e |
+| `nvidia-rtx-pro-4500` | `rtx-pro-4500` | g7 |
+| `nvidia-v100` | `v100` | p3dn |
+| `nvidia-a100` | `a100` | p4d |
+| `nvidia-h100` | `h100` | p5 |
+| `nvidia-b200` | `b200` | p6-b200 |
+
+**Azure**
+
+| GPU model ID | Short name | VM series |
+| --- | --- | --- |
+| `nvidia-m60` | `m60` | NVv3 |
+| `nvidia-t4` | `t4` | NCasT4_v3 |
+| `nvidia-v100` | `v100` | NCv3, NDv2 |
+| `nvidia-a10` | `a10` | NCads_A10_v4, NVads_A10_v5 |
+| `nvidia-a100` | `a100` | NCads_A100_v4, NDasr_A100_v4, NDm_A100_v4 |
+| `nvidia-h100` | `h100` | ND_H100_v5 |
+| `nvidia-h100-nvl` | `h100-nvl` | NCads_H100_v5, NCCads_H100_v5 |
+| `nvidia-h200` | `h200` | ND_H200_v5 |
+| `nvidia-rtx-pro-6000` | `rtx-pro-6000` | NCds_RTXPRO6000BSE_v6 |
+
+**Google Cloud**
+
+| GPU model ID | Short name | Machine series |
+| --- | --- | --- |
+| `nvidia-l4` | `l4` | G2 |
+| `nvidia-rtx-pro-6000` | `rtx-pro-6000` | G4 |
+| `nvidia-a100` | `a100` | A2 |
+| `nvidia-h100` | `h100` | A3 |
+| `nvidia-h200` | `h200` | A3 Ultra |
+| `nvidia-b200` | `b200` | A4 |
+
+On Google Cloud, only machine series with built-in GPUs are available. GPUs attached to N1 machine types, such as the T4 and V100, are not supported.
+
+## Infrastructure failures
+
+When a task fails because of the infrastructure rather than the task itself, for example when a [Fusion Snapshot](https://docs.seqera.io/fusion/guide/snapshots) cannot be restored, the scheduler reports the failure as retryable. Nextflow then reruns the task in a new work directory, whatever the [errorStrategy][process-errorstrategy] directive says.
+
+Each rerun counts as one task failure towards the [maxRetries][process-maxretries] directive (default: `1`). The rerun keeps the same `task.attempt`, but if the task later fails and is retried by the `errorStrategy` directive, the reruns are included in the new `task.attempt`. Once the task has failed `maxRetries` times, an infrastructure failure is no longer rerun and is handled by the `errorStrategy` directive as usual.
+
+To allow more reruns, increase `maxRetries`. For example:
+
+```nextflow
+process {
+    maxRetries = 3
+}
+```
+
 ## Disk support
 
 When a process specifies the [disk][process-disk] directive, the Seqera executor provisions storage for the task container. It supports two disk allocation strategies:
@@ -171,13 +257,16 @@ The EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEn
 :::
 
 [amazons3-page]: ../../amazons3
+[process-accelerator]: ../process/directives/accelerator
 [config-seqera]: ../config/seqera
 [process-arch]: ../process/directives/arch
 [process-container]: ../process/directives/container
 [process-containeroptions]: ../process/directives/container-options
 [process-cpus]: ../process/directives/cpus
 [process-disk]: ../process/directives/disk
+[process-errorstrategy]: ../process/directives/error-strategy
 [process-hints]: ../process/directives/hints
+[process-maxretries]: ../process/directives/max-retries
 [process-memory]: ../process/directives/memory
 [process-secret]: ../process/directives/secret
 [process-time]: ../process/directives/time
