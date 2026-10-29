@@ -134,9 +134,10 @@ class Mailer {
                     props.setProperty(key, DEF_SMTP_TIMEOUT)
             }
             // -- check proxy configuration
-            if( !props.contains('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
+            if( !props.containsKey('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
                 props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
-                props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
+                if( System.getProperty('http.proxyPort') )
+                    props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
             }
 
             // -- debug for debugging

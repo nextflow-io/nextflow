@@ -91,6 +91,38 @@ class MailerTest extends Specification {
         props.'mail.transport.protocol' == 'smtp'
     }
 
+    @RestoreSystemProperties
+    def 'should not override configured proxy setting' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.setProperty('http.proxyPort', '8000')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com', proxy: [host: 'bar.com', port: 9000]]] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'bar.com'
+        props.'mail.smtp.proxy.port' == '9000'
+    }
+
+    @RestoreSystemProperties
+    def 'should configure proxy setting without a proxy port' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.clearProperty('http.proxyPort')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com']] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'foo.com'
+        !props.containsKey('mail.smtp.proxy.port')
+    }
+
 
     /**
      * Fake SMTP server that accepts connections, optionally replies up to
