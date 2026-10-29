@@ -35,6 +35,7 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Session
 import nextflow.dag.DAG
+import nextflow.executor.StoredTaskHandler
 import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.PublishDir
@@ -346,6 +347,23 @@ class CleanupObserver implements TraceObserverV2 {
      */
     @Override
     void onTaskComplete(TaskEvent event) {
+        eventQueue.put(new Event.TaskCompleted(event.handler.task))
+    }
+
+    /**
+     * When a task is cached, track its output files in the same way
+     * as a completed task, since they may still exist from a previous
+     * run that did not complete.
+     *
+     * A task whose outputs were found in its `storeDir` is ignored,
+     * since its outputs must be kept.
+     *
+     * @param event
+     */
+    @Override
+    void onTaskCached(TaskEvent event) {
+        if( event.handler instanceof StoredTaskHandler )
+            return
         eventQueue.put(new Event.TaskCompleted(event.handler.task))
     }
 

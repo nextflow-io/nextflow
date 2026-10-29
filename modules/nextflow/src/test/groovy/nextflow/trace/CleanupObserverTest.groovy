@@ -24,6 +24,7 @@ import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import nextflow.dag.DAG
+import nextflow.executor.StoredTaskHandler
 import nextflow.file.FileHolder
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.PublishDir
@@ -588,6 +589,49 @@ class CleanupObserverTest extends Specification {
         then:
         !Files.exists(a)
         !Files.exists(d)
+    }
+
+    def 'should delete the outputs of a cached task once its consumers are done' () {
+        given:
+        def bam = file('a.bam')
+        def A = task('A', [bam])
+        def B = task('B', [], [bam])
+        def observer = observer([
+            A: new ProcessState([ ['B'] as Set ], [ false ]),
+            B: new ProcessState([], []),
+        ])
+
+        when:
+        observer.onTaskCached(event(A))
+        observer.onProcessClose(A.processor)
+        observer.handleEvents()
+        then:
+        Files.exists(bam)
+
+        when:
+        observer.onTaskCached(event(B))
+        observer.onProcessClose(B.processor)
+        observer.handleEvents()
+        then:
+        !Files.exists(bam)
+        observer.paths.isEmpty()
+    }
+
+    def 'should not delete the outputs of a task found in its storeDir' () {
+        given:
+        def bam = file('a.bam')
+        def A = task('A', [bam])
+        def observer = observer([
+            A: new ProcessState([ [] as Set ], [ false ]),
+        ])
+
+        when:
+        observer.onTaskCached(new TaskEvent(new StoredTaskHandler(A)))
+        observer.onProcessClose(A.processor)
+        observer.handleEvents()
+        then:
+        Files.exists(bam)
+        observer.paths.isEmpty()
     }
 
 }
