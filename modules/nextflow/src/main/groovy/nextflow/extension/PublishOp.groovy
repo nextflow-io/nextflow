@@ -274,11 +274,11 @@ class PublishOp {
             if( source instanceof Path ) {
                 publish0(source, target)
             }
-            else if( source instanceof Collection<Path> ) {
+            else if( source instanceof Collection ) {
                 if( !target.endsWith('/') )
                     throw new ScriptRuntimeException("Invalid publish target '${target}' for workflow output '${name}' -- should be a directory (end with a `/`) when publishing a collection of files")
                 for( final path : source )
-                    publish0(path, target)
+                    publish0((Path) path, target)
             }
             else {
                 throw new ScriptRuntimeException("Invalid publish source for workflow output '${name}' -- expected a file or collection of files, but received: ${source} [${source.class.simpleName}]")

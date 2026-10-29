@@ -24,40 +24,41 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface ContainerConfig {
+// declared as a trait to keep binary compatibility with plugins compiled with Groovy 4
+trait ContainerConfig {
 
-    default boolean canRunOciImage() {
+    boolean canRunOciImage() {
         return false
     }
 
-    default boolean entrypointOverride() {
+    boolean entrypointOverride() {
         return ContainerHelper.entrypointOverride()
     }
 
-    default String getFusionOptions() {
+    String getFusionOptions() {
         return null
     }
 
-    default Object getKill() {
+    Object getKill() {
         return null
     }
 
-    default String getRegistry() {
+    String getRegistry() {
         return null
     }
 
-    default boolean getRegistryOverride() {
+    boolean getRegistryOverride() {
         return false
     }
 
-    default String getTemp() {
+    String getTemp() {
         return null
     }
 
-    String getEngine()
+    abstract String getEngine()
 
-    List<String> getEnvWhitelist()
+    abstract List<String> getEnvWhitelist()
 
-    boolean isEnabled()
+    abstract boolean isEnabled()
 
 }

@@ -61,8 +61,8 @@ class AgentMultiToolBridgeIntegrationTest extends Dsl2Spec {
             assert req.toolSpecs.size() == 2
             final names = req.toolSpecs*.name as Set
             assert names == ['shout', 'whisper'] as Set
-            assert req.toolSpecs.find { it.name == 'shout' }.inputSchema.properties.text.type == 'string'
-            assert req.toolSpecs.find { it.name == 'whisper' }.inputSchema.properties.text.type == 'string'
+            assert req.toolSpecs.find { it.name == 'shout' }.inputSchema.get('properties').text.type == 'string'
+            assert req.toolSpecs.find { it.name == 'whisper' }.inputSchema.get('properties').text.type == 'string'
             // dispatch to EACH tool: this drives the two REAL processes through the executor
             shoutResult = req.dispatch.call('shout', '{"text":"Hi"}')
             whisperResult = req.dispatch.call('whisper', '{"text":"Hi"}')

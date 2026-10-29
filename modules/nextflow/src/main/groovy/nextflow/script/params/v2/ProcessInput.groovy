@@ -87,6 +87,16 @@ class ProcessInput implements InParam {
     }
 
     @Override
+    short getIndex() {
+        throw new UnsupportedOperationException()
+    }
+
+    @Override
+    short getMapIndex() {
+        throw new UnsupportedOperationException()
+    }
+
+    @Override
     def decodeInputs( List values ) {
         throw new UnsupportedOperationException()
     }

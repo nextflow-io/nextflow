@@ -151,8 +151,8 @@ class AgentRegistryToolTest extends Dsl2Spec {
             // more, because the wire name comes from `nf:module_run:<PROCESS>` (§4)
             assert req.toolSpecs.size() == 1
             assert req.toolSpecs[0].name == 'echo_tool'
-            assert req.toolSpecs[0].inputSchema.properties.meta.type == 'object'
-            assert req.toolSpecs[0].inputSchema.properties.reads.type == 'string'
+            assert req.toolSpecs[0].inputSchema.get('properties').meta.type == 'object'
+            assert req.toolSpecs[0].inputSchema.get('properties').reads.type == 'string'
             // invoke the tool: drives the REAL echo_tool process through the executor,
             // staging `reads.txt` and producing `out.dat`
             dispatchResult = req.dispatch.call('echo_tool', JsonOutput.toJson([meta: [id: 's1'], reads: readsAbs]))

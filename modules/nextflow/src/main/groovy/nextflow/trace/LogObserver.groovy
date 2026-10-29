@@ -25,19 +25,20 @@ package nextflow.trace
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface LogObserver {
+// declared as a trait to keep binary compatibility with plugins compiled with Groovy 4
+trait LogObserver {
 
-    void appendInfo(String message)
+    abstract void appendInfo(String message)
 
-    void appendWarning(String message)
+    abstract void appendWarning(String message)
 
-    void appendError(String message)
+    abstract void appendError(String message)
 
-    void forceTermination()
+    abstract void forceTermination()
 
-    default void appendSticky(String message) { }
+    void appendSticky(String message) { }
 
-    default boolean getStarted() { true }
+    boolean getStarted() { true }
 
-    default boolean getStopped() { false }
+    boolean getStopped() { false }
 }

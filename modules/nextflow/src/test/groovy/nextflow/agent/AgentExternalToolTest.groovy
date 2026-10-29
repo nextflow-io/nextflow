@@ -64,7 +64,7 @@ class AgentExternalToolTest extends Dsl2Spec {
             // the bridge exposes a `shout` tool with a scalar `text:String` input
             assert req.toolSpecs.size() == 1
             assert req.toolSpecs[0].name == 'shout'
-            assert req.toolSpecs[0].inputSchema.properties.text.type == 'string'
+            assert req.toolSpecs[0].inputSchema.get('properties').text.type == 'string'
             // invoke the tool: this drives the REAL external `shout` process through the executor
             dispatchResult = req.dispatch.call('shout', '{"text":"ada"}')
             // the returned JSON proves the external module's process actually ran

@@ -71,7 +71,7 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
             args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
@@ -211,6 +211,7 @@ class ScriptBinding extends WorkflowBinding {
     /**
      * Implements immutable params map
      */
+    @Slf4j
     @CompileStatic
     static class ParamsMap implements Record, Map<String,Object> {
 
