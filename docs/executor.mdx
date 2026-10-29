@@ -48,7 +48,7 @@ Use the [`executor`][config-executor] config scope to control executor behavior,
 ```groovy
 executor {
     queueSize = 100
-    pollInterval = '30sec'
+    pollInterval = 30.s
 }
 ```
 
@@ -58,12 +58,12 @@ To apply executor config settings to a specific executor, prefix the executor na
 executor {
     $sge {
         queueSize = 100
-        pollInterval = '30sec'
+        pollInterval = 30.s
     }
 
     $local {
         cpus = 8
-        memory = '32 GB'
+        memory = 32.GB
     }
 }
 ```
