@@ -412,6 +412,32 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
     }
 
+    def 'should report an error for invalid workflow publish statements' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                a = channel.of(1)
+
+                publish:
+                a
+            }
+
+            output {
+                a {
+                    path 'a'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 6
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow publish statement -- must be an assignment"
+    }
+
     def 'should report an error for an invalid output assignment' () {
         when:
         def errors = check(
