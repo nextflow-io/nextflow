@@ -46,7 +46,7 @@ When reporting, please include:
 - Any suggested mitigations you have identified.
 
 We aim to acknowledge receipt within **1 week** and to provide an
-initial assessment within **10 business days**. Coordinated disclosure is our
+initial assessment within **2 weeks**. Coordinated disclosure is our
 default: we will work with you to agree a disclosure timeline before any
 public announcement.
 
