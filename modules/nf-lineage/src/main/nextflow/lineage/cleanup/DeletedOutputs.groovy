@@ -178,23 +178,33 @@ class DeletedOutputs implements TraceObserverV2 {
      * @param task
      */
     void restoreInputs(TaskRun task) {
+        final missing = missingInputs(task)
         try {
-            restoreInputsAsync(task).get()
+            restoreAll(missing.values()).get()
         }
         catch( ExecutionException e ) {
             throw new ProcessException("Unable to restore input files deleted by eager cleanup for task `${task.lazyName()}`", e.cause)
         }
+
+        // a re-executed task may not reproduce the same file names, e.g. if they contain a timestamp
+        for( final entry : missing.entrySet() ) {
+            if( !Files.exists(entry.key) )
+                throw new ProcessException("Unable to restore input file `${entry.key.fileName}` deleted by eager cleanup for task `${task.lazyName()}` -- task `${entry.value.task.lazyName()}` did not produce it when re-executed")
+        }
     }
 
-    private CompletableFuture<Void> restoreInputsAsync(TaskRun task) {
-        final Set<Producer> producers = []
+    private Map<Path,Producer> missingInputs(TaskRun task) {
+        final Map<Path,Producer> result = [:]
         for( final holder : task.inputFiles ) {
             final file = files.get(holder.sourceObj)
             if( file != null && !Files.exists(file.path) )
-                producers.add(file.producer)
+                result.put(file.path, file.producer)
         }
+        return result
+    }
 
-        final futures = producers.collect( p -> restore(p) )
+    private CompletableFuture<Void> restoreAll(Collection<Producer> producers) {
+        final futures = new HashSet<Producer>(producers).collect( p -> restore(p) )
         return CompletableFuture.allOf(futures as CompletableFuture[])
     }
 
@@ -227,7 +237,7 @@ class DeletedOutputs implements TraceObserverV2 {
             producer.future = future
             restoring.put(producer.workDir, producer)
             try {
-                restoreInputsAsync(task)
+                restoreAll(missingInputs(task).values())
                     .thenRunAsync( () -> producer.resolver.launch(task, key, workDir) )
                     .exceptionally( (Throwable e) -> {
                         restoring.remove(producer.workDir)

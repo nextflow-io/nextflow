@@ -77,4 +77,29 @@ class DeletedOutputsTest extends Specification {
         workDir.deleteDir()
     }
 
+    def 'should fail when a restored task does not reproduce a deleted input file' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def file = workDir.resolve('a_123.txt')
+        def resolver = Mock(TaskResolver)
+        def producer = new DeletedOutputs.Producer(Stub(TaskRun) { lazyName() >> 'A (1)'; makeCopy() >> Stub(TaskRun) }, HashCode.fromInt(1), workDir, resolver)
+        def deleted = new DeletedOutputs(null, null)
+        deleted.files.put(file, new DeletedOutputs.DeletedFile(file, 1, null, producer))
+        def task = Stub(TaskRun) {
+            lazyName() >> 'B (1)'
+            getInputFiles() >> [new FileHolder(file)]
+        }
+
+        when:
+        deleted.restoreInputs(task)
+        then:
+        1 * resolver.workDirFor(_) >> workDir.resolve('restore')
+        1 * resolver.launch(_, _, _) >> { producer.future.complete(null) }
+        def e = thrown(ProcessException)
+        e.message == 'Unable to restore input file `a_123.txt` deleted by eager cleanup for task `B (1)` -- task `A (1)` did not produce it when re-executed'
+
+        cleanup:
+        workDir.deleteDir()
+    }
+
 }
