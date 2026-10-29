@@ -106,7 +106,7 @@ class AgentRpcConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        How long an agent RPC capability remains valid while its task waits to start, i.e. the maximum queueing delay tolerated between the task script being generated and the agent connecting back to the driver (default: `1 h`).
+        How long an agent RPC capability remains valid while its task waits to start, i.e. the maximum queueing delay tolerated between the task script being generated and the agent connecting back to the driver (default: `1.h`).
     """)
     final Duration capabilityTimeout
 
