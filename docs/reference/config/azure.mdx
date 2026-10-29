@@ -61,6 +61,10 @@ The `azcopy` tool is installed for each task execution.
 
 The `azcopy` tool is not installed.
 
+##### `azure.batch.delayBetweenAttempts`
+
+Delay between download attempts from Azure Blob Storage (default: `10.s`). The delay doubles after each failed attempt, up to 5 minutes or the configured value, whichever is larger.
+
 ##### `azure.batch.deleteJobsOnCompletion`
 
 <ChangedInVersion version="23.10">
@@ -94,6 +98,14 @@ If jobs do not complete within this time limit, the Batch service terminates the
 ##### `azure.batch.location`
 
 The name of the batch service region, e.g. `westeurope` or `eastus2`. Not needed when the endpoint is specified.
+
+##### `azure.batch.maxParallelTransfers`
+
+Max parallel upload/download transfer operations *per task* (default: `4`).
+
+##### `azure.batch.maxTransferAttempts`
+
+Max number of attempts for each download from Azure Blob Storage (default: `1`).
 
 ##### `azure.batch.poolIdentityClientId`
 
