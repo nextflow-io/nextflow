@@ -36,13 +36,13 @@ class K8sRetryConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Delay when retrying failed API requests (default: `250ms`).
+        Delay when retrying failed API requests (default: `250.ms`).
     """)
     Duration delay = Duration.of('250ms')
 
     @ConfigOption
     @Description("""
-        Max delay when retrying failed API requests (default: `90s`).
+        Max delay when retrying failed API requests (default: `90.s`).
     """)
     Duration maxDelay = Duration.of('90s')
 

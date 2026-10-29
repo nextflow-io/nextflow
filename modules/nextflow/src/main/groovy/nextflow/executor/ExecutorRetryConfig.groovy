@@ -28,7 +28,7 @@ class ExecutorRetryConfig implements ConfigScope {
     @Description("""
         *Used only by grid executors.*
 
-        Delay when retrying failed job submissions (default: `500ms`).
+        Delay when retrying failed job submissions (default: `500.ms`).
     """)
     Duration delay = Duration.of('500ms')
 
@@ -52,7 +52,7 @@ class ExecutorRetryConfig implements ConfigScope {
     @Description("""
         *Used only by grid executors.*
 
-        Max delay when retrying failed job submissions (default: `30s`).
+        Max delay when retrying failed job submissions (default: `30.s`).
     """)
     Duration maxDelay = Duration.of('30s')
 

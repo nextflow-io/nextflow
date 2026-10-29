@@ -30,7 +30,7 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: sched/run=${{ github.run_id }}-build-${{ matrix.java_version }}/cpu=8/mem=32/type=m7a+m7i/spot=true
     permissions:
       contents: read
       id-token: write
@@ -179,7 +179,7 @@ jobs:
   test:
     if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.docs_only != 'true' }}
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: sched/run=${{ github.run_id }}-${{ matrix.java_version }}-${{ matrix.test_mode }}/cpu=8/mem=32/type=m7a+m7i/spot=true
     permissions:
       contents: read
       id-token: write
