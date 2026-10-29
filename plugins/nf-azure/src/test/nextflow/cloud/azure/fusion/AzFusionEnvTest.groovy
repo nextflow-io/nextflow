@@ -264,4 +264,40 @@ class AzFusionEnvTest extends Specification {
         env.size() == 1  // Only account name
     }
 
+    def 'should pass custom storage endpoint to fusion'() {
+        given:
+        def ENDPOINT = 'https://onelake.blob.fabric.microsoft.com'
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [
+                storage: [accountName: 'onelake', endpoint: ENDPOINT],
+                batch: [poolIdentityClientId: 'pool-managed-identity-id']
+            ]]
+        }
+
+        when:
+        def env = new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
+
+        then:
+        env.AZURE_STORAGE_ACCOUNT == 'onelake'
+        env.AZURE_STORAGE_ENDPOINT == ENDPOINT
+        env.FUSION_AZ_MSI_CLIENT_ID == 'pool-managed-identity-id'
+        !env.AZURE_STORAGE_SAS_TOKEN
+    }
+
+    def 'should throw an exception when using OneLake without a managed identity'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [
+                storage: [accountName: 'onelake', endpoint: 'https://onelake.blob.fabric.microsoft.com'],
+                activeDirectory: [servicePrincipalId: 'id', servicePrincipalSecret: 'secret', tenantId: 'tenant']
+            ]]
+        }
+
+        when:
+        new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }
