@@ -85,6 +85,22 @@ class MailerTest extends Specification {
         props.'mail.smtp.proxy.port' == '9000'
     }
 
+    @RestoreSystemProperties
+    def 'should configure proxy setting without a proxy port' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.clearProperty('http.proxyPort')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com']] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'foo.com'
+        !props.containsKey('mail.smtp.proxy.port')
+    }
+
 
     def "sending mails using javamail"() {
 

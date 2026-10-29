@@ -127,7 +127,8 @@ class Mailer {
             // -- check proxy configuration
             if( !props.containsKey('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
                 props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
-                props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
+                if( System.getProperty('http.proxyPort') )
+                    props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
             }
 
             // -- debug for debugging
