@@ -311,7 +311,7 @@ input = file('myfs://<path-to-file>')
 See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information and the `nf-amazon` plugin (`S3FileSystemProvider`) for an example of a custom filesystem.
 
 :::note
-As of Nextflow 26.11.0-edge, filesystem providers loaded by a plugin are not visible to `Paths.get(URI)`, `Path.of(URI)`, or `FileSystems.newFileSystem(URI)`. Use `FileHelper.asPath(String)` or `file()` to resolve a URI such as `s3://`, `az://`, or `seqera://` to a path.
+Use `FileHelper.asPath(String)` or `file()` to resolve a URI such as `s3://`, `az://`, or `seqera://` to a path in plugin code. Filesystem providers loaded by a plugin are not necessarily visible to `Path.of(URI)` or `FileSystems.newFileSystem(URI)`.
 :::
 
 :::tip
