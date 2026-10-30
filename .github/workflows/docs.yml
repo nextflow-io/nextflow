@@ -4,6 +4,8 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - 'docs/**'
+      - '!docs/adr/**'
+      - '!docs/specs/**'
       - '.docusaurus_site/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
