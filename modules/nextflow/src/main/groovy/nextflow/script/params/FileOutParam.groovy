@@ -172,7 +172,7 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
 
         final dir = workDir.toString()
         if( !path.startsWith(dir) )
-            throw new IllegalFileException("File `$path` is outside the scope of the process work directory: $workDir")
+            throw new IllegalFileException("File `$path` is outside the scope of the task work directory: $workDir")
 
         if( path.length()-dir.length()<2 )
             throw new IllegalFileException("Missing output file name")
@@ -186,7 +186,7 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
             return glob ? FilePatternSplitter.GLOB.escape(path) : path
 
         if( !path.startsWith(workDir) )
-            throw new IllegalFileException("File `$path` is outside the scope of the process work directory: $workDir")
+            throw new IllegalFileException("File `$path` is outside the scope of the task work directory: $workDir")
 
         if( path.nameCount == workDir.nameCount )
             throw new IllegalFileException("Missing output file name")
