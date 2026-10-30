@@ -72,6 +72,12 @@ class SmtpOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Socket connection timeout in milliseconds (default: `30000`).
+    """)
+    final Integer connectiontimeout
+
+    @ConfigOption
+    @Description("""
         Host name of the mail server.
     """)
     final String host
@@ -90,17 +96,32 @@ class SmtpOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Socket read timeout in milliseconds (default: `30000`).
+    """)
+    final Integer timeout
+
+    @ConfigOption
+    @Description("""
         User name to connect to the mail server.
     """)
     final String user
 
+    @ConfigOption
+    @Description("""
+        Socket write timeout in milliseconds (default: `30000`).
+    """)
+    final Integer writetimeout
+
     private Map opts
 
     SmtpOpts(Map opts) {
+        connectiontimeout = opts.connectiontimeout as Integer
         host = opts.host
         password = opts.password
         port = opts.port as Integer
+        timeout = opts.timeout as Integer
         user = opts.user
+        writetimeout = opts.writetimeout as Integer
         this.opts = opts
     }
 

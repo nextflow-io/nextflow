@@ -73,7 +73,7 @@ Forcefully apply compression option to all layers, including already existing la
 
 <AddedInVersion version="24.04" />
 
-The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when using `wave.build.template` set to `conda/micromamba:v2`, `conda/micromamba:v2-fast`, `conda/pixi:v1` or `conda/pixi:v1-fast`.
+The base image of the Conda containers built with the `conda/micromamba:v2` and `conda/micromamba:v2-fast` templates (default: `ubuntu:24.04`). Ignored by the other templates.
 
 ##### `wave.build.conda.basePackages`
 
@@ -97,20 +97,11 @@ The corresponding credentials must be provided in your Seqera Platform account.
 
 <AddedInVersion version="26.04" />
 
-The build template to use for container builds (default: `conda/micromamba:v1`). Supported values:
-
-- `conda/micromamba:v1`: Standard Micromamba 1.x single-stage build. Default when unspecified.
-- `conda/micromamba:v2`: Micromamba 2.x with multi-stage builds.
-- `conda/micromamba:v2-fast`: Micromamba 2.x with multi-stage builds, and the Conda environment split into multiple image layers of at most 512 MB. Docker images only.
-- `conda/pixi:v1`: Pixi package manager with multi-stage builds for optimized image sizes.
-- `conda/pixi:v1-fast`: Pixi package manager with multi-stage builds, and the Conda environment split into multiple image layers of at most 512 MB. Docker images only.
-- `cran/installr:v1`: R/CRAN packages using installr.
-
-Multi-stage templates produce smaller images by excluding build tools from the final image.
+The build template used to build Conda containers (default: `conda/micromamba:v2`). Can be `conda/micromamba:v1`, `conda/micromamba:v2`, `conda/micromamba:v2-fast`, `conda/pixi:v1`, or `conda/pixi:v1-fast`. See [Build templates][wave-build-templates] for details.
 
 ##### `wave.httpClient.connectTimeout`
 
-The connection timeout for the Wave HTTP client (default: `30s`).
+The connection timeout for the Wave HTTP client (default: `30.s`).
 
 ##### `wave.httpClient.maxRate`
 
@@ -120,7 +111,7 @@ The maximum request rate for the Wave HTTP client (default: `1/sec`).
 
 ##### `wave.retryPolicy.delay`
 
-The initial delay when a failing HTTP request is retried (default: `450ms`).
+The initial delay when a failing HTTP request is retried (default: `450.ms`).
 
 ##### `wave.retryPolicy.jitter`
 
@@ -132,7 +123,7 @@ The max number of attempts a failing HTTP request is retried (default: `5`).
 
 ##### `wave.retryPolicy.maxDelay`
 
-The max delay when a failing HTTP request is retried (default: `90s`).
+The max delay when a failing HTTP request is retried (default: `90.s`).
 
 ##### `wave.scan.allowedLevels`
 
@@ -164,4 +155,5 @@ The containers used by your pipeline are scanned for security vulnerabilities. T
 
 The containers used by your pipeline are scanned for security vulnerabilities. The task is only executed if the corresponding container is free of vulnerabilities.
 
+[wave-build-templates]: ../../wave#build-templates
 [wave-page]: ../../wave

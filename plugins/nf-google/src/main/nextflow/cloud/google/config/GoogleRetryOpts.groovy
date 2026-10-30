@@ -44,7 +44,7 @@ class GoogleRetryOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
+        Max delay when retrying failed API requests to Cloud Storage (default: `90.s`).
     """)
     final Duration maxDelay
 

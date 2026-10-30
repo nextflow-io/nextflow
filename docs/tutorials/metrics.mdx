@@ -231,7 +231,7 @@ The first and second programs are executed as `malloc` and `malloc_fill`, respec
 
 ```nextflow
 process malloc {
-    memory '1.5 GB'
+    memory 2.GB
 
     script:
     """
@@ -240,7 +240,7 @@ process malloc {
 }
 
 process malloc_fill {
-    memory '1.5 GB'
+    memory 2.GB
 
     script:
     """

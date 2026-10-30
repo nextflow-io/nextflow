@@ -86,7 +86,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                     rm -rf $target
                     >&2 echo "Unable to download path: $source"
-                    exit 1
+                    return 1
                 }
             }
         }

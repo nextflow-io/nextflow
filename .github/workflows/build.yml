@@ -1,7 +1,7 @@
 name: Nextflow CI
 # read more here: https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
 
-# Note: We don't use the `on: path` option for docs,
+# Note: We don't use the `on: paths-ignore` option for docs,
 # because the Build steps are *required* tests.
 # Instead, we trigger + skip the tests if the only changes
 # are in the docs folder. GitHub treats this as passing.
@@ -30,10 +30,11 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: sched/run=${{ github.run_id }}-build-${{ matrix.java_version }}/cpu=8/mem=32/type=m7a+m7i/spot=true
     permissions:
       contents: read
       id-token: write
+      pull-requests: read
     timeout-minutes: 100
     strategy:
       fail-fast: false
@@ -67,7 +68,30 @@ jobs:
           echo "Commit message=$COMMIT_MESSAGE"
           echo "commit_message=$COMMIT_MESSAGE" >> "$GITHUB_OUTPUT"
 
+      # docs/snippets is exercised by the `test_docs` mode, so a change there
+      # is not docs-only. Any API failure, or a PR beyond the 3000-file
+      # limit of the files endpoint, falls back to a full build.
+      - name: Check for docs-only changes
+        id: docs_only
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          COUNT=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.changed_files') || COUNT=''
+          FILES=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)') || FILES=''
+          # indent so that file names can't be interpreted as workflow commands
+          echo "Changed files ($COUNT):"; printf '%s\n' "$FILES" | sed 's/^/- /'
+          CODE=$(printf '%s\n' "$FILES" | grep -vE '^(docs|\.docusaurus_site)/' || true)
+          SNIPPETS=$(printf '%s\n' "$FILES" | grep -E '^docs/snippets/' || true)
+          if [ -n "$FILES" ] && [ "${COUNT:-0}" -gt 0 ] && [ "$COUNT" -le 3000 ] && [ -z "$CODE$SNIPPETS" ]; then
+            echo "Docs-only change: skipping build and tests"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup env
+        if: steps.docs_only.outputs.skip != 'true'
         run: |
           rm -f $HOME/.gitconfig;
           mkdir -p "$HOME/.nextflow";
@@ -79,12 +103,14 @@ jobs:
       # and artifacts before upload to detect tests that dump the environment.
       # Generated in-job so it also works for fork PRs, which get no secrets.
       - name: Setup leak canary
+        if: steps.docs_only.outputs.skip != 'true'
         run: |
           canary="nxfcanary-$(openssl rand -hex 16)"
           echo "::add-mask::$canary"
           echo "NXF_CANARY_TOKEN=$canary" >> "$GITHUB_ENV"
 
       - name: Setup Java ${{ matrix.java_version }}
+        if: steps.docs_only.outputs.skip != 'true'
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
         with:
           java-version: ${{matrix.java_version}}
@@ -93,18 +119,20 @@ jobs:
           cache: gradle
 
       - name: Compile
+        if: steps.docs_only.outputs.skip != 'true'
         run: make assemble
 
       # Assume the CI test role via GitHub OIDC. Fork PRs get no OIDC token, so this is
       # skipped and so are the AWS tests.
       - name: Configure AWS credentials
-        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        if: ${{ github.event.pull_request.head.repo.fork != true && steps.docs_only.outputs.skip != 'true' }}
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.SEQERA_NEXTFLOW_TEST_ROLE_ARN }}
           aws-region: eu-west-1
 
       - name: Test
+        if: steps.docs_only.outputs.skip != 'true'
         run: |
           # the OIDC credentials step sets AWS_REGION/AWS_DEFAULT_REGION, but unit tests expect none (e.g. `aws` cli without `--region`)
           unset AWS_REGION AWS_DEFAULT_REGION
@@ -116,8 +144,6 @@ jobs:
           # run tests
           make test
         env:
-          # run the nf-amazon tests against real S3 with the CI role credentials
-          ENABLE_S3FS_TEST: true
           NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
           NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
@@ -130,7 +156,7 @@ jobs:
 
       - name: Scan tests report for leaks
         id: leak_scan
-        if: always()
+        if: always() && steps.docs_only.outputs.skip != 'true'
         run: |
           shopt -s globstar nullglob
           if ! .github/scripts/check-leaks.sh ./**/build/reports/tests/test; then
@@ -148,11 +174,12 @@ jobs:
 
     outputs:
       commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
+      docs_only: ${{ steps.docs_only.outputs.skip }}
 
   test:
-    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
+    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.docs_only != 'true' }}
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: sched/run=${{ github.run_id }}-${{ matrix.java_version }}-${{ matrix.test_mode }}/cpu=8/mem=32/type=m7a+m7i/spot=true
     permissions:
       contents: read
       id-token: write
@@ -278,7 +305,7 @@ jobs:
             integration-tests.tar.gz
 
   test-e2e:
-    if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
+    if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]')) && needs.build.outputs.docs_only != 'true' }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

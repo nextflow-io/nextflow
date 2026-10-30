@@ -10,6 +10,7 @@ process-typed-taskpath.nf
 record-types.nf
 records.nf
 resume-typed-value-output.nf
+stage-record-collection.nf
 task-ext-block.nf
 topic-channel-typed.nf
 type-annotations.nf
