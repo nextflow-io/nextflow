@@ -101,6 +101,42 @@ class WaveFactoryTest extends Specification {
         e.message == 'Fusion feature requires enabling Wave service'
     }
 
+    @Unroll
+    def 'should make wave optional for the seqera executor in native fusion mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        WaveFactory.shouldEnable(session)
+        then:
+        noExceptionThrown()
+        CONFIG == EXPECTED
+        DISABLED * session.setDisableRemoteBinDir(true) >> null
+
+        where:
+        CONFIG                                                                                                    | EXPECTED                                                                                                                                           | DISABLED
+        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], fusion:[enabled:true]]                     | [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], fusion:[enabled:true]]                                              | 0
+        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], wave:[enabled:true], fusion:[enabled:true]] | [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
+    }
+
+    @Unroll
+    def 'should require wave for the seqera executor without native fusion mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        WaveFactory.shouldEnable(session)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Fusion feature requires enabling Wave service'
+
+        where:
+        CONFIG << [
+            [process:[executor:'seqera'], fusion:[enabled:true]],
+            [process:[executor:'seqera'], seqera:[executor:[fusionMode:'wave']], fusion:[enabled:true]],
+        ]
+    }
+
     def 'should not fail when wave is disabled' () {
         given:
         SysEnv.push(NXF_DISABLE_WAVE_SERVICE: 'true')

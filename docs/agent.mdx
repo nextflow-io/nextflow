@@ -350,7 +350,7 @@ agent {
     executor = 'k8s'
     container = '<nf-agent-pi runner image>'
     cpus = 1
-    memory = '1 GB'
+    memory = 1.GB
 
     rpc.remoteHost = 'nextflow-driver.default.svc'
 }
@@ -382,7 +382,7 @@ Default tool-loop cap (default: `20`).
 
 ##### `maxToolOutputInlineSize`
 
-Largest tool-output file passed to the model inline; bigger ones become path handles (default: `32 KB`).
+Largest tool-output file passed to the model inline; bigger ones become path handles (default: `32.KB`).
 
 ##### `model`
 
@@ -390,7 +390,7 @@ Default model for an agent that omits the directive.
 
 ##### `requestTimeout`
 
-Timeout for a single model request (default: `120 sec`).
+Timeout for a single model request (default: `120.s`).
 
 ##### `runner`
 
@@ -410,7 +410,7 @@ Host a containerized task uses to reach the driver. See [RPC configuration](#rpc
 
 ##### `rpc.capabilityTimeout`
 
-Queuing budget for an agent task's one-time connection capability (default: `1h`).
+Queuing budget for an agent task's one-time connection capability (default: `1.h`).
 
 ##### `rpc.tls`
 

@@ -819,4 +819,14 @@ class AgentConfigTest extends Specification {
     // (`agent.model`, `agent.maxIterations`) lives in ConfigValidatorTest. `log.warn1` caches
     // by message for the whole JVM, so asserting the same warning twice across specs is
     // inherently order-dependent -- see the existing `wokDir`/`wokDir2` split there.
+
+    def 'should not render the environment' () {
+        given:
+        def obj = new AgentConfig([:], [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'AgentConfig'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

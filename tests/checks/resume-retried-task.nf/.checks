@@ -16,3 +16,15 @@ echo ''
 $NXF_RUN -resume | tee stdout
 
 [[ `< .nextflow.log grep -c 'Cached process > foo'` == 1 ]] || false
+
+#
+# RESUME mode after cleaning the run with the failed attempts, keeping the cached one (#7792)
+#
+echo ''
+$NXF_CMD clean -f -but last | tee stdout
+
+[[ `< stdout grep -c '^Removed'` == 2 ]] || false
+
+$NXF_RUN -resume | tee stdout
+
+[[ `< .nextflow.log grep -c 'Cached process > foo'` == 1 ]] || false

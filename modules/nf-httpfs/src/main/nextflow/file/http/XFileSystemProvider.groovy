@@ -50,7 +50,6 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.InsensitiveMap
-import sun.net.www.protocol.ftp.FtpURLConnection
 /**
  * Implements a read-only JSR-203 compliant file system provider for http/ftp protocols
  *
@@ -480,7 +479,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     protected XFileAttributes readHttpAttributes(XPath path) {
         final conn = toConnection(path)
-        if( conn instanceof FtpURLConnection ) {
+        if( conn.getURL().protocol == 'ftp' ) {
             return new XFileAttributes(null,-1)
         }
         if( conn !instanceof HttpURLConnection ) {

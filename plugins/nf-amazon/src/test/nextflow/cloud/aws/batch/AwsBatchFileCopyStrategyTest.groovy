@@ -132,6 +132,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -142,14 +143,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -223,6 +225,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -233,14 +236,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
 
                 nxf_parallel() {

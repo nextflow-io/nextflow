@@ -29,7 +29,7 @@ import nextflow.script.dsl.Ops;
 public interface String {
 
     @Description("""
-        Returns `true` if the string ends with the given substring.
+        Returns `true` if the string contains the given substring.
     """)
     boolean contains(String s);
 
@@ -134,7 +134,7 @@ public interface String {
     String sha256();
 
     @Description("""
-        Returns `true` if the string ends with the given prefix.
+        Returns `true` if the string starts with the given prefix.
     """)
     boolean startsWith(String prefix);
 

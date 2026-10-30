@@ -32,7 +32,7 @@ import spock.lang.Specification
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-@Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec {
 
     private S3Client s3Client0
@@ -40,9 +40,8 @@ class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec
     S3Client getS3Client() { s3Client0 }
 
     static private Map config0() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-        return [aws: [accessKey: accessKey, secretKey: secretKey]]
+        // no static keys: the default provider chain also reads the session token of the CI role credentials
+        return [aws: [:]]
     }
 
     def setup() {

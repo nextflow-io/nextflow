@@ -19,6 +19,7 @@ package io.seqera.executor
 import io.seqera.config.ExecutorOpts
 import io.seqera.config.SeqeraConfig
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.FusionMode
 import io.seqera.sched.api.schema.v1a1.CreateRunResponse
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.client.SchedClientConfig
@@ -385,7 +386,8 @@ class SeqeraExecutorTest extends Specification {
             endpoint: 'https://sched.example.com',
             provider: 'aws',
             strategy: 'vm',
-            region: 'eu-west-1'
+            region: 'eu-west-1',
+            fusionMode: 'native'
         )
         def executor = new SeqeraExecutor()
         executor.session = session
@@ -400,6 +402,7 @@ class SeqeraExecutorTest extends Specification {
         captured.getProvider() == 'aws'
         captured.getStrategy() == 'vm'
         captured.getRegion() == 'eu-west-1'
+        captured.getFusionMode() == FusionMode.NATIVE
 
         cleanup:
         executor.batchSubmitter?.shutdown()

@@ -1274,6 +1274,18 @@ class FileHelperTest extends Specification {
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
 
+    def 'getAttemptFromPath parses the attempt from the suffix of a work dir'() {
+        expect:
+        FileHelper.getAttemptFromPath(PATH == null ? null : Paths.get(PATH)) == ATTEMPT
+
+        where:
+        PATH                                            | ATTEMPT
+        null                                            | 1
+        '/work/ab/cdef0123456789abcdef0123456789'       | 1
+        '/work/ab/cdef0123456789abcdef0123456789-2'     | 2
+        '/work/ab/cdef0123456789abcdef0123456789-12'    | 12
+    }
+
     def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {
         given:
         def work = Paths.get('/work')

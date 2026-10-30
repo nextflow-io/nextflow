@@ -80,13 +80,18 @@ refresh:
 
 #
 # Run all tests or selected ones
+# When no AWS credentials are set, use the temporary keys of the `aws_profile` SSO session
+# (if any) so the S3 integration tests run instead of being skipped
 #
+aws_profile ?= nextflow-oss
+
 test:
-ifndef class
-	$(gradle) ${mm}test
-else
-	$(gradle) ${mm}test --tests ${class}
-endif
+	@if [ -z "$$AWS_ACCESS_KEY_ID" ] && creds=$$(aws configure export-credentials --profile $(aws_profile) --format env 2>/dev/null); then \
+	  eval "$$creds"; unset AWS_PROFILE; echo "Using AWS profile '$(aws_profile)' for S3 tests"; \
+	elif [ -z "$$AWS_ACCESS_KEY_ID" ]; then \
+	  echo "No AWS credentials for profile '$(aws_profile)' -- S3 tests will be skipped"; \
+	fi; \
+	$(gradle) ${mm}test $(if $(class),--tests $(class))
 
 #
 # Run smoke tests

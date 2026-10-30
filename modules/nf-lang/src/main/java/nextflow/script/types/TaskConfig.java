@@ -238,7 +238,7 @@ public interface TaskConfig {
 
         [Read more](https://docs.seqera.io/nextflow/reference/process#label)
     """)
-    String getLabel();
+    List<String> getLabel();
 
     @Constant("machineType")
     @Description("""

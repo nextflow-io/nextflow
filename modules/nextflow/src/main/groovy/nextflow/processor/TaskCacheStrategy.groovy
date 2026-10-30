@@ -61,10 +61,8 @@ interface TaskCacheStrategy extends ExtensionPoint {
      *      <b>retry</b> ({@code tryCache == false} and {@code task.failCount > 0}) it is instead the
      *      key this strategy passed to {@link TaskResolver#launch launch} for the previous attempt:
      *      {@code TaskProcessor} retries with {@code taskCopy.hash}, which {@code submitTask} set
-     *      from that key. For {@link DefaultTaskCacheStrategy} that is the per-attempt folded hash,
-     *      which is why its chain is {@code H(H(h,1),2)}. A strategy that recomputes the retry key
-     *      from {@code failCount} instead would land in a different work directory than the one
-     *      Nextflow later resumes from.
+     *      from that key. For {@link DefaultTaskCacheStrategy} that is the task key shared by every
+     *      attempt, {@code H(h,1)}: the attempt is a suffix of the work directory, not of the key.
      * @param tryCache Whether a cached execution may be resumed; {@code false} on a retry, and when
      *      the run is not resuming.
      * @param resolver The processor's primitives to resume or launch the task with.

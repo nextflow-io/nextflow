@@ -62,6 +62,7 @@ class BashFunLib<V extends BashFunLib> {
         nxf_cp_retry() {
             local max_attempts=$maxTransferAttempts
             local timeout=${delayBetweenAttempts.seconds}
+            local max_timeout=${Math.max(CloudTransferOptions.MAX_DELAY_BETWEEN_ATTEMPTS.seconds, delayBetweenAttempts.seconds)}
             local attempt=0
             local exitCode=0
             while (( \$attempt < \$max_attempts ))
@@ -72,14 +73,15 @@ class BashFunLib<V extends BashFunLib> {
               else
                 exitCode=\$?
               fi
-              if [[ \$exitCode == 0 ]]
+              attempt=\$(( attempt + 1 ))
+              if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
               then
                 break
               fi
               nxf_sleep \$timeout
-              attempt=\$(( attempt + 1 ))
-              timeout=\$(( timeout * 2 ))
+              timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
             done
+            return \$exitCode
         }
 
         nxf_parallel() {

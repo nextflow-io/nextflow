@@ -358,4 +358,8 @@ class SingularityCache {
         return result
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }

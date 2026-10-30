@@ -898,7 +898,7 @@ class FileHelper {
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
-                    def result = relative ? path : fullPath
+                    def result = relative ? path : stripTrailingSlash(fullPath)
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
@@ -938,6 +938,20 @@ class FileHelper {
             }
       })
 
+    }
+
+    /**
+     * Strip the trailing slash that some cloud storage providers (e.g. GCS)
+     * preserve in the path of a directory
+     *
+     * @param dir A directory path, possibly with a trailing slash
+     * @return The directory path without the trailing slash
+     */
+    static protected Path stripTrailingSlash(Path dir) {
+        // the file name of a GCS path does not include the trailing slash
+        return dir.toString().endsWith('/')
+            ? dir.resolveSibling(dir.getFileName())
+            : dir
     }
 
     static protected Path relativize0(Path folder, Path fullPath) {
@@ -1296,6 +1310,18 @@ class FileHelper {
             log.debug("String '${strHash}' is not a valid hash", e)
             return null
         }
+    }
+
+    /**
+     * The attempt of the task run in the given work directory: {@code N} for {@code <30hex>-N},
+     * 1 when the leaf has no attempt suffix.
+     */
+    static int getAttemptFromPath(Path workDir) {
+        final leaf = workDir?.getFileName()?.toString()
+        if( !leaf )
+            return 1
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        return suffix.find() ? Integer.parseInt(leaf.substring(suffix.start() + 1)) : 1
     }
 
     /**

@@ -156,6 +156,40 @@ public class Types {
     }
 
     /**
+     * Determine whether two types can be compared for equality.
+     *
+     * Any two records are comparable. Otherwise, one type must be
+     * assignable to the other and the type arguments (e.g. list
+     * elements, map keys/values, tuple components) must be pairwise
+     * comparable.
+     *
+     * @param a
+     * @param b
+     */
+    public static boolean isComparable(ClassNode a, ClassNode b) {
+        if( ClassHelper.isObjectType(a) || ClassHelper.isObjectType(b) )
+            return true;
+        if( isRecordType(a) || isRecordType(b) )
+            return isRecordType(a) && isRecordType(b);
+        return (isAssignableFrom(a, b, false) || isAssignableFrom(b, a, false))
+            && isComparable(a.getGenericsTypes(), b.getGenericsTypes());
+    }
+
+    private static boolean isComparable(GenericsType[] a, GenericsType[] b) {
+        if( a == null || b == null )
+            return true;
+        if( a.length != b.length )
+            return false;
+        for( int i = 0; i < a.length; i++ ) {
+            if( a[i].isWildcard() || b[i].isWildcard() || a[i].isPlaceholder() || b[i].isPlaceholder() )
+                continue;
+            if( !isComparable(a[i].getType(), b[i].getType()) )
+                return false;
+        }
+        return true;
+    }
+
+    /**
      * Determine whether two types are equal.
      *
      * @param a
