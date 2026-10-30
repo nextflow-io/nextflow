@@ -32,6 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -50,7 +51,7 @@ class AgentParserTest {
         var parser = new ScriptParser();
         var source = parser.parse("main.nf", contents);
         parser.analyze();
-        assertThat(TestUtils.hasSyntaxErrors(source)).isFalse();
+        assertThat(TestUtils.getErrors(source)).isEmpty();
         return source;
     }
 
@@ -255,9 +256,7 @@ class AgentParserTest {
             }
             """);
 
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(20, 24, "Agent `eval_agent` cannot be used as a variable"));
+        assertErrors(errors, tuple(20, 24, "Agent `eval_agent` cannot be used as a variable"));
     }
 
     @Test
@@ -563,7 +562,7 @@ class AgentParserTest {
             }
             """);
 
-        assertThat(messages(errors)).anySatisfy(message -> assertThat(message).contains("eval"));
+        assertErrors(errors, tuple(8, 5, "`eval` is not defined"));
     }
 
 }

@@ -19,22 +19,10 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.ast.FeatureFlagNode;
-import nextflow.script.ast.ScriptNode;
-import nextflow.script.control.ScriptParser;
-import nextflow.script.control.ScriptResolveVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
 import nextflow.script.dsl.Types;
-import nextflow.test.TestUtils;
-import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.stmt.BlockStatement;
-import org.codehaus.groovy.ast.stmt.ExpressionStatement;
-import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
-import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,6 +30,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static nextflow.script.types.TypeCheckingTestUtils.assertType;
+import static nextflow.script.types.TypeCheckingTestUtils.check;
+import static nextflow.script.types.TypeCheckingTestUtils.getErrors;
+import static nextflow.script.types.TypeCheckingTestUtils.parseExpression;
+import static nextflow.script.types.TypeCheckingTestUtils.typeOf;
 import static nextflow.script.types.TypeCheckingUtils.getType;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -55,65 +48,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class TypeCheckingExpressionTest {
-
-    /**
-     * Parse, resolve and type-check a script with static typing enabled.
-     */
-    private static SourceUnit parse(String contents) {
-        var parser = new ScriptParser();
-        var source = parser.parse("main.nf", contents);
-        var ast = (ScriptNode) source.getAST();
-        assertThat(ast).isNotNull();
-        ast.addFeatureFlag(new FeatureFlagNode("nextflow.enable.types", new ConstantExpression(true)));
-        new ScriptResolveVisitor(source, parser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, List.of()).visit();
-        new TypeCheckingVisitor(source).visit();
-        return source;
-    }
-
-    /**
-     * Get the errors of a script, sorted by position. Unlike
-     * {@link TestUtils#getErrors}, soft errors are included.
-     */
-    private static List<SyntaxException> getErrors(String contents) {
-        var errors = parse(contents).getErrorCollector().getErrors();
-        if( errors == null )
-            return List.of();
-        return errors.stream()
-            .filter(e -> e instanceof SyntaxErrorMessage)
-            .map(e -> ((SyntaxErrorMessage) e).getCause())
-            .sorted(TestUtils.ERROR_COMPARATOR)
-            .toList();
-    }
-
-    private static List<String> check(String contents) {
-        return getErrors(contents).stream()
-            .map(SyntaxException::getOriginalMessage)
-            .toList();
-    }
-
-    /**
-     * Get the expression of the last statement in the entry workflow
-     * of a script that type-checks without errors.
-     */
-    private static Expression parseExpression(String contents) {
-        var source = parse(contents);
-        assertThat(source.getErrorCollector().getErrors()).isNullOrEmpty();
-        var main = ((ScriptNode) source.getAST()).getEntry().main;
-        assertThat(main).isInstanceOf(BlockStatement.class);
-        var statements = ((BlockStatement) main).getStatements();
-        var last = statements.get(statements.size() - 1);
-        assertThat(last).isInstanceOf(ExpressionStatement.class);
-        return ((ExpressionStatement) last).getExpression();
-    }
-
-    private static String typeOf(String contents) {
-        return Types.getName(getType(parseExpression(contents)));
-    }
-
-    private static void assertType(Expression exp, Class<?> type) {
-        assertThat(getType(exp))
-            .matches(cn -> Types.isEqual(cn, ClassHelper.makeCached(type)), "is " + type.getSimpleName());
-    }
 
     /**
      * Get the type name of the last parameter of the method that
@@ -342,8 +276,8 @@ class TypeCheckingExpressionTest {
 
         @ParameterizedTest
         @ValueSource(strings = {
-            "[1, 2, 3].collect { v -> v * 2 }\n",
-            "channel.of(1, 2, 3).map { v -> v * 2 }\n",
+            "[1, 2, 3].collect { v -> v * 2 }",
+            "channel.of(1, 2, 3).map { v -> v * 2 }",
         })
         void resolveGenericFunctionalParameterType(String source) {
             assertThat(lastParameterType(parseExpression(source))).isEqualTo("(Integer) -> Integer");

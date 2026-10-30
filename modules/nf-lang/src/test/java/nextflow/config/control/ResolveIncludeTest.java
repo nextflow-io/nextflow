@@ -23,6 +23,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -46,9 +47,7 @@ class ResolveIncludeTest {
             includeConfig 'extra.config'
             """);
         var extra = root.resolve("extra.config");
-        assertThat(check(List.of(config)))
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 1, "Invalid include source: '" + extra + "'"));
+        assertErrors(check(List.of(config)), tuple(1, 1, "Invalid include source: '" + extra + "'"));
     }
 
     @Test

@@ -15,16 +15,11 @@
  */
 package nextflow.script.formatter;
 
-import java.util.List;
-
-import nextflow.script.control.ScriptParser;
-import nextflow.script.control.ScriptResolveVisitor;
-import nextflow.script.dsl.Types;
-import nextflow.test.TestUtils;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static nextflow.script.formatter.FormatterTestUtils.DEFAULT;
+import static nextflow.script.formatter.FormatterTestUtils.assertFormat;
 
 /**
  * Specifies how {@link ScriptFormattingVisitor} re-indents multi-line strings
@@ -34,30 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ScriptFormatterLayoutTest {
 
-    private static final FormattingOptions DEFAULT = new FormattingOptions(4, true);
-
     private static final FormattingOptions HARSHIL = new FormattingOptions(4, true, true, false, false);
-
-    private static String format(String contents, FormattingOptions options) {
-        var parser = new ScriptParser();
-        var source = parser.parse("main.nf", contents);
-        new ScriptResolveVisitor(source, parser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, List.of()).visit();
-        // resolve errors are allowed
-        assertThat(TestUtils.hasSyntaxErrors(source)).isFalse();
-        var formatter = new ScriptFormattingVisitor(source, options);
-        formatter.visit();
-        assertThat(formatter.getMissingComments()).isEmpty();
-        return formatter.toString();
-    }
-
-    /**
-     * Assert that {@code input} is formatted as {@code expected}, and that
-     * {@code expected} is already formatted.
-     */
-    private static void assertFormat(String input, String expected, FormattingOptions options) {
-        assertThat(format(input, options)).isEqualTo(expected);
-        assertThat(format(expected, options)).as("formatting is idempotent").isEqualTo(expected);
-    }
 
     @Nested
     class MultiLineStrings {

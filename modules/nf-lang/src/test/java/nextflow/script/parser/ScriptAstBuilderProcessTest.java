@@ -19,11 +19,11 @@ import java.util.List;
 
 import nextflow.script.control.ScriptParser;
 import nextflow.test.TestUtils;
-import org.assertj.core.groups.Tuple;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -38,12 +38,6 @@ class ScriptAstBuilderProcessTest {
 
     private static List<SyntaxException> check(String contents) {
         return TestUtils.check(new ScriptParser(), contents);
-    }
-
-    private static void assertErrors(List<SyntaxException> errors, Tuple... expected) {
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(expected);
     }
 
     @Nested

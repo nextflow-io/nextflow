@@ -23,6 +23,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -46,9 +47,7 @@ class ConfigResolveTest {
         var errors = check("""
             process.clusterOptions = "--cpus ${process.cpus}"
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 36, "`process` is not defined"));
+        assertErrors(errors, tuple(1, 36, "`process` is not defined"));
     }
 
     @Test
@@ -56,9 +55,7 @@ class ConfigResolveTest {
         var errors = check("""
             process.clusterOptions = "--cpus $PROCESS_CPUS"
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 34, "`PROCESS_CPUS` is not defined (hint: use `env('...')` to access environment variable)"));
+        assertErrors(errors, tuple(1, 34, "`PROCESS_CPUS` is not defined (hint: use `env('...')` to access environment variable)"));
     }
 
     @Test
@@ -70,9 +67,7 @@ class ConfigResolveTest {
             """);
         var extra = TestUtils.tempFile(root, "extra.config", "");
         var errors = check(List.of(config, extra));
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(2, 5, "Config includes are only allowed at the top-level or in a profile"));
+        assertErrors(errors, tuple(2, 5, "Config includes are only allowed at the top-level or in a profile"));
     }
 
     @Test
@@ -98,11 +93,9 @@ class ConfigResolveTest {
                 }()
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(
-                tuple(3, 9, "`args_list` was assigned but not declared"),
-                tuple(4, 9, "`args_list` is not defined"));
+        assertErrors(errors,
+            tuple(3, 9, "`args_list` was assigned but not declared"),
+            tuple(4, 9, "`args_list` is not defined"));
     }
 
     @Test
@@ -145,9 +138,7 @@ class ConfigResolveTest {
                 ext.prefix = { "${meta.id}.filter1" }()
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(2, 23, "`meta` is not defined"));
+        assertErrors(errors, tuple(2, 23, "`meta` is not defined"));
     }
 
     @Test

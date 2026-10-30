@@ -27,6 +27,7 @@ import nextflow.test.TestUtils;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -110,7 +111,7 @@ class AgentToGroovyTest {
     }
 
     @ParameterizedTest
-    @CsvSource(delimiter = '|', textBlock = """
+    @CsvSource(delimiter = '|', quoteCharacter = '"', textBlock = """
         stdout()          | java.lang.String
         file('report.md') | java.nio.file.Path
         """)
@@ -276,6 +277,9 @@ class AgentToGroovyTest {
         assertThat(calls(blocks.unstagers()))
             .extracting(MethodCallExpression::getMethodAsString)
             .containsExactly("_unstage_files");
+        assertThat(((ExpressionStatement) blocks.prompt()).getExpression())
+            .isInstanceOfSatisfying(ConstructorCallExpression.class, prompt ->
+                assertThat(prompt.getType().getName()).isEqualTo("nextflow.script.PromptDef"));
     }
 
     @Test
@@ -347,34 +351,49 @@ class AgentToGroovyTest {
     }
 
     /**
-     * The blocks of the generated agent closure body, in order:
+     * The statements of the generated agent closure body, in order:
      * directives, stagers, unstagers, inputs, outputs, prompt.
      */
-    private record LoweredAgent(
-        BlockStatement stagers,
-        BlockStatement unstagers,
-        BlockStatement inputs,
-        BlockStatement outputs
-    ) {}
+    private record LoweredAgent(List<Statement> body) {
+
+        BlockStatement stagers() {
+            return (BlockStatement) body.get(1);
+        }
+
+        BlockStatement unstagers() {
+            return (BlockStatement) body.get(2);
+        }
+
+        BlockStatement inputs() {
+            return (BlockStatement) body.get(3);
+        }
+
+        BlockStatement outputs() {
+            return (BlockStatement) body.get(4);
+        }
+
+        Statement prompt() {
+            return body.get(body.size() - 1);
+        }
+    }
 
     private static LoweredAgent lowerAgent(String contents) {
         var source = analyze(contents);
         var agent = ((ScriptNode) source.getAST()).getAgents().get(0);
-        var stmt = new AgentToGroovyVisitor(source).transform(agent);
-        return new LoweredAgent(
-            blockAt(stmt, 1),
-            blockAt(stmt, 2),
-            blockAt(stmt, 3),
-            blockAt(stmt, 4));
+        return new LoweredAgent(closureStatements(new AgentToGroovyVisitor(source).transform(agent)));
     }
 
     /**
-     * The i-th statement of the generated `agent('name') { ... }` closure body.
+     * The statements of a generated `agent('name') { ... }` or `process('name') { ... }` closure body.
      */
-    private static BlockStatement blockAt(Statement stmt, int index) {
+    private static List<Statement> closureStatements(Statement stmt) {
         var call = (MethodCallExpression) ((ExpressionStatement) stmt).getExpression();
         var closure = (ClosureExpression) args(call).get(1);
-        return (BlockStatement) ((BlockStatement) closure.getCode()).getStatements().get(index);
+        return ((BlockStatement) closure.getCode()).getStatements();
+    }
+
+    private static BlockStatement blockAt(Statement stmt, int index) {
+        return (BlockStatement) closureStatements(stmt).get(index);
     }
 
     private static List<MethodCallExpression> calls(BlockStatement block) {

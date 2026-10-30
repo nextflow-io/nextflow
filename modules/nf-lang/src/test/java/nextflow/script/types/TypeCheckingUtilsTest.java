@@ -22,7 +22,6 @@ import java.util.stream.Stream;
 
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.control.ScriptParser;
-import nextflow.script.dsl.Types;
 import nextflow.script.namespaces.ChannelNamespace;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -37,6 +36,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static nextflow.script.types.TypeCheckingTestUtils.assertType;
 import static nextflow.script.types.TypeCheckingUtils.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -84,24 +84,30 @@ class TypeCheckingUtilsTest {
     @ParameterizedTest
     @MethodSource("literals")
     void resolveTypeOfLiteral(String expr, Class<?> type) {
-        assertThat(getType(parseExpression(expr)))
-            .matches(cn -> Types.isEqual(cn, ClassHelper.makeCached(type)), "is " + type.getSimpleName());
+        assertType(parseExpression(expr), type);
     }
 
-    static Stream<Arguments> calls() {
+    @Test
+    void resolveReturnTypeOfFunctionCall() {
+        assertType(parseExpression("env('HELLO')"), String.class);
+    }
+
+    static Stream<Arguments> propertyAccesses() {
         return Stream.of(
-            arguments("env('HELLO')", String.class),
             arguments("workflow.projectDir", Path.class),
-            arguments("workflow.projectDir.name", String.class),
-            arguments("workflow.projectDir.exists()", Boolean.class)
+            arguments("workflow.projectDir.name", String.class)
         );
     }
 
     @ParameterizedTest
-    @MethodSource("calls")
-    void resolveTypeOfFunctionCallPropertyAccessAndMethodCall(String expr, Class<?> type) {
-        assertThat(getType(parseExpression(expr)))
-            .matches(cn -> Types.isEqual(cn, ClassHelper.makeCached(type)), "is " + type.getSimpleName());
+    @MethodSource("propertyAccesses")
+    void resolveTypeOfPropertyAccess(String expr, Class<?> type) {
+        assertType(parseExpression(expr), type);
+    }
+
+    @Test
+    void resolveReturnTypeOfMethodCall() {
+        assertType(parseExpression("workflow.projectDir.exists()"), Boolean.class);
     }
 
     @Test

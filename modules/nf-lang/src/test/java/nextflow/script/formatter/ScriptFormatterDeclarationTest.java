@@ -15,16 +15,13 @@
  */
 package nextflow.script.formatter;
 
-import java.util.List;
-
-import nextflow.script.control.ScriptParser;
-import nextflow.script.control.ScriptResolveVisitor;
-import nextflow.script.control.TypeCheckingVisitor;
-import nextflow.script.dsl.Types;
-import nextflow.test.TestUtils;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static nextflow.script.formatter.FormatterTestUtils.DEFAULT;
+import static nextflow.script.formatter.FormatterTestUtils.assertFormat;
+import static nextflow.script.formatter.FormatterTestUtils.assertFormatted;
+import static nextflow.script.formatter.FormatterTestUtils.format;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -33,38 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class ScriptFormatterTest {
-
-    private static String format(String contents, boolean typeCheck) {
-        var parser = new ScriptParser();
-        var source = parser.parse("main.nf", contents);
-        new ScriptResolveVisitor(source, parser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, List.of()).visit();
-        if( typeCheck )
-            new TypeCheckingVisitor(source).visit();
-        // resolve and type errors are allowed
-        assertThat(TestUtils.hasSyntaxErrors(source)).isFalse();
-        var formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true));
-        formatter.visit();
-        assertThat(formatter.getMissingComments()).isEmpty();
-        return formatter.toString();
-    }
-
-    private static String format(String contents) {
-        return format(contents, false);
-    }
-
-    /**
-     * Assert that {@code input} is formatted as {@code expected}, and that
-     * {@code expected} is already formatted.
-     */
-    private static void assertFormat(String input, String expected) {
-        assertThat(format(input)).isEqualTo(expected);
-        assertThat(format(expected)).as("formatting is idempotent").isEqualTo(expected);
-    }
-
-    private static void assertFormatted(String source) {
-        assertThat(format(source)).isEqualTo(source);
-    }
+class ScriptFormatterDeclarationTest {
 
     @Test
     void formatCodeSnippet() {
@@ -74,47 +40,6 @@ class ScriptFormatterTest {
             """,
             """
             println('Hello!')
-            """
-        );
-    }
-
-    @Test
-    void formatSingleLineInclude() {
-        assertFormat(
-            """
-            include{foo;bar}from'./foobar.nf'
-            """,
-            """
-            include { foo ; bar } from './foobar.nf'
-            """
-        );
-    }
-
-    @Test
-    void formatMultiLineInclude() {
-        assertFormat(
-            """
-            include{
-            foo;bar
-            }from'./foobar.nf'
-            """,
-            """
-            include {
-                foo ;
-                bar
-            } from './foobar.nf'
-            """
-        );
-    }
-
-    @Test
-    void formatParameterDeclaration() {
-        assertFormat(
-            """
-            params.foo='bar'
-            """,
-            """
-            params.foo = 'bar'
             """
         );
     }
@@ -140,6 +65,55 @@ class ScriptFormatterTest {
             output {
             }
             """);
+    }
+
+    @Nested
+    class Includes {
+
+        @Test
+        void formatSingleLineInclude() {
+            assertFormat(
+                """
+                include{foo;bar}from'./foobar.nf'
+                """,
+                """
+                include { foo ; bar } from './foobar.nf'
+                """
+            );
+        }
+
+        @Test
+        void formatMultiLineInclude() {
+            assertFormat(
+                """
+                include{
+                foo;bar
+                }from'./foobar.nf'
+                """,
+                """
+                include {
+                    foo ;
+                    bar
+                } from './foobar.nf'
+                """
+            );
+        }
+    }
+
+    @Nested
+    class Params {
+
+        @Test
+        void formatParameterDeclaration() {
+            assertFormat(
+                """
+                params.foo='bar'
+                """,
+                """
+                params.foo = 'bar'
+                """
+            );
+        }
     }
 
     @Nested
@@ -240,7 +214,7 @@ class ScriptFormatterTest {
                         path 'b'
                     }
                 }
-                """, true);
+                """, DEFAULT, true);
             assertThat(result).contains("    a = ch\n", "    b = ch\n");
         }
     }
@@ -335,31 +309,35 @@ class ScriptFormatterTest {
         }
     }
 
-    // an agent declaration used to be walked without emitting anything, so
-    // formatting an agent module deleted its entire content
-    @Test
-    void formatAgent() {
-        assertFormatted("""
-            nextflow.enable.types = true
+    @Nested
+    class Agents {
 
-            agent reporter {
-                model 'openai/gpt-4o'
-                instruction 'You write QA reports.'
-                skills 'qa-report', 'style'
+        // an agent declaration used to be walked without emitting anything, so
+        // formatting an agent module deleted its entire content
+        @Test
+        void formatAgent() {
+            assertFormatted("""
+                nextflow.enable.types = true
 
-                input:
-                sample: String
-                depth: Integer
+                agent reporter {
+                    model 'openai/gpt-4o'
+                    instruction 'You write QA reports.'
+                    skills 'qa-report', 'style'
 
-                output:
-                stdout()
+                    input:
+                    sample: String
+                    depth: Integer
 
-                prompt:
-                \"""
-                Write a report for ${sample} at depth ${depth}.
-                \"""
-            }
-            """);
+                    output:
+                    stdout()
+
+                    prompt:
+                    \"""
+                    Write a report for ${sample} at depth ${depth}.
+                    \"""
+                }
+                """);
+        }
     }
 
     @Nested
@@ -434,36 +412,40 @@ class ScriptFormatterTest {
         }
     }
 
-    @Test
-    void formatEnum() {
-        assertFormat(
-            """
-            enum Colors{RED,GREEN,BLUE}
-            """,
-            """
-            enum Colors {
-                RED,
-                GREEN,
-                BLUE,
-            }
-            """
-        );
-    }
+    @Nested
+    class EnumsAndRecords {
 
-    @Test
-    void formatRecord() {
-        assertFormat(
-            """
-            record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
-            """,
-            """
-            record FastqPair {
-                id: String
-                fastq_1: Path
-                fastq_2: Path?
-            }
-            """
-        );
+        @Test
+        void formatEnum() {
+            assertFormat(
+                """
+                enum Colors{RED,GREEN,BLUE}
+                """,
+                """
+                enum Colors {
+                    RED,
+                    GREEN,
+                    BLUE,
+                }
+                """
+            );
+        }
+
+        @Test
+        void formatRecord() {
+            assertFormat(
+                """
+                record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
+                """,
+                """
+                record FastqPair {
+                    id: String
+                    fastq_1: Path
+                    fastq_2: Path?
+                }
+                """
+            );
+        }
     }
 
     @Nested

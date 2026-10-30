@@ -21,6 +21,7 @@ import nextflow.test.TestUtils;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Test;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -49,9 +50,7 @@ class CallArityTest {
                 hello('world')
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(9, 5, "Incorrect number of call arguments, expected 0 but received 1"));
+        assertErrors(errors, tuple(9, 5, "Incorrect number of call arguments, expected 0 but received 1"));
     }
 
     @Test
@@ -70,9 +69,7 @@ class CallArityTest {
                 hello('world')
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(11, 5, "Incorrect number of call arguments, expected 2 but received 1"));
+        assertErrors(errors, tuple(11, 5, "Incorrect number of call arguments, expected 2 but received 1"));
     }
 
     @Test
@@ -98,9 +95,7 @@ class CallArityTest {
                 reporter('a', 'b')
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(18, 5, "Incorrect number of call arguments, expected 1 but received 2"));
+        assertErrors(errors, tuple(18, 5, "Incorrect number of call arguments, expected 1 but received 2"));
     }
 
     @Test
