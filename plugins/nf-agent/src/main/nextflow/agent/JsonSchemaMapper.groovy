@@ -71,7 +71,7 @@ class JsonSchemaMapper {
      */
     static JsonObjectSchema toObjectSchema(Map schema) {
         final builder = JsonObjectSchema.builder()
-        final Map properties = (schema?.properties ?: [:]) as Map
+        final Map properties = (schema?.get('properties') ?: [:]) as Map
         for( Map.Entry entry : properties.entrySet() ) {
             final key = entry.key as String
             final spec = entry.value as Map

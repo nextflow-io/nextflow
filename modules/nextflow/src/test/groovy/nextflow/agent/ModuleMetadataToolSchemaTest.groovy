@@ -64,14 +64,14 @@ class ModuleMetadataToolSchemaTest extends Specification {
         schema.required == ['meta', 'reads']
         and:
         // meta.id convention -> nested object with an id string property
-        schema.properties.meta.type == 'object'
-        schema.properties.meta.properties.id.type == 'string'
-        schema.properties.meta.properties.id.description == 'sample identifier'
-        schema.properties.meta.additionalProperties == true
+        schema.get('properties').meta.type == 'object'
+        schema.get('properties').meta.get('properties').id.type == 'string'
+        schema.get('properties').meta.get('properties').id.description == 'sample identifier'
+        schema.get('properties').meta.additionalProperties == true
         and:
         // file -> string path, with the pattern appended to the description
-        schema.properties.reads.type == 'string'
-        schema.properties.reads.description == 'input reads (file path) (pattern: *.{fastq,fq}.gz)'
+        schema.get('properties').reads.type == 'string'
+        schema.get('properties').reads.description == 'input reads (file path) (pattern: *.{fastq,fq}.gz)'
     }
 
     def 'should NOT apply the meta.id convention for a non-nf-core module'() {
@@ -84,10 +84,10 @@ class ModuleMetadataToolSchemaTest extends Specification {
 
         then:
         // generic map -> open object, no nested id property
-        schema.properties.meta.type == 'object'
-        schema.properties.meta.additionalProperties == true
-        schema.properties.meta.description == 'sample meta'
-        !schema.properties.meta.containsKey('properties')
+        schema.get('properties').meta.type == 'object'
+        schema.get('properties').meta.additionalProperties == true
+        schema.get('properties').meta.description == 'sample meta'
+        !schema.get('properties').meta.containsKey('properties')
     }
 
     def 'should map scalar / integer / number / boolean / enum input types'() {
@@ -104,13 +104,13 @@ class ModuleMetadataToolSchemaTest extends Specification {
         def schema = ModuleMetadataToolSchema.inputSchema(metadata, false)
 
         then:
-        schema.properties.label.type == 'string'
-        schema.properties.count.type == 'integer'
-        schema.properties.ratio.type == 'number'
-        schema.properties.flag.type == 'boolean'
+        schema.get('properties').label.type == 'string'
+        schema.get('properties').count.type == 'integer'
+        schema.get('properties').ratio.type == 'number'
+        schema.get('properties').flag.type == 'boolean'
         and:
-        schema.properties.mode.type == 'string'
-        schema.properties.mode.enum == ['fast', 'slow']
+        schema.get('properties').mode.type == 'string'
+        schema.get('properties').mode.enum == ['fast', 'slow']
         and:
         schema.required == ['label', 'count', 'ratio', 'flag', 'mode']
     }
@@ -182,7 +182,7 @@ class ModuleMetadataToolSchemaTest extends Specification {
 
     def 'should handle null metadata / empty inputs gracefully'() {
         expect:
-        ModuleMetadataToolSchema.inputSchema(null, false).properties == [:]
+        ModuleMetadataToolSchema.inputSchema(null, false).get('properties') == [:]
         ModuleMetadataToolSchema.inputPropertyNames(null) == []
         ModuleMetadataToolSchema.description(null).contains('module tool')
         ModuleMetadataToolSchema.outputDescription(null).contains('no declared outputs')

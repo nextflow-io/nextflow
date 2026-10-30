@@ -140,7 +140,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -173,7 +173,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -207,7 +207,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -240,7 +240,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey

@@ -95,14 +95,14 @@ class RecordSchemaTest extends Dsl2Spec {
         def schema = RecordSchema.of(cls)
 
         then:
-        schema.properties.keySet() == ['answer', 'note'] as Set
+        schema.get('properties').keySet() == ['answer', 'note'] as Set
         schema.required == ['answer']
 
         and: 'the portable layer keeps a plain scalar type and does NOT itself emit a nullable union'
         // the union (type:['string','null']) is the downstream/plugin (langchain4j) responsibility;
         // core only omits @Nullable fields from `required`. Guards against the portable layer
         // starting to self-encode optionality (which would require the plan §6 contingency).
-        schema.properties.note == [type: 'string']
+        schema.get('properties').note == [type: 'string']
     }
 
     def 'should map Path output fields to path strings'() {
@@ -119,7 +119,7 @@ class RecordSchemaTest extends Dsl2Spec {
         def schema = RecordSchema.of(cls)
 
         then:
-        schema.properties.p == [type: 'string', description: 'Absolute path of an existing file']
-        schema.properties.ps == [type: 'array', items: [type: 'string', description: 'Absolute path of an existing file']]
+        schema.get('properties').p == [type: 'string', description: 'Absolute path of an existing file']
+        schema.get('properties').ps == [type: 'array', items: [type: 'string', description: 'Absolute path of an existing file']]
     }
 }

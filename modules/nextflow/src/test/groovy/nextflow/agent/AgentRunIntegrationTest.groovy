@@ -81,8 +81,8 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         captured.prompt.contains('Question: analyze my reads')
         and:
         // the output schema was derived from the Answer record type
-        captured.outputSchema.properties.answer.type == 'string'
-        captured.outputSchema.properties.confidence.type == 'number'
+        captured.outputSchema.get('properties').answer.type == 'string'
+        captured.outputSchema.get('properties').confidence.type == 'number'
         and:
         // the input record was serialized to JSON
         captured.inputJson.contains('analyze my reads')

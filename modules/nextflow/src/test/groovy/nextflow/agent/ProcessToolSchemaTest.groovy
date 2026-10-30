@@ -96,7 +96,7 @@ class ProcessToolSchemaTest extends Dsl2Spec {
         def schema = ProcessToolSchema.inputSchema(proc)
 
         then:
-        schema.properties == [
+        schema.get('properties') == [
             name : [type: 'string'],
             count: [type: 'integer'],
             score: [type: 'number'],

@@ -368,21 +368,21 @@ class ProcessBuilderTest extends Specification {
 
     def 'should delegate non-directive method calls to the owner script' () {
         given:
-        def owner = Mock(BaseScript)
+        def owner = GroovyMock(BaseScript)
         def builder = createBuilder(owner)
 
         // `container localTag()`
         when:
         def result = builder.localTag()
         then:
-        1 * owner.invokeMethod('localTag', _) >> 'ubuntu:22.04'
+        1 * owner.localTag() >> 'ubuntu:22.04'
         result == 'ubuntu:22.04'
 
         // `container imageTag('foo')`
         when:
         result = builder.imageTag('foo')
         then:
-        1 * owner.invokeMethod('imageTag', { (it as List) == ['foo'] }) >> 'image-for-foo'
+        1 * owner.imageTag('foo') >> 'image-for-foo'
         result == 'image-for-foo'
     }
 }

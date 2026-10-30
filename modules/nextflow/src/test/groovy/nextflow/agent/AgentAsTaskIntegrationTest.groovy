@@ -95,9 +95,9 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
 
         then: 'the schema is the BARE record schema - properties at the root, no wrapper key `a`'
         captured.outputSchema.type == 'object'
-        captured.outputSchema.properties.containsKey('answer')
-        captured.outputSchema.properties.containsKey('confidence')
-        !captured.outputSchema.properties.containsKey('a')
+        captured.outputSchema.get('properties').containsKey('answer')
+        captured.outputSchema.get('properties').containsKey('confidence')
+        !captured.outputSchema.get('properties').containsKey('a')
         and: 'the bare record schema carries required + additionalProperties:false (byte shape unchanged)'
         (captured.outputSchema.required as Set) == ['answer', 'confidence'] as Set
         captured.outputSchema.additionalProperties == false
@@ -242,7 +242,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
             ''')
 
         then:
-        captured.outputSchema.properties.keySet() == ['count'] as Set
+        captured.outputSchema.get('properties').keySet() == ['count'] as Set
         result.val == 42
     }
 
@@ -422,7 +422,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
             ''')
 
         then:
-        captured.outputSchema.properties.contigs.type == 'string'
+        captured.outputSchema.get('properties').contigs.type == 'string'
         def a = result.val
         a.id == 's1'
         a.contigs instanceof Path
@@ -459,7 +459,7 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
             ''')
 
         then:
-        captured.outputSchema.properties.scores == [type: 'array', items: [type: 'integer']]
+        captured.outputSchema.get('properties').scores == [type: 'array', items: [type: 'integer']]
         result.val == [1, 2]
     }
 

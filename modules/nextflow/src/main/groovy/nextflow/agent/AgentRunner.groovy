@@ -27,7 +27,8 @@ import nextflow.agent.rpc.AgentRpcConfig
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface AgentRunner {
+// declared as a trait to keep binary compatibility with plugins compiled with Groovy 4
+trait AgentRunner {
 
     /**
      * Stable user-facing runner identifier. Implementations supplied by plugins
@@ -35,13 +36,13 @@ interface AgentRunner {
      * The default keeps this interface single-abstract-method compatible with
      * closure-coerced runners used by tests and embedding applications.
      */
-    default String getName() { getClass().getSimpleName() }
+    String getName() { getClass().getSimpleName() }
 
     /**
      * Return a canonical task launch description, or {@code null} for a legacy
      * in-JVM runner. The default preserves closure-coerced test runners.
      */
-    default AgentLaunchSpec getLaunchSpec() { null }
+    AgentLaunchSpec getLaunchSpec() { null }
 
     /**
      * The container image a canonical task of this runner runs in when the user declares no
@@ -55,7 +56,7 @@ interface AgentRunner {
      * runners used by tests and embedding applications, and leaves a runner that has no image
      * of its own -- an in-JVM one, for instance -- requiring an explicit {@code agent.container}.
      */
-    default String getDefaultContainer() { null }
+    String getDefaultContainer() { null }
 
     /**
      * Issue the connection material a canonical agent task needs to call back into
@@ -91,9 +92,9 @@ interface AgentRunner {
      * The default keeps this interface single-abstract-method compatible with
      * closure-coerced runners used by tests and embedding applications.
      */
-    default AgentRpcRegistration register(AgentRunnerRequest request, boolean remote) {
+    AgentRpcRegistration register(AgentRunnerRequest request, boolean remote) {
         throw new UnsupportedOperationException("Agent runner `${getName()}` provides a launch spec but no RPC broker")
     }
 
-    String run(AgentRunnerRequest request)
+    abstract String run(AgentRunnerRequest request)
 }

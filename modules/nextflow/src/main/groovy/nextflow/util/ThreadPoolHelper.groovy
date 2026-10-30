@@ -64,7 +64,7 @@ class ThreadPoolHelper {
         }
     }
 
-    static protected int pending(ExecutorService pool) {
+    static protected long pending(ExecutorService pool) {
         if( pool instanceof ThreadPoolExecutor) {
             final p1 = ((ThreadPoolExecutor)pool)
             return p1.getTaskCount() - p1.getCompletedTaskCount()

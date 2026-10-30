@@ -756,7 +756,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> false
         0 * executor.shouldDeleteJob('job1') >> true
         and:
-        0 * client.deleteJob('job1') >> null
+        0 * client.deleteJob('job1')
 
         when:
         handler.@jobId = 'job1'
@@ -767,7 +767,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         1 * executor.getReaper() >> reaper
         1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
         and:
-        1 * client.deleteJob('job1') >> null
+        1 * client.deleteJob('job1')
 
         when:
         handler.@jobId = 'job1'
@@ -776,7 +776,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * client.deleteJob('job1') >> null
+        0 * client.deleteJob('job1')
     }
 
     def 'should not fail when the job deletion fails' () {

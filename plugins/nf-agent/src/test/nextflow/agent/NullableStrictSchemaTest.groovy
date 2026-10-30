@@ -60,10 +60,10 @@ class NullableStrictSchemaTest extends Specification {
         def wire = toWire('Answer', portable, true)
 
         then: 'the required field keeps a plain type'
-        asList(wire.properties.answer.type) == ['string']
+        asList(wire.get('properties').answer.type) == ['string']
 
         and: 'the optional field carries the OpenAI nullable union'
-        asList(wire.properties.note.type) == ['string', 'null']
+        asList(wire.get('properties').note.type) == ['string', 'null']
 
         and: 'strict rewrote required to all keys - the field is "required" but nullable'
         (wire.required as Set) == ['answer', 'note'] as Set
@@ -89,13 +89,13 @@ class NullableStrictSchemaTest extends Specification {
         def wire = toWire('Outer', portable, true)
 
         then: 'the required nested object stays a plain object'
-        asList(wire.properties.inner.type) == ['object']
+        asList(wire.get('properties').inner.type) == ['object']
 
         and: 'its optional field carries the nullable union at depth'
-        asList(wire.properties.inner.properties.note.type) == ['string', 'null']
+        asList(wire.get('properties').inner.get('properties').note.type) == ['string', 'null']
 
         and: 'the nested required set was rewritten to include the nullable field'
-        (wire.properties.inner.required as Set) == ['name', 'note'] as Set
+        (wire.get('properties').inner.required as Set) == ['name', 'note'] as Set
     }
 
     def 'a nullable nested object becomes an object/null union'() {
@@ -115,7 +115,7 @@ class NullableStrictSchemaTest extends Specification {
         def wire = toWire('Outer', portable, true)
 
         then: 'the nullable object becomes an object/null union'
-        asList(wire.properties.addr.type) == ['object', 'null']
+        asList(wire.get('properties').addr.type) == ['object', 'null']
 
         and: 'it is still listed in the strict required set'
         (wire.required as Set) == ['name', 'addr'] as Set
@@ -138,10 +138,10 @@ class NullableStrictSchemaTest extends Specification {
         def wire = toWire('Wrapper', portable, true)
 
         then: 'the deeply-nested nullable field still receives the nullable union - recursion at every wrapper level'
-        asList(wire.properties.plan.properties.hint.type) == ['string', 'null']
+        asList(wire.get('properties').plan.get('properties').hint.type) == ['string', 'null']
 
         and:
-        (wire.properties.plan.required as Set) == ['step', 'hint'] as Set
+        (wire.get('properties').plan.required as Set) == ['step', 'hint'] as Set
     }
 
     def 'non-strict serialization keeps the classic optional idiom (control)'() {
@@ -155,7 +155,7 @@ class NullableStrictSchemaTest extends Specification {
         def wire = toWire('Answer', portable, false)
 
         then: 'the optional field keeps a plain scalar type'
-        asList(wire.properties.note.type) == ['string']
+        asList(wire.get('properties').note.type) == ['string']
 
         and: 'and is simply omitted from required (classic optional idiom)'
         !(wire.required as List).contains('note')

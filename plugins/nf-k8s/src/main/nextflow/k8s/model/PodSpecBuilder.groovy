@@ -449,10 +449,10 @@ class PodSpecBuilder {
             container.securityContext = secContext
         }
 
-        final spec = [
-                restartPolicy: restart,
-                containers: [ container ],
-        ]
+        final Map<String,?> spec = [:]
+
+        spec.restartPolicy = restart
+        spec.containers = [ container ]
 
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
