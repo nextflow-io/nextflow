@@ -19,6 +19,7 @@ package nextflow.fusion
 import static nextflow.fusion.FusionConfig.FUSION_PATH
 import static nextflow.fusion.FusionHelper.*
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -49,9 +50,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.workDir = toContainerMount(bean.workDir, scheme)
         bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
-        // remap input files to container mounted paths
+        // remap input files to container mounted paths; a local one was accepted by a ForeignFileFilter and is linked where it is
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
+            if( entry.value.fileSystem != FileSystems.default )
+                bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
         }
 
         // make it change to the task work dir

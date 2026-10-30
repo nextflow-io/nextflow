@@ -517,4 +517,31 @@ class AzFileCopyStrategyTest extends Specification {
 
     }
 
+    def 'should link a local input and download the others'() {
+        given:
+        def workDir = mockAzPath( 'az://my-data/work/dir' )
+        def input1 = mockAzPath('az://my-data/work/dir/file1.txt')
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
+
+        when:
+        def binding = new AzBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: workDir,
+                targetDir: workDir,
+                inputFiles: ['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'file1.txt': input1],
+                script: 'echo Hello world!' ] as TaskBean, executor) .makeBinding()
+
+        then:
+        binding.stage_inputs == '''\
+                # stage input files
+                downloads=(true)
+                rm -f ref.fa
+                rm -f file1.txt
+                ln -sfn /mnt/shared/ref.fa ref.fa
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
+    }
+
 }

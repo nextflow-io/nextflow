@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -133,7 +134,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
                 delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
-            links << stageInputFile( storePath, stageName )
+            links << ( isLocalInput(storePath) ? stageLocalFile(storePath, stageName) : stageInputFile(storePath, stageName) )
         }
 
         // return a big string containing the command
@@ -152,6 +153,21 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return The script which will apply the staging for this file in the main script
      */
     String stageInputFile( Path path, String targetName ) {
+        return stageLocalFile(path, targetName)
+    }
+
+    /**
+     * A local input with a remote work dir was accepted by a {@link ForeignFileFilter}
+     * and is linked where it is, whatever staging mechanism the executor uses
+     */
+    private boolean isLocalInput( Path path ) {
+        return workDir != null && workDir.fileSystem != FileSystems.default && path.fileSystem == FileSystems.default
+    }
+
+    /**
+     * Stage the input file with the default mechanism, which subclasses cannot override
+     */
+    private String stageLocalFile( Path path, String targetName ) {
         def cmd = ''
         def p = targetName.lastIndexOf('/')
         if( p>0 ) {
