@@ -123,12 +123,11 @@ class PiAgentPackagingTest extends Specification {
     private static final Set<String> EXPECTED_LIB_JARS = [
         // the broker's TLS identity -- see AgentRpcTlsCredentials
         'bcpkix-jdk18on', 'bcprov-jdk18on', 'bcutil-jdk18on',
-        // the agent RPC transport
+        // the agent RPC transport; its Guava comes from Nextflow core, see build.gradle
         'grpc-api', 'grpc-context', 'grpc-core', 'grpc-netty-shaded', 'grpc-stub', 'grpc-util',
-        'perfmark-api', 'gson', 'guava', 'failureaccess', 'listenablefuture',
+        'perfmark-api', 'gson',
         // annotation-only artifacts the above drag in
-        'animal-sniffer-annotations', 'annotations', 'checker-qual', 'error_prone_annotations',
-        'j2objc-annotations', 'jsr305',
+        'animal-sniffer-annotations', 'annotations', 'error_prone_annotations', 'jsr305',
     ] as Set<String>
 
     /**

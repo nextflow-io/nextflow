@@ -149,6 +149,8 @@ tasks.register('releaseImageIfNotExists', Exec) {
 
 configurations {
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    // gRPC needs Guava: use the patched copy from Nextflow core instead of bundling an older one
+    runtimeClasspath.exclude group: 'com.google.guava', module: 'guava'
 }
 
 dependencies {
