@@ -318,7 +318,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     }
 
     protected String escape(String path) {
-        path.startsWith('$') ? "\"$path\"" : Escape.path(path)
+        path.startsWith('$') ? "\"$path\"" : Escape.dataPath(path)
     }
 
     protected String mountFlags(boolean readOnly) {

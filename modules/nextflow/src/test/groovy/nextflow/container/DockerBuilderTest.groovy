@@ -42,6 +42,7 @@ class DockerBuilderTest extends Specification {
         builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
         builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
         builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes([Paths.get('/data/h$i/A')]).toString() == '-v /data/h\\$i/A:/data/h\\$i/A -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
 
     }
 

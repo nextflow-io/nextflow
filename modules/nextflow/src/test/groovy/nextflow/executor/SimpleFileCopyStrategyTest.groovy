@@ -17,10 +17,13 @@
 package nextflow.executor
 
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.file.FilePatternSplitter
 import nextflow.processor.TaskBean
+import nextflow.util.Escape
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -257,6 +260,69 @@ class SimpleFileCopyStrategyTest extends Specification {
     }
 
 
+    @Unroll
+    def 'should match output pattern #PATTERN in eval as the output file collector does' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        (OTHERS + FILE).each { folder.resolve(it).text = 'x' }
+        def splitter = FilePatternSplitter.glob().parse(PATTERN)
+        def collected = { String name ->
+            splitter.isPattern()
+                ? FileSystems.default.getPathMatcher('glob:' + PATTERN).matches(Paths.get(name))
+                : splitter.strip(PATTERN) == name
+        }
+
+        when:
+        def script = 'eval "ls -1d ' + Escape.doubleQuoted(SimpleFileCopyStrategy.escapePattern(PATTERN)) + '"'
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+
+        then:
+        proc.inputStream.text == FILE + '\n'
+        proc.waitFor() == 0
+        and:
+        collected(FILE)
+        !OTHERS.any(collected)
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        PATTERN             | FILE                  | OTHERS
+        'g\\[1\\].txt'      | 'g[1].txt'            | ['g1.txt']
+        '\\{a,b\\}.txt'     | '{a,b}.txt'           | ['a.txt', 'b.txt']
+        'f\\*.txt'          | 'f*.txt'              | ['f1.txt']
+        'f\\?.txt'          | 'f?.txt'              | ['f1.txt']
+        'x\\\\y.txt'        | 'x\\\\y.txt'          | ['x\\y.txt']
+        'x\\:y\\!z.txt'     | 'x\\:y\\!z.txt'       | ['x:y!z.txt']
+        'd$x.txt'           | 'd$x.txt'             | ['d.txt']
+        'd$*'               | 'd$x.txt'             | ['dx.txt']
+        '*.csv'             | 'data.csv'            | ['data.txt']
+        '*\\.txt'           | 'a.txt'               | ['a.csv']
+        'a\\b*'             | 'ab.txt'              | ['a\\b.txt']
+        'x\\\\y*'           | 'x\\y.txt'            | ['xy.txt']
+        'a b;c `d` "e".txt' | 'a b;c `d` "e".txt'   | ['a']
+    }
+
+    def 'should unstage only the files matching the output patterns' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        ['g[1].txt', 'g1.txt', 'a.csv'].each { folder.resolve(it).text = 'x' }
+        def strategy = new SimpleFileCopyStrategy(new TaskBean(workDir: folder, targetDir: folder))
+        // stub the copy function to record the names it receives
+        def script = 'nxf_fs_copy() { printf "%s\\n" "$1" >> copied.log; }\n'
+        script += strategy.getUnstageOutputFilesScript(['g\\[1\\].txt', '*.csv'], folder)
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('copied.log').readLines().sort() == ['a.csv', 'g[1].txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should return cp script to unstage output files' () {
 
         given:
@@ -270,9 +336,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
                     nxf_fs_copy "$name" /target/work\\ dir
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -311,9 +379,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
                     nxf_fs_move "$name" /target/store
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -333,9 +403,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
                     nxf_fs_rsync "$name" /target/work\\'s
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
