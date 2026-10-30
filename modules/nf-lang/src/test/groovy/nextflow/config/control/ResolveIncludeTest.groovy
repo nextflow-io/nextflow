@@ -18,6 +18,8 @@ package nextflow.config.control
 
 import java.nio.file.Path
 
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.io.StringReaderSource
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Specification
 import test.TestUtils
@@ -98,16 +100,23 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
-    def 'should resolve a relative include against a remote config' () {
-        expect:
-        ResolveIncludeVisitor.getIncludeUri(new URI(URI_), SOURCE) == new URI(EXPECTED)
+    def 'should not resolve includes in a remote config' () {
+        given:
+        def parser = new ConfigParser()
+        def compiler = parser.compiler()
+        def reader = new StringReaderSource("includeConfig 'extra.config'\n", compiler.configuration()) {
+            @Override
+            URI getURI() { new URI('s3://bucket/conf/nextflow.config') }
+        }
+        def source = new SourceUnit('nextflow.config', reader, compiler.configuration(), compiler.classLoader(), compiler.createErrorCollector())
+        compiler.addSource(source)
+        compiler.compile(source)
 
-        where:
-        URI_                                   | SOURCE                | EXPECTED
-        's3://bucket/conf/nextflow.config'     | 'extra.config'        | 's3://bucket/conf/extra.config'
-        's3://bucket/conf/nextflow.config'     | '../base.config'      | 's3://bucket/base.config'
-        'az://container/nextflow.config'       | 'my configs/a.config' | 'az://container/my%20configs/a.config'
-        's3://bucket/conf/nextflow.config'     | 'gs://other/a.config' | 'gs://other/a.config'
+        when:
+        def visitor = new ResolveIncludeVisitor(source)
+        visitor.visit()
+        then:
+        visitor.getErrors().isEmpty()
     }
 
     def 'should not resolve dynamic includes' () {

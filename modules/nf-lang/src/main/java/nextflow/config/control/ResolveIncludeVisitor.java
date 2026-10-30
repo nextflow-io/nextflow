@@ -16,7 +16,6 @@
 package nextflow.config.control;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -66,6 +65,9 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
     public void visitConfigInclude(ConfigIncludeNode node) {
         if( !(node.source instanceof ConstantExpression) )
             return;
+        // includes in a remote config are not checked
+        if( !isIncludeLocal(uri) )
+            return;
         var source = node.source.getText();
         var includeUri = getIncludeUri(uri, source);
         if( !isIncludeLocal(includeUri) )
@@ -87,15 +89,6 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
             // ignore
         }
         // otherwise, resolve the source path against the including URI
-        if( !isIncludeLocal(uri) ) {
-            // a remote file system provider may not be visible to Path.of()
-            try {
-                return uri.resolve(new URI(null, null, source, null)).normalize();
-            }
-            catch( URISyntaxException e ) {
-                throw new IllegalArgumentException("Invalid include source: '" + source + "'", e);
-            }
-        }
         return Path.of(uri).getParent().resolve(source).normalize().toUri();
     }
 
