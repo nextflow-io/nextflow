@@ -894,6 +894,27 @@ class ConfigParserV2Test extends Specification {
         e.message.contains('offending scope: `docker`')
     }
 
+    def 'should parse a config with a relative include on a non-default file system' () {
+        given:
+        def config = createInMemTempFile('nextflow.config', "includeConfig 'extra.config'\n")
+        config.resolveSibling('extra.config').text = 'process.cpus = 8\n'
+
+        when:
+        def result = new ConfigParserV2().parse(config)
+        then:
+        result.process.cpus == 8
+    }
+
+    def 'should report a syntax error in a config on a non-default file system' () {
+        given:
+        def config = createInMemTempFile('nextflow.config', 'process {\n')
+
+        when:
+        new ConfigParserV2().parse(config)
+        then:
+        thrown(ConfigParseException)
+    }
+
     static class ConfigFileHandler implements HttpHandler {
 
         Path folder

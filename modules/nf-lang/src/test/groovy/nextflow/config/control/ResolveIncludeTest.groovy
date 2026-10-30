@@ -98,6 +98,18 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should resolve a relative include against a remote config' () {
+        expect:
+        ResolveIncludeVisitor.getIncludeUri(new URI(URI_), SOURCE) == new URI(EXPECTED)
+
+        where:
+        URI_                                   | SOURCE                | EXPECTED
+        's3://bucket/conf/nextflow.config'     | 'extra.config'        | 's3://bucket/conf/extra.config'
+        's3://bucket/conf/nextflow.config'     | '../base.config'      | 's3://bucket/base.config'
+        'az://container/nextflow.config'       | 'my configs/a.config' | 'az://container/my%20configs/a.config'
+        's3://bucket/conf/nextflow.config'     | 'gs://other/a.config' | 'gs://other/a.config'
+    }
+
     def 'should not resolve dynamic includes' () {
         given:
         def root = tempDir()

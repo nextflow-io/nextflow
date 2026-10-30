@@ -16,6 +16,7 @@
 package nextflow.config.control;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -86,6 +87,15 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
             // ignore
         }
         // otherwise, resolve the source path against the including URI
+        if( !isIncludeLocal(uri) ) {
+            // a remote file system provider may not be visible to Path.of()
+            try {
+                return uri.resolve(new URI(null, null, source, null)).normalize();
+            }
+            catch( URISyntaxException e ) {
+                throw new IllegalArgumentException("Invalid include source: '" + source + "'", e);
+            }
+        }
         return Path.of(uri).getParent().resolve(source).normalize().toUri();
     }
 
