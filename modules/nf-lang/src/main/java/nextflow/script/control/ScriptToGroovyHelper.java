@@ -18,13 +18,18 @@ package nextflow.script.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.ScriptNode;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -80,6 +85,60 @@ public class ScriptToGroovyHelper {
             .toList();
 
         return listX(refs);
+    }
+
+    /**
+     * Get the source text of script functions called by a statement,
+     * including functions called by those functions.
+     *
+     * This method is used to include function definitions in the task
+     * hash, so that changing a function invalidates the cached tasks
+     * of processes that call it.
+     *
+     * The resulting expression should be provided as the fifth
+     * argument of the BodyDef constructor.
+     *
+     * @param node
+     */
+    public Expression getFunctionSources(Statement node) {
+        var sources = new FunctionCallCollector().collect(node).stream()
+            .map(fn -> new ScriptToGroovyHelper(fn.getNodeMetaData(ASTNodeMarker.SOURCE_UNIT)).getSourceText(fn))
+            .toList();
+
+        return constX(String.join("\n", sources));
+    }
+
+    private static class FunctionCallCollector extends CodeVisitorSupport {
+
+        private List<FunctionNode> functions;
+
+        public List<FunctionNode> collect(Statement node) {
+            functions = new ArrayList<>();
+            visit(node);
+            return functions;
+        }
+
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression node) {
+            super.visitMethodCallExpression(node);
+
+            if( !node.isImplicitThis() )
+                return;
+            if( !(node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET) instanceof FunctionNode fn) )
+                return;
+            // skip placeholders for functions that could not be included
+            if( fn.getNodeMetaData(ASTNodeMarker.SOURCE_UNIT) == null )
+                return;
+            if( functions.stream().anyMatch(other -> other == fn) )
+                return;
+
+            functions.add(fn);
+            for( var param : fn.getParameters() ) {
+                if( param.hasInitialExpression() )
+                    visit(param.getInitialExpression());
+            }
+            visit(fn.getCode());
+        }
     }
 
     private class VariableRefCollector extends CodeVisitorSupport {
@@ -173,11 +232,11 @@ public class ScriptToGroovyHelper {
     }
 
     /**
-     * Get the source text for a statement.
+     * Get the source text for a statement or declaration.
      *
      * @param node
      */
-    public String getSourceText(Statement node) {
+    public String getSourceText(ASTNode node) {
         var builder = new StringBuilder();
         var colx = node.getColumnNumber();
         var colz = node.getLastColumnNumber();

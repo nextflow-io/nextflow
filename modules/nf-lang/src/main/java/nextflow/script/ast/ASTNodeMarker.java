@@ -73,6 +73,9 @@ public enum ASTNodeMarker {
     // the starting quote sequence of a string literal or gstring expression
     QUOTE_CHAR,
 
+    // the source unit that declares a function (FunctionNode)
+    SOURCE_UNIT,
+
     // denotes that an expression list has a trailing comma
     TRAILING_COMMA,
 
