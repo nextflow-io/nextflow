@@ -89,6 +89,20 @@ class TaskPathTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should escape the file name for a task script' () {
+        expect:
+        new TaskPath(Paths.get('/work/x'), 'a$.txt').toStringEscape() == 'a$.txt'
+        new TaskPath(Paths.get('/work/x'), 'a b.txt').toStringEscape() == 'a\\ b.txt'
+
+        when:
+        new TaskPath(Paths.get('/work/x'), NAME).toStringEscape()
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        NAME << ['p${x}.txt', 'p$[x].txt', 'p\nq.txt']
+    }
+
     def 'should validate equals method' () {
         given:
         def p1 = Paths.get('/foo/bar/baz.txt')
