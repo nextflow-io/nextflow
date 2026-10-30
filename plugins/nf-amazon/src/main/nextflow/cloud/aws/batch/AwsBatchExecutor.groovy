@@ -32,6 +32,7 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.nio.S3Path
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
@@ -76,6 +77,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
      * Executor service to throttle cancel requests
      */
     private ThrottlingExecutor reaper
+
+    /**
+     * Thread pool to prepare job array child launchers
+     */
+    private ArrayLauncherPool arrayLaunchers = new ArrayLauncherPool('AwsBatch-array-launcher')
 
     /**
      * A S3 path where executable scripts need to be uploaded
@@ -306,10 +312,22 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     @Override
+    void prepareArrayChildren(List<TaskHandler> children) {
+        arrayLaunchers.prepare(children)
+    }
+
+    @Override
+    boolean prepareArrayChildrenOnSubmit() {
+        return true
+    }
+
+    @Override
     void shutdown() {
         def tasks = submitter.shutdownNow()
         if( tasks ) log.warn "Execution interrupted -- cleaning up execution pool"
         submitter.awaitTermination(5, TimeUnit.MINUTES)
+        arrayLaunchers.shutdown()
+
         // -- finally delete cleanup executor
         // start shutdown process
         reaper.shutdown()

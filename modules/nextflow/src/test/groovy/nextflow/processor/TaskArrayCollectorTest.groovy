@@ -123,7 +123,7 @@ class TaskArrayCollectorTest extends Specification {
         then:
         3 * handler.withArrayChild(true) >> handler
         3 * exec.createTaskHandler(task) >> handler
-        3 * handler.prepareLauncher()
+        1 * exec.prepareArrayChildren([handler, handler, handler])
         1 * collector.createArrayTaskScript([handler, handler, handler]) >> 'the-task-array-script'
         and:
         taskArray.name == 'PROC (1)'
@@ -171,7 +171,8 @@ class TaskArrayCollectorTest extends Specification {
         then:
         1 * handler.withArrayChild(true) >> handler
         1 * exec.createTaskHandler(task) >> handler
-        1 * handler.prepareLauncher()
+        1 * exec.prepareArrayChildrenOnSubmit() >> true
+        0 * exec.prepareArrayChildren(_)
         1 * collector.createArrayTaskScript([handler]) >> 'the-task-array-script'
         and:
         // the array job carries the auto labels, merged as they are for a plain task

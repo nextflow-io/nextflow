@@ -23,6 +23,7 @@ import nextflow.SysEnv
 import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.cloud.aws.util.S3PathFactory
+import nextflow.util.ThrottlingExecutor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -141,6 +142,27 @@ class AwsBatchExecutorTest extends Specification {
         and:
         true    | false       | false   | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
         false   | true        | false   | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'
+    }
+
+
+    def 'should prepare job array children with the launcher pool' () {
+        given:
+        def pool = Mock(ArrayLauncherPool)
+        def executor = Spy(AwsBatchExecutor) { awaitCompletion(_,_,_,_) >> null }
+        executor.@arrayLaunchers = pool
+        executor.@submitter = Mock(ThrottlingExecutor)
+        executor.@reaper = Mock(ThrottlingExecutor)
+        def children = [Mock(TaskHandler), Mock(TaskHandler)]
+
+        when:
+        executor.prepareArrayChildren(children)
+        then:
+        1 * pool.prepare(children)
+
+        when:
+        executor.shutdown()
+        then:
+        1 * pool.shutdown()
     }
 
 }

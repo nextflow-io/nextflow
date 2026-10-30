@@ -137,26 +137,76 @@ class TaskPollingMonitorTest extends Specification {
 
     def 'should submit a job array' () {
         given:
-        def session = Mock(Session)
+        def session = Mock(Session) { canSubmitTasks() >> true }
         def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))
         and:
         def handler = Mock(TaskHandler) {
             getTask() >> Mock(TaskRun)
         }
+        def arrayTask = Mock(TaskArrayRun) {
+            children >> (1..3).collect( i -> handler )
+        }
         def arrayHandler = Mock(TaskHandler) {
-            getTask() >> Mock(TaskArrayRun) {
-                children >> (1..3).collect( i -> handler )
-            }
+            getTask() >> arrayTask
         }
 
         when:
         monitor.submit(arrayHandler)
         then:
+        1 * arrayTask.prepareChildren()
+        then:
         1 * arrayHandler.prepareLauncher()
+        then:
         1 * arrayHandler.submit()
         0 * handler.prepareLauncher()
         0 * handler.submit()
         3 * session.notifyTaskSubmit(handler)
+    }
+
+    def 'should not submit a job array when the session is aborted while preparing it' () {
+        given:
+        def session = Mock(Session) { canSubmitTasks() >> false }
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))
+        and:
+        def handler = Mock(TaskHandler)
+        def arrayTask = Mock(TaskArrayRun) {
+            children >> (1..3).collect( i -> handler )
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> arrayTask
+        }
+
+        when:
+        monitor.submit(arrayHandler)
+        then:
+        1 * arrayTask.prepareChildren()
+        1 * arrayHandler.prepareLauncher()
+        0 * arrayHandler.submit()
+        0 * session.notifyTaskSubmit(_)
+        monitor.getRunningQueue().size() == 0
+    }
+
+    def 'should not submit job array children when the array submission fails' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))
+        and:
+        def handler = Mock(TaskHandler)
+        def arrayTask = Mock(TaskArrayRun) {
+            children >> (1..3).collect( i -> handler )
+            prepareChildren() >> { throw new IOException('boom') }
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> arrayTask
+        }
+
+        when:
+        monitor.submit(arrayHandler)
+        then:
+        thrown(IOException)
+        0 * arrayHandler.submit()
+        0 * session.notifyTaskSubmit(_)
+        monitor.getRunningQueue().size() == 0
     }
 
     @Unroll
@@ -285,7 +335,7 @@ class TaskPollingMonitorTest extends Specification {
     def 'should release job array resources as each child completes'() {
         given:
         def tracker = new ResourceTracker(8, MemoryUnit.of('16GB').toBytes())
-        def monitor = new TaskPollingMonitor(name: 'foo', session: Mock(Session), pollInterval: Duration.of('1min'), resourceTracker: tracker)
+        def monitor = new TaskPollingMonitor(name: 'foo', session: Mock(Session) { canSubmitTasks() >> true }, pollInterval: Duration.of('1min'), resourceTracker: tracker)
         def children = (1..3).collect {
             Mock(TaskHandler) {
                 getTask() >> new TaskRun(config: new TaskConfig(cpus: 2, memory: MemoryUnit.of('2GB')))
