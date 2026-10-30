@@ -127,8 +127,8 @@ class PiAgentPackagingTest extends Specification {
         'grpc-api', 'grpc-context', 'grpc-core', 'grpc-netty-shaded', 'grpc-stub', 'grpc-util',
         'perfmark-api', 'gson', 'guava', 'failureaccess', 'listenablefuture',
         // annotation-only artifacts the above drag in
-        'animal-sniffer-annotations', 'annotations', 'checker-qual', 'error_prone_annotations',
-        'j2objc-annotations', 'jsr305',
+        'animal-sniffer-annotations', 'annotations', 'error_prone_annotations',
+        'j2objc-annotations', 'jspecify', 'jsr305',
     ] as Set<String>
 
     /**

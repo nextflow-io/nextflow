@@ -42,6 +42,21 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('Unrecognized config option')
     }
 
+    def 'should validate mail smtp timeout options' () {
+        when:
+        new ConfigValidator().validate([
+            mail: [
+                smtp: [
+                    connectiontimeout: 5000,
+                    timeout: 5000,
+                    writetimeout: 5000
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
     def 'should warn about invalid per-executor config options' () {
         when:
         new ConfigValidator().validate([

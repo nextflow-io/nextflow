@@ -1,6 +1,9 @@
 # DOCUMENTATION -------------------------------------------------------
 # Docs folder ownership
 /docs/ @nextflow-io/docs
+# Design records have no owner
+/docs/adr/
+/docs/specs/
 
 # COMPILER ------------------------------------------------------------
 # nf-lang module

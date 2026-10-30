@@ -117,6 +117,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -127,14 +128,15 @@ class AzFileCopyStrategyTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
 
                 nxf_parallel() {
@@ -204,7 +206,7 @@ class AzFileCopyStrategyTest extends Specification {
                         azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
-                            exit 1
+                            return 1
                         }
                     }
                 }
@@ -254,6 +256,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -264,14 +267,15 @@ class AzFileCopyStrategyTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
 
                 nxf_parallel() {
@@ -341,7 +345,7 @@ class AzFileCopyStrategyTest extends Specification {
                         azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
-                            exit 1
+                            return 1
                         }
                     }
                 }
@@ -415,6 +419,7 @@ class AzFileCopyStrategyTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -425,14 +430,15 @@ class AzFileCopyStrategyTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -502,7 +508,7 @@ class AzFileCopyStrategyTest extends Specification {
                             azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                                 rm -rf $target
                                 >&2 echo "Unable to download path: $source"
-                                exit 1
+                                return 1
                             }
                         }
                     }

@@ -30,7 +30,7 @@ import spock.lang.Specification
  * {@code required} to include every property, BUT emits an OpenAI nullable-union type
  * ({@code ["<type>","null"]}) for fields omitted from {@code required}. That is the canonical
  * OpenAI-strict optional-field idiom: the field is listed as required but its type is nullable,
- * so the model may legitimately return it null. See {@code adr/specs/agent-design.md} §3.3.
+ * so the model may legitimately return it null. See {@code docs/specs/260801-agent-primitive/agent-design.md} §3.3.
  *
  * This lives in the plugin because the nullable-union is produced by langchain4j serialization,
  * which is on the plugin classpath only. It is a faithful, network-free proxy for the schema the

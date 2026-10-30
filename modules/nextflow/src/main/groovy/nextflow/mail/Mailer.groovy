@@ -65,6 +65,11 @@ class Mailer {
 
     private static String DEF_CHARSET = Charset.defaultCharset().toString()
 
+    private static final String DEF_SMTP_TIMEOUT = '30000'
+
+    // JavaMail defaults these to infinite, so an unresponsive server would block forever
+    private static final List<String> SMTP_TIMEOUTS = ['mail.smtp.connectiontimeout', 'mail.smtp.timeout', 'mail.smtp.writetimeout']
+
     /**
      * Mail session object
      */
@@ -124,10 +129,15 @@ class Mailer {
             final cfg = [mail: [smtp: config.smtp.toMap()]] as ConfigObject
             final props = cfg.toProperties()
             props.setProperty('mail.transport.protocol', 'smtp')
+            for( String key : SMTP_TIMEOUTS ) {
+                if( !props.containsKey(key) )
+                    props.setProperty(key, DEF_SMTP_TIMEOUT)
+            }
             // -- check proxy configuration
-            if( !props.contains('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
+            if( !props.containsKey('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
                 props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
-                props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
+                if( System.getProperty('http.proxyPort') )
+                    props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
             }
 
             // -- debug for debugging
