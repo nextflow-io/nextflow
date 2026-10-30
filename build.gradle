@@ -180,6 +180,8 @@ allprojects {
             '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
             '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
         ])
+        // agent mode, auto-detected when tests run under an agent, changes console output
+        environment 'NXF_AGENT_MODE', 'false'
     }
 
     /**
@@ -442,7 +444,7 @@ task validatePluginVersions {
         final coreVersion = rootProject.file('VERSION').text.trim()
         // ordered as one number rather than a list: Groovy will not compare two ArrayLists with `>`.
         // The multipliers leave room for a 2-digit month and a 4-digit patch, which is well beyond
-        // anything the calendar scheme in CLAUDE.md produces.
+        // anything the calendar scheme in .agents/docs/release.md produces.
         final calver = { String v ->
             final m = (v =~ /^(\d+)\.(\d+)\.(\d+)/)
             return m ? (m[0][1] as int) * 1000000 + (m[0][2] as int) * 10000 + (m[0][3] as int) : null
