@@ -179,10 +179,10 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         log.trace "File remote URL: $url"
-        return toConnection0(url, 0)
+        return toConnection0(url, url, 0)
     }
 
-    protected URLConnection toConnection0(URL url, int attempt) {
+    protected URLConnection toConnection0(URL origin, URL url, int attempt) {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( conn instanceof HttpURLConnection ) {
@@ -198,24 +198,24 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
         if ( conn instanceof HttpURLConnection && conn.getResponseCode() in REDIRECT_CODES ) {
             if( attempt >= MAX_REDIRECT_HOPS )
-                throw new IOException("Too many redirects (max ${MAX_REDIRECT_HOPS}) - URL: $url")
+                throw new IOException("Too many redirects (max ${MAX_REDIRECT_HOPS}) - origin: $origin - last location: $url")
             final header = InsensitiveMap.of(conn.getHeaderFields())
             final location = header.get("Location")?.get(0)
             log.debug "Remote redirect location=$location; attempt=$attempt"
             final newUrl = new URI(absLocation(location,url)).toURL()
             if( url.protocol=='https' && newUrl.protocol=='http' )
                 throw new IOException("Refuse to follow redirection from HTTPS to HTTP (unsafe) URL - origin: $url - target: $newUrl")
-            return toConnection0(newUrl, attempt+1)
+            return toConnection0(origin, newUrl, attempt+1)
         }
         else if( conn instanceof HttpURLConnection && conn.getResponseCode() in config().retryCodes() && attempt < config().maxAttempts() ) {
             final delay = (Math.pow(config().backOffBase(), attempt) as long) * config().backOffDelay()
             log.debug "Got HTTP error=${conn.getResponseCode()} waiting for ${delay}ms (attempt=${attempt+1})"
             Thread.sleep(delay)
-            return toConnection0(url, attempt+1)
+            return toConnection0(origin, url, attempt+1)
         }
         else if( conn instanceof HttpURLConnection && conn.getResponseCode()==401 && attempt==0 ) {
             if( XAuthRegistry.instance.refreshToken(conn) ) {
-                return toConnection0(url, attempt+1)
+                return toConnection0(origin, url, attempt+1)
             }
         }
         return conn
