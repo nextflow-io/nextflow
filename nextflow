@@ -28,7 +28,6 @@ NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 
 function cmp_ver() {
-    local IFS=.
     local i ver1 ver2
     read -r -a ver1 <<< "${1//./ }"
     read -r -a ver2 <<< "${2//./ }"
