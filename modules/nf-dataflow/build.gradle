@@ -17,4 +17,9 @@
 // Dataflow core vendored from GPars 1.2.1 (https://github.com/GPars/GPars), trimmed to what Nextflow uses
 dependencies {
     api "org.apache.groovy:groovy:${groovyVersion}"
+
+    // the BOM also aligns the root build's junit-platform-launcher to JUnit 6
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
 }

@@ -20,7 +20,7 @@ sourceSets {
     main.java.srcDirs = []
     main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
     main.resources.srcDirs = ['src/main/resources']
-    test.java.srcDirs = []
+    test.java.srcDirs = ['src/test/java']
     test.groovy.srcDirs = ['src/test/groovy']
     test.resources.srcDirs = ['src/test/resources']
 }
@@ -65,6 +65,10 @@ dependencies {
     testImplementation "org.subethamail:subethasmtp:${subethasmtpVersion}"
     testImplementation (project(':nf-lineage'))
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
+    // the BOM also aligns Spock's JUnit Platform and the root build's junit-platform-launcher to JUnit 6
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
     // test configuration
     testFixturesApi ("org.apache.groovy:groovy-test:${groovyVersion}") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
