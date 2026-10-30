@@ -208,8 +208,37 @@ class XFileSystemProviderTest extends Specification {
 
         308       | "/target.html"      | 10
         308       | "/index2.html"      | 10
-        //infinite redirect to himself
-        308       | "/index.html"       | -1
+    }
+
+    def 'should fail on a redirect loop' () {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        wireMockRule.stubFor(get(urlEqualTo("/start.html"))
+            .willReturn(aResponse()
+                .withStatus(302)
+                .withHeader("Location", "${localhost}/loop.html")))
+        wireMockRule.stubFor(get(urlEqualTo("/loop.html"))
+            .willReturn(aResponse()
+                .withStatus(302)
+                .withHeader("Location", "${localhost}/loop.html")))
+        and:
+        def provider = new HttpFileSystemProvider()
+        def path = provider.getPath(new URI("${localhost}/start.html"))
+
+        expect:
+        !Files.exists(path)
+
+        when:
+        Files.size(path)
+        then:
+        def e = thrown(IOException)
+        e.message == "Too many redirects (max 5) - origin: ${localhost}/start.html - last location: ${localhost}/loop.html"
+
+        when:
+        path.text
+        then:
+        e = thrown(IOException)
+        e.message.startsWith('Too many redirects')
     }
 
     def 'should normalize location' () {
