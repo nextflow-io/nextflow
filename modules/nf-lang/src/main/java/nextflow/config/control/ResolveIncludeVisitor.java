@@ -65,6 +65,9 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
     public void visitConfigInclude(ConfigIncludeNode node) {
         if( !(node.source instanceof ConstantExpression) )
             return;
+        // includes in a remote config are not checked
+        if( !isIncludeLocal(uri) )
+            return;
         var source = node.source.getText();
         var includeUri = getIncludeUri(uri, source);
         if( !isIncludeLocal(includeUri) )

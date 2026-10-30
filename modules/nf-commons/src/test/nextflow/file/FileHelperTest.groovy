@@ -18,15 +18,24 @@ package nextflow.file
 
 import static java.nio.file.LinkOption.*
 
+import java.nio.channels.SeekableByteChannel
+import java.nio.file.AccessMode
+import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemLoopException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
+import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
@@ -1349,6 +1358,41 @@ class FileHelperTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should register a provider without installing it in the JDK' () {
+        when:
+        def provider = FileHelper.getOrInstallProvider(FakeFileSystemProvider)
+        then:
+        provider instanceof FakeFileSystemProvider
+        FileHelper.getProviderFor('fake').is(provider)
+        FileHelper.getOrInstallProvider(FakeFileSystemProvider).is(provider)
+        !FileSystemProvider.installedProviders().any { it.scheme == 'fake' }
+        FileHelper.getProviderSchemes().containsAll(['file', 'fake'])
+
+        cleanup:
+        FileHelper.providersMap.remove('fake')
+    }
+
+    static class FakeFileSystemProvider extends FileSystemProvider {
+        String getScheme() { 'fake' }
+        FileSystem newFileSystem(URI uri, Map<String,?> env) { throw new UnsupportedOperationException() }
+        FileSystem getFileSystem(URI uri) { throw new UnsupportedOperationException() }
+        Path getPath(URI uri) { throw new UnsupportedOperationException() }
+        SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) { throw new UnsupportedOperationException() }
+        void createDirectory(Path dir, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        void delete(Path path) { throw new UnsupportedOperationException() }
+        void copy(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        void move(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        boolean isSameFile(Path path, Path path2) { throw new UnsupportedOperationException() }
+        boolean isHidden(Path path) { throw new UnsupportedOperationException() }
+        FileStore getFileStore(Path path) { throw new UnsupportedOperationException() }
+        void checkAccess(Path path, AccessMode... modes) { throw new UnsupportedOperationException() }
+        <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        Map<String,Object> readAttributes(Path path, String attributes, LinkOption... options) { throw new UnsupportedOperationException() }
+        void setAttribute(Path path, String attribute, Object value, LinkOption... options) { throw new UnsupportedOperationException() }
     }
 
 }
