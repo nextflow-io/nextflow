@@ -312,6 +312,6 @@ Much of the difficulty that users experience with Nextflow config comes from (1)
 
 - Community discussion: [#3107](https://github.com/nextflow-io/nextflow/discussions/3107)
 - Implementation: [#4613](https://github.com/nextflow-io/nextflow/pull/4613), [#4744](https://github.com/nextflow-io/nextflow/pull/4744)
-- [Nextflow language specification](../reference/syntax.md)
-- [Preparing for strict syntax](../strict-syntax.md)
+- [Nextflow language specification](../reference/syntax.mdx)
+- [Preparing for strict syntax](../strict-syntax.mdx)
 - Refined by: [Plugin Spec](./20250922-plugin-spec.md)
