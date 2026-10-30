@@ -208,7 +208,7 @@ class OperatorImpl {
         // therefore the channel need to be added `'manually` to the inputs list
         // fixes #1346
         OpCall.current.get().inputs.add(right)
-        final target = opts.by instanceof String
+        final target = opts.by instanceof String || opts.by instanceof Closure
             ? new JoinOpV2(left, right, opts).apply()
             : new JoinOp(left, right, opts).apply()
         return target
