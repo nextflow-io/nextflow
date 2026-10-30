@@ -161,6 +161,10 @@ dependencies {
     api "io.grpc:grpc-api:${grpcVersion}"
     api "io.grpc:grpc-stub:${grpcVersion}"
     api "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    constraints {
+        // gRPC pulls a vulnerable Guava
+        api("com.google.guava:guava:33.7.2-jre") { because 'GHSA-xxph-c9ww-hj94' }
+    }
 
     // Self-signed certificate construction for the broker's per-run TLS identity: the JDK has no
     // public API for it. Same pinned versions as nf-k8s -- PF4J isolates plugin classloaders, so
