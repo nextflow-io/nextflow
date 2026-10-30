@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -53,9 +54,7 @@ class ResolveIncludeTest {
             include { hello } from './hello.nf'
             """);
         var module = root.resolve("hello.nf");
-        assertThat(check(main))
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 1, "Invalid include source: '" + module + "'"));
+        assertErrors(check(main), tuple(1, 1, "Invalid include source: '" + module + "'"));
     }
 
     @Test

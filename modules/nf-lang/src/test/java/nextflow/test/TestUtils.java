@@ -28,9 +28,12 @@ import nextflow.script.control.PhaseAware;
 import nextflow.script.control.Phases;
 import nextflow.script.control.ScriptParser;
 import nextflow.script.control.SeverityAware;
+import org.assertj.core.groups.Tuple;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Helpers to parse and analyze sources and collect their diagnostics.
@@ -107,9 +110,22 @@ public final class TestUtils {
             .toList();
     }
 
-    public static boolean hasSyntaxErrors(SourceUnit source) {
+    /**
+     * Get the errors of a source file that were reported during parsing.
+     */
+    public static List<SyntaxException> getSyntaxErrors(SourceUnit source) {
         return getErrors(source).stream()
-            .anyMatch(error -> !(error instanceof PhaseAware pa) || pa.getPhase() == Phases.SYNTAX);
+            .filter(error -> !(error instanceof PhaseAware pa) || pa.getPhase() == Phases.SYNTAX)
+            .toList();
+    }
+
+    /**
+     * Assert the errors by line, column and message, in order.
+     */
+    public static void assertErrors(List<SyntaxException> errors, Tuple... expected) {
+        assertThat(errors)
+            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
+            .containsExactly(expected);
     }
 
     /**

@@ -22,6 +22,7 @@ import nextflow.test.TestUtils;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Test;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -44,9 +45,7 @@ class ConfigAstBuilderTest {
                 memory 8.GB
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(3, 12, "Unexpected input: '8'"));
+        assertErrors(errors, tuple(3, 12, "Unexpected input: '8'"));
     }
 
     @Test
@@ -59,9 +58,7 @@ class ConfigAstBuilderTest {
                 process.cpus = 4
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 1, "If statements cannot be mixed with config statements"));
+        assertErrors(errors, tuple(1, 1, "If statements cannot be mixed with config statements"));
     }
 
     @Test
@@ -78,9 +75,7 @@ class ConfigAstBuilderTest {
                 }
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(3, 9, "If statements cannot be mixed with config statements"));
+        assertErrors(errors, tuple(3, 9, "If statements cannot be mixed with config statements"));
     }
 
     @Test
@@ -92,9 +87,7 @@ class ConfigAstBuilderTest {
             catch( Exception e ) {
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 1, "Try-catch blocks cannot be mixed with config statements"));
+        assertErrors(errors, tuple(1, 1, "Try-catch blocks cannot be mixed with config statements"));
     }
 
     @Test
@@ -106,9 +99,7 @@ class ConfigAstBuilderTest {
             catch( Exception e ) {
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 1, "Try-catch blocks cannot be mixed with config statements"));
+        assertErrors(errors, tuple(1, 1, "Try-catch blocks cannot be mixed with config statements"));
     }
 
     @Test
@@ -116,9 +107,7 @@ class ConfigAstBuilderTest {
         var errors = check("""
             def trace_timestamp = new Date().format('yyyy-MM-dd_HH-mm-ss')
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 1, "Variable declarations cannot be mixed with config statements"));
+        assertErrors(errors, tuple(1, 1, "Variable declarations cannot be mixed with config statements"));
     }
 
     @Test
@@ -143,9 +132,7 @@ class ConfigAstBuilderTest {
         var errors = check("""
             params.x = 'a\\.b'
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 14, "Invalid escape sequence: '\\.'"));
+        assertErrors(errors, tuple(1, 14, "Invalid escape sequence: '\\.'"));
     }
 
     @Test
@@ -153,9 +140,7 @@ class ConfigAstBuilderTest {
         var errors = check("""
             params.x = "${params.y}/res\\q.txt"
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(1, 28, "Invalid escape sequence: '\\q'"));
+        assertErrors(errors, tuple(1, 28, "Invalid escape sequence: '\\q'"));
     }
 
     @Test

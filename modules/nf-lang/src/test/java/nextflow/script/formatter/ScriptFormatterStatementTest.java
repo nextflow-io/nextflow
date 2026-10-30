@@ -15,16 +15,11 @@
  */
 package nextflow.script.formatter;
 
-import java.util.List;
-
-import nextflow.script.control.ScriptParser;
-import nextflow.script.control.ScriptResolveVisitor;
-import nextflow.script.dsl.Types;
-import nextflow.test.TestUtils;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static nextflow.script.formatter.FormatterTestUtils.assertFormat;
+import static nextflow.script.formatter.FormatterTestUtils.assertFormatted;
 
 /**
  * Specifies the output of {@link ScriptFormattingVisitor} for statements and
@@ -33,31 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class ScriptFormatterStatementTest {
-
-    private static String format(String contents) {
-        var parser = new ScriptParser();
-        var source = parser.parse("main.nf", contents);
-        new ScriptResolveVisitor(source, parser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, List.of()).visit();
-        // resolve errors are allowed
-        assertThat(TestUtils.hasSyntaxErrors(source)).isFalse();
-        var formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true));
-        formatter.visit();
-        assertThat(formatter.getMissingComments()).isEmpty();
-        return formatter.toString();
-    }
-
-    /**
-     * Assert that {@code input} is formatted as {@code expected}, and that
-     * {@code expected} is already formatted.
-     */
-    private static void assertFormat(String input, String expected) {
-        assertThat(format(input)).isEqualTo(expected);
-        assertThat(format(expected)).as("formatting is idempotent").isEqualTo(expected);
-    }
-
-    private static void assertFormatted(String source) {
-        assertThat(format(source)).isEqualTo(source);
-    }
 
     @Nested
     class Statements {

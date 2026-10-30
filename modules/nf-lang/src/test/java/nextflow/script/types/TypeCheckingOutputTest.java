@@ -15,22 +15,14 @@
  */
 package nextflow.script.types;
 
-import java.util.List;
-
-import nextflow.script.ast.FeatureFlagNode;
-import nextflow.script.ast.ScriptNode;
-import nextflow.script.control.ScriptParser;
-import nextflow.script.control.ScriptResolveVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
-import nextflow.script.dsl.Types;
-import nextflow.test.TestUtils;
-import org.codehaus.groovy.ast.expr.ConstantExpression;
-import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static nextflow.script.types.TypeCheckingTestUtils.check;
+import static nextflow.script.types.TypeCheckingTestUtils.getErrors;
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -44,43 +36,20 @@ import static org.assertj.core.api.Assertions.tuple;
  */
 class TypeCheckingOutputTest {
 
-    /**
-     * Parse, resolve and type-check a script with static typing enabled.
-     */
-    private static SourceUnit parse(String contents) {
-        var parser = new ScriptParser();
-        var source = parser.parse("main.nf", contents);
-        var ast = (ScriptNode) source.getAST();
-        assertThat(ast).isNotNull();
-        ast.addFeatureFlag(new FeatureFlagNode("nextflow.enable.types", new ConstantExpression(true)));
-        new ScriptResolveVisitor(source, parser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, List.of()).visit();
-        new TypeCheckingVisitor(source).visit();
-        return source;
-    }
-
-    /**
-     * Get the errors of a script, sorted by position. Unlike
-     * {@link TestUtils#getErrors}, soft errors are included.
-     */
-    private static List<SyntaxException> getErrors(String contents) {
-        var errors = parse(contents).getErrorCollector().getErrors();
-        if( errors == null )
-            return List.of();
-        return errors.stream()
-            .filter(e -> e instanceof SyntaxErrorMessage)
-            .map(e -> ((SyntaxErrorMessage) e).getCause())
-            .sorted(TestUtils.ERROR_COMPARATOR)
-            .toList();
-    }
-
-    private static List<String> check(String contents) {
-        return getErrors(contents).stream()
-            .map(SyntaxException::getOriginalMessage)
-            .toList();
-    }
-
     @Nested
     class WorkflowEmits {
+
+        @Test
+        void allowSingleNamedEmit() {
+            assertThat(getErrors("""
+                nextflow.enable.types = true
+
+                workflow hello {
+                    emit:
+                    result = 42
+                }
+                """)).isEmpty();
+        }
 
         @Test
         void reportWorkflowEmitWithWrongType() {
@@ -93,9 +62,7 @@ class TypeCheckingOutputTest {
                     b: Value<Integer> = channel.value(1)
                 }
                 """);
-            assertThat(errors)
-                .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-                .containsExactly(tuple(5, 5, "Assignment target with type Value<String> cannot be assigned to value with type Value<Integer>"));
+            assertErrors(errors, tuple(5, 5, "Assignment target with type Value<String> cannot be assigned to value with type Value<Integer>"));
         }
 
         @Test
@@ -124,9 +91,7 @@ class TypeCheckingOutputTest {
                     b: Value<Integer> = channel.value(1)
                 }
                 """);
-            assertThat(errors)
-                .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-                .containsExactly(tuple(5, 5, "Workflow emit `a` must be declared as a Channel or Value, not Integer"));
+            assertErrors(errors, tuple(5, 5, "Workflow emit `a` must be declared as a Channel or Value, not Integer"));
         }
 
         @Test
@@ -182,11 +147,6 @@ class TypeCheckingOutputTest {
         void allowSingleNamedOutput() {
             assertThat(getErrors("""
                 nextflow.enable.types = true
-
-                workflow hello {
-                    emit:
-                    result = 42
-                }
 
                 process bye {
                     output:

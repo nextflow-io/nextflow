@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 import nextflow.test.TestUtils;
-import org.assertj.core.groups.Tuple;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -51,12 +51,6 @@ class ScriptResolveTest {
         var source = parser.parse("main.nf", contents);
         parser.analyze();
         return source;
-    }
-
-    private static void assertErrors(List<SyntaxException> errors, Tuple... expected) {
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-            .containsExactly(expected);
     }
 
     @Nested
@@ -270,14 +264,6 @@ class ScriptResolveTest {
                 """),
                 tuple(5, 5, "`x` is not defined"));
         }
-
-        @Test
-        void undefinedFunction() {
-            assertErrors(check("""
-                hello('world')
-                """),
-                tuple(1, 1, "`hello` is not defined"));
-        }
     }
 
     @Nested
@@ -415,6 +401,14 @@ class ScriptResolveTest {
 
     @Nested
     class Callables {
+
+        @Test
+        void reportUndefinedFunctionCall() {
+            assertErrors(check("""
+                hello('world')
+                """),
+                tuple(1, 1, "`hello` is not defined"));
+        }
 
         @Test
         void reportProcessOrWorkflowUsedAsVariableInTypedScript() {
