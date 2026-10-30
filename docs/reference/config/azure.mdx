@@ -257,6 +257,12 @@ The blob storage account key. Defaults to environment variable `AZURE_STORAGE_AC
 
 The blob storage account name. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_NAME`.
 
+##### `azure.storage.endpoint`
+
+<AddedInVersion version="26.11" />
+
+The blob storage service endpoint (default: `https://<accountName>.blob.core.windows.net`). For Microsoft Fabric OneLake, set `accountName` to `onelake` and the endpoint to `https://onelake.blob.fabric.microsoft.com`. OneLake requires a managed identity or service principal. Moving directories is not supported on OneLake.
+
 ##### `azure.storage.fileShares.<name>.mountOptions`
 
 The file share mount options.
