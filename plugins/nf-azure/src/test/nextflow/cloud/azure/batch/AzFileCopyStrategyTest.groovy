@@ -184,12 +184,12 @@ class AzFileCopyStrategyTest extends Specification {
 
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy --output-level essential cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       else
-                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy --output-level essential cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      azcopy --output-level essential cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
 
@@ -200,10 +200,10 @@ class AzFileCopyStrategyTest extends Specification {
                     local ret
                     mkdir -p "$basedir"
 
-                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                    ret=$(azcopy --output-level essential cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        azcopy --output-level essential cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             return 1
@@ -248,6 +248,7 @@ class AzFileCopyStrategyTest extends Specification {
                     export BAR="any"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_JOB_PLAN_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -323,12 +324,12 @@ class AzFileCopyStrategyTest extends Specification {
 
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy --output-level essential cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       else
-                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy --output-level essential cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      azcopy --output-level essential cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
 
@@ -339,10 +340,10 @@ class AzFileCopyStrategyTest extends Specification {
                     local ret
                     mkdir -p "$basedir"
 
-                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                    ret=$(azcopy --output-level essential cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        azcopy --output-level essential cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             return 1
@@ -411,6 +412,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_JOB_PLAN_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -486,12 +488,12 @@ class AzFileCopyStrategyTest extends Specification {
 
                         if [[ -d $name ]]; then
                           if [[ "$base_name" == "$name" ]]; then
-                            azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                            azcopy --output-level essential cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                           else
-                            azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                            azcopy --output-level essential cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                           fi
                         else
-                          azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                          azcopy --output-level essential cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                         fi
                     }
 
@@ -502,10 +504,10 @@ class AzFileCopyStrategyTest extends Specification {
                         local ret
                         mkdir -p "$basedir"
 
-                        ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                        ret=$(azcopy --output-level essential cp "$source?$AZ_SAS" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
-                            azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                            azcopy --output-level essential cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                                 rm -rf $target
                                 >&2 echo "Unable to download path: $source"
                                 return 1

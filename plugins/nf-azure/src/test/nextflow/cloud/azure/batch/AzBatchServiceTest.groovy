@@ -324,9 +324,9 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.commandLine == 'bash -c "mkdir -p $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy"'
         configuredStartTask.resourceFiles.size()==1
-        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy.tar.gz'
     }
 
     def 'should configure custom startTask' () {
@@ -338,10 +338,10 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/" && bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == 'bash -c "mkdir -p $AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C $AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy" && bash -c \'echo hello-world\''
         and:
         configuredStartTask.resourceFiles.size()==1
-        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy.tar.gz'
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
@@ -765,7 +765,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-01000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy && bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -809,7 +809,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy && bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '--cpu-shares 4096 --memory 8192m -v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -854,7 +854,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 azcopy_linux_amd64_10.34.1/azcopy && bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
