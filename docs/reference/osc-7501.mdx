@@ -1,0 +1,86 @@
+---
+title: OSC 7501 program status
+description: How Nextflow reports run activity with the OSC 7501 Program Status Protocol, and how mature that protocol is.
+---
+
+# OSC 7501 program status
+
+<AddedInVersion version="26.10" />
+
+Nextflow can tell the terminal whether a run is working, waiting, finished, or stopped. The signal is the [Program Status Protocol (OSC 7501)](https://www.superlogical.com/rex/docs/build/program-status), revision 0.4 (2026-10-10), written by Mitchell Hashimoto. A public specification exists. It is a proposal, not an ECMA or xterm standard.
+
+## What the specification says
+
+A report is one sequence:
+
+```text
+ESC ] 7501 ; key=value:key=value ST
+```
+
+`ESC` is `0x1B`. `ST` is `ESC \` (`0x1B 0x5C`) or `BEL` (`0x07`). The body is `key=value` pairs separated by `:`. Keys are lowercase. Values use only letters, digits, and `_ . , + / = -`, so `:` and `;` never need escaping. `msg` and `title` are base64 of one UTF-8 line. Padding is optional. A decoded message that contains a control character, including a newline, causes the terminal to discard the whole report.
+
+`state` is required. The states in revision 0.4 are:
+
+| `state` | Meaning |
+| --- | --- |
+| `idle` | At rest, waiting for the user's next instruction. |
+| `working` | Running. `progress` may be an integer from 0 to 100. Absent `progress` means the program is busy with no percentage. |
+| `done` | Finished, and the user has not looked at the result yet. Survives process exit and the next shell prompt. |
+| `blocked` | Cannot continue until the user acts. `kind` is `permission`, `question`, or `auth`. |
+| `error` | Failed and stopped. Same lifetime as `done`. |
+| `clear` | Removes the record. This is not a stored state. |
+
+Other keys: `app` (a stable program name, up to 32 characters), `title`, `msg`, `id` (a record path), and `progress`. Each report replaces its record, so `app` is sent on every report that should keep it. There is no heartbeat.
+
+Feature detection is `OSC 7501 ; ? ST`. It is optional. A program may send reports without asking, because a well-behaved terminal ignores an OSC it does not implement.
+
+The words "active", "needs attention", and "inbox" are not protocol states. The specification says it avoids presentation words such as notification, attention, and focus. Terminals decide how to show a record. Rex, for example, marks sessions that have a completed or blocked task, and its docs describe a unified priority inbox as later work.
+
+Sources for the text above:
+
+- Specification, revision 0.4: [Program Status Protocol (OSC 7501)](https://www.superlogical.com/rex/docs/build/program-status). Revision history there: 0.1 on 2026-09-28, 0.2 on 2026-10-06, 0.3 on 2026-10-07, 0.4 on 2026-10-10.
+- The author's write-up: [A Terminal Protocol for Program Status (OSC 7501)](https://mitchellh.com/writing/program-status-osc7501) (2026-10-06). The announcement post is [on X](https://x.com/mitchellh/status/2109279616519241920).
+- Independent summary of revision 0.4: [control-codes](https://control-codes.page/proposals/osc-7501/).
+
+## Who implements it
+
+As of 2026-10-11 the protocol is young. Four revisions landed in about two weeks, and 0.3–0.4 changed feature detection, the meaning of a missing `progress`, and removed a terminfo capability. The report grammar (`key=value` pairs, the five stored states, base64 `msg`) is what current terminals parse.
+
+| Terminal | Support |
+| --- | --- |
+| [Rex](https://www.superlogical.com/rex/docs/build/program-status) | Reads the protocol. Session picker and tab headers show working and blocked activity today. A unified inbox is described as future work. |
+| [libghostty-vt](https://control-codes.page/proposals/osc-7501/) | Parses reports and hands them to the host. The Ghostty application does not display them yet. |
+| [TUIOS](https://tuios.dev/docs/program-status.md) | Shows records in the rail and the inbox. Its page cites revision 0.2. |
+| [Harness](https://harnesscli.dev/docs/program-status) | Reads revision 0.2 from terminal output. |
+
+Hashimoto's post also names proof-of-concept emitters in Terraform, Claude Code, Codex, and Homebrew. Widespread terminal support is not established.
+
+## What Nextflow sends
+
+The ANSI progress observer (`AnsiLogObserver`) owns the signal. The bytes are produced only by `Osc7501Emitter`, so a revision of the proposal is a change in that class.
+
+| Run | OSC 7501 `state` |
+| --- | --- |
+| The run has started, including before the first task and after the queue drains | `working` |
+| At least one task is pending, submitted, or running | `working` |
+| The run completes successfully | `done` |
+| The run stops because of a failure | `error` |
+| The user cancels or interrupts the run | `idle` |
+
+`app` is `nextflow`. `msg` is a single stable line (`Running workflow`, `Running tasks`, `Workflow completed`, `Workflow failed`, or `Run cancelled`). The first `working` report keeps its message for the rest of the run: an empty queue is still `working`, because the process has not returned to a prompt. A task that fails and is retried or ignored does not emit `error`: the protocol's `error` means the program failed and stopped. `blocked` is not emitted, because a run does not wait on permission, a typed answer, or a credential. `progress` is omitted, so `working` stays indeterminate instead of rewriting the record on every task. `clear` is not sent on success or failure, so the `done` or `error` record survives process exit.
+
+A report is written only when the state changes. Queue updates that stay in `working` do not emit again. Reports go to standard output, and only when it is a terminal, ANSI logging is enabled, and reporting has not been turned off. Nextflow does not send the feature-detection query: the specification allows sending reports without a reply, and reading the reply would take input that belongs to the pipeline.
+
+### Opting out
+
+Either of these turns reporting off. ANSI logging turned off (`-ansi-log false`, `NXF_ANSI_LOG=false`, or `NO_COLOR`) turns it off as well, because the signal is part of the ANSI console observer.
+
+```groovy
+osc7501 = false
+```
+
+```bash
+export NXF_OSC7501=false
+```
+
+`NXF_OSC7501` accepts `true`/`false` and `1`/`0`. When the variable is unset, reporting stays on for an ANSI terminal. See [`NXF_OSC7501`](env-vars.mdx) and [`osc7501`](config/unscoped.mdx).
