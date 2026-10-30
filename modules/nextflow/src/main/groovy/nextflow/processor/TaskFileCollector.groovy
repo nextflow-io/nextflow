@@ -22,6 +22,7 @@ import java.nio.file.NoSuchFileException
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.IllegalFileException
 import nextflow.exception.MissingFileException
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
@@ -59,6 +60,7 @@ class TaskFileCollector {
         boolean inputsExcluded = false
 
         for( String filePattern : filePatterns ) {
+            checkWithinWorkDir(filePattern)
             List<Path> result = null
 
             final splitter = opts.glob ? FilePatternSplitter.glob().parse(filePattern) : null
@@ -145,6 +147,11 @@ class TaskFileCollector {
         }
 
         return result
+    }
+
+    protected void checkWithinWorkDir(String filePattern) {
+        if( filePattern.tokenize('/').contains('..') )
+            throw new IllegalFileException("File `$filePattern` is outside the scope of the task work directory: $workDir")
     }
 
     protected boolean checkFileExists(Path file) {

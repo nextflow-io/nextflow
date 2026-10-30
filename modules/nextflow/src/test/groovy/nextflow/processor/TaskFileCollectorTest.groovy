@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.exception.IllegalFileException
 import nextflow.exception.MissingFileException
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -51,6 +52,22 @@ class TaskFileCollectorTest extends Specification {
 
     }
 
+
+    @Unroll
+    def 'should reject output pattern outside the work dir: #PATTERN'() {
+        given:
+        def task = Mock(TaskRun) { getTargetDir() >> Path.of('/work/dir') }
+        def collector = new TaskFileCollector([PATTERN], [:], task)
+
+        when:
+        collector.collect()
+        then:
+        def e = thrown(IllegalFileException)
+        e.message == "File `$PATTERN` is outside the scope of the task work directory: /work/dir"
+
+        where:
+        PATTERN << ['../x.txt', '../../../../outside.txt', 'foo/../../x.txt', '../*.txt', '..']
+    }
 
     private List<String> fetchResultFiles(Map opts=[:], String namePattern, Path folder) {
         def collector = new TaskFileCollector([], opts, Mock(TaskRun))
