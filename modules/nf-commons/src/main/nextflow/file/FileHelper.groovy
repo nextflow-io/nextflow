@@ -695,7 +695,7 @@ class FileHelper {
      * {@link #getProviderFor(java.lang.String)}.
      * <p>
      * Providers registered this way are not visible to {@code Paths.get(URI)}, use
-     * {@link #asPath(java.net.URI)} instead.
+     * {@link #asPath(java.lang.String)} instead.
      *
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class

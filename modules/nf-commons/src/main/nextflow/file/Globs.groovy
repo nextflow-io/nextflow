@@ -171,7 +171,7 @@ class Globs {
                         pos++
                         continue
                     }
-                    // the JDK also rejects `\` and `[` as the end of a range
+                    // `\` and `[` are rejected as the end of a range, even where the JDK accepts them (e.g. `[,-\{]`)
                     if( end < rangeStart || end == '\\' as char || end == '[' as char )
                         throw syntaxError('Invalid character range', pos)
                     if( rangeStart < ('/' as char) && end >= ('/' as char) )
