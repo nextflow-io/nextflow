@@ -57,6 +57,9 @@ class ProcessBacklog implements BooleanSupplier {
 
     private final AtomicInteger pending = new AtomicInteger()
 
+    // preparing + pending, kept apart so that a task moving from one to the other is not counted twice
+    private final AtomicInteger busy = new AtomicInteger()
+
     private volatile boolean closed
 
     @PackageScope
@@ -72,25 +75,27 @@ class ProcessBacklog implements BooleanSupplier {
      */
     @Override
     boolean getAsBoolean() {
-        return !closed && !owner.released && preparing.get() + pending.get() >= owner.highWater
+        return !closed && !owner.released && busy.get() >= owner.highWater
     }
 
     void taskStarted() {
         preparing.incrementAndGet()
+        busy.incrementAndGet()
     }
 
     void taskPrepared() {
         preparing.decrementAndGet()
+        busy.decrementAndGet()
         changed()
     }
 
     void taskPending() {
         pending.incrementAndGet()
+        busy.incrementAndGet()
     }
 
     /**
-     * Move a task from preparing to pending. Pending is incremented first, so that the
-     * backlog never drops and resumes the operator in between
+     * Move a task from preparing to pending, which leaves the backlog unchanged
      */
     void taskScheduled() {
         pending.incrementAndGet()
@@ -99,6 +104,7 @@ class ProcessBacklog implements BooleanSupplier {
 
     void taskSubmitted() {
         pending.decrementAndGet()
+        busy.decrementAndGet()
         changed()
     }
 
@@ -112,7 +118,7 @@ class ProcessBacklog implements BooleanSupplier {
     }
 
     private void changed() {
-        if( preparing.get() + pending.get() <= owner.lowWater )
+        if( busy.get() <= owner.lowWater )
             operator?.resume()
         owner.wake()
     }
@@ -130,13 +136,18 @@ class ProcessBacklog implements BooleanSupplier {
     int getPending() { pending.get() }
 
     /**
+     * The tasks preparing or pending
+     */
+    int getBusy() { busy.get() }
+
+    /**
      * Whether the whole backlog is at or above the given mark
      */
     boolean isOver(int mark) {
         if( closed )
             return false
-        final busy = preparing.get() + pending.get()
-        return busy >= mark || busy + ready(mark - busy) >= mark
+        final n = busy.get()
+        return n >= mark || n + ready(mark - n) >= mark
     }
 
     /**

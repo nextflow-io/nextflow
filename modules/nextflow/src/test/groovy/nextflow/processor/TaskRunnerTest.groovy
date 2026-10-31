@@ -500,6 +500,30 @@ class TaskRunnerTest extends Specification {
         1 * exec.submit(task)
     }
 
+    @Unroll
+    def 'should not schedule a task prepared asynchronously once the run is stopped' () {
+        given:
+        def exec = Mock(Executor)
+        def session = Mock(Session) { isAborted() >> ABORTED }
+        def runner = newRunner(new TaskProcessor(name: 'foo', executor: exec, session: session, prepareAsync: ASYNC))
+        and:
+        def task = new TaskRun(name: 'foo (1)', index: 1)
+        def call = new CompletableFuture<TaskRun>()
+        runner.@calls.put(1, call)
+
+        when:
+        runner.schedule(task)
+        then:
+        SUBMITTED * exec.submit(task)
+        call.isCompletedExceptionally() == !SUBMITTED
+
+        where:
+        ASYNC   | ABORTED   | SUBMITTED
+        true    | true      | 0
+        true    | false     | 1
+        false   | true      | 1
+    }
+
     /** A task hashable by the default {@link TaskHasher} without touching the file system. */
     private TaskRun hashableTask() {
         def session = Mock(Session) {

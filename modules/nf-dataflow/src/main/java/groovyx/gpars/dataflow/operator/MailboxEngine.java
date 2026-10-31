@@ -18,6 +18,8 @@ package groovyx.gpars.dataflow.operator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -44,7 +46,9 @@ import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
  * subscribes to the input, which hands over its next value. Value inputs ({@link DataflowVariable})
  * are re-read on every firing instead. With {@code maxForks > 1}, the body runs on the pool and up to
  * {@code maxForks} bodies run at once: when all are in flight, a complete input set is parked, and no
- * further input is read until a body completes.
+ * further input is read until a body completes. With {@link DataflowProcessor#setAsync}, a body that
+ * returns a {@link CompletionStage} is asynchronous: it stays in flight until the stage completes, and
+ * {@code afterRun} fires then.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -392,15 +396,12 @@ final class MailboxEngine implements Runnable {
         arrived = 0;
         fresh = false;
         final List<Object> verified = owner.fireBeforeRun(messages);
-        if (maxForks == 1)
-            runBody(verified);
-        else if (inFlight < maxForks)
-            fork(verified);
-        else {
+        if (inFlight >= maxForks) {
             // wait for a body to complete before taking more inputs
             parked = verified;
             return;
         }
+        start(verified);
         afterFiring();
     }
 
@@ -409,28 +410,32 @@ final class MailboxEngine implements Runnable {
             pauseIfGateClosed();
     }
 
-    private void runBody(final List<Object> messages) {
-        try {
-            code.call(messages.toArray(new Object[messages.size()]));
-        }
-        catch (Throwable e) {
-            owner.reportError(e);
-        }
-        finally {
-            owner.fireAfterRun(messages);
-        }
+    private void start(final List<Object> messages) {
+        if (maxForks == 1)
+            runInline(messages);
+        else
+            fork(messages);
+    }
+
+    /**
+     * Runs the body on the drain thread. An asynchronous body is in flight until it completes
+     */
+    private void runInline(final List<Object> messages) {
+        if (runBody(messages))
+            inFlight++;
     }
 
     private void fork(final List<Object> messages) {
         inFlight++;
         try {
             pool.execute(() -> {
+                boolean async = false;
                 try {
-                    runBody(messages);
+                    async = runBody(messages);
                 }
                 finally {
-                    forksDone.incrementAndGet();
-                    signal();
+                    if (!async)
+                        forkDone();
                 }
             });
         }
@@ -438,6 +443,53 @@ final class MailboxEngine implements Runnable {
             inFlight--;
             throw e;
         }
+    }
+
+    /**
+     * Runs the body. When the processor is async, a body that returns a {@link CompletionStage} is
+     * asynchronous: its error is reported and {@code afterRun} fires when the stage completes, so that
+     * it holds a fork until then.
+     *
+     * @return whether the body is asynchronous
+     */
+    private boolean runBody(final List<Object> messages) {
+        Object result = null;
+        try {
+            result = code.call(messages.toArray(new Object[messages.size()]));
+        }
+        catch (Throwable e) {
+            owner.reportError(e);
+        }
+        finally {
+            if (!isAsync(result))
+                owner.fireAfterRun(messages);
+        }
+        if (!isAsync(result))
+            return false;
+        ((CompletionStage<?>) result).whenComplete((value, error) -> {
+            try {
+                if (error != null)
+                    owner.reportError(error instanceof CompletionException && error.getCause() != null ? error.getCause() : error);
+            }
+            finally {
+                try {
+                    owner.fireAfterRun(messages);
+                }
+                finally {
+                    forkDone();
+                }
+            }
+        });
+        return true;
+    }
+
+    private boolean isAsync(final Object result) {
+        return result instanceof CompletionStage && owner.isAsync();
+    }
+
+    private void forkDone() {
+        forksDone.incrementAndGet();
+        signal();
     }
 
     private void onForksDone(final int count) {
@@ -450,7 +502,7 @@ final class MailboxEngine implements Runnable {
         if (parked != null) {
             final List<Object> messages = parked;
             parked = null;
-            fork(messages);
+            start(messages);
             afterFiring();
         }
     }

@@ -916,6 +916,13 @@ class TaskRunner {
      * @param task The task or task array to be scheduled
      */
     void schedule(TaskRun task) {
+        // a task prepared off the dataflow threads may complete its preparation after the run is stopped
+        if( processor.isPrepareAsync() && task.runType == TaskProcessor.RunType.SUBMIT && (session.isAborted() || session.isCancelled()) ) {
+            log.debug "Task ${safeTaskName(task)} not submitted -- the run is stopped"
+            if( isCall(task) )
+                calls.remove(task.index)?.completeExceptionally(new IllegalStateException("Task not submitted -- the run is stopped"))
+            return
+        }
         backlog.scheduled(task)
         try {
             executor.submit(task)

@@ -17,6 +17,7 @@ package nextflow.processor
 
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
@@ -36,9 +37,11 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import groovyx.gpars.scheduler.Scheduler
 import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.dag.NodeMarker
@@ -204,6 +207,11 @@ class TaskProcessor {
 
     private TaskArrayCollector arrayCollector
 
+    /**
+     * Whether the tasks are prepared off the dataflow threads, see {@link #invokeTask}
+     */
+    private boolean prepareAsync
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -260,6 +268,7 @@ class TaskProcessor {
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
         this.arrayCollector = createArrayCollector(arraySize)
+        this.prepareAsync = prepareAsync()
         log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
     }
 
@@ -536,7 +545,9 @@ class TaskProcessor {
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
-        session.allOperators << (operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke))
+        // the task body returns the future of the task preparation, see #invokeTask
+        operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke).setAsync(true)
+        session.allOperators << operator
         backlog = session.backpressure?.register(name, opInputs, operator)
 
         // notify the creation of a new vertex the execution DAG
@@ -586,7 +597,8 @@ class TaskProcessor {
         // this allows us to manage them independently from the operator life-cycle
         final interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         final invoke = new InvokeTaskAdapter(this, opInputs.size())
-        this.operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke)
+        // the task body returns the future of the task preparation, see #invokeTask
+        this.operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke).setAsync(true)
         this.backlog = session.backpressure?.register(name, opInputs, operator)
         session.allOperators << operator
 
@@ -606,10 +618,47 @@ class TaskProcessor {
      *      The args array is expected to be composed by two elements:
      *      the first is the {@link TaskRun} accepted by the runner for the input set,
      *      the second is the list of task input messages as received by the process
+     * @return
+     *      When the task is prepared off the dataflow thread, the future of its preparation,
+     *      which holds the operator fork until it completes, otherwise {@code null}
      */
-    final protected void invokeTask( Object[] args ) {
+    final protected Object invokeTask( Object[] args ) {
         assert args.size()==2
-        runner.submit((TaskRun) args[0], (List) args[1])
+        final task = (TaskRun) args[0]
+        final values = (List) args[1]
+        if( !isPrepareAsync() ) {
+            runner.submit(task, values)
+            return null
+        }
+        return CompletableFuture.runAsync({ prepareTask(task, values) } as Runnable, session.getPrepareExecService())
+    }
+
+    private void prepareTask(TaskRun task, List values) {
+        try {
+            runner.submit(task, values)
+        }
+        catch( Throwable e ) {
+            // like the operator exception handler, see TaskProcessorInterceptor#onException
+            if( runner.handleException(e, task) )
+                operator.terminate()
+        }
+        finally {
+            currentTask.remove()
+        }
+    }
+
+    boolean isPrepareAsync() { prepareAsync }
+
+    /**
+     * Whether tasks are prepared (staging, hashing, cache lookup, ...) off the dataflow
+     * threads, on the task preparation pool. By default only with a single dataflow
+     * thread, so that the dataflow loop never blocks on the preparation of a task.
+     */
+    static private boolean prepareAsync() {
+        final value = SysEnv.get('NXF_TASK_PREPARE_ASYNC')
+        return value != null
+            ? value == 'true'
+            : Scheduler.getPoolSize() == 1
     }
 
     /**

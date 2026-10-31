@@ -49,8 +49,7 @@ class InvokeTaskAdapter extends Closure {
 
     @Override
     Object call(final Object... args) {
-        processor.invokeTask(args)
-        return null
+        return processor.invokeTask(args)
     }
 
     @Override

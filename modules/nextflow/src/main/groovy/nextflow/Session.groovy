@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
@@ -289,6 +290,12 @@ class Session implements ISession {
 
     /** Orchestration pool for agent tasks; lazily created -- see {@link #getAgentExecService}. */
     private volatile ExecutorService agentExecService
+
+    private volatile ExecutorService prepareExecService
+
+    private final Object prepareLock = new Object()
+
+    private boolean prepareShutdown
 
     private volatile TaskFault fault
 
@@ -765,6 +772,28 @@ class Session implements ISession {
         return agentExecService
     }
 
+    /**
+     * The pool that prepares the tasks of the processes off the dataflow threads, see
+     * {@link nextflow.processor.TaskProcessor#invokeTask}. The concurrency is bounded by
+     * the forks of the process operators. Created lazily, and never again once shut down.
+     */
+    ExecutorService getPrepareExecService() {
+        final result = prepareExecService
+        if( result != null )
+            return result
+        synchronized (prepareLock) {
+            if( prepareExecService == null ) {
+                if( prepareShutdown )
+                    throw new RejectedExecutionException("Task preparation pool is shut down")
+                log.debug "Creating task preparation pool"
+                prepareExecService = Threads.useVirtual()
+                        ? Executors.newVirtualThreadPerTaskExecutor()
+                        : Executors.newCachedThreadPool(new CustomThreadFactory('nf-prepare'))
+            }
+            return prepareExecService
+        }
+    }
+
     ScriptBinding getBinding() { binding }
 
     @Memoized
@@ -902,6 +931,10 @@ class Session implements ISession {
             execService = null
             agentExecService?.shutdown()
             agentExecService = null
+            synchronized (prepareLock) {
+                prepareShutdown = true
+                prepareExecService?.shutdown()
+            }
             log.trace "Session > executor shutdown"
 
             // -- close db
@@ -1101,6 +1134,7 @@ class Session implements ISession {
 
         execService?.shutdownNow()
         agentExecService?.shutdownNow()
+        prepareExecService?.shutdownNow()
     }
 
     boolean isTerminated() { terminated }
