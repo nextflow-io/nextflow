@@ -43,7 +43,7 @@ import static java.util.Arrays.asList;
 public abstract class PGroup {
 
     /**
-     * Stores the group actors' thread pool
+     * Stores the group thread pool
      */
     private final Pool threadPool;
 
@@ -52,7 +52,7 @@ public abstract class PGroup {
     }
 
     /**
-     * Creates a group for actors, agents, tasks and operators. The actors will share a common daemon thread pool.
+     * Creates a group for agents and operators, which share a common daemon thread pool.
      *
      * @param threadPool The thread pool to use by the group
      */
@@ -86,7 +86,7 @@ public abstract class PGroup {
     }
 
     /**
-     * Creates an agent instance initialized with the given state, which will cooperate in thread sharing with other agents and actors in a fair manner.
+     * Creates an agent instance initialized with the given state, which will cooperate in thread sharing with other agents and operators in a fair manner.
      *
      * @param state The initial internal state of the new Agent instance
      * @return The created instance
@@ -98,7 +98,7 @@ public abstract class PGroup {
     }
 
     /**
-     * Creates an agent instance initialized with the given state, which will cooperate in thread sharing with other agents and actors in a fair manner.
+     * Creates an agent instance initialized with the given state, which will cooperate in thread sharing with other agents and operators in a fair manner.
      *
      * @param copy  A closure to use to create a copy of the internal state when sending the internal state out
      * @param state The initial internal state of the new Agent instance

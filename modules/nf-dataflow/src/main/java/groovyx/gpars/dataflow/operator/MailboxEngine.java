@@ -49,7 +49,7 @@ import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-final class MailboxEngine extends OperatorEngine implements Runnable {
+final class MailboxEngine implements Runnable {
 
     private static final int BATCH = 128;
 
@@ -131,7 +131,6 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
             ports[i] = new Port(i, inputs.get(i));
     }
 
-    @Override
     void start(final PGroup group) {
         if (group != null)
             pool = group.getThreadPool();
@@ -144,7 +143,6 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
      * Stops the operator. On the drain thread it stops at once, otherwise it interrupts a running
      * drain and stops on the next one. {@code afterStop} fires once, on the drain thread.
      */
-    @Override
     void terminate() {
         if (!state.compareAndSet(RUNNING, STOPPING))
             return;
@@ -161,34 +159,28 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
         post(TERMINATE);
     }
 
-    @Override
     void terminateAfterNextRun() {
         post(STOP_GENTLY);
     }
 
-    @Override
     void join() throws InterruptedException {
         stopped.await();
     }
 
-    @Override
     boolean isActive() {
         final int s = state.get();
         return s == RUNNING || s == STOPPING;
     }
 
-    @Override
     void resume() {
         if (paused)
             post(RESUME);
     }
 
-    @Override
     boolean isPaused() {
         return paused;
     }
 
-    @Override
     long getPauseCount() {
         return pauseCount;
     }
@@ -535,7 +527,7 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
             if (port.requested)
                 port.channel.unsubscribe(port);
         }
-        // like the legacy engine, forward a poison pill that waits for the bodies in flight
+        // like GPars, forward a poison pill that waits for the bodies in flight
         final PoisonPill pill = pendingPill;
         pendingPill = null;
         try {

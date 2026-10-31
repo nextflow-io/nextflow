@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import groovyx.gpars.Closures;
-import groovyx.gpars.agent.Agent;
 import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowReadChannel;
@@ -41,7 +40,6 @@ import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
 class SchedulerTest {
@@ -58,15 +56,6 @@ class SchedulerTest {
     @AfterEach
     void tearDown() {
         loop.shutdown();
-    }
-
-    @Test
-    void shouldParseTheEngine() {
-        assertThat(Scheduler.parseEngine(null)).isFalse();
-        assertThat(Scheduler.parseEngine("")).isFalse();
-        assertThat(Scheduler.parseEngine("mailbox")).isFalse();
-        assertThat(Scheduler.parseEngine("legacy")).isTrue();
-        assertThatThrownBy(() -> Scheduler.parseEngine("actors")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -134,8 +123,6 @@ class SchedulerTest {
 
     @Test
     void shouldRunOperatorsForksAndAgentsOnTheLoopThread() throws Exception {
-        // the legacy engine blocks the actor thread while all forks are busy, so it deadlocks on a single thread
-        assumeFalse(Scheduler.isLegacyEngine());
         var input = new DataflowQueue<Object>();
         var middle = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();

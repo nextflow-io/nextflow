@@ -16,16 +16,13 @@
 //
 // Modified by Seqera Labs for Nextflow (2026): trimmed to the methods used by Nextflow and its plugins
 // (removed SelectableChannel, rightShift, then, chainWith, filter, split, tap, merge, choice, separate,
-// the Pool/PGroup/Map variants and the event manager); added the non-blocking reads of the operator engine.
+// the Pool/PGroup/Map variants, getValAsync and the event manager); added the non-blocking reads of the operator engine.
 
 package groovyx.gpars.dataflow;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import groovy.lang.Closure;
-import groovyx.gpars.actor.impl.MessageStream;
 import groovyx.gpars.dataflow.impl.ReadCallback;
 
 /**
@@ -35,42 +32,6 @@ import groovyx.gpars.dataflow.impl.ReadCallback;
  *         Date: 21st Sep 2010
  */
 public interface DataflowReadChannel<T> {
-
-    /**
-     * Asynchronously retrieves the value from the channel. Sends the actual value of the channel as a message
-     * back the the supplied actor once the value has been bound.
-     *
-     * @param callback The actor to notify when a value is bound
-     */
-    default void getValAsync(final MessageStream callback) {
-        getValAsync(null, callback);
-    }
-
-    /**
-     * Asynchronously retrieves the value from the channel. Sends a message back the the supplied MessageStream
-     * with a map holding the supplied attachment under the 'attachment' key and the actual value of the channel under
-     * the 'result' key once the value has been bound.
-     *
-     * @param attachment arbitrary non-null attachment if reader needs better identification of result
-     * @param callback   The actor to notify when a value is bound
-     */
-    default void getValAsync(final Object attachment, final MessageStream callback) {
-        if (callback == null)
-            throw new NullPointerException();
-        final ReadCallback reader = item -> {
-            if (attachment == null) {
-                callback.send(item);
-                return;
-            }
-            final Map<String, Object> message = new HashMap<String, Object>(2);
-            message.put("attachment", attachment);
-            message.put("result", item);
-            callback.send(message);
-        };
-        final Object item = takeOrSubscribe(reader);
-        if (item != ReadCallback.NONE)
-            reader.onItem(item);
-    }
 
     /**
      * Reads the current value of the channel. Blocks, if the value has not been assigned yet.
@@ -97,7 +58,10 @@ public interface DataflowReadChannel<T> {
      * @param closure closure to execute when data becomes available. The closure should take at most one argument.
      */
     default <V> void whenBound(final Closure<V> closure) {
-        getValAsync(new DataCallback(closure, Dataflow.retrieveCurrentDFPGroup()));
+        final DataCallback callback = new DataCallback(closure, Dataflow.retrieveCurrentDFPGroup());
+        final Object item = takeOrSubscribe(callback);
+        if (item != ReadCallback.NONE)
+            callback.onItem(item);
     }
 
     /**

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import nextflow.Global;
@@ -86,8 +87,14 @@ class BackpressureScriptTest {
     @TempDir
     Path workDir;
 
+    /**
+     * Runs at the start of each task submission
+     */
+    static volatile Runnable beforeSubmit = () -> {};
+
     @BeforeEach
     void setup() {
+        beforeSubmit = () -> {};
         reset();
         SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", String.valueOf(HW)));
     }
@@ -113,7 +120,13 @@ class BackpressureScriptTest {
         @Override
         public TaskHandler createTaskHandler(TaskRun task) {
             // an anonymous subclass, since the constructor is protected
-            return new NativeTaskHandler(task, this) {};
+            return new NativeTaskHandler(task, this) {
+                @Override
+                public void submit() {
+                    beforeSubmit.run();
+                    super.submit();
+                }
+            };
         }
     }
 
@@ -667,6 +680,37 @@ class BackpressureScriptTest {
               channel.of(1..$N) | SLOW | count
             }
             """))).isInstanceOf(ProcessFailedException.class);
+        assertThat(last.blockCount("channel.of")).isPositive();
+        assertThat(last.backpressure().isReleased()).isTrue();
+    }
+
+    @Test
+    void shouldNotHangWhenTheRunIsAbortedWhileASourceIsBlocked() {
+        // the first submission waits for the source to block, then aborts the run
+        var first = new AtomicBoolean(true);
+        beforeSubmit = () -> {
+            if( !first.getAndSet(false) )
+                return;
+            try {
+                final var gate = last.gate("channel.of");
+                BackpressureInternals.await(gate::isWaiting);
+                last.session().abort(new IllegalStateException("abort"));
+            }
+            catch( InterruptedException e ) {
+                throw new RuntimeException(e);
+            }
+        };
+        assertThatThrownBy(() -> run(script("""
+            process SLOW {
+              input: val x
+              output: val x
+              exec: true
+            }
+
+            workflow {
+              channel.of(1..$N) | SLOW | count
+            }
+            """))).isInstanceOf(IllegalStateException.class).hasMessage("abort");
         assertThat(last.blockCount("channel.of")).isPositive();
         assertThat(last.backpressure().isReleased()).isTrue();
     }
