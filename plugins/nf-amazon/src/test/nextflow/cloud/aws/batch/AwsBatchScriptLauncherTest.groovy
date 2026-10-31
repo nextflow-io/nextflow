@@ -231,9 +231,12 @@ class AwsBatchScriptLauncherTest extends Specification {
         binding.unstage_outputs == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://bucket/work")
+                    set -f
+                    for name in $(set +f; eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://bucket/work")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()
