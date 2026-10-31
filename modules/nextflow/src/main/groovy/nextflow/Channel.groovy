@@ -34,6 +34,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ControlMessage
 import nextflow.dag.NodeMarker
+import nextflow.dataflow.engine.Backpressure
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
@@ -236,6 +237,7 @@ class Channel  {
 
         def task = {
             def value = closure.call(index++)
+            Backpressure.runAsSource { Backpressure.awaitSource(result) }
             result << value
             if( value == STOP ) {
                 timer.cancel()
@@ -324,7 +326,10 @@ class Channel  {
         Global.onCleanup(it -> watcher.terminate())
 
         session.addIgniter {
-            watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }
+            watcher.apply { Path file ->
+                Backpressure.runAsSource { Backpressure.awaitSource(result) }
+                result.bind(file.toAbsolutePath())
+            }
         }
 
         return result
@@ -471,9 +476,6 @@ class Channel  {
         // -- a channel from the path
         final fromOpts = fetchParams0(VALID_FROM_PATH_PARAMS, options)
         final files = new DataflowQueue()
-        session.addIgniter {
-            pumpFilePairs0(files, fromOpts, allPatterns)
-        }
 
         // -- map the files to a tuple like ( ID, filePath )
         final mapper = { path, int index ->
@@ -515,13 +517,17 @@ class Channel  {
             result = groupChannel
         }
 
+        session.addIgniter {
+            pumpFilePairs0(files, result, fromOpts, allPatterns)
+        }
+
         return result
     }
 
-    static private void pumpFilePairs0(DataflowWriteChannel files, Map fromOpts, List allPatterns) {
+    static private void pumpFilePairs0(DataflowWriteChannel files, DataflowWriteChannel source, Map fromOpts, List allPatterns) {
         def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ )  {
-            def factory = new PathVisitor(opts: fromOpts, target: files)
+            def factory = new PathVisitor(opts: fromOpts, target: files, source: source)
             factory.bindPayload = index
             factory.closeChannelOnComplete = index == allPatterns.size()-1
             future = factory.applyAsync( future, allPatterns.get(index) )

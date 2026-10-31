@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): pause after a firing while the backpressure gate is closed.
 
 package groovyx.gpars.dataflow.operator;
 
@@ -40,7 +42,14 @@ import java.util.Map;
  */
 @SuppressWarnings({"RawUseOfParameterizedType", "unchecked"})
 class DataflowOperatorActor extends DataflowProcessorActor {
+    private static final Object RESUME = new Object();
+
     private Map values = new HashMap(10);
+
+    private volatile boolean paused = false;
+
+    // written only by the actor thread
+    private volatile long pauseCount = 0;
 
     DataflowOperatorActor(final DataflowOperator owningOperator, final PGroup group, final List outputs, final List inputs, final Closure code) {
         super(owningOperator, group, outputs, inputs, code);
@@ -68,8 +77,46 @@ class DataflowOperatorActor extends DataflowProcessorActor {
         }
     }
 
+    /**
+     * Requests the next input set, unless the gate is closed: then the operator is paused until resumed
+     */
+    private void queryInputsUnlessPaused() {
+        if (owningProcessor.isGateClosed()) {
+            paused = true;
+            // check again after publishing the flag, so that a concurrent resume() is not lost
+            if (owningProcessor.isGateClosed()) {
+                pauseCount++;
+                return;
+            }
+            paused = false;
+        }
+        queryInputs(false);
+    }
+
+    @Override
+    void resume() {
+        if (paused) send(RESUME);
+    }
+
+    @Override
+    boolean isPaused() {
+        return paused;
+    }
+
+    @Override
+    long getPauseCount() {
+        return pauseCount;
+    }
+
     @Override
     public final void onMessage(final Object message) {
+        if (message == RESUME) {
+            if (paused && !hasBeenStopped()) {
+                paused = false;
+                queryInputsUnlessPaused();
+            }
+            return;
+        }
         if (message instanceof StopGently) {
             stoppingGently = true;
             return;
@@ -110,7 +157,7 @@ class DataflowOperatorActor extends DataflowProcessorActor {
             if (stoppingGently) {
                 stop();
             }
-            if (!hasBeenStopped()) queryInputs(false);
+            if (!hasBeenStopped()) queryInputsUnlessPaused();
         }
     }
 
