@@ -16,7 +16,7 @@
 
 package nextflow.script
 
-import static nextflow.util.ConfigHelper.*
+import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 

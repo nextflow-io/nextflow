@@ -28,6 +28,7 @@ sourceSets {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
+    api(project(':nf-scm'))
     api(project(':nf-lang'))
     api "org.apache.groovy:groovy:${groovyVersion}"
     api "org.apache.groovy:groovy-nio:${groovyVersion}"

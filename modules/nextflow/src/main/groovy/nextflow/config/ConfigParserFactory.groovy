@@ -23,15 +23,17 @@ import nextflow.config.parser.v1.ConfigParserV1
 import nextflow.config.parser.v2.ConfigParserV2
 
 /**
- * Factory for creating an instance of {@link ConfigParser}.
+ * Factory for creating an instance of {@link ConfigParser}, registered as a
+ * {@link ConfigParserProvider} service. Use {@link ConfigParserProvider#createParser()} to get a parser.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ConfigParserFactory {
+class ConfigParserFactory implements ConfigParserProvider {
 
-    static ConfigParser create() {
+    @Override
+    ConfigParser create() {
         final parser = NF.getSyntaxParserVersion()
         if( parser == 'v1' ) {
             return new ConfigParserV1()

@@ -40,7 +40,6 @@ nextflow.mail.Notification
 nextflow.mail.SendMailProvider
 nextflow.mail.SimpleMailProvider
 nextflow.processor.tip.DefaultTaskTipProvider
-nextflow.scm.RepositoryFactory
 nextflow.secret.LocalSecretsProvider
 nextflow.spack.SpackConfig
 nextflow.trace.DefaultObserverFactory

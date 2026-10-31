@@ -653,7 +653,7 @@ class CmdRun extends CmdBase implements HubAware {
             try {
                 manager.checkout(revision)
                 manager.updateModules()
-                final scriptFile = manager.getScriptFile(mainScript)
+                final scriptFile = ScriptFile.of(manager, mainScript)
                 if( checkForUpdate && !(offline && remoteSource) )
                     manager.checkRemoteStatus(scriptFile.revisionInfo)
                 // return the script file

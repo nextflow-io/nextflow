@@ -615,60 +615,6 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should create a script file object legacy' () {
-
-        given:
-        def dir = tempDir.root
-        // create the repo dir
-        dir.resolve('main.nf').text = "println 'Hello world'"
-        dir.resolve('nextflow.config').text = 'manifest {  }'
-        dir.resolve('foo.nf').text = 'this is foo content'
-
-        def init = Git.init()
-        def repo = init.setDirectory( dir.toFile() ).call()
-        repo.add().addFilepattern('.').call()
-        def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
-        repo.close()
-
-        // append fake remote data
-        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
-
-        when:
-        def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
-        and:
-        def manager = new AssetManager(provider: p)
-                .setLocalPath(dir.toFile())
-                .setProject('nextflow-io/nextflow')
-        and:
-        def script = manager.getScriptFile()
-        then:
-        script.localPath == dir
-        script.commitId == commit.name()
-        script.revision == getLocalDefaultBranch()
-        script.parent == dir
-        script.text == "println 'Hello world'"
-        script.repository == 'https://github.com/nextflow-io/nextflow'
-        script.projectName == 'nextflow-io/nextflow'
-
-        when:
-        p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
-        and:
-        manager = new AssetManager(provider: p)
-                .setLocalPath(dir.toFile())
-                .setProject('nextflow-io/nextflow')
-        and:
-        script = manager.getScriptFile('foo.nf')
-        then:
-        script.localPath == dir
-        script.commitId == commit.name()
-        script.revision == getLocalDefaultBranch()
-        script.parent == dir
-        script.text == "this is foo content"
-        script.repository == 'https://github.com/nextflow-io/nextflow'
-        script.projectName == 'nextflow-io/nextflow'
-
-    }
-
     def 'should return project name from git url' () {
 
         AssetManager manager

@@ -29,12 +29,11 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.config.ConfigParserFactory
+import nextflow.config.ConfigParserProvider
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.scm.HubOptions
-import nextflow.script.ScriptFile
 import nextflow.SysEnv
 import nextflow.util.HttpClientOpts
 import nextflow.util.IniFile
@@ -559,17 +558,6 @@ class AssetManager implements Closeable {
         return strategy?.getProjectPath()
     }
 
-    ScriptFile getScriptFile(String scriptName=null) {
-
-        def result = new ScriptFile(getMainScriptFile(scriptName))
-        result.revisionInfo = getCurrentRevisionAndName()
-        result.repository = getRepositoryUrl()
-        result.localPath = localPath.toPath()
-        result.projectName = project
-
-        return result
-    }
-
     File getMainScriptFile(String scriptName=null) {
         if( !localPath.exists() ) {
             throw new AbortOperationException("Unknown project folder: $localPath")
@@ -622,12 +610,16 @@ class AssetManager implements Closeable {
             log.warn "Cannot read project manifest -- Cause: ${e.message ?: e}", e
         }
 
-        if( text ) try {
-            def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
-            result = (ConfigObject)config.manifest
-        }
-        catch( Exception e ) {
-            log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
+        if( text ) {
+            // outside the try: a missing parser must fail, not silently yield an empty manifest
+            final parser = ConfigParserProvider.createParser()
+            try {
+                def config = parser.setIgnoreIncludes(true).setStrict(false).parse(text)
+                result = (ConfigObject)config.manifest
+            }
+            catch( Exception e ) {
+                log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
+            }
         }
 
         // by default return an empty object

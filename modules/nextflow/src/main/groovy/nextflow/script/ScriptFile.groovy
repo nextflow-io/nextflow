@@ -99,4 +99,13 @@ class ScriptFile {
         this(file.toPath())
     }
 
+    static ScriptFile of(AssetManager manager, String scriptName=null) {
+        final result = new ScriptFile(manager.getMainScriptFile(scriptName))
+        result.revisionInfo = manager.getCurrentRevisionAndName()
+        result.repository = manager.getRepositoryUrl()
+        result.localPath = manager.getLocalPath().toPath()
+        result.projectName = manager.getProject()
+        return result
+    }
+
 }

@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigClosurePlaceholder
+import nextflow.extension.Bolts
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
@@ -239,7 +240,7 @@ class ConfigHelper {
      * @return
      */
     static String toCanonicalString(Map map, boolean sort=false) {
-        toCanonicalString(map.toConfigObject(), sort)
+        toCanonicalString(Bolts.toConfigObject(map), sort)
     }
 
     static String toPropertiesString(ConfigObject config, boolean sort=false) {
@@ -249,7 +250,7 @@ class ConfigHelper {
     }
 
     static String toPropertiesString(Map map, boolean sort=false) {
-        toPropertiesString(map.toConfigObject(), sort)
+        toPropertiesString(Bolts.toConfigObject(map), sort)
     }
 
     static String toFlattenString(ConfigObject object, boolean sort=false) {
@@ -257,7 +258,7 @@ class ConfigHelper {
     }
 
     static String toFlattenString(Map map, boolean sort=false) {
-        flattenFormat(map.toConfigObject(), sort)
+        flattenFormat(Bolts.toConfigObject(map), sort)
     }
 
     static String toJsonString(ConfigObject config, boolean sort=false) {
