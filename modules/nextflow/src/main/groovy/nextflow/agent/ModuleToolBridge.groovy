@@ -18,30 +18,33 @@ package nextflow.agent
 import java.nio.channels.ClosedByInterruptException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.operator.DataflowProcessor
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
 import io.seqera.npr.api.schema.v1.ModuleMetadata
 import nextflow.util.TypeHelper
-import nextflow.Global
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.extension.CH
-import nextflow.extension.DataflowHelper
 import nextflow.extension.FilesEx
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpec.ModuleParam
-import nextflow.script.ChannelOut
+import nextflow.processor.ErrorStrategy
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.processor.TaskStartParams
 import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ProcessDef
@@ -53,14 +56,13 @@ import nextflow.script.params.v2.ProcessOutput
 
 /**
  * Bridges Nextflow processes/modules to the agent as LLM tools that execute as
- * real, request-scoped dataflow nodes.
+ * real Nextflow tasks.
  *
  * The bridge is built in the workflow body (inside {@link nextflow.script.AgentDef#run},
  * <b>before</b> the dataflow network is ignited). For every tool it derives a portable
- * {@link ToolDescriptor} and starts a dataflow gateway over a request queue. Each tool call
- * carries its own reply variable; the gateway creates fresh input/output channels and invokes
- * a cloned {@link ProcessDef}. Correlation is therefore represented by dataflow variables
- * rather than by ordering on a shared process lane.
+ * {@link ToolDescriptor} and creates a {@link TaskProcessor} that is never started: each
+ * tool call is executed as a task of that process by its {@link nextflow.processor.TaskRunner},
+ * outside of the dataflow network, and the caller waits for the task to complete.
  *
  * Two marshalling modes are supported:
  * <ul>
@@ -76,11 +78,10 @@ import nextflow.script.params.v2.ProcessOutput
  *       contract). Schema from {@link ModuleSpecToolSchema} (Phase 3.2).</li>
  * </ul>
  *
- * At tool-call time (post-ignition, on the agent task thread) {@link #call} submits a
- * {@link ToolCall} and waits on its reply. The gateway can service independent requests
- * concurrently; each resulting process still uses the normal executor, cache, work directory,
- * retry and tracing machinery. When the agent's input source is exhausted {@link #close}
- * poisons the request queue so the gateway terminates.
+ * At tool-call time (post-ignition, on the agent task thread) {@link #call} prepares and
+ * submits the task, then waits for it to complete. Independent calls run concurrently; each
+ * task uses the normal executor, cache, work directory, retry and tracing machinery. When the
+ * agent's input source is exhausted {@link #close} closes the topics fed by the tools.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -99,15 +100,17 @@ class ModuleToolBridge implements ToolDispatcher {
         String outputParamName
         // spec mode: the module spec
         ModuleSpec spec
-        // process template cloned for every request
+        // process template
         ProcessDef processDef
-    }
-
-    @TupleConstructor
-    private static class ToolCall {
-        Tool tool
-        Map arguments
-        DataflowVariable<String> reply
+        // the process that executes the tool calls, never started
+        TaskProcessor processor
+        // whether the tool process was notified as created
+        final AtomicBoolean created = new AtomicBoolean()
+        final AtomicInteger taskIndex = new AtomicInteger()
+        // the topic sources fed by the tool outputs, by output index (classic processes)
+        final Map<Integer,DataflowWriteChannel> topicOutputs = new LinkedHashMap<Integer,DataflowWriteChannel>()
+        // all the topic sources of the tool, closed with the bridge
+        final List<DataflowWriteChannel> topics = new ArrayList<DataflowWriteChannel>()
     }
 
     /**
@@ -137,10 +140,6 @@ class ModuleToolBridge implements ToolDispatcher {
 
     private final List<ToolDescriptor> descriptors = new ArrayList<ToolDescriptor>()
 
-    private final DataflowQueue requests = new DataflowQueue()
-
-    private DataflowProcessor gateway
-
     private final AtomicBoolean closed = new AtomicBoolean()
 
     /** The wire names of the {@code fs:} tools this bridge serves in the driver JVM, a subset of
@@ -164,7 +163,7 @@ class ModuleToolBridge implements ToolDispatcher {
     void setMaxInlineBytes(long bytes) { this.maxInlineBytes = bytes > 0 ? bytes : ToolOutputReader.DEFAULT_INLINE_BYTES }
 
     /**
-     * Build the bridge and its request gateway in the workflow body, before ignition. A tool with a
+     * Build the bridge and its tool processes in the workflow body, before ignition. A tool with a
      * {@link ModuleSpec} (e.g. a sibling {@code meta.yml}) uses spec-driven marshalling; one without
      * uses the scalar typed-I/O path. When a {@link WiredModuleTool} carries a public registry
      * {@link ModuleMetadata}, that metadata is the descriptor source (richer schema); marshalling
@@ -196,47 +195,88 @@ class ModuleToolBridge implements ToolDispatcher {
             else
                 wireScalar(tool.name, tool.proc)
         }
-        if( !tools.isEmpty() )
-            startGateway()
-    }
-
-    private void startGateway() {
-        final session = Global.session as Session
-        gateway = DataflowHelper.newOperator(
-            [inputs: [requests]],
-            { ToolCall request -> startInvocation(session, request) } )
+        for( final tool : tools.values() )
+            createProcess(tool)
     }
 
     /**
-     * Construct each request-scoped graph on the single gateway operator. Script and DAG
-     * construction are mutable, whereas the resulting channels are independent and can be
-     * collected concurrently.
+     * Create the process that executes the calls of a tool. The process is never started:
+     * its tasks are executed by its runner directly, so it adds no operator, no backlog and
+     * no DAG node to the dataflow network. Its topic outputs are emitted to topic sources
+     * created here, before the network is ignited, and closed with the bridge.
      */
-    private void startInvocation(Session session, ToolCall request) {
-        try {
-            if( request.tool.spec != null )
-                startSpecInvocation(session, request)
-            else
-                startScalarInvocation(session, request)
-        }
-        catch( Throwable e ) {
-            request.reply.bindError(e)
-        }
-    }
-
-    /**
-     * Pull outputs away from the GPars operator so it remains free to construct the next
-     * request and to run the TaskProcessor operators that produce those outputs.
-     */
-    private void collectAsync(Session session, ToolCall request, Closure<String> collector) {
-        // ORCHESTRATION: this thread blocks reading the tool task's output, so it must not
-        // come from the execution pool that same tool task needs to run on
-        session.getAgentExecService().submit {
-            try {
-                request.reply.bind(collector.call())
+    private static void createProcess(Tool tool) {
+        final ProcessDef proc = tool.processDef.clone()
+        final config = proc.getProcessConfig()
+        if( config instanceof ProcessConfigV1 ) {
+            final outParams = declaredOutputParams(proc)
+            for( int i=0; i<outParams.size(); i++ ) {
+                if( !isTopicOutput(outParams, i) )
+                    continue
+                final ch = CH.createTopicSource(((BaseOutParam) outParams[i]).getChannelTopicName())
+                tool.topicOutputs.put(i, ch)
+                tool.topics.add(ch)
             }
-            catch( Throwable e ) {
-                request.reply.bindError(e)
+        }
+        else if( config instanceof ProcessConfigV2 ) {
+            for( final topic : ((ProcessConfigV2) config).getOutputs().getTopics() ) {
+                final ch = CH.createTopicSource(topic.getTarget())
+                topic.setChannel(ch)
+                tool.topics.add(ch)
+            }
+        }
+        tool.processor = proc.createTaskProcessor()
+    }
+
+    /**
+     * Execute a tool call as a task of the tool process, on the calling thread, and wait
+     * for the task to complete. A task failure is handled by the task error strategy,
+     * which aborts the run by default.
+     *
+     * @return the values of the tool process outputs, in declaration order
+     */
+    private static List execute(Tool tool, List args) {
+        final processor = tool.processor
+        final session = processor.getSession()
+        if( tool.created.compareAndSet(false, true) )
+            session.notifyProcessCreate(processor)
+        final values = new ArrayList(args)
+        // the control value of the process operator inputs
+        values.add(Boolean.TRUE)
+        final params = new TaskStartParams(TaskId.next(), tool.taskIndex.incrementAndGet())
+        final TaskRun task
+        try {
+            task = await(tool, session, processor.getRunner().execute(params, values))
+        }
+        catch( ExecutionException e ) {
+            // the task error strategy did not ignore the error
+            throw new AgentToolFatalError("Agent tool `${tool.name}` aborted - the underlying process task failed", e.cause)
+        }
+        if( task.failed && task.errorAction != ErrorStrategy.IGNORE )
+            throw new AgentToolFatalError("Agent tool `${tool.name}` aborted - the underlying process task failed", task.error)
+        if( !task.canBind )
+            throw new IllegalStateException(task.failed ? "the task failed and its error was ignored" : "the task produced no outputs")
+        processor.publishOutputs(task)
+        final result = processor.outputValues(task)
+        for( final entry : tool.topicOutputs.entrySet() ) {
+            final value = result[entry.key]
+            if( value != null )
+                entry.value.bind(value)
+        }
+        return result
+    }
+
+    /**
+     * Wait for a tool task to complete, or for the run to be aborted
+     */
+    private static TaskRun await(Tool tool, Session session, Future<TaskRun> result) {
+        while( true ) {
+            try {
+                return result.get(1, TimeUnit.SECONDS)
+            }
+            catch( TimeoutException e ) {
+                if( session.isAborted() )
+                    throw new AgentToolFatalError("Agent tool `${tool.name}` aborted - the run was aborted", null)
             }
         }
     }
@@ -354,9 +394,9 @@ class ModuleToolBridge implements ToolDispatcher {
 
     /**
      * The ProcessDef's declared output params, in declaration order. These are positionally
-     * aligned with the captured {@link ChannelOut} (the ProcessDef builds the {@code ChannelOut}
-     * from these same outputs, in order), so {@code outParams[i]} corresponds to
-     * {@code channelOut[i]}. Used to detect topic-routed outputs authoritatively.
+     * aligned with the output values of a task (see {@link TaskProcessor#outputValues}), so
+     * {@code outParams[i]} corresponds to {@code values[i]}. Used to detect topic-routed
+     * outputs authoritatively.
      */
     private static List<OutParam> declaredOutputParams(ProcessDef proc) {
         final config = proc.getProcessConfig()
@@ -453,8 +493,8 @@ class ModuleToolBridge implements ToolDispatcher {
     }
 
     /**
-     * Execute a tool call. Parse the JSON args, submit a correlated request to the gateway,
-     * then block on that request's reply variable.
+     * Execute a tool call. Parse the JSON args, execute the tool task
+     * and block until it completes.
      *
      * <p><b>Dispatch-level errors are returned as a tool result, not thrown.</b> An unknown
      * tool name, unparseable {@code argsJson}, or a malformed/mis-shaped argument all yield a
@@ -463,12 +503,11 @@ class ModuleToolBridge implements ToolDispatcher {
      * by an exception escaping the dispatcher.
      *
      * <p><b>Task failure is fatal, not recoverable.</b> When the underlying tool <i>process task</i>
-     * (the Nextflow task the tool runs as) hard-fails (exit ≠ 0), the session aborts the dataflow
-     * network and interrupts the agent operator thread that is blocked on the tool's output channel
-     * {@code .val} ({@link groovyx.gpars.dataflow.DataflowVariable#getVal} throws
-     * {@link InterruptedException}). This is NOT recoverable by the LLM: the run is already being
-     * torn down. Such an {@link InterruptedException} is caught here, the thread's interrupt flag is
-     * restored, and it is re-thrown as an {@link AgentToolFatalError} (an {@link Error}, NOT an
+     * (the Nextflow task the tool runs as) hard-fails (exit ≠ 0) and its error strategy does not
+     * ignore the error, or the run is aborted while the agent thread waits for the tool task, the
+     * call throws an {@link AgentToolFatalError}. This is NOT recoverable by the LLM: the run is being
+     * torn down. An {@link InterruptedException} raised by the abort is caught here, the thread's
+     * interrupt flag is restored, and it is re-thrown as an {@link AgentToolFatalError} (an {@link Error}, NOT an
      * {@link Exception}) so it escapes langchain4j's tool-execution {@code try/catch(Exception)} and
      * propagates out of {@code agent.chat(...)} on the agent task-body thread and through
      * {@code TaskProcessor}'s exec-body failure handling, which aborts the run cleanly — instead of
@@ -478,8 +517,8 @@ class ModuleToolBridge implements ToolDispatcher {
      * @param argsJson the LLM-supplied arguments as a JSON object string
      * @return the tool result serialized as a JSON object string; on a dispatch-level failure
      *         a {@code {"error": "..."}} JSON object so the LLM can recover
-     * @throws AgentToolFatalError when the underlying process task fails and the session aborts
-     *         (the blocking output pull is interrupted) — the run is torn down, not retried
+     * @throws AgentToolFatalError when the underlying process task fails and its error is not
+     *         ignored, or the run is aborted — the run is torn down, not retried
      */
     @Override
     String call(String toolName, String argsJson) {
@@ -495,12 +534,12 @@ class ModuleToolBridge implements ToolDispatcher {
             if( tool == null )
                 throw new IllegalArgumentException("Unknown agent tool `${toolName}` - available tools: ${tools.keySet()}")
 
-            final DataflowVariable<String> reply = new DataflowVariable<String>()
             if( closed.get() )
                 throw new IllegalStateException("Agent tool bridge is closed")
             final parsed = resolvePathArgs(parseArgs(toolName, argsJson), tool.spec, context())
-            requests.bind(new ToolCall(tool, parsed, reply))
-            final result = reply.val
+            final result = tool.spec != null
+                ? callSpec(tool, parsed)
+                : callScalar(tool, parsed)
             // after the module task completes, scan the result for file path strings and whitelist
             // their parent dirs in the dispatch context so the `fs:` tools can read module outputs.
             // ONLY whitelist on a non-error result: a failed module returns {"error":"..."}, and if
@@ -714,21 +753,13 @@ class ModuleToolBridge implements ToolDispatcher {
         return FilesEx.toUriString(source ?: context.workDir.resolve(str))
     }
 
-    private void startScalarInvocation(Session session, ToolCall request) {
-        final tool = request.tool
-        final parsed = request.arguments
+    private static String callScalar(Tool tool, Map parsed) {
         final args = (0..<tool.inputParamNames.size()).collect { i ->
             asScalarArg(parsed.get(tool.inputParamNames[i]), tool.inputParamTypes[i])
         }
-        final invocation = tool.processDef.clone()
-        final ChannelOut out = (ChannelOut) invocation.run(args as Object[])
-        final DataflowReadChannel resultChannel = CH.getReadChannel(out[0])
-
-        collectAsync(session, request) {
-            final result = resultChannel.val
-            final key = (tool.outputParamName == '$out') ? 'result' : tool.outputParamName
-            return JsonOutput.toJson([(key): result])
-        }
+        final result = execute(tool, args)[0]
+        final key = (tool.outputParamName == '$out') ? 'result' : tool.outputParamName
+        return JsonOutput.toJson([(key): result])
     }
 
     /**
@@ -744,10 +775,9 @@ class ModuleToolBridge implements ToolDispatcher {
             : value
     }
 
-    private void startSpecInvocation(Session session, ToolCall request) {
-        final tool = request.tool
+    private String callSpec(Tool tool, Map arguments) {
         final spec = tool.spec
-        final parsed = dropEmptyPathArgs(request.arguments, spec)
+        final parsed = dropEmptyPathArgs(arguments, spec)
 
         // -- marshal the flattened LLM args into one channel value per input channel using the
         //    SAME logic as `nextflow module run` (ProcessEntryHandler.getProcessArguments): the
@@ -758,33 +788,25 @@ class ModuleToolBridge implements ToolDispatcher {
         //    A missing/invalid arg throws IllegalArgumentException which the dispatcher in `call`
         //    turns into a {"error":...} tool result so the LLM can recover.
         final List args = ProcessEntryHandler.getProcessArguments(tool.processDef, parsed, spec)
-        final ProcessDef invocation = tool.processDef.clone()
-        final ChannelOut channelOut = (ChannelOut) invocation.run(args as Object[])
-        // Capture all readers before pulling any value. This matters if a future component
-        // invocation returns broadcast outputs rather than singleton variables.
-        final List<DataflowReadChannel> outReadChannels = (0..<channelOut.size()).collect { CH.getReadChannel(channelOut[it]) }
+        final List values = execute(tool, args)
 
-        collectAsync(session, request) {
-            // -- block on each output channel, in declared order, serializing the records
-            final result = new LinkedHashMap<String,Object>()
-            final outputs = spec.outputs ?: Collections.<ModuleParam>emptyList()
-            final emitNames = emitNamesByPosition(channelOut)
-            final int nOut = channelOut.size()
-            // The ProcessDef's declared output params are positionally aligned with ChannelOut.
-            final List<OutParam> outParams = declaredOutputParams(invocation)
-            for( int i=0; i<outputs.size(); i++ ) {
-                final param = outputs[i]
-                // Topic/eval outputs are bookkeeping and never bind a per-invocation value.
-                if( isEvalOutput(param) || isTopicOutput(outParams, i) )
-                    continue
-                if( i >= nOut )
-                    continue
-                final key = outputKey(param, emitNames, i)
-                final value = outReadChannels[i].val
-                result.put(key, serializeOutput(param, value))
-            }
-            return JsonOutput.toJson(result)
+        // -- serialize the output values, in declared order
+        final result = new LinkedHashMap<String,Object>()
+        final outputs = spec.outputs ?: Collections.<ModuleParam>emptyList()
+        // The ProcessDef's declared output params are positionally aligned with the output values.
+        final List<OutParam> outParams = declaredOutputParams(tool.processDef)
+        final emitNames = emitNamesByPosition(outParams)
+        for( int i=0; i<outputs.size(); i++ ) {
+            final param = outputs[i]
+            // Topic/eval outputs are bookkeeping, not a per-invocation tool result.
+            if( isEvalOutput(param) || isTopicOutput(outParams, i) )
+                continue
+            if( i >= values.size() )
+                continue
+            final key = outputKey(param, emitNames, i)
+            result.put(key, serializeOutput(param, values[i]))
         }
+        return JsonOutput.toJson(result)
     }
 
     /**
@@ -844,20 +866,19 @@ class ModuleToolBridge implements ToolDispatcher {
     }
 
     /**
-     * Map each positional output channel of the {@link ChannelOut} to its emit name (when
-     * the channel was declared with {@code emit:}). Used as the JSON key for tuple outputs
-     * whose spec param carries no channel-level name.
+     * Map each positional output of the process to its emit name (when the output was
+     * declared with {@code emit:}, or is a named typed output). Used as the JSON key for
+     * tuple outputs whose spec param carries no channel-level name.
      */
-    private static Map<Integer,String> emitNamesByPosition(ChannelOut out) {
+    private static Map<Integer,String> emitNamesByPosition(List<OutParam> outParams) {
         final result = new LinkedHashMap<Integer,String>()
-        for( final emitName : out.getNames() ) {
-            final ch = out.getProperty(emitName)
-            for( int i=0; i<out.size(); i++ ) {
-                if( out[i].is(ch) ) {
-                    result.put(i, emitName)
-                    break
-                }
-            }
+        for( int i=0; i<outParams.size(); i++ ) {
+            final param = outParams[i]
+            final name = param instanceof ProcessOutput
+                ? ((ProcessOutput) param).getName()
+                : (param instanceof BaseOutParam ? ((BaseOutParam) param).getChannelEmitName() : null)
+            if( name )
+                result.put(i, name)
         }
         return result
     }
@@ -872,15 +893,19 @@ class ModuleToolBridge implements ToolDispatcher {
     }
 
     /**
-     * Poison the gateway request queue so its operator terminates. Idempotent.
+     * Close the topic sources of the tool processes and notify their termination. Idempotent.
      */
     void close() {
         // close() is triggered only after the agent output completes, so no valid call can
-        // race with the poison pill. The atomic flag provides idempotence and visibility.
+        // race with it. The atomic flag provides idempotence and visibility.
         if( !closed.compareAndSet(false, true) )
             return
-        if( gateway != null )
-            requests.bind(PoisonPill.instance)
+        for( final tool : tools.values() ) {
+            for( final topic : tool.topics )
+                topic.bind(PoisonPill.instance)
+            if( tool.created.get() )
+                tool.processor.getSession().notifyProcessTerminate(tool.processor)
+        }
     }
 
     /**

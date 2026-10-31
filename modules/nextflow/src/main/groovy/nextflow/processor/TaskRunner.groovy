@@ -19,6 +19,8 @@ package nextflow.processor
 import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -139,6 +141,11 @@ class TaskRunner {
      */
     private final TaskBacklogTracker backlog
 
+    /**
+     * The tasks executed with {@link #execute}, by task index.
+     */
+    private final Map<Integer,CompletableFuture<TaskRun>> calls = new ConcurrentHashMap<>()
+
     TaskRunner(TaskProcessor processor, Consumer<TaskRun> onComplete) {
         this.processor = processor
         this.onComplete = onComplete
@@ -215,6 +222,59 @@ class TaskRunner {
         finally {
             backlog.prepared(task)
         }
+    }
+
+    /**
+     * Execute a task outside of a dataflow network, e.g. on behalf of an agent tool call.
+     *
+     * The task completes the returned future instead of invoking the completion handler,
+     * and it is never collected into a task array.
+     * An error raised while preparing the task is handled by the task error strategy, as
+     * for a task of the process operator: the future completes with the failed task when
+     * the error is ignored, and exceptionally unless the task is retried.
+     *
+     * @param params
+     *      The task id and index. The index identifies the task until it completes, so it
+     *      must not be used by another task of this runner
+     * @param values
+     *      The list of task input values, including the control value
+     * @return The completed task, possibly cached, failed and ignored, or skipped by its `when` guard
+     */
+    CompletableFuture<TaskRun> execute(TaskStartParams params, List values) {
+        final result = new CompletableFuture<TaskRun>()
+        calls.put(params.index, result)
+        try {
+            submit(params, values)
+        }
+        catch( Throwable e ) {
+            final task = processor.currentTask.get()
+            final fault = resumeOrDie(task, e)
+            if( fault instanceof TaskFault )
+                session.fault(fault)
+            // a retried task completes the future when the retry completes
+            if( fault == IGNORE && task != null )
+                completed(task)
+            else if( fault != RETRY ) {
+                calls.remove(params.index)
+                result.completeExceptionally(e)
+            }
+        }
+        finally {
+            processor.currentTask.remove()
+        }
+        return result
+    }
+
+    private boolean isCall(TaskRun task) {
+        return !calls.isEmpty() && task.index != null && calls.containsKey(task.index)
+    }
+
+    private void completed(TaskRun task) {
+        final call = !calls.isEmpty() && task.index != null ? calls.remove(task.index) : null
+        if( call != null )
+            call.complete(task)
+        else
+            onComplete.accept(task)
     }
 
     private void submit0(TaskRun task, List values) {
@@ -624,7 +684,7 @@ class TaskRunner {
             session.notifyTaskCached(new StoredTaskHandler(task))
 
             // -- now bind the results
-            onComplete.accept(task)
+            completed(task)
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
@@ -812,7 +872,7 @@ class TaskRunner {
                 session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
 
             // -- now bind the results
-            onComplete.accept(task)
+            completed(task)
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
@@ -839,9 +899,10 @@ class TaskRunner {
         task.config.hash = hash.toString()
         task.config.name = task.getName()
 
-        // when no collector is define OR it's a task retry, then submit directly for execution
+        // when no collector is define OR it's a task retry OR a task executed outside of
+        // the dataflow network (whose collector is never closed), then submit directly for execution
         final arrayCollector = processor.getArrayCollector()
-        if( !arrayCollector || task.config.getAttempt() > 1 )
+        if( !arrayCollector || task.config.getAttempt() > 1 || isCall(task) )
             schedule(task)
         // add the task to the collection of running tasks
         else
@@ -882,10 +943,13 @@ class TaskRunner {
             }
 
             log.trace "Task ${safeTaskName(task)} is not executed because `when` condition is not verified"
-            onComplete.accept(task)
+            completed(task)
             return false
         }
         catch ( FailedGuardException error ) {
+            // a task executed outside of the dataflow network completes its future in #execute
+            if( isCall(task) )
+                throw error
             handleException(error, task)
             return false
         }
@@ -924,7 +988,7 @@ class TaskRunner {
             return finalizeFailedTask(handler, error)
         }
 
-        onComplete.accept(task)
+        completed(task)
         return null
     }
 
@@ -942,7 +1006,7 @@ class TaskRunner {
         final fault = resumeOrDie(task, error, handler.getTraceRecord())
         log.trace "Task fault (3): $fault"
         if( fault != ErrorStrategy.RETRY )
-            onComplete.accept(task)
+            completed(task)
 
         return fault
     }

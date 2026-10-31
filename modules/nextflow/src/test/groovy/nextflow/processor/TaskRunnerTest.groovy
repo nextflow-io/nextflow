@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.function.Consumer
 
@@ -483,6 +484,17 @@ class TaskRunnerTest extends Specification {
         proc.submitTask(task, hash, workDir)
         then:
         task.getConfig() >> new TaskConfig(attempt: 2)
+        and:
+        0 * collector.collect(task)
+        1 * exec.submit(task)
+
+        when:
+        // a task executed outside of the dataflow network is never collected
+        proc.@calls.put(1, new CompletableFuture<TaskRun>())
+        proc.submitTask(task, hash, workDir)
+        then:
+        task.getConfig() >> new TaskConfig()
+        task.getIndex() >> 1
         and:
         0 * collector.collect(task)
         1 * exec.submit(task)

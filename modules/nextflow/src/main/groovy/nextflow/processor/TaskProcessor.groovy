@@ -703,7 +703,7 @@ class TaskProcessor {
      * @param overwrite When {@code true} any existing file will be overwritten, otherwise the publishing is ignored
      */
     @CompileStatic
-    protected void publishOutputs( TaskRun task ) {
+    void publishOutputs( TaskRun task ) {
         final publishList = task.config.getPublishDir()
         if( !publishList ) {
             return
@@ -814,6 +814,46 @@ class TaskProcessor {
     }
 
     protected void bindOutputsV1(TaskRun task) {
+        final tuples = outputTuplesV1(task)
+
+        // -- bind out the collected values
+        for( OutParam param : configV1().getOutputs() ) {
+            final outValue = tuples[param.index]
+            if( outValue == null )
+                throw new IllegalStateException()
+
+            if( outValue instanceof MissingParam ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+                continue
+            }
+
+            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
+            bindOutParam(param, outValue)
+        }
+    }
+
+    /**
+     * The values of the declared outputs of a completed task, in declaration order, as they
+     * are emitted on the output channels. An optional output whose files are missing is
+     * {@code null}. Used to collect the result of a task executed outside of the dataflow
+     * network, see {@link TaskRunner#execute}.
+     *
+     * @param task A task whose outputs were collected
+     */
+    List outputValues(TaskRun task) {
+        if( config instanceof ProcessConfigV2 )
+            return configV2().getOutputs().getParams().collect { param -> task.outputs[param] }
+        final tuples = outputTuplesV1(task)
+        return configV1().getOutputs().collect { OutParam param ->
+            final List values = tuples[param.index]
+            values instanceof MissingParam ? null : (values.size() == 1 ? values[0] : values)
+        }
+    }
+
+    /**
+     * The values of each output of a completed task, by output index
+     */
+    private Map<Short,List> outputTuplesV1(TaskRun task) {
 
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
@@ -849,20 +889,7 @@ class TaskProcessor {
             }
         }
 
-        // -- bind out the collected values
-        for( OutParam param : configV1().getOutputs() ) {
-            final outValue = tuples[param.index]
-            if( outValue == null )
-                throw new IllegalStateException()
-
-            if( outValue instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
-                continue
-            }
-
-            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
-            bindOutParam(param, outValue)
-        }
+        return tuples
     }
 
     protected void bindOutParam( OutParam param, List values ) {
