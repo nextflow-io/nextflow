@@ -15,7 +15,7 @@
 // limitations under the License.
 //
 // Modified by Seqera Labs for Nextflow (2026): trimmed to the methods used by Nextflow and its plugins
-// (removed SelectableChannel, rightShift, then, chainWith, filter, split, tap, merge, choice, separate,
+// (removed SelectableChannel, rightShift, then, chainWith, into, filter, split, tap, merge, choice, separate,
 // the Pool/PGroup/Map variants, getValAsync, the timed getVal and the event manager); added the non-blocking reads of the operator engine.
 
 package groovyx.gpars.dataflow;
@@ -51,13 +51,6 @@ public interface DataflowReadChannel<T> {
         if (item != ReadCallback.NONE)
             callback.onItem(item);
     }
-
-    /**
-     * Copies all the values of the channel into the target channel
-     *
-     * @param target The channel to copy the values into
-     */
-    void into(final DataflowWriteChannel<T> target);
 
     /**
      * Check if value has been set already for this expression

@@ -20,9 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import groovy.lang.Closure;
 import groovyx.gpars.dataflow.impl.ReadCallback;
-import groovyx.gpars.dataflow.impl.ThenMessagingRunnable;
 import groovyx.gpars.dataflow.impl.Waiter;
 
 /**
@@ -31,8 +29,8 @@ import groovyx.gpars.dataflow.impl.Waiter;
  * <p>
  * Rewrites the GPars 1.2.1 classes {@code DataflowVariable} and {@code DataflowExpression}
  * (Copyright 2008-2013 the original author or authors) with their public API and semantics, minus remote
- * variables, bind error listeners, bindUnique, getValAsync, the timed reads, leftShift and the derived
- * expressions for unknown properties and methods.
+ * variables, bind error listeners, bindUnique, getValAsync, the timed reads, leftShift, then, chainWith, into
+ * and the derived expressions for unknown properties and methods.
  *
  * @param <T> Type of values to bind with the DataflowVariable
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -176,37 +174,6 @@ public class DataflowVariable<T> implements DataflowReadChannel<T>, DataflowWrit
         if (isError())
             return error;
         throw new IllegalStateException("No error has been bound to the dataflow variable.");
-    }
-
-    /**
-     * Schedules the closure once the value is bound, and binds its result to the returned variable.
-     * A bound error is propagated without running the closure.
-     */
-    public final <V> DataflowVariable<V> then(final Closure<V> closure) {
-        return then(closure, null);
-    }
-
-    public <V> DataflowVariable<V> then(final Closure<V> closure, final Closure<V> errorHandler) {
-        final DataflowVariable<V> result = new DataflowVariable<V>();
-        whenBound(new ThenMessagingRunnable<T, V>(result, closure, errorHandler));
-        return result;
-    }
-
-    /**
-     * Like {@link #then(Closure)}, returning the result as a read channel
-     */
-    public final <V> DataflowReadChannel<V> chainWith(final Closure<V> closure) {
-        return then(closure);
-    }
-
-    /**
-     * Copies the value into the target channel once bound
-     */
-    @Override
-    public void into(final DataflowWriteChannel<T> target) {
-        final Object item = takeOrSubscribe(it -> target.bind((T) it));
-        if (item != ReadCallback.NONE)
-            target.bind((T) item);
     }
 
     @Override

@@ -172,18 +172,4 @@ class DataflowQueueConformanceTest {
         assertThat(q.getVal()).isEqualTo(2);
     }
 
-    @Test
-    void shouldCopyEveryItemAndThePoisonPillWithInto() throws Exception {
-        var q = new DataflowQueue<Object>();
-        var target = new DataflowBroadcast<Object>();
-        var reader = target.createReadChannel();
-
-        q.into(target);
-        q.bind(1);
-        q.bind(2);
-        q.bind(3);
-        q.bind(PoisonPill.getInstance());
-        assertThat(read(reader, 4)).containsExactly(1, 2, 3, PoisonPill.getInstance());
-    }
-
 }

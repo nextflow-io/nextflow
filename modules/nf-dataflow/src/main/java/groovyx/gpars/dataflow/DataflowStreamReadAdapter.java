@@ -20,21 +20,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import groovyx.gpars.dataflow.impl.ReadCallback;
 import groovyx.gpars.dataflow.impl.Waiter;
-import groovyx.gpars.dataflow.operator.ChainWithClosure;
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure;
-import groovyx.gpars.dataflow.operator.DataflowOperator;
-import groovyx.gpars.dataflow.operator.DataflowProcessor;
 
 /**
  * A reader of a stream: it reads every value bound to the stream after its creation, independently
  * of the other readers.
  * <p>
  * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2011 the original author or authors).
- * Unlike GPars, the blocking and the asynchronous reads share a single cursor, and there is no timed read.
+ * Unlike GPars, the blocking and the asynchronous reads share a single cursor, and there is no timed read and no into.
  *
  * @param <T> The type of messages to pass through the stream
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -116,15 +111,6 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
         return (T) Waiter.read(this);
     }
 
-    /**
-     * Copies all the values into the target channel, with an operator
-     */
-    @Override
-    public void into(final DataflowWriteChannel<T> target) {
-        final Map<String, Object> params = Map.of(DataflowProcessor.INPUTS, List.of(this), DataflowProcessor.OUTPUTS, List.of(target));
-        new DataflowOperator(params, new ChainWithClosure(new CopyChannelsClosure())).start();
-    }
-
     @Override
     public final boolean isBound() {
         return length() > 0;
@@ -138,13 +124,6 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
         // the head first, so that it cannot be past the tail
         final int read = headNode.seq;
         return stream.tail().seq - read;
-    }
-
-    /**
-     * The number of values not read yet, counting at most {@code max} of them. Safe to call from any thread.
-     */
-    public final int length(final int max) {
-        return Math.min(length(), max);
     }
 
     /**

@@ -14,32 +14,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by the mailbox engine instead of a GPars actor; added isActive(); removed registerChannelListenersToAllInputs,
-// start(PGroup), terminateAfterNextRun, bindAllOutputValuesAtomically, the output and state getters, the state object, adding and removing listeners after construction and the
-// registered, afterStart, messageSentOut and customEvent events.
+// Modified by Seqera Labs for Nextflow (2026): merged DataflowOperator into this class, which takes a typed constructor instead of a parameter map;
+// run by the mailbox engine instead of a GPars actor; added the backpressure gate (setGate, resume, isPaused, getPauseCount) and isActive();
+// removed registerChannelListenersToAllInputs, start(PGroup), terminateAfterNextRun, bindAllOutputValuesAtomically, the output and state getters,
+// the state object, adding and removing listeners after construction and the registered, afterStart, messageSentOut and customEvent events.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
+import groovyx.gpars.scheduler.Scheduler;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 
 /**
- * Dataflow selectors and operators (processors) form the basic units in dataflow networks. They are typically combined into oriented graphs that transform data.
- * They accept a set of input and output dataflow channels and following specific strategies they transform input values from the input channels
- * into new values written to the output channels.
+ * Dataflow operators (processors) form the basic units in dataflow networks. They are typically combined into oriented graphs that transform data.
+ * Once a value is available in each of the input channels, the operator's body is triggered on the values, potentially generating values
+ * to be written into the output channels.
  * The output channels at the same time are suitable to be used as input channels by some other dataflow processors.
  * The channels allow processors to communicate.
  * <p>
- * Dataflow selectors and operators enable creation of highly concurrent applications yet the abstraction hides the low-level concurrency primitives
- * and exposes much friendlier API.
  * Operators run on a shared pool of threads, so the actual number of threads used by the calculation can be kept much lower
  * than the actual number of processors used in the network.
  * </p>
@@ -47,74 +46,54 @@ import java.util.function.BooleanSupplier;
  * @author Vaclav Pech
  *         Date: Sep 9, 2009
  */
-@SuppressWarnings({"RawUseOfParameterizedType", "AccessingNonPublicFieldOfAnotherObject", "unchecked", "AbstractClassWithoutAbstractMethods", "ConstantDeclaredInAbstractClass"})
-public abstract class DataflowProcessor {
-
-    public static final String INPUTS = "inputs";
-    public static final String OUTPUTS = "outputs";
-    public static final String MAX_FORKS = "maxForks";
-    private static final String LISTENERS = "listeners";
+@SuppressWarnings({"RawUseOfParameterizedType", "unchecked"})
+public final class DataflowProcessor {
 
     /**
      * The engine running the processor
      */
-    MailboxEngine engine;
+    private final MailboxEngine engine;
 
-    final List<DataflowReadChannel<?>> inputs;
+    private final List<DataflowWriteChannel<?>> outputs;
 
-    final List<DataflowWriteChannel<?>> outputs;
-
-    protected final Collection<DataflowEventListener> listeners = new CopyOnWriteArrayList<DataflowEventListener>();
+    private final List<DataflowEventListener> listeners;
 
     private volatile BooleanSupplier gate;
 
     /**
-     * Creates a processor
+     * Creates a processor on the dataflow pool.
      * After creation the processor needs to be started using the start() method.
      *
-     * @param channels A map specifying "inputs" and "outputs" - dataflow channels (instances of the DataflowQueue or DataflowVariable classes) to use for inputs and outputs
-     * @param code     The processor's body to run each time all inputs have a value to read
+     * @param inputs    The input channels, one per parameter of the body
+     * @param outputs   The output channels, or null for none
+     * @param listeners The event listeners, or null for none
+     * @param maxForks  The maximum number of bodies running at once
+     * @param code      The processor's body to run each time all inputs have a value to read
      */
-    protected DataflowProcessor(final Map<String, Object> channels, final Closure<?> code) {
+    public DataflowProcessor(final List<? extends DataflowReadChannel<?>> inputs, final List<? extends DataflowWriteChannel<?>> outputs, final List<? extends DataflowEventListener> listeners, final int maxForks, final Closure<?> code) {
+        this(Scheduler.pool(), inputs, outputs, listeners, maxForks, code);
+    }
+
+    /**
+     * Creates a processor that runs on the given pool instead of the dataflow pool
+     */
+    DataflowProcessor(final Executor pool, final List<? extends DataflowReadChannel<?>> inputs, final List<? extends DataflowWriteChannel<?>> outputs, final List<? extends DataflowEventListener> listeners, final int maxForks, final Closure<?> code) {
+        if (inputs == null || inputs.isEmpty())
+            throw new IllegalArgumentException("The processor body must take some inputs. The provided list of input channels is empty.");
+        final int parameters = code.getMaximumNumberOfParameters();
+        if (parameters != inputs.size())
+            throw new IllegalArgumentException("The operator's body accepts " + parameters + " parameters while it is given " + inputs.size() + " input streams. The numbers must match.");
+        if (maxForks < 1)
+            throw new IllegalArgumentException("The maxForks argument must be a positive value. " + maxForks + " was provided.");
+        this.outputs = copy(outputs);
+        this.listeners = copy(listeners);
         //noinspection ThisEscapedInObjectConstruction
         code.setDelegate(this);
-
-        listeners.addAll(extractListeners(channels));
-        inputs = channels != null ? extractInputs(channels) : Collections.<DataflowReadChannel<?>>emptyList();
-        outputs = channels != null ? extractOutputs(channels) : Collections.<DataflowWriteChannel<?>>emptyList();
-        if (channels == null) return;
-        final Collection<?> declaredInputs = (Collection<?>) channels.get(INPUTS);
-        if (declaredInputs == null || declaredInputs.isEmpty()) {
-            throw new IllegalArgumentException("The processor body must take some inputs. The provided list of input channels is empty.");
-        }
+        this.engine = new MailboxEngine(this, pool, copy(inputs), (Closure<?>) code.clone(), maxForks);
     }
 
-    static boolean shouldBeMultiThreaded(final Map<String, Object> channels) {
-        final Integer maxForks = (Integer) channels.get(MAX_FORKS);
-        return maxForks != null && maxForks != 1;
-    }
-
-    static List<DataflowReadChannel<?>> extractInputs(final Map<String, Object> channels) {
-        final List<DataflowReadChannel<?>> inputs = (List<DataflowReadChannel<?>>) channels.get(INPUTS);
-        if (inputs == null) return Collections.emptyList();
-        return Collections.unmodifiableList(inputs);
-    }
-
-    static List<DataflowWriteChannel<?>> extractOutputs(final Map<String, Object> channels) {
-        final List<DataflowWriteChannel<?>> outputs = (List<DataflowWriteChannel<?>>) channels.get(OUTPUTS);
-        if (outputs == null) return Collections.emptyList();
-        return Collections.unmodifiableList(outputs);
-    }
-
-    private static Collection<DataflowEventListener> extractListeners(final Map<String, Object> channels) {
-        if (channels == null) return null;
-        final Collection<DataflowEventListener> listeners = (Collection<DataflowEventListener>) channels.get(LISTENERS);
-        return listeners != null ? listeners : Collections.<DataflowEventListener>emptyList();
-    }
-
-    protected static void checkMaxForks(final Map<?, ?> channels) {
-        if ((Integer) channels.get(MAX_FORKS) < 1)
-            throw new IllegalArgumentException("The maxForks argument must be a positive value. " + channels.get(MAX_FORKS) + " was provided.");
+    private static <T> List<T> copy(final List<? extends T> list) {
+        return list != null ? Collections.unmodifiableList(new ArrayList<T>(list)) : Collections.<T>emptyList();
     }
 
     /**
@@ -122,7 +101,7 @@ public abstract class DataflowProcessor {
      *
      * @return This operator instance
      */
-    public final DataflowProcessor start() {
+    public DataflowProcessor start() {
         engine.start();
         return this;
     }
@@ -130,7 +109,7 @@ public abstract class DataflowProcessor {
     /**
      * Stops the processor immediately, potentially loosing unhandled messages
      */
-    public final void terminate() {
+    public void terminate() {
         engine.terminate();
     }
 
@@ -138,11 +117,11 @@ public abstract class DataflowProcessor {
      * Sets a gate that pauses the operator: while the gate returns true, the operator does not
      * read further inputs after a firing. Call {@link #resume()} once the gate may have opened.
      */
-    public final void setGate(final BooleanSupplier gate) {
+    public void setGate(final BooleanSupplier gate) {
         this.gate = gate;
     }
 
-    final boolean isGateClosed() {
+    boolean isGateClosed() {
         final BooleanSupplier g = gate;
         return g != null && g.getAsBoolean();
     }
@@ -150,18 +129,18 @@ public abstract class DataflowProcessor {
     /**
      * Wakes the operator if it is paused by its gate
      */
-    public final void resume() {
+    public void resume() {
         engine.resume();
     }
 
-    public final boolean isPaused() {
+    public boolean isPaused() {
         return engine.isPaused();
     }
 
     /**
      * The number of times the operator was paused by its gate
      */
-    public final long getPauseCount() {
+    public long getPauseCount() {
         return engine.getPauseCount();
     }
 
@@ -170,14 +149,14 @@ public abstract class DataflowProcessor {
      *
      * @throws InterruptedException If the thread gets interrupted
      */
-    public final void join() throws InterruptedException {
+    public void join() throws InterruptedException {
         engine.join();
     }
 
     /**
      * Whether the processor was started and has not stopped yet
      */
-    public final boolean isActive() {
+    public boolean isActive() {
         return engine.isActive();
     }
 
@@ -187,7 +166,7 @@ public abstract class DataflowProcessor {
      * @param idx   The index of the channel to bind
      * @param value The value to bind
      */
-    public final void bindOutput(final int idx, final Object value) {
+    public void bindOutput(final int idx, final Object value) {
         ((DataflowWriteChannel<Object>) outputs.get(idx)).bind(value);
     }
 
@@ -196,7 +175,7 @@ public abstract class DataflowProcessor {
      *
      * @param value The value to bind
      */
-    public final void bindOutput(final Object value) {
+    public void bindOutput(final Object value) {
         bindOutput(0, value);
     }
 
@@ -208,7 +187,7 @@ public abstract class DataflowProcessor {
      *
      * @param value The value to bind
      */
-    public final void bindAllOutputs(final Object value) {
+    public void bindAllOutputs(final Object value) {
         for (final DataflowWriteChannel<?> channel : outputs)
             ((DataflowWriteChannel<Object>) channel).bind(value);
     }
@@ -224,7 +203,7 @@ public abstract class DataflowProcessor {
      *
      * @param values Values to send to output channels of the same position index
      */
-    public final void bindAllOutputValues(final Object... values) {
+    public void bindAllOutputValues(final Object... values) {
         for (int i = 0; i < outputs.size(); i++)
             ((DataflowWriteChannel<Object>) outputs.get(i)).bind(values[i]);
     }
@@ -235,7 +214,7 @@ public abstract class DataflowProcessor {
      *
      * @param value The value to bind
      */
-    public final synchronized void bindAllOutputsAtomically(final Object value) {
+    public synchronized void bindAllOutputsAtomically(final Object value) {
         bindAllOutputs(value);
     }
 
@@ -245,7 +224,7 @@ public abstract class DataflowProcessor {
      * @param e The reported exception
      */
     @SuppressWarnings({"UseOfSystemOutOrSystemErr"})
-    final synchronized void reportError(final Throwable e) {
+    synchronized void reportError(final Throwable e) {
         if (listeners.isEmpty()) {
             System.err.println("The dataflow processor experienced an unhandled exception and is about to terminate. " + e);
             terminate();
@@ -255,13 +234,13 @@ public abstract class DataflowProcessor {
         }
     }
 
-    protected final void fireAfterStop() {
+    void fireAfterStop() {
         for (final DataflowEventListener listener : listeners) {
             listener.afterStop(this);
         }
     }
 
-    protected final boolean fireOnException(final Throwable e) {
+    boolean fireOnException(final Throwable e) {
         boolean terminate = false;
         for (final DataflowEventListener listener : listeners) {
             terminate = terminate || listener.onException(this, e);
@@ -269,7 +248,7 @@ public abstract class DataflowProcessor {
         return terminate;
     }
 
-    protected final Object fireMessageArrived(final DataflowReadChannel channel, final int index, final Object message) {
+    Object fireMessageArrived(final DataflowReadChannel channel, final int index, final Object message) {
         Object result = message;
         for (final DataflowEventListener listener : listeners) {
             result = listener.messageArrived(this, channel, index, result);
@@ -277,7 +256,7 @@ public abstract class DataflowProcessor {
         return result;
     }
 
-    protected final Object fireControlMessageArrived(final DataflowReadChannel channel, final int index, final Object message) {
+    Object fireControlMessageArrived(final DataflowReadChannel channel, final int index, final Object message) {
         Object result = message;
         for (final DataflowEventListener listener : listeners) {
             result = listener.controlMessageArrived(this, channel, index, result);
@@ -285,7 +264,7 @@ public abstract class DataflowProcessor {
         return result;
     }
 
-    protected final List<Object> fireBeforeRun(final List<Object> messages) {
+    List<Object> fireBeforeRun(final List<Object> messages) {
         List<Object> result = messages;
         for (final DataflowEventListener listener : listeners) {
             result = listener.beforeRun(this, result);
@@ -293,7 +272,7 @@ public abstract class DataflowProcessor {
         return result;
     }
 
-    protected final void fireAfterRun(final List<Object> messages) {
+    void fireAfterRun(final List<Object> messages) {
         for (final DataflowEventListener listener : listeners) {
             listener.afterRun(this, messages);
         }

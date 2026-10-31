@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,7 +28,6 @@ import groovy.lang.Closure;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
 import groovyx.gpars.dataflow.impl.ReadCallback;
-import groovyx.gpars.scheduler.Pool;
 
 import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
 
@@ -69,7 +69,7 @@ final class MailboxEngine implements Runnable {
 
     private final Port[] ports;
 
-    private final Pool pool;
+    private final Executor pool;
 
     private final Queue<Object> mailbox = new ConcurrentLinkedQueue<>();
 
@@ -116,7 +116,7 @@ final class MailboxEngine implements Runnable {
 
     private boolean interrupted;
 
-    MailboxEngine(final DataflowProcessor owner, final Pool pool, final List<DataflowReadChannel<?>> inputs, final Closure<?> code, final int maxForks) {
+    MailboxEngine(final DataflowProcessor owner, final Executor pool, final List<DataflowReadChannel<?>> inputs, final Closure<?> code, final int maxForks) {
         this.owner = owner;
         this.pool = pool;
         this.code = code;

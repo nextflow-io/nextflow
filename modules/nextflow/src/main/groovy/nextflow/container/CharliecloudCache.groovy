@@ -24,11 +24,10 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.Duration
+import nextflow.util.LazyValue
 import nextflow.util.TestOnly
 /**
  * Handle caching of remote Charliecloud images
@@ -41,7 +40,7 @@ import nextflow.util.TestOnly
 @CompileStatic
 class CharliecloudCache {
 
-    static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> localImageNames = new ConcurrentHashMap<>()
 
     private CharliecloudConfig config
 
@@ -262,17 +261,17 @@ class CharliecloudCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
      * image download is actually executed.
      *
      * @param imageUrl The Docker image remote URL
-     * @return The {@link DataflowVariable} which holds (and pulls) the local image directory
+     * @return The {@link LazyValue} which holds (and pulls) the local image directory
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String imageUrl) {
+    LazyValue<Path> getLazyImagePath(String imageUrl) {
         if( imageUrl in localImageNames ) {
             log.trace "Charliecloud found local cache for image `$imageUrl`"
             return localImageNames[imageUrl]
@@ -281,7 +280,7 @@ class CharliecloudCache {
         synchronized (localImageNames) {
             def result = localImageNames[imageUrl]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ downloadCharliecloudImage(imageUrl) })
+                result = new LazyValue<Path>({ downloadCharliecloudImage(imageUrl) })
                 localImageNames[imageUrl] = result
             }
             else {
@@ -301,10 +300,7 @@ class CharliecloudCache {
      * @return the container image local {@link Path}
      */
     Path getCachePathFor(String url) {
-        def promise = getLazyImagePath(url)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(url).get()
         if( !result )
             throw new IllegalStateException("Charliecloud cannot pull image `$url`")
         log.trace "Charliecloud cache for `$url` path=$result"

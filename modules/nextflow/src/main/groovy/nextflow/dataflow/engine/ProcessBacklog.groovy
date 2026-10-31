@@ -153,9 +153,7 @@ class ProcessBacklog implements BooleanSupplier {
     }
 
     static private int queued(DataflowReadChannel ch, int max) {
-        if( ch instanceof DataflowStreamReadAdapter )
-            return ch.length(max)
-        if( ch instanceof DataflowQueue )
+        if( ch instanceof DataflowStreamReadAdapter || ch instanceof DataflowQueue )
             return Math.min(ch.length(), max)
         return 0
     }

@@ -18,7 +18,6 @@ package groovyx.gpars.dataflow.operator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -37,14 +36,13 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import static groovyx.gpars.TestThreads.poll;
-import static groovyx.gpars.Closures.function;
 import static groovyx.gpars.TestThreads.start;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Pins the GPars operator semantics that Nextflow relies on: {@code DataflowHelper.newOperator}
- * and {@code TaskProcessor} ({@code new DataflowOperator(params, code).start()}).
+ * and {@code TaskProcessor} ({@code new DataflowProcessor(inputs, outputs, listeners, maxForks, code).start()}).
  */
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
 class DataflowOperatorConformanceTest {
@@ -162,13 +160,13 @@ class DataflowOperatorConformanceTest {
     // -- creation and outputs
 
     @Test
-    void shouldCreateAStartedOperatorWithDataflowOperator() throws Exception {
+    void shouldCreateAStartedOperator() throws Exception {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output)), body((self, x) -> self.bindOutput((Integer) x * 2))).start();
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(), 1, body((self, x) -> self.bindOutput((Integer) x * 2))).start();
         send(input, 1, 2, 3);
-        assertThat(op).isInstanceOf(DataflowOperator.class);
+        assertThat(op).isInstanceOf(DataflowProcessor.class);
         assertThat(read(output, 3)).containsExactly(2, 4, 6);
     }
 
@@ -177,7 +175,7 @@ class DataflowOperatorConformanceTest {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output)), body((self, x) -> self.bindOutput((Integer) x + 1)));
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(), 1, body((self, x) -> self.bindOutput((Integer) x + 1)));
         send(input, 1, 2);
         assertThat(isEmpty(output)).isTrue();
 
@@ -192,7 +190,7 @@ class DataflowOperatorConformanceTest {
         var output = new DataflowQueue<Object>();
         var seen = new DataflowVariable<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output)), body((self, x) -> {
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(), 1, body((self, x) -> {
             seen.bind(self);
             self.bindOutput(x);
         })).start();
@@ -207,7 +205,7 @@ class DataflowOperatorConformanceTest {
         var b = new DataflowQueue<Object>();
         var calls = new DataflowQueue<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(a, b)), recording(2, calls)).start();
+        var op = new DataflowProcessor(List.of(a, b), List.of(), List.of(), 1, recording(2, calls)).start();
         a.bind(1);
         b.bind("x");
         var call = (Call) poll(calls, WAIT, TimeUnit.SECONDS);
@@ -221,7 +219,7 @@ class DataflowOperatorConformanceTest {
         var o1 = new DataflowQueue<Object>();
         var o2 = new DataflowQueue<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(o1, o2)), body((self, x) -> {
+        var op = new DataflowProcessor(List.of(input), List.of(o1, o2), List.of(), 1, body((self, x) -> {
             self.bindOutput(x);
             self.bindOutput(1, -(Integer) x);
             self.bindAllOutputs("all");
@@ -237,13 +235,13 @@ class DataflowOperatorConformanceTest {
     void shouldRejectInvalidParameters() {
         var q = new DataflowQueue<Object>();
 
-        assertThatThrownBy(() -> new DataflowOperator(Map.of("inputs", List.of()), body((self, x) -> {})))
+        assertThatThrownBy(() -> new DataflowProcessor(List.of(), List.of(), List.of(), 1, body((self, x) -> {})))
             .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new DataflowOperator(Map.of("inputs", List.of(q)), body((self, x, y) -> {})))
+        assertThatThrownBy(() -> new DataflowProcessor(List.of(q), List.of(), List.of(), 1, body((self, x, y) -> {})))
             .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new DataflowOperator(Map.of("inputs", List.of(q), "maxForks", 0), body((self, x) -> {})))
+        assertThatThrownBy(() -> new DataflowProcessor(List.of(q), List.of(), List.of(), 0, body((self, x) -> {})))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -255,7 +253,7 @@ class DataflowOperatorConformanceTest {
         var b = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
 
-        new DataflowOperator(Map.of("inputs", List.of(a, b), "outputs", List.of(output)), body((self, x, y) -> self.bindOutput(List.of(x, y)))).start();
+        new DataflowProcessor(List.of(a, b), List.of(output), List.of(), 1, body((self, x, y) -> self.bindOutput(List.of(x, y)))).start();
         send(b, "p", "q");
         send(a, 1, 2, 3);
         assertThat(read(output, 2)).containsExactly(List.of(1, "p"), List.of(2, "q"));
@@ -274,7 +272,7 @@ class DataflowOperatorConformanceTest {
         var maxRunning = new AtomicInteger();
         var n = 50;
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output)), body((self, x) -> {
+        new DataflowProcessor(List.of(input), List.of(output), List.of(), 1, body((self, x) -> {
             maxRunning.accumulateAndGet(running.incrementAndGet(), Math::max);
             // widen the window in which overlapping bodies would be observed
             Thread.sleep(1);
@@ -297,7 +295,7 @@ class DataflowOperatorConformanceTest {
         var allIn = new CountDownLatch(3);
         var n = 30;
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "maxForks", 3), body((self, x) -> {
+        new DataflowProcessor(List.of(input), List.of(output), List.of(), 3, body((self, x) -> {
             maxRunning.accumulateAndGet(running.incrementAndGet(), Math::max);
             // the first three bodies only complete if they run at the same time
             allIn.countDown();
@@ -334,7 +332,7 @@ class DataflowOperatorConformanceTest {
         };
         var n = 200;
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "maxForks", 4, "listeners", List.of(listener)), body((self, x) -> self.bindOutput(x))).start();
+        new DataflowProcessor(List.of(input), List.of(output), List.of(listener), 4, body((self, x) -> self.bindOutput(x))).start();
         for( int i = 0; i < n; i++ )
             input.bind(i);
         assertThat(read(output, n)).containsExactlyInAnyOrderElementsOf(range(n));
@@ -358,7 +356,7 @@ class DataflowOperatorConformanceTest {
             }
         };
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "listeners", List.of(listener)), recording(1, calls)).start();
+        new DataflowProcessor(List.of(input), List.of(), List.of(listener), 1, recording(1, calls)).start();
         input.bind(1);
         assertThat(((Call) poll(calls, WAIT, TimeUnit.SECONDS)).args()).containsExactly("params", List.of(10));
     }
@@ -369,7 +367,7 @@ class DataflowOperatorConformanceTest {
         var value = new DataflowVariable<Object>();
         var output = new DataflowQueue<Object>();
 
-        new DataflowOperator(Map.of("inputs", List.of(items, value), "outputs", List.of(output)), body((self, x, v) -> self.bindOutput((Integer) x + (Integer) v))).start();
+        new DataflowProcessor(List.of(items, value), List.of(output), List.of(), 1, body((self, x, v) -> self.bindOutput((Integer) x + (Integer) v))).start();
         send(items, 1, 2, 3);
         assertThat(isEmpty(output)).isTrue();
 
@@ -389,7 +387,7 @@ class DataflowOperatorConformanceTest {
         var rec = new Recorder();
         var count = new AtomicInteger();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(value), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x) -> {
+        var op = new DataflowProcessor(List.of(value), List.of(output), List.of(rec), 1, body((self, x) -> {
             count.incrementAndGet();
             self.bindOutput(x);
             self.terminate();
@@ -409,23 +407,13 @@ class DataflowOperatorConformanceTest {
         var o1 = new DataflowQueue<Object>();
         var o2 = new DataflowQueue<Object>();
 
-        new DataflowOperator(Map.of("inputs", List.of(bc.createReadChannel()), "outputs", List.of(o1)), body((self, x) -> self.bindOutput(x))).start();
-        new DataflowOperator(Map.of("inputs", List.of(bc.createReadChannel()), "outputs", List.of(o2)), body((self, x) -> self.bindOutput((Integer) x * 2))).start();
+        new DataflowProcessor(List.of(bc.createReadChannel()), List.of(o1), List.of(), 1, body((self, x) -> self.bindOutput(x))).start();
+        new DataflowProcessor(List.of(bc.createReadChannel()), List.of(o2), List.of(), 1, body((self, x) -> self.bindOutput((Integer) x * 2))).start();
         bc.bind(1);
         bc.bind(2);
         bc.bind(STOP);
         assertThat(read(o1, 3)).containsExactly(1, 2, STOP);
         assertThat(read(o2, 3)).containsExactly(2, 4, STOP);
-    }
-
-    @Test
-    void shouldCopyItemsWithAChainWithClosure() throws Exception {
-        var input = new DataflowQueue<Object>();
-        var output = new DataflowQueue<Object>();
-
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output)), new ChainWithClosure<>(function(x -> (Integer) x * 3))).start();
-        send(input, 1, 2, STOP);
-        assertThat(read(output, 3)).containsExactly(3, 6, STOP);
     }
 
     // -- poison pill
@@ -437,7 +425,7 @@ class DataflowOperatorConformanceTest {
         var o2 = new DataflowQueue<Object>();
         var rec = new Recorder();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(o1, o2), "listeners", List.of(rec)), body((self, x) -> self.bindAllOutputs(x))).start();
+        var op = new DataflowProcessor(List.of(input), List.of(o1, o2), List.of(rec), 1, body((self, x) -> self.bindAllOutputs(x))).start();
         send(input, 1, 2, STOP);
         assertThat(read(o1, 3)).containsExactly(1, 2, STOP);
         assertThat(read(o2, 3)).containsExactly(1, 2, STOP);
@@ -452,7 +440,7 @@ class DataflowOperatorConformanceTest {
         var output = new DataflowQueue<Object>();
         var rec = new Recorder();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(a, b), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x, y) -> self.bindOutput((Integer) x + (Integer) y))).start();
+        var op = new DataflowProcessor(List.of(a, b), List.of(output), List.of(rec), 1, body((self, x, y) -> self.bindOutput((Integer) x + (Integer) y))).start();
         send(a, 1, 2, 3);
         send(b, 10, STOP);
         assertThat(read(output, 2)).containsExactly(11, STOP);
@@ -469,7 +457,7 @@ class DataflowOperatorConformanceTest {
         var rec = new Recorder();
         value.bind(100);
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(items, value), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x, v) -> self.bindOutput((Integer) x + (Integer) v))).start();
+        var op = new DataflowProcessor(List.of(items, value), List.of(output), List.of(rec), 1, body((self, x, v) -> self.bindOutput((Integer) x + (Integer) v))).start();
         send(items, 1, STOP);
         assertThat(read(output, 2)).containsExactly(101, STOP);
         assertThat(poll(rec.stopped, WAIT, TimeUnit.SECONDS)).isSameAs(op);
@@ -482,7 +470,7 @@ class DataflowOperatorConformanceTest {
         var output = new DataflowQueue<Object>();
         var rec = new Recorder();
 
-        new DataflowOperator(Map.of("inputs", List.of(a, b), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x, y) -> self.bindOutput(x))).start();
+        new DataflowProcessor(List.of(a, b), List.of(output), List.of(rec), 1, body((self, x, y) -> self.bindOutput(x))).start();
         a.bind(STOP);
         b.bind(STOP);
         assertThat(poll(output, WAIT, TimeUnit.SECONDS)).isSameAs(STOP);
@@ -500,7 +488,7 @@ class DataflowOperatorConformanceTest {
         var release = new CountDownLatch(1);
         var rec = new Recorder();
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "maxForks", 4, "listeners", List.of(rec)), body((self, x) -> {
+        new DataflowProcessor(List.of(input), List.of(output), List.of(rec), 4, body((self, x) -> {
             started.countDown();
             release.await(WAIT, TimeUnit.SECONDS);
             self.bindOutput(x);
@@ -529,7 +517,7 @@ class DataflowOperatorConformanceTest {
         var output = new DataflowQueue<Object>();
         var rec = new Recorder();
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x) -> {
+        new DataflowProcessor(List.of(input), List.of(output), List.of(rec), 1, body((self, x) -> {
             rec.events.add("body:" + x);
             self.bindOutput(x);
         })).start();
@@ -550,7 +538,7 @@ class DataflowOperatorConformanceTest {
         var output = new DataflowQueue<Object>();
         var rec = new Recorder(false);
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x) -> {
+        new DataflowProcessor(List.of(input), List.of(output), List.of(rec), 1, body((self, x) -> {
             if( x.equals(2) ) throw new IllegalStateException("bad " + x);
             self.bindOutput(x);
         })).start();
@@ -568,7 +556,7 @@ class DataflowOperatorConformanceTest {
         var output = new DataflowQueue<Object>();
         var rec = new Recorder(true);
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x) -> {
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(rec), 1, body((self, x) -> {
             if( x.equals(2) ) throw new IllegalStateException("bad " + x);
             self.bindOutput(x);
         })).start();
@@ -587,7 +575,7 @@ class DataflowOperatorConformanceTest {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output)), body((self, x) -> {
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(), 1, body((self, x) -> {
             if( x.equals(2) ) throw new IllegalStateException("expected test error");
             self.bindOutput(x);
         })).start();
@@ -602,7 +590,7 @@ class DataflowOperatorConformanceTest {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
         var rec = new Recorder();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "listeners", List.of(rec)), body((self, x) -> self.bindOutput(x))).start();
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(rec), 1, body((self, x) -> self.bindOutput(x))).start();
         input.bind(1);
         poll(output, WAIT, TimeUnit.SECONDS);
         var joined = joinAsync(op);
@@ -625,7 +613,7 @@ class DataflowOperatorConformanceTest {
         var rec = new Recorder();
         var started = new CountDownLatch(1);
         var interrupted = new DataflowVariable<Object>();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "listeners", List.of(rec)), body((self, x) -> {
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(rec), 1, body((self, x) -> {
             started.countDown();
             try {
                 Thread.sleep(30_000);
@@ -651,7 +639,7 @@ class DataflowOperatorConformanceTest {
     void shouldFireAfterStopOnlyOnce() throws Exception {
         var input = new DataflowQueue<Object>();
         var rec = new Recorder();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "listeners", List.of(rec)), body((self, x) -> {})).start();
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(rec), 1, body((self, x) -> {})).start();
 
         input.bind(STOP);
         poll(rec.stopped, WAIT, TimeUnit.SECONDS);
@@ -665,7 +653,7 @@ class DataflowOperatorConformanceTest {
     @Test
     void shouldBlockJoinUntilTheOperatorStops() throws Exception {
         var input = new DataflowQueue<Object>();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input)), body((self, x) -> {})).start();
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(), 1, body((self, x) -> {})).start();
         var joined = joinAsync(op);
 
         assertThat(poll(joined, 100, TimeUnit.MILLISECONDS)).isNull();
@@ -680,7 +668,7 @@ class DataflowOperatorConformanceTest {
         var rec = new Recorder();
         var seen = new CopyOnWriteArrayList<Object>();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "listeners", List.of(rec)), body((self, x) -> seen.add(x))).start();
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(rec), 1, body((self, x) -> seen.add(x))).start();
         send(input, 1, 2, STOP);
         assertThat(poll(rec.stopped, WAIT, TimeUnit.SECONDS)).isSameAs(op);
         assertThat(seen).containsExactly(1, 2);

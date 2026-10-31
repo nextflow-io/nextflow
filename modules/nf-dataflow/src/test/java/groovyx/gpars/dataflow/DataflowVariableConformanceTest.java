@@ -15,11 +15,9 @@
  */
 package groovyx.gpars.dataflow;
 
-import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -27,7 +25,6 @@ import org.junit.jupiter.api.Timeout;
 
 import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.Closures.action;
-import static groovyx.gpars.Closures.function;
 import static groovyx.gpars.TestThreads.awaitBlocked;
 import static groovyx.gpars.TestThreads.start;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Pins the GPars {@link DataflowVariable} semantics that Nextflow relies on
- * (value channels, reply variables, {@code LazyDataflowVariable} caches).
+ * (value channels and reply variables).
  */
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
 class DataflowVariableConformanceTest {
@@ -222,120 +219,6 @@ class DataflowVariableConformanceTest {
         assertThat(v.isError()).isTrue();
         assertThat(v.getError()).isSameAs(error);
         assertThat(v.getVal()).isSameAs(error);
-    }
-
-    @Test
-    void shouldChainThenOnTheBoundValue() throws Exception {
-        // the ToListOp pattern: the result of then() is used as a DataflowVariable
-        var before = new DataflowVariable<Object>();
-        var early = before.then(function(x -> "early:" + x));
-        before.bind(1);
-
-        var after = new DataflowVariable<Object>();
-        after.bind(2);
-        var late = after.then(function(x -> "late:" + x));
-
-        assertThat(early).isInstanceOf(DataflowVariable.class);
-        assertThat(late).isInstanceOf(DataflowVariable.class);
-        assertThat(poll(early, WAIT, TimeUnit.SECONDS)).isEqualTo("early:1");
-        assertThat(poll(late, WAIT, TimeUnit.SECONDS)).isEqualTo("late:2");
-    }
-
-    @Test
-    void shouldPropagateErrorsThroughThen() throws Exception {
-        var calls = new AtomicInteger();
-        var failed = new DataflowVariable<Object>();
-        var error = new RuntimeException("boom");
-        var skipped = (DataflowVariable<?>) failed.then(function(x -> calls.incrementAndGet()));
-        failed.bindError(error);
-
-        var bound = new DataflowVariable<Object>();
-        var thrown = (DataflowVariable<?>) bound.then(function(x -> { throw new IllegalStateException("then boom"); }));
-        bound.bind(1);
-
-        poll(skipped, WAIT, TimeUnit.SECONDS);
-        assertThat(skipped.isError()).isTrue();
-        assertThat(skipped.getError()).isSameAs(error);
-        assertThat(calls.get()).isZero();
-
-        poll(thrown, WAIT, TimeUnit.SECONDS);
-        assertThat(thrown.isError()).isTrue();
-        assertThat(thrown.getError()).isInstanceOf(IllegalStateException.class).hasMessage("then boom");
-    }
-
-    @Test
-    void shouldComputeALazyVariableOnceOnFirstRead() throws Exception {
-        var count = new AtomicInteger();
-        var v = new LazyDataflowVariable<Object>(function(() -> { count.incrementAndGet(); return "value"; }));
-
-        assertThat(count.get()).isZero();
-
-        var a = poll(v, WAIT, TimeUnit.SECONDS);
-        var b = poll(v, WAIT, TimeUnit.SECONDS);
-        assertThat(a).isEqualTo("value");
-        assertThat(b).isEqualTo("value");
-        assertThat(count.get()).isEqualTo(1);
-        assertThat(v.isBound()).isTrue();
-    }
-
-    @Test
-    void shouldComputeALazyVariableOnceUnderConcurrentReads() throws Exception {
-        // the conda/spack/container cache pattern: concurrent tasks wait for the same environment
-        var count = new AtomicInteger();
-        var release = new CountDownLatch(1);
-        var v = new LazyDataflowVariable<Object>(function(() -> {
-            count.incrementAndGet();
-            release.await(WAIT, TimeUnit.SECONDS);
-            return "value";
-        }));
-        var results = new CopyOnWriteArrayList<Object>();
-        var readers = new ArrayList<Thread>();
-        for( int i = 0; i < 8; i++ )
-            readers.add(start(() -> results.add(v.getVal())));
-
-        for( var reader : readers )
-            awaitBlocked(reader);
-        release.countDown();
-        for( var reader : readers )
-            reader.join(WAIT * 1000);
-
-        assertThat(results).hasSize(8).containsOnly("value");
-        assertThat(count.get()).isEqualTo(1);
-    }
-
-    @Test
-    void shouldComputeALazyVariableOnceWhenTheFirstReadsRace() throws Exception {
-        for( int round = 0; round < 200; round++ ) {
-            var count = new AtomicInteger();
-            var v = new LazyDataflowVariable<Object>(function(() -> { count.incrementAndGet(); return "value"; }));
-            var go = new CountDownLatch(1);
-            var readers = new ArrayList<Thread>();
-            for( int i = 0; i < 6; i++ ) {
-                final int kind = i % 2;
-                readers.add(start(() -> {
-                    go.await();
-                    if( kind == 0 )
-                        v.getVal();
-                    else
-                        v.isError();
-                }));
-            }
-            go.countDown();
-            for( var reader : readers )
-                reader.join(WAIT * 1000);
-
-            assertThat(poll(v, WAIT, TimeUnit.SECONDS)).isEqualTo("value");
-            assertThat(count.get()).isEqualTo(1);
-        }
-    }
-
-    @Test
-    void shouldReportTheErrorOfAFailingLazyVariable() throws Exception {
-        var v = new LazyDataflowVariable<Object>(function(() -> { throw new IllegalStateException("lazy boom"); }));
-
-        poll(v, WAIT, TimeUnit.SECONDS);
-        assertThat(v.isError()).isTrue();
-        assertThat(v.getError()).isInstanceOf(IllegalStateException.class).hasMessage("lazy boom");
     }
 
 }

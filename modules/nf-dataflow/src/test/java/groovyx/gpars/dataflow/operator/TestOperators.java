@@ -15,10 +15,12 @@
  */
 package groovyx.gpars.dataflow.operator;
 
-import java.util.Map;
+import java.util.List;
+import java.util.concurrent.Executor;
 
 import groovy.lang.Closure;
-import groovyx.gpars.scheduler.Pool;
+import groovyx.gpars.dataflow.DataflowReadChannel;
+import groovyx.gpars.dataflow.DataflowWriteChannel;
 
 /**
  * Operator helpers for tests in other packages.
@@ -30,7 +32,7 @@ public final class TestOperators {
     /**
      * Start an operator on the given pool instead of the dataflow pool.
      */
-    public static DataflowProcessor start(Pool pool, Map<String, ?> channels, Closure<?> code) {
-        return new DataflowOperator(pool, channels, code).start();
+    public static DataflowProcessor start(Executor pool, List<? extends DataflowReadChannel<?>> inputs, List<? extends DataflowWriteChannel<?>> outputs, List<? extends DataflowEventListener> listeners, int maxForks, Closure<?> code) {
+        return new DataflowProcessor(pool, inputs, outputs, listeners, maxForks, code).start();
     }
 }
