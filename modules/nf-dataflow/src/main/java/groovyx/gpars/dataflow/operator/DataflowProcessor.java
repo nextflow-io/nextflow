@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount).
 
 package groovyx.gpars.dataflow.operator;
 
@@ -27,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BooleanSupplier;
 
 /**
  * Dataflow selectors and operators (processors) form the basic units in dataflow networks. They are typically combined into oriented graphs that transform data.
@@ -64,6 +67,8 @@ public abstract class DataflowProcessor {
     protected final Object stateObject;
 
     protected final Collection<DataflowEventListener> listeners = new CopyOnWriteArrayList<DataflowEventListener>();
+
+    private volatile BooleanSupplier gate;
 
     /**
      * Creates a processor
@@ -153,6 +158,37 @@ public abstract class DataflowProcessor {
      */
     public final void terminateAfterNextRun() {
         actor.send(StopGently.getInstance());
+    }
+
+    /**
+     * Sets a gate that pauses the operator: while the gate returns true, the operator does not
+     * read further inputs after a firing. Call {@link #resume()} once the gate may have opened.
+     */
+    public final void setGate(final BooleanSupplier gate) {
+        this.gate = gate;
+    }
+
+    final boolean isGateClosed() {
+        final BooleanSupplier g = gate;
+        return g != null && g.getAsBoolean();
+    }
+
+    /**
+     * Wakes the operator if it is paused by its gate
+     */
+    public final void resume() {
+        actor.resume();
+    }
+
+    public final boolean isPaused() {
+        return actor.isPaused();
+    }
+
+    /**
+     * The number of times the operator was paused by its gate
+     */
+    public final long getPauseCount() {
+        return actor.getPauseCount();
     }
 
     /**

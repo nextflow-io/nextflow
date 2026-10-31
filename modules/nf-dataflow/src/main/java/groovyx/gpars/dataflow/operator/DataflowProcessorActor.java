@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure hooks (resume, isPaused, getPauseCount).
 
 package groovyx.gpars.dataflow.operator;
 
@@ -68,6 +70,18 @@ abstract class DataflowProcessorActor extends StaticDispatchActor<Object> {
             ((DataflowReadChannel<Object>) input).getEventManager().addDataflowChannelListener(handler);
         }
     }
+
+    void resume() {
+    }
+
+    boolean isPaused() {
+        return false;
+    }
+
+    long getPauseCount() {
+        return 0;
+    }
+
     final void onException(final Throwable e) {
         reportException(e);
         terminate();

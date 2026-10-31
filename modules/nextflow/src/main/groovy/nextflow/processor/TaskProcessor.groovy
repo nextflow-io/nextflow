@@ -49,6 +49,7 @@ import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
+import nextflow.dataflow.engine.ProcessBacklog
 import nextflow.exception.FailedGuardException
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
@@ -166,6 +167,11 @@ class TaskProcessor {
      * note: it must be declared volatile -- issue #41
      */
     protected volatile DataflowProcessor operator
+
+    /**
+     * The process backlog, when dataflow backpressure is enabled
+     */
+    private ProcessBacklog backlog
 
     /**
      * The underlying executor which will run the task
@@ -398,6 +404,8 @@ class TaskProcessor {
 
     LongAdder getForksCount() { forksCount }
 
+    ProcessBacklog getBacklog() { backlog }
+
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
@@ -597,6 +605,7 @@ class TaskProcessor {
         def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
+        backlog = session.backpressure?.register(name, opInputs, operator)
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
@@ -651,6 +660,7 @@ class TaskProcessor {
         final params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         final invoke = new InvokeTaskAdapter(this, opInputs.size())
         this.operator = new DataflowOperator(group, params, invoke)
+        this.backlog = session.backpressure?.register(name, opInputs, operator)
         session.allOperators << operator
 
         // notify the creation of a new vertex the execution DAG
@@ -2006,6 +2016,7 @@ class TaskProcessor {
 
     protected void closeProcess() {
         arrayCollector?.close()
+        backlog?.close()
     }
 
     protected void terminateProcess() {
@@ -2109,6 +2120,7 @@ class TaskProcessor {
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
+            backlog?.taskStarted()
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
@@ -2125,6 +2137,7 @@ class TaskProcessor {
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After run"
             currentTask.remove()
+            backlog?.taskPrepared()
         }
 
         @Override
