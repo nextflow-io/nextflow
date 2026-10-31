@@ -25,9 +25,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventListener
-import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
@@ -123,7 +121,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code DataflowOperator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -138,7 +136,8 @@ class DataflowHelper {
             params.listeners = [ DEF_ERROR_LISTENER ]
         }
 
-        final op = new DataflowOperator(params, code).start()
+        final maxForks = params.maxForks != null ? params.maxForks as int : 1
+        final op = new DataflowProcessor(params.inputs as List, params.outputs as List, params.listeners as List, maxForks, code).start()
         NodeMarker.appendOperator(op)
         if( session && session.allOperators != null ) {
             session.allOperators.add(op)
@@ -148,7 +147,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code DataflowOperator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -161,7 +160,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code DataflowOperator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -174,7 +173,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code DataflowOperator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -188,12 +187,7 @@ class DataflowHelper {
         if( !listener )
             listener = DEF_ERROR_LISTENER
 
-        def params = [:]
-        params.inputs = [input]
-        params.outputs = [output]
-        params.listeners = [listener]
-
-        final op = new DataflowOperator(params, code).start()
+        final op = new DataflowProcessor([input], [output], [listener], 1, code).start()
         NodeMarker.appendOperator(op)
         if( session && session.allOperators != null ) {
             session.allOperators << op

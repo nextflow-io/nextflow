@@ -87,11 +87,6 @@ class ChannelInternalsTest {
         }
 
         @Override
-        public void into(DataflowWriteChannel<Object> target) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public boolean isBound() {
             return false;
         }
@@ -369,8 +364,8 @@ class ChannelInternalsTest {
                 Arrays.fill(last, Integer.MIN_VALUE);
                 int ended = 0;
                 while( ended < writers ) {
-                    final int length = reader.length(5);
-                    if( length < 0 || length > 5 )
+                    final int length = reader.length();
+                    if( length < 0 )
                         errors.add("length " + length);
                     Object item;
                     if( async ) {
@@ -473,15 +468,6 @@ class ChannelInternalsTest {
         assertThatThrownBy(() -> shell.evaluate("v.bytes"))
             .isInstanceOf(MissingPropertyException.class)
             .hasMessageContaining("bytes");
-    }
-
-    @Test
-    void shouldCopyAValueWithInto() throws Exception {
-        var v = new DataflowVariable<Object>();
-        var target = new DataflowQueue<Object>();
-        v.into(target);
-        v.bind("x");
-        assertThat(poll(target, WAIT, TimeUnit.SECONDS)).isEqualTo("x");
     }
 
     private static Supplier<Object> bindWeak(DataflowWriteChannel<Object> channel) {

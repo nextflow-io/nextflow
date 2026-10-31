@@ -17,9 +17,10 @@ package groovyx.gpars.dataflow.operator;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,8 +31,6 @@ import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
-import groovyx.gpars.scheduler.DefaultPool;
-import groovyx.gpars.scheduler.Pool;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
@@ -61,7 +60,7 @@ class MailboxEngineTest {
     @Test
     void shouldBeActiveFromStartUntilItStops() throws Exception {
         var input = new DataflowQueue<Object>();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input)), Closures.action(x -> {}));
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(), 1, Closures.action(x -> {}));
         assertThat(op.isActive()).isFalse();
 
         op.start();
@@ -80,7 +79,7 @@ class MailboxEngineTest {
         var started = new AtomicInteger();
         var stopped = new StopCounter();
 
-        new DataflowOperator(Map.of("inputs", List.of(input), "maxForks", 2, "listeners", List.of(stopped)), Closures.action(x -> {
+        new DataflowProcessor(List.of(input), List.of(), List.of(stopped), 2, Closures.action(x -> {
             started.incrementAndGet();
             release.await();
         })).start();
@@ -107,7 +106,7 @@ class MailboxEngineTest {
         for( int round = 0; round < 50; round++ ) {
             var input = new DataflowQueue<Object>();
             var stopped = new StopCounter();
-            var op = new DataflowOperator(Map.of("inputs", List.of(input), "listeners", List.of(stopped)), Closures.action(x -> {})).start();
+            var op = new DataflowProcessor(List.of(input), List.of(), List.of(stopped), 1, Closures.action(x -> {})).start();
             var go = new CountDownLatch(1);
             var threads = new ArrayList<Thread>();
             for( int i = 0; i < 4; i++ )
@@ -126,10 +125,10 @@ class MailboxEngineTest {
     @Test
     void shouldNotLeakTheInterruptOfAnExternalTerminateToTheNextTaskOnThePoolThread() throws Exception {
         // a single thread, so the next operator runs on the thread interrupted for the first one
-        var pool = new DefaultPool(true, 1);
+        var pool = Executors.newFixedThreadPool(1);
         try {
             var started = new CountDownLatch(1);
-            var sleeper = new DataflowOperator(pool, Map.of("inputs", List.of(constant(1))), Closures.action(x -> {
+            var sleeper = new DataflowProcessor(pool, List.of(constant(1)), List.of(), List.of(), 1, Closures.action(x -> {
                 started.countDown();
                 Thread.sleep(30_000);
             })).start();
@@ -138,7 +137,7 @@ class MailboxEngineTest {
             sleeper.join();
 
             var interrupted = new DataflowVariable<Boolean>();
-            new DataflowOperator(pool, Map.of("inputs", List.of(constant(2))), Closures.action(x -> interrupted.bind(Thread.currentThread().isInterrupted()))).start();
+            new DataflowProcessor(pool, List.of(constant(2)), List.of(), List.of(), 1, Closures.action(x -> interrupted.bind(Thread.currentThread().isInterrupted()))).start();
             assertThat(poll(interrupted, 5, TimeUnit.SECONDS)).isFalse();
         }
         finally {
@@ -149,21 +148,15 @@ class MailboxEngineTest {
     @Test
     void shouldNotScheduleAnUnstartedOperator() throws Exception {
         var executions = new AtomicInteger();
-        var pool = new DefaultPool(true, 2);
-        var counting = new Pool() {
-            public void resize(int poolSize) { pool.resize(poolSize); }
-            public void resetDefaultSize() { pool.resetDefaultSize(); }
-            public int getPoolSize() { return pool.getPoolSize(); }
-            public void shutdown() { pool.shutdown(); }
-            public void execute(Runnable task) {
-                executions.incrementAndGet();
-                pool.execute(task);
-            }
+        var pool = Executors.newFixedThreadPool(2);
+        Executor counting = task -> {
+            executions.incrementAndGet();
+            pool.execute(task);
         };
         try {
             var input = new DataflowQueue<Object>();
             var fired = new CopyOnWriteArrayList<Object>();
-            var op = new DataflowOperator(counting, Map.of("inputs", List.of(input)), Closures.action(x -> fired.add(x)));
+            var op = new DataflowProcessor(counting, List.of(input), List.of(), List.of(), 1, Closures.action(x -> fired.add(x)));
             input.bind(1);
             Thread.sleep(100);
             assertThat(executions.get()).isZero();
@@ -174,7 +167,7 @@ class MailboxEngineTest {
             op.join();
         }
         finally {
-            counting.shutdown();
+            pool.shutdown();
         }
     }
 
@@ -188,7 +181,7 @@ class MailboxEngineTest {
                 interrupted.bind(Thread.currentThread().isInterrupted());
             }
         };
-        var op = new DataflowOperator(Map.of("inputs", List.of(constant(1)), "listeners", List.of(listener)), Closures.action(x -> {
+        var op = new DataflowProcessor(List.of(constant(1)), List.of(), List.of(listener), 1, Closures.action(x -> {
             started.countDown();
             // wait for the interrupt of the terminate, leaving the flag set
             final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
@@ -215,7 +208,7 @@ class MailboxEngineTest {
                 return message;
             }
         };
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "outputs", List.of(output), "maxForks", 2, "listeners", List.of(listener)), Closures.action(x -> {
+        var op = new DataflowProcessor(List.of(input), List.of(output), List.of(listener), 2, Closures.action(x -> {
             started.countDown();
             release.await();
         })).start();
@@ -243,7 +236,7 @@ class MailboxEngineTest {
         var closed = new AtomicBoolean();
         var stopped = new StopCounter();
 
-        var op = new DataflowOperator(Map.of("inputs", List.of(input), "maxForks", 2, "listeners", List.of(stopped)), Closures.action(x -> {
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(stopped), 2, Closures.action(x -> {
             started.incrementAndGet();
             release.await();
         }));
@@ -281,7 +274,7 @@ class MailboxEngineTest {
         a.bind(1);
         b.bind(2);
         var fired = new AtomicInteger();
-        var op = new DataflowOperator(Map.of("inputs", List.of(a, b)), Closures.action((x, y) -> fired.incrementAndGet())).start();
+        var op = new DataflowProcessor(List.of(a, b), List.of(), List.of(), 1, Closures.action((x, y) -> fired.incrementAndGet())).start();
         try {
             await(() -> fired.get() == 1);
             Thread.sleep(100);
@@ -297,7 +290,7 @@ class MailboxEngineTest {
     void shouldNotTakeAValueOfAQueueInputOnceStopped() throws Exception {
         var input = new DataflowQueue<Object>();
         var fired = new CopyOnWriteArrayList<Object>();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input)), Closures.action(x -> fired.add(x))).start();
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(), 1, Closures.action(x -> fired.add(x))).start();
         input.bind(1);
         await(() -> fired.size() == 1);
 
@@ -321,7 +314,7 @@ class MailboxEngineTest {
     private static void terminateWhileBinding(DataflowWriteChannel<Object> channel, DataflowReadChannel<Object> input, int round) throws Exception {
         final int n = 200;
         var fired = new AtomicInteger();
-        var op = new DataflowOperator(Map.of("inputs", List.of(input)), Closures.action(x -> fired.incrementAndGet())).start();
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(), 1, Closures.action(x -> fired.incrementAndGet())).start();
         var writer = start(() -> {
             for( int i = 0; i < n; i++ )
                 channel.bind(i);
@@ -343,7 +336,7 @@ class MailboxEngineTest {
     void shouldYieldThePoolThreadWhileFiringOnBufferedValues() throws Exception {
         // a single thread: the other operator runs only if the first one yields between batches
         final int n = 100_000;
-        var pool = new DefaultPool(true, 1);
+        var pool = Executors.newFixedThreadPool(1);
         try {
             var busy = new DataflowBroadcast<Object>();
             var reader = busy.createReadChannel();
@@ -354,8 +347,8 @@ class MailboxEngineTest {
             var seen = new DataflowVariable<Integer>();
             var stopped = new StopCounter();
 
-            new DataflowOperator(pool, Map.of("inputs", List.of(reader), "listeners", List.of(stopped)), Closures.action(x -> count.incrementAndGet())).start();
-            new DataflowOperator(pool, Map.of("inputs", List.of(constant(1))), Closures.action(x -> seen.bind(count.get()))).start();
+            new DataflowProcessor(pool, List.of(reader), List.of(), List.of(stopped), 1, Closures.action(x -> count.incrementAndGet())).start();
+            new DataflowProcessor(pool, List.of(constant(1)), List.of(), List.of(), 1, Closures.action(x -> seen.bind(count.get()))).start();
 
             assertThat(poll(seen, 5, TimeUnit.SECONDS)).isLessThan(n);
             await(() -> stopped.stops.get() == 1);

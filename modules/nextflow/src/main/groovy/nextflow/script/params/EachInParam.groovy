@@ -98,7 +98,9 @@ class EachInParam extends BaseInParam {
             result.bind(value)
         }
 
-        return result.chainWith { it instanceof Collection || it == null ? it : [it] }
+        final normalized = new DataflowVariable()
+        result.whenBound { it instanceof Throwable ? normalized.bindError(it) : normalized.bind(it instanceof Collection || it == null ? it : [it]) }
+        return normalized
     }
 
 }

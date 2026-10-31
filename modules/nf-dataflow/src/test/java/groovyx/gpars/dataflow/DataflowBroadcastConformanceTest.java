@@ -151,21 +151,4 @@ class DataflowBroadcastConformanceTest {
         assertThat(poll(r, WAIT, TimeUnit.SECONDS)).isEqualTo("b");
     }
 
-    @Test
-    void shouldCopyEveryItemAndThePoisonPillFromAReadChannelWithInto() throws Exception {
-        // the WorkflowDef recursion pattern: CH.getReadChannel(output).into(feedback)
-        var ch = new DataflowBroadcast<Object>();
-        var source = (DataflowStreamReadAdapter<Object>) ch.createReadChannel();
-        var other = ch.createReadChannel();
-        var target = new DataflowQueue<Object>();
-
-        source.into(target);
-        ch.bind(1);
-        ch.bind(2);
-        ch.bind(STOP);
-        assertThat(read(target, 3)).containsExactly(1, 2, STOP);
-        // copying does not consume the items of the other readers
-        assertThat(read(other, 3)).containsExactly(1, 2, STOP);
-    }
-
 }

@@ -37,7 +37,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowEventListener
-import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -368,7 +367,7 @@ class TaskProcessor {
     boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
 
     /**
-     * @return The {@code DataflowOperator} underlying this process
+     * @return The {@code DataflowProcessor} underlying this process
      */
     DataflowProcessor getOperator() { operator }
 
@@ -570,11 +569,10 @@ class TaskProcessor {
             final forwarder = new ForwardClosure(size, iteratorIndexes)
 
             // instantiate the iteration process
-            def DataflowOperator op1
+            def DataflowProcessor op1
             def stopAfterFirstRun = allScalarValues
             def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
-            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allOperators << (op1 = new DataflowOperator(params, forwarder))
+            session.allOperators << (op1 = new DataflowProcessor(opInputs, linkingChannels, [interceptor], 1, forwarder))
             // fix issue #41
             start(op1)
 
@@ -594,9 +592,8 @@ class TaskProcessor {
         this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
-        session.allOperators << (operator = new DataflowOperator(params, invoke))
+        session.allOperators << (operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke))
         backlog = session.backpressure?.register(name, opInputs, operator)
 
         // notify the creation of a new vertex the execution DAG
@@ -645,9 +642,8 @@ class TaskProcessor {
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
         final interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        final params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         final invoke = new InvokeTaskAdapter(this, opInputs.size())
-        this.operator = new DataflowOperator(params, invoke)
+        this.operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke)
         this.backlog = session.backpressure?.register(name, opInputs, operator)
         session.allOperators << operator
 

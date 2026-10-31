@@ -20,20 +20,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import groovyx.gpars.dataflow.impl.ReadCallback;
 import groovyx.gpars.dataflow.impl.Waiter;
-import groovyx.gpars.dataflow.operator.ChainWithClosure;
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure;
-import groovyx.gpars.dataflow.operator.DataflowOperator;
-import groovyx.gpars.dataflow.operator.DataflowProcessor;
 
 /**
  * An unbounded FIFO channel: each value is read once, by a single reader.
  * <p>
  * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2013 the original author or authors)
- * with its public API and semantics, minus the timed read and leftShift. The buffered values are held in
+ * with its public API and semantics, minus the timed read, leftShift and into. The buffered values are held in
  * an array deque instead of a dataflow variable each, and a waiting read is handed the next value directly.
  *
  * @param <T> The type of messages to pass through the queue
@@ -84,15 +79,6 @@ public class DataflowQueue<T> implements DataflowReadChannel<T>, DataflowWriteCh
     @Override
     public final T getVal() throws InterruptedException {
         return (T) Waiter.read(this);
-    }
-
-    /**
-     * Copies all the values into the target channel, with an operator
-     */
-    @Override
-    public void into(final DataflowWriteChannel<T> target) {
-        final Map<String, Object> params = Map.of(DataflowProcessor.INPUTS, List.of(this), DataflowProcessor.OUTPUTS, List.of(target));
-        new DataflowOperator(params, new ChainWithClosure(new CopyChannelsClosure())).start();
     }
 
     @Override

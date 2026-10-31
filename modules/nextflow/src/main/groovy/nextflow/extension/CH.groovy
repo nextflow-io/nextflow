@@ -24,6 +24,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.impl.ReadCallback
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.DataflowStreamReadAdapter
 import nextflow.Channel
@@ -97,8 +99,23 @@ class CH {
         for( DataflowQueue queue : bridges.keySet() ) {
             log.trace "Bridging dataflow queue=$queue"
             def broadcast = bridges.get(queue)
-            queue.into(broadcast)
+            forward(queue, broadcast)
         }
+    }
+
+    /**
+     * Copies the values of a channel into another one. Unlike an operator, the copy
+     * is not part of the DAG nor of the session operators.
+     */
+    static void forward(DataflowReadChannel source, DataflowWriteChannel target) {
+        if( source instanceof DataflowVariable ) {
+            // like the former `into`: binds in place when the value is bound, else in the binding thread
+            final item = source.takeOrSubscribe({ Object it -> target.bind(it) } as ReadCallback)
+            if( item !== ReadCallback.NONE )
+                target.bind(item)
+        }
+        else
+            new DataflowProcessor([source], [target], null, 1, new ChainWithClosure(new CopyChannelsClosure())).start()
     }
 
     static private void connectTopics() {

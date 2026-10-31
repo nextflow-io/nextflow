@@ -14,14 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): updated the class description.
+// Modified by Seqera Labs for Nextflow (2026): updated the class description; moved from groovyx.gpars.dataflow.operator to Nextflow, its only user.
 
-package groovyx.gpars.dataflow.operator;
+package nextflow.extension;
 
 import groovy.lang.Closure;
 
 /**
- * Identity closure used with {@link ChainWithClosure} by {@code into()} and the copying operators
+ * Identity closure used with {@link ChainWithClosure} by the copying operators
  * to forward each input value unchanged to the operator's outputs.
  *
  * @author Vaclav Pech

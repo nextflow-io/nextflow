@@ -112,7 +112,7 @@ class AgentConformanceTest {
         agent.send(action(it -> { release.await(); list(it).add("slow"); }));
         agent.send(action(it -> list(it).add("fast")));
         agent.await();
-        assertThat(agent.getInstantVal()).containsExactly("slow", "fast");
+        assertThat(agent.getVal()).containsExactly("slow", "fast");
     }
 
     @Test
@@ -161,7 +161,7 @@ class AgentConformanceTest {
 
         agent.send(action(it -> list(it).add(1)));
         agent.await();
-        assertThat(agent.getInstantVal()).containsExactly(1);
+        assertThat(agent.getVal()).containsExactly(1);
         assertThat(calls.get()).isZero();
     }
 

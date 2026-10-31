@@ -17,14 +17,15 @@ package groovyx.gpars.scheduler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import groovyx.gpars.Closures;
-import groovyx.gpars.agent.Agent;
+import groovyx.gpars.agent.TestAgents;
 import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowReadChannel;
@@ -47,7 +48,7 @@ class SchedulerTest {
 
     static final PoisonPill STOP = PoisonPill.getInstance();
 
-    Pool loop;
+    ExecutorService loop;
 
     @BeforeEach
     void setUp() {
@@ -128,16 +129,15 @@ class SchedulerTest {
         var middle = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
         var threads = new CopyOnWriteArrayList<Thread>();
-        var agent = new Agent<>(0);
-        agent.attachToThreadPool(loop);
+        var agent = TestAgents.create(loop, 0);
 
-        TestOperators.start(loop, Map.of("inputs", List.of(input), "outputs", List.of(middle)), Closures.closure(1, (self, args) -> {
+        TestOperators.start(loop, List.of(input), List.of(middle), List.of(), 1, Closures.closure(1, (self, args) -> {
             threads.add(Thread.currentThread());
             ((DataflowProcessor) self).bindOutput((Integer) args[0] * 10);
             return null;
         }));
         // with maxForks, the bodies are queued on the loop and run one at a time
-        TestOperators.start(loop, Map.of("inputs", List.of(middle), "outputs", List.of(output), "maxForks", 4), Closures.closure(1, (self, args) -> {
+        TestOperators.start(loop, List.of(middle), List.of(output), List.of(), 4, Closures.closure(1, (self, args) -> {
             threads.add(Thread.currentThread());
             agent.send(Closures.action(it -> threads.add(Thread.currentThread())));
             ((DataflowProcessor) self).bindOutput((Integer) args[0] + 1);
@@ -169,7 +169,7 @@ class SchedulerTest {
             }
         };
 
-        TestOperators.start(loop, Map.of("inputs", List.of(input), "listeners", List.of(listener)), Closures.action(x -> unbound.getVal()));
+        TestOperators.start(loop, List.of(input), List.of(), List.of(listener), 1, Closures.action(x -> unbound.getVal()));
         input.bind(1);
         assertThat(poll(error, 5, TimeUnit.SECONDS))
             .isInstanceOf(IllegalStateException.class)
@@ -178,8 +178,7 @@ class SchedulerTest {
 
     @Test
     void shouldNotLeakAnInterruptSetByAnAgentClosureToTheNextMessageOrPoolTask() throws Exception {
-        var agent = new Agent<>(0);
-        agent.attachToThreadPool(loop);
+        var agent = TestAgents.create(loop, 0);
         var interrupted = new CopyOnWriteArrayList<Boolean>();
         // hold the loop thread, so that the agent handles both messages in one batch
         var hold = new CountDownLatch(1);
@@ -201,9 +200,69 @@ class SchedulerTest {
         assertThat(onPool(loop, () -> Thread.currentThread().isInterrupted())).isFalse();
     }
 
+    @Test
+    void shouldHandleTheAgentMessagesInPlaceWhenTheLoopThreadWaitsForThem() throws Exception {
+        var agent = TestAgents.create(loop, new ArrayList<Object>());
+        // the messages are queued behind the task that waits for them
+        var result = onPool(loop, () -> {
+            for( int i = 0; i < 3; i++ ) {
+                final int x = i;
+                agent.send(Closures.action(it -> ((List<Object>) it).add(x)));
+            }
+            agent.await();
+            var awaited = List.copyOf((List<?>) agent.getVal());
+            agent.send(Closures.action(it -> ((List<Object>) it).add(3)));
+            return List.of(awaited, agent.getVal(), Thread.currentThread());
+        });
+
+        assertThat(result.get(0)).isEqualTo(List.of(0, 1, 2));
+        assertThat(result.get(1)).isEqualTo(List.of(0, 1, 2, 3));
+        assertThat(onPool(loop, Thread::currentThread)).isSameAs(result.get(2));
+    }
+
+    @Test
+    void shouldThrowWhenTheLoopThreadIsInterruptedBeforeWaitingForAnAgent() throws Exception {
+        var agent = TestAgents.create(loop, 0);
+        var result = onPool(loop, () -> {
+            Thread.currentThread().interrupt();
+            try {
+                agent.await();
+                return null;
+            }
+            catch( InterruptedException e ) {
+                return List.of(e, Thread.currentThread().isInterrupted());
+            }
+        });
+
+        assertThat((List<?>) result).first().isInstanceOf(InterruptedException.class);
+        assertThat((List<?>) result).last().isEqualTo(false);
+        assertThat(agent.hasErrors()).isFalse();
+        assertThat(agent.getVal()).isEqualTo(0);
+    }
+
+    @Test
+    void shouldNameTheDataflowThreads() throws Exception {
+        var pool = Scheduler.newDefaultPool();
+        try {
+            var thread = onPool(pool, Thread::currentThread);
+            assertThat(thread.getName()).matches("Dataflow Thread \\d+");
+            assertThat(thread.isDaemon()).isTrue();
+            assertThat(onPool(pool, Scheduler::isLoopThread)).isFalse();
+        }
+        finally {
+            pool.shutdown();
+        }
+        var thread = onPool(loop, Thread::currentThread);
+        assertThat(thread.getName()).matches("Dataflow Thread \\d+");
+        assertThat(thread.isDaemon()).isTrue();
+        // a custom handler, not the thread group
+        assertThat(thread.getUncaughtExceptionHandler()).isNotSameAs(thread.getThreadGroup());
+        assertThat(Scheduler.newThreadName()).isNotEqualTo(Scheduler.newThreadName());
+    }
+
     interface Call<T> { T call() throws Exception; }
 
-    static <T> T onPool(Pool pool, Call<T> call) throws Exception {
+    static <T> T onPool(Executor pool, Call<T> call) throws Exception {
         var result = new DataflowVariable<Object>();
         pool.execute(() -> {
             try {

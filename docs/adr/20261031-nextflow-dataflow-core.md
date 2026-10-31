@@ -83,12 +83,19 @@ Vendor GPars as `modules/nf-dataflow` (Groovy as its only dependency), trimmed t
 | `leftShift` (`<<`) | Replaced by `bind` (`send` for `Agent`) |
 | `ControlMessage` | Replaced by `PoisonPill` (the type of `Channel.STOP`) |
 | Derived values (unknown property or method of a value) | Removed: fails with an error suggesting an operator |
+| `DataflowOperator` and the parameter map of `DataflowProcessor` | Merged into `DataflowProcessor`, which takes a typed constructor |
+| Thread pools (`Pool`, `DefaultPool`, `ResizeablePool`, `PoolFactory`, `PoolUtils`) and `GParsConfig` | Replaced by an `ExecutorService` owned by `Scheduler`; Nextflow sets its factory with `Scheduler.setExecutorFactory` |
+| `LazyDataflowVariable` | Replaced by `nextflow.util.LazyValue`, computed in the thread of its first reader |
+| `then`, `chainWith` | Removed: Nextflow uses `whenBound` |
+| `into` and its copy closures (`ChainWithClosure`, `CopyChannelsClosure`) | Moved to Nextflow (`CH.forward`, `nextflow.extension`) |
+| `AgentCore`, `AgentBase` | Merged into `Agent`, without fair agents, validators, the copy closure, the static factories, `getInstantVal`, `valAsync` and the public `sendAndWait` |
+| Nextflow's `SimpleAgent` (not GPars) | Replaced by `Agent` in `WorkflowStatsObserver`, and removed |
 | `Promise`, timed reads, `DataflowChannel`, unused processor methods and listener events | Removed |
 | Remote and serial actors, STM, CSP, `GParsPool`, selectors, `jsr166y`, `multiverse` | Removed |
 
-The renames changed a few Nextflow call sites mechanically. GPars types and methods are not script API, so most of these changes only affect plugins that use them. The exception is derived values: a script that calls a non-operator method or property on a value channel (e.g. `.toList().sort()`) now fails. A JUnit conformance suite pins the GPars semantics that Nextflow relies on. The steps landed as separate commits: vendor with no behavior change, backpressure behind a flag, the mailbox engine with the actor engine as a fallback, the channel rewrite, removal of the fallback, then the API reduction.
+The renames changed a few Nextflow call sites mechanically. GPars types and methods are not script API, so these changes only affect plugins that use them. Derived values (an unknown property or method of a value) were never supported script API; such calls now fail with an error suggesting an operator. A JUnit conformance suite pins the GPars semantics that Nextflow relies on. The steps landed as separate commits: vendor with no behavior change, backpressure (off by default), the mailbox engine with the actor engine as a fallback, the channel rewrite, removal of the fallback, then the API reduction.
 
-**Concurrency model.** Each `DataflowProcessor` is a mailbox. When an input hands over a value, the operator is scheduled on the shared pool unless it is already scheduled, and the drain fires on complete input sets in a bounded batch before yielding the thread. A read takes a buffered value at once or subscribes for the next one: no message or `DataflowVariable` per item. With `maxForks > 1` the body is forked onto the pool, up to `maxForks` at once; when all are busy, the operator stops reading inputs instead of blocking a thread. `NXF_DATAFLOW_POOL_SIZE` fixes the pool size. With `1`, the network runs on one loop thread in a deterministic order, and a blocking read on that thread fails instead of hanging.
+**Concurrency model.** Each `DataflowProcessor` is a mailbox. When an input hands over a value, the operator is scheduled on the shared pool unless it is already scheduled, and the drain fires on complete input sets in a bounded batch before yielding the thread. A read takes a buffered value at once or subscribes for the next one: no message or `DataflowVariable` per item. With `maxForks > 1` the body is forked onto the pool, up to `maxForks` at once; when all are busy, the operator stops reading inputs instead of blocking a thread. `NXF_DATAFLOW_POOL_SIZE` fixes the pool size. With `1`, the network runs on one loop thread in a deterministic order, and a blocking read on that thread fails instead of hanging. `Agent.await()` and `getVal()` are the exception: on the loop thread they handle the agent's pending messages in place.
 
 **Channels.** A queue is a deque with a list of waiting readers. A broadcast is a linked list of nodes shared by its readers (24 B per item). A value is a write-once cell. `getVal()` still blocks, so tests and blocking reads keep working.
 
@@ -105,8 +112,8 @@ Since nothing on a dataflow thread waits for a process, every pause drains, and 
 
 Nextflow has no migration page for the next release yet. These notes should go in it:
 
-- Calling a non-operator method or property on a value channel, such as `ch.toList().sort()`, now fails. Use `map` instead, e.g. `ch.toList().map { it.sort() }`.
-- Plugins that use the GPars APIs `leftShift` (`<<`), `DataflowEventAdapter`, `ControlMessage`, `DataflowExpression`, `PGroup` or `Dataflow`, or the `groovyx.gpars.dataflow.stream` package, must be updated and rebuilt.
+- Plugins that use the GPars APIs `leftShift` (`<<`), `DataflowEventAdapter`, `ControlMessage`, `DataflowExpression`, `PGroup`, `Dataflow`, `DataflowOperator`, `LazyDataflowVariable`, `then`, `chainWith`, `into`, `GParsConfig` or the pool classes (`groovyx.gpars.scheduler.Pool`, `DefaultPool`, `ResizeablePool`, `groovyx.gpars.util`), or the `groovyx.gpars.dataflow.stream` package, must be updated and rebuilt. `ChainWithClosure` and `CopyChannelsClosure` moved to `nextflow.extension`, and `DataflowProcessor` takes a typed constructor instead of a parameter map.
+- `Agent()`, `Agent(T)`, `send`, `await`, `getVal`, `addListener`, `updateValue`, `getErrors` and `hasErrors` are unchanged. Plugins that use other `Agent` members (fair agents, validators, the copy-closure constructor, the static factories, `getInstantVal`, `valAsync` or `sendAndWait`) must be updated.
 - Backpressure is enabled by default. Set `NXF_DATAFLOW_HIGH_WATER=0` to restore the previous unbounded behavior.
 
 ## Links

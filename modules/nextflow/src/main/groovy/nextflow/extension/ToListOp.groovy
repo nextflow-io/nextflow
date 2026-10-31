@@ -58,8 +58,20 @@ class ToListOp {
 
         DataflowHelper.reduceImpl(source, target, []) { List list, item -> list << item }
         if( ordering ) {
-            final sort = { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
-            return (DataflowVariable)target.then(sort)
+            final result = new DataflowVariable()
+            target.whenBound { Object list ->
+                if( list instanceof Throwable ) {
+                    result.bindError(list)
+                    return
+                }
+                try {
+                    result.bind(ordering instanceof Closure ? ((List) list).sort((Closure) ordering) : ((List) list).sort())
+                }
+                catch( Throwable e ) {
+                    result.bindError(e)
+                }
+            }
+            return result
         }
         else {
             return target

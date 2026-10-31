@@ -16,7 +16,6 @@
 package groovyx.gpars.dataflow.operator;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,7 +26,6 @@ import groovyx.gpars.Closures;
 import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowVariable;
-import groovyx.gpars.dataflow.DataflowStreamReadAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -48,7 +46,7 @@ class DataflowOperatorGateTest {
     /**
      * An operator with a queue input and a value input, which records the queue items it fires on.
      */
-    private static DataflowOperator operator(DataflowQueue<Object> input, List<Object> fired, int maxForks, DataflowVariable<Object> stopped, AtomicInteger started) {
+    private static DataflowProcessor operator(DataflowQueue<Object> input, List<Object> fired, int maxForks, DataflowVariable<Object> stopped, AtomicInteger started) {
         final var listener = new DataflowEventListener() {
             @Override
             public List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
@@ -65,8 +63,7 @@ class DataflowOperatorGateTest {
         };
         final var value = new DataflowVariable<Object>();
         value.bind(0);
-        final var params = Map.of("inputs", List.of(input, value), "maxForks", maxForks, "listeners", List.of(listener));
-        return new DataflowOperator(params, Closures.action((x, y) -> fired.add(x)));
+        return new DataflowProcessor(List.of(input, value), List.of(), List.of(listener), maxForks, Closures.action((x, y) -> fired.add(x)));
     }
 
     /**
@@ -193,20 +190,18 @@ class DataflowOperatorGateTest {
     }
 
     @Test
-    void shouldCountTheItemsBufferedForABroadcastReaderUpToAMaximum() throws Exception {
+    void shouldCountTheItemsBufferedForABroadcastReader() throws Exception {
         var broadcast = new DataflowBroadcast<Object>();
-        var reader = (DataflowStreamReadAdapter<Object>) broadcast.createReadChannel();
+        var reader = broadcast.createReadChannel();
 
-        assertThat(reader.length(10)).isZero();
+        assertThat(reader.length()).isZero();
 
         for( int i = 0; i < 5; i++ )
             broadcast.bind(i);
-        assertThat(reader.length(10)).isEqualTo(5);
-        assertThat(reader.length(3)).isEqualTo(3);
         assertThat(reader.length()).isEqualTo(5);
 
         reader.getVal();
         reader.getVal();
-        assertThat(reader.length(10)).isEqualTo(3);
+        assertThat(reader.length()).isEqualTo(3);
     }
 }
