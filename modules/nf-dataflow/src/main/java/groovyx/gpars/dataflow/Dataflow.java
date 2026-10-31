@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed the select and selector factory methods; the default group runs on the dataflow scheduler pool.
+// Modified by Seqera Labs for Nextflow (2026): removed the select and selector factory methods, tasks, splitters and whenAllBound; the default group runs on the dataflow scheduler pool.
 
 package groovyx.gpars.dataflow;
 
@@ -28,9 +28,6 @@ import groovyx.gpars.scheduler.Scheduler;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-
-import static java.util.Arrays.asList;
 
 /**
  * Contains factory methods to create dataflow actors and starting them.
@@ -80,72 +77,6 @@ public abstract class Dataflow {
         } finally {
             activeParallelGroup.set(original);
         }
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the default dataflow parallel group.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     *
-     * @param code The task body to run
-     * @return A DataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public static <T> Promise<T> task(final Closure<T> code) {
-        return retrieveCurrentDFPGroup().task(code);
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param callable The task body to run
-     * @return A DataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public static <T> Promise<T> task(final Callable<T> callable) {
-        return retrieveCurrentDFPGroup().task(callable);
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param runnable The task body to run
-     * @return A DataflowVariable, which gets bound to null once the supplied code finishes
-     */
-    public static Promise<Object> task(final Runnable runnable) {
-        return retrieveCurrentDFPGroup().task(runnable);
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the default dataflow parallel group.
-     * The task is lazy, since it only gets executed if the returned Promise instance is read or a then-callback is registered on it.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     *
-     * @param code The task body to run
-     * @return A LazyDataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public static <T> Promise<T> lazyTask(final Closure<T> code) {
-        final PGroup group = retrieveCurrentDFPGroup();
-        return group.lazyTask(code);
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * The task is lazy, since it only gets executed if the returned Promise instance is read or a then-callback is registered on it.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param callable The task body to run
-     * @return A LazyDataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public static <T> Promise<T> lazyTask(final Callable<T> callable) {
-        return retrieveCurrentDFPGroup().lazyTask(callable);
     }
 
     /**
@@ -209,165 +140,4 @@ public abstract class Dataflow {
         return retrieveCurrentDFPGroup().operator(input, output, maxForks, code);
     }
 
-    /**
-     * Creates a splitter copying its single input channel into all of its output channels. The created splitter will be part of the default parallel group
-     * Input with lower position index have higher priority.
-     *
-     * @param inputChannel   The channel to  read values from
-     * @param outputChannels A list of channels to output to
-     * @return A new active splitter instance
-     */
-    public static DataflowProcessor splitter(final DataflowReadChannel inputChannel, final List<DataflowWriteChannel> outputChannels) {
-        return retrieveCurrentDFPGroup().splitter(inputChannel, outputChannels);
-    }
-
-    /**
-     * Creates a splitter copying its single input channel into all of its output channels. The created splitter will be part of this parallel group
-     * Input with lower position index have higher priority.
-     *
-     * @param inputChannel   The channel to  read values from
-     * @param outputChannels A list of channels to output to
-     * @param maxForks       Number of threads running the splitter's body, defaults to 1
-     * @return A new active splitter instance
-     */
-    public static DataflowProcessor splitter(final DataflowReadChannel inputChannel, final List<DataflowWriteChannel> outputChannels, final int maxForks) {
-        return retrieveCurrentDFPGroup().splitter(inputChannel, outputChannels, maxForks);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promises The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final List<Promise> promises, final Closure<T> code) {
-        return retrieveCurrentDFPGroup().whenAllBound(promises, code);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Closure<T> code) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1), code);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param promise2 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Closure<T> code) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1, promise2), code);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param promise2 The promises to wait for
-     * @param promise3 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Closure<T> code) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1, promise2, promise3), code);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param promise2 The promises to wait for
-     * @param promise3 The promises to wait for
-     * @param promise4 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Promise promise4, final Closure<T> code) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1, promise2, promise3, promise4), code);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promises     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final List<Promise> promises, final Closure<T> code, final Closure<T> errorHandler) {
-        return retrieveCurrentDFPGroup().whenAllBound(promises, code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Closure<T> code, final Closure<T> errorHandler) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1), code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param promise2     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Closure<T> code, final Closure<T> errorHandler) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1, promise2), code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param promise2     The promises to wait for
-     * @param promise3     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Closure<T> code, final Closure<T> errorHandler) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1, promise2, promise3), code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param promise2     The promises to wait for
-     * @param promise3     The promises to wait for
-     * @param promise4     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public static <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Promise promise4, final Closure<T> code, final Closure<T> errorHandler) {
-        return retrieveCurrentDFPGroup().whenAllBound(asList(promise1, promise2, promise3, promise4), code, errorHandler);
-    }
 }

@@ -14,12 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by a mailbox or legacy actor engine; added isActive().
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by a mailbox or legacy actor engine; added isActive(); removed registerChannelListenersToAllInputs.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
-import groovyx.gpars.dataflow.DataflowChannelListener;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
 import groovyx.gpars.group.PGroup;
@@ -350,17 +349,6 @@ public abstract class DataflowProcessor {
 
     public final void removeDataflowEventListener(final DataflowEventListener listener) {
         listeners.remove(listener);
-    }
-
-    /**
-     * Registers the provided handler to all input channels
-     *
-     * @param handler The closure to invoke whenever a value gets bound to any of the input channels
-     */
-    public final void registerChannelListenersToAllInputs(final DataflowChannelListener<Object> handler) {
-        for (final DataflowReadChannel<?> input : inputs) {
-            ((DataflowReadChannel<Object>) input).getEventManager().addDataflowChannelListener(handler);
-        }
     }
 
     protected final void fireAfterStart() {
