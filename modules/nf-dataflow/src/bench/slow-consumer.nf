@@ -15,7 +15,7 @@
  */
 
 // E2 slow consumer: n records into a `maxForks 1` process with a tiny native task
-// (port of the `mem` workload of nf prototypes/0014-dataflow). Without backpressure
+// (the `mem` workload of an internal Seqera prototype). Without backpressure
 // the source binds every record up front and the process turns each one into a
 // pending task, so memory grows with n.
 

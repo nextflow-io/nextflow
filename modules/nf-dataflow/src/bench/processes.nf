@@ -15,7 +15,6 @@
  */
 
 // E1 processes: one native task per item of a channel of n items
-// (port of nf bench/run/processes.nf, LIGHT variant)
 
 params {
     n: Integer = 10000

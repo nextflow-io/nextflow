@@ -34,20 +34,19 @@ import groovyx.gpars.dataflow.DataflowWriteChannel;
 import groovyx.gpars.group.DefaultPGroup;
 import groovyx.gpars.scheduler.DefaultPool;
 import groovyx.gpars.scheduler.Pool;
-import groovyx.gpars.scheduler.Scheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import static groovyx.gpars.TestThreads.await;
 import static groovyx.gpars.TestThreads.start;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
- * Operator engine behaviors beyond the GPars conformance suite. They hold on both engines.
+ * Operator engine behaviors beyond the GPars conformance suite.
  */
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
-class OperatorEngineTest {
+class MailboxEngineTest {
 
     static final PoisonPill STOP = PoisonPill.getInstance();
 
@@ -58,12 +57,6 @@ class OperatorEngineTest {
         public void afterStop(DataflowProcessor processor) {
             stops.incrementAndGet();
         }
-    }
-
-    @Test
-    void shouldRunOnTheEngineSelectedByTheEnvironment() {
-        var op = new DataflowOperator(Dataflow.retrieveCurrentDFPGroup(), Map.of("inputs", List.of(new DataflowQueue<>())), Closures.action(x -> {}));
-        assertThat(op.engine).isInstanceOf(Scheduler.isLegacyEngine() ? ActorEngine.class : MailboxEngine.class);
     }
 
     @Test
@@ -81,6 +74,7 @@ class OperatorEngineTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
     void shouldStopTakingInputsWhileAllForksAreBusy() throws Exception {
         var input = new DataflowQueue<Object>();
         var release = new CountDownLatch(1);
@@ -94,13 +88,16 @@ class OperatorEngineTest {
         for( int i = 0; i < 5; i++ )
             input.bind(i);
 
-        // two bodies run, a third input set waits for one of them, the rest stays in the channel
-        await(() -> started.get() == 2 && input.length() == 2);
-        Thread.sleep(50);
-        assertThat(started.get()).isEqualTo(2);
-        assertThat(input.length()).isEqualTo(2);
-
-        release.countDown();
+        try {
+            // two bodies run, a third input set waits for one of them, the rest stays in the channel
+            await(() -> started.get() == 2 && input.length() == 2);
+            Thread.sleep(50);
+            assertThat(started.get()).isEqualTo(2);
+            assertThat(input.length()).isEqualTo(2);
+        }
+        finally {
+            release.countDown();
+        }
         input.bind(STOP);
         await(() -> stopped.stops.get() == 1);
         assertThat(started.get()).isEqualTo(5);
@@ -207,6 +204,7 @@ class OperatorEngineTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
     void shouldForwardThePoisonPillWhenTerminatedWhileWaitingForTheBodiesInFlight() throws Exception {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
@@ -240,6 +238,7 @@ class OperatorEngineTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
     void shouldPauseWhenAParkedInputSetForksWhileTheGateIsClosed() throws Exception {
         var input = new DataflowQueue<Object>();
         var release = new CountDownLatch(1);
@@ -256,10 +255,14 @@ class OperatorEngineTest {
         for( int i = 0; i < 5; i++ )
             input.bind(i);
 
-        // two bodies run and a third input set is parked: the gate is checked again once it forks
-        await(() -> started.get() == 2 && input.length() == 2);
-        closed.set(true);
-        release.countDown();
+        try {
+            // two bodies run and a third input set is parked: the gate is checked again once it forks
+            await(() -> started.get() == 2 && input.length() == 2);
+            closed.set(true);
+        }
+        finally {
+            release.countDown();
+        }
         await(() -> started.get() == 3 && op.isPaused());
         Thread.sleep(50);
         assertThat(started.get()).isEqualTo(3);
@@ -295,8 +298,6 @@ class OperatorEngineTest {
 
     @Test
     void shouldNotTakeAValueOfAQueueInputOnceStopped() throws Exception {
-        // the legacy engine leaves its request on the queue, so it swallows the next value
-        assumeFalse(Scheduler.isLegacyEngine());
         var input = new DataflowQueue<Object>();
         var fired = new CopyOnWriteArrayList<Object>();
         var op = Dataflow.operator(Map.of("inputs", List.of(input)), Closures.action(x -> fired.add(x)));
@@ -343,8 +344,6 @@ class OperatorEngineTest {
 
     @Test
     void shouldYieldThePoolThreadWhileFiringOnBufferedValues() throws Exception {
-        // the legacy actor keeps the thread while values keep arriving
-        assumeFalse(Scheduler.isLegacyEngine());
         // a single thread: the other operator runs only if the first one yields between batches
         final int n = 100_000;
         var group = new DefaultPGroup(new DefaultPool(true, 1));

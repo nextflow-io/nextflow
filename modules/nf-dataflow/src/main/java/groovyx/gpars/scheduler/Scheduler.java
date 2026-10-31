@@ -22,28 +22,17 @@ import java.util.concurrent.TimeUnit;
 import groovyx.gpars.GParsConfig;
 
 /**
- * The dataflow runtime: the pool shared by operators, agents and callbacks, and the engine
- * running operators.
+ * The dataflow runtime: the pool shared by operators, agents and callbacks.
  * <p>
- * Configured with environment variables, read once:
- * <ul>
- * <li>{@code NXF_DATAFLOW_ENGINE}: {@code mailbox} (default) or {@code legacy} (GPars actors).
- * {@code legacy} only rolls back the operator engine: agents, the shared pool and the loop thread
- * check are the same on both engines.</li>
- * <li>{@code NXF_DATAFLOW_POOL_SIZE}: a fixed number of dataflow threads. By default the pool
- * comes from the {@link GParsConfig} pool factory. With a size of 1, every operator, agent and
- * callback runs on a single loop thread, in a deterministic order.</li>
- * </ul>
+ * {@code NXF_DATAFLOW_POOL_SIZE}, read once, sets a fixed number of dataflow threads. By default
+ * the pool comes from the {@link GParsConfig} pool factory. With a size of 1, every operator, agent
+ * and callback runs on a single loop thread, in a deterministic order.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public final class Scheduler {
 
-    public static final String ENGINE_ENV = "NXF_DATAFLOW_ENGINE";
-
     public static final String POOL_SIZE_ENV = "NXF_DATAFLOW_POOL_SIZE";
-
-    private static final boolean LEGACY = parseEngine(System.getenv(ENGINE_ENV));
 
     private static final int POOL_SIZE = parsePoolSize(System.getenv(POOL_SIZE_ENV));
 
@@ -60,17 +49,6 @@ public final class Scheduler {
      */
     public static Pool pool() {
         return Holder.POOL;
-    }
-
-    /**
-     * Whether operators run on the GPars actor engine instead of the mailbox engine
-     */
-    public static boolean isLegacyEngine() {
-        return LEGACY;
-    }
-
-    public static String getEngineName() {
-        return LEGACY ? "legacy" : "mailbox";
     }
 
     /**
@@ -105,14 +83,6 @@ public final class Scheduler {
             return thread;
         });
         return new DefaultPool(executor);
-    }
-
-    static boolean parseEngine(final String value) {
-        if (value == null || value.isEmpty() || "mailbox".equals(value))
-            return false;
-        if ("legacy".equals(value))
-            return true;
-        throw new IllegalArgumentException("Invalid " + ENGINE_ENV + " value: '" + value + "' -- it must be 'mailbox' or 'legacy'");
     }
 
     static int parsePoolSize(final String value) {

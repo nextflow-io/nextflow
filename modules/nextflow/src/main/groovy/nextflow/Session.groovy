@@ -33,7 +33,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.scheduler.Scheduler
 import nextflow.cache.CacheDB
@@ -467,13 +466,13 @@ class Session implements ISession {
         // -- set the thread pool size
         this.poolSize = config.poolSize as int
         log.debug "Executor pool size: ${poolSize}"
-        log.debug "Dataflow engine: ${Scheduler.getEngineName()}; dataflow pool size: ${Scheduler.getPoolSize() ?: 'default'}"
+        log.debug "Dataflow pool size: ${Scheduler.getPoolSize() ?: 'default'}"
 
         // -- DAG object
         this.dag = new DAG()
 
         // -- dataflow backpressure
-        final highWater = Backpressure.highWater()
+        final highWater = Backpressure.highWater(poolSize)
         if( highWater > 0 ) {
             this.backpressure = new Backpressure(this, highWater)
             onShutdown { backpressure.shutdown() }
@@ -1102,7 +1101,6 @@ class Session implements ISession {
 
         execService?.shutdownNow()
         agentExecService?.shutdownNow()
-        GParsConfig.shutdown()
     }
 
     boolean isTerminated() { terminated }

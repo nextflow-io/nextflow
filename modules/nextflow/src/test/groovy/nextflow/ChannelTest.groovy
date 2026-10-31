@@ -27,6 +27,7 @@ import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
+import test.MockSession
 import test.TemporaryPath
 import test.TestHelper
 
@@ -1078,11 +1079,11 @@ class ChannelTest extends Specification {
         given:
         def id = 'SRR389222'
         def retryPolicy = [maxAttempts: 2]
+        new MockSession()
 
         when:
-        def result = runDataflow {
-            Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
-        }
+        // the network is not fired: the query would fail async and abort the session of a later test
+        def result = Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
         then:
         result != null
 

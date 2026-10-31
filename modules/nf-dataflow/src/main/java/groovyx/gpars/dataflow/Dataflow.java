@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Contains factory methods to create dataflow actors and starting them.
+ * Contains factory methods to create dataflow operators and start them.
  *
  * @author Vaclav Pech, Dierk Koenig
  *         Date: Jun 4, 2009
@@ -39,7 +39,7 @@ import java.util.Map;
 public abstract class Dataflow {
 
     /**
-     * The parallel group used by all Dataflow Concurrency actors by default.
+     * The parallel group used by all dataflow operators by default.
      */
     public static final PGroup DATA_FLOW_GROUP = new DefaultPGroup(Scheduler.pool());
 

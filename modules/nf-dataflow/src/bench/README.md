@@ -8,8 +8,6 @@ Whole-run benchmarks for the dataflow engine: wall time, peak RSS, and live heap
 | `processes.nf` | E1 | one native (`exec:`) task per item (default 10⁴) |
 | `slow-consumer.nf` | E2 | `n` three-field records into a `maxForks 1` process with a tiny native task (default 10⁶) |
 
-The scripts are ports of `bench/run/dataflow.nf`, `bench/run/processes.nf` and the `mem` workload of `prototypes/0014-dataflow` in the nf repository.
-
 ## Running
 
 ```bash

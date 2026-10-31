@@ -13,11 +13,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): documentation updated for the removal of actors.
 
 package groovyx.gpars.scheduler;
 
 /**
- * Represents an actor's thread pool
+ * Represents the thread pool of the dataflow operators and agents
  *
  * @author Vaclav Pech
  *         Date: Feb 27, 2009

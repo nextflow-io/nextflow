@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): run by the mailbox engine, or by the GPars actors with NXF_DATAFLOW_ENGINE=legacy.
+// Modified by Seqera Labs for Nextflow (2026): run by the mailbox engine instead of a GPars actor.
 
 package groovyx.gpars.dataflow.operator;
 
@@ -34,8 +34,8 @@ import java.util.Map;
  * <p>
  * Dataflow selectors and operators enable creation of highly concurrent applications yet the abstraction hides the low-level concurrency primitives
  * and exposes much friendlier API.
- * Since selectors and operators internally leverage the actor implementation, they reuse a pool of threads and so the actual number of threads
- * used by the calculation can be kept much lower than the actual number of processors used in the network.
+ * Operators run on a shared pool of threads, so the actual number of threads used by the calculation can be kept much lower
+ * than the actual number of processors used in the network.
  * </p>
  *
  * @author Vaclav Pech
@@ -62,14 +62,7 @@ public final class DataflowOperator extends DataflowProcessor {
         if (forking)
             checkMaxForks(channels);
         final int maxForks = forking ? (Integer) channels.get(MAX_FORKS) : 1;
-        if (Scheduler.isLegacyEngine()) {
-            final DataflowOperatorActor actor = forking
-                ? new ForkingDataflowOperatorActor(this, group, outputs, inputs, (Closure) code.clone(), maxForks)
-                : new DataflowOperatorActor(this, group, outputs, inputs, (Closure) code.clone());
-            this.engine = new ActorEngine(actor);
-        } else {
-            this.engine = new MailboxEngine(this, group != null ? group.getThreadPool() : Scheduler.pool(), inputs, (Closure) code.clone(), maxForks);
-        }
+        this.engine = new MailboxEngine(this, group != null ? group.getThreadPool() : Scheduler.pool(), inputs, (Closure) code.clone(), maxForks);
         for (final DataflowEventListener listener : listeners) {
             listener.registered(this);
         }

@@ -82,10 +82,11 @@ class BackpressureTest {
 
     @Test
     void shouldGetTheHighWaterMark() {
-        // disabled by default
         SysEnv.push(Map.of());
         try {
-            assertThat(Backpressure.highWater()).isZero();
+            assertThat(Backpressure.highWater(4)).isEqualTo(64);
+            assertThat(Backpressure.highWater(16)).isEqualTo(64);
+            assertThat(Backpressure.highWater(50)).isEqualTo(100);
         }
         finally {
             SysEnv.pop();
@@ -93,7 +94,7 @@ class BackpressureTest {
 
         SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", "16"));
         try {
-            assertThat(Backpressure.highWater()).isEqualTo(16);
+            assertThat(Backpressure.highWater(50)).isEqualTo(16);
             assertThat(new Backpressure(null, 16).getLowWater()).isEqualTo(8);
         }
         finally {
@@ -103,7 +104,7 @@ class BackpressureTest {
         // zero disables backpressure
         SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", "0"));
         try {
-            assertThat(Backpressure.highWater()).isZero();
+            assertThat(Backpressure.highWater(4)).isZero();
         }
         finally {
             SysEnv.pop();
@@ -115,7 +116,7 @@ class BackpressureTest {
     void shouldRejectAnInvalidHighWaterMark(String value) {
         SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", value));
         try {
-            assertThatThrownBy(() -> Backpressure.highWater())
+            assertThatThrownBy(() -> Backpressure.highWater(4))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid NXF_DATAFLOW_HIGH_WATER value: '" + value + "'");
         }

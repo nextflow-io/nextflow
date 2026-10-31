@@ -15,7 +15,6 @@
  */
 
 // E1 dataflow: n items through map, filter, flatMap, map and reduce
-// (port of nf bench/run/dataflow.nf)
 
 params {
     n: Integer = 1000000

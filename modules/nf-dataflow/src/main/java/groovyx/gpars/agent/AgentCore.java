@@ -64,7 +64,7 @@ public abstract class AgentCore {
     }
 
     /**
-     * Sets an actor group to use for task scheduling
+     * Sets a parallel group to use for task scheduling
      *
      * @param pGroup The pGroup to use
      */
