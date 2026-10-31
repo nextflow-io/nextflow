@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed remote binding support (groovyx.gpars.remote, groovyx.gpars.serial).
+// Modified by Seqera Labs for Nextflow (2026): removed remote binding support (groovyx.gpars.remote, groovyx.gpars.serial); getVal() fails on the loop thread of a single-thread pool instead of blocking it.
 
 package groovyx.gpars.dataflow.expression;
 
@@ -43,6 +43,7 @@ import groovyx.gpars.dataflow.operator.FilterClosure;
 import groovyx.gpars.dataflow.operator.SeparationClosure;
 import groovyx.gpars.group.DefaultPGroup;
 import groovyx.gpars.group.PGroup;
+import groovyx.gpars.scheduler.Scheduler;
 import groovyx.gpars.scheduler.Pool;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
@@ -238,6 +239,8 @@ public abstract class DataflowExpression<T> implements Serializable, GroovyObjec
      */
     @Override
     public T getVal() throws InterruptedException {
+        if (state.get() != S_INITIALIZED && Scheduler.isLoopThread())
+            throw new IllegalStateException("Cannot block on an unbound " + getClass().getSimpleName() + " on the dataflow loop thread -- blocking reads are not allowed when the dataflow pool has a single thread (" + Scheduler.POOL_SIZE_ENV + "=1)");
         WaitingThread newWaiting = null;
         while (state.get() != S_INITIALIZED) {
             if (newWaiting == null) {

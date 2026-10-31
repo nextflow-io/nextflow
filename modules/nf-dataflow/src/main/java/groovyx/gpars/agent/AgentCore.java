@@ -13,58 +13,46 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): a serial executor on the dataflow scheduler pool, instead of the GPars actor messaging core.
 
 package groovyx.gpars.agent;
 
-import groovyx.gpars.actor.Actors;
 import groovyx.gpars.group.PGroup;
 import groovyx.gpars.scheduler.Pool;
-import groovyx.gpars.util.AsyncMessagingCore;
+import groovyx.gpars.scheduler.Scheduler;
+import org.codehaus.groovy.runtime.InvokerInvocationException;
+import org.codehaus.groovy.runtime.NullObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ * Handles the messages sent to an agent one at a time, in send order, on a pool thread
+ *
  * @author Vaclav Pech
  *         Date: 13.4.2010
  */
 @SuppressWarnings({"UnqualifiedStaticUsage"})
 public abstract class AgentCore {
 
-    private final AsyncMessagingCore core;
+    private static final int BATCH = 128;
+
+    private final Queue<Object> queue = new ConcurrentLinkedQueue<Object>();
+
+    private final AtomicBoolean scheduled = new AtomicBoolean();
+
+    private final Runnable drain = this::drain;
+
+    private volatile Pool threadPool = Scheduler.pool();
+
+    private volatile boolean fair = false;
 
     protected volatile Thread currentThread;
-
-    protected AgentCore() {
-        this.core = new AsyncMessagingCore(Actors.defaultActorPGroup.getThreadPool()) {
-            @Override
-            protected void registerError(final Throwable e) {
-                AgentCore.this.registerError(e);
-            }
-
-            @Override
-            protected void handleMessage(final Object message) {
-                AgentCore.this.handleMessage(message);
-            }
-
-            /**
-             * Informs about the thread being removed from the task
-             */
-            @Override
-            protected void threadAssigned() {
-                currentThread = Thread.currentThread();
-            }
-
-            /**
-             * Informs about a new thread being assigned to process the next message
-             */
-            @Override
-            protected void threadUnassigned() {
-                currentThread = null;
-            }
-        };
-    }
 
     /**
      * Sets a new thread pool to be used by the agent
@@ -72,7 +60,7 @@ public abstract class AgentCore {
      * @param threadPool The thread pool to use
      */
     public final void attachToThreadPool(final Pool threadPool) {
-        core.attachToThreadPool(threadPool);
+        this.threadPool = threadPool;
     }
 
     /**
@@ -92,7 +80,7 @@ public abstract class AgentCore {
      * @return True for fair agents, false for non-fair ones. Agents are non-fair by default.
      */
     public boolean isFair() {
-        return core.isFair();
+        return fair;
     }
 
     /**
@@ -101,7 +89,7 @@ public abstract class AgentCore {
      * Non-fair agents tend to perform better than fair ones.
      */
     public void makeFair() {
-        core.makeFair();
+        this.fair = true;
     }
 
     /**
@@ -115,7 +103,57 @@ public abstract class AgentCore {
      * @param message A value or a closure
      */
     public final void send(final Object message) {
-        core.store(message);
+        queue.add(message != null ? message : NullObject.getNullObject());
+        schedule();
+    }
+
+    private void schedule() {
+        if (!scheduled.compareAndSet(false, true))
+            return;
+        try {
+            threadPool.execute(drain);
+        }
+        catch (RuntimeException | Error e) {
+            scheduled.set(false);
+            throw e;
+        }
+    }
+
+    /**
+     * Handles a batch of messages, then gives up the thread. A fair agent handles one message at a time.
+     */
+    private void drain() {
+        currentThread = Thread.currentThread();
+        try {
+            final int batch = fair ? 1 : BATCH;
+            for (int n = 0; n < batch; n++) {
+                final Object message = queue.poll();
+                if (message == null)
+                    break;
+                try {
+                    handleMessage(message);
+                }
+                catch (InvokerInvocationException e) {
+                    registerError(e.getCause());
+                }
+                catch (Throwable e) {
+                    registerError(e);
+                }
+                // like GPars, an interrupt set by a closure is an error, cleared so that it does not leak to the next message
+                if (Thread.interrupted()) {
+                    registerError(new InterruptedException());
+                    break;
+                }
+            }
+        }
+        finally {
+            currentThread = null;
+            // nor to the next pool task, e.g. an interrupt that came after the last message
+            Thread.interrupted();
+            scheduled.set(false);
+            if (!queue.isEmpty())
+                schedule();
+        }
     }
 
     /**

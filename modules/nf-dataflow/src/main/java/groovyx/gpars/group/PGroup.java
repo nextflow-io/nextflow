@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed the actor, select and selector factory methods.
+// Modified by Seqera Labs for Nextflow (2026): removed the actor, select and selector factory methods; no pool shutdown on finalization, since groups share the scheduler pool.
 
 package groovyx.gpars.group;
 
@@ -550,16 +550,6 @@ public abstract class PGroup {
 
     private static <T> boolean isListAccepting(final Closure<T> code) {
         return code.getMaximumNumberOfParameters() == 1 && List.class.isAssignableFrom(code.getParameterTypes()[0]);
-    }
-
-    /**
-     * Shutdown the thread pool gracefully
-     */
-    @SuppressWarnings({"FinalizeDeclaration"})
-    @Override
-    protected void finalize() throws Throwable {
-        this.threadPool.shutdown();
-        super.finalize();
     }
 
     /**
