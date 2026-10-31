@@ -92,8 +92,8 @@ class ValueImpl {
             if( iterable instanceof Tuple )
                 throw new ScriptRuntimeException("Operator `flatMap` expected an Iterable but received a tuple: ${iterable}\n")
             for( final e : iterable )
-                target << e
-            target << CH.stop()
+                target.bind(e)
+            target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
         NodeMarker.addOperatorNode("flatMap", [source], [target])

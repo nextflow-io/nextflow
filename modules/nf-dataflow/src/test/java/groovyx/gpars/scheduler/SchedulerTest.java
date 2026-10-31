@@ -24,20 +24,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import groovyx.gpars.Closures;
+import groovyx.gpars.agent.Agent;
 import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter;
+import groovyx.gpars.dataflow.operator.DataflowEventListener;
 import groovyx.gpars.dataflow.operator.DataflowProcessor;
 import groovyx.gpars.dataflow.operator.PoisonPill;
-import groovyx.gpars.group.DefaultPGroup;
-import groovyx.gpars.group.PGroup;
+import groovyx.gpars.dataflow.operator.TestOperators;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static groovyx.gpars.TestThreads.poll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -46,11 +47,11 @@ class SchedulerTest {
 
     static final PoisonPill STOP = PoisonPill.getInstance();
 
-    PGroup loop;
+    Pool loop;
 
     @BeforeEach
     void setUp() {
-        loop = new DefaultPGroup(Scheduler.newPool(1));
+        loop = Scheduler.newPool(1);
     }
 
     @AfterEach
@@ -71,7 +72,7 @@ class SchedulerTest {
     @Test
     void shouldFlagOnlyTheThreadOfASingleThreadPoolAsTheLoopThread() throws Exception {
         assertThat(Scheduler.isLoopThread()).isFalse();
-        assertThat(onPool(loop.getThreadPool(), Scheduler::isLoopThread)).isTrue();
+        assertThat(onPool(loop, Scheduler::isLoopThread)).isTrue();
 
         var pool = Scheduler.newPool(2);
         try {
@@ -88,8 +89,8 @@ class SchedulerTest {
         var bound = new DataflowVariable<Object>();
         bound.bind("x");
 
-        assertThat(onPool(loop.getThreadPool(), () -> (Object) bound.getVal())).isEqualTo("x");
-        assertThat(onPool(loop.getThreadPool(), () -> {
+        assertThat(onPool(loop, () -> (Object) bound.getVal())).isEqualTo("x");
+        assertThat(onPool(loop, () -> {
             try {
                 return unbound.getVal();
             }
@@ -106,7 +107,7 @@ class SchedulerTest {
         var reader = broadcast.createReadChannel();
 
         for( var channel : List.<DataflowReadChannel<Object>>of(queue, reader) ) {
-            assertThat(onPool(loop.getThreadPool(), () -> {
+            assertThat(onPool(loop, () -> {
                 try {
                     return channel.getVal();
                 }
@@ -117,8 +118,8 @@ class SchedulerTest {
         }
         queue.bind("x");
         broadcast.bind("y");
-        assertThat(queue.getVal(5, TimeUnit.SECONDS)).isEqualTo("x");
-        assertThat(reader.getVal(5, TimeUnit.SECONDS)).isEqualTo("y");
+        assertThat(poll(queue, 5, TimeUnit.SECONDS)).isEqualTo("x");
+        assertThat(poll(reader, 5, TimeUnit.SECONDS)).isEqualTo("y");
     }
 
     @Test
@@ -127,15 +128,16 @@ class SchedulerTest {
         var middle = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
         var threads = new CopyOnWriteArrayList<Thread>();
-        var agent = loop.agent(0);
+        var agent = new Agent<>(0);
+        agent.attachToThreadPool(loop);
 
-        loop.operator(Map.of("inputs", List.of(input), "outputs", List.of(middle)), Closures.closure(1, (self, args) -> {
+        TestOperators.start(loop, Map.of("inputs", List.of(input), "outputs", List.of(middle)), Closures.closure(1, (self, args) -> {
             threads.add(Thread.currentThread());
             ((DataflowProcessor) self).bindOutput((Integer) args[0] * 10);
             return null;
         }));
         // with maxForks, the bodies are queued on the loop and run one at a time
-        loop.operator(Map.of("inputs", List.of(middle), "outputs", List.of(output), "maxForks", 4), Closures.closure(1, (self, args) -> {
+        TestOperators.start(loop, Map.of("inputs", List.of(middle), "outputs", List.of(output), "maxForks", 4), Closures.closure(1, (self, args) -> {
             threads.add(Thread.currentThread());
             agent.send(Closures.action(it -> threads.add(Thread.currentThread())));
             ((DataflowProcessor) self).bindOutput((Integer) args[0] + 1);
@@ -147,7 +149,7 @@ class SchedulerTest {
 
         var result = new ArrayList<Object>();
         for( int i = 0; i < 101; i++ )
-            result.add(output.getVal(5, TimeUnit.SECONDS));
+            result.add(poll(output, 5, TimeUnit.SECONDS));
         assertThat(result.get(100)).isSameAs(STOP);
         assertThat(result.subList(0, 100)).containsExactlyInAnyOrderElementsOf(IntStream.range(0, 100).map(i -> i * 10 + 1).boxed().toList());
         agent.await();
@@ -159,7 +161,7 @@ class SchedulerTest {
         var input = new DataflowQueue<Object>();
         var unbound = new DataflowVariable<Object>();
         var error = new DataflowVariable<Throwable>();
-        var listener = new DataflowEventAdapter() {
+        var listener = new DataflowEventListener() {
             @Override
             public boolean onException(DataflowProcessor processor, Throwable e) {
                 error.bind(e);
@@ -167,20 +169,21 @@ class SchedulerTest {
             }
         };
 
-        loop.operator(Map.of("inputs", List.of(input), "listeners", List.of(listener)), Closures.action(x -> unbound.getVal()));
+        TestOperators.start(loop, Map.of("inputs", List.of(input), "listeners", List.of(listener)), Closures.action(x -> unbound.getVal()));
         input.bind(1);
-        assertThat(error.getVal(5, TimeUnit.SECONDS))
+        assertThat(poll(error, 5, TimeUnit.SECONDS))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining(Scheduler.POOL_SIZE_ENV);
     }
 
     @Test
     void shouldNotLeakAnInterruptSetByAnAgentClosureToTheNextMessageOrPoolTask() throws Exception {
-        var agent = loop.agent(0);
+        var agent = new Agent<>(0);
+        agent.attachToThreadPool(loop);
         var interrupted = new CopyOnWriteArrayList<Boolean>();
         // hold the loop thread, so that the agent handles both messages in one batch
         var hold = new CountDownLatch(1);
-        loop.getThreadPool().execute(() -> {
+        loop.execute(() -> {
             try {
                 hold.await();
             }
@@ -195,7 +198,7 @@ class SchedulerTest {
 
         assertThat(interrupted).containsExactly(false);
         assertThat(agent.getErrors()).singleElement().isInstanceOf(InterruptedException.class);
-        assertThat(onPool(loop.getThreadPool(), () -> Thread.currentThread().isInterrupted())).isFalse();
+        assertThat(onPool(loop, () -> Thread.currentThread().isInterrupted())).isFalse();
     }
 
     interface Call<T> { T call() throws Exception; }
@@ -211,7 +214,7 @@ class SchedulerTest {
             }
         });
         @SuppressWarnings("unchecked")
-        var value = (T) result.getVal(5, TimeUnit.SECONDS);
+        var value = (T) poll(result, 5, TimeUnit.SECONDS);
         return value;
     }
 }

@@ -16,11 +16,9 @@
 //
 // Modified by Seqera Labs for Nextflow (2026): trimmed to the methods used by Nextflow and its plugins
 // (removed SelectableChannel, rightShift, then, chainWith, filter, split, tap, merge, choice, separate,
-// the Pool/PGroup/Map variants, getValAsync and the event manager); added the non-blocking reads of the operator engine.
+// the Pool/PGroup/Map variants, getValAsync, the timed getVal and the event manager); added the non-blocking reads of the operator engine.
 
 package groovyx.gpars.dataflow;
-
-import java.util.concurrent.TimeUnit;
 
 import groovy.lang.Closure;
 import groovyx.gpars.dataflow.impl.ReadCallback;
@@ -42,23 +40,13 @@ public interface DataflowReadChannel<T> {
     T getVal() throws InterruptedException;
 
     /**
-     * Reads the current value of the channel. Blocks up to given timeout, if the value has not been assigned yet.
-     *
-     * @param timeout The timeout value
-     * @param units   Units for the timeout
-     * @return The actual value, or null when the timeout expires
-     * @throws InterruptedException If the current thread gets interrupted while waiting for the channel to be bound
-     */
-    T getVal(final long timeout, final TimeUnit units) throws InterruptedException;
-
-    /**
-     * Schedules the closure to run on the current parallel group once a value is available.
+     * Schedules the closure to run on the dataflow pool once a value is available.
      * A queue or a stream reader hands each value to a single callback.
      *
      * @param closure closure to execute when data becomes available. The closure should take at most one argument.
      */
     default <V> void whenBound(final Closure<V> closure) {
-        final DataCallback callback = new DataCallback(closure, Dataflow.retrieveCurrentDFPGroup());
+        final DataCallback callback = new DataCallback(closure);
         final Object item = takeOrSubscribe(callback);
         if (item != ReadCallback.NONE)
             callback.onItem(item);

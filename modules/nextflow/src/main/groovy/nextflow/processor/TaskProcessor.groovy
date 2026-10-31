@@ -32,17 +32,15 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
-import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
-import groovyx.gpars.group.PGroup
+import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.NF
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
@@ -546,12 +544,6 @@ class TaskProcessor {
             }
         }
 
-        /**
-         * The thread pool used by GPars. The thread pool to be used is set in the static
-         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
-         */
-        final PGroup group = Dataflow.retrieveCurrentDFPGroup()
-
         /*
          * When one (or more) {@code each} are declared as input, it is created an extra
          * operator which will receive the inputs from the channel (excepts the values over iterate)
@@ -568,7 +560,7 @@ class TaskProcessor {
             // the iterator operator needs to executed just one time
             // thus add a dataflow queue binding a single value and then a stop signal
             def termination = new DataflowQueue<>()
-            termination << Boolean.TRUE
+            termination.bind(Boolean.TRUE)
             opInputs[size] = termination
 
             // the channel forwarding the data from the *iterator* process to the target task
@@ -583,7 +575,7 @@ class TaskProcessor {
             def stopAfterFirstRun = allScalarValues
             def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
             def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allOperators << (op1 = new DataflowOperator(group, params, forwarder))
+            session.allOperators << (op1 = new DataflowOperator(params, forwarder))
             // fix issue #41
             start(op1)
 
@@ -605,7 +597,7 @@ class TaskProcessor {
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
-        session.allOperators << (operator = new DataflowOperator(group, params, invoke))
+        session.allOperators << (operator = new DataflowOperator(params, invoke))
         backlog = session.backpressure?.register(name, opInputs, operator)
 
         // notify the creation of a new vertex the execution DAG
@@ -651,16 +643,12 @@ class TaskProcessor {
         final opInputs = inputs + [control]
         this.openPorts = createPortsArray(opInputs.size())
 
-        // The thread pool used by GPars. The thread pool to be used is set in the static
-        // initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
-        final group = Dataflow.retrieveCurrentDFPGroup()
-
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
         final interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         final params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         final invoke = new InvokeTaskAdapter(this, opInputs.size())
-        this.operator = new DataflowOperator(group, params, invoke)
+        this.operator = new DataflowOperator(params, invoke)
         this.backlog = session.backpressure?.register(name, opInputs, operator)
         session.allOperators << operator
 
@@ -1293,10 +1281,10 @@ class TaskProcessor {
             if( channel instanceof DataflowQueue ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowStreamWriteAdapter ) {
+            else if( channel instanceof DataflowBroadcast ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowExpression && !channel.isBound()) {
+            else if( channel instanceof DataflowVariable && !channel.isBound()) {
                 channel.bind( PoisonPill.instance )
             }
         }
@@ -2060,7 +2048,7 @@ class TaskProcessor {
             def last = i == openPorts.length()-1
             def param = configV1().getInputs()[i]
             def chnnl = param?.inChannel
-            def isValue = chnnl instanceof DataflowExpression
+            def isValue = chnnl instanceof DataflowVariable
             def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
             def channel = param && !(param instanceof TupleInParam) ? param.getName() : '-'
             def status; if( isValue ) { status = !chnnl.isBound() ? 'OPEN  ' : 'bound ' }
@@ -2072,7 +2060,7 @@ class TaskProcessor {
     /*
      * logger class for the *iterator* processor
      */
-    class BaseProcessInterceptor extends DataflowEventAdapter {
+    class BaseProcessInterceptor implements DataflowEventListener {
 
         final List<DataflowReadChannel> inputs
 
@@ -2190,7 +2178,7 @@ class TaskProcessor {
         /**
          * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
          * If any of the listeners returns true, the operator will terminate.
-         * Exceptions outside of the operator's body or listeners' messageSentOut() handlers will terminate the operator irrespective of the listeners' votes.
+         * Exceptions outside of the operator's body will terminate the operator irrespective of the listeners' votes.
          * When using maxForks, the method may be invoked from threads running the forks.
          * @param processor
          * @param error

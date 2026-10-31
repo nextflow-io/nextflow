@@ -23,9 +23,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
+import groovyx.gpars.dataflow.DataflowStreamReadAdapter
 
 /**
  * The backlog of a process:
@@ -139,7 +139,7 @@ class ProcessBacklog implements BooleanSupplier {
         int result = max
         boolean anyQueue = false
         for( DataflowReadChannel ch : inputs ) {
-            if( ch instanceof DataflowExpression ) {
+            if( ch instanceof DataflowVariable ) {
                 if( !ch.isBound() )
                     return 0
                 continue

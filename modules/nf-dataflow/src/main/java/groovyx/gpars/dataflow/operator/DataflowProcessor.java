@@ -14,14 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by the mailbox engine instead of a GPars actor; added isActive(); removed registerChannelListenersToAllInputs.
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by the mailbox engine instead of a GPars actor; added isActive(); removed registerChannelListenersToAllInputs,
+// start(PGroup), terminateAfterNextRun, bindAllOutputValuesAtomically, the output and state getters, the state object, adding and removing listeners after construction and the
+// registered, afterStart, messageSentOut and customEvent events.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
-import groovyx.gpars.group.PGroup;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -52,7 +53,6 @@ public abstract class DataflowProcessor {
     public static final String INPUTS = "inputs";
     public static final String OUTPUTS = "outputs";
     public static final String MAX_FORKS = "maxForks";
-    public static final String STATE_OBJECT = "stateObject";
     private static final String LISTENERS = "listeners";
 
     /**
@@ -63,11 +63,6 @@ public abstract class DataflowProcessor {
     final List<DataflowReadChannel<?>> inputs;
 
     final List<DataflowWriteChannel<?>> outputs;
-
-    /**
-     * May hold custom state provided at construction time and read within the body
-     */
-    protected final Object stateObject;
 
     protected final Collection<DataflowEventListener> listeners = new CopyOnWriteArrayList<DataflowEventListener>();
 
@@ -84,7 +79,6 @@ public abstract class DataflowProcessor {
         //noinspection ThisEscapedInObjectConstruction
         code.setDelegate(this);
 
-        stateObject = extractState(channels);
         listeners.addAll(extractListeners(channels));
         inputs = channels != null ? extractInputs(channels) : Collections.<DataflowReadChannel<?>>emptyList();
         outputs = channels != null ? extractOutputs(channels) : Collections.<DataflowWriteChannel<?>>emptyList();
@@ -112,11 +106,6 @@ public abstract class DataflowProcessor {
         return Collections.unmodifiableList(outputs);
     }
 
-    private static Object extractState(final Map<String, Object> channels) {
-        if (channels == null) return null;
-        return channels.get(STATE_OBJECT);
-    }
-
     private static Collection<DataflowEventListener> extractListeners(final Map<String, Object> channels) {
         if (channels == null) return null;
         final Collection<DataflowEventListener> listeners = (Collection<DataflowEventListener>) channels.get(LISTENERS);
@@ -129,23 +118,12 @@ public abstract class DataflowProcessor {
     }
 
     /**
-     * Starts a processor using the specified parallel group
-     *
-     * @param group The parallel group to use with the processor
-     * @return This operator instance
-     */
-    public final DataflowProcessor start(final PGroup group) {
-        engine.start(group);
-        return this;
-    }
-
-    /**
-     * Starts a processor using the specified parallel group
+     * Starts the processor
      *
      * @return This operator instance
      */
     public final DataflowProcessor start() {
-        engine.start(null);
+        engine.start();
         return this;
     }
 
@@ -154,14 +132,6 @@ public abstract class DataflowProcessor {
      */
     public final void terminate() {
         engine.terminate();
-    }
-
-    /**
-     * Gently stops the processor after the next set of messages is handled. Unlike with terminate(), no messages will get lost.
-     * If the operator never gets triggered after calling the terminateAfterNextRun() method, the operator never really stops.
-     */
-    public final void terminateAfterNextRun() {
-        engine.terminateAfterNextRun();
     }
 
     /**
@@ -218,8 +188,7 @@ public abstract class DataflowProcessor {
      * @param value The value to bind
      */
     public final void bindOutput(final int idx, final Object value) {
-        final DataflowWriteChannel<Object> channel = (DataflowWriteChannel<Object>) outputs.get(idx);
-        channel.bind(fireMessageSentOut(channel, idx, value));
+        ((DataflowWriteChannel<Object>) outputs.get(idx)).bind(value);
     }
 
     /**
@@ -240,11 +209,8 @@ public abstract class DataflowProcessor {
      * @param value The value to bind
      */
     public final void bindAllOutputs(final Object value) {
-        final List<DataflowWriteChannel<?>> outputs = getOutputs();
-        for (int i = 0; i < outputs.size(); i++) {
-            final DataflowWriteChannel<Object> channel = (DataflowWriteChannel<Object>) outputs.get(i);
-            channel.bind(fireMessageSentOut(channel, i, value));
-        }
+        for (final DataflowWriteChannel<?> channel : outputs)
+            ((DataflowWriteChannel<Object>) channel).bind(value);
     }
 
     /**
@@ -259,11 +225,8 @@ public abstract class DataflowProcessor {
      * @param values Values to send to output channels of the same position index
      */
     public final void bindAllOutputValues(final Object... values) {
-        final List<DataflowWriteChannel<?>> outputs = getOutputs();
-        for (int i = 0; i < outputs.size(); i++) {
-            final DataflowWriteChannel channel = outputs.get(i);
-            channel.bind(fireMessageSentOut(channel, i, values[i]));
-        }
+        for (int i = 0; i < outputs.size(); i++)
+            ((DataflowWriteChannel<Object>) outputs.get(i)).bind(values[i]);
     }
 
     /**
@@ -274,56 +237,6 @@ public abstract class DataflowProcessor {
      */
     public final synchronized void bindAllOutputsAtomically(final Object value) {
         bindAllOutputs(value);
-    }
-
-    /**
-     * Used by the processor's body to send a value to all output channels, while guaranteeing atomicity of the operation
-     * and preventing other calls to bindAllOutputsAtomically() from interfering with one another.
-     * The values passed as arguments will each be sent to an output channel with identical position index.
-     *
-     * @param values Values to send to output channels of the same position index
-     */
-    public final synchronized void bindAllOutputValuesAtomically(final Object... values) {
-        bindAllOutputValues(values);
-    }
-
-    /**
-     * The processor's output channel of the given index
-     *
-     * @param idx The index of the channel to retrieve
-     * @return The particular DataflowWriteChannel instance
-     */
-    public final DataflowWriteChannel<?> getOutputs(final int idx) {
-        if (outputs.isEmpty()) return null;
-        return outputs.get(idx);
-    }
-
-    /**
-     * The processor's all output channels
-     *
-     * @return A List holding all output channels
-     */
-    public final List<DataflowWriteChannel<?>> getOutputs() {
-        return outputs;
-    }
-
-    /**
-     * The processor's first / only output channel
-     *
-     * @return The particular DataflowWriteChannel instance
-     */
-    public final DataflowWriteChannel<?> getOutput() {
-        if (outputs.isEmpty()) return null;
-        return outputs.get(0);
-    }
-
-    /**
-     * Retrieves the custom state object
-     *
-     * @return The state object associated with the operator
-     */
-    public final Object getStateObject() {
-        return stateObject;
     }
 
     /**
@@ -342,21 +255,6 @@ public abstract class DataflowProcessor {
         }
     }
 
-    public final void addDataflowEventListener(final DataflowEventListener listener) {
-        listeners.add(listener);
-        listener.registered(this);
-    }
-
-    public final void removeDataflowEventListener(final DataflowEventListener listener) {
-        listeners.remove(listener);
-    }
-
-    protected final void fireAfterStart() {
-        for (final DataflowEventListener listener : listeners) {
-            listener.afterStart(this);
-        }
-    }
-
     protected final void fireAfterStop() {
         for (final DataflowEventListener listener : listeners) {
             listener.afterStop(this);
@@ -371,14 +269,6 @@ public abstract class DataflowProcessor {
         return terminate;
     }
 
-    public final Object fireCustomEvent(final Object data) {
-        Object result = data;
-        for (final DataflowEventListener listener : listeners) {
-            result = listener.customEvent(this, result);
-        }
-        return result;
-    }
-
     protected final Object fireMessageArrived(final DataflowReadChannel channel, final int index, final Object message) {
         Object result = message;
         for (final DataflowEventListener listener : listeners) {
@@ -391,14 +281,6 @@ public abstract class DataflowProcessor {
         Object result = message;
         for (final DataflowEventListener listener : listeners) {
             result = listener.controlMessageArrived(this, channel, index, result);
-        }
-        return result;
-    }
-
-    protected final Object fireMessageSentOut(final DataflowWriteChannel channel, final int index, final Object message) {
-        Object result = message;
-        for (final DataflowEventListener listener : listeners) {
-            result = listener.messageSentOut(this, channel, index, result);
         }
         return result;
     }

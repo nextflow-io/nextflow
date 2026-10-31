@@ -89,7 +89,7 @@ class JoinOpV2 {
             onNext(target, value, index)
         } catch( Throwable e ) {
             this.failed = true
-            target << CH.stop()
+            target.bind(CH.stop())
             throw e
         }
     }
@@ -103,7 +103,7 @@ class JoinOpV2 {
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final rightValue : rightValues )
-                target << leftValue.plus(rightValue)
+                target.bind(leftValue.plus(rightValue))
             if( !rightValues.isEmpty() )
                 emitted.add(key)
             leftValues.add(leftValue)
@@ -114,7 +114,7 @@ class JoinOpV2 {
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final leftValue : leftValues )
-                target << leftValue.plus(rightValue)
+                target.bind(leftValue.plus(rightValue))
             if( !leftValues.isEmpty() )
                 emitted.add(key)
             rightValues.add(rightValue)
@@ -134,7 +134,7 @@ class JoinOpV2 {
             keysLeft.removeAll(emitted)
             for( final key : keysLeft ) {
                 for( final value : mappingsLeft.get(key) )
-                    target << value
+                    target.bind(value)
             }
 
             // emit unmatched right-hand values
@@ -142,11 +142,11 @@ class JoinOpV2 {
             keysRight.removeAll(emitted)
             for( final key : keysRight ) {
                 for( final value : mappingsRight.get(key) )
-                    target << value
+                    target.bind(value)
             }
         }
 
-        target << CH.stop()
+        target.bind(CH.stop())
     }
 
 }

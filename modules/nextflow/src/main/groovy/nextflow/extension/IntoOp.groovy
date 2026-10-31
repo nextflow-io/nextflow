@@ -21,10 +21,10 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
@@ -104,8 +104,8 @@ class IntoOp {
 
     private createListener() {
 
-        final stopOnFirst = source instanceof DataflowExpression
-        final listener = new DataflowEventAdapter() {
+        final stopOnFirst = source instanceof DataflowVariable
+        final listener = new DataflowEventListener() {
             @Override
             void afterRun(DataflowProcessor processor, List<Object> messages) {
                 if( !stopOnFirst ) return
@@ -113,10 +113,10 @@ class IntoOp {
                 processor.terminate()
                 // -- close the output channels
                 for( def it : outputs ) {
-                    if( !(it instanceof DataflowExpression))
+                    if( !(it instanceof DataflowVariable))
                         it.bind(Channel.STOP)
 
-                    else if( !(it as DataflowExpression).isBound() )
+                    else if( !(it as DataflowVariable).isBound() )
                         it.bind(Channel.STOP)
 
                 }

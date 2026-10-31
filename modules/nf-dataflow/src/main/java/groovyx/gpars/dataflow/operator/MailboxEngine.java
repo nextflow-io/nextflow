@@ -27,7 +27,6 @@ import groovy.lang.Closure;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
 import groovyx.gpars.dataflow.impl.ReadCallback;
-import groovyx.gpars.group.PGroup;
 import groovyx.gpars.scheduler.Pool;
 
 import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
@@ -61,7 +60,6 @@ final class MailboxEngine implements Runnable {
     private static final Object START = new Object();
     private static final Object RESUME = new Object();
     private static final Object TERMINATE = new Object();
-    private static final Object STOP_GENTLY = new Object();
 
     private final DataflowProcessor owner;
 
@@ -71,7 +69,7 @@ final class MailboxEngine implements Runnable {
 
     private final Port[] ports;
 
-    private volatile Pool pool;
+    private final Pool pool;
 
     private final Queue<Object> mailbox = new ConcurrentLinkedQueue<>();
 
@@ -104,8 +102,6 @@ final class MailboxEngine implements Runnable {
 
     private PoisonPill pendingPill;
 
-    private boolean stoppingGently;
-
     // the backpressure gate
 
     private volatile boolean paused;
@@ -131,9 +127,7 @@ final class MailboxEngine implements Runnable {
             ports[i] = new Port(i, inputs.get(i));
     }
 
-    void start(final PGroup group) {
-        if (group != null)
-            pool = group.getThreadPool();
+    void start() {
         if (!state.compareAndSet(NEW, RUNNING))
             throw new IllegalStateException("The operator has already been started");
         post(START);
@@ -157,10 +151,6 @@ final class MailboxEngine implements Runnable {
             }
         }
         post(TERMINATE);
-    }
-
-    void terminateAfterNextRun() {
-        post(STOP_GENTLY);
     }
 
     void join() throws InterruptedException {
@@ -308,15 +298,8 @@ final class MailboxEngine implements Runnable {
         if (message == RESUME)
             onResume();
         else if (message == START)
-            onStart();
-        else if (message == STOP_GENTLY)
-            stoppingGently = true;
+            started = true;
         // TERMINATE only wakes the drain, which stops on the state
-    }
-
-    private void onStart() {
-        owner.fireAfterStart();
-        started = true;
     }
 
     /**
@@ -369,11 +352,10 @@ final class MailboxEngine implements Runnable {
         // the operator stops once the bodies in flight complete
         if (pendingPill != null)
             return;
-        if (item instanceof ControlMessage) {
+        if (item instanceof PoisonPill) {
             item = owner.fireControlMessageArrived(port.channel, port.index, item);
-            if (item instanceof PoisonPill)
+            if (item instanceof PoisonPill) {
                 onPoison((PoisonPill) item);
-            if (item instanceof ControlMessage) {
                 // like GPars, the input is not read again
                 port.requested = true;
                 return;
@@ -423,10 +405,6 @@ final class MailboxEngine implements Runnable {
     }
 
     private void afterFiring() {
-        if (stoppingGently) {
-            owner.terminate();
-            return;
-        }
         if (state.get() == RUNNING)
             pauseIfGateClosed();
     }
@@ -491,7 +469,6 @@ final class MailboxEngine implements Runnable {
         pendingPill = null;
         owner.bindAllOutputsAtomically(pill);
         owner.terminate();
-        pill.countDown();
     }
 
     private void onResume() {
@@ -536,8 +513,6 @@ final class MailboxEngine implements Runnable {
             owner.fireAfterStop();
         }
         finally {
-            if (pill != null)
-                pill.countDown();
             stopped.countDown();
         }
     }

@@ -32,7 +32,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.ControlMessage
+import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.dataflow.engine.Backpressure
 import nextflow.datasource.SraExplorer
@@ -62,7 +62,7 @@ import org.codehaus.groovy.runtime.NullObject
 @CompileStatic
 class Channel  {
 
-    static public ControlMessage STOP = CH.stop()
+    static public PoisonPill STOP = CH.stop()
 
     static public NullObject VOID = NullObject.getNullObject()
 
@@ -238,7 +238,7 @@ class Channel  {
         def task = {
             def value = closure.call(index++)
             Backpressure.runAsSource { Backpressure.awaitSource(result) }
-            result << value
+            result.bind(value)
             if( value == STOP ) {
                 timer.cancel()
             }

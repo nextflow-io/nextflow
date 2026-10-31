@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): a serial executor on the dataflow scheduler pool, instead of the GPars actor messaging core.
+// Modified by Seqera Labs for Nextflow (2026): a serial executor on the dataflow scheduler pool, instead of the GPars actor messaging core;
+// removed setPGroup and the leftShift and call aliases of send.
 
 package groovyx.gpars.agent;
 
-import groovyx.gpars.group.PGroup;
 import groovyx.gpars.scheduler.Pool;
 import groovyx.gpars.scheduler.Scheduler;
 import org.codehaus.groovy.runtime.InvokerInvocationException;
@@ -61,15 +61,6 @@ public abstract class AgentCore {
      */
     public final void attachToThreadPool(final Pool threadPool) {
         this.threadPool = threadPool;
-    }
-
-    /**
-     * Sets a parallel group to use for task scheduling
-     *
-     * @param pGroup The pGroup to use
-     */
-    public void setPGroup(final PGroup pGroup) {
-        attachToThreadPool(pGroup.getThreadPool());
     }
 
     /**
@@ -154,26 +145,6 @@ public abstract class AgentCore {
             if (!queue.isEmpty())
                 schedule();
         }
-    }
-
-    /**
-     * Adds the message to the agent\s message queue
-     *
-     * @param message A value or a closure
-     */
-    @SuppressWarnings({"UnusedDeclaration"})
-    public final void leftShift(final Object message) {
-        send(message);
-    }
-
-    /**
-     * Adds the message to the agent\s message queue
-     *
-     * @param message A value or a closure
-     */
-    @SuppressWarnings({"UnusedDeclaration"})
-    public final void call(final Object message) {
-        send(message);
     }
 
     /**

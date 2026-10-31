@@ -24,16 +24,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
 import groovyx.gpars.Closures;
-import groovyx.gpars.dataflow.Dataflow;
 import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowVariable;
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter;
+import groovyx.gpars.dataflow.DataflowStreamReadAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.TestThreads.await;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,7 +49,7 @@ class DataflowOperatorGateTest {
      * An operator with a queue input and a value input, which records the queue items it fires on.
      */
     private static DataflowOperator operator(DataflowQueue<Object> input, List<Object> fired, int maxForks, DataflowVariable<Object> stopped, AtomicInteger started) {
-        final var listener = new DataflowEventAdapter() {
+        final var listener = new DataflowEventListener() {
             @Override
             public List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
                 if( started != null )
@@ -66,7 +66,7 @@ class DataflowOperatorGateTest {
         final var value = new DataflowVariable<Object>();
         value.bind(0);
         final var params = Map.of("inputs", List.of(input, value), "maxForks", maxForks, "listeners", List.of(listener));
-        return new DataflowOperator(Dataflow.retrieveCurrentDFPGroup(), params, Closures.action((x, y) -> fired.add(x)));
+        return new DataflowOperator(params, Closures.action((x, y) -> fired.add(x)));
     }
 
     /**
@@ -131,13 +131,15 @@ class DataflowOperatorGateTest {
         op.setGate(closed::get);
         op.start();
 
-        input.leftShift(1).leftShift(2).leftShift(STOP);
+        input.bind(1);
+        input.bind(2);
+        input.bind(STOP);
         await(() -> fired.size() == 1 && op.isPaused());
         assertThat(stopped.isBound()).isFalse();
 
         closed.set(false);
         op.resume();
-        assertThat(stopped.getVal(5, TimeUnit.SECONDS)).isEqualTo(true);
+        assertThat(poll(stopped, 5, TimeUnit.SECONDS)).isEqualTo(true);
         assertThat(fired).containsExactly(1, 2);
     }
 
@@ -185,7 +187,7 @@ class DataflowOperatorGateTest {
             op.resume();
         }
 
-        assertThat(stopped.getVal(5, TimeUnit.SECONDS)).isEqualTo(true);
+        assertThat(poll(stopped, 5, TimeUnit.SECONDS)).isEqualTo(true);
         assertThat(fired).hasSize(n);
         assertThat(op.getPauseCount()).isPositive();
     }

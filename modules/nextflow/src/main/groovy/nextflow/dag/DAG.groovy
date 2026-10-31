@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.NF
 import nextflow.extension.CH
@@ -226,7 +226,7 @@ class DAG {
     }
 
     private boolean isForkable(obj) {
-        if( obj instanceof DataflowExpression )
+        if( obj instanceof DataflowVariable )
             return true
         if( obj instanceof DataflowBroadcast )
             return true
@@ -503,7 +503,7 @@ class DAG {
     static class ChannelHandler {
 
         /**
-         * The {@link groovyx.gpars.dataflow.DataflowChannel} that originated this graph edge
+         * The dataflow channel that originated this graph edge
          */
         Object channel
 

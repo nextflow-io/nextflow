@@ -24,11 +24,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
+import groovyx.gpars.dataflow.DataflowStreamReadAdapter
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
@@ -46,7 +43,7 @@ class CH {
         return (Session) Global.session
     }
 
-    static ControlMessage stop() { PoisonPill.getInstance() }
+    static PoisonPill stop() { PoisonPill.getInstance() }
 
     static class Topic {
         DataflowBroadcast broadcaster = new DataflowBroadcast()
@@ -127,7 +124,7 @@ class CH {
 
     @PackageScope
     static DataflowWriteChannel close0(DataflowWriteChannel source) {
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             if( !source.isBound() )
                 source.bind(stop())
         }
@@ -138,7 +135,7 @@ class CH {
     }
 
     static DataflowWriteChannel createBy(DataflowReadChannel channel) {
-        create( channel instanceof DataflowExpression )
+        create( channel instanceof DataflowVariable )
     }
 
     static DataflowWriteChannel create(boolean value=false) {
@@ -188,11 +185,11 @@ class CH {
     }
 
     static boolean isValue(obj) {
-        return obj instanceof DataflowExpression
+        return obj instanceof DataflowVariable
     }
 
     static boolean isChannelQueue(obj) {
-        obj instanceof DataflowQueue || obj instanceof DataflowStreamReadAdapter || obj instanceof DataflowStreamWriteAdapter
+        obj instanceof DataflowQueue || obj instanceof DataflowStreamReadAdapter || obj instanceof DataflowBroadcast
     }
 
     static boolean allScalar(List args) {
