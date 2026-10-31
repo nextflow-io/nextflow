@@ -37,9 +37,8 @@ import groovyx.gpars.dataflow.DataflowStreamReadAdapter
  * and resumes once it drops to the low-water mark. Sources feeding the process are paused
  * likewise on the whole backlog.
  *
- * A task counts as both preparing and pending from its scheduling ({@code schedule} is called
- * within the task preparation) until the end of its preparation ({@code afterRun}), so the
- * backlog may briefly exceed the mark by the input sets being prepared.
+ * The task counts are changed only by {@link nextflow.processor.TaskBacklogTracker}, which
+ * moves a task from preparing to pending at once when it is scheduled.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -87,6 +86,15 @@ class ProcessBacklog implements BooleanSupplier {
 
     void taskPending() {
         pending.incrementAndGet()
+    }
+
+    /**
+     * Move a task from preparing to pending. Pending is incremented first, so that the
+     * backlog never drops and resumes the operator in between
+     */
+    void taskScheduled() {
+        pending.incrementAndGet()
+        preparing.decrementAndGet()
     }
 
     void taskSubmitted() {

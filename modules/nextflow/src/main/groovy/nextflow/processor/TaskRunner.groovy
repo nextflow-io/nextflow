@@ -21,6 +21,7 @@ import static nextflow.processor.ErrorStrategy.*
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
+import java.util.function.Supplier
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
@@ -28,6 +29,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.CloudSpotTerminationException
+import nextflow.dataflow.engine.ProcessBacklog
 import nextflow.exception.FailedGuardException
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
@@ -132,10 +134,18 @@ class TaskRunner {
     /** The {@link TaskResolver} adapter over this runner, created on first use. */
     private volatile TaskResolver taskResolver
 
+    /**
+     * Counts the tasks of this runner in the process backlog, when backpressure is enabled.
+     */
+    private final TaskBacklogTracker backlog
+
     TaskRunner(TaskProcessor processor, Consumer<TaskRun> onComplete) {
         this.processor = processor
         this.onComplete = onComplete
+        this.backlog = new TaskBacklogTracker({ -> processor.getBacklog() } as Supplier<ProcessBacklog>)
     }
+
+    @PackageScope TaskBacklogTracker getBacklog() { backlog }
 
     int getErrorCount() { errorCount }
 
@@ -177,10 +187,39 @@ class TaskRunner {
      *      The list of task input values
      */
     void submit(TaskStartParams params, List values) {
-        log.trace "Invoking task > $name with params=$params; values=$values"
+        submit(accept(params), values)
+    }
 
-        // -- create the task run instance
+    /**
+     * Create the task for an input set taken by the process. The task counts as
+     * preparing in the process backlog until {@link #submit} schedules or discards it,
+     * so this is called as soon as the input set is taken, for the backpressure gate
+     * to see it at once.
+     *
+     * @param params The task id and index
+     * @return The new task, to be passed to {@link #submit(TaskRun,List)}
+     */
+    TaskRun accept(TaskStartParams params) {
         final task = createTaskRun(params)
+        backlog.accepted(task)
+        return task
+    }
+
+    /**
+     * Execute a task created by {@link #accept} for the given input values.
+     */
+    void submit(TaskRun task, List values) {
+        try {
+            submit0(task, values)
+        }
+        finally {
+            backlog.prepared(task)
+        }
+    }
+
+    private void submit0(TaskRun task, List values) {
+        log.trace "Invoking task > $name with id=${task.id}; index=${task.index}; values=$values"
+
         // -- set the task instance as the current in this thread
         processor.currentTask.set(task)
 
@@ -803,10 +842,35 @@ class TaskRunner {
         // when no collector is define OR it's a task retry, then submit directly for execution
         final arrayCollector = processor.getArrayCollector()
         if( !arrayCollector || task.config.getAttempt() > 1 )
-            executor.submit(task)
+            schedule(task)
         // add the task to the collection of running tasks
         else
             arrayCollector.collect(task)
+    }
+
+    /**
+     * Hand a task over to the executor, counted as pending in the process backlog
+     * until the executor takes it off its pending queue
+     *
+     * @param task The task or task array to be scheduled
+     */
+    void schedule(TaskRun task) {
+        backlog.scheduled(task)
+        try {
+            executor.submit(task)
+        }
+        catch( Throwable e ) {
+            backlog.dequeued(task)
+            throw e
+        }
+    }
+
+    /**
+     * Invoked by the task monitor when a task leaves its pending queue,
+     * either submitted or failed
+     */
+    void taskDequeued(TaskRun task) {
+        backlog.dequeued(task)
     }
 
     protected boolean checkWhenGuard(TaskRun task) {

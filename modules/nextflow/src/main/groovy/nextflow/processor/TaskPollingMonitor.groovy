@@ -31,7 +31,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.CloudSpotTerminationException
-import nextflow.dataflow.engine.ProcessBacklog
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
@@ -337,7 +336,6 @@ class TaskPollingMonitor implements TaskMonitor {
     void schedule(TaskHandler handler) {
         pendingLock.lock()
         try{
-            backlogOf(handler)?.taskPending()
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
             notifyTaskPending(handler)
@@ -736,14 +734,10 @@ class TaskPollingMonitor implements TaskMonitor {
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
             itr.remove()
-            backlogOf(handler)?.taskSubmitted()
+            handler.task?.processor?.getRunner()?.taskDequeued(handler.task)
         }
 
         return count
-    }
-
-    static private ProcessBacklog backlogOf(TaskHandler handler) {
-        return handler.task?.processor?.getBacklog()
     }
 
 

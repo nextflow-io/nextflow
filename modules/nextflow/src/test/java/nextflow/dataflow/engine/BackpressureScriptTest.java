@@ -79,10 +79,10 @@ class BackpressureScriptTest {
     static final int N = 1000;
 
     /**
-     * A task is counted both as preparing and pending between its scheduling and the end of
-     * its preparation, so the sampled count may exceed the mark by the tasks being prepared.
+     * The operator pauses as soon as the backlog reaches the mark, but the sampler reads the
+     * preparing and pending counts apart, so it may count a task twice as it is scheduled.
      */
-    static final int MAX_BUSY = 2 * HW;
+    static final int MAX_BUSY = HW + 2;
 
     @TempDir
     Path workDir;

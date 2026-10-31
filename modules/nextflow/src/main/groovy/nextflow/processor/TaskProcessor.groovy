@@ -604,12 +604,12 @@ class TaskProcessor {
      *
      * @param args
      *      The args array is expected to be composed by two elements:
-     *      the first must be an object object of type {@link TaskStartParams},
+     *      the first is the {@link TaskRun} accepted by the runner for the input set,
      *      the second is the list of task input messages as received by the process
      */
     final protected void invokeTask( Object[] args ) {
         assert args.size()==2
-        runner.submit((TaskStartParams) args[0], (List) args[1])
+        runner.submit((TaskRun) args[0], (List) args[1])
     }
 
     /**
@@ -1124,12 +1124,11 @@ class TaskProcessor {
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
-            backlog?.taskStarted()
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
             final result = new ArrayList(2)
-            result[0] = params
+            result[0] = runner.accept(params)
             result[1] = messages
             return result
         }
@@ -1141,7 +1140,6 @@ class TaskProcessor {
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After run"
             currentTask.remove()
-            backlog?.taskPrepared()
         }
 
         @Override
