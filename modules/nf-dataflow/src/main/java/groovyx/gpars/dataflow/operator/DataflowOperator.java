@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): run by the mailbox engine instead of a GPars actor.
+// Modified by Seqera Labs for Nextflow (2026): run by the mailbox engine instead of a GPars actor, on the dataflow pool instead of a parallel group.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
-import groovyx.gpars.group.PGroup;
+import groovyx.gpars.scheduler.Pool;
 import groovyx.gpars.scheduler.Scheduler;
 
 import java.util.Collection;
@@ -48,12 +48,18 @@ public final class DataflowOperator extends DataflowProcessor {
      * Creates an operator
      * After creation the operator needs to be started using the start() method.
      *
-     * @param group    The group the thread pool of which o use
      * @param channels A map specifying "inputs" and "outputs" - dataflow channels (instances of the DataflowQueue or DataflowVariable classes) to use for inputs and outputs
      * @param code     The operator's body to run each time all inputs have a value to read
      */
+    public DataflowOperator(final Map channels, final Closure code) {
+        this(Scheduler.pool(), channels, code);
+    }
+
+    /**
+     * Creates an operator that runs on the given pool instead of the dataflow pool
+     */
     @SuppressWarnings({"ThisEscapedInObjectConstruction"})
-    public DataflowOperator(final PGroup group, final Map channels, final Closure code) {
+    DataflowOperator(final Pool pool, final Map channels, final Closure code) {
         super(channels, code);
         final int parameters = code.getMaximumNumberOfParameters();
         if (verifyChannelParameters(channels, parameters))
@@ -62,10 +68,7 @@ public final class DataflowOperator extends DataflowProcessor {
         if (forking)
             checkMaxForks(channels);
         final int maxForks = forking ? (Integer) channels.get(MAX_FORKS) : 1;
-        this.engine = new MailboxEngine(this, group != null ? group.getThreadPool() : Scheduler.pool(), inputs, (Closure) code.clone(), maxForks);
-        for (final DataflowEventListener listener : listeners) {
-            listener.registered(this);
-        }
+        this.engine = new MailboxEngine(this, pool, inputs, (Closure) code.clone(), maxForks);
     }
 
     private static boolean verifyChannelParameters(final Map channels, final int parameters) {

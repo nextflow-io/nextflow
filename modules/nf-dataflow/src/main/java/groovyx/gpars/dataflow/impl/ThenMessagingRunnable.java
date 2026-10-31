@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): extends Closure directly instead of the removed MessagingRunnable.
+// Modified by Seqera Labs for Nextflow (2026): extends Closure directly instead of the removed MessagingRunnable; binds the result with bind instead of leftShift.
 
 package groovyx.gpars.dataflow.impl;
 
@@ -63,7 +63,7 @@ public class ThenMessagingRunnable<T, V> extends Closure<Object> {
         if (argument instanceof Throwable) {
             if (errorHandler != null && shallHandle(errorHandler, (Throwable) argument)) {
                 try {
-                    result.leftShift(errorHandler.getMaximumNumberOfParameters() == 1 ? errorHandler.call(argument) : errorHandler.call());
+                    result.bind(errorHandler.getMaximumNumberOfParameters() == 1 ? errorHandler.call(argument) : errorHandler.call());
                 } catch (Throwable e) {
                     result.bindError(e);
                 }
@@ -72,7 +72,7 @@ public class ThenMessagingRunnable<T, V> extends Closure<Object> {
             }
         } else {
             try {
-                result.leftShift(closure.getMaximumNumberOfParameters() == 1 ? closure.call(argument) : closure.call());
+                result.bind(closure.getMaximumNumberOfParameters() == 1 ? closure.call(argument) : closure.call());
             } catch (Throwable e) {
                 result.bindError(e);
             }

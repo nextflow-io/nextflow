@@ -314,8 +314,8 @@ class TaskProcessorTest extends Specification {
         int i = 0
         agent.addListener { a, b -> println ">>: $a -- $b"; i++ }
 
-        agent << { it.add(1); (this as Agent).updateValue(it) }
-        agent << { it.add(2); (this as Agent).updateValue(it) }
+        agent.send { it.add(1); (this as Agent).updateValue(it) }
+        agent.send { it.add(2); (this as Agent).updateValue(it) }
         agent.await()
         then:
         agent.val == [1,2]

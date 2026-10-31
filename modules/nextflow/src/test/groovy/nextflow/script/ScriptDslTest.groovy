@@ -605,6 +605,50 @@ class ScriptDslTest extends Dsl2Spec {
         e2.message == 'Missing process or function Channel.doesNotExist()'
     }
 
+    def 'should throw an exception on unknown method or property of a value channel' () {
+
+        when:
+        runScript '''
+        workflow {
+           channel.value('hello').toUpperCase()
+        }
+        '''
+        then:
+        def e1 = thrown(MissingProcessException)
+        e1.message == 'Unknown method invocation `toUpperCase` on dataflow value -- use an operator such as `map` to transform the value'
+        e1.cause instanceof MissingMethodException
+
+        when:
+        runScript '''
+        workflow {
+           channel.value('hello').bytes
+        }
+        '''
+        then:
+        def e2 = thrown(MissingPropertyException)
+        e2.property == 'bytes'
+
+        when:
+        runScript '''
+        workflow {
+           channel.value('hello').value
+        }
+        '''
+        then:
+        def e3 = thrown(MissingPropertyException)
+        e3.property == 'value'
+
+        when:
+        runScript '''
+        workflow {
+           channel.value('hello').state
+        }
+        '''
+        then:
+        def e4 = thrown(MissingPropertyException)
+        e4.property == 'state'
+    }
+
     def 'should allow typed process output to use external functions' () {
         when:
         def result = runScript(

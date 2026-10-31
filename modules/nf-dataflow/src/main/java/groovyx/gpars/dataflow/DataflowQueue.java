@@ -20,31 +20,33 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 import groovyx.gpars.dataflow.impl.ReadCallback;
 import groovyx.gpars.dataflow.impl.Waiter;
 import groovyx.gpars.dataflow.operator.ChainWithClosure;
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure;
+import groovyx.gpars.dataflow.operator.DataflowOperator;
+import groovyx.gpars.dataflow.operator.DataflowProcessor;
 
 /**
  * An unbounded FIFO channel: each value is read once, by a single reader.
  * <p>
  * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2013 the original author or authors)
- * with its public API and semantics. The buffered values are held in an array deque instead of a
- * dataflow variable each, and a waiting read is handed the next value directly.
+ * with its public API and semantics, minus the timed read and leftShift. The buffered values are held in
+ * an array deque instead of a dataflow variable each, and a waiting read is handed the next value directly.
  *
  * @param <T> The type of messages to pass through the queue
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
-public class DataflowQueue<T> implements DataflowChannel<T> {
+public class DataflowQueue<T> implements DataflowReadChannel<T>, DataflowWriteChannel<T> {
 
     // stands for a null value, which the deque does not accept
     private static final Object NULL = new Object();
 
     // guarded by this
-    private final ArrayDeque<Object> items = new ArrayDeque<>();
+    private final ArrayDeque<Object> queued = new ArrayDeque<>();
 
     // the reads waiting for a value, in arrival order, guarded by this
     private ArrayDeque<ReadCallback> waiters;
@@ -55,35 +57,16 @@ public class DataflowQueue<T> implements DataflowChannel<T> {
         synchronized (this) {
             waiter = waiters != null ? waiters.poll() : null;
             if (waiter == null)
-                items.add(value != null ? value : NULL);
+                queued.add(value != null ? value : NULL);
         }
         if (waiter != null)
             waiter.onItem(value);
     }
 
     @Override
-    public final DataflowWriteChannel<T> leftShift(final T value) {
-        bind(value);
-        return this;
-    }
-
-    /**
-     * Binds the next value of the read channel once available. Unlike GPars, it does not reserve a slot:
-     * the value takes its place among the values bound meanwhile when it becomes available, so
-     * {@code ch << unboundVar; ch << 1} yields {@code 1} first.
-     */
-    @Override
-    public final DataflowWriteChannel<T> leftShift(final DataflowReadChannel<T> ref) {
-        final Object item = ref.takeOrSubscribe(it -> bind((T) it));
-        if (item != ReadCallback.NONE)
-            bind((T) item);
-        return this;
-    }
-
-    @Override
     public final Object takeOrSubscribe(final ReadCallback callback) {
         synchronized (this) {
-            final Object item = items.poll();
+            final Object item = queued.poll();
             if (item != null)
                 return item != NULL ? item : null;
             if (waiters == null)
@@ -100,34 +83,26 @@ public class DataflowQueue<T> implements DataflowChannel<T> {
 
     @Override
     public final T getVal() throws InterruptedException {
-        return (T) Waiter.read(this, -1);
+        return (T) Waiter.read(this);
     }
 
     /**
-     * Takes the next value, blocking until there is one or the timeout expires. Returns null on timeout.
-     */
-    @Override
-    public final T getVal(final long timeout, final TimeUnit units) throws InterruptedException {
-        final Object result = Waiter.read(this, Math.max(0, units.toNanos(timeout)));
-        return result != ReadCallback.NONE ? (T) result : null;
-    }
-
-    /**
-     * Copies all the values into the target channel, with an operator on the current parallel group
+     * Copies all the values into the target channel, with an operator
      */
     @Override
     public void into(final DataflowWriteChannel<T> target) {
-        Dataflow.retrieveCurrentDFPGroup().operator(this, target, new ChainWithClosure(new CopyChannelsClosure()));
+        final Map<String, Object> params = Map.of(DataflowProcessor.INPUTS, List.of(this), DataflowProcessor.OUTPUTS, List.of(target));
+        new DataflowOperator(params, new ChainWithClosure(new CopyChannelsClosure())).start();
     }
 
     @Override
     public final synchronized boolean isBound() {
-        return !items.isEmpty();
+        return !queued.isEmpty();
     }
 
     @Override
     public final synchronized int length() {
-        return items.size();
+        return queued.size();
     }
 
     /**
@@ -138,8 +113,8 @@ public class DataflowQueue<T> implements DataflowChannel<T> {
     }
 
     private synchronized List<T> snapshot() {
-        final List<T> result = new ArrayList<>(items.size());
-        for (final Object item : items)
+        final List<T> result = new ArrayList<>(queued.size());
+        for (final Object item : queued)
             result.add(item != NULL ? (T) item : null);
         return result;
     }

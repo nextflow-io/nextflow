@@ -13,14 +13,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): updated the class description.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
 
 /**
- * Used by the chainWith() method to wrap the supplied closure inside the operator's body.
- * This wrapper closure is responsible for writing the calculated result into the operator's output through its bind() methods.
+ * Identity closure used with {@link ChainWithClosure} by {@code into()} and the copying operators
+ * to forward each input value unchanged to the operator's outputs.
  *
  * @author Vaclav Pech
  */

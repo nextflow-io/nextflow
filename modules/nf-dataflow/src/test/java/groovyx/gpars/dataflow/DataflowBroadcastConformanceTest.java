@@ -21,10 +21,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import groovyx.gpars.dataflow.operator.PoisonPill;
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.Closures.action;
 import static groovyx.gpars.TestThreads.awaitBlocked;
 import static groovyx.gpars.TestThreads.start;
@@ -44,7 +44,7 @@ class DataflowBroadcastConformanceTest {
     static List<Object> read(DataflowReadChannel<Object> ch, int n) throws InterruptedException {
         var result = new ArrayList<Object>(n);
         for( int i = 0; i < n; i++ )
-            result.add(ch.getVal(WAIT, TimeUnit.SECONDS));
+            result.add(poll(ch, WAIT, TimeUnit.SECONDS));
         return result;
     }
 
@@ -75,12 +75,12 @@ class DataflowBroadcastConformanceTest {
     void shouldNotDeliverItemsBoundBeforeTheReaderWasCreated() throws Exception {
         var ch = new DataflowBroadcast<Object>();
         var early = ch.createReadChannel();
-        ch.leftShift(1).leftShift(2);
-
+        ch.bind(1);
+        ch.bind(2);
         var late = ch.createReadChannel();
-        ch.leftShift(3);
-        assertThat(late.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(3);
-        assertThat(late.getVal(50, TimeUnit.MILLISECONDS)).isNull();
+        ch.bind(3);
+        assertThat(poll(late, WAIT, TimeUnit.SECONDS)).isEqualTo(3);
+        assertThat(poll(late, 50, TimeUnit.MILLISECONDS)).isNull();
         assertThat(read(early, 3)).containsExactly(1, 2, 3);
     }
 
@@ -89,8 +89,8 @@ class DataflowBroadcastConformanceTest {
         var ch = new DataflowBroadcast<Object>();
         var r1 = ch.createReadChannel();
         var r2 = ch.createReadChannel();
-        ch.leftShift("a").leftShift("b");
-
+        ch.bind("a");
+        ch.bind("b");
         assertThat(read(r1, 2)).containsExactly("a", "b");
         assertThat(read(r2, 2)).containsExactly("a", "b");
     }
@@ -101,11 +101,12 @@ class DataflowBroadcastConformanceTest {
         var r1 = ch.createReadChannel();
         var r2 = ch.createReadChannel();
 
-        ch.leftShift(1).leftShift(STOP);
-        assertThat(r1.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(1);
-        assertThat(r1.getVal(WAIT, TimeUnit.SECONDS)).isSameAs(STOP);
-        assertThat(r2.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(1);
-        assertThat(r2.getVal(WAIT, TimeUnit.SECONDS)).isSameAs(STOP);
+        ch.bind(1);
+        ch.bind(STOP);
+        assertThat(poll(r1, WAIT, TimeUnit.SECONDS)).isEqualTo(1);
+        assertThat(poll(r1, WAIT, TimeUnit.SECONDS)).isSameAs(STOP);
+        assertThat(poll(r2, WAIT, TimeUnit.SECONDS)).isEqualTo(1);
+        assertThat(poll(r2, WAIT, TimeUnit.SECONDS)).isSameAs(STOP);
     }
 
     @Test
@@ -113,7 +114,7 @@ class DataflowBroadcastConformanceTest {
         var ch = new DataflowBroadcast<Object>();
         var r = ch.createReadChannel();
 
-        assertThat(r.getVal(100, TimeUnit.MILLISECONDS)).isNull();
+        assertThat(poll(r, 100, TimeUnit.MILLISECONDS)).isNull();
 
         var received = new DataflowVariable<Object>();
         var reader = start(() -> received.bind(r.getVal()));
@@ -121,7 +122,20 @@ class DataflowBroadcastConformanceTest {
         assertThat(received.isBound()).isFalse();
 
         ch.bind("x");
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("x");
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isEqualTo("x");
+    }
+
+    @Test
+    void shouldNotLoseAValueAfterAnExpiredRead() throws Exception {
+        var ch = new DataflowBroadcast<Object>();
+        var r = ch.createReadChannel();
+
+        assertThat(poll(r, 50, TimeUnit.MILLISECONDS)).isNull();
+
+        ch.bind("a");
+        ch.bind("b");
+        assertThat(r.length()).isEqualTo(2);
+        assertThat(read(r, 2)).containsExactly("a", "b");
     }
 
     @Test
@@ -131,9 +145,10 @@ class DataflowBroadcastConformanceTest {
         var received = new DataflowVariable<Object>();
 
         r.whenBound(action(x -> received.bind(x)));
-        ch.leftShift("a").leftShift("b");
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("a");
-        assertThat(r.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("b");
+        ch.bind("a");
+        ch.bind("b");
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isEqualTo("a");
+        assertThat(poll(r, WAIT, TimeUnit.SECONDS)).isEqualTo("b");
     }
 
     @Test
@@ -145,7 +160,9 @@ class DataflowBroadcastConformanceTest {
         var target = new DataflowQueue<Object>();
 
         source.into(target);
-        ch.leftShift(1).leftShift(2).leftShift(STOP);
+        ch.bind(1);
+        ch.bind(2);
+        ch.bind(STOP);
         assertThat(read(target, 3)).containsExactly(1, 2, STOP);
         // copying does not consume the items of the other readers
         assertThat(read(other, 3)).containsExactly(1, 2, STOP);

@@ -15,7 +15,15 @@
  */
 package groovyx.gpars;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
+
+import groovyx.gpars.dataflow.DataflowReadChannel;
+import groovyx.gpars.dataflow.DataflowVariable;
+import groovyx.gpars.dataflow.impl.ReadCallback;
 
 /**
  * Thread helpers for concurrency tests.
@@ -66,6 +74,34 @@ public final class TestThreads {
                 throw new AssertionError("Interrupted while waiting for a condition", e);
             }
         }
+    }
+
+    /**
+     * Read the next value of a channel, like {@code getVal()}, waiting up to the timeout.
+     *
+     * @return the value, or null when the timeout expires
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T poll(DataflowReadChannel<T> channel, long timeout, TimeUnit unit) throws InterruptedException {
+        final CompletableFuture<Object> future = new CompletableFuture<>();
+        final ReadCallback callback = future::complete;
+        Object item = channel.takeOrSubscribe(callback);
+        if( item == ReadCallback.NONE ) {
+            try {
+                item = future.get(Math.max(0, timeout), unit);
+            }
+            catch( TimeoutException e ) {
+                if( channel.unsubscribe(callback) )
+                    return null;
+                // the value is being handed over
+                item = future.join();
+            }
+            catch( ExecutionException e ) {
+                throw new AssertionError(e);
+            }
+        }
+        // a value channel reads as null when bound to an error
+        return channel instanceof DataflowVariable ? ((DataflowVariable<T>) channel).getVal() : (T) item;
     }
 
     /**

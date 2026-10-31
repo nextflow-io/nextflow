@@ -31,11 +31,17 @@ class OpCallTest extends Specification {
     static class MyExt extends OperatorImpl{
 
         DataflowWriteChannel foo1(DataflowReadChannel source) {
-            new DataflowQueue() << 1 << 2
+            final result = new DataflowQueue()
+            result.bind(1)
+            result.bind(2)
+            return result
         }
 
         DataflowWriteChannel foo2(DataflowReadChannel source, DataflowReadChannel channel2) {
-            new DataflowQueue() << 1 << 2
+            final result = new DataflowQueue()
+            result.bind(1)
+            result.bind(2)
+            return result
         }
 
         String foo3(DataflowReadChannel source, List<DataflowReadChannel> channel3) {
@@ -47,7 +53,10 @@ class OpCallTest extends Specification {
         }
 
         DataflowWriteChannel foo5(DataflowReadChannel source, DataflowWriteChannel channel2) {
-            new DataflowQueue() << 1 << 2
+            final result = new DataflowQueue()
+            result.bind(1)
+            result.bind(2)
+            return result
         }
 
         List<DataflowReadChannel> foo6(DataflowReadChannel source, List<DataflowWriteChannel> channel3) {

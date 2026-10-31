@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.Closures.action;
 import static groovyx.gpars.Closures.function;
 import static groovyx.gpars.TestThreads.awaitBlocked;
@@ -50,18 +51,9 @@ class DataflowVariableConformanceTest {
         assertThat(v.isBound()).isTrue();
         assertThat(v.getVal()).isEqualTo("x");
         assertThat(v.getVal()).isEqualTo("x");
-        assertThat(v.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("x");
+        assertThat(poll(v, WAIT, TimeUnit.SECONDS)).isEqualTo("x");
         assertThat(v.get()).isEqualTo("x");
         assertThat(v.isError()).isFalse();
-    }
-
-    @Test
-    void shouldBindWithLeftShift() throws Exception {
-        var v = new DataflowVariable<Object>();
-
-        var result = v.leftShift(42);
-        assertThat(result).isSameAs(v);
-        assertThat(v.getVal()).isEqualTo(42);
     }
 
     @Test
@@ -94,15 +86,14 @@ class DataflowVariableConformanceTest {
     }
 
     @Test
-    void shouldReturnNullWhenGetValTimesOutOnUnboundVariable() throws Exception {
+    void shouldUnsubscribeAnExpiredReadWithoutConsumingALaterValue() throws Exception {
         var v = new DataflowVariable<Object>();
 
-        var t0 = System.nanoTime();
-        var result = v.getVal(100, TimeUnit.MILLISECONDS);
-        var elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
-        assertThat(result).isNull();
-        assertThat(elapsed).isGreaterThanOrEqualTo(90);
+        assertThat(poll(v, 50, TimeUnit.MILLISECONDS)).isNull();
         assertThat(v.isBound()).isFalse();
+
+        v.bind("late");
+        assertThat(poll(v, WAIT, TimeUnit.SECONDS)).isEqualTo("late");
     }
 
     @Test
@@ -115,7 +106,7 @@ class DataflowVariableConformanceTest {
         assertThat(reader.isBound()).isFalse();
 
         v.bind("done");
-        assertThat(reader.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("done");
+        assertThat(poll(reader, WAIT, TimeUnit.SECONDS)).isEqualTo("done");
     }
 
     @Test
@@ -134,7 +125,7 @@ class DataflowVariableConformanceTest {
 
         awaitBlocked(thread);
         thread.interrupt();
-        assertThat(error.getVal(WAIT, TimeUnit.SECONDS)).isInstanceOf(InterruptedException.class);
+        assertThat(poll(error, WAIT, TimeUnit.SECONDS)).isInstanceOf(InterruptedException.class);
     }
 
     @Test
@@ -143,10 +134,10 @@ class DataflowVariableConformanceTest {
         var received = new DataflowVariable<Object>();
         v.whenBound(action(received::bind));
 
-        assertThat(received.getVal(50, TimeUnit.MILLISECONDS)).isNull();
+        assertThat(poll(received, 50, TimeUnit.MILLISECONDS)).isNull();
 
         v.bind("hello");
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("hello");
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isEqualTo("hello");
     }
 
     @Test
@@ -156,7 +147,7 @@ class DataflowVariableConformanceTest {
         var received = new DataflowVariable<Object>();
 
         v.whenBound(action(received::bind));
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("hello");
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isEqualTo("hello");
     }
 
     @Test
@@ -191,7 +182,7 @@ class DataflowVariableConformanceTest {
         assertThat(v.getError()).isSameAs(error);
         // getVal does not throw: it returns null and the error is only visible through get()/isError()
         assertThat(v.getVal()).isNull();
-        assertThat(v.getVal(WAIT, TimeUnit.SECONDS)).isNull();
+        assertThat(poll(v, WAIT, TimeUnit.SECONDS)).isNull();
 
         assertThatThrownBy(v::get).isSameAs(error);
     }
@@ -204,7 +195,7 @@ class DataflowVariableConformanceTest {
         v.whenBound(action(received::bind));
 
         v.bindError(error);
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isSameAs(error);
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isSameAs(error);
     }
 
     @Test
@@ -246,8 +237,8 @@ class DataflowVariableConformanceTest {
 
         assertThat(early).isInstanceOf(DataflowVariable.class);
         assertThat(late).isInstanceOf(DataflowVariable.class);
-        assertThat(((DataflowVariable<?>) early).getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("early:1");
-        assertThat(((DataflowVariable<?>) late).getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("late:2");
+        assertThat(poll(early, WAIT, TimeUnit.SECONDS)).isEqualTo("early:1");
+        assertThat(poll(late, WAIT, TimeUnit.SECONDS)).isEqualTo("late:2");
     }
 
     @Test
@@ -262,12 +253,12 @@ class DataflowVariableConformanceTest {
         var thrown = (DataflowVariable<?>) bound.then(function(x -> { throw new IllegalStateException("then boom"); }));
         bound.bind(1);
 
-        skipped.getVal(WAIT, TimeUnit.SECONDS);
+        poll(skipped, WAIT, TimeUnit.SECONDS);
         assertThat(skipped.isError()).isTrue();
         assertThat(skipped.getError()).isSameAs(error);
         assertThat(calls.get()).isZero();
 
-        thrown.getVal(WAIT, TimeUnit.SECONDS);
+        poll(thrown, WAIT, TimeUnit.SECONDS);
         assertThat(thrown.isError()).isTrue();
         assertThat(thrown.getError()).isInstanceOf(IllegalStateException.class).hasMessage("then boom");
     }
@@ -279,8 +270,8 @@ class DataflowVariableConformanceTest {
 
         assertThat(count.get()).isZero();
 
-        var a = v.getVal(WAIT, TimeUnit.SECONDS);
-        var b = v.getVal(WAIT, TimeUnit.SECONDS);
+        var a = poll(v, WAIT, TimeUnit.SECONDS);
+        var b = poll(v, WAIT, TimeUnit.SECONDS);
         assertThat(a).isEqualTo("value");
         assertThat(b).isEqualTo("value");
         assertThat(count.get()).isEqualTo(1);
@@ -320,13 +311,11 @@ class DataflowVariableConformanceTest {
             var go = new CountDownLatch(1);
             var readers = new ArrayList<Thread>();
             for( int i = 0; i < 6; i++ ) {
-                final int kind = i % 3;
+                final int kind = i % 2;
                 readers.add(start(() -> {
                     go.await();
                     if( kind == 0 )
                         v.getVal();
-                    else if( kind == 1 )
-                        v.touch();
                     else
                         v.isError();
                 }));
@@ -335,7 +324,7 @@ class DataflowVariableConformanceTest {
             for( var reader : readers )
                 reader.join(WAIT * 1000);
 
-            assertThat(v.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("value");
+            assertThat(poll(v, WAIT, TimeUnit.SECONDS)).isEqualTo("value");
             assertThat(count.get()).isEqualTo(1);
         }
     }
@@ -344,7 +333,7 @@ class DataflowVariableConformanceTest {
     void shouldReportTheErrorOfAFailingLazyVariable() throws Exception {
         var v = new LazyDataflowVariable<Object>(function(() -> { throw new IllegalStateException("lazy boom"); }));
 
-        v.getVal(WAIT, TimeUnit.SECONDS);
+        poll(v, WAIT, TimeUnit.SECONDS);
         assertThat(v.isError()).isTrue();
         assertThat(v.getError()).isInstanceOf(IllegalStateException.class).hasMessage("lazy boom");
     }

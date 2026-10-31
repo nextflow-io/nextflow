@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
@@ -56,7 +56,7 @@ class TakeOp {
             return target
         }
 
-        final listener = new DataflowEventAdapter() {
+        final listener = new DataflowEventListener() {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( ++count >= length ) {

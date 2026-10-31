@@ -19,10 +19,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import groovy.lang.Closure;
 import groovyx.gpars.dataflow.impl.ReadCallback;
-import groovyx.gpars.group.PGroup;
+import groovyx.gpars.scheduler.Scheduler;
 
 /**
- * A dataflow variable computed by its initializer, on the group's pool, on the first read.
+ * A dataflow variable computed by its initializer, on the dataflow pool, on the first read.
  * <p>
  * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2012 the original author or authors).
  *
@@ -33,29 +33,20 @@ public final class LazyDataflowVariable<T> extends DataflowVariable<T> {
 
     private final Closure<T> initializer;
 
-    private final PGroup group;
-
     private final AtomicBoolean started = new AtomicBoolean();
 
     public LazyDataflowVariable(final Closure<T> initializer) {
-        this(Dataflow.DATA_FLOW_GROUP, initializer);
-    }
-
-    public LazyDataflowVariable(final PGroup group, final Closure<T> initializer) {
         if (initializer == null)
             throw new IllegalArgumentException("The LazyDataflowVariable initializer must not be null.");
-        if (group == null)
-            throw new IllegalArgumentException("The LazyDataflowVariable initialization group must not be null.");
-        this.group = group;
         this.initializer = initializer;
     }
 
     private void initialize() {
         if (started.get() || !started.compareAndSet(false, true))
             return;
-        group.getThreadPool().execute(() -> {
+        Scheduler.pool().execute(() -> {
             try {
-                leftShift(initializer.call());
+                bind(initializer.call());
             }
             catch (Throwable e) {
                 bindError(e);
@@ -80,10 +71,5 @@ public final class LazyDataflowVariable<T> extends DataflowVariable<T> {
     public Throwable getError() {
         initialize();
         return super.getError();
-    }
-
-    @Override
-    public void touch() {
-        initialize();
     }
 }

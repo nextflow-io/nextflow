@@ -52,11 +52,13 @@ import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.exception.MissingProcessException
 import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
@@ -500,7 +502,13 @@ class LoggerHelper {
         }
 
         // add the log message
-        if( fail instanceof MissingPropertyException ) {
+        if( fail instanceof MissingPropertyException && MissingProcessException.isValue(fail.type) ) {
+            buffer.append("Unknown property `${fail.property}` on dataflow value -- use an operator such as `map` to access the value")
+        }
+        else if( fail instanceof MissingPropertyException && MissingProcessException.isChannel(fail.type) ) {
+            buffer.append("Unknown property `${fail.property}` on channel type -- use an operator such as `map` to access channel values")
+        }
+        else if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: fail.messageWithoutLocationText
             buffer.append("No such variable: ${name}")
         }
@@ -591,6 +599,9 @@ class LoggerHelper {
         if( found ) {
             msg = "Invalid method invocation `$name` with arguments: $right"
             if( hasLeftTarget ) msg += " on $left"
+        }
+        else if( MissingProcessException.isChannel(type) || MissingProcessException.isValue(type) ) {
+            msg = MissingProcessException.channelMessage(type, name)
         }
         else {
             msg = "Unknown method invocation `$name`"
@@ -782,6 +793,8 @@ class LoggerHelper {
 
     static String fmtType( Object type ) {
         if( type instanceof Class ) {
+            if( DataflowVariable.isAssignableFrom(type) )
+                return 'dataflow value'
             if( DataflowWriteChannel.isAssignableFrom(type) || DataflowReadChannel .isAssignableFrom(type) )
                 return 'channel type'
             if( ComponentDef.isAssignableFrom(type) )
@@ -804,6 +817,8 @@ class LoggerHelper {
         if( type instanceof OpCall )
             return fmtType((OpCall)type)
 
+        if( type instanceof DataflowVariable )
+            return "dataflow value object"
         if( type instanceof DataflowWriteChannel || type instanceof DataflowReadChannel )
             return "channel object"
 
