@@ -14,14 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): added the backpressure hooks (resume, isPaused, getPauseCount).
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure hooks (resume, isPaused, getPauseCount); removed registerChannelListenersToAllInputs.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
 import groovyx.gpars.actor.StaticDispatchActor;
 import groovyx.gpars.actor.impl.MessageStream;
-import groovyx.gpars.dataflow.DataflowChannelListener;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.group.PGroup;
 
@@ -59,16 +58,6 @@ abstract class DataflowProcessorActor extends StaticDispatchActor<Object> {
 
     void afterStop() {
         owningProcessor.fireAfterStop();
-    }
-
-    /**
-     * Registers the provided handler to all input channels
-     * @param handler The closure to invoke whenever a value gets bound to any of the input channels
-     */
-    final void registerChannelListenersToAllInputs(final DataflowChannelListener<Object> handler) {
-        for (final Object input : inputs) {
-            ((DataflowReadChannel<Object>) input).getEventManager().addDataflowChannelListener(handler);
-        }
     }
 
     void resume() {

@@ -26,9 +26,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import groovyx.gpars.Closures;
 import groovyx.gpars.dataflow.Dataflow;
+import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
+import groovyx.gpars.dataflow.DataflowWriteChannel;
 import groovyx.gpars.group.DefaultPGroup;
 import groovyx.gpars.scheduler.DefaultPool;
 import groovyx.gpars.scheduler.Pool;
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.Timeout;
 import static groovyx.gpars.TestThreads.await;
 import static groovyx.gpars.TestThreads.start;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * Operator engine behaviors beyond the GPars conformance suite. They hold on both engines.
@@ -268,6 +271,103 @@ class OperatorEngineTest {
         input.bind(STOP);
         await(() -> stopped.stops.get() == 1);
         assertThat(started.get()).isEqualTo(5);
+    }
+
+    @Test
+    void shouldFireOnceWhenAllInputsAreValues() throws Exception {
+        // a firing needs a value that arrived: the value inputs are re-read, which does not fire again
+        var a = new DataflowVariable<Object>();
+        var b = new DataflowVariable<Object>();
+        a.bind(1);
+        b.bind(2);
+        var fired = new AtomicInteger();
+        var op = Dataflow.operator(Map.of("inputs", List.of(a, b)), Closures.action((x, y) -> fired.incrementAndGet()));
+        try {
+            await(() -> fired.get() == 1);
+            Thread.sleep(100);
+            assertThat(fired.get()).isEqualTo(1);
+            assertThat(op.isActive()).isTrue();
+        }
+        finally {
+            op.terminate();
+        }
+    }
+
+    @Test
+    void shouldNotTakeAValueOfAQueueInputOnceStopped() throws Exception {
+        // the legacy engine leaves its request on the queue, so it swallows the next value
+        assumeFalse(Scheduler.isLegacyEngine());
+        var input = new DataflowQueue<Object>();
+        var fired = new CopyOnWriteArrayList<Object>();
+        var op = Dataflow.operator(Map.of("inputs", List.of(input)), Closures.action(x -> fired.add(x)));
+        input.bind(1);
+        await(() -> fired.size() == 1);
+
+        op.terminate();
+        op.join();
+        input.bind(2);
+        assertThat(input.getVal(5, TimeUnit.SECONDS)).isEqualTo(2);
+        assertThat(fired).containsExactly(1);
+    }
+
+    @Test
+    void shouldDropAtMostTheValueHandedOverWhenTerminatedWhileAWriterBinds() throws Exception {
+        for( int round = 0; round < 300; round++ ) {
+            var queue = new DataflowQueue<Object>();
+            terminateWhileBinding(queue, queue, round);
+            var broadcast = new DataflowBroadcast<Object>();
+            terminateWhileBinding(broadcast, broadcast.createReadChannel(), round);
+        }
+    }
+
+    private static void terminateWhileBinding(DataflowWriteChannel<Object> channel, DataflowReadChannel<Object> input, int round) throws Exception {
+        final int n = 200;
+        var fired = new AtomicInteger();
+        var op = Dataflow.operator(Map.of("inputs", List.of(input)), Closures.action(x -> fired.incrementAndGet()));
+        var writer = start(() -> {
+            for( int i = 0; i < n; i++ )
+                channel.bind(i);
+        });
+        for( int spin = round * 7 % 2000; spin > 0; spin-- )
+            Thread.onSpinWait();
+        op.terminate();
+        op.join();
+        writer.join();
+
+        // each value is fired or left in the channel, except one handed over to the stopped operator
+        final int firedBeforeStop = fired.get();
+        assertThat(firedBeforeStop + input.length()).isBetween(n - 1, n);
+        Thread.sleep(1);
+        assertThat(fired.get()).isEqualTo(firedBeforeStop);
+    }
+
+    @Test
+    void shouldYieldThePoolThreadWhileFiringOnBufferedValues() throws Exception {
+        // the legacy actor keeps the thread while values keep arriving
+        assumeFalse(Scheduler.isLegacyEngine());
+        // a single thread: the other operator runs only if the first one yields between batches
+        final int n = 100_000;
+        var group = new DefaultPGroup(new DefaultPool(true, 1));
+        try {
+            var busy = new DataflowBroadcast<Object>();
+            var reader = busy.createReadChannel();
+            for( int i = 0; i < n; i++ )
+                busy.bind(i);
+            busy.bind(STOP);
+            var count = new AtomicInteger();
+            var seen = new DataflowVariable<Integer>();
+            var stopped = new StopCounter();
+
+            group.operator(Map.of("inputs", List.of(reader), "listeners", List.of(stopped)), Closures.action(x -> count.incrementAndGet()));
+            group.operator(Map.of("inputs", List.of(constant(1))), Closures.action(x -> seen.bind(count.get())));
+
+            assertThat(seen.getVal(5, TimeUnit.SECONDS)).isLessThan(n);
+            await(() -> stopped.stops.get() == 1);
+            assertThat(count.get()).isEqualTo(n);
+        }
+        finally {
+            group.shutdown();
+        }
     }
 
     private static DataflowQueue<Object> constant(Object value) {

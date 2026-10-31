@@ -313,6 +313,34 @@ class DataflowVariableConformanceTest {
     }
 
     @Test
+    void shouldComputeALazyVariableOnceWhenTheFirstReadsRace() throws Exception {
+        for( int round = 0; round < 200; round++ ) {
+            var count = new AtomicInteger();
+            var v = new LazyDataflowVariable<Object>(function(() -> { count.incrementAndGet(); return "value"; }));
+            var go = new CountDownLatch(1);
+            var readers = new ArrayList<Thread>();
+            for( int i = 0; i < 6; i++ ) {
+                final int kind = i % 3;
+                readers.add(start(() -> {
+                    go.await();
+                    if( kind == 0 )
+                        v.getVal();
+                    else if( kind == 1 )
+                        v.touch();
+                    else
+                        v.isError();
+                }));
+            }
+            go.countDown();
+            for( var reader : readers )
+                reader.join(WAIT * 1000);
+
+            assertThat(v.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("value");
+            assertThat(count.get()).isEqualTo(1);
+        }
+    }
+
+    @Test
     void shouldReportTheErrorOfAFailingLazyVariable() throws Exception {
         var v = new LazyDataflowVariable<Object>(function(() -> { throw new IllegalStateException("lazy boom"); }));
 
