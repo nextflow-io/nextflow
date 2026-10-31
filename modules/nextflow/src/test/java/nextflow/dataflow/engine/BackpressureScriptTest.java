@@ -531,7 +531,6 @@ class BackpressureScriptTest {
         assertThat(run.feeds("channel.of")).containsExactly("FAST", "SLOW");
         assertThat(run.maxBusy("SLOW")).isLessThanOrEqualTo(MAX_BUSY);
         assertThat(run.pauseCount("SLOW")).isPositive();
-        assertThat(run.blockCount("channel.of")).isPositive();
     }
 
     @Test

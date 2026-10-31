@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed the select and selector factory methods.
+// Modified by Seqera Labs for Nextflow (2026): removed the select and selector factory methods; the default group runs on the dataflow scheduler pool.
 
 package groovyx.gpars.dataflow;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
-import groovyx.gpars.GParsConfig;
 import groovyx.gpars.dataflow.operator.DataflowOperator;
 import groovyx.gpars.dataflow.operator.DataflowProcessor;
 import groovyx.gpars.group.DefaultPGroup;
 import groovyx.gpars.group.PGroup;
+import groovyx.gpars.scheduler.Scheduler;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +44,7 @@ public abstract class Dataflow {
     /**
      * The parallel group used by all Dataflow Concurrency actors by default.
      */
-    public static final PGroup DATA_FLOW_GROUP = new DefaultPGroup(GParsConfig.retrieveDefaultPool());
+    public static final PGroup DATA_FLOW_GROUP = new DefaultPGroup(Scheduler.pool());
 
     /**
      * Maps threads/tasks to parallel groups they belong to

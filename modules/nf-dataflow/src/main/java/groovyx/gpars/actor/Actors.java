@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed the actor factory methods, keeping only the default parallel group.
+// Modified by Seqera Labs for Nextflow (2026): removed the actor factory methods, keeping only the default parallel group, which runs on the dataflow scheduler pool.
 
 package groovyx.gpars.actor;
 
-import groovyx.gpars.GParsConfig;
 import groovyx.gpars.group.DefaultPGroup;
+import groovyx.gpars.scheduler.Scheduler;
 
 /**
  * Holds the default parallel group shared by actors, agents and dataflow expressions.
@@ -33,5 +33,5 @@ public abstract class Actors {
     /**
      * The default actor group to share by all actors created through the Actors class.
      */
-    public static final DefaultPGroup defaultActorPGroup = new DefaultPGroup(GParsConfig.retrieveDefaultPool());
+    public static final DefaultPGroup defaultActorPGroup = new DefaultPGroup(Scheduler.pool());
 }

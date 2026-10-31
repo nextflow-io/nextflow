@@ -23,3 +23,26 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
 }
+
+// the conformance suite runs on both engines: `test` also runs the legacy (GPars actor) engine
+def testLegacy = tasks.register('testLegacy', Test) {
+    description = 'Runs the tests on the legacy GPars actor engine'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    environment 'NXF_DATAFLOW_ENGINE', 'legacy'
+}
+test {
+    environment 'NXF_DATAFLOW_ENGINE', 'mailbox'
+    dependsOn testLegacy
+}
+// the legacy run takes the filter of `test`, including `--tests`, which is set once the task graph is built
+gradle.taskGraph.whenReady { graph ->
+    if( !graph.hasTask(test) )
+        return
+    final filter = testLegacy.get().filter
+    filter.includePatterns = test.filter.includePatterns
+    filter.excludePatterns = test.filter.excludePatterns
+    filter.commandLineIncludePatterns = test.filter.commandLineIncludePatterns
+}

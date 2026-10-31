@@ -35,6 +35,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import groovyx.gpars.scheduler.Scheduler
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
@@ -469,6 +470,7 @@ class Session implements ISession {
         // -- set the thread pool size
         this.poolSize = config.poolSize as int
         log.debug "Executor pool size: ${poolSize}"
+        log.debug "Dataflow engine: ${Scheduler.getEngineName()}; dataflow pool size: ${Scheduler.getPoolSize() ?: 'default'}"
 
         // -- DAG object
         this.dag = new DAG()
