@@ -1,0 +1,501 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Standalone bundle for each target platform:
+//
+//   build/bundle/nextflow-<version>-<os>-<arch>/
+//     bin/nextflow                  launcher
+//     runtime/                      jlink image of the JDK modules found by jdeps
+//     lib/nextflow-<version>-one.jar
+//     lib/nextflow.aot              AOT cache (host target only, see bundle/train.sh)
+//
+//   build/bundle/nextflow-<version>-<os>-<arch>.tar.gz
+//
+// The runtime is linked from the latest Corretto 25 release, with the jlink of the host JDK
+// and the jmods of the target JDK, so that every target can be built on any supported host.
+// The AOT cache can only be created by running the target runtime, so it is only included
+// in the bundle of the host platform.
+//
+//   ./gradlew bundle                        current OS/arch, with the AOT cache
+//   ./gradlew bundleAll                     all targets (only the host one with the AOT cache)
+//   -PcorrettoVersion=<version>             override the Corretto release (default: latest)
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+import java.util.regex.Pattern
+import javax.inject.Inject
+
+/**
+ * Resolves the Corretto release of the bundled runtime (the given version, or the latest
+ * one of every target) and the SHA-256 checksums of its archives, from its GitHub release.
+ */
+abstract class CorrettoRelease extends DefaultTask {
+
+    @Input
+    abstract Property<Integer> getFeatureVersion()
+
+    @Input
+    @Optional
+    abstract Property<String> getVersion()
+
+    /** Archive suffix of each target, e.g. linux-x64 -> linux-x64.tar.gz. */
+    @Input
+    abstract MapProperty<String,String> getArchives()
+
+    /** Name of the latest archive of each target, e.g. linux-x64 -> x64-linux-jdk.tar.gz. */
+    @Input
+    abstract MapProperty<String,String> getLatestArchives()
+
+    @Internal
+    abstract Property<Boolean> getOffline()
+
+    @OutputFile
+    abstract RegularFileProperty getOutputFile()
+
+    CorrettoRelease() {
+        // the latest release can change at any time
+        outputs.upToDateWhen { false }
+    }
+
+    @TaskAction
+    void run() {
+        final output = outputFile.get().asFile
+        if( offline.get() && output.exists() ) {
+            logger.warn("Offline: using the previously resolved Corretto release")
+            return
+        }
+        final version = this.version.getOrElse(latestVersion())
+        final notes = fetch("https://api.github.com/repos/corretto/corretto-${featureVersion.get()}/releases/tags/${version}")
+        final body = (new JsonSlurper().parseText(notes) as Map).body as String
+        final result = archives.get().collectEntries { target, suffix ->
+            // e.g. [amazon-corretto-<version>-linux-x64.tar.gz](<url>)|`<md5>` /<br /> `<sha256>`|
+            final name = "amazon-corretto-$version-$suffix"
+            final m = body =~ /\[${Pattern.quote(name)}\]\((https:[^)]+)\)\|`[0-9a-f]{32}` \/<br \/> `([0-9a-f]{64})`/
+            if( !m.find() )
+                throw new GradleException("No checksum for ${name} in the release notes of Corretto ${version}")
+            [target, [url: m.group(1), sha256: m.group(2)]]
+        }
+        logger.lifecycle("Corretto release: ${version}")
+        output.text = JsonOutput.prettyPrint(JsonOutput.toJson([version: version, archives: result]))
+    }
+
+    /**
+     * Gets the version that the latest download link of every target redirects to,
+     * since the latest GitHub release can be specific to one platform.
+     */
+    private String latestVersion() {
+        final versions = latestArchives.get().values().collect { name ->
+            final conn = (HttpURLConnection) URI.create("https://corretto.aws/downloads/latest/amazon-corretto-${featureVersion.get()}-${name}").toURL().openConnection()
+            conn.instanceFollowRedirects = false
+            conn.requestMethod = 'HEAD'
+            final location = conn.getHeaderField('Location')
+            conn.disconnect()
+            if( !location )
+                throw new GradleException("Can't resolve the latest Corretto release of ${name} (HTTP ${conn.responseCode})")
+            location.tokenize('/')[-2]
+        }.unique()
+        if( versions.size() != 1 )
+            throw new GradleException("The latest Corretto release differs between targets: ${versions.join(', ')}")
+        return versions.first()
+    }
+
+    private static String fetch(String url) {
+        final conn = URI.create(url).toURL().openConnection()
+        // authenticated requests have a higher rate limit
+        final token = System.getenv('GITHUB_TOKEN')
+        if( token )
+            conn.setRequestProperty('Authorization', "Bearer ${token}")
+        return conn.inputStream.withCloseable { it.getText('UTF-8') }
+    }
+}
+
+/**
+ * Downloads the JDK archive of a target into a shared cache, verifies its
+ * SHA-256 checksum, and extracts the JDK home directory.
+ */
+abstract class JdkDownload extends DefaultTask {
+
+    /** Output of {@link CorrettoRelease}. */
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getRelease()
+
+    @Input
+    abstract Property<String> getTarget()
+
+    /** Download cache, shared across builds. */
+    @Internal
+    abstract DirectoryProperty getCacheDirectory()
+
+    @OutputDirectory
+    abstract DirectoryProperty getJdkHome()
+
+    @Inject
+    protected abstract ExecOperations getExec()
+
+    @Inject
+    protected abstract FileSystemOperations getFs()
+
+    @TaskAction
+    void run() {
+        final json = new JsonSlurper().parse(release.get().asFile) as Map
+        final config = (json.archives as Map)[target.get()] as Map
+        final url = config.url as String
+        final expected = config.sha256 as String
+        final archive = new File(cacheDirectory.get().asFile, url.tokenize('/').last())
+        if( !archive.exists() || sha256(archive) != expected ) {
+            logger.lifecycle("Downloading ${url}")
+            archive.parentFile.mkdirs()
+            final tmp = new File(archive.path + '.part')
+            URI.create(url).toURL().withInputStream { input -> Files.copy(input, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+            final actual = sha256(tmp)
+            if( actual != expected ) {
+                tmp.delete()
+                throw new GradleException("Checksum mismatch for ${url}: expected ${expected}, got ${actual}")
+            }
+            Files.move(tmp.toPath(), archive.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+
+        // the JDK home is the top-level directory on Linux, and <name>.jdk/Contents/Home on macOS
+        final extracted = temporaryDir
+        fs.delete { delete(extracted) }
+        extracted.mkdirs()
+        exec.exec { commandLine 'tar', '-xzf', archive.absolutePath, '-C', extracted.absolutePath }
+        final release = Files.find(extracted.toPath(), 4, { path, attrs -> path.fileName.toString() == 'release' && attrs.isRegularFile() })
+            .withCloseable { it.findFirst() }
+            .orElseThrow { new GradleException("No JDK found in ${archive}") }
+        final home = jdkHome.get().asFile
+        fs.delete { delete(home) }
+        Files.move(release.parent, home.toPath())
+        fs.delete { delete(extracted) }
+    }
+
+    private static String sha256(File file) {
+        final digest = MessageDigest.getInstance('SHA-256')
+        file.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+}
+
+/**
+ * Computes the JDK modules required by the given jars
+ * using `jdeps --print-module-deps`.
+ */
+@CacheableTask
+abstract class JdepsModules extends DefaultTask {
+
+    @Classpath
+    abstract ConfigurableFileCollection getClasspath()
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getJdkHome()
+
+    /** Java feature version for multi-release jars. */
+    @Input
+    abstract Property<Integer> getRelease()
+
+    /** Modules to add on top of those detected by jdeps (e.g. modules only loaded via ServiceLoader). */
+    @Input
+    abstract ListProperty<String> getExtraModules()
+
+    @OutputFile
+    abstract RegularFileProperty getModulesFile()
+
+    @Inject
+    protected abstract ExecOperations getExec()
+
+    @TaskAction
+    void run() {
+        final jars = classpath.files*.absolutePath
+        final stdout = new ByteArrayOutputStream()
+        exec.exec {
+            executable = jdkHome.file('bin/jdeps').get().asFile.absolutePath
+            args '--print-module-deps', '--ignore-missing-deps', '--multi-release', release.get().toString()
+            args jars
+            standardOutput = stdout
+        }
+        final modules = (stdout.toString().trim().tokenize(',') + extraModules.get())
+            *.trim()
+            .findAll { it }
+            .toSorted()
+            .unique()
+        modulesFile.get().asFile.text = modules.join(',') + '\n'
+    }
+}
+
+/**
+ * Links a minimal Java runtime image containing only the given JDK modules,
+ * using the jlink of the host JDK and the jmods of the target JDK (same version).
+ */
+@CacheableTask
+abstract class JlinkRuntime extends DefaultTask {
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getModulesFile()
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getHostJdkHome()
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getTargetJdkHome()
+
+    /** Glob patterns of files to exclude from the image (see `jlink --exclude-files`). */
+    @Input
+    abstract ListProperty<String> getExcludeFiles()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDirectory()
+
+    @Inject
+    protected abstract ExecOperations getExec()
+
+    @Inject
+    protected abstract FileSystemOperations getFs()
+
+    @TaskAction
+    void run() {
+        final output = outputDirectory.get().asFile
+        // jlink refuses to write into an existing directory
+        fs.delete { delete(output) }
+        exec.exec {
+            executable = hostJdkHome.file('bin/jlink').get().asFile.absolutePath
+            args '--module-path', targetJdkHome.dir('jmods').get().asFile.absolutePath
+            args '--add-modules', modulesFile.get().asFile.text.trim()
+            // not --strip-debug, which on Linux hosts also runs objcopy on the native binaries,
+            // and fails for other architectures; Corretto binaries have no debug info anyway
+            args '--strip-java-debug-attributes', '--no-header-files', '--no-man-pages'
+            // keep the vendor, version and platform of the target JDK in runtime/release
+            args '--release-info', targetJdkHome.file('release').get().asFile.absolutePath
+            if( excludeFiles.get() )
+                args '--exclude-files', excludeFiles.get().collect { "glob:$it" }.join(',')
+            args '--output', output.absolutePath
+        }
+    }
+}
+
+/** Gives task actions in this script access to injected services. */
+interface ExecServices {
+    @Inject
+    ExecOperations getExec()
+
+    @Inject
+    FileSystemOperations getFs()
+}
+
+// Java version of the bundled runtime, and the Corretto archives of each target
+final javaVersion = 25
+final targets = [
+    'linux-x64'  : [corretto: 'linux-x64.tar.gz', latest: 'x64-linux-jdk.tar.gz'],
+    'linux-arm64': [corretto: 'linux-aarch64.tar.gz', latest: 'aarch64-linux-jdk.tar.gz'],
+    'macos-arm64': [corretto: 'macosx-aarch64.tar.gz', latest: 'aarch64-macos-jdk.tar.gz'],
+]
+
+final hostTarget = providers.systemProperty('os.name').zip(providers.systemProperty('os.arch')) { name, arch ->
+    final o = name.startsWith('Linux') ? 'linux' : name.startsWith('Mac') ? 'macos' : name
+    final a = arch in ['amd64', 'x86_64'] ? 'x64' : arch in ['aarch64', 'arm64'] ? 'arm64' : arch
+    "$o-$a".toString()
+}.get()
+final hostSupported = targets.containsKey(hostTarget)
+final unsupportedHost = "Unsupported host platform for the bundle: $hostTarget (supported: ${targets.keySet().join(', ')})".toString()
+
+// e.g. linux-x64 -> LinuxX64
+final taskSuffix = { String target -> target.tokenize('-')*.capitalize().join() }
+
+evaluationDependsOn(':nf-cli-v1')
+final shadowJar = project(':nf-cli-v1').tasks.named('shadowJar', Jar)
+final bundleVersion = version.toString()
+final jarName = "nextflow-${bundleVersion}-one.jar".toString()
+
+final correttoRelease = tasks.register('correttoRelease', CorrettoRelease) {
+    description = "Resolves the Corretto $javaVersion release of the bundled runtime."
+    featureVersion = javaVersion
+    version = providers.gradleProperty('correttoVersion')
+    archives = targets.collectEntries { target, config -> [target, config.corretto] }
+    latestArchives = targets.collectEntries { target, config -> [target, config.latest] }
+    offline = gradle.startParameter.offline
+    outputFile = layout.buildDirectory.file('jdk/corretto.json')
+}
+
+final jdks = targets.collectEntries { target, config ->
+    [target, tasks.register("jdk${taskSuffix(target)}", JdkDownload) {
+        description = "Downloads the Corretto JDK for $target."
+        release = correttoRelease.flatMap { it.outputFile }
+        it.target = target
+        cacheDirectory = new File(gradle.gradleUserHomeDir, 'caches/corretto')
+        jdkHome = layout.buildDirectory.dir("jdk/$target")
+    }]
+}
+// jlink can only link jmods of the same JDK version
+final hostJdk = hostSupported
+    ? jdks[hostTarget].flatMap { it.jdkHome }
+    : providers.provider { throw new GradleException(unsupportedHost) }
+
+// the module dependencies are the same on every platform
+final jdeps = tasks.register('jdeps', JdepsModules) {
+    classpath.from(shadowJar)
+    jdkHome = hostJdk
+    release = javaVersion
+    extraModules = [
+        // loaded via ServiceLoader: Groovy uses jdk.zipfs to find the default imports in the jar,
+        // the others provide charsets, locales and DNS lookups
+        'jdk.zipfs', 'jdk.charsets', 'jdk.localedata', 'jdk.naming.dns',
+        // used by the core plugins, which are not scanned by jdeps: jdk.net by the AWS SDK HTTP
+        // client (nf-amazon), jdk.httpserver by the login callback servers (nf-tower, nf-azure)
+        'jdk.net', 'jdk.httpserver',
+        // the `-remote-debug` launcher option
+        'jdk.jdwp.agent',
+    ]
+    modulesFile = layout.buildDirectory.file('jdeps/modules.txt')
+}
+
+final bundleNames = targets.keySet().collectEntries { target -> [target, "nextflow-$bundleVersion-$target".toString()] }
+
+final bundleImages = targets.keySet().collectEntries { target ->
+    final suffix = taskSuffix(target)
+
+    final jlink = tasks.register("jlink$suffix", JlinkRuntime) {
+        description = "Links the Java runtime for $target."
+        modulesFile = jdeps.flatMap { it.modulesFile }
+        hostJdkHome = hostJdk
+        targetJdkHome = jdks[target].flatMap { it.jdkHome }
+        excludeFiles = []
+        outputDirectory = layout.buildDirectory.dir("jlink/$target")
+    }
+
+    final image = tasks.register("bundleImage$suffix", Sync) {
+        description = "Assembles the standalone bundle for $target."
+        final jar = shadowJar.flatMap { it.archiveFile }
+        final version = bundleVersion
+        inputs.property('version', version)
+        into(layout.buildDirectory.dir("bundle/${bundleNames[target]}"))
+        from(rootProject.file('nextflow')) {
+            into 'bin'
+            filePermissions { unix('rwxr-xr-x') }
+            // the launcher of the last release, which must select the bundled version by default
+            filter { it.replaceFirst(/^NXF_VER=\$\{NXF_VER:-'.*'\}$/, "NXF_VER=\\\${NXF_VER:-'$version'}") }
+        }
+        from(jlink) {
+            into 'runtime'
+            // jlink makes some files read-only, which prevents overwriting them
+            eachFile { details ->
+                final mode = details.permissions.toUnixNumeric() | 0200
+                details.permissions { it.unix(mode) }
+            }
+        }
+        from(jar) {
+            into 'lib'
+            rename { jarName }
+        }
+        // the AOT cache checks the jar mtime, so it must not change when the image is synced again
+        doLast {
+            new File(destinationDir, "lib/$jarName").setLastModified(jar.get().asFile.lastModified())
+        }
+    }
+    [target, image]
+}
+
+final trainedCache = layout.buildDirectory.file('bundle-aot/nextflow.aot')
+
+if( hostSupported ) {
+    final hostImage = bundleImages[hostTarget]
+
+    // trains the AOT cache of the host bundle by running the training pipeline with its launcher
+    tasks.register('bundleTrain') {
+        description = 'Creates the AOT cache of the host bundle.'
+        final services = objects.newInstance(ExecServices)
+        final image = hostImage.map { it.destinationDir }
+        final script = rootProject.file('bundle/train.sh')
+        final workDir = layout.buildDirectory.dir('bundle-aot/work')
+        inputs.files(hostImage).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.dir('bundle/training').withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file(script)
+        outputs.file(trainedCache)
+        doLast {
+            services.exec.exec { commandLine script.absolutePath, image.get().absolutePath, trainedCache.get().asFile.absolutePath, workDir.get().asFile.absolutePath }
+        }
+    }
+
+    // checks that a relocated copy of the host bundle runs with its AOT cache
+    tasks.register('bundleVerify') {
+        description = 'Verifies that the host bundle runs with its AOT cache.'
+        final services = objects.newInstance(ExecServices)
+        final fs = services.fs
+        final image = hostImage.map { it.destinationDir }
+        final copy = layout.buildDirectory.dir('bundle-verify/image')
+        final workDir = layout.buildDirectory.dir('bundle-verify/work')
+        final stamp = layout.buildDirectory.file('bundle-verify/ok')
+        final script = rootProject.file('bundle/train.sh')
+        inputs.files(hostImage).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.files(tasks.named('bundleTrain'))
+        outputs.file(stamp)
+        doLast {
+            final home = copy.get().asFile
+            fs.delete { delete(home) }
+            home.parentFile.mkdirs()
+            // -p keeps the jar mtime, which is checked by the JVM
+            services.exec.exec { commandLine 'cp', '-Rp', image.get().absolutePath, home.absolutePath }
+            services.exec.exec { commandLine 'cp', '-p', trainedCache.get().asFile.absolutePath, new File(home, 'lib/nextflow.aot').absolutePath }
+            // -XX:AOTMode=on: the JVM fails to start if the cache is rejected
+            services.exec.exec {
+                environment 'NXF_JVM_ARGS', '-XX:AOTMode=on'
+                commandLine script.absolutePath, '--verify', home.absolutePath, workDir.get().asFile.absolutePath
+            }
+            stamp.get().asFile.text = ''
+        }
+    }
+}
+
+final bundleTars = targets.keySet().collect { target ->
+    final name = bundleNames[target]
+    tasks.register("bundleTar${taskSuffix(target)}", Tar) {
+        description = "Packages the standalone bundle for $target."
+        from(bundleImages[target]) { into name }
+        // only the host bundle can be run to create its AOT cache
+        if( target == hostTarget ) {
+            dependsOn 'bundleVerify'
+            from(trainedCache) { into "$name/lib" }
+        }
+        destinationDirectory = layout.buildDirectory.dir('bundle')
+        archiveFileName = "${name}.tar.gz"
+        compression = Compression.GZIP
+        // keep executable bits
+        useFileSystemPermissions()
+        // the AOT cache is only valid for the jar mtime at training, which reproducible archives would reset
+        preserveFileTimestamps = true
+    }
+}
+
+tasks.register('bundle') {
+    group = 'distribution'
+    description = 'Builds the standalone bundle for the current OS/arch.'
+    if( hostSupported )
+        dependsOn "bundleTar${taskSuffix(hostTarget)}"
+    else
+        doFirst { throw new GradleException(unsupportedHost) }
+}
+
+tasks.register('bundleAll') {
+    group = 'distribution'
+    description = 'Builds the standalone bundles for all supported targets.'
+    dependsOn bundleTars
+}
