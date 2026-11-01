@@ -267,6 +267,53 @@ class MailboxEngineTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
+    void shouldPairBeforeRunAndAfterRunWhenAParkedInputSetIsDroppedOnStop() throws Exception {
+        var input = new DataflowQueue<Object>();
+        var release = new CountDownLatch(1);
+        var started = new AtomicInteger();
+        var before = new AtomicInteger();
+        var after = new AtomicInteger();
+        var stopped = new StopCounter();
+        var listener = new DataflowEventListener() {
+            @Override
+            public List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
+                before.incrementAndGet();
+                return messages;
+            }
+
+            @Override
+            public void afterRun(DataflowProcessor processor, List<Object> messages) {
+                after.incrementAndGet();
+            }
+        };
+
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(listener, stopped), 2, Closures.action(x -> {
+            started.incrementAndGet();
+            release.await();
+        }));
+        op.start();
+        for( int i = 0; i < 5; i++ )
+            input.bind(i);
+
+        try {
+            // two bodies run and a third input set is parked, then the operator is stopped
+            await(() -> started.get() == 2 && input.length() == 2);
+            op.terminate();
+            await(() -> stopped.stops.get() == 1);
+        }
+        finally {
+            release.countDown();
+        }
+        // the parked input set is dropped without a beforeRun, which would expect an afterRun
+        await(() -> after.get() == 2);
+        Thread.sleep(50);
+        assertThat(before.get()).isEqualTo(2);
+        assertThat(after.get()).isEqualTo(2);
+        assertThat(started.get()).isEqualTo(2);
+    }
+
+    @Test
     void shouldFireOnceWhenAllInputsAreValues() throws Exception {
         // a firing needs a value that arrived: the value inputs are re-read, which does not fire again
         var a = new DataflowVariable<Object>();

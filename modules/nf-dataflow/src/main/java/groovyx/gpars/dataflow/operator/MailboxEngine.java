@@ -391,16 +391,17 @@ final class MailboxEngine implements Runnable {
         }
         arrived = 0;
         fresh = false;
+        if (maxForks > 1 && inFlight >= maxForks) {
+            // wait for a body to complete before taking more inputs. Like GPars, beforeRun fires
+            // only once the body is about to run, so that a set dropped on stop has no afterRun pending
+            parked = messages;
+            return;
+        }
         final List<Object> verified = owner.fireBeforeRun(messages);
         if (maxForks == 1)
             runBody(verified);
-        else if (inFlight < maxForks)
+        else
             fork(verified);
-        else {
-            // wait for a body to complete before taking more inputs
-            parked = verified;
-            return;
-        }
         afterFiring();
     }
 
@@ -450,7 +451,7 @@ final class MailboxEngine implements Runnable {
         if (parked != null) {
             final List<Object> messages = parked;
             parked = null;
-            fork(messages);
+            fork(owner.fireBeforeRun(messages));
             afterFiring();
         }
     }
