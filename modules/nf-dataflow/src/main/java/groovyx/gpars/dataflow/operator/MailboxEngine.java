@@ -349,8 +349,9 @@ final class MailboxEngine implements Runnable {
     }
 
     private void arrive(final Port port, Object item) {
-        // the operator stops once the bodies in flight complete
-        if (pendingPill != null)
+        // the operator stops once the bodies in flight complete, or has stopped already on
+        // another input handed over in the same batch
+        if (pendingPill != null || state.get() != RUNNING)
             return;
         if (item instanceof PoisonPill) {
             item = owner.fireControlMessageArrived(port.channel, port.index, item);

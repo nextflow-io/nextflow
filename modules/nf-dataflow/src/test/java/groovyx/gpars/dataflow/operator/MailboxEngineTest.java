@@ -72,6 +72,35 @@ class MailboxEngineTest {
     }
 
     @Test
+    void shouldForwardASinglePoisonPillWhenSeveralInputsHandOverOneInTheSameDrain() throws Exception {
+        // a manual pool, so that both pills are handed over before the drain that takes them
+        var tasks = new ArrayList<Runnable>();
+        Executor manual = tasks::add;
+        var a = new DataflowQueue<Object>();
+        var b = new DataflowQueue<Object>();
+        var output = new DataflowQueue<Object>();
+        var counter = new StopCounter();
+        var op = new DataflowProcessor(manual, List.of(a, b), List.of(output), List.of(counter), 1, Closures.action((x, y) -> {}));
+
+        op.start();
+        // subscribe both inputs
+        runAll(tasks);
+        a.bind(STOP);
+        b.bind(STOP);
+        runAll(tasks);
+
+        assertThat(op.isActive()).isFalse();
+        assertThat(counter.stops.get()).isEqualTo(1);
+        assertThat(output.getVal()).isSameAs(STOP);
+        assertThat(output.length()).isZero();
+    }
+
+    private static void runAll(List<Runnable> tasks) {
+        while( !tasks.isEmpty() )
+            tasks.remove(0).run();
+    }
+
+    @Test
     @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
     void shouldStopTakingInputsWhileAllForksAreBusy() throws Exception {
         var input = new DataflowQueue<Object>();
