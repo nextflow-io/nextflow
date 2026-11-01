@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package nextflow.dataflow;
+package nextflow.dataflow
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
-import groovyx.gpars.scheduler.Scheduler;
+import groovy.transform.CompileStatic
+import groovyx.gpars.scheduler.Scheduler
 
 /**
  * Runs calls on the dataflow pool, e.g. on the loop thread with {@code NXF_DATAFLOW_POOL_SIZE=1}.
  */
-public final class DataflowThreads {
+@CompileStatic
+final class DataflowThreads {
 
     private DataflowThreads() {}
 
@@ -37,21 +37,21 @@ public final class DataflowThreads {
      *
      * @throws Exception the error of the first failed call
      */
-    public static <T> List<T> call(int n, Callable<T> call) throws Exception {
-        final List<Future<T>> futures = new ArrayList<>(n);
+    static <T> List<T> call(int n, Callable<T> call) throws Exception {
+        final futures = new ArrayList<Future<T>>(n)
         for( int i = 0; i < n; i++ )
-            futures.add(Scheduler.pool().submit(call));
-        final List<T> result = new ArrayList<>(n);
+            futures.add(Scheduler.pool().submit(call))
+        final result = new ArrayList<T>(n)
         for( Future<T> future : futures ) {
             try {
-                result.add(future.get(30, TimeUnit.SECONDS));
+                result.add(future.get(30, TimeUnit.SECONDS))
             }
             catch( ExecutionException e ) {
-                if( e.getCause() instanceof Exception cause )
-                    throw cause;
-                throw e;
+                if( e.cause instanceof Exception )
+                    throw (Exception) e.cause
+                throw e
             }
         }
-        return result;
+        return result
     }
 }

@@ -13,13 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.dataflow.engine;
+package nextflow.dataflow.engine
 
-import java.util.function.BooleanSupplier;
+import java.util.function.BooleanSupplier
+
+import groovy.transform.CompileStatic
 
 /**
  * Test helpers for backpressure.
  */
+@CompileStatic
 final class BackpressureInternals {
 
     private BackpressureInternals() {}
@@ -28,11 +31,11 @@ final class BackpressureInternals {
      * Wait until a condition holds, failing after a deadline.
      */
     static void await(BooleanSupplier condition) throws InterruptedException {
-        final long deadline = System.currentTimeMillis() + 5_000;
+        final deadline = System.currentTimeMillis() + 5_000
         while( !condition.getAsBoolean() ) {
             if( System.currentTimeMillis() > deadline )
-                throw new AssertionError("Condition not met in time");
-            Thread.sleep(5);
+                throw new AssertionError("Condition not met in time")
+            Thread.sleep(5)
         }
     }
 }

@@ -22,6 +22,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
+import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.extension.CH
 import nextflow.file.FileHelper
 import org.junit.Rule
 import spock.lang.Specification
@@ -1096,6 +1098,12 @@ class ChannelTest extends Specification {
         }
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def 'should use the dataflow poison pill as stop' () {
+        expect:
+        Channel.STOP.is(PoisonPill.getInstance())
+        CH.stop().is(PoisonPill.getInstance())
     }
 
 }

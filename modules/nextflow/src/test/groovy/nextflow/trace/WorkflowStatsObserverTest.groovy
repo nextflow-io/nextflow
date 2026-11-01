@@ -14,30 +14,35 @@
  * limitations under the License.
  */
 
-package nextflow.trace;
+package nextflow.trace
 
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeUnit
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import spock.lang.Specification
+import spock.lang.Timeout
 
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
-class WorkflowStatsObserverTest {
+class WorkflowStatsObserverTest extends Specification {
 
-    @Test
-    void shouldReturnTheQuickStatsAndKeepTheInterruptWhenInterrupted() {
-        var observer = new WorkflowStatsObserver(null);
+    def 'should return the quick stats and keep the interrupt when interrupted' () {
+        given:
+        def observer = new WorkflowStatsObserver(null)
+        def stats
+        def interrupted
 
-        Thread.currentThread().interrupt();
+        when:
+        Thread.currentThread().interrupt()
         try {
-            assertThat(observer.getStats()).isNotNull();
-            assertThat(Thread.currentThread().isInterrupted()).isTrue();
+            stats = observer.getStats()
+            interrupted = Thread.currentThread().isInterrupted()
         }
         finally {
-            Thread.interrupted();
+            Thread.interrupted()
         }
-        assertThat(observer.getStats()).isNotNull();
+
+        then:
+        stats != null
+        interrupted
+        observer.getStats() != null
     }
 }
