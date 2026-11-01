@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -79,10 +80,15 @@ class BackpressureScriptTest {
     static final int N = 1000;
 
     /**
-     * A task is counted both as preparing and pending between its scheduling and the end of
-     * its preparation, so the sampled count may exceed the mark by the tasks being prepared.
+     * The operator pauses as soon as the backlog reaches the mark
      */
-    static final int MAX_BUSY = 2 * HW;
+    static final int MAX_BUSY = HW;
+
+    /**
+     * A retried task is scheduled without going through the operator gate, at most one
+     * for each of the two task slots
+     */
+    static final int MAX_BUSY_WITH_RETRIES = HW + 2;
 
     @TempDir
     Path workDir;
@@ -92,9 +98,15 @@ class BackpressureScriptTest {
      */
     static volatile Runnable beforeSubmit = () -> {};
 
+    /**
+     * The names of the threads that evaluate a `when` guard, i.e. that prepare a task
+     */
+    static final Set<String> prepareThreads = ConcurrentHashMap.newKeySet();
+
     @BeforeEach
     void setup() {
         beforeSubmit = () -> {};
+        prepareThreads.clear();
         reset();
         SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", String.valueOf(HW)));
     }
@@ -175,7 +187,7 @@ class BackpressureScriptTest {
             while( !done ) {
                 for( var it : bp.processes() ) {
                     backlogs.putIfAbsent(it.getName(), it);
-                    busy.merge(it.getName(), it.getPreparing() + it.getPending(), Math::max);
+                    busy.merge(it.getName(), it.getBusy(), Math::max);
                     ready.merge(it.getName(), it.ready(100_000), Math::max);
                 }
                 try {
@@ -735,7 +747,7 @@ class BackpressureScriptTest {
             """));
         assertThat(intValue(run.value())).isEqualTo(N);
         assertThat(run.stats().getRetriesCount()).isEqualTo(N / 10);
-        assertThat(run.maxBusy("SLOW")).isLessThanOrEqualTo(MAX_BUSY);
+        assertThat(run.maxBusy("SLOW")).isLessThanOrEqualTo(MAX_BUSY_WITH_RETRIES);
         assertThat(run.pauseCount("SLOW")).isPositive();
         assertThat(run.blockCount("channel.of")).isPositive();
     }
@@ -762,6 +774,63 @@ class BackpressureScriptTest {
         assertThat(run.maxBusy("SLOW")).isLessThanOrEqualTo(MAX_BUSY);
         assertThat(run.pauseCount("SLOW")).isPositive();
         assertThat(run.blockCount("channel.of")).isPositive();
+    }
+
+    @Test
+    void shouldBoundTasksPreparedOffTheDataflowThreads() throws Throwable {
+        SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", String.valueOf(HW), "NXF_TASK_PREPARE_ASYNC", "true"));
+        try {
+            var run = run(script("""
+                process SLOW {
+                  errorStrategy 'retry'
+                  maxRetries 1
+
+                  input: val x
+                  output: val x
+                  when: { nextflow.dataflow.engine.BackpressureScriptTest.prepareThreads.add(Thread.currentThread().name); x % 2 == 0 }()
+                  exec:
+                    sleep 1
+                    if( task.attempt == 1 && x % 10 == 0 ) throw new IllegalStateException('boom')
+                }
+
+                workflow {
+                  channel.of(1..$N) | SLOW | count
+                }
+                """));
+            assertThat(prepareThreads).isNotEmpty().allMatch(it -> it.startsWith("nf-prepare-"));
+            assertThat(intValue(run.value())).isEqualTo(N / 2);
+            assertThat(run.stats().getRetriesCount()).isEqualTo(N / 10);
+            assertThat(run.maxBusy("SLOW")).isLessThanOrEqualTo(MAX_BUSY_WITH_RETRIES);
+            assertThat(run.pauseCount("SLOW")).isPositive();
+            assertThat(run.blockCount("channel.of")).isPositive();
+        }
+        finally {
+            SysEnv.pop();
+        }
+    }
+
+    @Test
+    void shouldFailOnAnErrorRaisedWhilePreparingATaskOffTheDataflowThreads() {
+        SysEnv.push(Map.of("NXF_DATAFLOW_HIGH_WATER", String.valueOf(HW), "NXF_TASK_PREPARE_ASYNC", "true"));
+        try {
+            assertThatThrownBy(() -> run(script("""
+                process SLOW {
+                  storeDir { if( x == 20 ) throw new IllegalStateException('boom'); null }
+
+                  input: val x
+                  output: val x
+                  exec: sleep 1
+                }
+
+                workflow {
+                  channel.of(1..$N) | SLOW | count
+                }
+                """))).hasMessageContaining("boom");
+            assertThat(last.backpressure().isReleased()).isTrue();
+        }
+        finally {
+            SysEnv.pop();
+        }
     }
 
     @Test

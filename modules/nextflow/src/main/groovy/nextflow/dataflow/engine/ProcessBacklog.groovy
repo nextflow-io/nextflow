@@ -37,9 +37,8 @@ import groovyx.gpars.dataflow.DataflowStreamReadAdapter
  * and resumes once it drops to the low-water mark. Sources feeding the process are paused
  * likewise on the whole backlog.
  *
- * A task counts as both preparing and pending from its scheduling ({@code schedule} is called
- * within the task preparation) until the end of its preparation ({@code afterRun}), so the
- * backlog may briefly exceed the mark by the input sets being prepared.
+ * The task counts are changed only by {@link nextflow.processor.TaskBacklogTracker}, which
+ * moves a task from preparing to pending at once when it is scheduled.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -58,6 +57,9 @@ class ProcessBacklog implements BooleanSupplier {
 
     private final AtomicInteger pending = new AtomicInteger()
 
+    // preparing + pending, kept apart so that a task moving from one to the other is not counted twice
+    private final AtomicInteger busy = new AtomicInteger()
+
     private volatile boolean closed
 
     @PackageScope
@@ -73,24 +75,36 @@ class ProcessBacklog implements BooleanSupplier {
      */
     @Override
     boolean getAsBoolean() {
-        return !closed && !owner.released && preparing.get() + pending.get() >= owner.highWater
+        return !closed && !owner.released && busy.get() >= owner.highWater
     }
 
     void taskStarted() {
         preparing.incrementAndGet()
+        busy.incrementAndGet()
     }
 
     void taskPrepared() {
         preparing.decrementAndGet()
+        busy.decrementAndGet()
         changed()
     }
 
     void taskPending() {
         pending.incrementAndGet()
+        busy.incrementAndGet()
+    }
+
+    /**
+     * Move a task from preparing to pending, which leaves the backlog unchanged
+     */
+    void taskScheduled() {
+        pending.incrementAndGet()
+        preparing.decrementAndGet()
     }
 
     void taskSubmitted() {
         pending.decrementAndGet()
+        busy.decrementAndGet()
         changed()
     }
 
@@ -104,7 +118,7 @@ class ProcessBacklog implements BooleanSupplier {
     }
 
     private void changed() {
-        if( preparing.get() + pending.get() <= owner.lowWater )
+        if( busy.get() <= owner.lowWater )
             operator?.resume()
         owner.wake()
     }
@@ -122,13 +136,18 @@ class ProcessBacklog implements BooleanSupplier {
     int getPending() { pending.get() }
 
     /**
+     * The tasks preparing or pending
+     */
+    int getBusy() { busy.get() }
+
+    /**
      * Whether the whole backlog is at or above the given mark
      */
     boolean isOver(int mark) {
         if( closed )
             return false
-        final busy = preparing.get() + pending.get()
-        return busy >= mark || busy + ready(mark - busy) >= mark
+        final n = busy.get()
+        return n >= mark || n + ready(mark - n) >= mark
     }
 
     /**

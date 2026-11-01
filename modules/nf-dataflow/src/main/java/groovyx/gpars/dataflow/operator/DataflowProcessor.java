@@ -60,6 +60,8 @@ public final class DataflowProcessor {
 
     private volatile BooleanSupplier gate;
 
+    private volatile boolean async;
+
     /**
      * Creates a processor on the dataflow pool.
      * After creation the processor needs to be started using the start() method.
@@ -119,6 +121,20 @@ public final class DataflowProcessor {
      */
     public void setGate(final BooleanSupplier gate) {
         this.gate = gate;
+    }
+
+    /**
+     * Makes the body asynchronous: a body that returns a {@link java.util.concurrent.CompletionStage}
+     * holds its fork until the stage completes. Otherwise the result of the body is ignored.
+     * Set it before the processor is started.
+     */
+    public DataflowProcessor setAsync(final boolean async) {
+        this.async = async;
+        return this;
+    }
+
+    boolean isAsync() {
+        return async;
     }
 
     boolean isGateClosed() {

@@ -7,6 +7,7 @@ Whole-run benchmarks for the dataflow engine: wall time, peak RSS, and live heap
 | `dataflow.nf` | E1 | `n` items through `map`, `filter`, `flatMap`, `map`, `reduce` (default 10⁶) |
 | `processes.nf` | E1 | one native (`exec:`) task per item (default 10⁴) |
 | `slow-consumer.nf` | E2 | `n` three-field records into a `maxForks 1` process with a tiny native task (default 10⁶) |
+| `slow-prepare.nf` | E3 | one native task per item whose `when` guard blocks for `ms` milliseconds (default 10³ tasks, 20 ms), next to a pure dataflow pipeline of `side` items (`side_ms`) |
 
 ## Running
 

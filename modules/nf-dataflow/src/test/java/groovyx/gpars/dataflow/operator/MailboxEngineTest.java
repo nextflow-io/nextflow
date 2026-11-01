@@ -17,6 +17,7 @@ package groovyx.gpars.dataflow.operator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -99,6 +100,97 @@ class MailboxEngineTest {
         input.bind(STOP);
         await(() -> stopped.stops.get() == 1);
         assertThat(started.get()).isEqualTo(5);
+    }
+
+    @Test
+    void shouldHoldAForkUntilAnAsynchronousBodyCompletes() throws Exception {
+        for( int forks : new int[] {1, 2} ) {
+            var input = new DataflowQueue<Object>();
+            var bodies = new CopyOnWriteArrayList<CompletableFuture<Object>>();
+            var afterRun = new AtomicInteger();
+            var stopped = new StopCounter() {
+                @Override
+                public void afterRun(DataflowProcessor processor, List<Object> messages) {
+                    afterRun.incrementAndGet();
+                }
+            };
+
+            new DataflowProcessor(List.of(input), List.of(), List.of(stopped), forks, Closures.function(x -> {
+                var result = new CompletableFuture<Object>();
+                bodies.add(result);
+                return result;
+            })).setAsync(true).start();
+            for( int i = 0; i < 5; i++ )
+                input.bind(i);
+
+            // the bodies return at once, but each holds its fork until its future completes
+            await(() -> bodies.size() == forks);
+            Thread.sleep(50);
+            assertThat(bodies).hasSize(forks);
+            assertThat(afterRun.get()).isZero();
+
+            // the poison pill waits for the bodies in flight
+            input.bind(STOP);
+            for( int i = 0; i < 5; i++ ) {
+                final int n = i + 1;
+                await(() -> bodies.size() >= n);
+                bodies.get(i).complete(null);
+            }
+            await(() -> stopped.stops.get() == 1);
+            assertThat(afterRun.get()).isEqualTo(5);
+        }
+    }
+
+    @Test
+    void shouldReportTheErrorOfAnAsynchronousBody() throws Exception {
+        var input = new DataflowQueue<Object>();
+        var errors = new CopyOnWriteArrayList<Throwable>();
+        var listener = new DataflowEventListener() {
+            @Override
+            public boolean onException(DataflowProcessor processor, Throwable error) {
+                errors.add(error);
+                return false;
+            }
+        };
+        var failure = new IllegalStateException("boom");
+
+        var op = new DataflowProcessor(List.of(input), List.of(), List.of(listener), 2, Closures.function(x ->
+            CompletableFuture.runAsync(() -> { throw failure; })
+        )).setAsync(true).start();
+        input.bind(1);
+
+        await(() -> errors.size() == 1);
+        assertThat(errors.get(0)).isSameAs(failure);
+        assertThat(op.isActive()).isTrue();
+        input.bind(STOP);
+        op.join();
+    }
+
+    @Test
+    void shouldForwardAnIncompleteFutureUntouchedUnlessAsync() throws Exception {
+        for( int forks : new int[] {1, 2} ) {
+            var input = new DataflowQueue<Object>();
+            var output = new DataflowQueue<Object>();
+            var stopped = new StopCounter();
+            var item = new CompletableFuture<Object>();
+
+            // like the forwarding operators, the body binds its input and returns it
+            new DataflowProcessor(List.of(input), List.of(output), List.of(stopped), forks, Closures.closure(1, (self, args) -> {
+                ((DataflowProcessor) self).bindOutput(args[0]);
+                return args[0];
+            })).start();
+            input.bind(item);
+            input.bind(1);
+            input.bind(STOP);
+
+            await(() -> stopped.stops.get() == 1);
+            var received = new ArrayList<Object>();
+            for( int i = 0; i < 3; i++ )
+                received.add(output.getVal());
+            assertThat(received.subList(0, 2)).containsExactlyInAnyOrder(item, 1);
+            assertThat(received.get(2)).isSameAs(STOP);
+            assertThat(item).isNotDone();
+        }
     }
 
     @Test

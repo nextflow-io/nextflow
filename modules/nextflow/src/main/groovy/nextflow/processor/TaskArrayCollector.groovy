@@ -89,7 +89,7 @@ class TaskArrayCollector {
             // submit task directly if the collector is closed
             // or if the task is retried (since it might have dynamic resources)
             if( closed ) {
-                executor.submit(task)
+                schedule(task)
                 return
             }
 
@@ -98,7 +98,7 @@ class TaskArrayCollector {
 
             // submit job array when it is ready
             if( array.size() == arraySize ) {
-                executor.submit(createTaskArray(array))
+                schedule(createTaskArray(array))
                 array = new ArrayList<>(arraySize)
             }
         }
@@ -114,10 +114,10 @@ class TaskArrayCollector {
         sync.lock()
         try {
             if( array.size() == 1 ) {
-                executor.submit(array.first())
+                schedule(array.first())
             }
             else if( array.size() > 0 ) {
-                executor.submit(createTaskArray(array))
+                schedule(createTaskArray(array))
                 array = null
             }
             closed = true
@@ -125,6 +125,17 @@ class TaskArrayCollector {
         finally {
             sync.unlock()
         }
+    }
+
+    /**
+     * Hand a task over through the process runner, which counts it in the process backlog
+     */
+    private void schedule(TaskRun task) {
+        final runner = processor?.getRunner()
+        if( runner )
+            runner.schedule(task)
+        else
+            executor.submit(task)
     }
 
     /**

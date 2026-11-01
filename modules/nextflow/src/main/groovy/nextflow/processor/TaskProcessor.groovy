@@ -15,18 +15,16 @@
  */
 package nextflow.processor
 
-import static nextflow.processor.ErrorStrategy.*
-
 import java.nio.file.FileSystems
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
+import java.util.function.Consumer
 import java.util.regex.Pattern
 
 import ch.grengine.Grengine
-import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -39,34 +37,20 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import groovyx.gpars.scheduler.Scheduler
 import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
-import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.dataflow.engine.ProcessBacklog
-import nextflow.exception.FailedGuardException
-import nextflow.exception.IllegalArityException
-import nextflow.exception.MissingFileException
-import nextflow.exception.MissingValueException
-import nextflow.exception.ProcessEvalException
-import nextflow.exception.ProcessException
-import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessRetryableException
-import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
-import nextflow.executor.StoredTaskHandler
 import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
-import nextflow.file.FileHelper
-import nextflow.file.FileHolder
-import nextflow.file.FilePorter
-import nextflow.plugin.Plugins
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -75,31 +59,18 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.dsl.Nullable
-import nextflow.script.dsl.Types
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
-import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
-import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
-import nextflow.script.params.InParam
 import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
-import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
-import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.script.params.v2.ProcessInput
-import nextflow.script.params.v2.ProcessTupleInput
-import nextflow.script.types.Record
-import nextflow.script.types.Tuple
-import nextflow.trace.TraceRecord
 import nextflow.util.Escape
-import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -183,43 +154,11 @@ class TaskProcessor {
     protected ProcessConfig config
 
     /**
-     * Count the number of time an error occurred
+     * Executes the tasks for this process. It implements the process
+     * functionality that does not depend on the dataflow interface, and it
+     * reports the completion of each task via {@link #taskCompleted}
      */
-    private volatile int errorCount
-
-
-    /**
-     * Set to true the very first time the error is shown.
-     *
-     * Note: it is declared static because the error must be shown only the
-     * very first time  for all processes
-     */
-    private static final AtomicBoolean errorShown = new AtomicBoolean()
-
-    /**
-     * The {@link TaskHasherFactory} extensions registered by plugins, in priority order --
-     * resolved once, on the first task hashed by this processor. See {@link #createTaskHasher}.
-     *
-     * <p>This and the three fields below are lazily initialised without a lock and read from every
-     * operator thread that submits a task, plus the retry executor -- so they must be {@code
-     * volatile}: without it a reader may see a non-null reference to a list whose contents are not
-     * yet visible, fall back to the default hasher, and give that ONE task a different cache key
-     * from the rest of the run (a silent miss, not a crash). With it the benign race is correct,
-     * since resolving twice is harmless.
-     */
-    @PackageScope volatile List<TaskHasherFactory> hasherFactories
-
-    /**
-     * The {@link TaskCacheStrategy} extensions registered by plugins, in priority order -- resolved
-     * once, on the first task resolved by this processor. See {@link #getCacheStrategy}.
-     */
-    @PackageScope volatile List<TaskCacheStrategy> cacheStrategies
-
-    /** The strategy chosen among {@link #cacheStrategies} for this run, else the default. */
-    private volatile TaskCacheStrategy cacheStrategy
-
-    /** The {@link TaskResolver} adapter over this processor, created on first use. */
-    private volatile TaskResolver taskResolver
+    private final TaskRunner runner = new TaskRunner(this, { TaskRun task -> taskCompleted(task) } as Consumer<TaskRun>)
 
     /**
      * Flag set {@code true} when the processor termination has been invoked
@@ -260,7 +199,6 @@ class TaskProcessor {
 
     private static int processCount
 
-
     private List<TaskRun> fairBuffers = new ArrayList<>()
 
     private int currentEmission
@@ -268,6 +206,11 @@ class TaskProcessor {
     private Boolean isFair0
 
     private TaskArrayCollector arrayCollector
+
+    /**
+     * Whether the tasks are prepared off the dataflow threads, see {@link #invokeTask}
+     */
+    private boolean prepareAsync
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -279,7 +222,7 @@ class TaskProcessor {
     @TestOnly
     static void reset() {
         processCount=0
-        errorShown.set(false)
+        TaskRunner.errorShown.set(false)
         currentProcessor0 = null
     }
 
@@ -325,8 +268,16 @@ class TaskProcessor {
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
         this.arrayCollector = createArrayCollector(arraySize)
+        this.prepareAsync = prepareAsync()
         log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
     }
+
+    @PackageScope TaskArrayCollector getArrayCollector() { arrayCollector }
+
+    /**
+     * @return The {@link TaskRunner} which executes the tasks of this process
+     */
+    TaskRunner getRunner() { runner }
 
     private TaskArrayCollector createArrayCollector(int arraySize) {
         if( arraySize > 0 && executor instanceof TaskArrayExecutor )
@@ -406,7 +357,7 @@ class TaskProcessor {
 
     int getMaxForks() { maxForks }
 
-    boolean hasErrors() { errorCount>0 }
+    boolean hasErrors() { runner.getErrorCount()>0 }
 
     boolean isSingleton() { singleton }
 
@@ -594,7 +545,9 @@ class TaskProcessor {
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
-        session.allOperators << (operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke))
+        // the task body returns the future of the task preparation, see #invokeTask
+        operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke).setAsync(true)
+        session.allOperators << operator
         backlog = session.backpressure?.register(name, opInputs, operator)
 
         // notify the creation of a new vertex the execution DAG
@@ -644,7 +597,8 @@ class TaskProcessor {
         // this allows us to manage them independently from the operator life-cycle
         final interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         final invoke = new InvokeTaskAdapter(this, opInputs.size())
-        this.operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke)
+        // the task body returns the future of the task preparation, see #invokeTask
+        this.operator = new DataflowProcessor(opInputs, null, [interceptor], session.poolSize, invoke).setAsync(true)
         this.backlog = session.backpressure?.register(name, opInputs, operator)
         session.allOperators << operator
 
@@ -662,68 +616,49 @@ class TaskProcessor {
      *
      * @param args
      *      The args array is expected to be composed by two elements:
-     *      the first must be an object object of type {@link TaskStartParams},
+     *      the first is the {@link TaskRun} accepted by the runner for the input set,
      *      the second is the list of task input messages as received by the process
+     * @return
+     *      When the task is prepared off the dataflow thread, the future of its preparation,
+     *      which holds the operator fork until it completes, otherwise {@code null}
      */
-    final protected void invokeTask( Object[] args ) {
+    final protected Object invokeTask( Object[] args ) {
         assert args.size()==2
-        final params = (TaskStartParams) args[0]
+        final task = (TaskRun) args[0]
         final values = (List) args[1]
-
-        // create and initialize the task instance to be executed
-        log.trace "Invoking task > $name with params=$params; values=$values"
-
-        // -- create the task run instance
-        final task = createTaskRun(params)
-        // -- set the task instance as the current in this thread
-        currentTask.set(task)
-
-        // -- map the inputs to a map and use to delegate closure values interpolation
-        final foreignFiles = session.filePorter.newBatch(executor.getStageDir())
-
-        resolveTaskInputs(task, values, foreignFiles)
-
-        // verify that `when` guard, when specified, is satisfied
-        if( !checkWhenGuard(task) )
-            return
-
-        // -- resolve the task command script
-        task.resolve(taskBody)
-
-        // -- verify if exists a stored result for this case,
-        //    if true skip the execution and return the stored data
-        if( checkStoredOutput(task) )
-            return
-
-        // -- download foreign files
-        session.filePorter.transfer(foreignFiles)
-
-        final hash = createTaskHasher(task).compute()
-        checkCachedOrLaunchTask(task, hash, resumable)
+        if( !isPrepareAsync() ) {
+            runner.submit(task, values)
+            return null
+        }
+        return CompletableFuture.runAsync({ prepareTask(task, values) } as Runnable, session.getPrepareExecService())
     }
 
-    /**
-     * Create the {@link TaskHasher} for the given task.
-     *
-     * The registered {@link TaskHasherFactory} extensions are asked in priority order and the
-     * first hasher returned is used; with none registered, or all abstaining, the default
-     * {@link TaskHasher} is used, exactly as when no plugin takes part in hashing.
-     *
-     * @param task The task to be hashed.
-     * @return The hasher computing the cache key of {@code task}.
-     */
-    @CompileStatic
-    protected TaskHasher createTaskHasher(TaskRun task) {
-        if( hasherFactories == null )
-            hasherFactories = Plugins.getPriorityExtensions(TaskHasherFactory) ?: Collections.<TaskHasherFactory>emptyList()
-        for( final factory : hasherFactories ) {
-            final hasher = factory.create(task)
-            if( hasher != null ) {
-                log.trace "Task: ${task.lazyName()} > Using task hasher: ${hasher.getClass().getName()}"
-                return hasher
-            }
+    private void prepareTask(TaskRun task, List values) {
+        try {
+            runner.submit(task, values)
         }
-        return new TaskHasher(task)
+        catch( Throwable e ) {
+            // like the operator exception handler, see TaskProcessorInterceptor#onException
+            if( runner.handleException(e, task) )
+                operator.terminate()
+        }
+        finally {
+            currentTask.remove()
+        }
+    }
+
+    boolean isPrepareAsync() { prepareAsync }
+
+    /**
+     * Whether tasks are prepared (staging, hashing, cache lookup, ...) off the dataflow
+     * threads, on the task preparation pool. By default only with a single dataflow
+     * thread, so that the dataflow loop never blocks on the preparation of a task.
+     */
+    static private boolean prepareAsync() {
+        final value = SysEnv.get('NXF_TASK_PREPARE_ASYNC')
+        return value != null
+            ? value == 'true'
+            : Scheduler.getPoolSize() == 1
     }
 
     /**
@@ -779,488 +714,12 @@ class TaskProcessor {
         return null
     }
 
-    /**
-     * Create a new {@code TaskRun} instance, initializing the following properties :
-     * <li>{@code TaskRun#id}
-     * <li>{@code TaskRun#status}
-     * <li>{@code TaskRun#index}
-     * <li>{@code TaskRun#name}
-     * <li>{@code TaskRun#process}
-     *
-     * @return The new newly created {@code TaskRun}
-     */
-
-    final protected TaskRun createTaskRun(TaskStartParams params) {
-        final task = new TaskRun(
-                id: params.id,
-                index: params.index,
-                processor: this,
-                type: scriptType,
-                config: config.createTaskConfig(),
-                context: new TaskContext(this)
-        )
-
-        // setup config
-        task.config.index = task.index
-        task.config.process = task.processor.name
-        task.config.executor = task.processor.executor.name
-        task.config.setAutoResourceLabels(session?.getAutoResourceLabels())
-
-        if( config instanceof ProcessConfigV1 )
-            initializeTaskRunV1(task)
-
-        return task
-    }
-
-    private void initializeTaskRunV1(TaskRun task) {
-        /*
-         * initialize the inputs/outputs for this task instance
-         */
-        configV1().getInputs().each { InParam param ->
-            if( param instanceof TupleInParam )
-                param.inner.each { task.setInput(it)  }
-            else if( param instanceof EachInParam )
-                task.setInput(param.inner)
-            else
-                task.setInput(param)
-        }
-
-        configV1().getOutputs().each { OutParam param ->
-            if( param instanceof TupleOutParam ) {
-                param.inner.each { task.setOutput(it) }
-            }
-            else
-                task.setOutput(param)
-        }
-    }
-
-    /**
-     * Try to check if exists a previously executed process result in the a cached folder. If it exists
-     * use the that result and skip the process execution, otherwise the task is sumitted for execution.
-     *
-     * The resolution is delegated to the {@link TaskCacheStrategy} in use for this run -- see
-     * {@link #getCacheStrategy} -- which drives it through the {@link TaskResolver} primitives of
-     * this processor: with no plugin strategy applying, the {@link DefaultTaskCacheStrategy} runs
-     * the per-run resolution loop exactly as before.
-     *
-     * @param task
-     *      The {@code TaskRun} instance to be executed
-     * @param hash
-     *      The unique {@code HashCode} for the given task inputs
-     * @param shouldTryCache
-     *      Whether a cached execution may be resumed
-     */
-    @CompileStatic
-    final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
-        getCacheStrategy().resolve(task, hash, shouldTryCache, getTaskResolver())
-    }
-
-    /**
-     * The {@link TaskCacheStrategy} resolving the tasks of this run.
-     *
-     * The registered {@link TaskCacheStrategy} extensions are asked in priority order and the first
-     * one enabled for the session is used; with none registered, or none enabled, the
-     * {@link DefaultTaskCacheStrategy} is used, exactly as when no plugin takes part in the
-     * resolution. Resolved once, on the first task of this processor.
-     */
-    @CompileStatic
-    protected TaskCacheStrategy getCacheStrategy() {
-        if( cacheStrategy != null )
-            return cacheStrategy
-        if( cacheStrategies == null )
-            cacheStrategies = Plugins.getPriorityExtensions(TaskCacheStrategy) ?: Collections.<TaskCacheStrategy>emptyList()
-        for( final strategy : cacheStrategies ) {
-            if( strategy.isEnabled(session) ) {
-                log.trace "Process: ${name} > Using task cache strategy: ${strategy.getClass().getName()}"
-                return cacheStrategy = strategy
-            }
-        }
-        return cacheStrategy = new DefaultTaskCacheStrategy()
-    }
-
-    /**
-     * The {@link TaskResolver} a {@link TaskCacheStrategy} resolves the tasks of this processor with.
-     */
-    @CompileStatic
-    protected TaskResolver getTaskResolver() {
-        if( taskResolver == null )
-            taskResolver = new Resolver()
-        return taskResolver
-    }
-
-    /**
-     * Adapts the resume / launch primitives of this processor to the {@link TaskResolver} contract,
-     * so a strategy never touches the processor itself.
-     */
-    @CompileStatic
-    private class Resolver implements TaskResolver {
-
-        @Override
-        TaskEntry entry(HashCode key) {
-            return session.cache.getTaskEntry(key, TaskProcessor.this)
-        }
-
-        @Override
-        boolean resume(TaskRun task, HashCode key, Path workDir, TaskEntry entry) {
-            return checkCachedOutput(task.clone(), workDir, key, entry)
-        }
-
-        @Override
-        void launch(TaskRun task, HashCode key, Path workDir) {
-            submitTask(task, key, workDir)
-        }
-
-        @Override
-        Path workDirFor(HashCode key) {
-            return FileHelper.getWorkFolder(executor.getWorkDir(), key)
-        }
-    }
-
-    /**
-     * Check if exists a *storeDir* for the specified task. When if exists
-     * and contains the expected result files, the process execution is skipped.
-     *
-     * @param task The task for which check the stored output
-     * @return {@code true} when the folder exists and it contains the expected outputs,
-     *      {@code false} otherwise
-     */
-    final boolean checkStoredOutput( TaskRun task ) {
-        if( !task.config.storeDir ) {
-            log.trace "[${safeTaskName(task)}] storeDir not set -- return false"
-            return false
-        }
-
-        // -- when store path is set, only output params of type 'file' can be specified
-        if( isInvalidStoreDir(task) ) {
-            checkWarn "[${safeTaskName(task)}] storeDir can only be used with `val` and `path` outputs"
-            return false
-        }
-
-        if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.storeDir} -- return false"
-            // no folder -> no cached result
-            return false
-        }
-
-
-        try {
-            // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = TaskConfig.EXIT_ZERO
-            // -- check if all output resources are available
-            collectOutputs(task)
-            log.info "[skipping] Stored process > ${safeTaskName(task)}"
-            // set the exit code in to the task object
-            task.exitStatus = TaskConfig.EXIT_ZERO
-            task.cached = true
-            session.notifyTaskCached(new StoredTaskHandler(task))
-
-            // -- now bind the results
-            finalizeTask0(task)
-            return true
-        }
-        catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.storeDir}"
-            task.exitStatus = Integer.MAX_VALUE
-            task.workDir = null
-            return false
-        }
-    }
-
-    protected boolean isInvalidStoreDir(TaskRun task) {
-        final ctx = task.context
-
-        if( config instanceof ProcessConfigV1 ) {
-            return task.getOutputs().keySet().any { param ->
-                if( param instanceof ValueOutParam )
-                    return false
-                if( param instanceof FileOutParam )
-                    return false
-                return true
-            }
-        }
-
-        if( config instanceof ProcessConfigV2 ) {
-            return config.getOutputs().getFiles().isEmpty()
-        }
-
-        return false
-    }
-
-    /**
-     * Check whenever the outputs for the specified task already exist
-     *
-     * @param task The task instance
-     * @param folder The folder where the outputs are stored (eventually)
-     * @return {@code true} when all outputs are available, {@code false} otherwise
-     */
-    final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash, TaskEntry entry) {
-
-        // check if exists the task exit code file
-        def exitCode = null
-        def exitFile = folder.resolve(TaskRun.CMD_EXIT)
-        if( task.type == ScriptType.SCRIPTLET ) {
-            def str
-            try {
-                str = exitFile.text?.trim()
-            }
-            catch( IOException e ) {
-                log.trace "[${safeTaskName(task)}] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
-                return false
-            }
-
-            exitCode = str.isInteger() ? str.toInteger() : null
-            if( !task.isSuccess(exitCode) ) {
-                log.trace "[${safeTaskName(task)}] Exit code is not valid > $str -- return false"
-                return false
-            }
-        }
-
-        /*
-         * verify cached context map
-         */
-        if( !entry ) {
-            log.trace "[${safeTaskName(task)}] Missing cache entry -- return false"
-            return false
-        }
-
-        if( task.hasCacheableValues() && !entry.context ) {
-            log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
-            return false
-        }
-
-        /*
-         * verify stdout file
-         */
-        final stdoutFile = folder.resolve( TaskRun.CMD_OUTFILE )
-
-        if( entry.context != null ) {
-            task.context = entry.context
-            task.config.context = entry.context
-            task.code?.delegate = entry.context
-        }
-
-        try {
-            // -- set task properties in order to resolve task outputs
-            task.workDir = folder
-            task.config.workDir = folder
-            task.stdout = stdoutFile
-            task.config.exitStatus = exitCode
-            // -- check if all output resources are available
-            collectOutputs(task)
-
-            // set the exit code in to the task object
-            task.cached = true
-            task.hash = hash
-            if( exitCode != null ) {
-                task.exitStatus = exitCode
-            }
-
-            log.info "[${task.hashLog}] Cached process > ${task.name}"
-            // -- notify cached event
-            if( entry )
-                session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
-
-            // -- now bind the results
-            finalizeTask0(task)
-            return true
-        }
-        catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed cache > ${e.getMessage()} -- folder: $folder"
-            task.exitStatus = Integer.MAX_VALUE
-            task.workDir = null
-            return false
-        }
-    }
-
-    /**
-     * Handles an error raised during the processor execution
-     *
-     * @param error The exception raised during the task execution
-     * @param task The {@code TaskDef} instance which raised the exception
-     * @return {@code true} to terminate the processor execution,
-     *         {@code false} ignore the error and continue to process other pending tasks
-     */
-    final protected boolean handleException( Throwable error, TaskRun task = null ) {
-        log.trace "Handling error: $error -- task: $task"
-        def fault = resumeOrDie(task, error)
-        log.trace "Task fault (2): $fault"
-
-        if (fault instanceof TaskFault) {
-            session.fault(fault)
-            // when a `TaskFault` is returned a `TERMINATE` is implicit, thus return `true`
-            return true
-        }
-
-        return fault == TERMINATE || fault == FINISH
-    }
-
-    /**
-     * @param task The {@code TaskRun} instance that raised an error
-     * @param error The error object
-     * @return
-     *      Either a value of value of {@link ErrorStrategy} representing the error strategy chosen
-     *      or an instance of {@TaskFault} representing the cause of the error (that implicitly means
-     *      a {@link ErrorStrategy#TERMINATE})
-     */
-    @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
-        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
-
-        ErrorStrategy errorStrategy = TERMINATE
-        final List<String> message = []
-        try {
-            // -- do not recoverable error, just re-throw it
-            if( error instanceof Error ) throw error
-
-            // -- retry without increasing the error counts
-            if( task && (error.cause instanceof ProcessRetryableException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error.cause instanceof ProcessRetryableException )
-                    log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
-                else
-                    log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
-                task.failCount+=1
-                final taskCopy = task.makeCopy()
-                session.getExecService().submit {
-                    try {
-                        taskCopy.runType = RunType.RETRY
-                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
-                    }
-                    catch( Throwable e ) {
-                        log.error("Unable to re-submit task `${taskCopy.name}`", e)
-                        session.abort(e)
-                    }
-                }
-                task.failed = true
-                task.errorAction = RETRY
-                return RETRY
-            }
-
-            final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
-            final submitErrMsg = submitTimeout ? error.cause.message : null
-            final int submitRetries = submitTimeout ? ++task.submitRetries : 0
-            final int taskErrCount = !submitTimeout && task ? ++task.failCount : 0
-            final int procErrCount = !submitTimeout ? ++errorCount : errorCount
-
-            // -- when is a task level error and the user has chosen to ignore error,
-            //    just report and error message and DO NOT stop the execution
-            if( task && error instanceof ProcessException ) {
-                // expose current task exit status
-                task.config.exitStatus = task.exitStatus
-                task.config.errorCount = procErrCount
-                task.config.retryCount = taskErrCount
-                //Add trace of the previous execution in the task context for next execution
-                if ( traceRecord )
-                    task.config.previousTrace = traceRecord
-                task.config.previousException = error
-
-                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
-                if( errorStrategy.soft ) {
-                    def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
-                    if( errorStrategy == IGNORE )
-                        msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY )
-                        msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
-                    log.info msg
-                    task.failed = true
-                    task.errorAction = errorStrategy
-                    return errorStrategy
-                }
-            }
-
-            // -- mark the task as failed
-            if( task ) {
-                task.failed = true
-                task.errorAction = errorStrategy
-            }
-
-            // -- make sure the error is showed only the very first time across all processes
-            if( errorShown.getAndSet(true) || session.aborted ) {
-                log.trace "Task errorShown=${errorShown.get()}; aborted=${session.aborted}"
-                return errorStrategy
-            }
-
-            def dumpStackTrace = log.isTraceEnabled()
-            def errorFormatter = new TaskErrorFormatter()
-            message << "Error executing process > '${safeTaskName(task)}'"
-            switch( error ) {
-                case ProcessException:
-                    errorFormatter.formatTaskError( message, error, task )
-                    break
-
-                case ProcessEvalException:
-                    errorFormatter.formatCommandError( message, error, task )
-                    break
-
-                case FailedGuardException:
-                    errorFormatter.formatGuardError( message, error as FailedGuardException, task )
-                    break;
-
-                default:
-                    message << errorFormatter.formatErrorCause(error)
-                    dumpStackTrace = true
-            }
-
-            if( dumpStackTrace )
-                log.error(message.join('\n'), error)
-            else
-                log.error(message.join('\n'))
-        }
-        catch( Throwable e ) {
-            // no recoverable error
-            log.error("Execution aborted due to an unexpected error", e )
-        }
-
-        return new TaskFault(error: error, task: task, report: message.join('\n'))
-    }
-
     protected String safeTaskName(TaskRun task)  {
         return task!=null
                 ? task.lazyName()
                 : name
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
-
-        final action = task.config.getErrorStrategy()
-
-        // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
-            return !action.soft ? action : TERMINATE
-        }
-
-        // IGNORE strategy -- just continue
-        if( action == IGNORE ) {
-            return IGNORE
-        }
-
-        // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-        if( action == RETRY ) {
-            final int maxErrors = task.config.getMaxErrors()
-            final int maxRetries = task.config.getMaxRetries()
-
-            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries && submitRetries <= maxRetries ) {
-                final taskCopy = task.makeCopy()
-                session.getExecService().submit({
-                    try {
-                        taskCopy.config.attempt = taskErrCount+1
-                        taskCopy.config.submitAttempt = submitRetries+1
-                        taskCopy.runType = RunType.RETRY
-                        taskCopy.resolve(taskBody)
-                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
-                    }
-                    catch( Throwable e ) {
-                        log.error("Unable to re-submit task `${safeTaskName(taskCopy)}`", e)
-                        session.abort(e)
-                    }
-                } as Runnable)
-                return RETRY
-            }
-
-            return TERMINATE
-        }
-
-        return action
-    }
 
     /**
      * Send a poison pill over all the outputs channel
@@ -1293,7 +752,7 @@ class TaskProcessor {
      * @param overwrite When {@code true} any existing file will be overwritten, otherwise the publishing is ignored
      */
     @CompileStatic
-    protected void publishOutputs( TaskRun task ) {
+    void publishOutputs( TaskRun task ) {
         final publishList = task.config.getPublishDir()
         if( !publishList ) {
             return
@@ -1404,6 +863,46 @@ class TaskProcessor {
     }
 
     protected void bindOutputsV1(TaskRun task) {
+        final tuples = outputTuplesV1(task)
+
+        // -- bind out the collected values
+        for( OutParam param : configV1().getOutputs() ) {
+            final outValue = tuples[param.index]
+            if( outValue == null )
+                throw new IllegalStateException()
+
+            if( outValue instanceof MissingParam ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+                continue
+            }
+
+            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
+            bindOutParam(param, outValue)
+        }
+    }
+
+    /**
+     * The values of the declared outputs of a completed task, in declaration order, as they
+     * are emitted on the output channels. An optional output whose files are missing is
+     * {@code null}. Used to collect the result of a task executed outside of the dataflow
+     * network, see {@link TaskRunner#execute}.
+     *
+     * @param task A task whose outputs were collected
+     */
+    List outputValues(TaskRun task) {
+        if( config instanceof ProcessConfigV2 )
+            return configV2().getOutputs().getParams().collect { param -> task.outputs[param] }
+        final tuples = outputTuplesV1(task)
+        return configV1().getOutputs().collect { OutParam param ->
+            final List values = tuples[param.index]
+            values instanceof MissingParam ? null : (values.size() == 1 ? values[0] : values)
+        }
+    }
+
+    /**
+     * The values of each output of a completed task, by output index
+     */
+    private Map<Short,List> outputTuplesV1(TaskRun task) {
 
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
@@ -1439,20 +938,7 @@ class TaskProcessor {
             }
         }
 
-        // -- bind out the collected values
-        for( OutParam param : configV1().getOutputs() ) {
-            final outValue = tuples[param.index]
-            if( outValue == null )
-                throw new IllegalStateException()
-
-            if( outValue instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
-                continue
-            }
-
-            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
-            bindOutParam(param, outValue)
-        }
+        return tuples
     }
 
     protected void bindOutParam( OutParam param, List values ) {
@@ -1469,49 +955,6 @@ class TaskProcessor {
         }
     }
 
-    /**
-     * Once the task has completed this method is invoked to collected all the task results
-     *
-     * @param task
-     */
-    @CompileStatic
-    protected void collectOutputs( TaskRun task ) {
-        if( config instanceof ProcessConfigV2 )
-            collectOutputsV2( task )
-        else if( config instanceof ProcessConfigV1 )
-            collectOutputsV1( task )
-    }
-
-    @CompileStatic
-    protected void collectOutputsV2(TaskRun task) {
-        final declaredOutputs = configV2().getOutputs()
-        final resolver = new TaskOutputResolver(declaredOutputs.getFiles(), task)
-
-        for( final param : declaredOutputs.getParams() ) {
-            final value = resolver.resolve(param.getLazyValue())
-            task.setOutput(param, value)
-        }
-
-        for( final topic : declaredOutputs.getTopics() ) {
-            final value = resolver.resolve(topic.getLazyValue())
-            topic.getChannel().bind(value)
-        }
-
-        task.canBind = true
-    }
-
-    @CompileStatic
-    protected void collectOutputsV1( TaskRun task ) {
-        log.trace "<$name> collecting output: ${task.outputs}"
-
-        final resolver = new TaskOutputResolverV1(task)
-
-        for( OutParam param : task.outputs.keySet() )
-            resolver.resolve(param)
-
-        // mark ready for output binding
-        task.canBind = true
-    }
 
     @Memoized
     ResourcesBundle getModuleBundle() {
@@ -1616,362 +1059,6 @@ class TaskProcessor {
         return script.join('\n')
     }
 
-    final protected void resolveTaskInputs(TaskRun task, List values, FilePorter.Batch foreignFiles) {
-        if( config instanceof ProcessConfigV1 )
-            resolveTaskInputsV1(task, values, foreignFiles)
-        else if( config instanceof ProcessConfigV2 )
-            resolveTaskInputsV2(task, values, foreignFiles)
-    }
-
-    private void resolveTaskInputsV1(TaskRun task, List values, FilePorter.Batch foreignFiles) {
-
-        // -- validate input lengths
-        for( final param : configV1().getInputs().ofType(TupleInParam) ) {
-            final value = values[param.index]
-            final expected = param.inner.size()
-            final actual = value instanceof Collection
-                ? value.size()
-                : (value instanceof Map ? value.size() : 1)
-
-            if( actual != expected ) {
-                final message = "Input tuple does not match tuple declaration in process `$name` -- offending value: $value"
-                checkWarn(message, [firstOnly: true, cacheKey: this])
-            }
-        }
-
-        // -- add input params to task context
-        final Map<FileInParam,?> fileParams = [:]
-
-        task.inputs.keySet().each { InParam param ->
-
-            // add the value to the task instance
-            def val = param.decodeInputs(values)
-
-            switch(param) {
-                case ValueInParam:
-                    task.context.put(param.name, val)
-                    break
-
-                case FileInParam:
-                    fileParams[param] = val
-                    return // <-- leave it, because we do not want to add this 'val' at this stage
-
-                case StdInParam:
-                    task.stdin = val
-                    break
-
-                case EnvInParam:
-                    task.inputEnv.put(param.name, val?.toString())
-                    break
-
-                default:
-                    throw new IllegalStateException("Unsupported input param type: ${param?.class?.simpleName}")
-            }
-
-            // add the value to the task instance context
-            task.setInput(param, val)
-        }
-
-        // -- all file parameters are processed in a second pass
-        //    so that we can use resolve the variables that eventually are in the file name
-        final resolver = new TaskInputResolver(task, foreignFiles, executor)
-
-        for( Map.Entry<FileInParam,?> entry : fileParams.entrySet() ) {
-            final param = entry.getKey()
-            final val = entry.getValue()
-            final resolved = resolver.resolve(param, val)
-
-            if( !param.isValidArity(resolved.size()) )
-                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
-
-            // add the value to the task instance context
-            task.setInput(param, resolved)
-            task.inputFiles.addAll(resolved)
-        }
-
-        // -- set the delegate map as context in the task config
-        //    so that lazy directives will be resolved against it
-        task.config.context = task.context
-
-        // check conflicting file names
-        checkConflicts(task.inputFiles)
-    }
-
-    /**
-     * Check that no stage name is used by more than one file.
-     * The same file staged multiple times under the same name
-     * is not a conflict.
-     */
-    @CompileStatic
-    private void checkConflicts(List<FileHolder> allFiles) {
-        final allNames = new LinkedHashMap<String,Map<Path,FileHolder>>()
-        for( final holder : allFiles )
-            allNames.computeIfAbsent(holder.stageName, k -> new LinkedHashMap<Path,FileHolder>()).putIfAbsent(holder.storePath, holder)
-
-        final conflicts = allNames.findAll { name, holders -> holders.size() > 1 }
-        if( conflicts ) {
-            final names = conflicts.collect { name, holders ->
-                final paths = holders.values().collect { FileHolder h -> h.sourcePath ?: h.storePath }
-                "${name} (${truncateList(paths, 3)})".toString()
-            }
-            final message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${truncateList(names, 10)}"
-            throw new ProcessUnrecoverableException(message)
-        }
-    }
-
-    @CompileStatic
-    private static String truncateList(List items, int max) {
-        return items.size() > max
-            ? items.take(max).join(', ') + ", ... ${items.size() - max} more"
-            : items.join(', ')
-    }
-
-    @CompileStatic
-    private void resolveTaskInputsV2(TaskRun task, List values, FilePorter.Batch foreignFiles) {
-        final declaredInputs = configV2().getInputs()
-        final ctx = task.context
-
-        // -- remove control input
-        values = values.init()
-
-        // -- validate input lengths
-        if( declaredInputs.size() != values.size() )
-            throw new ProcessUnrecoverableException("Process `$name` declares ${declaredInputs.size()} inputs but received ${values.size()} -- offending value: $values")
-
-        // -- add input params to task context
-        for( int i = 0; i < declaredInputs.getParams().size(); i++ ) {
-            final param = declaredInputs.getParams()[i]
-            final value = values[i]
-            if( param instanceof ProcessTupleInput && param.getType() == Record.class )
-                assignTaskRecordInput(task, param, value, i)
-            else if( param instanceof ProcessTupleInput && param.getType() == Tuple.class )
-                assignTaskTupleInput(task, param, value, i)
-            else
-                assignTaskInput(task, param, value, i)
-        }
-
-        // -- resolve environment vars
-        for( final entry : declaredInputs.getEnv() ) {
-            final value = ctx.resolveLazy(entry.value)
-            task.inputEnv.put(entry.key, value?.toString())
-        }
-
-        // -- resolve stdin
-        task.stdin = ctx.resolveLazy(declaredInputs.stdin)
-
-        // -- resolve input files
-        final resolver = new TaskInputResolver(task, foreignFiles, executor)
-        final resolvedValues = new HashSet<>()
-
-        for( final fileInput : declaredInputs.getFiles() ) {
-            final value = fileInput.resolve(ctx)
-            // allow nullable file inputs
-            if( value == null )
-                continue
-            // user-defined file stagers take precedence over default file stagers
-            if( resolvedValues.contains(value) )
-                continue
-            final resolved = resolver.resolve(fileInput, value)
-            task.inputFiles.addAll(resolved)
-            resolvedValues.add(value)
-        }
-
-        // -- check conflicting file names
-        checkConflicts(task.inputFiles)
-
-        // -- normalize input values by replacing source paths with staged paths
-        final Map<Path,FileHolder> holders = [:]
-        for( final holder : task.inputFiles )
-            holders.put(holder.getSourcePath(), holder)
-
-        for( final param : declaredInputs.getParams() ) {
-            if( param instanceof ProcessTupleInput ) {
-                for( final innerParam : param.getComponents() ) {
-                    final value = task.inputs[innerParam]
-                    final normalizedValue = resolver.normalizeValue(value, holders)
-                    task.context.put( innerParam.name, normalizedValue )
-                }
-            }
-            else {
-                final value = task.inputs[param]
-                final normalizedValue = resolver.normalizeValue(value, holders)
-                task.context.put( param.name, normalizedValue )
-            }
-        }
-
-        // -- set the delegate map as context in the task config
-        //    so that lazy directives will be resolved against it
-        task.config.context = ctx
-    }
-
-    @CompileStatic
-    private void assignTaskRecordInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
-        if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
-        }
-        if( value !instanceof RecordMap ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a record but received: ${value} [${value.class.simpleName}]")
-        }
-        final recordParams = param.getComponents()
-        final record = value as Map
-        for( final recordParam : recordParams ) {
-            assignTaskInput(task, recordParam, record[recordParam.getName()], index)
-        }
-    }
-
-    @CompileStatic
-    private void assignTaskTupleInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
-        if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
-        }
-        if( value !instanceof List ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple but received: ${value} [${value.class.simpleName}]")
-        }
-        final tupleParams = param.getComponents()
-        final tupleValues = value as List
-        if( tupleParams.size() != tupleValues.size() ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple with ${tupleParams.size()} elements but received ${tupleValues.size()} -- offending value: $tupleValues")
-        }
-        for( int i = 0; i < tupleParams.size(); i++ ) {
-            assignTaskInput(task, tupleParams[i], tupleValues[i], index)
-        }
-    }
-
-    @CompileStatic
-    private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
-        checkTaskInput(task, param.type, param.optional, value, index, '')
-        task.context.put(param.getName(), value)
-        task.setInput(param, value)
-    }
-
-    @CompileStatic
-    private void checkTaskInput(TaskRun task, Class expectedType, boolean optional, Object value, int index, String field) {
-        final location = field ? "input field `${field}` at index ${index}" : "input at index ${index}"
-        if( value == null && !optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] ${location} cannot be null -- append `?` to the type annotation to mark it as nullable")
-        }
-        if( value == null || expectedType == null )
-            return
-        final actualType = value.getClass()
-        if( !isAssignableFrom(expectedType, actualType) )
-            log.warn "[${safeTaskName(task)}] invalid argument type for ${location} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
-        // record types are not validated by `nextflow run`, so check the fields of named record types here
-        if( expectedType != Record.class && Record.class.isAssignableFrom(expectedType) && value instanceof Map ) {
-            final record = value as Map
-            for( final fn : expectedType.getDeclaredFields() ) {
-                if( fn.isSynthetic() )
-                    continue
-                final name = field ? "${field}.${fn.getName()}".toString() : fn.getName()
-                checkTaskInput(task, fn.getType(), fn.isAnnotationPresent(Nullable.class), record[fn.getName()], index, name)
-            }
-        }
-    }
-
-    private static boolean isAssignableFrom(Class targetType, Class sourceType) {
-        // treat all record types as compatible
-        // record types are validated at compile-time
-        if( Record.class.isAssignableFrom(targetType) && Record.class.isAssignableFrom(sourceType) )
-            return true
-        return targetType.isAssignableFrom(sourceType)
-    }
-
-    /**
-     * Execute the specified task shell script
-     *
-     * @param script The script string to be execute, e.g. a BASH script
-     * @return {@code TaskDef}
-     */
-    final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
-        log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
-
-        // set name, hash, and working directory
-        task.hash = hash
-        task.workDir = folder
-        task.config.workDir = folder
-        task.config.hash = hash.toString()
-        task.config.name = task.getName()
-
-        // when no collector is define OR it's a task retry, then submit directly for execution
-        if( !arrayCollector || task.config.getAttempt() > 1 )
-            executor.submit(task)
-        // add the task to the collection of running tasks
-        else
-            arrayCollector.collect(task)
-    }
-
-    protected boolean checkWhenGuard(TaskRun task) {
-
-        try {
-            def pass = task.config.getWhenGuard()
-            if( pass ) {
-                return true
-            }
-
-            log.trace "Task ${safeTaskName(task)} is not executed because `when` condition is not verified"
-            finalizeTask0(task)
-            return false
-        }
-        catch ( FailedGuardException error ) {
-            handleException(error, task)
-            return false
-        }
-    }
-
-    /**
-     * Finalize the task execution, checking the exit status
-     * and binding output values accordingly
-     *
-     * @param task The {@code TaskRun} instance to finalize
-     */
-    @PackageScope
-    final finalizeTask( TaskHandler handler) {
-        def task = handler.task
-        log.trace "finalizing process > ${safeTaskName(task)} -- $task"
-
-        try {
-            // -- verify task exit status
-            if( task.error )
-                throw new ProcessFailedException("Process `${safeTaskName(task)}` failed", task.error)
-
-            if( task.type == ScriptType.SCRIPTLET ) {
-                if( task.exitStatus == Integer.MAX_VALUE )
-                    throw new ProcessFailedException("Process `${safeTaskName(task)}` terminated for an unknown reason -- Likely it has been terminated by the external system")
-
-                if ( !task.isSuccess() )
-                    throw new ProcessFailedException("Process `${safeTaskName(task)}` terminated with an error exit status (${task.exitStatus})")
-            }
-
-            // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = task.exitStatus
-            // -- if it's OK collect results and finalize
-            collectOutputs(task)
-        }
-        catch ( Throwable error ) {
-            return finalizeFailedTask(handler, error)
-        }
-
-        finalizeTask0(task)
-        return null
-    }
-
-    /**
-     * Finalize a task that failed with the given error, unless
-     * the task is retried according to its error strategy
-     *
-     * @param handler The {@link TaskHandler} of the failed task
-     * @param error The error raised by the task
-     * @return The error strategy or {@link TaskFault} returned by {@link #resumeOrDie}
-     */
-    @PackageScope
-    final finalizeFailedTask( TaskHandler handler, Throwable error ) {
-        final task = handler.task
-        final fault = resumeOrDie(task, error, handler.getTraceRecord())
-        log.trace "Task fault (3): $fault"
-        if( fault != ErrorStrategy.RETRY )
-            finalizeTask0(task)
-        return fault
-    }
-
     /**
      * Whenever the process can be cached
      */
@@ -1984,13 +1071,17 @@ class TaskProcessor {
     }
 
     /**
-     * Finalize the task execution, checking the exit status
-     * and binding output values accordingly
+     * Invoked when a task execution has completed, that is when the task outputs
+     * have been resolved, or the task has failed, or its execution was skipped
+     * because of a `when` guard, a store directory or a cached result.
      *
-     * @param task The {@code TaskRun} instance to finalize
-     * @param producedFiles The map of files to be bind the outputs
+     * This is the boundary between the execution of a task and the dataflow
+     * interface of the process: it is the only point at which task results are
+     * emitted to the process output channels.
+     *
+     * @param task The {@code TaskRun} instance that has completed
      */
-    private void finalizeTask0( TaskRun task ) {
+    protected void taskCompleted( TaskRun task ) {
         log.trace "Finalize process > ${safeTaskName(task)}"
 
         // -- bind output (files)
@@ -2109,12 +1200,11 @@ class TaskProcessor {
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
-            backlog?.taskStarted()
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
             final result = new ArrayList(2)
-            result[0] = params
+            result[0] = runner.accept(params)
             result[1] = messages
             return result
         }
@@ -2126,7 +1216,6 @@ class TaskProcessor {
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After run"
             currentTask.remove()
-            backlog?.taskPrepared()
         }
 
         @Override
@@ -2182,7 +1271,7 @@ class TaskProcessor {
          */
         boolean onException(final DataflowProcessor processor, final Throwable error) {
             // return `true` to terminate the dataflow processor
-            handleException( error, currentTask.get() )
+            runner.handleException( error, currentTask.get() )
         }
     }
 }
