@@ -29,10 +29,12 @@ import nextflow.exception.AbortOperationException
 @Parameters
 class CmdConsole extends CmdBase implements UsageAware {
 
+    static final public String NAME = 'console'
+
     @Parameter
     List<String> args
 
-    String getName() { 'console' }
+    String getName() { NAME }
 
     void run() {
         abort()

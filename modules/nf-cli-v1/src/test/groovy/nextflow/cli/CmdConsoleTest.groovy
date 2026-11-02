@@ -41,15 +41,17 @@ class CmdConsoleTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    def 'should report removal through the launcher'() {
-        expect:
-        new Launcher().command(args as String[]).run() == 1
+    def 'should parse leftover console arguments'() {
+        when:
+        def launcher = new Launcher().parseMainArgs(args as String[])
+        then:
+        launcher.command instanceof CmdConsole
 
         where:
-        args                    | _
-        ['console']             | _
-        ['console', 'foo.nf']   | _
-        ['console', '-h']       | _
-        ['help', 'console']     | _
+        args                            | _
+        ['console']                     | _
+        ['console', 'foo.nf']           | _
+        ['console', '-foo']             | _
+        ['console', '-foo', 'bar.nf']   | _
     }
 }

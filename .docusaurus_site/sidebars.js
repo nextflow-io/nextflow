@@ -239,6 +239,7 @@ module.exports = {
                         "reference/cli/clean",
                         "reference/cli/clone",
                         "reference/cli/config",
+                        "reference/cli/console",
                         "reference/cli/drop",
                         "reference/cli/fs",
                         "reference/cli/help",
