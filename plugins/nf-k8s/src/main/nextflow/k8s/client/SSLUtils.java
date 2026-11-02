@@ -25,6 +25,7 @@ package nextflow.k8s.client;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -37,7 +38,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -50,10 +50,6 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 
 import org.apache.commons.codec.binary.Base64;
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 
 public class SSLUtils {
@@ -91,22 +87,76 @@ public class SSLUtils {
         }
     }
 
+    // DER encoding of OID 1.2.840.10045.2.1 (id-ecPublicKey)
+    private static final byte[] EC_PUBLIC_KEY_OID = {0x06, 0x07, 0x2A, (byte) 0x86, 0x48, (byte) 0xCE, 0x3D, 0x02, 0x01};
+
+    /**
+     * Read an EC private key in PKCS#8 (BEGIN PRIVATE KEY) or SEC1 (BEGIN EC PRIVATE KEY) PEM format.
+     */
     static private PrivateKey generateEcKey(InputStream keyInputStream) throws IOException {
-        PrivateKey privateKey=null;
-        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-        Object object = new PEMParser(new InputStreamReader(keyInputStream)).readObject();
-        if (object instanceof PEMKeyPair) {
-            PEMKeyPair keys = (PEMKeyPair) object;
-            privateKey = new JcaPEMKeyConverter().getKeyPair(keys).getPrivate();
+        PemBlock pem = readPem(keyInputStream);
+        byte[] pkcs8;
+        if( "PRIVATE KEY".equals(pem.type) )
+            pkcs8 = pem.bytes;
+        else if( "EC PRIVATE KEY".equals(pem.type) )
+            pkcs8 = sec1ToPkcs8(pem.bytes);
+        else
+            throw new IOException("Unsupported EC algorithm: unexpected PEM block '" + pem.type + "'");
+        try {
+            return KeyFactory.getInstance("EC").generatePrivate(new PKCS8EncodedKeySpec(pkcs8));
         }
-        if( object instanceof PrivateKeyInfo) {
-            PrivateKeyInfo privateKeyInfo = (PrivateKeyInfo)object;
-            privateKey = new JcaPEMKeyConverter().getPrivateKey(privateKeyInfo);
+        catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new IOException("Unsupported EC algorithm: " + e.getMessage(), e);
         }
-        if( privateKey == null) {
-            throw new IOException("Unsupported EC algorithm");
+    }
+
+    /**
+     * Wrap a SEC1 ECPrivateKey into a PKCS#8 PrivateKeyInfo, taking the
+     * named curve from the SEC1 [0] parameters field.
+     */
+    private static byte[] sec1ToPkcs8(byte[] sec1) throws IOException {
+        Asn1Object sequence = new DerParser(sec1).read();
+        sequence.validateSequence();
+        DerParser parser = new DerParser(sequence.getValue());
+        if( !BigInteger.ONE.equals(parser.read().getInteger()) )
+            throw new IOException("Unsupported EC algorithm: invalid SEC1 key version");
+        parser.read();
+        byte[] curveOid = null;
+        while( parser.hasMore() ) {
+            Asn1Object obj = parser.read();
+            if( obj.tag == 0xA0 ) {
+                curveOid = obj.getValue();
+                break;
+            }
         }
-        return privateKey;
+        if( curveOid == null )
+            throw new IOException("Unsupported EC algorithm: SEC1 key does not specify the curve parameters");
+        if( curveOid.length == 0 || curveOid[0] != 0x06 )
+            throw new IOException("Unsupported EC algorithm: only named curves are supported");
+
+        byte[] algorithm = derEncode(0x30, EC_PUBLIC_KEY_OID, curveOid);
+        byte[] version = {0x02, 0x01, 0x00};
+        return derEncode(0x30, version, algorithm, derEncode(0x04, sec1));
+    }
+
+    private static byte[] derEncode(int tag, byte[]... parts) {
+        ByteArrayOutputStream content = new ByteArrayOutputStream();
+        for( byte[] part : parts )
+            content.writeBytes(part);
+        int length = content.size();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(tag);
+        if( length < 0x80 ) {
+            out.write(length);
+        }
+        else {
+            byte[] lenBytes = BigInteger.valueOf(length).toByteArray();
+            int offset = lenBytes[0] == 0 ? 1 : 0;
+            out.write(0x80 | (lenBytes.length - offset));
+            out.write(lenBytes, offset, lenBytes.length - offset);
+        }
+        out.writeBytes(content.toByteArray());
+        return out.toByteArray();
     }
 
     static private PrivateKey generateStdKey(InputStream keyInputStream, String clientKeyAlgo) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
@@ -147,16 +197,36 @@ public class SSLUtils {
         return keyStore;
     }
 
+    static class PemBlock {
+        final String type;
+        final byte[] bytes;
+
+        PemBlock(String type, byte[] bytes) {
+            this.type = type;
+            this.bytes = bytes;
+        }
+    }
+
+    private static byte[] decodePem(InputStream keyInputStream) throws IOException {
+        return readPem(keyInputStream).bytes;
+    }
+
     // This method is inspired and partly taken over from
     // http://oauth.googlecode.com/svn/code/java/
     // All credits to belong to them.
-    private static byte[] decodePem(InputStream keyInputStream) throws IOException {
+    private static PemBlock readPem(InputStream keyInputStream) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(keyInputStream));
         try {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.contains("-----BEGIN ")) {
-                    return readBytes(reader, line.trim().replace("BEGIN", "END"));
+                    String begin = line.trim();
+                    String type = begin.replace("-----BEGIN ", "").replace("-----", "");
+                    byte[] bytes = readBytes(reader, begin.replace("BEGIN", "END"));
+                    // openssl ecparam -genkey emits the curve parameters before the key
+                    if( "EC PARAMETERS".equals(type) )
+                        continue;
+                    return new PemBlock(type, bytes);
                 }
             }
             throw new IOException("PEM is invalid: no begin marker");
@@ -215,6 +285,10 @@ public class SSLUtils {
             }
 
             return new Asn1Object(tag, value);
+        }
+
+        boolean hasMore() throws IOException {
+            return in.available() > 0;
         }
 
         private int getLength() throws IOException {
