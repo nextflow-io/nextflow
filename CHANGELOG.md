@@ -1,5 +1,17 @@
 # Nextflow change-log
 
+## [Version 26.10.5](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.5) - 2 Nov 2026
+
+- Add wave.soci option for SOCI lazy loading (#7991) [d08aee9e1]
+- Bump nf-seqera@0.26.2 [bf1feb0e0]
+- Bump nf-wave@1.22.5 [9d1e7efff]
+- Bump sched-client to 0.113.0 in nf-seqera (idempotent task submit) (#7952) [c937ef96d]
+- Fix and simplify Wave build templates docs (#7951) [2a34f3929]
+- Fix cloud integration tests (#7895) [caf13052b]
+- Fix formatting of typed publish targets (#7960) [5c25bfd7f]
+- Fix missing source channel edges in DAG for typed processes (#7979) [b99f4b0f6]
+- Use daemon timer for channel.interval to avoid hanging JVM (#7981) [8affaafce]
+
 ## [Version 26.10.4](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.4) - 26 Oct 2026
 
 - Allow list of columns for splitCsv header in type checker (#7871) [a5df4b3ab]
