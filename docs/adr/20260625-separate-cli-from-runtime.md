@@ -78,7 +78,7 @@ Several deliberate moves were required so that the runtime never depends on the 
 
 `nf-console`, `nf-k8s`, `nf-tower`, and `nf-wave` add CLI commands. The goal was to keep them depending on the runtime rather than the CLI:
 
-- `nf-console` still depends on `:nf-cli-v1`.
+- `nf-console` still depends on `:nf-cli-v1`. (Update: `nf-console` and the `console` command were later removed.)
 
 - `nf-k8s` compiles against `nextflow` only and references no CLI classes. To get there, `K8sDriverLauncher` (which uses `CmdRun`) was moved out of `nf-k8s` and into `nf-cli-v1`. As a result, `nf-cli-v1` now depends on `nf-k8s` at build-time. Because `CmdKubeRun` now instantiates `K8sDriverLauncher` directly (rather than resolving it through the plugin extension point), `nf-k8s` is bundled into the distribution fat jar *and* still shipped as a plugin, so `nextflow.k8s` becomes a split package loaded by both the application and plugin classloaders. This is accepted as a consequence of preserving `kuberun`; the CLI v2 will not need to do this if it does not preserve the `kuberun` command, as it can simply load `nf-k8s` at runtime when using the `k8s` executor.
 

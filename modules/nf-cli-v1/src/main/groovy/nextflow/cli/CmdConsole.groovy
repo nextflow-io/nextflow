@@ -19,34 +19,22 @@ package nextflow.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.plugin.Plugins
-import nextflow.ui.console.ConsoleExtension
+import nextflow.exception.AbortOperationException
 
 /**
- * Launch the Nextflow Console plugin
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Stub for the removed `console` command, kept to report a clear error.
+ * Omitting the command description hides it from the command listing.
  */
 @CompileStatic
-@Parameters(commandDescription = "Launch Nextflow interactive console")
+@Parameters
 class CmdConsole extends CmdBase {
 
-    @Parameter(description = 'Nextflow console arguments')
+    @Parameter
     List<String> args
 
     String getName() { 'console' }
 
     void run() {
-        Plugins.init()
-        Plugins.start('nf-console')
-        final console = Plugins.getExtension(ConsoleExtension)
-        if( !console )
-            throw new IllegalStateException("Failed to find Nextflow Console extension")
-        // normalise the console args prepending the `console` command itself
-        if( args == null )
-            args = []
-        args.add(0, 'console')
-        // go !
-        console.run(args as String[])
+        throw new AbortOperationException("The `console` command has been removed")
     }
 }
