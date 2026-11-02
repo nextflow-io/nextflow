@@ -189,14 +189,12 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     void setProperty(String name, Object value) {
-        // if the class defines a real setter for this property (e.g.
-        // `setContext`, `setTarget`), use it; otherwise store the value as a
-        // task directive in the underlying map. Without the map fallback, a
-        // bare assignment to a read-only directive (getter but no setter, e.g.
-        // `shell`) would throw ReadOnlyPropertyException under Groovy 5.
-        final setter = 'set' + name.capitalize()
-        if( metaClass.respondsTo(this, setter, [value] as Object[]) )
-            metaClass.invokeMethod(this, setter, value)
+        // use the declared setter if any (e.g. `context`), otherwise store the value
+        // as a directive -- Groovy 5 no longer falls back to the map for read-only
+        // properties (e.g. `shell`) and throws ReadOnlyPropertyException instead
+        final meta = metaClass.getMetaProperty(name)
+        if( meta instanceof MetaBeanProperty && meta.setter )
+            meta.setProperty(this, value)
         else
             put(name, value)
     }
