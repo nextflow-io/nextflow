@@ -478,7 +478,10 @@ JAVA_OPTS+=(-XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m)
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
-export JAVA_CMD
+# the runtime of a bundle is not inherited by tasks, e.g. a child `nextflow` of another version
+if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" ]]; then export -n JAVA_CMD
+else export JAVA_CMD
+fi
 export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
