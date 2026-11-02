@@ -123,10 +123,14 @@ bundle-all:
 	$(gradle) bundleAll
 
 #
-# Upload NF launcher to nextflow.io web site
+# Upload NF launcher to nextflow.io web site, with the Java bundles in the directory
+# NXF_RELEASE_BUNDLES (or NXF_RELEASE_BUNDLES=none to deploy a release without them)
 #
 deploy:
 	BUILD_PACK=1 $(gradle) deploy
+
+check-release-bundles:
+	$(gradle) checkReleaseBundles
 
 #
 # Close artifacts uploaded to Maven central
