@@ -66,7 +66,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     protected Path makeStoreFile() {
         final name = env.NXF_SECRETS_FILE ?: 'secrets/store.json'
-        final secretFile = name.startsWith('/')
+        final secretFile = Paths.get(name).isAbsolute()
                 ? Paths.get(name)
                 : Const.APP_HOME_DIR.resolve(name)
         final path = secretFile.parent
@@ -85,12 +85,24 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
      * that does not support {@code chmod}) is logged but never aborts the operation.
      */
     private static void restrictDirPermissions(Path dir) {
+        if( !isPosix(dir) ) {
+            log.debug "Secrets directory permissions not restricted on non-POSIX file system: '${dir}'"
+            return
+        }
         try {
             dir.setPermissions(ONLY_OWNER_DIR_PERMS)
         }
         catch( Exception e ) {
             log.warn "Cannot restrict permissions on secrets directory '${dir}' - ${e.message}"
         }
+    }
+
+    /**
+     * @return {@code true} when the file system supports POSIX permissions, which is not the case
+     *      on Windows where the user profile directory is accessible only by its owner by default
+     */
+    private static boolean isPosix(Path path) {
+        return path.getFileSystem().supportedFileAttributeViews().contains('posix')
     }
 
     protected Map<String,Secret> makeSecretsSet() {
@@ -176,10 +188,16 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         // the file is world-readable (e.g. 0644 under the common umask 022) while it already holds the
         // secret values, allowing another local user to read them. Because 'rw-------' has no group/other
         // bits, the umask cannot widen it, so the file is atomically created with owner-only access.
-        if( !storeFile.exists() )
-            Files.createFile(storeFile, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(ONLY_OWNER_PERMS)))
-        // re-assert owner-only permissions in case the file already existed with broader access
-        storeFile.setPermissions(ONLY_OWNER_PERMS)
+        if( !isPosix(storeFile) ) {
+            if( !storeFile.exists() )
+                Files.createFile(storeFile)
+        }
+        else {
+            if( !storeFile.exists() )
+                Files.createFile(storeFile, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(ONLY_OWNER_PERMS)))
+            // re-assert owner-only permissions in case the file already existed with broader access
+            storeFile.setPermissions(ONLY_OWNER_PERMS)
+        }
         // save the secrets as JSON file into the now owner-only file
         final json = new GsonBuilder().setPrettyPrinting().create().toJson(secrets)
         Files.write(storeFile, json.getBytes('utf-8'))

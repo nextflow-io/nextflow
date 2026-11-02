@@ -610,9 +610,23 @@ class Session implements ISession {
         final abort_h = { Signal sig -> abort(new AbortSignalException(sig)) } as SignalHandler
 
         // -- register handlers
-        Signal.handle( new Signal("INT"), ctrl_c)
-        Signal.handle( new Signal("TERM"), abort_h)
-        Signal.handle( new Signal("HUP"), abort_h)
+        handleSignal("INT", ctrl_c)
+        handleSignal("TERM", abort_h)
+        handleSignal("HUP", abort_h)
+    }
+
+    /**
+     * Register a signal handler, when the signal is supported by the platform e.g. `HUP` is not available on Windows
+     */
+    static protected boolean handleSignal(String name, SignalHandler handler) {
+        try {
+            Signal.handle(new Signal(name), handler)
+            return true
+        }
+        catch( IllegalArgumentException e ) {
+            log.debug "Signal $name is not supported by the current platform -- ${e.message}"
+            return false
+        }
     }
 
     void addIgniter( Closure action )  {

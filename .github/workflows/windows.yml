@@ -12,24 +12,14 @@ on:
       - '.github/workflows/windows.yml'
       - 'nextflow.ps1'
       - 'validation/windows/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/container/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/executor/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/file/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/processor/**'
-      - 'modules/nf-commons/src/main/nextflow/file/**'
-      - 'modules/nf-commons/src/main/nextflow/util/**'
+      - 'modules/*/src/main/**'
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
       - '.github/workflows/windows.yml'
       - 'nextflow.ps1'
       - 'validation/windows/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/container/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/executor/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/file/**'
-      - 'modules/nextflow/src/main/groovy/nextflow/processor/**'
-      - 'modules/nf-commons/src/main/nextflow/file/**'
-      - 'modules/nf-commons/src/main/nextflow/util/**'
+      - 'modules/*/src/main/**'
   workflow_dispatch:
 
 permissions:
@@ -120,6 +110,25 @@ jobs:
           $jar = (Get-Item modules/nf-cli-v1/build/libs/nf-cli-v1-*-one.jar).FullName
           ./validation/windows/test.ps1 -Jar $jar -WorkDir $env:TEST_DIR
 
+      # the artifact files must be in a single folder, the test dir is on another drive
+      - name: Collect logs
+        if: failure()
+        run: |
+          $logs = Join-Path $env:RUNNER_TEMP 'logs'
+          New-Item -ItemType Directory -Force -Path $logs | Out-Null
+          if( Test-Path $env:TEST_DIR ) {
+            Get-ChildItem -Path $env:TEST_DIR -Force -Filter '.nextflow.log*' | Copy-Item -Destination $logs
+            Get-ChildItem -Path (Join-Path $env:TEST_DIR 'work') -Recurse -Force -Filter '.command.*' -ErrorAction SilentlyContinue | ForEach-Object {
+              $target = Join-Path $logs ($_.FullName.Substring($env:TEST_DIR.Length))
+              New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+              Copy-Item -Path $_.FullName -Destination $target -ErrorAction SilentlyContinue
+            }
+          }
+          Copy-Item -Path (Join-Path $env:RUNNER_TEMP 'dockerd.log') -Destination $logs -ErrorAction SilentlyContinue
+          if( Test-Path modules/nextflow/build/reports/tests/test ) {
+            Copy-Item -Recurse -Path modules/nextflow/build/reports/tests/test -Destination (Join-Path $logs 'unit-tests')
+          }
+
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
@@ -127,8 +136,4 @@ jobs:
           name: windows-logs
           include-hidden-files: true
           if-no-files-found: ignore
-          path: |
-            ${{ env.TEST_DIR }}/.nextflow.log*
-            ${{ env.TEST_DIR }}/work/**/.command.*
-            ${{ runner.temp }}/dockerd.log
-            modules/nextflow/build/reports/tests/test/
+          path: ${{ runner.temp }}/logs

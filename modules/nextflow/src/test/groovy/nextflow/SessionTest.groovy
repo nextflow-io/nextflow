@@ -66,6 +66,11 @@ import static test.ScriptHelper.*
  */
 class SessionTest extends Specification {
 
+    def 'should skip signals not supported by the platform' () {
+        expect:
+        !Session.handleSignal('NXF_UNKNOWN', { sig -> } as sun.misc.SignalHandler)
+    }
+
 
     def 'test baseDir and binDir'() {
 

@@ -25,6 +25,8 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
+import nextflow.secret.LocalSecretsProvider
+import nextflow.secret.SecretImpl
 import nextflow.util.Escape
 import nextflow.util.PosixPaths
 import nextflow.util.SysHelper
@@ -48,6 +50,27 @@ class WindowsHostTest extends Specification {
         SysHelper.isWindows()
         FileHelper.windowsHost
         BashWrapperBuilder.systemOsName.startsWith('Windows')
+    }
+
+    def 'should skip the signals not available on windows' () {
+        expect:
+        !Session.handleSignal('HUP', { sig -> } as sun.misc.SignalHandler)
+    }
+
+    def 'should store secrets on windows' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def storeFile = folder.resolve('secrets/store.json')
+        Files.createDirectories(storeFile.parent)
+        def provider = new LocalSecretsProvider(storeFile: storeFile)
+
+        when:
+        provider.storeSecrets([new SecretImpl('foo', 'bar')])
+        then:
+        storeFile.text.contains('"bar"')
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should map windows paths to container paths' () {
