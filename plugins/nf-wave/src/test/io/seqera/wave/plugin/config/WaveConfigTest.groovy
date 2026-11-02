@@ -203,7 +203,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT1M30S), scan:WaveScanConfig(allowedLevels:null, mode:null), strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
+        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT1M30S), scan:WaveScanConfig(allowedLevels:null, mode:null), soci:false, strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
     }
 
     def 'should not allow invalid setting' () {
@@ -249,6 +249,13 @@ class WaveConfigTest extends Specification {
         !new WaveConfig([:]).mirrorMode()
         and:
         new WaveConfig([mirror:true]).mirrorMode()
+    }
+
+    def 'should enable soci mode' () {
+        expect:
+        !new WaveConfig([:]).sociMode()
+        and:
+        new WaveConfig([soci:true]).sociMode()
     }
 
     @Unroll

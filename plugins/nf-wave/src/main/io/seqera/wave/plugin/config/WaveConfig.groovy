@@ -83,6 +83,12 @@ class WaveConfig implements ConfigScope {
 
     final WaveScanConfig scan
 
+    @ConfigOption
+    @Description("""
+        Enable SOCI lazy loading for Wave containers (default: `false`). Wave attaches a SOCI index to the containers, so that hosts running the SOCI snapshotter start them before the whole image is downloaded. Not applied to Singularity containers.
+    """)
+    final boolean soci
+
     @ConfigOption(types=[String])
     @Description("""
         The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
@@ -106,6 +112,7 @@ class WaveConfig implements ConfigScope {
         this.mirror = opts.mirror as boolean
         this.retryPolicy = retryOpts0(opts)
         this.scan = new WaveScanConfig(opts.scan as Map ?: Collections.emptyMap())
+        this.soci = opts.soci as boolean
         this.strategy = parseStrategy(opts.strategy)
 
         this.bundleProjectResources = opts.bundleProjectResources
@@ -131,6 +138,8 @@ class WaveConfig implements ConfigScope {
     boolean freezeMode() { this.freeze }
 
     boolean mirrorMode() { this.mirror }
+
+    boolean sociMode() { this.soci }
 
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 

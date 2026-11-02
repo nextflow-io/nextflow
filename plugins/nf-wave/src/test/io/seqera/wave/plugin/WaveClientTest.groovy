@@ -267,6 +267,24 @@ class WaveClientTest extends Specification {
         req.timestamp instanceof String
     }
 
+    def 'should create request object with soci mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[soci:true]]}
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage('foo:latest'))
+        then:
+        req.containerImage == 'foo:latest'
+        req.soci
+
+        when:
+        req = wave.makeRequest(new WaveAssets(null, null, null, null, 'From foo:latest', null, null, true))
+        then:
+        req.format == 'sif'
+        !req.soci
+    }
+
     def 'should create request object with scan mode and levels' () {
         given:
         def session = Mock(Session) { getConfig() >> [wave:[scan:[mode: 'required', allowedLevels: 'low,medium']]]}
