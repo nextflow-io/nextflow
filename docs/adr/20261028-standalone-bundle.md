@@ -31,7 +31,7 @@ Nextflow runs on whatever Java it finds, which causes two problems:
 
 ## Non-goals
 
-- Using the bundle by default, or automatically when no Java is installed. Users who want a standalone install will get a separate install path.
+- Using the bundle by default, or automatically when no Java is installed. Users who want it install Nextflow with `NXF_JAVA_BUNDLE=true` (see below).
 - A native binary (GraalVM native image): Nextflow compiles scripts and config files at runtime, and pipelines ship arbitrary Groovy code in `lib/`.
 - Windows, Intel macOS and musl Linux bundles (they keep the jar and the system Java).
 
@@ -170,7 +170,9 @@ The bundle is used only with `NXF_JAVA_BUNDLE=true`. Using it by default would s
 - Java security fixes would no longer come from OS updates: each version runs the runtime it was released with. Old versions, e.g. pinned with `NXF_VER`, keep an old runtime.
 - Packages that run `nextflow -download` at build time (bioconda) would ship the bundle of the build platform.
 
-Opt-in leaves existing installs unchanged, and makes these trade-offs a choice. A standalone install path, which installs the launcher with `NXF_JAVA_BUNDLE=true` for users without Java, is a follow-up. The default could be revisited in a stable release, with migration notes, once the bundle has been used in practice.
+Opt-in leaves existing installs unchanged, and makes these trade-offs a choice. The default could be revisited in a stable release, with migration notes, once the bundle has been used in practice.
+
+Users without Java install Nextflow with `curl -s https://get.nextflow.io | NXF_JAVA_BUNDLE=true bash`. The installer then writes `true` as the default of `NXF_JAVA_BUNDLE` into the installed launcher, so that the setting does not depend on the environment, and `self-update` keeps it. The launcher of a bundle has the same default, so that an extracted bundle also runs other versions (`NXF_VER`) with their bundle. `NXF_JAVA_BUNDLE=false` still selects the system Java.
 
 ### Launcher
 
@@ -250,7 +252,6 @@ The container scenarios were run with the earlier `jlink` runtime; the launcher 
 
 ### Open questions
 
-- The standalone install path for users without Java.
 - `self-update` run from an extracted bundle replaces the bundle's launcher with the plain one. It keeps working, through the hand-off, but the bundle is no longer self-contained.
 - Old versions accumulate in `$NXF_HOME/framework` as today; `self-update -clean` removes them, including their bundles.
 - The training pipeline covers a typical run. Commands such as `lint` load classes that it does not cover, which are loaded as usual.

@@ -88,6 +88,21 @@ To install Nextflow with the self-installing package:
     nextflow info
     ```
 
+### Install without Java
+
+:::warning{title="Experimental: may change in a future release."}
+:::
+
+Nextflow can run with its own Java runtime, so that Java doesn't need to be installed. It is available for Linux (x86-64 and ARM64, glibc) and macOS (ARM64).
+
+To install Nextflow without Java, follow the [self-install](#self-install) steps, but download Nextflow with:
+
+```bash
+curl -s https://get.nextflow.io | NXF_JAVA_BUNDLE=true bash
+```
+
+Nextflow downloads the bundle of each version that it runs, which contains the Java runtime and a startup cache. `nextflow self-update` keeps this setting. Set `NXF_JAVA_BUNDLE=false` to use the system Java instead, or set `NXF_JAVA_HOME` to use another Java installation.
+
 ### Conda
 
 To install Nextflow with Conda:

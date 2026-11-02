@@ -215,7 +215,7 @@ When the history file is disabled, `nextflow run` requires an explicit run name 
 :::warning{title="Experimental: may change in a future release."}
 :::
 
-When `true`, the launcher runs Nextflow with the Java bundle of the selected version, which contains its own Java runtime and a startup cache (default: `false`). The bundle is downloaded once per version and platform from the same location as the Nextflow JAR. When no bundle is available, the JAR and the system Java are used. Bundles are available for Linux (x86-64 and ARM64, glibc) and macOS (ARM64). `NXF_JAVA_HOME` takes precedence over this setting.
+When `true`, the launcher runs Nextflow with the Java bundle of the selected version, which contains its own Java runtime and a startup cache (default: `false`). The bundle is downloaded once per version and platform from the same location as the Nextflow JAR. When no bundle is available, the JAR and the system Java are used. Bundles are available for Linux (x86-64 and ARM64, glibc) and macOS (ARM64). `NXF_JAVA_HOME` takes precedence over this setting. An [install without Java](../install.mdx#install-without-java) sets it to `true` by default.
 
 ##### `NXF_JAVA_BUNDLE_BASE`
 

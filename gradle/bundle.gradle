@@ -268,6 +268,8 @@ final bundleImages = targets.keySet().collectEntries { target ->
             filePermissions { unix('rwxr-xr-x') }
             // the launcher of the last release, which must select the bundled version by default
             filter { it.replaceFirst(/^NXF_VER=\$\{NXF_VER:-'.*'\}$/, "NXF_VER=\\\${NXF_VER:-'$version'}") }
+            // other versions also run with their bundle, e.g. with NXF_VER or after self-update
+            filter { it.replaceFirst(/^NXF_JAVA_BUNDLE=\$\{NXF_JAVA_BUNDLE:-false\}$/, 'NXF_JAVA_BUNDLE=\\\${NXF_JAVA_BUNDLE:-true}') }
         }
         from(runtime) {
             into 'runtime'

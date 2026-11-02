@@ -26,6 +26,8 @@ NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
+# true for an install without Java (see `install`), which runs Nextflow with the Java bundle of each version
+NXF_JAVA_BUNDLE=${NXF_JAVA_BUNDLE:-false}
 # set on the hand-off to the launcher of a bundle, and not inherited by its child processes
 bundle_exec=${NXF_JAVA_BUNDLE_EXEC:-}
 unset NXF_JAVA_BUNDLE_EXEC
@@ -207,12 +209,20 @@ function install() {
     local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || current_ver)
     local action="a=${2:-default}"
     get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
+    # an install without Java, which self-update keeps
+    if [[ $NXF_JAVA_BUNDLE == true ]]; then
+        sed 's/^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-false}$/NXF_JAVA_BUNDLE=${NXF_JAVA_BUNDLE:-true}/' "$tmpfile" > "$tmpfile.bundle" && mv "$tmpfile.bundle" "$tmpfile" || exit $?
+        grep -q '^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-true}$' "$tmpfile" || echo_yellow "NOTE: This Nextflow version can't run with its own Java runtime -- it will use the system Java"
+    fi
     mv "$tmpfile" "$1" || exit $?
     chmod +rx "$1" || exit $?
     bash "$1" -download || exit $?
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
     echo -e $'- the executable file `nextflow` has been created in the folder:' $(dirname $1)
+    if grep -q '^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-true}$' "$1"; then
+    echo -e $'- it runs Nextflow with its own Java runtime (set NXF_JAVA_BUNDLE=false to use the system Java)'
+    fi
     if [[ ! "$PATH" =~ (^|:)"$(dirname $1)"(:|$) ]]; then
     echo -e $'- you may complete the installation by moving it to a directory in your $PATH'
     fi
