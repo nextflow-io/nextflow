@@ -6,6 +6,12 @@
 - Date: 2026-06-25
 - Tags: cli, modularization, build, architecture
 
+## Updates
+
+### 2026-11-02
+- **Removed `kuberun`**: `CmdKubeRun` and `K8sDriverLauncher` moved to the external [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, which depends on `nf-k8s` as a plugin. `nf-cli-v1` no longer depends on `nf-k8s`, so `nf-k8s` is no longer bundled in the distribution and the split package described below no longer applies. The `kuberun` command remains as a stub that reports its removal.
+- **Removed `nf-console`**: the `nf-console` plugin was removed. The `console` command remains as a stub that reports its removal.
+
 ## Summary
 
 Move the CLI code into a new `nf-cli-v1` module, leaving `nextflow` as a pure runtime that knows nothing about the CLI. The split untangles circular dependencies, speeds up builds, lets library consumers depend on the runtime without dragging in the CLI, and makes room for a future CLI v2.
