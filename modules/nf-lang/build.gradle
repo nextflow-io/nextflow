@@ -26,12 +26,14 @@ dependencies {
   api "org.apache.groovy:groovy:${groovyVersion}"
   api "org.pf4j:pf4j:${pf4jVersion}"
 
+  testFixturesApi "org.apache.groovy:groovy-nio:${groovyVersion}"
   testFixturesApi "com.google.jimfs:jimfs:${jimfsVersion}"
   constraints {
     // jimfs pulls a vulnerable Guava, even in its latest release
     testFixturesApi('com.google.guava:guava:33.7.2-jre') { because 'GHSA-xxph-c9ww-hj94' }
   }
-  testImplementation(testFixtures(project(":nextflow")))
+  testImplementation ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }
+  testRuntimeOnly "org.apache.groovy:groovy-json:${groovyVersion}"
 }
 
 generateGrammarSource {
