@@ -24,6 +24,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
+import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.processor.TaskProcessor
@@ -250,8 +251,12 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     private DataflowReadChannel createSourceChannel(Object value) {
-        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
-            return CH.getReadChannel(value)
+        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast ) {
+            final result = CH.getReadChannel(value)
+            if( result != value )
+                NodeMarker.addDataflowBroadcastPair(result, value)
+            return result
+        }
 
         final result = CH.value()
         result.bind(value)
