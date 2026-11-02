@@ -192,8 +192,8 @@ Converting the classes that link the most call sites in a hello run (~35 classes
 - Otherwise, on a supported platform, the installed script hands off to the bundle of `NXF_VER` in `$NXF_HOME/framework/<version>/`. It downloads the bundle when neither the bundle nor the jar of that version is installed, i.e. when it would download the jar today, and falls back to the jar when the bundle is not available. A version without a bundle costs one failed request, once.
 - The bundle is extracted into a temporary directory and installed with an atomic symlink, so that concurrent first launches install it once (tested with 4 concurrent launches). It is only installed if its checksum matches and its runtime runs (it may not, e.g. on a `noexec` mount). The download times out after 10 s without a connection, and reports to stderr, so that the output of commands such as `nextflow config` is not affected.
 - The hand-off happens after `-download` and `self-update` are handled by the installed script.
-- `NXF_JAVA_HOME` still selects another Java, `NXF_BUNDLE=false` disables the hand-off, and `NXF_JVM_ARGS=-XX:AOTMode=off` disables the AOT cache.
-- Mirrors and air-gapped installs can set `NXF_BUNDLE_BASE` to another host with the same layout (`<base>/v<version>/<bundle>.tar.gz` and `.sha256`), including a `file://` URL.
+- `NXF_JAVA_HOME` still selects another Java, `NXF_JAVA_BUNDLE=false` disables the hand-off, and `NXF_JVM_ARGS=-XX:AOTMode=off` disables the AOT cache.
+- Mirrors and air-gapped installs can set `NXF_JAVA_BUNDLE_BASE` to another host with the same layout (`<base>/v<version>/<bundle>.tar.gz` and `.sha256`), including a `file://` URL.
 
 Changes in behaviour, on supported platforms:
 
@@ -236,9 +236,9 @@ The cache saves a roughly constant 0.5-0.8 s per launch, and does not change mem
 ### Distribution and packaging
 
 - **The `-dist` release.** It is a single file with the launcher and the jar, which needs a system Java. It is still needed for platforms without a bundle, and Homebrew builds it from source with its own `openjdk`. It should be kept for now. The bundle could replace it for offline installs on supported platforms, once the bundles are hosted next to the other release files.
-- **bioconda** installs the launcher and runs `nextflow -download` at build time, with `NXF_DIST` set inside the package. With the hand-off, this would download the bundle of the build platform into the package, which would break the package on other platforms. The recipe must set `NXF_BUNDLE=false` before the first release with bundles, and the same applies to any package that installs the launcher and pre-downloads the jar.
+- **bioconda** installs the launcher and runs `nextflow -download` at build time, with `NXF_DIST` set inside the package. With the hand-off, this would download the bundle of the build platform into the package, which would break the package on other platforms. The recipe must set `NXF_JAVA_BUNDLE=false` before the first release with bundles, and the same applies to any package that installs the launcher and pre-downloads the jar.
 - **Docker image.** It is based on `amazoncorretto:25-al2023` (glibc), so it could use the bundle of its platform instead of installing a JDK.
-- **Package managers.** A package manager owns the Nextflow version, the Java dependency and updates. Instead of each recipe knowing about `NXF_BUNDLE=false`, packages could set a single variable, e.g. `NXF_INSTALLER=conda`, which disables the hand-off and makes `self-update` print the upgrade command of the package manager instead of overwriting a file that it owns. Not implemented yet.
+- **Package managers.** A package manager owns the Nextflow version, the Java dependency and updates. Instead of each recipe knowing about `NXF_JAVA_BUNDLE=false`, packages could set a single variable, e.g. `NXF_INSTALLER=conda`, which disables the hand-off and makes `self-update` print the upgrade command of the package manager instead of overwriting a file that it owns. Not implemented yet.
 
 ### Testing
 
@@ -260,7 +260,7 @@ CI builds each bundle on its platform, runs the training pipeline from an extrac
 
 ### Open questions
 
-- Hosting: the workflow attaches the bundles to the GitHub release, and the launcher downloads them from there (`NXF_BUNDLE_BASE` overrides the location). They could be uploaded next to the jar under `www.nextflow.io/releases` instead.
+- Hosting: the workflow attaches the bundles to the GitHub release, and the launcher downloads them from there (`NXF_JAVA_BUNDLE_BASE` overrides the location). They could be uploaded next to the jar under `www.nextflow.io/releases` instead.
 - `self-update` run from an extracted bundle replaces the bundle's launcher with the plain one. It keeps working, through the hand-off, but the bundle is no longer self-contained.
 - Old versions accumulate in `$NXF_HOME/framework` as today; `self-update -clean` removes them, including their bundles.
 - The training pipeline covers a typical run. Commands such as `lint` load classes that it does not cover, which are loaded as usual.

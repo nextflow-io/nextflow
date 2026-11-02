@@ -26,6 +26,9 @@ NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
+# set on the hand-off to the launcher of a bundle, and not inherited by its child processes
+bundle_exec=${NXF_JAVA_BUNDLE_EXEC:-}
+unset NXF_JAVA_BUNDLE_EXEC
 
 function cmp_ver() {
     local i ver1 ver2
@@ -127,37 +130,45 @@ function get_ver() {
     fi
 }
 
-# downloads the bundle of NXF_VER for this platform and installs it as the symlink $1,
-# returns 1 when it is not available (e.g. versions released without bundles), without errors
-# since the jar and the system Java are used instead
+# downloads the bundle of NXF_VER for this platform next to the jar and installs it as the symlink $1,
+# returns 1 when it is not available (e.g. versions released without bundles)
 function get_bundle() {
     local name="nextflow-$NXF_VER-$NXF_PLATFORM"
-    local url="${NXF_BUNDLE_BASE:-https://github.com/$NXF_ORG/nextflow/releases/download}/v$NXF_VER/$name.tar.gz"
-    local sum dir status
+    local url="${NXF_JAVA_BUNDLE_BASE:-$NXF_BASE}/v$NXF_VER/$name.tar.gz"
+    local sum status
     if command -v sha256sum &>/dev/null; then sum=sha256sum
     elif command -v shasum &>/dev/null; then sum='shasum -a 256'
     else return 1
     fi
+    # a symlink to a deleted directory
+    [[ -L $1 && ! -e $1 ]] && rm -f "$1"
     # mktemp creates a 0700 directory, which other users of a shared NXF_HOME could not use
-    mkdir -p "$(dirname "$1")" && dir=$(mktemp -d "$(dirname "$1")/.bundle.XXXXXX") && chmod 755 "$dir" || return 1
-    >&2 printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
-    # the runtime may not run, e.g. on a noexec mount, in which case the jar and the system Java are used
-    get_file "$url" "$dir/$name.tar.gz" && get_file "$url.sha256" "$dir/sha256" \
-        && [[ $(cd "$dir" && $sum "$name.tar.gz" | cut -d' ' -f1) == "$(cut -d' ' -f1 "$dir/sha256")" ]] \
-        && tar -xzf "$dir/$name.tar.gz" -C "$dir" && [[ -f $dir/$name/lib/$NXF_JAR ]] \
-        && "$dir/$name/runtime/bin/java" -version &>/dev/null \
-        && rm -f "$dir/$name.tar.gz" "$dir/sha256" \
-        && { ln -sn "$(basename "$dir")/$name" "$1" 2>/dev/null || [[ -d $1 ]]; }
+    mkdir -p "$(dirname "$1")" && bundle_tmp=$(mktemp -d "$(dirname "$1")/.bundle.XXXXXX") && chmod 755 "$bundle_tmp" || return 1
+    trap 'rm -rf "$bundle_tmp"' EXIT
+    trap 'rm -rf "$bundle_tmp"; exit 130' INT
+    trap 'rm -rf "$bundle_tmp"; exit 143' TERM
+    if [[ -t 2 ]]; then >&2 printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
+    else >&2 echo "Downloading nextflow dependencies. It may require a few seconds, please wait .."
+    fi
+    # the runtime may not run, e.g. on a noexec mount; the bundle is installed as a symlink,
+    # because `mv` would nest the directory into the one of a concurrent launch
+    get_file "$url" "$bundle_tmp/$name.tar.gz" && get_file "$url.sha256" "$bundle_tmp/sha256" \
+        && [[ $(cd "$bundle_tmp" && $sum "$name.tar.gz" | cut -d' ' -f1) == "$(cut -d' ' -f1 "$bundle_tmp/sha256")" ]] \
+        && tar -xzf "$bundle_tmp/$name.tar.gz" -C "$bundle_tmp" && [[ -f $bundle_tmp/$name/lib/$NXF_JAR ]] \
+        && "$bundle_tmp/$name/runtime/bin/java" -version &>/dev/null \
+        && rm -f "$bundle_tmp/$name.tar.gz" "$bundle_tmp/sha256" \
+        && { ln -sn "$(basename "$bundle_tmp")/$name" "$1" 2>/dev/null && bundle_tmp='' || [[ -d $1 ]]; }
     status=$?
-    >&2 printf "\r\033[K"
-    # a symlink, because `mv` would nest the directory into the one of a concurrent launch
-    [[ $status -eq 0 && $(readlink "$1") == "$(basename "$dir")/$name" ]] || rm -rf "$dir"
+    [[ -t 2 ]] && >&2 printf "\r\033[K"
+    [[ $bundle_tmp ]] && rm -rf "$bundle_tmp"
+    trap - EXIT INT TERM
     return $status
 }
 
 function get_file() {
-    if command -v curl &>/dev/null; then curl -fsL --connect-timeout 10 "$1" -o "$2"
-    elif command -v wget &>/dev/null; then wget -q -T 10 "$1" -O "$2"
+    if [[ $1 == file://* ]]; then cp "${1#file://}" "$2" 2>/dev/null
+    elif command -v curl &>/dev/null; then curl -fsL --connect-timeout 10 "$1" -o "$2"
+    elif command -v wget &>/dev/null; then wget -q -T 10 -t 1 "$1" -O "$2"
     else return 1
     fi
 }
@@ -328,21 +339,36 @@ case "$OSTYPE/$HOSTTYPE" in
   *) NXF_PLATFORM='' ;;
 esac
 
-# use the Java runtime and the jar of the bundle that contains this script when it provides NXF_VER,
-# otherwise hand off to the bundle of NXF_VER, which is downloaded instead of the jar when available
+# use the Java runtime and the jar of the bundle that contains this script, otherwise hand off
+# to the bundle of NXF_VER when enabled by NXF_JAVA_BUNDLE, or use the jar with the system Java
 bundle_home=''
 if [[ ! $NXF_BIN && $NXF_PACK != dist ]]; then
     this_home="$(dirname "$(resolve_link "$0")")/.."
-    bundle_dir="$NXF_DIST/$NXF_VER/nextflow-$NXF_VER-$NXF_PLATFORM"
     if [[ -x $this_home/runtime/bin/java && -f $this_home/lib/$NXF_JAR ]]; then
         bundle_home="$(cd "$this_home" && pwd -P)"
         NXF_BIN="$bundle_home/lib/$NXF_JAR"
         [[ ! "$NXF_JAVA_HOME" ]] && JAVA_CMD="$bundle_home/runtime/bin/java"
-    elif [[ $NXF_PLATFORM && $NXF_BUNDLE != false ]]; then
-        [[ -e $bundle_dir || -f $NXF_DIST/$NXF_VER/$NXF_JAR ]] || get_bundle "$bundle_dir"
-        [[ -x $bundle_dir/bin/nextflow && -f $bundle_dir/lib/$NXF_JAR ]] && NXF_VER=$NXF_VER exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
+    elif [[ ! $bundle_exec ]]; then
+        bundle_dir="$NXF_DIST/$NXF_VER/nextflow-$NXF_VER-$NXF_PLATFORM"
+        bundle_marker="$NXF_DIST/$NXF_VER/.nextflow-$NXF_VER-$NXF_PLATFORM.unavailable"
+        if [[ $NXF_JAVA_BUNDLE == true && ! $NXF_JAVA_HOME ]]; then
+            if [[ ! $NXF_PLATFORM ]]; then
+                echo_yellow "NOTE: Nextflow Java bundles are not available for this platform ($OSTYPE/$HOSTTYPE) -- using the system Java"
+            elif [[ ! -e $bundle_dir && ! -e $bundle_marker ]] && ! get_bundle "$bundle_dir"; then
+                touch "$bundle_marker" 2>/dev/null
+                echo_yellow "NOTE: The Nextflow $NXF_VER Java bundle for $NXF_PLATFORM is not available -- using the system Java (delete $bundle_marker to retry)"
+            fi
+            [[ $NXF_PLATFORM && -x $bundle_dir/bin/nextflow && -x $bundle_dir/runtime/bin/java && -f $bundle_dir/lib/$NXF_JAR ]] && NXF_JAVA_BUNDLE_EXEC=1 exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
+        fi
+        # the jar of the bundle of another platform, e.g. in a NXF_HOME shared across architectures
+        if [[ ! -f $NXF_DIST/$NXF_VER/$NXF_JAR ]]; then
+            for f in "$NXF_DIST/$NXF_VER/nextflow-$NXF_VER"-*/lib/"$NXF_JAR"; do
+                [[ -f $f ]] && NXF_BIN=$f && break
+            done
+        fi
     fi
 fi
+[[ $bundle_exec && ! $bundle_home ]] && die "ERROR: $0 was launched as a Nextflow Java bundle, but its Java runtime or lib/$NXF_JAR is missing"
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
@@ -502,11 +528,10 @@ if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
   elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25|26) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
   fi
 fi
-# the startup cache of the bundle: it is only valid for the same runtime, jar and module options,
-# and with compressed oops, which the JVM disables for a default heap of 32 GB or more (i.e. 128 GB RAM)
-if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" ]]; then
-    [[ "$NXF_OPTS $NXF_JVM_ARGS" =~ -Xmx|MaxHeapSize ]] || launcher+=(-XX:+UseCompressedOops)
-    [[ -f $bundle_home/lib/nextflow.aot ]] && launcher+=(-XX:AOTCache="$bundle_home/lib/nextflow.aot" -Xlog:aot=off)
+# the startup cache of the bundle, which the JVM ignores unless the runtime, jar, module options
+# and heap layout match the training (e.g. compressed oops are disabled for a heap of 32 GB or more)
+if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" && -f $bundle_home/lib/nextflow.aot ]]; then
+    launcher+=(-XX:AOTCache="$bundle_home/lib/nextflow.aot" -Xlog:aot=off)
 fi
 launcher+=("${cmd_tail[@]}")
 
