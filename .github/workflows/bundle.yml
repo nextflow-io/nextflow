@@ -4,15 +4,8 @@ name: Bundle
 # The release (build.yml) calls this workflow and uploads the bundles with the other release
 # files, from the artifacts `bundle-<platform>` (`.tar.gz` and `.tar.gz.sha256`).
 
+# Not run on pushes to master: the release builds the bundles of every release commit.
 on:
-  push:
-    branches:
-      - 'master'
-    paths:
-      - 'nextflow'
-      - 'bundle/**'
-      - 'gradle/bundle.gradle'
-      - '.github/workflows/bundle.yml'
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
