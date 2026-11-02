@@ -274,6 +274,29 @@ class PluginUpdater extends UpdateManager {
         }
     }
 
+    /**
+     * Fetch the metadata of a plugin that was not prefetched, such as a missing
+     * dependency of a plugin that was already installed.
+     *
+     * @param id The plugin Id
+     */
+    protected void fetchMissingMetadata(String id) {
+        if( offline )
+            return
+        for( final repo : this.@repositories ) {
+            if( !(repo instanceof PrefetchUpdateRepository) || repo.getPlugins().containsKey(id) )
+                continue
+            try {
+                log.trace "Fetching missing plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugin=${id}"
+                // HttpPluginRepository caches the fetched metadata, so it is visible to getPluginsMap()
+                repo.getPlugin(id)
+            }
+            catch( PluginRuntimeException e ) {
+                log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
+            }
+        }
+    }
+
     protected boolean isAlreadyInstalled(PluginRef ref) {
         // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
         // to resolve the latest release.
@@ -478,6 +501,9 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
         }
 
+        if( !requestedVersion || !Version.isValid(requestedVersion) || !FilesEx.exists(pluginsStore.resolve("$id-$requestedVersion")) )
+            fetchMissingMetadata(id)
+
         def version = requestedVersion
         if( !version ) {
             version = getLastPluginRelease(id)?.version
@@ -526,8 +552,10 @@ class PluginUpdater extends UpdateManager {
             // -- if it's a core nextflow plugin use the version expected by it
             def depVersion = defaultPlugins.hasPlugin(it.pluginId) ? defaultPlugins.getPlugin(it.pluginId).version : null
             // -- otherwise try to find the newest matching release
-            if( !depVersion )
+            if( !depVersion ) {
+                fetchMissingMetadata(it.pluginId)
                 depVersion = findNewestMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
+            }
             log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - available version: $depVersion"
             if( pullOnly )
                 pullPlugin0(it.pluginId, depVersion)

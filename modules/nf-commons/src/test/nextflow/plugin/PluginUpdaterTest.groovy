@@ -57,6 +57,33 @@ class PluginUpdaterTest extends Specification {
         Path zip
     }
 
+    /**
+     * Prefetch repository that only knows the metadata it was asked for,
+     * like {@link HttpPluginRepository}.
+     */
+    static class LazyRepository implements PrefetchUpdateRepository {
+        @Delegate(excludes = ['getPlugins', 'getPlugin', 'refresh'])
+        DefaultUpdateRepository index
+        Map<String, PluginInfo> plugins = [:]
+        List<String> fetched = []
+
+        void prefetch(List<PluginRef> refs) {
+            refs.each { getPlugin(it.id) }
+        }
+
+        Map<String, PluginInfo> getPlugins() { plugins }
+
+        PluginInfo getPlugin(String id) {
+            if( !plugins.containsKey(id) && index.getPlugin(id) ) {
+                fetched << id
+                plugins.put(id, index.getPlugin(id))
+            }
+            return plugins.get(id)
+        }
+
+        void refresh() {}
+    }
+
     // ---------------------------
 
     def 'should install a plugin' () {
@@ -121,6 +148,71 @@ class PluginUpdaterTest extends Specification {
         noExceptionThrown()
         and:
         manager.getPlugin('dep-plugin').descriptor.version == '0.7.1'
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should fetch metadata for a missing dependency of an installed plugin' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = folder.resolve('repo'); repo.mkdirs()
+        def dep = createPlugin(repo, '0.7.1', 'dep-plugin')
+        dep.zip = zipDir(dep.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "dep-plugin", "description": "Test dependency", "releases": [
+                 {"version": "0.7.1", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${dep.zip}"} ]}]
+            """
+        and:
+        // the main plugin is installed, its dependency is not
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        createPlugin(local, '1.0.0', PLUGIN_ID, "dep-plugin@${DEP_VERSION}")
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.@repositories = [lazy]
+
+        when:
+        // the prefetch is skipped because the requested plugin is already installed
+        updater.prefetchMetadata([PluginRef.parse("${PLUGIN_ID}@1.0.0")])
+        then:
+        lazy.fetched == []
+
+        when:
+        updater.prepareAndStart(PLUGIN_ID, '1.0.0')
+        then:
+        lazy.fetched == ['dep-plugin']
+        manager.getPlugin('dep-plugin').descriptor.version == '0.7.1'
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        DEP_VERSION << ['0.7.1', '>=0.7.0']
+    }
+
+    def 'should fetch metadata for a pinned plugin that was not prefetched' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = folder.resolve('repo'); repo.mkdirs()
+        def plugin = createPlugin(repo, '1.0.0')
+        plugin.zip = zipDir(plugin.path)
+        def index = createRepositoryIndex(repo, [plugin])
+        and:
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.@repositories = [lazy]
+
+        when:
+        // e.g. a core plugin dependency, which is pinned to the default version
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+        then:
+        lazy.fetched == [PLUGIN_ID]
         manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
 
         cleanup:
