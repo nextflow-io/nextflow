@@ -18,6 +18,8 @@ package nextflow.config.control
 
 import java.nio.file.Path
 
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.io.StringReaderSource
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Specification
 import test.TestUtils
@@ -96,6 +98,25 @@ class ResolveIncludeTest extends Specification {
 
         cleanup:
         deleteDir(root)
+    }
+
+    def 'should not resolve includes in a remote config' () {
+        given:
+        def parser = new ConfigParser()
+        def compiler = parser.compiler()
+        def reader = new StringReaderSource("includeConfig 'extra.config'\n", compiler.configuration()) {
+            @Override
+            URI getURI() { new URI('s3://bucket/conf/nextflow.config') }
+        }
+        def source = new SourceUnit('nextflow.config', reader, compiler.configuration(), compiler.classLoader(), compiler.createErrorCollector())
+        compiler.addSource(source)
+        compiler.compile(source)
+
+        when:
+        def visitor = new ResolveIncludeVisitor(source)
+        visitor.visit()
+        then:
+        visitor.getErrors().isEmpty()
     }
 
     def 'should not resolve dynamic includes' () {
