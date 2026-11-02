@@ -64,7 +64,14 @@ jobs:
         run: ./gradlew.bat :nf-cli-v1:shadowJar
 
       - name: Unit tests
-        run: ./gradlew.bat :nextflow:test --tests 'nextflow.executor.local.WindowsHostTest'
+        run: |
+          ./gradlew.bat :nextflow:test --tests 'nextflow.executor.local.WindowsHostTest'
+          if( $LASTEXITCODE ) { throw "Unit tests failed" }
+          # the tests are skipped on other systems, make sure they have actually run
+          [xml]$report = Get-Content modules/nextflow/build/test-results/test/TEST-nextflow.executor.local.WindowsHostTest.xml
+          $suite = $report.testsuite
+          Write-Host "WindowsHostTest: tests=$($suite.tests) skipped=$($suite.skipped) failures=$($suite.failures) errors=$($suite.errors)"
+          if( [int]$suite.tests -eq 0 -or [int]$suite.skipped -gt 0 ) { throw "Windows unit tests did not run" }
 
       - name: Setup Docker in WSL2
         run: |
@@ -122,6 +129,11 @@ jobs:
         run: |
           $jar = (Get-Item modules/nf-cli-v1/build/libs/nf-cli-v1-*-one.jar).FullName
           ./validation/windows/test.ps1 -Jar $jar -WorkDir $env:TEST_DIR
+
+      # release the Gradle cache file locks, so that the cache can be saved
+      - name: Stop Gradle
+        if: always()
+        run: ./gradlew.bat --stop
 
       # the artifact files must be in a single folder, the test dir is on another drive
       - name: Collect logs
