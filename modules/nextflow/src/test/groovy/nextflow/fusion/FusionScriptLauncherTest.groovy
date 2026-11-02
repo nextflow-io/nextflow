@@ -101,4 +101,25 @@ class FusionScriptLauncherTest extends Specification {
         expect:
         FusionScriptLauncher.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
+
+    def 'should link a local input where it is' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        def LOCAL = Path.of('/mnt/shared/ref.fa')
+        def bean = new TaskBean(
+            workDir: XPath.get('http://foo/work'),
+            targetDir: XPath.get('http://foo/work'),
+            inputFiles: ['ref.fa': LOCAL, 'c.txt': XPath.get('http://foo/a/c.txt')] )
+
+        when:
+        def fusion = FusionScriptLauncher.create(bean, 'http')
+        then:
+        bean.inputFiles['ref.fa'] == LOCAL
+        bean.inputFiles['c.txt'] == Path.of('/fusion/http/foo/a/c.txt')
+        and:
+        def script = fusion.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('ln -sfn /fusion/http/foo/a/c.txt c.txt')
+    }
+
 }
