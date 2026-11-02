@@ -42,6 +42,14 @@ This option is only compatible with `wave.strategy = 'container'`. It cannot be 
 The container registry authentication must be managed by the underlying infrastructure.
 :::
 
+##### `wave.soci`
+
+<AddedInVersion version="26.11" />
+
+Enable SOCI lazy loading for Wave containers (default: `false`). Wave attaches a [SOCI](https://github.com/awslabs/soci-snapshotter) index to the containers, so that hosts running the SOCI snapshotter start them before the whole image is downloaded and fetch file data on demand. Clients without the SOCI snapshotter pull the containers as usual.
+
+When used with `wave.freeze` or `wave.mirror`, the SOCI-enabled container is published to the `<tag>-soci` tag, and it is used once it is available. Not applied to Singularity containers.
+
 ##### `wave.strategy`
 The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
 
