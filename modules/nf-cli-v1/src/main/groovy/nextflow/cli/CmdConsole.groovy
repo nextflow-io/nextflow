@@ -27,7 +27,7 @@ import nextflow.exception.AbortOperationException
  */
 @CompileStatic
 @Parameters
-class CmdConsole extends CmdBase {
+class CmdConsole extends CmdBase implements UsageAware {
 
     @Parameter
     List<String> args
@@ -35,6 +35,20 @@ class CmdConsole extends CmdBase {
     String getName() { 'console' }
 
     void run() {
+        abort()
+    }
+
+    @Override
+    void usage() {
+        abort()
+    }
+
+    @Override
+    void usage(List<String> args) {
+        abort()
+    }
+
+    private static void abort() {
         throw new AbortOperationException("The `console` command has been removed")
     }
 }
