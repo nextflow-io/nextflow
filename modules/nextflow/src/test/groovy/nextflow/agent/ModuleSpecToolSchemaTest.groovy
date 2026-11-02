@@ -56,15 +56,15 @@ class ModuleSpecToolSchemaTest extends Specification {
         schema.additionalProperties == false
         schema.required == ['meta', 'reads']
         and:
-        schema.properties.meta.type == 'object'
-        schema.properties.meta.additionalProperties == true
-        schema.properties.meta.description == 'sample meta'
+        schema.get('properties').meta.type == 'object'
+        schema.get('properties').meta.additionalProperties == true
+        schema.get('properties').meta.description == 'sample meta'
         // nf-core meta.id convention: meta input carries a nested `id` property
-        schema.properties.meta.properties.id.type == 'string'
-        schema.properties.meta.properties.id.description == 'sample identifier'
+        schema.get('properties').meta.get('properties').id.type == 'string'
+        schema.get('properties').meta.get('properties').id.description == 'sample identifier'
         and:
-        schema.properties.reads.type == 'string'
-        schema.properties.reads.description == 'input reads (file path)'
+        schema.get('properties').reads.type == 'string'
+        schema.get('properties').reads.description == 'input reads (file path)'
     }
 
     def 'should apply nf-core meta.id convention for map input named meta'() {
@@ -78,13 +78,13 @@ class ModuleSpecToolSchemaTest extends Specification {
         def schema = ModuleSpecToolSchema.inputSchema(spec)
 
         then:
-        schema.properties.meta.type == 'object'
-        schema.properties.meta.description == 'sample meta'
-        schema.properties.meta.properties.id.type == 'string'
-        schema.properties.meta.properties.id.description == 'sample identifier'
-        schema.properties.meta.additionalProperties == true
+        schema.get('properties').meta.type == 'object'
+        schema.get('properties').meta.description == 'sample meta'
+        schema.get('properties').meta.get('properties').id.type == 'string'
+        schema.get('properties').meta.get('properties').id.description == 'sample identifier'
+        schema.get('properties').meta.additionalProperties == true
         and:
-        schema.properties.reads.type == 'string'
+        schema.get('properties').reads.type == 'string'
     }
 
     def 'should map scalar / integer / boolean input types leniently'() {
@@ -103,10 +103,10 @@ class ModuleSpecToolSchemaTest extends Specification {
         def schema = ModuleSpecToolSchema.inputSchema(spec)
 
         then:
-        schema.properties.label.type == 'string'
-        schema.properties.count.type == 'integer'
-        schema.properties.flag.type == 'boolean'
-        schema.properties.weird.type == 'string'
+        schema.get('properties').label.type == 'string'
+        schema.get('properties').count.type == 'integer'
+        schema.get('properties').flag.type == 'boolean'
+        schema.get('properties').weird.type == 'string'
         schema.required == ['label', 'count', 'flag', 'weird']
     }
 
@@ -177,10 +177,10 @@ class ModuleSpecToolSchemaTest extends Specification {
         def schema = ModuleSpecToolSchema.inputSchema(spec)
 
         then:
-        schema.properties.meta.type == 'object'
-        schema.properties.meta.description == 'sample meta'
-        schema.properties.reads.type == 'string'
-        schema.properties.reads.description == 'input reads (file path)'
+        schema.get('properties').meta.type == 'object'
+        schema.get('properties').meta.description == 'sample meta'
+        schema.get('properties').reads.type == 'string'
+        schema.get('properties').reads.description == 'input reads (file path)'
         schema.required == ['meta', 'reads']
         and:
         // NOTE: ModuleSpecFactory.fromYaml drops the Map output channel key (`report`),

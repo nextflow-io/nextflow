@@ -17,7 +17,6 @@
 package nextflow.cli
 
 import java.lang.management.ManagementFactory
-import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -28,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -233,7 +233,7 @@ class CmdInfo extends CmdBase {
 
         // file system
         result << BLANK << "File systems: "
-        result << FileSystemProvider.installedProviders().collect { it.scheme }.join(', ')
+        result << FileHelper.getProviderSchemes().join(', ')
         result << NEWLINE
 
         // plugins

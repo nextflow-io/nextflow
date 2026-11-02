@@ -76,9 +76,9 @@ class JoinOpV2 {
         return result
     }
 
-    private Map<?,Collection<RecordMap>> mappingsLeft = [:]
-    private Map<?,Collection<RecordMap>> mappingsRight = [:]
-    private Set<?> emitted = []
+    private Map<Object,Collection<RecordMap>> mappingsLeft = [:]
+    private Map<Object,Collection<RecordMap>> mappingsRight = [:]
+    private Set<Object> emitted = []
     private volatile int count = 2
     private volatile boolean failed
 
