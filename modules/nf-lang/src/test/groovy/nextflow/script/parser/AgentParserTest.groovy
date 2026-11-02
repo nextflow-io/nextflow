@@ -92,6 +92,9 @@ class AgentParserTest extends Specification {
 
         then: 'params.* and task.ext.* are captured; the declared input `question` is NOT'
         names == ['params.threshold', 'task.ext.args']
+
+        and: '`task` is defined in agent scope'
+        TestUtils.getErrors(source) == []
     }
 
     def 'should capture no prompt valRefs when the prompt references only declared inputs'() {
