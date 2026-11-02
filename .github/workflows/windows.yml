@@ -97,10 +97,23 @@ jobs:
           if( $LASTEXITCODE ) { throw "Unable to build the docker shim" }
           Pop-Location
           Add-Content -Path $env:GITHUB_PATH -Value $shim
+          # Windows looks for programs in the system folders before the PATH, hide the runner
+          # Docker CLI (Windows containers only) so that Nextflow launches the shim instead
+          foreach( $dir in @([Environment]::SystemDirectory, $env:windir) ) {
+            $exe = Join-Path $dir 'docker.exe'
+            if( Test-Path $exe ) {
+              Write-Host "Hiding the runner Docker CLI: $exe"
+              Rename-Item -Path $exe -NewName 'docker-windows.exe'
+            }
+          }
 
       - name: Check docker
         run: |
+          where.exe docker
           (Get-Command docker).Source
+          foreach( $dir in @([Environment]::SystemDirectory, $env:windir) ) {
+            if( Test-Path (Join-Path $dir 'docker.exe') ) { throw "Unexpected Docker CLI in $dir" }
+          }
           docker version
           docker run --rm -v "$($env:RUNNER_TEMP):/data" public.ecr.aws/docker/library/ubuntu:24.04 ls /data
           if( $LASTEXITCODE ) { throw "Unable to run a Linux container" }
