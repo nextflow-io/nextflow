@@ -63,6 +63,14 @@ $result = Invoke-Nextflow @('-version')
 Check ($result.code -eq 0) 'launcher runs with Windows PowerShell'
 Check ($result.text -match 'N E X T F L O W') 'launcher prints the version'
 
+# -- without Docker the tasks cannot run on Windows
+$noDocker = Join-Path $WorkDir 'no-docker.config'
+Set-Content -Path $noDocker -Value 'docker.enabled = false'
+$result = Invoke-Nextflow @('run', $pipeline, '-ansi-log', 'false', '-c', $noDocker)
+Check ($result.code -ne 0) 'pipeline fails when Docker is not enabled'
+Check ($result.text -match 'On Windows, tasks can only be executed with Docker') 'the error explains that Docker is required'
+Remove-Item -Recurse -Force (Join-Path $WorkDir 'work'), (Join-Path $WorkDir '.nextflow') -ErrorAction SilentlyContinue
+
 # -- first run
 $result = Invoke-Nextflow @('run', $pipeline, '-ansi-log', 'false')
 Check ($result.code -eq 0) "pipeline completes successfully (exit code $($result.code))"
