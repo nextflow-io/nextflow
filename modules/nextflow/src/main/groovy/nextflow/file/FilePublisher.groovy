@@ -236,7 +236,7 @@ class FilePublisher {
 
     protected Map<String,String> resolveTags(tags) {
         final result = tags instanceof Closure ? tags.call() : tags
-        if( result instanceof Map<String,String> )
+        if( result instanceof Map )
             return result
         throw new ScriptRuntimeException("Invalid publish tags: ${tags}")
     }

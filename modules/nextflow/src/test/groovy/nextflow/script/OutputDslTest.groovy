@@ -256,8 +256,10 @@ class OutputDslTest extends Specification {
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
 
-        when:
+        and:
         def session = Spy(createSession(config))
+
+        when:
         def outputs = [:]
         // the output directory is disabled when a named workflow is executed directly
         session.outputDir = null
@@ -311,8 +313,10 @@ class OutputDslTest extends Specification {
             preview: true
         ]
 
-        when:
+        and:
         def session = Spy(createSession(config))
+
+        when:
         def outputs = [:]
         // process outputs are never closed in preview mode
         outputs.put('foo', new DataflowQueue())
@@ -348,8 +352,10 @@ class OutputDslTest extends Specification {
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
 
-        when:
+        and:
         def session = Spy(createSession(config))
+
+        when:
         def outputs = [:]
 
         outputs.put('foo', Channel.of(record))
