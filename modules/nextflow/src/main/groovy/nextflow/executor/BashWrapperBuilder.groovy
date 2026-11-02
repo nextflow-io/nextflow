@@ -186,6 +186,18 @@ class BashWrapperBuilder {
         systemOsName.startsWith('Mac')
     }
 
+    protected isWindowsOS() {
+        systemOsName.startsWith('Windows')
+    }
+
+    /**
+     * Scripts are always executed by a Linux shell, convert any Windows line endings
+     * e.g. coming from a pipeline script or config checked out with CRLF on a Windows host
+     */
+    protected String bashText(String text) {
+        return text != null && isWindowsOS() ? text.replace('\r\n', '\n') : text
+    }
+
     @PackageScope String buildNew0() {
         final template = BashWrapperBuilder.class.getResourceAsStream('command-run.txt')
         try {
@@ -444,12 +456,12 @@ class BashWrapperBuilder {
             log.warn1("Task runtime metrics are not reported when using macOS without a container engine")
 
         final wrapper = buildNew0()
-        final result = write0(targetWrapperFile(), wrapper)
-        write0(targetScriptFile(), script)
+        final result = write0(targetWrapperFile(), bashText(wrapper))
+        write0(targetScriptFile(), bashText(script))
         if( input != null )
             write0(targetInputFile(), input.toString())
         if( stageScript != null )
-            write0(targetStageFile(), stageScript)
+            write0(targetStageFile(), bashText(stageScript))
         return result
     }
 

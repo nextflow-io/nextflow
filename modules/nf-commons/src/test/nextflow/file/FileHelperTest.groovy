@@ -80,6 +80,26 @@ class FileHelperTest extends Specification {
 
     }
 
+    def 'should parse windows drive paths as local paths on windows' () {
+        given:
+        def windows = FileHelper.windowsHost
+
+        when:
+        FileHelper.windowsHost = true
+        then:
+        FileHelper.asPath('C:/data/file.txt') == Paths.get('C:/data/file.txt')
+        FileHelper.asPath('d:/data') == Paths.get('d:/data')
+
+        when:
+        FileHelper.windowsHost = false
+        FileHelper.asPath('C:/data/file.txt')
+        then:
+        thrown(IllegalArgumentException)
+
+        cleanup:
+        FileHelper.windowsHost = windows
+    }
+
     def 'should return a Path object' () {
 
         expect:

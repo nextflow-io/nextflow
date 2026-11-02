@@ -37,6 +37,7 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
 import nextflow.util.StringUtils
+import nextflow.util.SysHelper
 /**
  * A process wrapper adding the ability to access to the Posix PID
  * and the {@code hasExited} flag
@@ -72,6 +73,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     private final Path errorFile
 
     private Process process
+
+    private DockerWrapperLauncher dockerLauncher
 
     private boolean destroyed
 
@@ -136,6 +139,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder localProcessBuilder() {
+        if( isWindowsHost() )
+            throw new ProcessUnrecoverableException(windowsErrorMessage())
         final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()
         log.debug "Launch cmd line: ${cmd.join(' ')}"
         // make sure it's a posix file system
@@ -177,6 +182,48 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         return pb
     }
 
+    /**
+     * Run the task wrapper script inside the Docker container, see {@link LocalExecutor#isDockerWrapperEnabled()}
+     */
+    protected ProcessBuilder dockerProcessBuilder() {
+        // make sure it's a local file system, so it can be mounted in the container
+        if( task.workDir.fileSystem != FileSystems.default )
+            throw new ProcessUnrecoverableException("Local executor requires the use of a local file system — offending path: ${FilesEx.toUriString(task.workDir)}")
+
+        dockerLauncher = new DockerWrapperLauncher(task.toTaskBean(), containerName())
+        final cmd = dockerLauncher.runCommand()
+        log.debug "Launch cmd line: ${StringUtils.stripSecrets(cmd.join(' '))}"
+
+        // NOTE: make sure to redirect process output to a file otherwise
+        // execution can hang when stdout/stderr is bigger than 64k
+        final workDir = task.workDir.toFile()
+        final logFile = new File(workDir, TaskRun.CMD_LOG)
+
+        final pb = new ProcessBuilder()
+                .redirectErrorStream(true)
+                .redirectOutput(logFile)
+                .directory(workDir)
+                .command(cmd)
+        prepareAccelerators(pb)
+        return pb
+    }
+
+    protected String containerName() {
+        final hash = task.hash?.toString()
+        final prefix = hash ? hash.substring(0, Math.min(12, hash.length())) + '-' : ''
+        return 'nxf-' + prefix + UUID.randomUUID().toString().substring(0, 8)
+    }
+
+    protected boolean isWindowsHost() {
+        return SysHelper.isWindows()
+    }
+
+    protected String windowsErrorMessage() {
+        if( executor.isDockerWrapperEnabled() )
+            return "Process `${task.lazyName()}` does not specify a container -- On Windows, every process must define a container to be executed with Docker"
+        return "Process `${task.lazyName()}` cannot be executed -- On Windows, tasks can only be executed with Docker; enable it with the setting `docker.enabled = true` and define a container for each process"
+    }
+
     protected void prepareAccelerators(ProcessBuilder pb) {
         if( !acceleratorEnv )
             return
@@ -184,9 +231,11 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {
-        return fusionEnabled()
-                ? fusionProcessBuilder()
-                : localProcessBuilder()
+        if( fusionEnabled() )
+            return fusionProcessBuilder()
+        if( executor.isDockerWrapperEnabled() && task.getContainer() )
+            return dockerProcessBuilder()
+        return localProcessBuilder()
     }
 
     long elapsedTimeMillis() {
@@ -255,6 +304,10 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     protected void killTask() {
         if( !process ) return
+        if( dockerLauncher ) {
+            stopContainer()
+            return
+        }
         final pid = ProcessHelper.pid(process)
         log.trace("Killing process with pid: ${pid}")
         def cmd = "kill -TERM $pid"
@@ -267,11 +320,38 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
+     * Stop the task container. Killing the `docker run` client process is not enough
+     * because the container keeps running (on Windows, signals are not forwarded)
+     */
+    protected void stopContainer() {
+        final cmd = dockerLauncher.stopCommand()
+        if( !cmd ) {
+            process.destroy()
+            return
+        }
+        log.trace "Stopping task container: ${cmd.join(' ')}"
+        try {
+            // note: do not wait for the command completion, the container is stopped asynchronously
+            new ProcessBuilder(cmd)
+                .redirectErrorStream(true)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .start()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to stop container for task $task.name -- command: ${cmd.join(' ')}", e
+        }
+    }
+
+    /**
      * Destroy the process handler, closing all associated streams
      */
     void destroy() {
 
         if( destroyed ) { return }
+
+        // stop the container when the task is still running e.g. it exceeded the time limit
+        if( dockerLauncher && process?.isAlive() )
+            stopContainer()
 
         if( process ) {
             process.getInputStream()?.closeQuietly()
@@ -289,7 +369,9 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()
-        if( process )
+        if( dockerLauncher )
+            result.put('native_id', dockerLauncher.getName())
+        else if( process )
             result.put('native_id', ProcessHelper.pid(process))
         return result
     }

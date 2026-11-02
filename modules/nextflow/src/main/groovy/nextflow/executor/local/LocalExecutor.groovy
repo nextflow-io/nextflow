@@ -17,7 +17,9 @@
 package nextflow.executor.local
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
 import nextflow.fusion.FusionHelper
@@ -26,6 +28,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
+import nextflow.util.SysHelper
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -35,6 +38,12 @@ import nextflow.script.ScriptType
 @CompileStatic
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends Executor {
+
+    /**
+     * Environment variable to run the task wrapper script inside the Docker container
+     * also on Linux and macOS hosts. On Windows this is always the case.
+     */
+    static final String DOCKER_WRAPPER_ENV = 'NXF_DOCKER_WRAPPER_IN_CONTAINER'
 
     @Override
     protected TaskMonitor createTaskMonitor() {
@@ -54,7 +63,28 @@ class LocalExecutor extends Executor {
 
     @Override
     boolean isContainerNative() {
-        return isFusionEnabled()
+        return isFusionEnabled() || isDockerWrapperEnabled()
+    }
+
+    /**
+     * When enabled, the whole task wrapper script is run inside the Docker container,
+     * instead of running it on the host and launching the container from it.
+     * This is always the case on Windows, since the host has no Bash.
+     *
+     * @return {@code true} when the task wrapper must run inside the Docker container
+     */
+    @Memoized
+    boolean isDockerWrapperEnabled() {
+        if( isFusionEnabled() )
+            return false
+        final config = session.getContainerConfig()
+        if( !config?.isEnabled() || config.getEngine() != 'docker' )
+            return false
+        return isWindowsHost() || SysEnv.getBool(DOCKER_WRAPPER_ENV, false)
+    }
+
+    protected boolean isWindowsHost() {
+        return SysHelper.isWindows()
     }
 
     @Override

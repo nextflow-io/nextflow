@@ -138,6 +138,15 @@ Disables the automatic type detection of command line parameters.
 
 Disables the requirement for Wave service when enabling the Fusion file system.
 
+##### `NXF_DOCKER_WRAPPER_IN_CONTAINER`
+
+<AddedInVersion version="27.04" />
+
+:::warning{title="Experimental: may change in a future release."}
+:::
+
+When `true` and Docker is enabled, the `local` executor runs the whole task wrapper script (`.command.run`) inside the task container, instead of running it on the host and launching the container from it (default: `false`). This is always the case on Windows. See [Windows][install-windows] for details.
+
 ##### `NXF_ENABLE_AWS_SES`
 
 <AddedInVersion version="23.10" />
@@ -514,6 +523,7 @@ Forces the terminal width of ANSI-formatted log output. Overrides automatic term
 [agent-page]: ../agent
 [agent-provider]: ../agent#the-api-provider
 [cache-stores]: ../cache-and-resume#cache-stores
+[install-windows]: ../install#windows
 [process-conda]: ./process/directives/conda
 [process-publishdir]: ./process/directives/publish-dir
 [process-spack]: ./process/directives/spack

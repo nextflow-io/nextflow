@@ -17,6 +17,7 @@
 package nextflow.file
 
 import java.nio.file.CopyOption
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -174,6 +175,50 @@ class FilePublisherTest extends Specification {
         then:
         Files.isSymbolicLink(outputDir.resolve('report.txt'))
         outputDir.resolve('report.txt').text == 'Hello'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should fall back to copy when symlinks are not allowed on windows'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def work1 = root.resolve('work/ab/1234'); Files.createDirectories(work1)
+        def file1 = work1.resolve('report.txt'); file1.text = 'Hello'
+        def outputDir = root.resolve('results'); Files.createDirectories(outputDir)
+        and:
+        def session = mockSession()
+        def publisher = Spy(new FilePublisher(session, [:])) {
+            isWindowsHost() >> true
+            createSymbolicLink0(_, _) >> { throw new FileSystemException('report.txt', null, 'A required privilege is not held by the client') }
+        }
+
+        when:
+        publisher.writeFile(file1, outputDir.resolve('report.txt'), FilePublisher.Mode.SYMLINK)
+        then:
+        Files.isRegularFile(outputDir.resolve('report.txt'))
+        !Files.isSymbolicLink(outputDir.resolve('report.txt'))
+        outputDir.resolve('report.txt').text == 'Hello'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should not fall back to copy when symlinks fail on other systems'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def file1 = root.resolve('report.txt'); file1.text = 'Hello'
+        def outputDir = root.resolve('results'); Files.createDirectories(outputDir)
+        and:
+        def publisher = Spy(new FilePublisher(mockSession(), [:])) {
+            isWindowsHost() >> false
+            createSymbolicLink0(_, _) >> { throw new FileSystemException('report.txt', null, 'Operation not permitted') }
+        }
+
+        when:
+        publisher.writeFile(file1, outputDir.resolve('report.txt'), FilePublisher.Mode.SYMLINK)
+        then:
+        thrown(FileSystemException)
 
         cleanup:
         root?.deleteDir()

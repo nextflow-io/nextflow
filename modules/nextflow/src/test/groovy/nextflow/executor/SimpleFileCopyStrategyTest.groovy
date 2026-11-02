@@ -129,6 +129,26 @@ class SimpleFileCopyStrategyTest extends Specification {
         '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -sfn /some/path/to/file.txt abc.txt'
         '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -sfn /some/path/to/file.txt abc.txt'
 
+        // Windows host paths are mapped to their container mount paths
+        'C:\\data\\file.txt'        | 'abc.txt'            | null              | 'ln -sfn /c/data/file.txt abc.txt'
+        'D:\\my data\\file.txt'     | 'abc.txt'            | 'link'            | 'ln -f /d/my\\ data/file.txt abc.txt'
+        'C:\\data\\file.txt'        | 'abc.txt'            | 'copy'            | 'cp -fRL /c/data/file.txt abc.txt'
+
+    }
+
+    def 'should map windows paths in wrapper commands' () {
+        given:
+        def workDir = Paths.get('C:\\work\\ab\\cdef')
+        def strategy = new SimpleFileCopyStrategy(new TaskBean(workDir: workDir, targetDir: workDir))
+
+        expect:
+        strategy.fileStr(workDir.resolve('.command.sh')) == '/c/work/ab/cdef/.command.sh'
+        strategy.touchFile(workDir.resolve('.command.begin')) == 'touch /c/work/ab/cdef/.command.begin'
+        strategy.exitFile(workDir.resolve('.exitcode')) == '> /c/work/ab/cdef/.exitcode'
+        strategy.pipeInputFile(workDir.resolve('.command.in')) == ' < /c/work/ab/cdef/.command.in'
+        strategy.copyFile('.command.out', workDir.resolve('.command.out')) == 'cp .command.out /c/work/ab/cdef/.command.out'
+        strategy.stageOutCommand('$name', workDir, 'copy') == 'nxf_fs_copy "$name" /c/work/ab/cdef'
+        strategy.getUnstagePrefix(workDir) == 'mkdir -p /c/work/ab/cdef'
     }
 
 

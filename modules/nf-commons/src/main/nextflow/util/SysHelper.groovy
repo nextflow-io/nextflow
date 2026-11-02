@@ -206,6 +206,13 @@ class SysHelper {
     }
 
     /**
+     * @return {@code true} when running on a Windows host
+     */
+    static boolean isWindows() {
+        return System.getProperty('os.name')?.startsWith('Windows')
+    }
+
+    /**
      * Dump th stack trace of current running threads
      * @return
      */

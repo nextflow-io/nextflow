@@ -244,7 +244,7 @@ task buildInfo {
  * Update release information in nextflow wrapper, dockerfile, and plugin metadata.
  *
  * This task:
- * 1. Updates the NXF_VER version string in the nextflow launch script
+ * 1. Updates the NXF_VER version string in the nextflow and nextflow.ps1 launch scripts
  * 2. Updates the release version in docker/Dockerfile
  * 3. Generates plugins-info.txt with current plugin versions from VERSION files
  *
@@ -261,6 +261,12 @@ task releaseInfo {
     def file0 = file('nextflow')
     def src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
+    file0.text = src
+
+    // -- update 'nextflow.ps1' windows launcher
+    file0 = file('nextflow.ps1')
+    src = file0.text
+    src = src.replaceAll(/Get-EnvOrDefault 'NXF_VER' '.*'/, "Get-EnvOrDefault 'NXF_VER' '$version'" as String)
     file0.text = src
 
     // -- update dockerfile

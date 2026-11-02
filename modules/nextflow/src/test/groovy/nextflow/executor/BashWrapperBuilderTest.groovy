@@ -126,6 +126,55 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should convert windows line endings when the host is windows' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def osName = BashWrapperBuilder.systemOsName
+
+        when:
+        BashWrapperBuilder.systemOsName = 'Windows 11'
+        newBashWrapperBuilder(
+                workDir: folder,
+                script: '#!/bin/bash\r\necho Hello\r\necho world\r\n',
+                beforeScript: 'echo before\r\n' ).build()
+        then:
+        folder.resolve('.command.sh').text == '#!/bin/bash\necho Hello\necho world\n'
+        !folder.resolve('.command.run').text.contains('\r')
+
+        when:
+        BashWrapperBuilder.systemOsName = 'Linux'
+        newBashWrapperBuilder(
+                workDir: folder,
+                script: '#!/bin/bash\r\necho Hello\r\necho world' ).build()
+        then:
+        folder.resolve('.command.sh').text == '#!/bin/bash\r\necho Hello\r\necho world\n'
+
+        cleanup:
+        BashWrapperBuilder.systemOsName = osName
+        folder?.deleteDir()
+    }
+
+    def 'should render a container native wrapper with windows paths' () {
+        given:
+        def workDir = Paths.get('C:\\work\\ab\\cdef')
+
+        when:
+        def wrapper = newBashWrapperBuilder(
+                workDir: workDir,
+                containerImage: 'ubuntu:24.04',
+                containerConfig: new DockerConfig(enabled: true),
+                containerEnabled: true,
+                containerNative: true,
+                environment: [PATH: '$PATH:/c/project/bin'] ).buildNew0()
+        then:
+        wrapper.contains('/bin/bash -ue /c/work/ab/cdef/.command.sh')
+        wrapper.contains('printf -- $exit_status > /c/work/ab/cdef/.exitcode')
+        wrapper.contains('touch /c/work/ab/cdef/.command.begin')
+        wrapper.contains('export PATH="$PATH:/c/project/bin"')
+        !wrapper.contains('docker run')
+        !wrapper.contains('C:')
+    }
+
     def 'should create bash launcher files with trace' () {
         given:
         def folder = Files.createTempDirectory('test')

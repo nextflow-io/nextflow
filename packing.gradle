@@ -241,6 +241,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
 task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions]) {
 
     def launcherFile = file('nextflow').absoluteFile
+    def launcherPs1File = file('nextflow.ps1').absoluteFile
     def launcherMd5 = file('nextflow.md5').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
@@ -257,7 +258,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
     sleep 1
     gh release create --repo nextflow-io/nextflow --prerelease --title "Version $version" v$version 
     sleep 1
-    gh release upload --repo nextflow-io/nextflow v$version ${launcherFile} ${nextflowAllFile}        
+    gh release upload --repo nextflow-io/nextflow v$version ${launcherFile} ${launcherPs1File} ${nextflowAllFile}        
     """.stripIndent()
 
     if( edge && branch == 'master' )

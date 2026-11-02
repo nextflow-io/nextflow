@@ -50,7 +50,9 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.PosixPaths
 import nextflow.util.StringUtils
+import nextflow.util.SysHelper
 /**
  * Provides some helper method handling files
  *
@@ -72,6 +74,9 @@ class FileHelper {
      * hierarchy and appends the attempt number to the leaf (hex never contains a dash).
      */
     static final private Pattern ATTEMPT_SUFFIX = ~/-\d+$/
+
+    @PackageScope
+    static boolean windowsHost = SysHelper.isWindows()
 
     static final private Path localTempBasePath
 
@@ -343,6 +348,11 @@ class FileHelper {
             throw new IllegalArgumentException("Path string cannot ends with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
 
         if( !str.contains(':/') ) {
+            return Paths.get(str)
+        }
+
+        // a Windows drive path e.g. `C:/data/file.txt` is a local path, not a URL
+        if( windowsHost && PosixPaths.isWindowsPath(str) ) {
             return Paths.get(str)
         }
 

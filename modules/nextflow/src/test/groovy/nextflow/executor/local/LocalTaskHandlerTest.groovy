@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 import nextflow.Global
 import nextflow.container.DockerConfig
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -85,6 +86,132 @@ class LocalTaskHandlerTest extends Specification {
 
         cleanup:
         builder?.redirectOutput()?.file()?.delete()
+    }
+
+    def 'should create docker wrapper process builder' () {
+        given:
+        def bean = new TaskBean(
+            workDir: Path.of('/some/work/dir'),
+            containerImage: 'ubuntu:24.04',
+            containerConfig: new DockerConfig(enabled: true),
+            inputFiles: ['x.txt': Path.of('/data/x.txt')],
+            binDirs: [Path.of('/project/bin')] )
+        and:
+        def task = Mock(TaskRun) {
+            getContainer() >> 'ubuntu:24.04'
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+            toTaskBean() >> bean
+        }
+        def executor = Mock(LocalExecutor) { isDockerWrapperEnabled() >> true }
+        and:
+        def handler = Spy(new LocalTaskHandler(task, executor)) {
+            containerName() >> 'nxf-test'
+        }
+
+        when:
+        def builder = handler.createLaunchProcessBuilder()
+        then:
+        handler.fusionEnabled() >> false
+        and:
+        builder.command() == [
+            'docker', 'run', '--rm',
+            '-v', '/data:/data',
+            '-v', '/project/bin:/project/bin',
+            '-v', '/some/work/dir:/some/work/dir',
+            '-w', '/some/work/dir',
+            '--name', 'nxf-test',
+            'ubuntu:24.04',
+            '/bin/bash', '-ue', '.command.run' ]
+        builder.directory() == new File('/some/work/dir')
+        builder.redirectErrorStream()
+        builder.redirectOutput().file() == new File('/some/work/dir/.command.log')
+    }
+
+    def 'should run on the host a task without container when not on windows' () {
+        given:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def executor = Mock(LocalExecutor) { isDockerWrapperEnabled() >> true }
+        def handler = Spy(new LocalTaskHandler(task, executor))
+
+        when:
+        def builder = handler.createLaunchProcessBuilder()
+        then:
+        handler.fusionEnabled() >> false
+        handler.isWindowsHost() >> false
+        and:
+        builder.command() == ['/bin/bash','-ue','.command.run']
+    }
+
+    def 'should report an error when a task cannot run on windows' () {
+        given:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'foo'
+        }
+        def executor = Mock(LocalExecutor) { isDockerWrapperEnabled() >> DOCKER }
+        def handler = Spy(new LocalTaskHandler(task, executor))
+
+        when:
+        handler.createLaunchProcessBuilder()
+        then:
+        handler.fusionEnabled() >> false
+        handler.isWindowsHost() >> true
+        and:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message.contains(MESSAGE)
+
+        where:
+        DOCKER  | MESSAGE
+        false   | 'enable it with the setting `docker.enabled = true`'
+        true    | 'Process `foo` does not specify a container'
+    }
+
+    def 'should stop the task container when killed' () {
+        given:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new LocalTaskHandler(task, Mock(LocalExecutor)))
+        def process = Mock(Process)
+        handler.@process = process
+        handler.@dockerLauncher = Mock(DockerWrapperLauncher) { stopCommand() >> STOP_CMD }
+
+        when:
+        handler.killTask()
+        then:
+        DESTROY * process.destroy()
+
+        where:
+        STOP_CMD    | DESTROY
+        ['true']    | 0
+        null        | 1
+    }
+
+    def 'should stop the task container when destroyed while running' () {
+        given:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new LocalTaskHandler(task, Mock(LocalExecutor)))
+        handler.@process = Mock(Process) { isAlive() >> ALIVE }
+        handler.@dockerLauncher = Mock(DockerWrapperLauncher) { stopCommand() >> ['true'] }
+
+        when:
+        handler.destroy()
+        then:
+        STOPS * handler.stopContainer() >> null
+
+        where:
+        ALIVE   | STOPS
+        true    | 1
+        false   | 0
     }
 
     def 'should kill task when task exceeds time limit' () {

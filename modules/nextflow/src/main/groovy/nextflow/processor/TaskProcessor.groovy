@@ -101,6 +101,7 @@ import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
+import nextflow.util.PosixPaths
 import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -1575,16 +1576,19 @@ class TaskProcessor {
         List<Path> paths
         if( isLocalWorkDir() && (paths=getBinDirs()) ) {
             for( Path it : paths ) {
+                // note: render the bin path as seen by the task environment
+                // i.e. a Windows host path is mapped to its container mount path
+                final binPath = PosixPaths.toPosix(it)
                 if( result.containsKey('PATH') ) {
                     // note: do not escape potential blanks in the bin path because the PATH
                     // variable is enclosed in `"` when in rendered in the launcher script -- see #630
-                    result['PATH'] =  "${result['PATH']}:${it}".toString()
+                    result['PATH'] =  "${result['PATH']}:${binPath}".toString()
                 }
                 else {
                     // note: append custom bin path *after* the system PATH
                     // to prevent unnecessary network round-trip for each command
                     // when the added path is a shared file system directory
-                    result['PATH'] = "\$PATH:${it}".toString()
+                    result['PATH'] = "\$PATH:${binPath}".toString()
                 }
             }
         }

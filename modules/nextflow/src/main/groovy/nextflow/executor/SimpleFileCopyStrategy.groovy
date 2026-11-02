@@ -25,9 +25,13 @@ import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
+import nextflow.util.PosixPaths
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
+ *
+ * <p>Local paths are rendered with {@link PosixPaths#toPosix(Path)} so that, on a
+ * Windows host, they match the paths at which they are mounted in the task container.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -230,7 +234,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             throw new IllegalArgumentException("Process input file target path must be relative: $target")
 
         if( mode == 'symlink' || !mode )
-            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.path(PosixPaths.toPosix(source))} ${Escape.path(target)}"
 
         if( mode == 'rellink' ) {
             // GNU ln has the '-r' flag, but BSD ln doesn't, so we have to
@@ -238,16 +242,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
             def targetPath = workDir.resolve(target)
             def sourcePath = workDir.resolve(source)
-            source = targetPath.getParent().relativize(sourcePath).toString()
+            // join the path elements with '/' so that the link is valid also when the host is Windows
+            source = targetPath.getParent().relativize(sourcePath).collect { Path it -> it.toString() }.join('/')
 
             return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
         }
 
         if( mode == 'link' )
-            return "ln -f ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -f ${Escape.path(PosixPaths.toPosix(source))} ${Escape.path(target)}"
 
         if( mode == 'copy' || !mode )
-            return "cp -fRL ${Escape.path(source)} ${Escape.path(target)}"
+            return "cp -fRL ${Escape.path(PosixPaths.toPosix(source))} ${Escape.path(target)}"
 
         throw new IllegalArgumentException("Unknown stage-in strategy: $mode")
     }
@@ -259,7 +264,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     protected String getUnstagePrefix(Path targetDir) {
         final scheme = getPathScheme(targetDir)
         if( scheme == 'file' ) {
-            return "mkdir -p ${Escape.path(targetDir)}"
+            return "mkdir -p ${Escape.path(PosixPaths.toPosix(targetDir))}"
         }
         else
             return null
@@ -280,7 +285,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         def scheme = getPathScheme(targetDir)
         if( scheme == 'file' ) {
             if( mode !in VALID_STAGE_OUT_MODES ) throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
-            return "nxf_fs_$mode \"$source\" ${Escape.path(targetDir)}"
+            return "nxf_fs_$mode \"$source\" ${Escape.path(PosixPaths.toPosix(targetDir))}"
         }
 
         final cmd = FileSystemPathFactory.uploadCmd(source,targetDir)
@@ -375,7 +380,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String touchFile(Path file) {
-        "touch ${Escape.path(file)}"
+        "touch ${Escape.path(PosixPaths.toPosix(file))}"
     }
 
     /**
@@ -383,7 +388,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String fileStr(Path file) {
-        Escape.path(file)
+        Escape.path(PosixPaths.toPosix(file))
     }
 
     /**
@@ -391,7 +396,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String copyFile(String name, Path target) {
-        "cp ${Escape.path(name)} ${Escape.path(target)}"
+        "cp ${Escape.path(name)} ${Escape.path(PosixPaths.toPosix(target))}"
     }
 
     /**
@@ -399,7 +404,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String exitFile(Path file) {
-        "> ${Escape.path(file)}"
+        "> ${Escape.path(PosixPaths.toPosix(file))}"
     }
 
     /**
@@ -407,7 +412,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String pipeInputFile(Path file) {
-        " < ${Escape.path(file)}"
+        " < ${Escape.path(PosixPaths.toPosix(file))}"
     }
 
     @Override

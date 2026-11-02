@@ -241,6 +241,22 @@ class TaskProcessorTest extends Specification {
         true    | true          | [PATH:'$PATH:/foo:/bar:/project/bin']
     }
 
+    def 'should map windows bin paths in the task env' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def executor = Mock(Executor) { getBinDir() >> Path.of('C:\\Users\\me\\project\\bin')}
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+
+        when:
+        def result = processor.getProcessEnvironment()
+        then:
+        session.enableModuleBinaries() >> false
+        processor.isLocalWorkDir() >> true
+        and:
+        result == [PATH:'$PATH:/c/Users/me/project/bin']
+    }
+
     def 'should fetch interpreter from shebang line'() {
 
         when:

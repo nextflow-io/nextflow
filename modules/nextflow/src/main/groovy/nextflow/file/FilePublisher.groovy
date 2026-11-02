@@ -20,6 +20,7 @@ import static nextflow.util.CacheHelper.*
 
 import java.nio.file.CopyOption
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystemException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -45,6 +46,7 @@ import nextflow.extension.FilesEx
 import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.RetryConfig
+import nextflow.util.SysHelper
 /**
  * Publish files from a source path to a target path.
  *
@@ -305,9 +307,9 @@ class FilePublisher {
         log.trace "Publishing file: $source -[$mode]-> $target"
 
         if( mode == Mode.SYMLINK )
-            Files.createSymbolicLink(target, source)
+            createSymlink(source, target, source)
         else if( mode == Mode.RELLINK )
-            Files.createSymbolicLink(target, target.parent.relativize(source))
+            createSymlink(source, target, target.parent.relativize(source))
         else if( mode == Mode.LINK )
             FilesEx.mklink(source, [hard: true], target)
         else if( mode == Mode.MOVE )
@@ -318,6 +320,34 @@ class FilePublisher {
             FileHelper.copyPath(source, target, copyOpts(LinkOption.NOFOLLOW_LINKS, SKIP_FUSION_DIR))
         else
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
+    }
+
+    /**
+     * Create a symbolic link. On Windows, creating symbolic links requires the
+     * Developer Mode or administrator rights, when it's not allowed fall back to a copy
+     */
+    protected void createSymlink(Path source, Path target, Path linkTarget) {
+        try {
+            createSymbolicLink0(target, linkTarget)
+        }
+        catch( FileAlreadyExistsException e ) {
+            throw e
+        }
+        catch( FileSystemException e ) {
+            if( !isWindowsHost() )
+                throw e
+            log.warn1("Unable to create symbolic links on this Windows host (${e.reason ?: e.message}) -- Publishing files with mode `copy` instead; enable Windows Developer Mode to allow symbolic links", firstOnly: true)
+            log.debug "Unable to create symbolic link: $target -> $linkTarget", e
+            FileHelper.copyPath(source, target, copyOpts(SKIP_FUSION_DIR))
+        }
+    }
+
+    protected void createSymbolicLink0(Path target, Path linkTarget) {
+        Files.createSymbolicLink(target, linkTarget)
+    }
+
+    protected boolean isWindowsHost() {
+        return SysHelper.isWindows()
     }
 
     protected CopyOption[] copyOpts(CopyOption... opts) {

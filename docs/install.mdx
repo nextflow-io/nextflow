@@ -5,7 +5,7 @@ description: Install Nextflow on Linux, macOS, and Windows using the self-instal
 
 # Installation
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). This page describes how to install Nextflow.
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux) or natively with Docker (see [Windows](#windows)). This page describes how to install Nextflow.
 
 :::note
 New versions of Nextflow are released regularly. See [Updating Nextflow][updating-nextflow] for more information about Nextflow release cadence, how to update Nextflow, and how select your version of Nextflow.
@@ -13,7 +13,7 @@ New versions of Nextflow are released regularly. See [Updating Nextflow][updatin
 
 ## Requirements
 
-Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 26)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
+Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 26)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed (see [Windows](#windows) for running Nextflow natively on Windows). To see which version of Java you have, run the following command:
 
 ```bash
 java -version
@@ -135,6 +135,59 @@ To use the standalone distribution:
     ```bash
     ./nextflow-24.10.1-dist run info
     ```
+
+### Windows
+
+<AddedInVersion version="27.04" />
+
+:::warning{title="Experimental: may change in a future release."}
+:::
+
+Nextflow can run natively on Windows, without WSL, when every task is executed in a Docker container. [WSL](https://learn.microsoft.com/en-us/windows/wsl/) remains the recommended option for full compatibility.
+
+Requirements:
+
+- [Java 17 (or later, up to 26)](https://adoptium.net/)
+- [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) using Linux containers
+- Windows PowerShell 5.1 or PowerShell 7
+
+To use Nextflow on Windows:
+
+1. Download `nextflow.ps1` from the Assets section of the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases).
+
+2. Allow the downloaded script to run:
+
+    ```powershell
+    Unblock-File .\nextflow.ps1
+    ```
+
+    If your execution policy doesn't allow scripts, run it with `powershell -ExecutionPolicy Bypass -File .\nextflow.ps1` instead.
+
+3. Confirm Nextflow is installed correctly:
+
+    ```powershell
+    .\nextflow.ps1 info
+    ```
+
+4. Enable Docker in your Nextflow configuration and define a container for every process:
+
+    ```groovy
+    docker.enabled = true
+    ```
+
+Tasks are executed by the `local` executor. Because Windows has no Bash, the whole task wrapper script runs inside the task container. Host paths are mounted in the container using the convention `C:\some\dir` → `/c/some/dir`, which is also how they appear in the task scripts.
+
+Known limitations:
+
+- Every process must define a container. Container images must provide Bash, the GNU core utilities, and `ps` (the same requirements as cloud batch executors such as AWS Batch).
+- The `beforeScript` and `afterScript` directives run inside the container.
+- Host paths interpolated in a process script as strings, such as `${projectDir}/data.txt`, are not converted to container paths. Declare files as `path` inputs, or put scripts in the project `bin` directory.
+- Glob patterns in file paths, such as `Channel.fromPath('data/*.fq')`, are not supported. Use a samplesheet that lists each file instead.
+- Network (UNC) paths are not supported. Map network shares to a drive letter.
+- Conda, Spack, Fusion, and container engines other than Docker are not supported.
+- The `docker.runOptions` setting and the `containerOptions` directive are not evaluated by a shell, so expressions such as `$(id -u)` are not supported.
+- Creating symbolic links requires [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development). Otherwise, files published with the `symlink` mode are copied.
+- Scripts in the project `bin` directory must use Unix (LF) line endings. Configure Git with a `.gitattributes` file containing `bin/* text eol=lf`.
 
 ## Seqera Platform
 
