@@ -132,5 +132,4 @@ Dataset downloads use `TowerClient.sendStreamingRequest()`, which calls `HxClien
 ## Links
 
 - [Spec](../specs/260310-seqera-dataset-fs/spec.md)
-- [Implementation plan](../specs/260310-seqera-dataset-fs/plan.md)
 - [Data model](../specs/260310-seqera-dataset-fs/data-model.md)

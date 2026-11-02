@@ -5,8 +5,8 @@
   configuration, caching and lineage
 - Companion documents: [agent runners](agent-runners.md) (the harness SPI and its
   implementations), [agent RPC](agent-rpc.md) (how an out-of-process runner reaches the driver)
-- Decision record: [`adr/20260505-llm-agent-primitive.md`](../20260505-llm-agent-primitive.md)
-- User guide: [`docs/agent.mdx`](../../docs/agent.mdx)
+- Decision record: [`adr/20260801-agent-primitive.md`](../../adr/20260801-agent-primitive.md)
+- User guide: [`docs/agent.mdx`](../../agent.mdx)
 
 This document is the architectural reference for the primitive. It records *what was decided and
 why*; the code is the reference for *how*. Where a decision has a non-obvious rationale or a known

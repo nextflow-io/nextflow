@@ -145,11 +145,11 @@ That is correct about workflow managers *as they are*, and it is the reason this
 
 - Agentic genomics framing: Corpas, M., Guio, H., and Fatumo, S. (2026). *Agentic genomics: From pipeline automation to autonomous validation.* Cell Genomics **6**, 101305. <https://doi.org/10.1016/j.xgen.2026.101305>
 - Agentic map-reduce as the scaling pattern: [Devin, *Agentic MapReduce*](https://devin.ai/blog/agentic-map-reduce)
-- User guide: [`docs/agent.mdx`](../docs/agent.mdx)
-- Design: [`adr/specs/agent-design.md`](specs/agent-design.md) covers the primitive: lowering to a task, typed I/O, tools, skills, modules, configuration, caching and lineage
-- Design: [`adr/specs/agent-runners.md`](specs/agent-runners.md) covers the `AgentRunner` SPI, runner selection, and the two shipped harnesses
-- Design: [`adr/specs/agent-rpc.md`](specs/agent-rpc.md) covers canonical task execution, the driver broker protocol, transport security and scalability
-- Examples: [`examples/agents/`](../examples/agents) (`validate.sh` runs them end to end; `-r` also checks that each replays from cache on `-resume`)
+- User guide: [`docs/agent.mdx`](../agent.mdx)
+- Design: [`specs/260801-agent-primitive/agent-design.md`](../specs/260801-agent-primitive/agent-design.md) covers the primitive: lowering to a task, typed I/O, tools, skills, modules, configuration, caching and lineage
+- Design: [`specs/260801-agent-primitive/agent-runners.md`](../specs/260801-agent-primitive/agent-runners.md) covers the `AgentRunner` SPI, runner selection, and the two shipped harnesses
+- Design: [`specs/260801-agent-primitive/agent-rpc.md`](../specs/260801-agent-primitive/agent-rpc.md) covers canonical task execution, the driver broker protocol, transport security and scalability
+- Examples: [`examples/agents/`](../../examples/agents) (`validate.sh` runs them end to end; `-r` also checks that each replays from cache on `-resume`)
 - Related ADRs: [`record types`](20260306-record-types.md), [`module system`](20251114-module-system.md), [`data lineage`](20250508-data-lineage.md), [`type system`](20260501-type-system.md)
 - Pattern this design inverts: [`colbyford/nf-foundry-workflow`](https://github.com/colbyford/nf-foundry-workflow), where Foundry agents call Seqera MCP to launch Nextflow pipelines
 - Runtime engine: [`langchain4j`](https://docs.langchain4j.dev/tutorials/agents)

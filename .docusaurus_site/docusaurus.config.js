@@ -47,7 +47,7 @@ export default async function createConfigAsync() {
         includeBlog: false,
         excludeImports: true,
         removeDuplicateHeadings: true,
-        ignoreFiles: ['**/tags', '**/tags/**'],
+        ignoreFiles: ['**/tags', '**/tags/**', 'adr/**', 'specs/**'],
         processingBatchSize: 50,
       }],
       [
@@ -62,6 +62,9 @@ export default async function createConfigAsync() {
             "**/_*/**",
             "**/*.test.{js,jsx,ts,tsx}",
             "**/__tests__/**",
+            // design records for contributors, not user docs
+            "adr/**",
+            "specs/**",
           ],
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,

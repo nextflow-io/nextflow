@@ -1934,7 +1934,6 @@ class TaskProcessor {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
-        def fault = null
         try {
             // -- verify task exit status
             if( task.error )
@@ -1954,14 +1953,28 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error, handler.getTraceRecord())
-            log.trace "Task fault (3): $fault"
+            return finalizeFailedTask(handler, error)
         }
 
-        // -- finalize the task
+        finalizeTask0(task)
+        return null
+    }
+
+    /**
+     * Finalize a task that failed with the given error, unless
+     * the task is retried according to its error strategy
+     *
+     * @param handler The {@link TaskHandler} of the failed task
+     * @param error The error raised by the task
+     * @return The error strategy or {@link TaskFault} returned by {@link #resumeOrDie}
+     */
+    @PackageScope
+    final finalizeFailedTask( TaskHandler handler, Throwable error ) {
+        final task = handler.task
+        final fault = resumeOrDie(task, error, handler.getTraceRecord())
+        log.trace "Task fault (3): $fault"
         if( fault != ErrorStrategy.RETRY )
             finalizeTask0(task)
-
         return fault
     }
 
