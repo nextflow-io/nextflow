@@ -1,0 +1,134 @@
+name: Windows CI
+# Verify that Nextflow runs natively on Windows, executing the tasks with Docker.
+#
+# GitHub-hosted Windows runners cannot run Docker Desktop, so the tasks run in a
+# Docker Engine installed in a WSL2 distribution, through the `docker` shim in
+# validation/windows/docker-shim, which maps the Windows paths of bind mounts as
+# Docker Desktop does. See validation/windows/test.ps1 for the checks.
+
+on:
+  push:
+    paths:
+      - '.github/workflows/windows.yml'
+      - 'nextflow.ps1'
+      - 'validation/windows/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/container/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/executor/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/file/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/processor/**'
+      - 'modules/nf-commons/src/main/nextflow/file/**'
+      - 'modules/nf-commons/src/main/nextflow/util/**'
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - '.github/workflows/windows.yml'
+      - 'nextflow.ps1'
+      - 'validation/windows/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/container/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/executor/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/file/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/processor/**'
+      - 'modules/nf-commons/src/main/nextflow/file/**'
+      - 'modules/nf-commons/src/main/nextflow/util/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows / Docker
+    # branches of this repository are tested on push, pull requests only for forks
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      NXF_ANSI_LOG: false
+      WSL_DISTRO: nxf
+      TEST_DIR: C:\nxf-windows-test
+
+    steps:
+      # check out with Windows line endings, as users do, to verify that task scripts are normalised
+      - name: Use Windows line endings
+        run: git config --global core.autocrlf true
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
+        with:
+          java-version: 21
+          distribution: 'corretto'
+          architecture: x64
+          cache: gradle
+
+      - name: Build
+        run: ./gradlew.bat :nf-cli-v1:shadowJar
+
+      - name: Unit tests
+        run: ./gradlew.bat :nextflow:test --tests 'nextflow.executor.local.WindowsHostTest'
+
+      - name: Setup Docker in WSL2
+        run: |
+          wsl --version
+          $rootfs = Join-Path $env:RUNNER_TEMP 'ubuntu.rootfs.tar.gz'
+          Invoke-WebRequest -UseBasicParsing -OutFile $rootfs -Uri 'https://cloud-images.ubuntu.com/wsl/releases/24.04/current/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz'
+          wsl --import $env:WSL_DISTRO (Join-Path $env:RUNNER_TEMP 'wsl') $rootfs --version 2
+          if( $LASTEXITCODE ) { throw "Unable to create the WSL2 distribution" }
+          wsl -d $env:WSL_DISTRO -u root -- bash -c 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io > /dev/null'
+          if( $LASTEXITCODE ) { throw "Unable to install Docker" }
+          # the background wsl.exe process keeps the distribution and the docker daemon running
+          Start-Process -FilePath wsl.exe -ArgumentList '-d', $env:WSL_DISTRO, '-u', 'root', '--', 'dockerd' `
+            -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP 'dockerd.out') `
+            -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'dockerd.log')
+          for( $i = 0; $i -lt 60; $i++ ) {
+            wsl -d $env:WSL_DISTRO -u root -- docker info --format '{{.ServerVersion}} {{.OSType}}' 2> $null
+            if( $LASTEXITCODE -eq 0 ) { break }
+            Start-Sleep -Seconds 2
+          }
+          if( $LASTEXITCODE ) { Get-Content (Join-Path $env:RUNNER_TEMP 'dockerd.log'); throw "Docker daemon is not available" }
+
+      - name: Setup docker shim
+        run: |
+          go version
+          $shim = Join-Path $env:RUNNER_TEMP 'docker-shim'
+          Push-Location validation/windows/docker-shim
+          go test ./...
+          if( $LASTEXITCODE ) { throw "docker shim tests failed" }
+          go build -o (Join-Path $shim 'docker.exe') .
+          if( $LASTEXITCODE ) { throw "Unable to build the docker shim" }
+          Pop-Location
+          Add-Content -Path $env:GITHUB_PATH -Value $shim
+
+      - name: Check docker
+        run: |
+          (Get-Command docker).Source
+          docker version
+          docker run --rm -v "$($env:RUNNER_TEMP):/data" public.ecr.aws/docker/library/ubuntu:24.04 ls /data
+          if( $LASTEXITCODE ) { throw "Unable to run a Linux container" }
+
+      - name: End-to-end test
+        run: |
+          $jar = (Get-Item modules/nf-cli-v1/build/libs/nf-cli-v1-*-one.jar).FullName
+          ./validation/windows/test.ps1 -Jar $jar -WorkDir $env:TEST_DIR
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
+        with:
+          name: windows-logs
+          include-hidden-files: true
+          if-no-files-found: ignore
+          path: |
+            ${{ env.TEST_DIR }}/.nextflow.log*
+            ${{ env.TEST_DIR }}/work/**/.command.*
+            ${{ runner.temp }}/dockerd.log
+            modules/nextflow/build/reports/tests/test/

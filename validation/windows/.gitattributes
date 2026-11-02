@@ -1,0 +1,6 @@
+# Scripts and data used inside the Linux task containers keep Unix line endings.
+# The pipeline script is intentionally left to the platform default (CRLF on
+# Windows) to check that Nextflow normalises the line endings of task scripts.
+bin/* text eol=lf
+data/** text eol=lf
+*.sh text eol=lf
