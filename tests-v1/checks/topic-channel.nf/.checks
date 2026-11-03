@@ -1,0 +1,15 @@
+#
+# initial run
+#
+echo Initial run
+$NXF_RUN
+
+cmp versions.txt .expected || false
+
+#
+# Resumed run
+#
+echo Resumed run
+$NXF_RUN -resume
+
+cmp versions.txt .expected || false

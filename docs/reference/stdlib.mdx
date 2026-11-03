@@ -1,0 +1,29 @@
+---
+title: Standard library
+description: Overview of the Nextflow standard library, including the built-in namespaces, the standard types, and the available Groovy and Java classes.
+---
+
+# Standard library
+
+The Nextflow standard library defines the constants, functions, and types that are available to every Nextflow script. Namespaces group the constants and functions that Nextflow makes available at runtime, while types describe the values that flow through a pipeline.
+
+## Standard library reference
+
+| Page | Description |
+| ---- | ----------- |
+| [Namespaces][stdlib-namespaces-page] | The built-in namespaces, including the global namespace and the `channel`, `log`, `nextflow`, and `workflow` namespaces. |
+| [Types][stdlib-types-page] | The standard types, including primitive types, collections, records, and dataflow types. |
+| [Groovy and Java classes][stdlib-groovy-page] | The Groovy and Java classes that are available to Nextflow at runtime. |
+
+## See also
+
+- [Semantics][semantics-values]: How Nextflow evaluates values, operators, and expressions that use these types.
+- [Static typing][static-typing-page]: How to annotate pipeline code with standard types so that the language server can validate it.
+- [Syntax reference][syntax-page]: The formal grammar for type annotations.
+
+[semantics-values]: ./semantics#values
+[static-typing-page]: ../static-typing
+[stdlib-groovy-page]: ./stdlib-groovy
+[stdlib-namespaces-page]: ./stdlib-namespaces
+[stdlib-types-page]: ./stdlib-types
+[syntax-page]: ./syntax

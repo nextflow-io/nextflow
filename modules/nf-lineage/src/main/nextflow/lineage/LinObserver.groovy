@@ -1,0 +1,652 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.lineage
+
+import nextflow.NextflowMeta
+import nextflow.extension.FilesEx
+import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpecFactory
+import nextflow.module.ModuleStorage
+
+import static nextflow.lineage.fs.LinPath.*
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+import java.time.OffsetDateTime
+
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.Session
+import nextflow.agent.AgentTaskInfo
+import nextflow.lineage.model.v1beta1.AgentRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import nextflow.file.FileHelper
+import nextflow.file.FileHolder
+import nextflow.processor.TaskHasher
+import nextflow.processor.TaskRun
+import nextflow.script.PlatformMetadata
+import nextflow.script.ScriptMeta
+import nextflow.script.dsl.Types
+import nextflow.script.params.BaseParam
+import nextflow.script.params.CmdEvalParam
+import nextflow.script.params.DefaultInParam
+import nextflow.script.params.EachInParam
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.FileOutParam
+import nextflow.script.params.InParam
+import nextflow.script.params.OutParam
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessOutput
+import nextflow.script.types.Record
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.util.CacheHelper
+import nextflow.util.PathNormalizer
+import nextflow.util.SecretHelper
+import nextflow.util.TestOnly
+
+/**
+ * Observer to write the generated workflow metadata in a lineage store.
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class LinObserver implements TraceObserverV2 {
+    private static Set<String> workflowMetadataPropertiesToRemove = Set.of(
+        "completed", "duration", "exitStatus", "errorMessage", "errorReport", "stats", "success" // Only existing at the end
+    )
+    private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
+        (StdOutParam)  : "stdout",
+        (StdInParam)   : "stdin",
+        (FileInParam)  : "path",
+        (FileOutParam) : "path",
+        (ValueInParam) : "val",
+        (ValueOutParam): "val",
+        (EnvInParam)   : "env",
+        (EnvOutParam)  : "env",
+        (CmdEvalParam) : "eval",
+        (EachInParam)  : "each"
+    ]
+
+    private String executionHash
+    private LinStore store
+    private Session session
+    private WorkflowOutput workflowOutput
+    private Map<String,String> outputsStoreDirLid = new HashMap<String,String>(10)
+    private PathNormalizer normalizer
+
+    LinObserver(Session session, LinStore store) {
+        this.session = session
+        this.store = store
+    }
+
+    @TestOnly
+    String getExecutionHash() { executionHash }
+
+    @TestOnly
+    String setExecutionHash(String hash) { this.executionHash = hash }
+
+    @TestOnly
+    String setNormalizer(PathNormalizer normalizer) {  this.normalizer = normalizer }
+
+    @Override
+    void onFlowBegin() {
+        normalizer = new PathNormalizer(session.workflowMetadata)
+        executionHash = storeWorkflowRun(normalizer)
+        final executionUri = asUriString(executionHash)
+        workflowOutput = new WorkflowOutput(
+            OffsetDateTime.now(),
+            executionUri,
+            new LinkedList<Parameter>()
+        )
+        this.store.getHistoryLog().write(session.runName, session.uniqueId, executionUri)
+    }
+
+    @Override
+    void onFlowComplete() {
+        if(workflowOutput?.output ) {
+            workflowOutput.createdAt = OffsetDateTime.now()
+            final key = executionHash + '#output'
+            this.store.save(key, workflowOutput)
+        }
+    }
+
+    protected Collection<Path> allScriptFiles() {
+        return ScriptMeta.allScriptNames().values()
+    }
+
+    protected List<DataPath> collectScriptDataPaths(PathNormalizer normalizer) {
+        final allScripts = allScriptFiles().sort()
+        final result = new ArrayList<DataPath>(allScripts.size()+1)
+        // the main script
+        result.add( new DataPath(
+            normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize()),
+            Checksum.of(session.workflowMetadata.scriptId, "nextflow", CacheHelper.HashMode.DEFAULT())
+        ) )
+
+        // all other scripts
+        for (Path it: allScripts) {
+            if( it==null || it == session.workflowMetadata.scriptFile )
+                continue
+            final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
+            result.add(dataPath)
+        }
+        return result
+    }
+
+    protected String storeWorkflowRun(PathNormalizer normalizer) {
+        // create the workflow object holding script files and repo tracking info
+        final workflow = new Workflow(
+            collectScriptDataPaths(normalizer),
+            session.workflowMetadata.repository,
+            session.workflowMetadata.commitId
+        )
+        // create the workflow run main object
+        final value = new WorkflowRun(
+            workflow,
+            session.uniqueId.toString(),
+            session.runName,
+            getNormalizedParams(session.params.toPlainMap(), normalizer),
+            SecretHelper.hideSecrets(session.config.deepClone()) as Map,
+            collectWorkflowMetadata(normalizer)
+        )
+        final executionHash = CacheHelper.hasher(value).hash().toString()
+        store.save(executionHash, value)
+        return executionHash
+    }
+
+    protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer) {
+        final normalizedParams = new LinkedList<Parameter>()
+        for( Map.Entry<String,Object> entry : params ) {
+            final key = entry.key
+            final val = entry.value
+            normalizedParams.add( new Parameter( getParameterType(val), key, normalizeValue(val, normalizer) ) )
+        }
+        return normalizedParams
+    }
+
+    @Override
+    void onTaskComplete(TaskEvent event) {
+        final task = event.handler.task
+        if( task.failed || task.aborted )
+            return
+        storeTaskInfo(task)
+    }
+
+    protected void storeTaskInfo(TaskRun task) {
+        // store the task run entry
+        storeTaskRun(task, normalizer)
+        // store all task results
+        storeTaskResults(task, normalizer)
+    }
+
+    protected String storeTaskResults(TaskRun task, PathNormalizer normalizer) {
+        final outputParams = getNormalizedTaskOutputs(task, normalizer)
+        final value = new TaskOutput( asUriString(task.hash.toString()), asUriString(executionHash), OffsetDateTime.now(), outputParams )
+        final key = task.hash.toString() + '#output'
+        store.save(key,value)
+        return key
+    }
+
+    private List<Parameter> getNormalizedTaskOutputs(TaskRun task, PathNormalizer normalizer) {
+        final outputs = task.getOutputs()
+        final outputParams = new LinkedList<Parameter>()
+        for( Map.Entry<OutParam,Object> entry : outputs ) {
+            manageTaskOutputParameter(entry.key, outputParams, entry.value, task, normalizer)
+        }
+        return outputParams
+    }
+
+    private void manageTaskOutputParameter(OutParam key, LinkedList<Parameter> outputParams, value, TaskRun task, PathNormalizer normalizer) {
+        if (key instanceof FileOutParam) {
+            outputParams.add(new Parameter(getParameterType(key), key.name, manageFileOutParam(value, task)))
+        }
+        else if (key instanceof ProcessOutput) {
+            outputParams.add(new Parameter(getTypedParameterType(key.getType(), value), key.name, manageTypedOutput(value, task, normalizer)))
+        }
+        else {
+            outputParams.add(new Parameter(getParameterType(key), key.name, normalizeValue(value, normalizer)))
+        }
+    }
+
+    private static Object normalizeValue(Object value, PathNormalizer normalizer) {
+        if (value instanceof Path)
+            return normalizer.normalizePath((Path)value)
+        else if (value instanceof CharSequence)
+            return normalizer.normalizePath(value.toString())
+        else
+            return value
+    }
+
+    private Object manageTypedOutput(Object value, TaskRun task, PathNormalizer normalizer) {
+        return mapPaths(value) { Path path ->
+            getTaskRelative0(task, path.toAbsolutePath()) != null
+                ? asUriString(storeTaskOutput(task, path))
+                : manageInputPath(path, normalizer)
+        }
+    }
+
+    private Object manageInputPath(Path path, PathNormalizer normalizer) {
+        return getSourceReference(path) ?: new DataPath(normalizer.normalizePath(path), Checksum.ofNextflow(path))
+    }
+
+    /**
+     * Apply {@code fn} to every path in a typed value, recursing into collections, tuples and records.
+     */
+    private static Object mapPaths(Object value, Closure<Object> fn) {
+        if( value instanceof Path )
+            return fn.call(value)
+        if( value instanceof Collection )
+            return value.collect { el -> mapPaths(el, fn) }
+        // also covers records (RecordMap is a Map)
+        if( value instanceof Map )
+            return value.collectEntries { k, v -> [k, mapPaths(v, fn)] }
+        return value
+    }
+
+    private Object manageFileOutParam(Object value, TaskRun task) {
+        if (value == null) {
+            log.debug "Unexpected lineage File output value null"
+            return null
+        }
+        if (value instanceof Path) {
+            return asUriString(storeTaskOutput(task, (Path) value))
+        }
+        if (value instanceof Collection) {
+            final files = new LinkedList<String>()
+            for (final it : value) {
+                files.add( asUriString(storeTaskOutput(task, (Path)it)) )
+            }
+            return files
+        }
+        // unexpected task output
+        throw new IllegalArgumentException("Unexpected output [${value.getClass().getName()}] '${value}' for task '${task.name}'")
+    }
+
+    protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
+        // an agent lowers to an ordinary task, so it lands here too - but its identity is the
+        // model/tools/skills it ran with, not a script, and it is recorded as an AgentRun
+        final agentInfo = task.config?.get(AgentTaskInfo.CONFIG_KEY)
+        final value = agentInfo instanceof AgentTaskInfo
+            ? newAgentRun(task, agentInfo, normalizer)
+            : newTaskRun(task, normalizer)
+        // store in the underlying persistence
+        final key = task.hash.toString()
+        store.save(key, value)
+        return key
+    }
+
+    protected AgentRun newAgentRun(TaskRun task, AgentTaskInfo info, PathNormalizer normalizer) {
+        // the checksum covers the canonical agent identity source - the same text that feeds the
+        // resume cache key. NOTE: task.script is deliberately NOT recorded; on the RPC runner path
+        // it embeds the per-invocation capability token, which must never be persisted.
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        return new AgentRun(
+            session.uniqueId.toString(),
+            task.getName(),
+            codeChecksum,
+            info.runner,
+            info.model,
+            task.context?.get('$agentResolvedModel') as String,
+            info.instruction,
+            info.goal,
+            info.promptTemplate,
+            info.maxIterations,
+            info.outputSchema,
+            info.tools,
+            info.skills,
+            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.isContainerEnabled() ? task.getContainerFingerprint() : null,
+            asUriString(executionHash),
+            getTaskModuleId(task)
+        )
+    }
+
+    protected nextflow.lineage.model.v1beta1.TaskRun newTaskRun(TaskRun task, PathNormalizer normalizer) {
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        return new nextflow.lineage.model.v1beta1.TaskRun(
+            session.uniqueId.toString(),
+            task.getName(),
+            codeChecksum,
+            task.script,
+            getTaskOutputEvals(task),
+            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.isContainerEnabled() ? task.getContainerFingerprint() : null,
+            normalizer.normalizePath(task.getCondaEnv()),
+            normalizer.normalizePath(task.getSpackEnv()),
+            task.config?.getArchitecture()?.toString(),
+            getTaskGlobalVars(task),
+            getTaskBinEntries(task).collect { Path p -> new DataPath(
+                normalizer.normalizePath(p.normalize()),
+                Checksum.ofNextflow(p) )
+            },
+            asUriString(executionHash),
+            getTaskModuleId(task)
+        )
+    }
+
+    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+        return new TaskHasher(task).getTaskGlobalVars()
+    }
+
+    protected String getTaskModuleId(TaskRun task) {
+        final ownerScript = task.processor?.getOwnerScript()
+        if( !ownerScript )
+            return null
+
+        final scriptMeta = ScriptMeta.get(ownerScript)
+        if( !scriptMeta || !scriptMeta.isModule() )
+            return null
+        return extractModuleInfo(scriptMeta.getScriptPath())
+    }
+
+    @Memoized
+    protected String extractModuleInfo(Path scriptPath) {
+        if( !scriptPath )
+            return null
+        final moduleDir = scriptPath.getParent()
+        if( !moduleDir )
+            return null
+        final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        // presence of the `.module-info` marker is how we identify a directory as
+        // a Nextflow-managed remote module (vs. any directory that contains a meta.yml)
+        final infoPath = moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)
+        if( !manifestPath.exists() || !infoPath.exists() )
+            return null
+        try {
+            final spec = ModuleSpecFactory.fromYaml(manifestPath)
+            if( !spec.name || !spec.version ) {
+                log.debug("Incomplete module manifest '${manifestPath.toUriString()}': missing name or version")
+                return null
+            }
+            return "${spec.name}@${spec.version}".toString()
+        }
+        catch( Exception e ) {
+            log.warn("Unable to read module manifest '${manifestPath.toUriString()}': ${e.message}")
+            return null
+        }
+    }
+
+    protected List<Path> getTaskBinEntries(TaskRun task) {
+        return new TaskHasher(task).getTaskBinEntries(task.source)
+    }
+
+    protected Map<String,String> getTaskOutputEvals(TaskRun task) {
+        final outEvals = task.getOutputEvals()
+        return outEvals ? new LinkedHashMap<String,String>(outEvals) : null
+    }
+
+    protected String storeTaskOutput(TaskRun task, Path path) {
+        try {
+            final attrs = readAttributes(path)
+            final key = getTaskOutputKey(task, path)
+            final checksum = Checksum.ofNextflow(path)
+            final value = new FileOutput(
+                path.toUriString(),
+                checksum,
+                asUriString(task.hash.toString()),
+                asUriString(executionHash),
+                asUriString(task.hash.toString()),
+                attrs.size(),
+                LinUtils.toDate(attrs?.creationTime()),
+                LinUtils.toDate(attrs?.lastModifiedTime()))
+            store.save(key, value)
+            return key
+        } catch (Throwable e) {
+            log.warn("Unexpected error storing lineage output '${path.toUriString()}' for task '${task.name}'", e)
+            return path.toUriString()
+        }
+    }
+
+    protected String getTaskOutputKey(TaskRun task, Path path) {
+        final rel = getTaskRelative(task, path)
+        return task.hash.toString() + SEPARATOR + rel
+    }
+
+    protected String getWorkflowOutputKey(Path target) {
+        final rel = getWorkflowRelative(target)
+        return executionHash + SEPARATOR + rel
+    }
+
+    protected String getTaskRelative(TaskRun task, Path path) {
+        if (path.isAbsolute()) {
+            final rel = getTaskRelative0(task, path)
+            if (rel)
+                return rel
+            throw new IllegalArgumentException("Cannot access the relative path for output '${path.toUriString()}' and task '${task.name}'")
+        }
+        //Check if contains workdir or storeDir
+        final rel = getTaskRelative0(task, path.toAbsolutePath())
+        if (rel) return rel
+        if (path.normalize().getName(0).toString() == "..")
+            throw new IllegalArgumentException("Cannot access the relative path for output '${path.toUriString()}' and task '${task.name}'" )
+        return path.normalize().toString()
+    }
+
+    private String getTaskRelative0(TaskRun task, Path path) {
+        final workDirAbsolute = task.workDir.toAbsolutePath()
+        if (path.startsWith(workDirAbsolute)) {
+            return workDirAbsolute.relativize(path).toString()
+        }
+        //If task output is not in the workDir check if output is stored in the task's storeDir
+        final storeDir = task.getConfig()?.getStoreDir()?.toAbsolutePath()
+        if( storeDir && path.startsWith(storeDir) ) {
+            final rel = storeDir.relativize(path)
+            //If output stored in storeDir, keep the path in case it is used as workflow output
+            this.outputsStoreDirLid.put(path.toString(), asUriString(task.hash.toString(),rel.toString()))
+            return rel
+        }
+        return null
+    }
+
+    protected BasicFileAttributes readAttributes(Path path) {
+        return Files.readAttributes(path, BasicFileAttributes)
+    }
+
+    @Override
+    void onFilePublish(FilePublishEvent event) {
+        try {
+            final checksum = Checksum.ofNextflow(event.target)
+            final key = getWorkflowOutputKey(event.target)
+            final sourceReference = event.source
+                ? getSourceReference(event.source)
+                : asUriString(executionHash)
+            final attrs = readAttributes(event.target)
+            final value = new FileOutput(
+                event.target.toUriString(),
+                checksum,
+                sourceReference,
+                asUriString(executionHash),
+                null,
+                attrs.size(),
+                LinUtils.toDate(attrs?.creationTime()),
+                LinUtils.toDate(attrs?.lastModifiedTime()),
+                event.labels)
+            store.save(key, value)
+        }
+        catch (OutputRelativePathException ignored) {
+            log.warn1("Lineage was not recorded for published file '${event.target.toUriString()}' because it is outside the output directory")
+        }
+        catch (Throwable e) {
+            log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
+        }
+    }
+
+    String getSourceReference(Path source) {
+        final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
+        if (hash) {
+            // relativize against the directory the file is really in, NOT one rebuilt from the hash:
+            // getWorkFolder always yields the unsuffixed `<2hex>/<30hex>`, so for an output of a
+            // retried attempt (`<30hex>-N`) that would produce `../<30hex>-N/out`, which LinPath does
+            // not collapse -- a reference to a LID that was never stored. The producing side
+            // (getTaskRelative) already relativizes against the real `task.workDir`, so this keeps
+            // the two halves emitting the same `lid://<hash>/<rel>`.
+            final target = FileHelper.getTaskDirFromPath(source, session.workDir).relativize(source).toString()
+            return asUriString(hash.toString(), target)
+        }
+        final storeDirReference = outputsStoreDirLid.get(source.toString())
+        return storeDirReference ? asUriString(storeDirReference) : null
+    }
+
+    @Override
+    void onWorkflowOutput(WorkflowOutputEvent event) {
+        final type = getParameterType(event.value)
+        final value = convertPathsToLidReferences(event.index ?: event.value)
+        workflowOutput.output.add(new Parameter(type, event.name, value))
+    }
+
+    protected static String getParameterType(Object param) {
+        if( param instanceof BaseParam )
+            return taskParamToValue.get(param.class)
+        // return generic types
+        if( param instanceof Path )
+            return Path.simpleName
+        if( param instanceof CharSequence )
+            return String.simpleName
+        if( param instanceof Collection )
+            return Collection.simpleName
+        if( param instanceof Map )
+            return Map.simpleName
+        if( param==null ) {
+            log.debug "Unexpected lineage param type null"
+            return null
+        }
+        return param.class.simpleName
+    }
+
+    /**
+     * Declared type name of a typed param, or the value type when it is declared as Object (e.g. an unnamed output).
+     */
+    protected static String getTypedParameterType(Class type, Object value) {
+        if( (type == null || type == Object) && value != null )
+            return value instanceof Record ? Types.getName(Record) : getParameterType(value)
+        return Types.getName(type ?: Object)
+    }
+
+    private Object convertPathsToLidReferences(Object value) {
+        if( value instanceof Path ) {
+            try {
+                final key = getWorkflowOutputKey(value)
+                return asUriString(key)
+            } catch (Throwable e) {
+                //Workflow output key not found
+                return value
+            }
+        }
+        if( value instanceof Collection ) {
+            return value.collect { el -> convertPathsToLidReferences(el) }
+        }
+        if( value instanceof Map ) {
+            return value
+                .findAll { k, v -> v != null }
+                .collectEntries { k, v -> Map.entry(k, convertPathsToLidReferences(v)) }
+        }
+        return value
+    }
+
+    /**
+     * Relativizes a path from the workflow's output dir.
+     *
+     * @param path Path to relativize
+     * @return Path String with the relative path
+     * @throws IllegalArgumentException
+     */
+    protected String getWorkflowRelative(Path path) throws IllegalArgumentException{
+        // the output directory is disabled when a named workflow is executed directly
+        final outputDirAbs = session.outputDir?.toAbsolutePath()
+        if (path.isAbsolute()) {
+            if (outputDirAbs && path.startsWith(outputDirAbs)) {
+                return outputDirAbs.relativize(path).toString()
+            }
+            log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
+            throw new OutputRelativePathException()
+        }
+        final pathAbs = path.toAbsolutePath()
+        if (outputDirAbs && pathAbs.startsWith(outputDirAbs)) {
+            return outputDirAbs.relativize(pathAbs).toString()
+        }
+        if (path.normalize().getName(0).toString() == "..") {
+            log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
+            throw new OutputRelativePathException()
+        }
+        return path.normalize().toString()
+    }
+
+    protected List<Parameter> manageTaskInputParameters(Map<InParam, Object> inputs, PathNormalizer normalizer) {
+        List<Parameter> managedInputs = new LinkedList<Parameter>()
+        inputs.forEach { param, value ->
+            if( param instanceof FileInParam )
+                managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
+            else if( param instanceof ProcessInput )
+                managedInputs.add( new Parameter( getTypedParameterType(param.getType(), value), param.name, mapPaths(value) { Path p -> manageInputPath(p, normalizer) } ) )
+            else if( !(param instanceof DefaultInParam) )
+                managedInputs.add( new Parameter( getParameterType(param), param.name, value) )
+        }
+        return managedInputs
+    }
+
+    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer) {
+        final paths = new LinkedList<Object>();
+        for( FileHolder it : files ) {
+            paths.add(manageInputPath(it.sourcePath ?: it.storePath, normalizer))
+        }
+        return paths
+    }
+
+    /**
+     * Collects lineage data from workflow metadata applying the following transformations:
+     *  - Normalizes paths against the original remote URL, or work directory and convert to URI strings
+     *  - Remove transient properties (completed, duration, exitStatus, errorMessage, errorReport, stats, success)
+     *  - Convert Nextflow metadata as Json Map
+     * @param normalizer
+     * @return Map with workflow metadata or null when error
+     */
+    private Map collectWorkflowMetadata(PathNormalizer normalizer) {
+        try {
+            def metadata = session.workflowMetadata.toMap()
+                .collectEntries { it.value instanceof Path ? [it.key, FilesEx.toUriString(it.value as Path) ] : [it.key, it.value] }
+            metadata.removeAll {it.key.toString() in workflowMetadataPropertiesToRemove }
+            if( metadata.containsKey("nextflow") )
+                metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
+            if( metadata.containsKey("configFiles") )
+                metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
+            return metadata
+        } catch( Throwable e) {
+            log.debug("Error creating metadata", e)
+            return null
+        }
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.trace
@@ -30,6 +29,7 @@ import java.time.format.DateTimeFormatter
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.exception.AbortOperationException
+import nextflow.util.TestOnly
 
 /**
  * Helper methods for trace and observer feature
@@ -39,7 +39,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class TraceHelper {
 
-    /* only for testing -- do not use */
+    @TestOnly
     static protected String testTimestampFmt
 
     static public final Instant launchTimestamp = Instant.now()

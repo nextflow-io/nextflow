@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,21 @@
 
 package nextflow.trace
 
+import static nextflow.util.LoggerHelper.*
+import static org.fusesource.jansi.Ansi.*
+
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
-import nextflow.processor.TaskHandler
+import nextflow.SysEnv
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
+import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
-import static nextflow.util.LoggerHelper.isHashLogPrefix
-import static org.fusesource.jansi.Ansi.Attribute
-import static org.fusesource.jansi.Ansi.Color
-import static org.fusesource.jansi.Ansi.ansi
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -36,7 +39,7 @@ import static org.fusesource.jansi.Ansi.ansi
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AnsiLogObserver implements TraceObserver {
+class AnsiLogObserver implements TraceObserverV2, LogObserver {
 
     static final private String NEWLINE = '\n'
 
@@ -85,17 +88,40 @@ class AnsiLogObserver implements TraceObserver {
 
     private volatile int cols = 80
 
+    private volatile int rows = 24
+
     private long startTimestamp
 
     private long endTimestamp
 
     private long lastWidthReset
 
-    private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
+    private Boolean enableSummary = SysEnv.get('NXF_ANSI_SUMMARY') as Boolean
 
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
     private WorkflowStatsObserver statsObserver
+
+    protected static Integer getEnvTerminalWidth(boolean tty=System.console()!=null) {
+        // COLUMNS is only a fallback when there's no terminal to query: it doesn't track resizes and
+        // the launcher exports 80 when `tput` cannot read the tty, causing wrapped lines to be miscounted
+        // ponytail: JDK 22-24 return a console even without a tty, COLUMNS is then ignored (width 80)
+        return parseEnvTerminalWidth('TERMINAL_WIDTH') ?: (tty ? null : parseEnvTerminalWidth('COLUMNS'))
+    }
+
+    private static Integer parseEnvTerminalWidth(String name) {
+        final env = SysEnv.get(name)
+        if( !env )
+            return null
+        try {
+            final result = Integer.parseInt(env)
+            return result>0 ? result : null
+        }
+        catch( NumberFormatException e ) {
+            // do not log error to avoid catch-22 logging event (this class renders logging events)
+            return null
+        }
+    }
 
     private void markModified() {
         changeTimestamp = System.currentTimeMillis()
@@ -103,7 +129,7 @@ class AnsiLogObserver implements TraceObserver {
 
     boolean getStarted() { started }
 
-    boolean  getStopped() { stopped }
+    boolean getStopped() { stopped }
 
     private boolean hasProgressChanges() {
         final long progress = statsObserver.changeTimestamp ?: 0
@@ -116,12 +142,14 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendInfo(String message) {
-        if( message==null )
+        if( message==null || message.isEmpty() )
             return
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
-        
+        if( message.startsWith('[skipping]') )
+            return
+
         if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
@@ -179,7 +207,7 @@ class AnsiLogObserver implements TraceObserver {
                 wait(200)
             }
         }
-        // 
+        //
         final stats = statsObserver.getStats()
         renderProgress(stats)
         renderSummary(stats)
@@ -187,7 +215,7 @@ class AnsiLogObserver implements TraceObserver {
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
         int BLANKS=0
-        def itr = allMessages.iterator()
+        final itr = allMessages.iterator()
         while( itr.hasNext() ) {
             final event = itr.next()
 
@@ -225,7 +253,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String getExecutorName(String key) {
         session.getExecutorFactory().getDisplayName(key)
     }
-    
+
     protected void renderExecutors(Ansi term) {
         int count=0
         def line = ''
@@ -235,20 +263,21 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         if( count ) {
-            term.a("executor > " + line)
+            term.a(Attribute.INTENSITY_FAINT).a("executor > " + line).reset()
             term.newline()
         }
     }
 
     protected void renderProcesses(Ansi term, WorkflowStats stats) {
-        def processes = stats.getProcesses()
+        final processes = stats.getProcesses()
         if( !processes || (!session.isSuccess() && errors && !rendered) ) {
             // prevent to show a useless process progress if there's an error
             // on startup and the execution is terminated
             return
         }
 
-        cols = TerminalFactory.get().getWidth()
+        cols = getEnvTerminalWidth() ?: TerminalFactory.get().getWidth()
+        rows = TerminalFactory.get().getHeight()
 
         // calc max width
         final now = System.currentTimeMillis()
@@ -263,9 +292,25 @@ class AnsiLogObserver implements TraceObserver {
             lastWidthReset = now
 
         // render line
+        def renderedLines = 0
+        def skippedLines = 0
         for( ProgressRecord entry : processes ) {
-            term.a(line(entry))
-            term.newline()
+            // Only show line if we have space in the visible terminal area
+            // or if the process has some submitted tasks
+            if( renderedLines <= rows - 5 || entry.getTotalCount() > 0 ) {
+                term.a(line(entry))
+                term.newline()
+                renderedLines += 1
+            }
+            // Process with no active tasks and we're out of screen space, skip
+            else {
+                skippedLines += 1
+            }
+        }
+        // Tell the user how many processes without active tasks were hidden
+        if( skippedLines > 0 ) {
+            term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a("Plus ").bold().a(skippedLines).reset()
+            term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a(" more processes waiting for tasks…").reset().newline()
         }
         rendered = true
     }
@@ -280,7 +325,7 @@ class AnsiLogObserver implements TraceObserver {
 
     synchronized protected void renderProgress(WorkflowStats stats) {
         if( printedLines )
-            AnsiConsole.out.println ansi().cursorUp(printedLines+gapLines+1)
+            AnsiConsole.err.println ansi().cursorUp(printedLines+gapLines+1)
 
         // -- print processes
         final term = ansi()
@@ -293,14 +338,14 @@ class AnsiLogObserver implements TraceObserver {
 
         final str = term.toString()
         final count = printAndCountLines(str)
-        AnsiConsole.out.flush()
+        AnsiConsole.err.flush()
 
         // usually the gap should be negative because `count` should be greater or equal
         // than the previous `printedLines` value (the output should become longer)
         // otherwise cleanup the remaining lines
         gapLines = printedLines > count ? printedLines-count : 0
         if( gapLines>0 ) for(int i=0; i<gapLines; i++ )
-            AnsiConsole.out.print(ansi().eraseLine().newline())
+            AnsiConsole.err.print(ansi().eraseLine().newline())
         // at the end update the value of printed lines
         printedLines = count
     }
@@ -308,10 +353,34 @@ class AnsiLogObserver implements TraceObserver {
     protected int printAndCountLines(String str) {
         if( str ) {
             printAnsiLines(str)
-            return str.count(NEWLINE)
+            return countVisualLines(str)
         }
         else
             return 0
+    }
+
+    /**
+     * Count the number of visual lines the string occupies on the terminal,
+     * accounting for lines that wrap when they exceed the terminal width.
+     */
+    protected int countVisualLines(String str) {
+        final lines = str.split(NEWLINE, -1)
+        int count = 0
+        // the last element after split is always empty (trailing newline), skip it
+        for( int i=0; i<lines.length-1; i++ ) {
+            final visualLen = stripAnsi(lines[i]).length()
+            // each line takes at least 1 visual line, plus extra lines for wrapping
+            count += visualLen > 0 && cols > 0 ? Math.ceil((double)visualLen / cols).intValue() : 1
+        }
+        return count
+    }
+
+    /**
+     * Strip ANSI escape codes and OSC hyperlinks from a string
+     * to determine its visual display width.
+     */
+    protected static String stripAnsi(String str) {
+        return ANSI_ESCAPE.matcher(str).replaceAll('')
     }
 
     protected void renderSummary(WorkflowStats stats) {
@@ -320,10 +389,10 @@ class AnsiLogObserver implements TraceObserver {
             return
         if( enableSummary == null && delta <= 60*1_000 )
             return
-        
+
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
-            report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
+            report += "Completed at: ${SysHelper.fmtDate(new Date(endTimestamp))}\n"
             report += "Duration    : ${new Duration(delta)}\n"
             report += "CPU hours   : ${stats.getComputeTimeFmt()}\n"
             report += "Succeeded   : ${stats.succeedCountFmt}\n"
@@ -335,7 +404,7 @@ class AnsiLogObserver implements TraceObserver {
                 report += "Failed      : ${stats.failedCountFmt}\n"
 
             printAnsi(report, Color.GREEN, true)
-            AnsiConsole.out.flush()
+            AnsiConsole.err.flush()
         }
     }
 
@@ -346,15 +415,15 @@ class AnsiLogObserver implements TraceObserver {
         fmt = fmt.a(message)
         if( bold ) fmt = fmt.boldOff()
         if( color ) fmt = fmt.fg(Color.DEFAULT)
-        AnsiConsole.out.println(fmt.eraseLine())
+        AnsiConsole.err.println(fmt.eraseLine())
     }
-    
+
     protected void printAnsiLines(String lines) {
         final text = lines
                 .replace('\r','')
                 .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
-        AnsiConsole.out.print(text)
-    } 
+        AnsiConsole.err.print(text)
+    }
 
     protected String fmtWidth(String name, int width, int cols) {
         assert name.size() <= width
@@ -367,40 +436,122 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected String fmtChop(String str, int cols) {
+        // Truncate the process name to fit the terminal width
         if( str.size() <= cols )
             return str
-        return cols>3 ? str[0..(cols-3-1)] + '...' : str[0..cols-1]
+        // Take the first 3 characters and the final chunk of text
+        //   eg. for: NFCORE_RNASEQ:RNASEQ:FASTQ_SUBSAMPLE_FQ_SALMON:FQ_SUBSAMPLE
+        //   truncate to: NFC…_SALMON:FQ_SUBSAMPLE
+        return cols>5 ? str.take(3) + '…' + str.takeRight(cols-1-3) : str[0..cols-1]
     }
 
-    protected String line(ProgressRecord stats) {
+    private final static Pattern TAG_REGEX = ~/ \((.+)\)( *)$/
+    private final static Pattern LBL_REPLACE = ~/ \(.+\) *$/
+    private final static Pattern ANSI_ESCAPE = ~/\033\[[0-9;]*[a-zA-Z]|\033][^\007]*\007/
+
+    // OSC 8 hyperlink escape sequences (using BEL as String Terminator)
+    private final static String HYPERLINK_START = '\033]8;;'
+    private final static String HYPERLINK_SEP = '\007'
+    private final static String HYPERLINK_END = '\033]8;;\007'
+
+    protected static String hyperlink(String text, String url) {
+        if( !url )
+            return text
+        final href = url.startsWith('/') ? 'file://' + url : url
+        return HYPERLINK_START + href + HYPERLINK_SEP + text + HYPERLINK_END
+    }
+
+    protected Ansi line(ProgressRecord stats) {
+        final term = ansi()
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
+        // Truncate or pad the label to the correct width
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
+        // Break up the process label into components for styling. eg:
+        //   NFCORE_RNASEQ:RNASEQ:PREPARE_GENOME:GUNZIP_GTF (genes.gtf.gz)
+        //     labelTag = genes.gtf.gz
+        //     labelSpaces = whitespace padding after process name
+        //     labelFinalProcess = GUNZIP_GTF
+        //     labelNoFinalProcess = NFCORE_RNASEQ:RNASEQ:PREPARE_GENOME:
+        final tagMatch = TAG_REGEX.matcher(label)
+        final labelTag = tagMatch ? tagMatch.group(1) : ''
+        final labelSpaces = tagMatch ? tagMatch.group(2) : ''
+        final labelNoTag = LBL_REPLACE.matcher(label).replaceFirst("")
+        final labelFinalProcess = labelNoTag.tokenize(':')[-1]
+        final labelNoFinalProcess = labelNoTag.dropRight(labelFinalProcess.length())
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
-        if( tot == 0  )
-            return "[$hh] process > $label -"
-
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
-        final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
+        // eg. 100% (whitespace padded for alignment)
+        final pct = "${String.valueOf(x).padLeft(3)}%".toString()
+        // eg. 1 of 1
+        final numbs = " ${(int)com} of ${(int)tot}".toString()
 
-        final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[${hh}] process > $label $pct $numbs"
+        // Task hash, eg: [fa/71091a]
+        // make clickable hyperlink to work dir inferred from session workDir and task hash
+        final hashDisplay = (stats.workDir && !session.config.cleanup) ? hyperlink(hh, stats.workDir) : hh
+        term.a(Attribute.INTENSITY_FAINT).a('[').reset()
+        term.fg(Color.BLUE).a(hashDisplay).reset()
+        term.a(Attribute.INTENSITY_FAINT).a('] ').reset()
+
+        // Only show 'process > ' if the terminal has lots of width
+        if( cols > 180 )
+            term.a(Attribute.INTENSITY_FAINT).a('process > ').reset()
+        // Stem of process name, dim text
+        term.a(Attribute.INTENSITY_FAINT).a(labelNoFinalProcess).reset()
+        // Final process name, regular text
+        term.a(labelFinalProcess)
+        // Active process with a tag, eg: (genes.gtf.gz)
+        if( labelTag ) {
+            // Tag in yellow, () dim but tag text regular
+            term.fg(Color.YELLOW).a(Attribute.INTENSITY_FAINT).a(' (').reset()
+            term.fg(Color.YELLOW).a(labelTag)
+            term.a(Attribute.INTENSITY_FAINT).a(')').reset().a(labelSpaces)
+        }
+
+        // No tasks
+        if( tot == 0 ) {
+            term.a(' -')
+            return term
+        }
+
+        // Progress percentage, eg: [ 80%]
+        if( cols > 120 ) {
+            // Only show the percentage if we have lots of width
+            // Percentage text in green if 100%, otherwise blue
+            term.a(Attribute.INTENSITY_FAINT).a(' [').reset()
+                .fg(pct == '100%' ? Color.GREEN : Color.BLUE).a(pct).reset()
+                .a(Attribute.INTENSITY_FAINT).a(']').reset()
+        }
+        else {
+            // If narrow terminal, show single pipe char instead of percentage to save space
+            term.a(Attribute.INTENSITY_FAINT).a(' |').reset()
+        }
+        // Progress active task count, eg: 8 of 10
+        term.a(numbs)
+
+        // Completed task counts and status
+        // Dim text for cached, otherwise regular
         if( stats.cached )
-            result += ", cached: $stats.cached"
+            term.a(Attribute.INTENSITY_FAINT).a(", cached: $stats.cached").reset()
         if( stats.stored )
-            result += ", stored: $stats.stored"
-        if( stats.failed )
-            result += ", failed: $stats.failed"
+            term.a(", stored: $stats.stored")
+        if( stats.ignored )
+            term.a(", ignored: $stats.ignored")
         if( stats.retries )
-            result += ", retries: $stats.retries"
-        if( stats.terminated && tot )
-            result += stats.errored ? ' \u2718' : ' \u2714'
-        return fmtChop(result, cols)
+            term.a(", retries: $stats.retries")
+        // Show red cross ('✘') or green tick ('✔') according to status
+        if( stats.terminated && tot ) {
+            if( stats.errored )
+                term.fg(Color.RED).a(' \u2718').reset()
+            else
+                term.fg(Color.GREEN).a(' \u2714').reset()
+        }
+        return term
     }
 
     @Override
-    void onFlowCreate(Session session){
+    void onFlowCreate(Session session) {
         this.started = true
         this.session = session
         this.statsObserver = session.statsObserver
@@ -410,7 +561,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     @Override
-    void onFlowComplete(){
+    void onFlowComplete() {
         stopped = true
         endTimestamp = System.currentTimeMillis()
         renderer.join()
@@ -421,9 +572,9 @@ class AnsiLogObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    synchronized void onProcessSubmit(TaskHandler handler, TraceRecord trace){
+    synchronized void onTaskSubmit(TaskEvent event) {
         // executor counter
-        final exec = handler.task.processor.executor.name
+        final exec = event.handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
         markModified()

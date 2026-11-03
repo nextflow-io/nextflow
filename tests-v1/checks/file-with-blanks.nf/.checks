@@ -1,0 +1,20 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `< stdout grep -c 'Hello' ` == 1 ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `< .nextflow.log grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `< stdout grep -c 'Hello' ` == 1 ]] || false

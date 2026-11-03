@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,9 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
+import nextflow.Const
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.Duration
 import nextflow.util.Escape
@@ -42,17 +44,17 @@ class SingularityCache {
 
     static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
 
-    private ContainerConfig config
+    private String cacheDir
+
+    private String libraryDir
+
+    private boolean noHttps
+
+    private Duration pullTimeout
 
     private Map<String,String> env
 
     private boolean missingCacheDir
-
-    private Duration pullTimeout = Duration.of('20min')
-
-    /** Only for debugging purpose - do not use */
-    @PackageScope
-    SingularityCache() {}
 
     protected String getBinaryName() { return 'singularity' }
 
@@ -60,15 +62,16 @@ class SingularityCache {
 
     protected String getEnvPrefix() { getBinaryName().toUpperCase() }
 
-    /**
-     * Create a Singularity cache object
-     *
-     * @param config A {@link ContainerConfig} object
-     * @param env The environment configuration object. Specifying {@code null} the current system environment is used
-     */
-    SingularityCache(ContainerConfig config, Map<String,String> env=null) {
-        this.config = config
-        this.env = env ?: System.getenv()
+    static SingularityCache create(SingularityConfig config, Map<String,String> env=null) {
+        new SingularityCache(config.cacheDir, config.libraryDir, config.noHttps, config.pullTimeout, env)
+    }
+
+    SingularityCache(String cacheDir, String libraryDir, boolean noHttps, Duration pullTimeout, Map<String,String> env=null) {
+        this.cacheDir = cacheDir
+        this.libraryDir = libraryDir
+        this.noHttps = noHttps
+        this.pullTimeout = pullTimeout
+        this.env = env ?: SysEnv.get()
     }
 
     /**
@@ -99,7 +102,7 @@ class SingularityCache {
     }
 
     /**
-     * Create the specified directory if not exists
+     * Create the specified directory if it does not exist
      *
      * @param
      *      str A path string representing a folder where store the singularity images once downloaded
@@ -137,10 +140,7 @@ class SingularityCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
-
-        def str = config.cacheDir as String
+        String str = cacheDir
         if( str )
             return checkDir(str)
 
@@ -152,14 +152,14 @@ class SingularityCache {
         if( str )
             return checkDir(str)
 
-        def workDir = Global.session.workDir
+        Path workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
             // when the work dir is a remote path use the local launch directory to cache image files
-            workDir = Path.of('.nextflow').toAbsolutePath()
+            workDir = Const.appCacheDir.toAbsolutePath()
         }
 
         missingCacheDir = true
-        def result = workDir.resolve('singularity')
+        final result = workDir.resolve('singularity')
         result.mkdirs()
 
         return result
@@ -179,7 +179,7 @@ class SingularityCache {
      */
     @PackageScope
     Path getLibraryDir() {
-        def str = config.libraryDir as String ?: env.get("NXF_${envPrefix}_LIBRARYDIR".toString())
+        final str = libraryDir ?: env.get("NXF_${envPrefix}_LIBRARYDIR".toString())
         if( str )
             return existsDir(str)
 
@@ -224,7 +224,7 @@ class SingularityCache {
             return libraryPath
         }
 
-        // check for the image in teh cache dir
+        // check for the image in the cache dir
         // if the image does not exist in the cache dir, download it
         final localPath = localCachePath(imageUrl)
         if( localPath.exists() ) {
@@ -266,7 +266,7 @@ class SingularityCache {
 
         // Construct a temporary name for the image file
         final tmpFile = getTempImagePath(targetPath)
-        final noHttpsOption = (config.noHttps)? '--nohttps' : ''
+        final noHttpsOption = (noHttps)? '--no-https' : ''
 
         String cmd = "${binaryName} pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {
@@ -301,7 +301,7 @@ class SingularityCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  hint   : Try and increase ${binaryName}.pullTimeout in the config (current is \"${pullTimeout}\")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
@@ -357,5 +357,9 @@ class SingularityCache {
         log.trace "${appName} cache for `$url` path=$result"
         return result
     }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 
 }

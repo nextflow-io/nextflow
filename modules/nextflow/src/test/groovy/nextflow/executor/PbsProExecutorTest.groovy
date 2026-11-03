@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package nextflow.executor
 
-import nextflow.processor.TaskProcessor
-import spock.lang.Specification
-
 import java.nio.file.Paths
 
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
@@ -30,9 +31,19 @@ import nextflow.processor.TaskRun
  */
 class PbsProExecutorTest extends Specification {
 
+    def createExecutor(config) {
+        Spy(PbsProExecutor) {
+            getConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new ExecutorConfig([:]))
+    }
+
     def 'should get directives' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/here')
 
         def task = Mock(TaskRun)
@@ -54,7 +65,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with queue' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -77,7 +88,8 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with cpus' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
+        and:
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -101,7 +113,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with mem' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -125,7 +137,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with cpus and mem' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -149,7 +161,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should ignore cpus and memory when clusterOptions contains -l option' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -174,12 +186,32 @@ class PbsProExecutorTest extends Specification {
         ]
     }
 
-    def 'should return qstat command line' () {
+    def 'should get directives with job array' () {
         given:
-        def executor = [:] as PbsProExecutor
+        def executor = createExecutor()
+        and:
+        def task = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> 'foo'
+            workDir >> Paths.get('/foo/bar')
+            getArraySize() >> 5
+        }
 
         expect:
-		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.getDirectives(task, []) == [
+                '-J', '0-4',
+                '-N', 'nf-foo',
+                '-o', '/dev/null',
+                '-j', 'oe'
+        ]
+    }
+
+    def 'should return qstat command line' () {
+        given:
+        def executor = createExecutor()
+
+        expect:
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B -f | awk -v ORS=' ' '\$1 == \"Server:\" {print \"@\"\$2}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
@@ -187,7 +219,7 @@ class PbsProExecutorTest extends Specification {
     def 'should parse queue status'() {
 
         setup:
-        def executor = [:] as PbsProExecutor
+        def executor = createExecutor()
         def text =
                 """
                 Job Id: 12.localhost
@@ -221,7 +253,7 @@ class PbsProExecutorTest extends Specification {
     def 'should report cluster as first' () {
 
         setup:
-        def executor = [:] as PbsProExecutor
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -245,4 +277,48 @@ class PbsProExecutorTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = createExecutor()
+        expect:
+        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = createExecutor()
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo[]'     | 1             | 'foo[1]'
+        'bar[]'     | 2             | 'bar[2]'
+    }
+
+    def 'should set pbs account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
+        and:
+        def config = new ExecutorConfig(account: ACCOUNT)
+        def executor = createExecutor(config)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'pbspro'
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe']
+        'project-123'       | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe', '-P', 'project-123']
+    }
 }

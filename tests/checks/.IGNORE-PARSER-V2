@@ -1,0 +1,18 @@
+# TESTS THAT SHOULD ONLY BE RUN BY THE V2 PARSER
+collect-record.nf
+dynamic-filename-typed.nf
+env-typed.nf
+eval-out-typed.nf
+nullable-path.nf
+output-dsl.nf
+params-dsl.nf
+process-typed-taskpath.nf
+record-types.nf
+records.nf
+resume-typed-value-output.nf
+stage-record-collection.nf
+task-ext-block.nf
+topic-channel-typed.nf
+type-annotations.nf
+workflow-entry.nf
+workflow-oncomplete-v2.nf

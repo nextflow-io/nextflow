@@ -1,42 +1,68 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.ast
 
+import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
+import nextflow.script.ScriptLoaderFactory
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import test.BaseSpec
+import test.Dsl2Spec
+import test.MockExecutorFactory
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowDSLImplTest extends BaseSpec {
+class NextflowDSLImplTest extends Dsl2Spec {
 
-    def 'should fetch method names' () {
-
-        given:
+    def createCompilerConfig() {
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
+        return config
+    }
+
+
+    def 'should fetch method names' () {
+
+        given:
+        def config = createCompilerConfig()
+
         def SCRIPT = '''
-            def foo() { 
-                return 0 
+            def foo() {
+                return 0
             }
-            
-            def bar() { 
-                return 1 
+
+            def bar() {
+                return 1
             }
-            
-            private baz() { 
-                return 2 
+
+            private baz() {
+                return 2
             }
-            
+
             process alpha {
               /hello/
             }
-
         '''
+
         when:
         new GroovyShell(config).parse(SCRIPT)
         then:
@@ -45,20 +71,16 @@ class NextflowDSLImplTest extends BaseSpec {
 
     def 'should not allow duplicate processes' () {
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         def SCRIPT = '''
-                    
             process alpha {
               /hello/
             }
-        
+
             process alpha {
               /world/
             }
-
         '''
 
         when:
@@ -71,20 +93,16 @@ class NextflowDSLImplTest extends BaseSpec {
 
     def 'should not allow duplicate workflow' () {
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         def SCRIPT = '''
-                    
             workflow alpha {
               /hello/
             }
-        
+
             workflow alpha {
               /world/
             }
-
         '''
 
         when:
@@ -97,29 +115,24 @@ class NextflowDSLImplTest extends BaseSpec {
     def 'should throw illegal name exception' () {
 
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         when:
         def SCRIPT = '''
             workflow 'foo:bar' {
               /hello/
             }
-
         '''
         new GroovyShell(config).parse(SCRIPT)
         then:
         def e = thrown(MultipleCompilationErrorsException)
         e.message.contains 'Process and workflow names cannot contain colon character'
 
-
         when:
         SCRIPT = '''
             process 'foo:bar' {
               /hello/
             }
-
         '''
         new GroovyShell(config).parse(SCRIPT)
         then:
@@ -129,27 +142,56 @@ class NextflowDSLImplTest extends BaseSpec {
 
     def 'should set process name in the script meta' () {
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        and:
+        def parser = ScriptLoaderFactory.create(session)
 
         def SCRIPT = '''
-                    
             process alpha {
               /hello/
             }
-        
+
             process beta {
               /world/
             }
 
+            workflow {
+              alpha(); beta()
+            }
         '''
 
         when:
-        def script = new GroovyShell(config).parse(SCRIPT)
+        parser.runScript(SCRIPT)
         then:
-        ScriptMeta.get(script).getDsl1ProcessNames() == ['alpha', 'beta']
-        ScriptMeta.get(script).getProcessNames() == ['alpha', 'beta'] as Set
+        ScriptMeta.get(parser.getScript()).getProcessNames() == ['alpha', 'beta'] as Set
+    }
+
+    def 'should fetch variable names' () {
+
+        given:
+        def config = createCompilerConfig()
+
+        def SCRIPT = '''
+            process alpha {
+                input:
+                val foo
+
+                exec:
+                if( foo == 'a' )
+                    log.info "foo is 'a'"
+                def bar = foo
+            }
+
+            workflow {
+                alpha('a')
+            }
+            '''
+
+        when:
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        noExceptionThrown()
     }
 
 }

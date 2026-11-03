@@ -1,6 +1,6 @@
 
 process my_process {
-    publishDir "s3://nextflow-ci/work/ci-test/publish-s3"
+    publishDir "s3://nextflow-ci-oss/work/ci-test/publish-s3"
 
     input:
     val(param)
@@ -15,5 +15,5 @@ process my_process {
 }
 
 workflow {
-  Channel.of(1) | my_process
+  channel.of(1) | my_process
 }

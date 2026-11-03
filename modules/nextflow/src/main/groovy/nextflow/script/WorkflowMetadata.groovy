@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
@@ -29,9 +30,10 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.config.Manifest
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
-import org.codehaus.groovy.runtime.InvokerHelper
+import nextflow.util.TestOnly
 /**
  * Models workflow metadata properties and notification handler
  *
@@ -138,6 +140,11 @@ class WorkflowMetadata {
     Path launchDir
 
     /**
+     * Workflow output directory
+     */
+    Path outputDir
+
+    /**
      * Workflow working directory
      */
     Path workDir
@@ -188,9 +195,33 @@ class WorkflowMetadata {
     boolean stubRun
 
     /**
+     * Returns ``true`` whenever the current instance is in preview mode
+     */
+    boolean preview
+
+    /**
      * Which container engine was used to execute the workflow
      */
     String containerEngine
+
+    /**
+     * Metadata specific to Wave, including:
+     * <li>enabled: whether Wave is enabled
+     */
+    WaveMetadata wave
+
+    /**
+     * Metadata specific to Fusion, including:
+     * <li>enabled: whether Fusion is enabled
+     * <li>version: the version of Fusion in use
+     */
+    FusionMetadata fusion
+
+    /**
+     * Metadata specific to Seqera Platform, including:
+     * <li>workflowId: the Platform-assigned workflow identifier
+     */
+    PlatformMetadata platform
 
     /**
      * The list of files that concurred to create the config object
@@ -206,6 +237,11 @@ class WorkflowMetadata {
      * The workflow manifest
      */
     Manifest manifest
+
+    /**
+     * whenever it should terminate with a failure when one or more task execution failed in an error strategy
+     */
+    boolean failOnIgnore
 
     private Session session
 
@@ -232,19 +268,24 @@ class WorkflowMetadata {
         this.container = session.fetchContainers()
         this.commandLine = session.commandLine
         this.nextflow = NextflowMeta.instance
+        this.outputDir = session.outputDir
         this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
-        this.profile = session.profile ?:  ConfigBuilder.DEFAULT_PROFILE
+        this.profile = session.profile ?: ConfigBuilder.DEFAULT_PROFILE
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
         this.stubRun = session.stubRun
+        this.preview = session.preview
         this.runName = session.runName
-        this.containerEngine = session.containerConfig.with { isEnabled() ? getEngine() : null }
+        this.containerEngine = containerEngine0(session)
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }
         this.stats = new WorkflowStats()
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
         this.manifest = session.getManifest()
+        this.wave = new WaveMetadata(session)
+        this.fusion = new FusionMetadata(session)
+        this.failOnIgnore = session.failOnIgnore()
 
         // check if there's a onComplete action in the config file
         registerConfigAction(session.config.workflow as Map)
@@ -252,11 +293,13 @@ class WorkflowMetadata {
         session.onError( this.&invokeOnError )
     }
 
-    /**
-     * Only for testing purpose -- do not use
-     */
-    @PackageScope
-    WorkflowMetadata() {}
+    private String containerEngine0(Session session) {
+       final config = session.getContainerConfig()
+       return config.isEnabled() ? config.getEngine() : null
+    }
+
+    @TestOnly
+    protected WorkflowMetadata() {}
 
     /**
      * Implements the following idiom in the pipeline script:
@@ -310,16 +353,6 @@ class WorkflowMetadata {
     }
 
     /**
-     * Dynamic getter for workflow metadata attributes
-     *
-     * @param field
-     * @return The value associated to the specified field
-     */
-    def get(String field) {
-        InvokerHelper.getProperty(this,field)
-    }
-
-    /**
      * Implements the following idiom in the pipeline script:
      * <pre>
      *     workflow.onError = {
@@ -367,7 +400,7 @@ class WorkflowMetadata {
             errorReport = msg
         }
         else {
-            exitStatus = 0
+            exitStatus = session.isSuccess() ? 0 : 1
         }
     }
 
@@ -378,7 +411,7 @@ class WorkflowMetadata {
     void invokeOnComplete() {
         this.complete = OffsetDateTime.now()
         this.duration = Duration.between( start, complete )
-        this.success = !(session.aborted || session.cancelled)
+        this.success = session.isSuccess()
         this.stats = getWorkflowStats()
 
         setErrorAttributes()
@@ -386,6 +419,10 @@ class WorkflowMetadata {
         onCompleteActions.each { Closure action ->
             try {
                 action.call()
+            }
+            catch (WorkflowScriptErrorException e) {
+                // re-throw it to allow `error` function to be invoked by completion handler
+                throw e
             }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
@@ -402,7 +439,11 @@ class WorkflowMetadata {
         setErrorAttributes()
         onErrorActions.each { Closure action ->
             try {
-                action.call(trace)
+                // handlers from an `onError:` section take no arguments
+                if( action.maximumNumberOfParameters > 0 )
+                    action.call(trace)
+                else
+                    action.call()
             }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onError` event handler", e)
@@ -414,7 +455,7 @@ class WorkflowMetadata {
         final allProperties = this.metaClass.getProperties()
         final result = new LinkedHashMap(allProperties.size())
         for( MetaProperty property : allProperties ) {
-            if( property.name == 'class' )
+            if( property.name == 'class' || !Modifier.isPublic(property.modifiers) )
                 continue
             try {
                 result[property.name] = property.getProperty(this)
@@ -453,11 +494,8 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            def notifier = new WorkflowNotifier()
-            notifier.workflow = this
-            notifier.config = session.config
-            notifier.variables = NF.binding.variables
-            notifier.sendNotification()
+            final notifier = new WorkflowNotifier(NF.binding.variables, this)
+            notifier.sendNotification(session.config)
         }
         catch (Exception e) {
             log.warn "Failed to deliver notification email -- See the log file for details", e
@@ -468,4 +506,14 @@ class WorkflowMetadata {
         session.statsObserver.getStats()
     }
 
+    PlatformMetadata getPlatform() {
+        if( platform!=null )
+            return platform
+        synchronized (this) {
+            if( platform!=null )
+                return platform
+            platform = new PlatformMetadata()
+        }
+        return platform
+    }
 }

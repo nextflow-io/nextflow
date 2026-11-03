@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,6 +90,7 @@ class NameGenerator {
             "lethal",
             "lonely",
             "loving",
+            "loquacious",
             "mad",
             "magical",
             "maniac",
@@ -151,9 +152,6 @@ class NameGenerator {
             // André-Marie Ampère - French physicist and mathematician, one of the founders of the science of classical electromagnetism. https://en.wikipedia.org/wiki/Andr%C3%A9-Marie_Amp%C3%A8re
             "ampere",
 
-            // Piero Angela - Italian television host, science journalist, writer, and pianist. He is best known as the creator and presenter of broadcasting science outreach programmes modelled on BBC and David Attenborough documentaries, and also for his scientific journalism published in numerous publications. https://en.wikipedia.org/wiki/Piero_Angela
-            "angela",
-        
             // Archimedes was a physicist, engineer and mathematician who invented too many things to list them here. https://en.wikipedia.org/wiki/Archimedes
             "archimedes",
 
@@ -228,7 +226,7 @@ class NameGenerator {
 
             // Walter Houser Brattain co-invented the transistor. https://en.wikipedia.org/wiki/Walter_Houser_Brattain
             "brattain",
-        
+
             // Vital Brazil Mineiro da Campanha, also known as Vital Brazil, was a Brazilian physician, biomedical scientist and immunologist, known to develop the first anti-scorpion and anti-spider serums. https://en.wikipedia.org/wiki/Vital_Brazil
             "brazil",
 
@@ -304,6 +302,9 @@ class NameGenerator {
             // Leonardo Da Vinci invented too many things to list here. https://en.wikipedia.org/wiki/Leonardo_da_Vinci.
             "davinci",
 
+            // Margaret Dayhoff - physical chemist and a pioneer in bioinformatics. Often called the mother of bioinformatics. https://pmc.ncbi.nlm.nih.gov/articles/PMC5037978/
+            "dayhoff",
+
             // René Descartes - French philosopher, mathematician, and scientist. His best known philosophical statement is "Cogito ergo sum". https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
             "descartes",
 
@@ -331,6 +332,9 @@ class NameGenerator {
             // Douglas Engelbart gave the mother of all demos: https://en.wikipedia.org/wiki/Douglas_Engelbart
             "engelbart",
 
+            // Maurits Cornelis Escher - Dutch graphic artist who made woodcuts, lithographs, and mezzotints, many of which were inspired by mathematics. His work features mathematical objects and operations including impossible objects, explorations of infinity, reflection, symmetry, perspective, truncated and stellated polyhedra, hyperbolic geometry, and tessellations. https://en.wikipedia.org/wiki/M._C._Escher
+            "escher",
+
             // Euclid invented geometry. https://en.wikipedia.org/wiki/Euclid
             "euclid",
 
@@ -351,6 +355,9 @@ class NameGenerator {
 
             // Richard Feynman was a key contributor to quantum mechanics and particle physics. https://en.wikipedia.org/wiki/Richard_Feynman
             "feynman",
+
+            // Leonardo Fibonacci, also known as Leonardo of Pisa, was an Italian mathematician who introduced the Hindu-Arabic numeral system to the Western world and is best known for the Fibonacci sequence. https://en.wikipedia.org/wiki/Fibonacci
+            "fibonacci",
 
             // Jean-Baptiste Joseph Fourier - a French mathematician and physicist, best known for initiating the investigation of Fourier series and their applications to problems of heat transfer and vibrations, is also generally credited with the discovery of the greenhouse effect. https://en.wikipedia.org/wiki/Joseph_Fourier
             "fourier",
@@ -408,6 +415,9 @@ class NameGenerator {
             // David Hilbert - German mathematician, recognized as one of the most influential and universal mathematicians of the 19th and early 20th centuries. he is known as one of the founders of proof theory and mathematical logic, as well as for being among the first to distinguish between mathematics and metamathematics. https://en.wikipedia.org/wiki/David_Hilbert
             "hilbert",
 
+            // Rahel Hirsch - German physician, the first woman in the Kingdom of Prussia to be appointed a professor of medicine. https://en.wikipedia.org/wiki/Rahel_Hirsch
+            "hirsch",
+
             // Dorothy Hodgkin was a British biochemist, credited with the development of protein crystallography. She was awarded the Nobel Prize in Chemistry in 1964. https://en.wikipedia.org/wiki/Dorothy_Hodgkin
             "hodgkin",
 
@@ -441,7 +451,7 @@ class NameGenerator {
             // A. P. J. Abdul Kalam - is an Indian scientist aka Missile Man of India for his work on the development of ballistic missile and launch vehicle technology. https://en.wikipedia.org/wiki/A._P._J._Abdul_Kalam
             "kalam",
 
-            // Rudolf E. Kálmán, American engineer and mathematican of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter". https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
+            // Rudolf E. Kálmán, American engineer and mathematician of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter". https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
             "kalman",
 
             // Susan Kare, created the icons and many of the interface elements for the original Apple Macintosh in the 1980s, and was an original employee of NeXT, working as the Creative Director. https://en.wikipedia.org/wiki/Susan_Kare
@@ -494,7 +504,7 @@ class NameGenerator {
 
             // Cesare Mansueto Giulio Lattes, also known as César Lattes, was a Brazilian experimental physicist and one of the discoverers of the pion, a composite subatomic particle made of a quark and an antiquark. https://en.wikipedia.org/wiki/César_Lattes
             "lattes",
-        
+
             // Antoine Lavoisier - French chemist central to the 18th-century chemical revolution and had a large influence on both the history of chemistry and the history of biology. https://en.wikipedia.org/wiki/Antoine_Lavoisier
             "lavoisier",
 
@@ -601,7 +611,7 @@ class NameGenerator {
             "murdock",
 
             // Angelo Moriondo was an Italian inventor usually credited for patenting the earliest known espresso machine. https://en.wikipedia.org/wiki/Angelo_Moriondo
-            "moriondo", 
+            "moriondo",
 
             // John von Neumann (Hungarian: Neumann János Lajos) was a Hungarian-American mathematician, physicist, computer scientist, engineer and polymath. The Von Neumann architecture, his namesake, is still used to this day in computer design. He also designed the policy of "mutually assured destruction" during the Cold War. https://en.wikipedia.org/wiki/John_von_Neumann
             "neumann",
@@ -624,11 +634,17 @@ class NameGenerator {
             // Robert Noyce invented silicone integrated circuits and gave Silicon Valley its name. https://en.wikipedia.org/wiki/Robert_Noyce
             "noyce",
 
+            // Severo Ochoa was a Spanish physician and biochemist, best known for being the winner of the 1959 Nobel Prize in Physiology or Medicine together with Arthur Kornberg for their discovery of the mechanisms in the biological synthesis of RNA and DNA. https://en.wikipedia.org/wiki/Severo_Ochoa
+            "ochoa",
+
             // Pāṇini - Ancient Indian linguist and grammarian from 4th century CE who worked on the world's first formal system. https://en.wikipedia.org/wiki/P%C4%81%E1%B9%87ini#Comparison_with_modern_formal_systems
             "panini",
 
             // Ambroise Paré invented modern surgery. https://en.wikipedia.org/wiki/Ambroise_Par%C3%A9
             "pare",
+
+            // Vilfredo Pareto - Italian civil engineer, sociologist, and economist, known for the Pareto principle (the 80/20 rule) and the concept of Pareto efficiency. https://en.wikipedia.org/wiki/Vilfredo_Pareto
+            "pareto",
 
             // Louis Pasteur discovered vaccination, fermentation and pasteurization. https://en.wikipedia.org/wiki/Louis_Pasteur.
             "pasteur",
@@ -654,7 +670,7 @@ class NameGenerator {
             // Max Karl Ernst Ludwig Planck was a German theoretical physicist, best known for the discovery of energy quenta and Planck's constant. https://en.wikipedia.org/wiki/Max_Planck
             "planck",
 
-            // Joseph Plateau - Belgian physisist known for being one of the first persons to demonstrate the illusion of moving image. https://en.wikipedia.org/wiki/Joseph_Plateau
+            // Joseph Plateau - Belgian physicist known for being one of the first persons to demonstrate the illusion of moving image. https://en.wikipedia.org/wiki/Joseph_Plateau
             "plateau",
 
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
@@ -668,6 +684,9 @@ class NameGenerator {
 
             // Claudius Ptolemy - a Greco-Egyptian writer of Alexandria, known as a mathematician, astronomer, geographer, astrologer, and poet of a single epigram in the Greek Anthology. https://en.wikipedia.org/wiki/Ptolemy
             "ptolemy",
+
+            // Gopalasamudram Narayana Ramachandran - Indian physicist and biophysicist best known for the Ramachandran plot, a fundamental tool in structural biology for assessing protein backbone conformations. https://en.wikipedia.org/wiki/G._N._Ramachandran
+            "ramachandran",
 
             // C. V. Raman - Indian physicist who won the Nobel Prize in 1930 for proposing the Raman effect. https://en.wikipedia.org/wiki/C._V._Raman
             "raman",
@@ -695,6 +714,9 @@ class NameGenerator {
 
             // Meghnad Saha - Indian astrophysicist best known for his development of the Saha equation, used to describe chemical and physical conditions in stars. https://en.wikipedia.org/wiki/Meghnad_Saha
             "saha",
+
+            // Margarita Salas - Spanish biochemist and molecular biologist, best known for her discovery and characterisation of the Φ29 phage DNA polymerase. https://en.wikipedia.org/wiki/Margarita_Salas
+            "salas",
 
             // Jean E. Sammet developed FORMAC, the first widely used computer language for symbolic manipulation of mathematical formulas. https://en.wikipedia.org/wiki/Jean_E._Sammet
             "sammet",
@@ -785,6 +807,9 @@ class NameGenerator {
 
             // James Watson - American molecular biologist, geneticist and zoologist, best known as one of the co-discoverers of the structure of DNA. https://en.wikipedia.org/wiki/James_Watson
             "watson",
+
+            // Alfred Wegener - German climatologist, geologist, geophysicist, meteorologist, and polar researcher. Best known for proposing the theory of continental drift, the precursor to plate tectonics. https://en.wikipedia.org/wiki/Alfred_Wegener
+            "wegener",
 
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",

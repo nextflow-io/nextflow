@@ -1,0 +1,347 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package nextflow.script.control;
+
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Set;
+
+import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
+import nextflow.script.ast.FeatureFlagNode;
+import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
+import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
+import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.Nullable;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
+import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.codehaus.groovy.syntax.SyntaxException;
+import org.codehaus.groovy.syntax.Types;
+
+import static nextflow.script.ast.ASTUtils.*;
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
+
+/**
+ * Transform a Nextflow script AST into a Groovy AST.
+ *
+ * @see nextflow.script.BaseScript
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
+
+    private static Set<String> RESERVED_NAMES = Set.of("main", "run", "runScript");
+
+    private SourceUnit sourceUnit;
+
+    private ScriptNode moduleNode;
+
+    private ScriptToGroovyHelper sgh;
+
+    public ScriptToGroovyVisitor(SourceUnit sourceUnit) {
+        this.sourceUnit = sourceUnit;
+        this.moduleNode = (ScriptNode) sourceUnit.getAST();
+        this.sgh = new ScriptToGroovyHelper(sourceUnit);
+    }
+
+    @Override
+    protected SourceUnit getSourceUnit() {
+        return sourceUnit;
+    }
+
+    public void visit() {
+        if( moduleNode == null )
+            return;
+
+        if( moduleNode.isTypingEnabled() )
+            moduleNode.addStatement(stmt(callThisX("enableTyping", new ArgumentListExpression())));
+
+        var declarations = moduleNode.getDeclarations();
+
+        declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
+
+        for( var decl : declarations ) {
+            if( decl instanceof AgentNode an )
+                visitAgent(an);
+            else if( decl instanceof ClassNode cn && cn.isEnum() )
+                visitEnum(cn);
+            else if( decl instanceof FeatureFlagNode ffn )
+                visitFeatureFlag(ffn);
+            else if( decl instanceof FunctionNode fn )
+                visitFunction(fn);
+            else if( decl instanceof IncludeNode in )
+                visitInclude(in);
+            else if( decl instanceof OutputBlockNode obn )
+                visitOutputs(obn);
+            else if( decl instanceof ParamBlockNode pbn )
+                visitParams(pbn);
+            else if( decl instanceof ParamNodeV1 pn )
+                visitParamV1(pn);
+            else if( decl instanceof ProcessNode pn )
+                visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
+            else if( decl instanceof WorkflowNode wn )
+                visitWorkflow(wn);
+        }
+
+        if( moduleNode.isEmpty() )
+            moduleNode.addStatement(ReturnStatement.RETURN_NULL_OR_VOID);
+    }
+
+    @Override
+    public void visitFeatureFlag(FeatureFlagNode node) {
+        // static typing is enabled per-script rather than globally
+        if( "nextflow.enable.types".equals(node.name) )
+            return;
+
+        var names = node.name.split("\\.");
+        Expression target = varX(DefaultGroovyMethods.head(names));
+        for( var name : DefaultGroovyMethods.tail(names) )
+            target = propX(target, name);
+
+        var result = stmt(assignX(target, node.value));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitInclude(IncludeNode node) {
+        // an included params block is only a type -- add it to this
+        // script so that it is compiled, and don't include it at runtime
+        var entries = new ArrayList<Expression>();
+        for( var entry : node.entries ) {
+            if( entry.getTarget() instanceof ClassNode cn && ScriptNode.isPipelineParams(cn) ) {
+                // the type is qualified by the including script, so that two
+                // scripts can include the same block
+                cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
+                addNullableAnnotations(cn);
+                moduleNode.addClass(cn);
+                continue;
+            }
+            var name = constX(entry.name);
+            entries.add(entry.alias != null
+                ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
+                : createX("nextflow.script.IncludeDef.Module", args(name)));
+        }
+
+        if( entries.isEmpty() )
+            return;
+        var include = callThisX("include", args(createX("nextflow.script.IncludeDef", args(listX(entries)))));
+        var from = callX(include, "from", args(node.source));
+        var result = stmt(callX(from, "load0", args(varX("params"))));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitParams(ParamBlockNode node) {
+        var paramsType = new RecordNode(sgh.packageName(moduleNode) + "." + "__Params");
+        for( var param : node.declarations ) {
+            var fn = new FieldNode(
+                param.getName(),
+                Modifier.PUBLIC,
+                param.getType(),
+                paramsType,
+                param.getInitialExpression()
+            );
+            paramsType.addField(fn);
+        }
+        moduleNode.addClass(paramsType);
+
+        var statements = Arrays.stream(node.declarations)
+            .map((param) -> {
+                var name = param.getName();
+                var optional = param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
+                var arguments = param.hasInitialExpression()
+                    ? args(constX(name), constX(optional), param.getInitialExpression())
+                    : args(constX(name), constX(optional));
+                return stmt(callThisX("declare", arguments));
+            })
+            .toList();
+        var closure = closureX(block(new VariableScope(), statements));
+        var result = stmt(callThisX("params", args(classX(paramsType), closure)));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
+        var result = stmt(assignX(node.target, node.value));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitWorkflow(WorkflowNode node) {
+        if( !node.isEntry() )
+            checkReservedMethodName(node, "workflow");
+        var result = new WorkflowToGroovyVisitor(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        checkReservedMethodName(node, "agent");
+        var result = new AgentToGroovyVisitor(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitProcessV2(ProcessNodeV2 node) {
+        checkReservedMethodName(node, "process");
+        var result = new ProcessToGroovyVisitorV2(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
+        checkReservedMethodName(node, "process");
+        var result = new ProcessToGroovyVisitorV1(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitFunction(FunctionNode node) {
+        checkReservedMethodName(node, "function");
+        moduleNode.getScriptClassDummy().addMethod(node);
+    }
+
+    private void checkReservedMethodName(MethodNode node, String typeLabel) {
+        if( RESERVED_NAMES.contains(node.getName()) )
+            syntaxError(node, "`" + node.getName() + "` is not allowed as a " + typeLabel + " name because it is reserved for internal use");
+    }
+
+    @Override
+    public void visitOutputs(OutputBlockNode node) {
+        var statements = node.declarations.stream()
+            .map((output) -> {
+                new PublishDslVisitor().visit(output.body);
+                var name = constX(output.getName());
+                var body = closureX(null, output.body);
+                return stmt(callThisX("declare", args(name, body)));
+            })
+            .toList();
+        var closure = closureX(null, block(new VariableScope(), statements));
+        var result = stmt(callThisX("output", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        addNullableAnnotations(node);
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    private static void addNullableAnnotations(ClassNode node) {
+        for( var fn : node.getFields() ) {
+            if( fn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+                fn.addAnnotation(NULLABLE);
+        }
+    }
+
+    @Override
+    public void visitEnum(ClassNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    private void syntaxError(ASTNode node, String message) {
+        sourceUnit.addError(new SyntaxException(message, node));
+    }
+
+    /**
+     * Transform publish statements in a workflow output:
+     *
+     *   path { sample ->
+     *     sample.foo >> 'foo/'
+     *     sample.bar >> 'bar/'
+     *   }
+     *
+     * becomes:
+     *
+     *   path { sample ->
+     *     publish(sample.foo, 'foo/')
+     *     publish(sample.bar, 'bar/')
+     *   }
+     */
+    private class PublishDslVisitor extends CodeVisitorSupport {
+
+        private boolean hasPublishStatements;
+
+        private boolean hasNonPublishStatements;
+
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression node) {
+            if( "path".equals(node.getMethodAsString()) )
+                visitPathDirective(node);
+        }
+
+        private void visitPathDirective(MethodCallExpression node) {
+            var code = asDslBlock(node, 1);
+            if( code == null )
+                return;
+            for( var stmt : code.getStatements() ) {
+                if( visitPublishStatement(stmt) )
+                    hasPublishStatements = true;
+                else
+                    hasNonPublishStatements = true;
+            }
+            if( hasPublishStatements && hasNonPublishStatements )
+                syntaxError(node, "Publish statements cannot be mixed with other statements in a dynamic publish path");
+        }
+
+        private boolean visitPublishStatement(Statement node) {
+            if( !(node instanceof ExpressionStatement) )
+                return false;
+            var es = (ExpressionStatement) node;
+            if( !(es.getExpression() instanceof BinaryExpression) )
+                return false;
+            var be = (BinaryExpression) es.getExpression();
+            if( be.getOperation().getType() != Types.RIGHT_SHIFT )
+                return false;
+            var source = be.getLeftExpression();
+            var target = be.getRightExpression();
+            es.setExpression(callThisX("publish", args(source, target)));
+            return true;
+        }
+    }
+
+}

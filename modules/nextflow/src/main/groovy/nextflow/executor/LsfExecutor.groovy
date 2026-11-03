@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -36,7 +38,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class LsfExecutor extends AbstractGridExecutor {
+class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
@@ -46,19 +48,9 @@ class LsfExecutor extends AbstractGridExecutor {
 
     private boolean perTaskReserve
 
-    /*
-     * If LSF_UNIT_FOR_LIMITS is not defined in lsf.conf, then the default setting is in KB, and for RUSAGE it is MB
-     * see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
-     */
-    private String memUnit = 'KB'
-
-    private String usageUnit = 'MB'
-
     protected boolean getPerJobMemLimit() { perJobMemLimit }
     protected boolean getPerTaskReserve() { perTaskReserve }
-    protected String getMemUnit() { memUnit }
-    protected String getUsageUnit() { usageUnit }
-    
+
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -68,7 +60,7 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        result << '-o' << (task.isArray() ?  '/dev/null' : task.workDir.resolve(TaskRun.CMD_LOG).toString())
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -94,24 +86,59 @@ class LsfExecutor extends AbstractGridExecutor {
             def mem1 = ( task.config.getCpus() > 1 && !perJobMemLimit ) ? mem.div(task.config.getCpus() as int) : mem
             def mem2 = ( task.config.getCpus() > 1 && perTaskReserve ) ? mem.div(task.config.getCpus() as int) : mem
 
-            result << '-M' << String.valueOf(mem1.toUnit(memUnit))
-            result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
+            result << '-M' << "${mem1.toMega()}MB".toString()
+            result << '-R' << "select[mem>=${mem.toMega()}MB] rusage[mem=${mem2.toMega()}MB]".toString()
         }
 
         def disk = task.config.getDisk()
         if( disk ) {
-            result << '-R' << "select[tmp>=${disk.toUnit(memUnit)}] rusage[tmp=${disk.toUnit(usageUnit)}]".toString()
+            result << '-R' << "select[tmp>=${disk.toMega()}MB] rusage[tmp=${disk.toMega()}MB]".toString()
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        addClusterOptionsDirective(task.config, result)
+
+        // add account from config
+        final account = config.getExecConfigProp(name, 'account', null) as String
+        if( account ) {
+            result << '-G' << account
+        }
 
         return result
     }
 
+    @Override
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        // when cluster options are defined as a list rely on default behavior
+        if( opts instanceof Collection ) {
+            super.addClusterOptionsDirective(config,result)
+        }
+        // when cluster options are a string value use the `getClusterOptionsAsList` for backward compatibility
+        else if( opts instanceof CharSequence ) {
+            result.addAll( config.getClusterOptionsAsList() )
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
+    }
+
+    @Override
+    String sanitizeJobName( String name ) {
+        // LSF does not allow square brackets in job names except for job arrays
+        name = name.replace('[','').replace(']','')
+        // Old LSF versions do not allow job names longer than 511 chars
+        name.size()>511 ? name.substring(0,511) : name
+    }
 
     /**
      * The command line to submit this job
@@ -148,11 +175,11 @@ class LsfExecutor extends AbstractGridExecutor {
             }
         }
 
-        new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n");
+        throw new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n")
     }
 
     @Override
-    protected List<String> getKillCommand() { ['bkill'] }
+    protected List<String> getKillCommand() { ['bkill', '-d'] }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
@@ -175,7 +202,7 @@ class LsfExecutor extends AbstractGridExecutor {
             'SSUSP': QueueStatus.HOLD,
             'DONE': QueueStatus.DONE,
             'EXIT': QueueStatus.ERROR,
-            'UNKWN': QueueStatus.ERROR,
+            'UNKWN': QueueStatus.HOLD,
             'ZOMBI': QueueStatus.ERROR,
     ]
 
@@ -273,13 +300,6 @@ class LsfExecutor extends AbstractGridExecutor {
         super.register()
         final conf = parseLsfConfig()
 
-        // lsf mem unit
-        // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
-        if( conf.get('LSF_UNIT_FOR_LIMITS') ) {
-            memUnit = usageUnit = conf.get('LSF_UNIT_FOR_LIMITS')
-            log.debug "[LSF] Detected lsf.conf LSF_UNIT_FOR_LIMITS=$memUnit"
-        }
-        
         // per job mem limit
         // https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
         if( conf.get('LSB_JOB_MEMLIMIT') ) {
@@ -288,7 +308,7 @@ class LsfExecutor extends AbstractGridExecutor {
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
 
-        perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
+        perJobMemLimit = config.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
 
         // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
@@ -297,11 +317,28 @@ class LsfExecutor extends AbstractGridExecutor {
             log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
 
-        perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
+        perTaskReserve = config.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
     @Override
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'LSB_JOBINDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 1
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}[${index + 1}]"
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,10 @@ package nextflow.processor
 import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.agent.AgentTaskInfo
 import nextflow.executor.Executor
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -52,7 +55,8 @@ class TaskHandlerTest extends Specification {
                 cpus: 2,
                 time: '1 hour',
                 disk: '100 GB',
-                memory: '4 GB'
+                memory: '4 GB',
+                accelerator: [request: 3, type: 'v100']
         ]
         def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config  )
         task.metaClass.getHashLog = { "5d5d7ds" }
@@ -63,7 +67,7 @@ class TaskHandlerTest extends Specification {
         task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo', AWS_SECRET: '12345']
         task.context = new TaskContext(Mock(Script), [:], 'none')
 
-        def handler = [:] as TaskHandler
+        def handler = Spy(TaskHandler)
         handler.task = task
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
@@ -100,6 +104,8 @@ class TaskHandlerTest extends Specification {
         trace.memory == MemoryUnit.of('4 GB').toBytes()
         trace.disk == MemoryUnit.of('100 GB').toBytes()
         trace.env == 'FOO=hola\nBAR=mundo\nAWS_SECRET=[secure]\n'
+        trace.accelerator == 3
+        trace.accelerator_type == 'v100'
 
         // check get method
         trace.getFmtStr('%cpu') == '1.0%'
@@ -113,7 +119,7 @@ class TaskHandlerTest extends Specification {
         trace.getFmtStr('disk') == '100 GB'
 
         when:
-        handler = [:] as TaskHandler
+        handler = Spy(TaskHandler)
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -124,7 +130,7 @@ class TaskHandlerTest extends Specification {
 
 
         when:
-        handler = [:] as TaskHandler
+        handler = Spy(TaskHandler)
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -151,7 +157,9 @@ class TaskHandlerTest extends Specification {
         def handler = Spy(TaskHandler)
         handler.task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) {
-                getMaxForks() >> MAX
+                // getMaxForks() returns a primitive int; a null stub cannot be
+                // cast to int under Groovy 5, so map the `null` (unset) case to 0
+                getMaxForks() >> (MAX ?: 0)
                 getForksCount() >> { COUNT ? _adder(COUNT) : null }
             }
         }
@@ -207,4 +215,322 @@ class TaskHandlerTest extends Specification {
         handler.task.processor.getForksCount().intValue() == COUNTER -1
     }
 
+    def 'should validate is submit timeout' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = TaskStatus.SUBMITTED
+        handler.task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) { getMaxSubmitAwait() >> Duration.of('500ms') }
+        }
+
+        when:
+        def timeout = handler.isSubmitTimeout()
+        then:
+        !timeout
+
+        when:
+        sleep 1_000
+        and:
+        timeout = handler.isSubmitTimeout()
+        then:
+        timeout
+
+    }
+
+    @Unroll
+    def 'should validate status' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = STATUS
+
+        expect:
+        handler.isNew() == EXPECT_NEW
+        handler.isRunning() == EXPECT_RUNNING
+        handler.isSubmitted() == EXPECT_SUBMITTED
+        handler.isActive() == EXPECTED_ACTIVE
+        handler.isCompleted() == EXPECT_COMPLETE
+
+        where:
+        STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
+        TaskStatus.NEW      | true        | false            | false          | false           | false
+        TaskStatus.SUBMITTED| false       | true             | false          | true            | false
+        TaskStatus.RUNNING  | false       | false            | true           | true            | false
+        TaskStatus.COMPLETED| false       | false            | false          | false           | true
+    }
+
+    @Unroll
+    def 'should include the tower prefix'() {
+        given:
+        def name = 'job_1'
+
+        expect:
+        TaskHandler.prependWorkflowPrefix(name, ENV) == EXPECTED
+
+        where:
+        ENV                         | EXPECTED
+        [:]                         | "job_1"
+        [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
+    }
+
+    def 'should not kill task twice'() {
+        given:
+        def handler = Spy(TaskHandler)
+        when:
+        handler.kill()
+        then:
+        1 * handler.killTask() >> {}
+
+        when:
+        handler.kill()
+        then:
+        0 * handler.killTask()
+    }
+
+    def 'should parse Fusion trace and set gpuMetrics'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":100},"gpu":{"name":"Tesla T4","pct":75,"peak":100}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        record.gpuMetrics.name == 'Tesla T4'
+        record.gpuMetrics.pct == 75
+        record.gpuMetrics.peak == 100
+    }
+
+    def 'should not read Fusion trace when Fusion is disabled'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> false }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        record.gpuMetrics == null
+    }
+
+    def 'should handle missing Fusion trace file gracefully'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        noExceptionThrown()
+        record.gpuMetrics == null
+    }
+
+    def 'should parse full Fusion trace metrics when NXF_FUSION_TRACE is enabled'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":660541,"pct_cpu":1045,"cpu_name":"Intel CPU","rchar":100,"wchar":200,"syscr":10,"syscw":20,"read_bytes":300,"write_bytes":400,"pct_mem":56,"vmem":1000,"rss":500,"peak_vmem":1100,"peak_rss":600,"vol_ctxt":100,"inv_ctxt":50},"gpu":{"name":"Tesla T4","pct":75,"peak":100},"cgroup":{"version":"v2","memory_current":25469927424,"memory_peak":41178980352,"memory_rss":67919872,"memory_peak_rss":14783070208,"memory_limit":77309411328}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        // cgroup memory metrics
+        record.store.get('vmem') == 25469927424L
+        record.store.get('rss') == 67919872L
+        record.store.get('peak_vmem') == 41178980352L
+        record.store.get('peak_rss') == 14783070208L
+        // proc metrics
+        record.store.get('realtime') == 660541L
+        record.store.get('%cpu') == 104.5f
+        record.store.get('cpu_model') == 'Intel CPU'
+        // gpu metrics
+        record.gpuMetrics.name == 'Tesla T4'
+        record.gpuMetrics.pct == 75
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should only parse GPU metrics when NXF_FUSION_TRACE is disabled'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'false'])
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":660541,"pct_cpu":1045},"gpu":{"name":"Tesla T4","pct":75,"peak":100},"cgroup":{"version":"v2","memory_current":25469927424}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        // only GPU metrics populated (existing behavior)
+        record.gpuMetrics.name == 'Tesla T4'
+        // no proc/cgroup metrics populated
+        record.store.get('realtime') == null
+        record.store.get('vmem') == null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should skip command trace file when NXF_FUSION_TRACE is enabled'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def folder = TestHelper.createInMemTempDir()
+        // Create a .command.trace with different values to prove it's NOT read
+        folder.resolve(TaskRun.CMD_TRACE).text = '''\
+            nextflow.trace/v2
+            realtime=99999
+            %cpu=100
+            '''.stripIndent().leftTrim()
+        // Create fusion trace
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":1000,"pct_cpu":500,"cpu_name":"CPU","rchar":0,"wchar":0,"syscr":0,"syscw":0,"read_bytes":0,"write_bytes":0,"pct_mem":0,"vmem":0,"rss":0,"peak_vmem":0,"peak_rss":0,"vol_ctxt":0,"inv_ctxt":0}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+        task.processor.getName() >> 'test'
+        task.processor.getProcessEnvironment() >> [:]
+        task.config = new TaskConfig()
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 500L
+        handler.startTimeMillis = 1000L
+        handler.completeTimeMillis = 2000L
+
+        when:
+        def record = handler.getTraceRecord()
+
+        then:
+        // Should use Fusion realtime (1000), NOT .command.trace realtime (99999)
+        record.store.get('realtime') == 1000L
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
+    }
+
+    /**
+     * The trace record is persisted in the resume cache DB and POSTed to Seqera Platform by
+     * nf-tower. An agent task's script is the RPC proxy launch command, whose `--token` is a bearer
+     * credential for the provider API key the driver sends on the start frame -- so it must not be
+     * in there. LinObserver already omits task.script from the lineage record for the same reason.
+     */
+    def 'the trace record of an agent task carries no capability token'() {
+        given:
+        def token = 'Y2FwYWJpbGl0eS10b2tlbi0zMi1ieXRlcw'
+        def script = "exec '/opt/nf-agent/agent-rpc' '--endpoint' 'driver:41235' " +
+            "'--invocation' 'inv-1' '--fingerprint' 'aabb' '--token' '${token}' '--' '/usr/bin/node' 'runner.mjs'"
+        def agentInfo = new AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = new TaskRun(id: new TaskId(7), name: 'agentTask', script: script,
+            config: new TaskConfig([(AgentTaskInfo.CONFIG_KEY): agentInfo]))
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'summarize'
+        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+
+        when:
+        def record = handler.getTraceRecord()
+
+        then: 'the token value is nowhere in the record'
+        !record.script.contains(token)
+        record.script.contains("'--token' '[REDACTED]'")
+        and: 'and the rest of the launch command still is -- a fingerprint is a public commitment'
+        record.script.contains("'--endpoint' 'driver:41235'")
+        record.script.contains("'--fingerprint' 'aabb'")
+        and: 'the EXECUTED script is untouched: .command.sh keeps the real token'
+        task.script == script
+        task.getScript() == script
+    }
+
+    def 'the trace record of an ordinary task is unchanged by the agent redaction'() {
+        given: 'the agent seam sits on the path taken by EVERY task, so this is the contract'
+        def script = 'echo hello --token not-really-a-flag'
+        def task = new TaskRun(id: new TaskId(8), name: 'plainTask', script: script, config: new TaskConfig([:]))
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'plain'
+        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+
+        when:
+        def record = handler.getTraceRecord()
+
+        then: 'byte-identical, even though it happens to contain the flag the redactor looks for'
+        record.script == script
+    }
 }

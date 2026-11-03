@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -601,6 +601,51 @@ class FilesExTest extends Specification {
 
         cleanup:
         sourceFolder.deleteDir()
+    }
+
+    def 'listFiles should not follow symlinked directory' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def realDir = folder.resolve('realDir')
+        Files.createDirectories(realDir)
+        realDir.resolve('file1.txt').text = 'Hello1'
+        realDir.resolve('file2.txt').text = 'Hello2'
+        def linkDir = folder.resolve('linkDir')
+        Files.createSymbolicLink(linkDir, realDir)
+
+        when:
+        def paths = linkDir.listFiles()
+
+        then:
+        // without FOLLOW_LINKS, walkFileTree treats the symlink as a file
+        paths.size() == 1
+        paths[0] == linkDir
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'listDirectory should follow symlinked directory' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def realDir = folder.resolve('realDir')
+        Files.createDirectories(realDir)
+        realDir.resolve('file1.txt').text = 'Hello1'
+        realDir.resolve('file2.txt').text = 'Hello2'
+        def linkDir = folder.resolve('linkDir')
+        Files.createSymbolicLink(linkDir, realDir)
+
+        when:
+        def paths = linkDir.listDirectory()
+
+        then:
+        paths.size() == 2
+        paths.collect { it.name }.sort() == ['file1.txt', 'file2.txt']
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 
@@ -1272,7 +1317,7 @@ class FilesExTest extends Specification {
         FilesEx.toPosixFilePermission(0644) == [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ] as Set
     }
 
-    def 'should convert permissions to actal' () {
+    def 'should convert permissions to octal' () {
         expect:
         FilesEx.toOctalFileMode([] as Set) == 0
         and:

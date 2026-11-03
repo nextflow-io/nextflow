@@ -1,0 +1,61 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package nextflow.script.dsl;
+
+public class FeatureFlagDsl {
+
+    @Deprecated
+    @FeatureFlag("nextflow.enable.configProcessNamesValidation")
+    @Description("""
+        When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
+    """)
+    public boolean configProcessNamesValidation;
+
+    @Deprecated
+    @FeatureFlag("nextflow.enable.dsl")
+    @Description("""
+        Defines the DSL version (`1` or `2`).
+    """)
+    public float dsl;
+
+    @FeatureFlag("nextflow.enable.moduleBinaries")
+    @Description("""
+        When `true`, enables the use of module-scoped executable scripts via [module resources](https://docs.seqera.io/nextflow/modules/developing-modules#resources).
+    """)
+    public boolean moduleBinaries;
+
+    @Deprecated
+    @FeatureFlag("nextflow.enable.strict")
+    @Description("""
+        When `true`, the pipeline is executed in [strict mode](https://docs.seqera.io/nextflow/reference/feature-flags).
+    """)
+    public boolean strict;
+
+    @FeatureFlag("nextflow.enable.types")
+    @Description("""
+        When `true`, enables the use of [typed processes](https://docs.seqera.io/nextflow/process-typed) and [typed workflows](https://docs.seqera.io/nextflow/workflow-typed).
+
+        This feature flag must be enabled in every script that uses typed processes/workflows. Legacy processes/workflows can not be defined in scripts that enable this feature flag.
+    """)
+    public boolean types;
+
+    @FeatureFlag("nextflow.preview.recursion")
+    @Description("""
+        When `true`, enables the use of [process and workflow recursion](https://docs.seqera.io/nextflow/workflow#process-and-workflow-recursion).
+    """)
+    public boolean previewRecursion;
+
+}

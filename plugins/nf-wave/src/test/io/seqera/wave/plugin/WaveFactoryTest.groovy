@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin
@@ -40,13 +39,53 @@ class WaveFactoryTest extends Specification {
         then:
         CONFIG == EXPECTED
         and:
-        DISABLED * session.setDisableRemoteBinDir(true) >> null
+        DISABLED * session.setDisableRemoteBinDir(true)
 
         where:
         CONFIG                      | EXPECTED                  | DISABLED
         [:]                         | [:]                       | 0
         [wave:[enabled:true]]       | [wave:[enabled:true]]     | 0
         [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
+    }
+
+    @Unroll
+    def 'should get wave enable status' () {
+        given:
+        SysEnv.push(ENV)
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        def result = WaveFactory.shouldEnable(session)
+        then:
+        result == ENABLED
+        CONFIG == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENABLED | ENV                               | CONFIG                        | EXPECTED
+        false   | [:]                               | [:]                           | [:]
+        true    | [:]                               | [wave:[enabled:true]]         | [wave:[enabled:true]]
+        true    | [:]                               | [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]]
+        false   | [NXF_DISABLE_WAVE_SERVICE: 'true']| [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:false], fusion:[enabled:true]]
+    }
+
+    @Unroll
+    def 'should check s5cmd is enabled' () {
+        given:
+        def factory = new WaveFactory()
+
+        expect:
+        factory.isAwsBatchFargateMode(CONFIG) == EXPECTED
+
+        where:
+        CONFIG                                  | EXPECTED
+        [:]                                     | false
+        [aws:[batch:[platformType:'foo']]]       | false
+        [aws:[batch:[platformType:'fargate']]]   | true
+        [aws:[batch:[platformType:'Fargate']]]   | true
+
     }
 
     def 'should fail when wave is disabled' () {
@@ -62,6 +101,42 @@ class WaveFactoryTest extends Specification {
         e.message == 'Fusion feature requires enabling Wave service'
     }
 
+    @Unroll
+    def 'should make wave optional for the seqera executor in native fusion mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        WaveFactory.shouldEnable(session)
+        then:
+        noExceptionThrown()
+        CONFIG == EXPECTED
+        DISABLED * session.setDisableRemoteBinDir(true)
+
+        where:
+        CONFIG                                                                                                    | EXPECTED                                                                                                                                           | DISABLED
+        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], fusion:[enabled:true]]                     | [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], fusion:[enabled:true]]                                              | 0
+        [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], wave:[enabled:true], fusion:[enabled:true]] | [process:[executor:'seqera'], seqera:[executor:[fusionMode:'native']], wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
+    }
+
+    @Unroll
+    def 'should require wave for the seqera executor without native fusion mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        WaveFactory.shouldEnable(session)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Fusion feature requires enabling Wave service'
+
+        where:
+        CONFIG << [
+            [process:[executor:'seqera'], fusion:[enabled:true]],
+            [process:[executor:'seqera'], seqera:[executor:[fusionMode:'wave']], fusion:[enabled:true]],
+        ]
+    }
+
     def 'should not fail when wave is disabled' () {
         given:
         SysEnv.push(NXF_DISABLE_WAVE_SERVICE: 'true')
@@ -74,10 +149,12 @@ class WaveFactoryTest extends Specification {
         then:
         noExceptionThrown()
         and:
-        0 * session.setDisableRemoteBinDir(true) >> null
+        0 * session.setDisableRemoteBinDir(true)
         and:
         CONFIG == [wave:[:], fusion:[enabled:true]]
-    }
 
+        cleanup:
+        SysEnv.pop()
+    }
 
 }

@@ -24,9 +24,9 @@ function echo_yellow() {
 # Some vars 
 #
 NXF_CMD=${NXF_CMD:-nextflow}
+NXF_SYNTAX_PARSER=${NXF_SYNTAX_PARSER:-v2}
 REPORT=$PWD/.report
 WITH_DOCKER=${WITH_DOCKER:=''}
-TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 
 #
 # Clean scratch dir 
@@ -34,10 +34,13 @@ TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 export NXF_WORK=$PWD/scratch
 rm -rf $NXF_WORK
 
+# agent mode changes console output; agent-output checks enable it explicitly
+export NXF_AGENT_MODE=false
+
 
 function run_checks() {
   NXF_SCRIPT="../../$1"
-  NXF_RUN="$NXF_CMD -q run $NXF_SCRIPT" 
+  NXF_RUN="$NXF_CMD -q run $NXF_SCRIPT"
   export NXF_SCRIPT
   export NXF_CMD
   export NXF_RUN
@@ -50,7 +53,7 @@ function run_checks() {
   else
      mkdir -p $1
      cd $1
-     $NXF_RUN > checks.out 
+     $NXF_RUN > checks.out
   fi
   
   ret=$?
@@ -73,14 +76,13 @@ rm -rf $REPORT
 list=${1:-'../*.nf'}
 
 function can_run() {
-    if [[ `grep -c "$1" .IGNORE` != 0 ]]; then
+    if [[ $(grep -c "$1" .IGNORE) != 0 ]]; then
         echo 'no'
-    elif [[ ! $WITH_DOCKER && `grep -c "$1" .IGNORE-DOCKER` != 0 ]]; then
+    elif [[ ! $WITH_DOCKER && $(grep -c "$1" .IGNORE-DOCKER) != 0 ]]; then
         echo 'no'
-    elif [[ $TRAVIS_PULL_REQUEST != false && `grep -c "$1" .IGNORE-TRAVIS-PR` != 0 ]]; then 
-        # https://docs.travis-ci.com/user/pull-requests/#Pull-Requests-and-Security-Restrictions
-        echo 'no'    
-    elif [[ -f .IGNORE-JAVA-$TEST_JDK && `grep -c "$1" .IGNORE-JAVA-$TEST_JDK` != 0 ]]; then
+    elif [[ -f .IGNORE-JAVA-$TEST_JDK && $(grep -c "$1" ".IGNORE-JAVA-$TEST_JDK") != 0 ]]; then
+        echo 'no'
+    elif [[ $NXF_SYNTAX_PARSER == 'v1' && $(grep -c "$1" .IGNORE-PARSER-V2) != 0 ]]; then
         echo 'no'
     else
         echo 'yes'

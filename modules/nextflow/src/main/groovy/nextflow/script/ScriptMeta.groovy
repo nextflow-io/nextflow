@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,17 +48,28 @@ class ScriptMeta {
 
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
+    static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
+
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
+
+    static private Set<String> resolvedAgentNames = new HashSet<>(20)
 
     @TestOnly
     static void reset() {
         REGISTRY.clear()
+        scriptsByPath.clear()
         resolvedProcessNames.clear()
+        resolvedAgentNames.clear()
     }
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
         return REGISTRY.get(script)
+    }
+
+    static BaseScript getScriptByPath(Path path) {
+        return scriptsByPath.get(path)
+            ?: scriptsByPath.get(path.toRealPath())
     }
 
     static Set<String> allProcessNames() {
@@ -70,8 +81,30 @@ class ScriptMeta {
         return result
     }
 
+    static Set<String> allAgentNames() {
+        def result = new HashSet()
+        for( ScriptMeta entry : REGISTRY.values() )
+            result.addAll( entry.getAgentNames() )
+        // add all resolved names
+        result.addAll(resolvedAgentNames)
+        return result
+    }
+
+    static Set<ProcessDef> allProcesses() {
+        final result = new HashSet()
+        for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            result.addAll(processes)
+        }
+        return result
+    }
+
     static void addResolvedName(String name) {
         resolvedProcessNames.add(name)
+    }
+
+    static void addResolvedAgentName(String name) {
+        resolvedAgentNames.add(name)
     }
 
     static Map<String,Path> allScriptNames() {
@@ -85,8 +118,8 @@ class ScriptMeta {
         get(ExecutionStack.script())
     }
 
-    /** the script {@link Class} object */
-    private Class<? extends BaseScript> clazz
+    /** the script object */
+    private BaseScript script
 
     /** The location path from where the script has been loaded */
     private Path scriptPath
@@ -97,8 +130,6 @@ class ScriptMeta {
     /** The module components included in the script */
     private Map<String,ComponentDef> imports = new HashMap<>(10)
 
-    private List<String> dsl1ProcessNames
-
     /** Whenever it's a module script or the main script */
     private boolean module
 
@@ -108,26 +139,22 @@ class ScriptMeta {
 
     Path getModuleDir () { scriptPath?.parent }
 
-    String getScriptName() { clazz.getName() }
+    String getScriptName() { script.getClass().getName() }
 
     boolean isModule() { module }
 
     ScriptMeta(BaseScript script) {
-        this.clazz = script.class
+        this.script = script
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
         }
     }
 
-    /** only for testing */
-    protected ScriptMeta() {}
-
-    @PackageScope
     void setScriptPath(Path path) {
+        scriptsByPath.put(path, script)
         scriptPath = path
     }
 
-    @PackageScope
     void setModule(boolean val) {
         this.module = val
     }
@@ -150,40 +177,16 @@ class ScriptMeta {
     }
 
     void checkComponentName(ComponentDef component, String name) {
-        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+        if( component !instanceof WorkflowDef && component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if (functionsCount.get(name)) {
-            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        if( functionsCount.get(name) ) {
+            throw new DuplicateModuleFunctionException("A function named '$name' is already defined or included in script: $scriptPath")
         }
-        if (imports.get(name)) {
-            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        final existing = imports.get(name)
+        if( existing != null ) {
+            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
         }
-    }
-
-    /*
-     * This method invocation is made by the NF AST transformer to pass
-     * the process names declared in the workflow script. This is only required
-     * for DSL1 script.
-     *
-     * When using DSL2 process names can be discovered during
-     * the script execution since, the process declaration is de-coupled by the
-     * process invocations.
-     */
-    @PackageScope
-    void setDsl1ProcessNames(List<String> names) {
-        this.dsl1ProcessNames = names
-    }
-
-    @PackageScope
-    List<String> getDsl1ProcessNames() {
-        dsl1ProcessNames ?: Collections.<String>emptyList()
     }
 
     @PackageScope
@@ -213,7 +216,8 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
-        checkComponentName(component, name)
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
         definitions.put(component.name, component)
         if( component instanceof FunctionDef ){
             incFunctionCount(name)
@@ -246,6 +250,11 @@ class ScriptMeta {
         return result instanceof ProcessDef ? result : null
     }
 
+    AgentDef getAgent(String name) {
+        final result = getComponent(name)
+        return result instanceof AgentDef ? result : null
+    }
+
     FunctionDef getFunction(String name) {
         final result = getComponent(name)
         return result instanceof FunctionDef ? result : null
@@ -270,7 +279,7 @@ class ScriptMeta {
         final result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
-            if( item instanceof WorkflowDef )
+            if( item instanceof WorkflowDef && item.name )
                 result.add(item.name)
         }
         // processes from imports
@@ -282,9 +291,6 @@ class ScriptMeta {
     }
 
     Set<String> getProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
-
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
@@ -299,14 +305,36 @@ class ScriptMeta {
         return result
     }
 
-    Set<String> getLocalProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
+    Set<String> getAgentNames() {
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof AgentDef )
+                result.add(item.name)
+        }
+        // agents from imports -- an aliased include is a clone carrying the alias as its name,
+        // so both the declared name and the alias are valid `withName:` targets
+        for( def item: imports.values() ) {
+            if( item instanceof AgentDef )
+                result.add(item.name)
+        }
+        return result
+    }
 
+    Set<String> getLocalProcessNames() {
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
             if( item instanceof ProcessDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getLocalAgentNames() {
+        def result = new HashSet(definitions.size())
+        for( def item : definitions.values() ) {
+            if( item instanceof AgentDef )
                 result.add(item.name)
         }
         return result
@@ -321,17 +349,80 @@ class ScriptMeta {
         return result
     }
 
+    /**
+     * Check if this script has a named workflow that can be executed
+     * automatically without an explicit entry workflow.
+     *
+     * @return true if the script has exactly one named workflow
+     */
+    boolean hasExecutableWorkflows() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+
+        // Must not have any process definitions
+        if( !getLocalProcessNames().isEmpty() )
+            return false
+
+        // Must have exactly one workflow
+        return getLocalWorkflowNames().size() == 1
+    }
+
+    /**
+     * Check if this script has a standalone process that can be executed
+     * automatically without requiring workflows
+     *
+     * @return true if the script has exactly one process and no workflows
+     */
+    boolean hasExecutableProcesses() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+
+        // Must not have any workflow definitions
+        if( !getLocalWorkflowNames().isEmpty() )
+            return false
+
+        // Must not have any agent definitions, since a process
+        // alongside an agent is a tool for that agent
+        if( !getLocalAgentNames().isEmpty() )
+            return false
+
+        // Must have exactly one process
+        return getLocalProcessNames().size() == 1
+    }
+
+    /**
+     * Check if this script has a standalone agent that can be executed
+     * automatically without requiring workflows. Processes are allowed,
+     * since they can be used as tools by the agent.
+     *
+     * @return true if the script has exactly one agent and no workflows
+     */
+    boolean hasExecutableAgents() {
+        if( isModule() )
+            return false
+
+        if( !getLocalWorkflowNames().isEmpty() )
+            return false
+
+        return getLocalAgentNames().size() == 1
+    }
+
     void addModule(BaseScript script, String name, String alias) {
        addModule(get(script), name, alias)
     }
 
-    void addModule(ScriptMeta script, String name, String alias) {
-        assert script
+    void addModule(ScriptMeta meta, String name, String alias) {
+        assert meta
         assert name
-        // include a specific
-        def item = script.getComponent(name)
+        // the pipeline of the module takes precedence over a definition
+        // with the same name, matching the compiler
+        final item = name == 'workflow' && NF.isSyntaxParserV2() && meta.script.getEntryFlow()
+            ? meta.script.getEntryFlow()
+            : meta.getComponent(name)
         if( !item )
-            throw new MissingModuleComponentException(script, name)
+            throw new MissingModuleComponentException(meta, name)
         addModule0(item, alias)
     }
 
@@ -339,13 +430,12 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        checkComponentName(component, name)
-        if( name != component.name ) {
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
+        if( name != component.name )
             imports.put(name, component.cloneWithName(name))
-        }
-        else {
+        else
             imports.put(name, component)
-        }
     }
 
     @Memoized

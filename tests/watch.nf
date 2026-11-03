@@ -1,0 +1,34 @@
+#!/usr/bin/env nextflow
+
+params.events = 'create'
+params.files = 'examples/data/*.fa'
+
+
+process align {
+  input:
+  path fasta
+
+  output:
+  path 'aln'
+
+  script:
+  """
+  t_coffee -in $fasta 1> aln
+  """
+}
+
+/*
+ * main flow
+ */
+
+workflow {
+
+    Channel
+        .watchPath(params.files, params.events) \
+        | align \
+        | subscribe {
+              println '------'
+              println it.text
+            }
+
+}

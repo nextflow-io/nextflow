@@ -1,0 +1,810 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package nextflow.script.formatter;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import nextflow.script.ast.AgentNode;
+import nextflow.script.ast.AssignmentExpression;
+import nextflow.script.ast.FeatureFlagNode;
+import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeEntryNode;
+import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
+import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
+import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.TupleParameter;
+import nextflow.script.ast.WorkflowNode;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
+import org.codehaus.groovy.ast.expr.EmptyExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
+import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.EmptyStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.control.SourceUnit;
+
+import static nextflow.script.ast.ASTUtils.*;
+
+/**
+ * Format a script.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class ScriptFormattingVisitor extends ScriptVisitorSupport {
+
+    private SourceUnit sourceUnit;
+
+    private FormattingOptions options;
+
+    private Formatter fmt;
+
+    private int maxIncludeWidth = 0;
+
+    private int maxParamWidth = 0;
+
+    public ScriptFormattingVisitor(SourceUnit sourceUnit, FormattingOptions options) {
+        this.sourceUnit = sourceUnit;
+        this.options = options;
+        this.fmt = new Formatter(options);
+        this.fmt.setComments(CommentAttacher.of(sourceUnit.getAST()));
+    }
+
+    /**
+     * Get the comments that were not printed. Should always be empty --
+     * a non-empty result means formatting would delete source.
+     */
+    public List<Comment> getMissingComments() {
+        return fmt.getComments().getMissingComments();
+    }
+
+    @Override
+    protected SourceUnit getSourceUnit() {
+        return sourceUnit;
+    }
+
+    public void visit() {
+        var moduleNode = sourceUnit.getAST();
+        if( !(moduleNode instanceof ScriptNode) )
+            return;
+        var scriptNode = (ScriptNode) moduleNode;
+        if( scriptNode.getShebang() != null ) {
+            fmt.append(scriptNode.getShebang());
+            fmt.appendNewLine();
+        }
+
+        // format code snippet if applicable
+        var entry = scriptNode.getEntry();
+        if( entry != null && entry.isCodeSnippet() ) {
+            fmt.visit(entry.main);
+            fmt.appendDanglingComments(scriptNode);
+            return;
+        }
+
+        // format script declarations
+        var declarations = scriptNode.getDeclarations();
+
+        // -- declarations are canonically sorted by default
+        // -- revert to original order if sorting is disabled
+        if( !options.sortDeclarations() ) {
+            declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
+        }
+
+        // -- prepare alignment widths if needed
+        if( options.harshilAlignment() ) {
+            maxIncludeWidth = scriptNode.getIncludes().stream()
+                .flatMap(in -> in.entries.stream())
+                .map(this::getIncludeWidth)
+                .max(Integer::compare).orElse(0);
+
+            maxParamWidth = scriptNode.getParamsV1().stream()
+                .map(ScriptFormattingVisitor::parameterWidth)
+                .max(Integer::compare).orElse(0);
+        }
+
+        for( var decl : declarations ) {
+            if( decl instanceof AgentNode an )
+                visitAgent(an);
+            else if( decl instanceof ClassNode cn && cn.isEnum() )
+                visitEnum(cn);
+            else if( decl instanceof FeatureFlagNode ffn )
+                visitFeatureFlag(ffn);
+            else if( decl instanceof FunctionNode fn )
+                visitFunction(fn);
+            else if( decl instanceof IncludeNode in )
+                visitInclude(in);
+            else if( decl instanceof OutputBlockNode obn )
+                visitOutputs(obn);
+            else if( decl instanceof ParamBlockNode pbn )
+                visitParams(pbn);
+            else if( decl instanceof ParamNodeV1 pn )
+                visitParamV1(pn);
+            else if( decl instanceof ProcessNode pn )
+                visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
+            else if( decl instanceof WorkflowNode wn )
+                visitWorkflow(wn);
+        }
+
+        fmt.appendDanglingComments(scriptNode);
+    }
+
+    public String toString() {
+        return fmt.toString();
+    }
+
+    // script declarations
+
+    @Override
+    public void visitFeatureFlag(FeatureFlagNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append(node.name);
+        fmt.append(" = ");
+        fmt.visit(node.value);
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    @Override
+    public void visitInclude(IncludeNode node) {
+        var wrap = node.getLineNumber() < node.getLastLineNumber();
+        fmt.appendLeadingComments(node);
+        fmt.append("include {");
+        if( wrap )
+            fmt.incIndent();
+        for( int i = 0; i < node.entries.size(); i++ ) {
+            if( wrap ) {
+                fmt.appendNewLine();
+                fmt.appendIndent();
+            }
+            else {
+                fmt.append(' ');
+            }
+            var entry = node.entries.get(i);
+            fmt.append(entry.name);
+            if( entry.alias != null ) {
+                fmt.append(" as ");
+                fmt.append(entry.alias);
+            }
+            if( !wrap && node.entries.size() == 1 && options.harshilAlignment() ) {
+                var padding = maxIncludeWidth - getIncludeWidth(entry);
+                fmt.append(" ".repeat(padding));
+            }
+            if( i + 1 < node.entries.size() )
+                fmt.append(" ;");
+        }
+        if( wrap ) {
+            fmt.appendNewLine();
+            fmt.decIndent();
+        }
+        else {
+            fmt.append(' ');
+        }
+        fmt.append("} from ");
+        fmt.visit(node.source);
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private int getIncludeWidth(IncludeEntryNode entry) {
+        return entry.alias != null
+            ? entry.name.length() + 4 + entry.alias.length()
+            : entry.name.length();
+    }
+
+    @Override
+    public void visitParams(ParamBlockNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("params {\n");
+        fmt.incIndent();
+        var aligner = fmt.commentAligner();
+        for( var param : node.declarations ) {
+            fmt.appendLeadingComments(param);
+            aligner.begin();
+            fmt.appendIndent();
+            fmt.append(param.getName());
+            if( fmt.hasType(param) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(param.getType());
+            }
+            if( param.hasInitialExpression() ) {
+                fmt.append(" = ");
+                fmt.visit(param.getInitialExpression());
+            }
+            aligner.end(param);
+            fmt.appendTrailingComment(param);
+            fmt.appendNewLine();
+        }
+        aligner.apply();
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
+        fmt.appendLeadingComments(node);
+        fmt.appendIndent();
+        fmt.visit(node.target);
+        if( maxParamWidth > 0 ) {
+            var padding = maxParamWidth - parameterWidth(node);
+            fmt.append(" ".repeat(padding));
+        }
+        fmt.append(" = ");
+        fmt.visit(node.value);
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private static int parameterWidth(ParamNodeV1 node) {
+        var target = (PropertyExpression) node.target;
+        var name = target.getPropertyAsString();
+        return name != null ? name.length() : 0;
+    }
+
+    @Override
+    public void visitWorkflow(WorkflowNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("workflow");
+        if( !node.isEntry() ) {
+            fmt.append(' ');
+            fmt.append(node.getName());
+        }
+        fmt.append(" {\n");
+        fmt.incIndent();
+        var takes = node.getParameters();
+        if( takes.length > 0 ) {
+            fmt.appendIndent();
+            fmt.append("take:\n");
+            visitTypedInputs(takes);
+        }
+        if( !node.main.isEmpty() ) {
+            if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() || !node.onComplete.isEmpty() || !node.onError.isEmpty() ) {
+                fmt.appendNewLine();
+                fmt.appendIndent();
+                fmt.append("main:\n");
+            }
+            fmt.visit(node.main);
+        }
+        if( !node.emits.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("emit:\n");
+            visitTypedOutputs(asBlockStatements(node.emits));
+        }
+        if( !node.publishers.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("publish:\n");
+            visitWorkflowPublishers(asBlockStatements(node.publishers));
+        }
+        if( !node.onComplete.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("onComplete:\n");
+            fmt.visit(node.onComplete);
+        }
+        if( !node.onError.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("onError:\n");
+            fmt.visit(node.onError);
+        }
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private void visitTypedInputs(Parameter[] inputs) {
+        var aligner = fmt.commentAligner();
+        for( var input : inputs ) {
+            fmt.appendLeadingComments(input);
+            aligner.begin();
+            fmt.appendIndent();
+            if( input instanceof TupleParameter tp ) {
+                visitStructuredInput(tp);
+            }
+            else {
+                visitTypedInput(input);
+            }
+            aligner.end(input);
+            fmt.appendTrailingComment(input);
+            fmt.appendNewLine();
+        }
+        aligner.apply();
+    }
+
+    private void visitStructuredInput(TupleParameter tp) {
+        var isRecord = "Record".equals(tp.getType().getNameWithoutPackage());
+        var wrap = isRecord;
+
+        fmt.append(isRecord ? "record" : "tuple");
+        fmt.append('(');
+        if( wrap )
+            fmt.incIndent();
+        for( int i = 0; i < tp.components.length; i++ ) {
+            var p = tp.components[i];
+            if( wrap ) {
+                fmt.appendNewLine();
+                fmt.appendIndent();
+            }
+            fmt.append(p.getName());
+            if( fmt.hasType(p) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(p.getType());
+            }
+            if( i < tp.components.length - 1 )
+                fmt.append(wrap ? "," : ", ");
+        }
+        if( wrap ) {
+            fmt.appendNewLine();
+            fmt.decIndent();
+            fmt.appendIndent();
+        }
+        fmt.append(')');
+    }
+
+    private void visitTypedInput(Parameter node) {
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(node.getType());
+        }
+    }
+
+    private void visitTypedOutputs(List<Statement> outputs) {
+        var alignmentWidth = options.harshilAlignment()
+            ? maxParameterWidth(outputs)
+            : 0;
+
+        var aligner = fmt.commentAligner();
+        for( var stmt : outputs ) {
+            var stmtX = (ExpressionStatement)stmt;
+            var output = stmtX.getExpression();
+            var target =
+                output instanceof AssignmentExpression ae ? (VariableExpression)ae.getLeftExpression() :
+                output instanceof VariableExpression ve ? ve :
+                null;
+            var source =
+                output instanceof AssignmentExpression ae ? ae.getRightExpression() :
+                null;
+
+            if( target != null ) {
+                fmt.appendLeadingComments(stmt);
+                aligner.begin();
+                fmt.appendIndent();
+                visitOutputAssignment(target, source, alignmentWidth);
+                aligner.end(stmt);
+                fmt.appendTrailingComment(stmt);
+                fmt.appendNewLine();
+            }
+            else {
+                fmt.visit(stmt);
+            }
+        }
+        aligner.apply();
+    }
+
+    private void visitWorkflowPublishers(List<Statement> publishers) {
+        var alignmentWidth = options.harshilAlignment() && publishers.size() > 1
+            ? publishers.stream()
+                .map((stmt) -> publisherTarget(stmt).getName().length())
+                .max(Integer::compare).orElse(0)
+            : 0;
+
+        var aligner = fmt.commentAligner();
+        for( var stmt : publishers ) {
+            var target = publisherTarget(stmt);
+            var source = ((AssignmentExpression)((ExpressionStatement)stmt).getExpression()).getRightExpression();
+
+            fmt.appendLeadingComments(stmt);
+            aligner.begin();
+            fmt.appendIndent();
+            fmt.append(target.getName());
+            if( alignmentWidth > 0 )
+                fmt.append(" ".repeat(alignmentWidth - target.getName().length()));
+            fmt.append(" = ");
+            fmt.visit(source);
+            aligner.end(stmt);
+            fmt.appendTrailingComment(stmt);
+            fmt.appendNewLine();
+        }
+        aligner.apply();
+    }
+
+    private static VariableExpression publisherTarget(Statement stmt) {
+        var emit = (AssignmentExpression)((ExpressionStatement)stmt).getExpression();
+        return (VariableExpression)emit.getLeftExpression();
+    }
+
+    private int maxParameterWidth(List<Statement> statements) {
+        if( statements.size() == 1 )
+            return 0;
+
+        return statements.stream()
+            .map((stmt) -> {
+                var stmtX = (ExpressionStatement)stmt;
+                var emit = stmtX.getExpression();
+                if( emit instanceof VariableExpression ve && !fmt.hasType(ve) ) {
+                    return ve.getName().length();
+                }
+                if( emit instanceof AssignmentExpression assign ) {
+                    var target = (VariableExpression)assign.getLeftExpression();
+                    return fmt.hasType(target) ? 0 : target.getName().length();
+                }
+                return 0;
+            })
+            .max(Integer::compare).orElse(0);
+    }
+
+    private void visitOutputAssignment(VariableExpression target, Expression source, int alignmentWidth) {
+        fmt.append(target.getText());
+        if( !fmt.hasType(target) && source != null && alignmentWidth > 0 ) {
+            var padding = alignmentWidth - target.getName().length();
+            fmt.append(" ".repeat(padding));
+        }
+        if( fmt.hasType(target) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(target.getType());
+        }
+        if( source != null ) {
+            fmt.append(" = ");
+            fmt.visit(source);
+        }
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("agent ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        if( !node.directives.isEmpty() ) {
+            visitDirectives(node.directives);
+            fmt.appendNewLine();
+        }
+        var inputs = node.inputs;
+        if( inputs.length > 0 ) {
+            fmt.appendIndent();
+            fmt.append("input:\n");
+            visitTypedInputs(inputs);
+            fmt.appendNewLine();
+        }
+        if( !node.outputs.isEmpty() ) {
+            visitProcessOutputs(node.outputs);
+            fmt.appendNewLine();
+        }
+        fmt.appendIndent();
+        fmt.append("prompt:\n");
+        fmt.visit(node.prompt);
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    @Override
+    public void visitProcessV2(ProcessNodeV2 node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("process ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        if( !node.directives.isEmpty() ) {
+            visitDirectives(node.directives);
+            fmt.appendNewLine();
+        }
+        var inputs = node.inputs;
+        if( inputs.length > 0 ) {
+            fmt.appendIndent();
+            fmt.append("input:\n");
+            visitTypedInputs(inputs);
+            fmt.appendNewLine();
+        }
+        if( !node.stagers.isEmpty() ) {
+            fmt.appendIndent();
+            fmt.append("stage:\n");
+            visitDirectives(node.stagers);
+            fmt.appendNewLine();
+        }
+        if( !options.maheshForm() ) {
+            if( !node.outputs.isEmpty() ) {
+                visitProcessOutputs(node.outputs);
+                fmt.appendNewLine();
+            }
+            if( !node.topics.isEmpty() ) {
+                visitProcessTopics(node.topics);
+                fmt.appendNewLine();
+            }
+        }
+        if( !(node.when instanceof EmptyExpression) ) {
+            fmt.appendIndent();
+            fmt.append("when:\n");
+            fmt.appendIndent();
+            fmt.visit(node.when);
+            fmt.append("\n\n");
+        }
+        fmt.appendIndent();
+        fmt.append(node.type);
+        fmt.append(":\n");
+        fmt.visit(node.exec);
+        if( !node.stub.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("stub:\n");
+            fmt.visit(node.stub);
+        }
+        if( options.maheshForm() ) {
+            if( !node.outputs.isEmpty() ) {
+                fmt.appendNewLine();
+                visitProcessOutputs(node.outputs);
+            }
+            if( !node.topics.isEmpty() ) {
+                fmt.appendNewLine();
+                visitProcessTopics(node.topics);
+            }
+        }
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private void visitProcessOutputs(Statement outputs) {
+        fmt.appendIndent();
+        fmt.append("output:\n");
+        visitTypedOutputs(asBlockStatements(outputs));
+    }
+
+    private void visitProcessTopics(Statement topics) {
+        fmt.appendIndent();
+        fmt.append("topic:\n");
+        fmt.visit(topics);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("process ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        if( !node.directives.isEmpty() ) {
+            visitDirectives(node.directives);
+            fmt.appendNewLine();
+        }
+        if( !node.inputs.isEmpty() ) {
+            fmt.appendIndent();
+            fmt.append("input:\n");
+            visitDirectives(node.inputs);
+            fmt.appendNewLine();
+        }
+        if( !options.maheshForm() && !node.outputs.isEmpty() ) {
+            visitProcessOutputsV1(node.outputs);
+            fmt.appendNewLine();
+        }
+        if( !(node.when instanceof EmptyExpression) ) {
+            fmt.appendIndent();
+            fmt.append("when:\n");
+            fmt.appendIndent();
+            fmt.visit(node.when);
+            fmt.append("\n\n");
+        }
+        fmt.appendIndent();
+        fmt.append(node.type);
+        fmt.append(":\n");
+        fmt.visit(node.exec);
+        if( !node.stub.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("stub:\n");
+            fmt.visit(node.stub);
+        }
+        if( options.maheshForm() && !node.outputs.isEmpty() ) {
+            fmt.appendNewLine();
+            visitProcessOutputsV1(node.outputs);
+        }
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private void visitProcessOutputsV1(Statement outputs) {
+        fmt.appendIndent();
+        fmt.append("output:\n");
+        visitDirectives(outputs);
+    }
+
+    @Override
+    public void visitFunction(FunctionNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("def ");
+        fmt.append(node.getName());
+        fmt.append('(');
+        fmt.visitParameters(node.getParameters());
+        fmt.append(')');
+        if( fmt.hasType(node.getReturnType()) ) {
+            fmt.append(" -> ");
+            fmt.visitTypeAnnotation(node.getReturnType());
+        }
+        fmt.append(" {\n");
+        fmt.incIndent();
+        fmt.visit(node.getCode());
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("record ");
+        fmt.append(node.getName());
+        visitRecordBody(node);
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private void visitRecordBody(RecordNode node) {
+        fmt.append(" {\n");
+        fmt.incIndent();
+        var aligner = fmt.commentAligner();
+        for( var fn : node.getFields() ) {
+            fmt.appendLeadingComments(fn);
+            aligner.begin();
+            fmt.appendIndent();
+            fmt.append(fn.getName());
+            if( fmt.hasType(fn) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(fn.getType());
+            }
+            aligner.end(fn);
+            fmt.appendTrailingComment(fn);
+            fmt.appendNewLine();
+        }
+        aligner.apply();
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.appendIndent();
+        fmt.append("}");
+    }
+
+    @Override
+    public void visitEnum(ClassNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("enum ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        for( var fn : node.getFields() ) {
+            fmt.appendLeadingComments(fn);
+            fmt.appendIndent();
+            fmt.append(fn.getName());
+            fmt.append(',');
+            fmt.appendTrailingComment(fn);
+            fmt.appendNewLine();
+        }
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    @Override
+    public void visitOutputs(OutputBlockNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("output {\n");
+        fmt.incIndent();
+        super.visitOutputs(node);
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    @Override
+    public void visitOutput(OutputNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.appendIndent();
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(node.getType());
+        }
+        fmt.append(" {\n");
+        fmt.incIndent();
+        visitOutputBody((BlockStatement) node.body);
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.appendIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
+    }
+
+    private void visitOutputBody(BlockStatement block) {
+        asBlockStatements(block).forEach((stmt) -> {
+            var call = asMethodCallX(stmt);
+            if( call == null )
+                return;
+
+            // treat as index definition
+            var name = call.getMethodAsString();
+            if( "index".equals(name) ) {
+                var args = asMethodCallArguments(call);
+                var closure = args.size() == 1 && args.get(0) instanceof ClosureExpression ce ? ce : null;
+                if( closure != null ) {
+                    fmt.appendLeadingComments(stmt);
+                    fmt.appendIndent();
+                    fmt.append(name);
+                    fmt.append(" {\n");
+                    fmt.incIndent();
+                    visitDirectives((BlockStatement) closure.getCode());
+                    fmt.appendDanglingComments(closure);
+                    fmt.decIndent();
+                    fmt.appendIndent();
+                    fmt.append("}");
+                    fmt.appendTrailingComment(stmt);
+                    fmt.appendNewLine();
+                    return;
+                }
+            }
+
+            // treat as regular directive
+            fmt.appendLeadingComments(stmt);
+            fmt.visitDirective(stmt, call);
+        });
+    }
+
+    private void visitDirectives(Statement statement) {
+        asBlockStatements(statement).forEach((stmt) -> {
+            var call = asMethodCallX(stmt);
+            if( call == null )
+                return;
+            fmt.appendLeadingComments(stmt);
+            fmt.visitDirective(stmt, call);
+        });
+    }
+
+}

@@ -1,0 +1,18 @@
+set -e
+
+#
+# run normal mode 
+#
+$NXF_RUN -process.scratch true | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+
+
+
+#
+# run resume mode 
+#
+$NXF_RUN -resume -process.scratch true | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
+

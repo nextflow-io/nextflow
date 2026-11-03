@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,16 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cache
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
 import org.iq80.leveldb.DB
@@ -64,7 +63,7 @@ class DefaultCacheStore implements CacheStore {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
-        this.baseDir = home ?: Paths.get('.nextflow').toAbsolutePath()
+        this.baseDir = home ?: Const.appCacheDir.toAbsolutePath()
         this.dataDir = baseDir.resolve("cache/$uniqueId")
         this.indexFile = dataDir.resolve("index.$runName")
     }
@@ -78,24 +77,30 @@ class DefaultCacheStore implements CacheStore {
             db = Iq80DBFactory.@factory.open(file, new Options().createIfMissing(true))
         }
         catch( Exception e ) {
-            String msg
             if( e.message?.startsWith('Unable to acquire lock') ) {
-                msg = "Unable to acquire lock on session with ID $uniqueId"
-                msg += "\n\n"
-                msg += "Common reasons for this error are:"
-                msg += "\n - You are trying to resume the execution of an already running pipeline"
-                msg += "\n - A previous execution was abruptly interrupted, leaving the session open"
-                msg += '\n'
-                msg += '\nYou can see which process is holding the lock file by using the following command:'
-                msg += "\n - lsof $file/LOCK"
+                final msg = """\
+                    Unable to acquire lock on session with ID $uniqueId
+
+                    Common reasons for this error are:
+                     - You are trying to resume the execution of an already running pipeline
+                     - A previous execution was abruptly interrupted, leaving the session open
+
+                    You can see which process is holding the lock file by using the following command:
+                     - lsof $file/LOCK""".stripIndent()
                 throw new IOException(msg)
             }
             else {
-                msg = "Can't open cache DB: $file"
-                msg += '\n\n'
-                msg += "Nextflow needs to be executed in a shared file system that supports file locks.\n"
-                msg += "Alternatively, you can run it in a local directory and specify the shared work\n"
-                msg += "directory by using the `-w` command line option."
+                final msg = """\
+                    Can't open cache DB: $file
+
+                    Cause: ${e.message}
+
+                    This can happen when the cache DB is located on a file system that does not
+                    support file locks, which is common for network file systems (NFS, Lustre, GPFS, …).
+                    In that case you can either:
+                      1. Set the NXF_CACHE_DIR environment variable to a lock-capable path.
+                      2. Run Nextflow from a local directory and point the work directory to your
+                         shared file system using the `-w` command line option.""".stripIndent()
                 throw new IOException(msg, e)
             }
         }

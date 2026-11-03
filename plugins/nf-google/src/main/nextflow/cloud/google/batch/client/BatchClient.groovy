@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,42 @@
 
 package nextflow.cloud.google.batch.client
 
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
+import dev.failsafe.function.CheckedPredicate
+
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.AlreadyExistsException
+import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.InternalException
+import com.google.api.gax.rpc.NotFoundException
+import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.BatchServiceClient.ListTasksPage
 import com.google.cloud.batch.v1.BatchServiceSettings
+import com.google.cloud.batch.v1.DeleteJobRequest
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.ListTasksRequest
 import com.google.cloud.batch.v1.LocationName
+import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
+import com.google.cloud.batch.v1.TaskName
+import com.google.cloud.batch.v1.TaskStatus
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.google.GoogleOpts
+import nextflow.util.TestOnly
 /**
  * Implements Google Batch HTTP client
  *
@@ -36,21 +60,25 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 class BatchClient {
-
+    private final static long TASK_STATE_INVALID_TIME = 1_000
+    private final static int LIST_TASKS_PAGE_SIZE = 500
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
+    protected GoogleOpts config
+    private Map<String, TaskStatusRecord> arrayTaskStatus = new ConcurrentHashMap<String, TaskStatusRecord>()
 
-    BatchClient(BatchConfig config) {
-        this.projectId = config.googleOpts.projectId
-        this.location = config.googleOpts.location
+    BatchClient(GoogleOpts config) {
+        this.config = config
+        this.projectId = config.projectId
+        this.location = config.location
         this.batchServiceClient = createBatchService(config)
     }
 
-    /** Only for testing - do not use */
+    @TestOnly
     protected BatchClient() {}
 
-    protected CredentialsProvider createCredentialsProvider(BatchConfig config) {
+    protected CredentialsProvider createCredentialsProvider(GoogleOpts config) {
         if( !config.getCredentials() )
             return null
         return new CredentialsProvider() {
@@ -61,7 +89,7 @@ class BatchClient {
         }
     }
 
-    protected BatchServiceClient createBatchService(BatchConfig config) {
+    protected BatchServiceClient createBatchService(GoogleOpts config) {
         final provider = createCredentialsProvider(config)
         if( provider ) {
             log.debug "[GOOGLE BATCH] Creating service client with config credentials"
@@ -81,35 +109,87 @@ class BatchClient {
 
     Job submitJob(String jobId, Job job) {
         final parent = LocationName.of(projectId, location)
+        final attempts = new AtomicInteger()
+        return apply(()-> createJob(parent, jobId, job, attempts.incrementAndGet()==1))
+    }
 
-        return batchServiceClient.createJob(parent, job, jobId)
+    /**
+     * Create the job, or fetch it when a previous submit attempt already created it.
+     * An earlier attempt can create the job and still fail on the client side, e.g. with
+     * DEADLINE_EXCEEDED, so the retry finds the job it submitted itself. On the first
+     * attempt the job ID is genuinely taken: report it
+     */
+    private Job createJob(LocationName parent, String jobId, Job job, boolean firstAttempt) {
+        try {
+            return batchServiceClient.createJob(parent, job, jobId)
+        }
+        catch( AlreadyExistsException e ) {
+            if( firstAttempt )
+                throw e
+            log.debug "[GOOGLE BATCH] Job $jobId already created by a previous submit attempt"
+            return batchServiceClient.getJob(JobName.of(projectId, location, jobId))
+        }
     }
 
     Job describeJob(String jobId) {
         final name = JobName.of(projectId, location, jobId)
-
-        return batchServiceClient.getJob(name)
+        return apply(()-> batchServiceClient.getJob(name))
     }
 
-    Iterable<?> listTasks(String jobId) {
-        final parent = TaskGroupName.of(projectId, location, jobId, 'group0')
+    List<Task> listTasks(String jobId) {
+        // the page size must be set explicitly: the pager copies it from the first request into
+        // each following page request, and the API rejects a page size of 0 (i.e. unset) combined
+        // with a page token issued for its default page size of 500
+        final request = ListTasksRequest.newBuilder()
+            .setParent(TaskGroupName.of(projectId, location, jobId, 'group0').toString())
+            .setPageSize(LIST_TASKS_PAGE_SIZE)
+            .build()
+        // fetch each page in its own retry block: iterateAll() loads pages after the first one
+        // lazily, so iterating it would leave those requests without a retry, and retrying the
+        // whole listing would restart it from the first page
+        final List<Task> result = []
+        ListTasksPage page = apply(()-> batchServiceClient.listTasks(request).getPage())
+        result.addAll(page.getValues())
+        while( page.hasNextPage() ) {
+            final current = page
+            page = apply(()-> current.getNextPage())
+            result.addAll(page.getValues())
+        }
+        return result
+    }
 
-        return batchServiceClient.listTasks(parent).iterateAll()
+    Task describeTask(String jobId, String taskId) {
+        final name = generateTaskName(jobId, taskId)
+        return apply(()-> batchServiceClient.getTask(name))
     }
 
     void deleteJob(String jobId) {
-        final name = JobName.of(projectId, location, jobId).toString()
+        final request = DeleteJobRequest.newBuilder()
+            .setName(JobName.of(projectId, location, jobId).toString())
+            .build()
+        // wait for the deletion request to be accepted, but not for the deletion to complete
+        apply(()-> {
+            try {
+                return batchServiceClient.deleteJobCallable().call(request)
+            }
+            catch( NotFoundException e ) {
+                // the job no longer exists, there is nothing to delete or retry
+                log.debug "[GOOGLE BATCH] Job $jobId not found -- skipping deletion"
+                return null
+            }
+        })
+    }
 
-        batchServiceClient.deleteJobAsync(name)
+    TaskStatus getTaskStatus(String jobId, String taskId) {
+        return describeTask(jobId, taskId).getStatus()
     }
 
     JobStatus getJobStatus(String jobId) {
-        final job = describeJob(jobId)
-        return job.getStatus()
+        return describeJob(jobId).getStatus()
     }
 
-    String getJobState(String jobId) {
-        final status = getJobStatus(jobId)
+    String getTaskState(String jobId, String taskId) {
+        final status = getTaskStatus(jobId, taskId)
         return status ? status.getState().toString() : null
     }
 
@@ -119,5 +199,112 @@ class BatchClient {
 
     String getLocation() {
         return location
+    }
+
+    String generateTaskName(String jobId, String taskId) {
+        TaskName.of(projectId, location, jobId, 'group0', taskId)
+    }
+
+    /**
+     * Creates a retry policy using the configuration specified by {@link BatchRetryConfig}
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link dev.failsafe.RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
+        final cfg = config.batch.getRetryConfig()
+        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("[GOOGLE BATCH] response error - attempt: ${event.attemptCount}; reason: ${event.lastException.message}")
+            }
+        }
+        return RetryPolicy.<T>builder()
+            .handleIf(cond)
+            .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(cfg.maxAttempts)
+            .withJitter(cfg.jitter)
+            .onRetry(listener)
+            .build()
+    }
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy
+     * when an API UnavailableException is thrown
+     *
+     * see also https://github.com/nextflow-io/nextflow/issues/4537
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T apply(CheckedSupplier<T> action) {
+        // define the retry condition
+        final cond = new CheckedPredicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof UnavailableException )
+                    return true
+                if( t instanceof DeadlineExceededException )
+                    return true
+                if( t instanceof InternalException )
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                if( t instanceof NotFoundException || t.cause instanceof NotFoundException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
+        final policy = retryPolicy(cond)
+        // apply the action with
+        return Failsafe.with(policy).get(action)
+    }
+
+
+    TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
+        final key = arrayTaskKey(jobId, taskId)
+        TaskStatusRecord record = arrayTaskStatus.get(key)
+        if( !record || System.currentTimeMillis() - record.timestamp > TASK_STATE_INVALID_TIME ){
+            log.trace("[GOOGLE BATCH] Updating tasks status for job $jobId")
+            updateArrayTasks(jobId)
+            record = arrayTaskStatus.get(key)
+        }
+        return record?.status
+    }
+
+    private void updateArrayTasks(String jobId){
+        final tasks = listTasks(jobId)
+        // take the timestamp after the listing, which can take longer than TASK_STATE_INVALID_TIME for large arrays
+        final now = System.currentTimeMillis()
+        for( Task t: tasks ){
+            final name = TaskName.parse(t.name)
+            arrayTaskStatus.put(arrayTaskKey(name.getJob(), name.getTask()), new TaskStatusRecord(t.status, now))
+        }
+    }
+
+    void removeFromArrayTasks(String jobId, String taskId){
+        arrayTaskStatus.remove(arrayTaskKey(jobId, taskId))
+    }
+
+    /*
+     * The API returns task names with the project number, while names created by
+     * generateTaskName() use the configured project ID, so they cannot be compared
+     */
+    private static String arrayTaskKey(String jobId, String taskId) {
+        return "${jobId}/${taskId}".toString()
+    }
+}
+
+@CompileStatic
+class TaskStatusRecord {
+    protected TaskStatus status
+    protected long timestamp
+
+    TaskStatusRecord(TaskStatus status, long timestamp) {
+        this.status = status
+        this.timestamp = timestamp
     }
 }

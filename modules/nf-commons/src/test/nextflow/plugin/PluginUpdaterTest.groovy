@@ -1,4 +1,22 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
+
+import nextflow.util.CacheHelper
 
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -8,10 +26,14 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-import nextflow.Const
+import nextflow.BuildInfo
+import nextflow.config.RegistryConfig
+import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
+import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginWrapper
+import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -21,101 +43,150 @@ import spock.lang.Unroll
  */
 class PluginUpdaterTest extends Specification {
 
+    private static final String PLUGIN_ID = 'my-plugin'
+
     static class FooPlugin extends Plugin {
         FooPlugin(PluginWrapper wrapper) {
             super(wrapper)
         }
     }
 
+    static class MockPlugin {
+        String version
+        Path path
+        Path zip
+    }
+
+    // ---------------------------
 
     def 'should install a plugin' () {
         given:
         def PLUGIN = 'my-plugin-1.0.0'
         def folder = Files.createTempDirectory('test')
-
         and:
-        // the plugin to be installed
-        Path plugin = folder.resolve('plugins')
-        def plugin1 = createPlugin(plugin, 'my-plugin', '1.0.0', FooPlugin.class)
-        def plugin2 = createPlugin(plugin, 'my-plugin', '2.0.0', FooPlugin.class)
-        def zip1 = zipDir(plugin1)
-        def zip2 = zipDir(plugin2)
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
         and:
-        // this represents the remote repo from where plugins are downloaded
-        def repoDir = Files.createDirectory(folder.resolve('repo'))
-        createRepositoryIndex(repoDir, zip1, zip2)
-
-        and:
-        // the central cache where downloaded unzipped plugins are kept
-        def cacheDir = Files.createDirectory(folder.resolve('cache'))
-        and:
-        def manager = new LocalPluginManager(cacheDir)
-        def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
 
         when:
-        updater.installPlugin( 'my-plugin', '1.0.0' )
+        updater.installPlugin( PLUGIN_ID, '1.0.0' )
 
         then:
-        manager.getPlugin('my-plugin').plugin.class == FooPlugin.class
-        manager.getPlugin('my-plugin').descriptor.getPluginId() == 'my-plugin'
-        manager.getPlugin('my-plugin').descriptor.getVersion() == '1.0.0'
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.0.0'
         and:
-        cacheDir.resolve(PLUGIN).exists()
-        cacheDir.resolve(PLUGIN).isDirectory()
-        cacheDir.resolve(PLUGIN).resolve('MANIFEST.MF').isFile()
+        local.resolve(PLUGIN).exists()
+        local.resolve(PLUGIN).isDirectory()
+        local.resolve(PLUGIN).resolve('MANIFEST.MF').isFile()
         and:
         manager.localRoot.resolve(PLUGIN).exists()
         manager.localRoot.resolve(PLUGIN).isLink()
-        manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == cacheDir.resolve(PLUGIN).resolve('MANIFEST.MF').text
+        manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == local.resolve(PLUGIN).resolve('MANIFEST.MF').text
 
         cleanup:
         folder?.deleteDir()
     }
 
+    def 'should install a plugin depending on a non-core plugin' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        and:
+        // the dependency is a registry plugin, NOT one of the nextflow core plugins
+        def dep = createPlugin(repo, '0.7.1', 'dep-plugin')
+        dep.zip = zipDir(dep.path)
+        and:
+        def main = createPlugin(repo, '1.0.0', PLUGIN_ID, 'dep-plugin@0.7.1')
+        main.zip = zipDir(main.path)
+        and:
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "dep-plugin", "description": "Test dependency", "releases": [
+                 {"version": "0.7.1", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${dep.zip}"} ]},
+             { "id": "$PLUGIN_ID", "description": "Test plugin", "releases": [
+                 {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${main.zip}"} ]}]
+            """
+        and:
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        noExceptionThrown()
+        and:
+        manager.getPlugin('dep-plugin').descriptor.version == '0.7.1'
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should detect already-installed pinned plugin from the on-disk store' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), ['1.0.0'])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+
+        expect:
+        // at prefetch time the local plugins have NOT been loaded into the manager yet
+        manager.getPlugin(PLUGIN_ID) == null
+        and:
+        // pinned + present in the store -> already installed, no remote metadata needed
+        updater.isAlreadyInstalled(PluginRef.parse('my-plugin@1.0.0'))
+        and:
+        // pinned but a different version is not installed
+        !updater.isAlreadyInstalled(PluginRef.parse('my-plugin@9.9.9'))
+        and:
+        // unpinned spec always needs remote metadata to resolve the latest release
+        !updater.isAlreadyInstalled(PluginRef.parse('my-plugin'))
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
     def 'should update a plugin' () {
         given:
         def folder = Files.createTempDirectory('test')
         and:
-        // the plugin to be installed
-        def pluginDir = folder.resolve('plugins')
-        def plugin1 = createPlugin(pluginDir, 'my-plugin', '1.0.0', FooPlugin.class)
-        def plugin2 = createPlugin(pluginDir, 'my-plugin', '2.0.0', FooPlugin.class)
-        def zip1 = zipDir(plugin1)
-        def zip2 = zipDir(plugin2)
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
         and:
-        // this represents the remote repo from where plugins are downloaded
-        def repoDir = Files.createDirectory(folder.resolve('repo'))
-        createRepositoryIndex(repoDir, zip1, zip2)
+        def local = localCache(folder.resolve('plugins'), [])
         and:
-        // the central cache where downloaded unzipped plugins are kept
-        def cacheDir = Files.createDirectory(folder.resolve('cache'))
-        and:
-        def manager = new LocalPluginManager(cacheDir)
-        def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
 
         when:
-        updater.installPlugin('my-plugin', '1.0.0')
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
         then:
-        manager.getPlugin('my-plugin').plugin.class == FooPlugin.class
-        manager.getPlugin('my-plugin').descriptor.getPluginId() == 'my-plugin'
-        manager.getPlugin('my-plugin').descriptor.getVersion() == '1.0.0'
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.0.0'
         and:
-        cacheDir.resolve('my-plugin-1.0.0').exists()
-        cacheDir.resolve('my-plugin-1.0.0').isDirectory()
+        local.resolve('my-plugin-1.0.0').exists()
+        local.resolve('my-plugin-1.0.0').isDirectory()
 
         when:
-        updater.updatePlugin( 'my-plugin', '2.0.0' )
+        updater.updatePlugin( PLUGIN_ID, '2.0.0' )
         then:
         manager.localRoot.resolve('my-plugin-2.0.0').exists()
         !manager.localRoot.resolve('my-plugin-1.0.0').exists()
         and:
-        cacheDir.resolve('my-plugin-1.0.0').exists()
-        cacheDir.resolve('my-plugin-2.0.0').exists()
+        local.resolve('my-plugin-1.0.0').exists()
+        local.resolve('my-plugin-2.0.0').exists()
         and:
-        manager.getPlugin('my-plugin').plugin.class == FooPlugin.class
-        manager.getPlugin('my-plugin').descriptor.getPluginId() == 'my-plugin'
-        manager.getPlugin('my-plugin').descriptor.getVersion() == '2.0.0'
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '2.0.0'
 
         cleanup:
         folder?.deleteDir()
@@ -126,131 +197,162 @@ class PluginUpdaterTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         and:
-        // this represents the remote repo from where plugins are downloaded
-        def repoDir = Files.createDirectory(folder.resolve('repo'))
-        createEmptyIndex(repoDir)
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
         and:
-        // the central cache where downloaded unzipped plugins are kept
-        def cacheDir = Files.createDirectory(folder.resolve('cache'))
-        def plugin1 = createPlugin(cacheDir,'my-plugin', '1.0.0', FooPlugin.class)
-        def plugin2 = createPlugin(cacheDir,'my-plugin', '2.0.0', FooPlugin.class)
+        def local = localCache(folder.resolve('plugins'), [])
         and:
-        def manager = new LocalPluginManager(cacheDir)
-        def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
 
         when:
-        updater.installPlugin('my-plugin', '1.0.0')
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
         then:
-        manager.getPlugin('my-plugin').plugin.class == FooPlugin.class
-        manager.getPlugin('my-plugin').descriptor.getPluginId() == 'my-plugin'
-        manager.getPlugin('my-plugin').descriptor.getVersion() == '1.0.0'
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.0.0'
         and:
-        cacheDir.resolve('my-plugin-1.0.0').exists()
-        cacheDir.resolve('my-plugin-1.0.0').isDirectory()
+        local.resolve('my-plugin-1.0.0').exists()
+        local.resolve('my-plugin-1.0.0').isDirectory()
         and:
         manager.localRoot.resolve('my-plugin-1.0.0').exists()
         manager.localRoot.resolve('my-plugin-1.0.0').isLink()
 
         when:
-        updater.updatePlugin( 'my-plugin', '2.0.0' )
+        updater.updatePlugin( PLUGIN_ID, '2.0.0' )
         then:
         manager.localRoot.resolve('my-plugin-2.0.0').exists()
         !manager.localRoot.resolve('my-plugin-1.0.0').exists()
         and:
-        cacheDir.resolve('my-plugin-1.0.0').exists()
-        cacheDir.resolve('my-plugin-2.0.0').exists()
+        local.resolve('my-plugin-1.0.0').exists()
+        local.resolve('my-plugin-2.0.0').exists()
         and:
-        manager.getPlugin('my-plugin').plugin.class == FooPlugin.class
-        manager.getPlugin('my-plugin').descriptor.getPluginId() == 'my-plugin'
-        manager.getPlugin('my-plugin').descriptor.getVersion() == '2.0.0'
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '2.0.0'
 
         cleanup:
         folder?.deleteDir()
     }
 
 
-    static private Path createPlugin(Path baseDir, String id, String ver, Class clazz) {
-        def fqn = "$id-$ver".toString()
-        def pluginDir = baseDir.resolve(fqn)
-        pluginDir.mkdirs()
+    def 'resolve plugin version from range' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteRepository(folder.resolve('repo'), ['1.2.0', '1.2.3', '2.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        and:
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
 
-        pluginDir.resolve('file1.txt').text = 'foo'
-        pluginDir.resolve('file2.txt').text = 'bar'
-        pluginDir.resolve('MANIFEST.MF').text = """\
-                Manifest-Version: 1.0
-                Plugin-Class: ${clazz.getName()}
-                Plugin-Id: $id
-                Plugin-Version: $ver
-                """
-                .stripIndent()
+        when:
+        def success = updater.installPlugin(PLUGIN_ID, '~1.2.0')
+        then:
+        success
+        and:
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.2.3'
+        and:
+        local.resolve('my-plugin-1.2.3').exists()
+        local.resolve('my-plugin-1.2.3').isDirectory()
+        local.resolve('my-plugin-1.2.3').resolve('MANIFEST.MF').isFile()
 
-        return pluginDir
+        cleanup:
+        folder?.deleteDir()
     }
 
-    static private void createRepositoryIndex(Path repoDir, Path zip1, Path zip2) {
-        repoDir.resolve('plugins.json').text = """
-              [{
-                "id": "my-plugin",
-                "description": "Test plugin",
-                "releases": [
-                  {
-                    "version": "1.0.0",
-                    "date": "Jun 25, 2020 9:58:35 PM",
-                    "url": "file:${zip1}"
-                  },
-                  {
-                    "version": "2.0.0",
-                    "date": "Jun 25, 2020 9:58:35 PM",
-                    "url": "file:${zip2}"
-                  }
-                ]
-              }]
-            """
+
+    def 'in offline mode, should use already downloaded plugin' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteRepository(folder.resolve('repo'), ['1.2.0', '1.2.3', '2.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), ['1.2.1', '1.2.2'])
+        and:
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, true)
+
+        when:
+        // 1.2.1 exists in local plugin cache
+        def success = updater.installPlugin(PLUGIN_ID, '1.2.1')
+        then:
+        success
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.2.1'
+
+        when:
+        // 2.0.0 only exists in remote repo, should shouldn't resolve
+        manager.unloadPlugin(PLUGIN_ID)
+        updater.installPlugin(PLUGIN_ID, '2.0.0')
+        then:
+        def error = thrown(PluginRuntimeException.class)
+        error.message == 'Plugin my-plugin with version @2.0.0 does not exist in the repository'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
-    static private void createEmptyIndex(Path repoDir) {
-        repoDir.resolve('plugins.json').text = """
-              [{
-                "id": "my-plugin",
-                "description": "Test plugin",
-                "releases": [ ]
-              }]
-            """
+
+    def 'in offline mode, resolve plugin version from range' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteRepository(folder.resolve('repo'), ['1.2.0', '1.2.3', '2.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), ['1.2.1', '1.2.2'])
+        and:
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, true)
+
+        when:
+        // should be able to find a match in range >=1.2.1 && <2.0.0
+        def success = updater.installPlugin(PLUGIN_ID, '~1.2.1')
+        then:
+        success
+        // version should be 1.2.2 (local) not 1.2.3 (remote)
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.2.2'
+
+        when:
+        // should not be able to find a match in range >=2.0.0 && <3.0.0
+        manager.unloadPlugin(PLUGIN_ID)
+        updater.installPlugin(PLUGIN_ID, '~2.0.0')
+        then:
+        def error = thrown(IllegalStateException.class)
+        error.message == 'Cannot find version of my-plugin plugin matching ~2.0.0'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
-    static Path zipDir(final Path folder) throws IOException {
 
-        def zipFilePath = folder.resolveSibling( "${folder.name}.zip" )
+    def 'versions with ~ should behave like +' () {
+        // this test checks our understanding on ~ semver rules is correct
+        when:
+        def condition = "~1.2"
+        then:
+        Version.parse("1.2.0").satisfies(condition)
+        Version.parse("1.2.1").satisfies(condition)
+        Version.parse("1.2.2").satisfies(condition)
+        !Version.parse("1.3.0").satisfies(condition)
 
-        try (
-                FileOutputStream fos = new FileOutputStream(zipFilePath.toFile());
-                ZipOutputStream zos = new ZipOutputStream(fos)
-        ) {
-            Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    zos.putNextEntry(new ZipEntry(folder.relativize(file).toString()));
-                    Files.copy(file, zos);
-                    zos.closeEntry();
-                    return FileVisitResult.CONTINUE;
-                }
-
-                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                    zos.putNextEntry(new ZipEntry(folder.relativize(dir).toString() + "/"));
-                    zos.closeEntry();
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        }
-
-        return zipFilePath
+        when:
+        condition = "~1.2.1"
+        then:
+        !Version.parse("1.2.0").satisfies(condition)
+        Version.parse("1.2.1").satisfies(condition)
+        Version.parse("1.2.2").satisfies(condition)
+        !Version.parse("1.3.0").satisfies(condition)
     }
+
 
     def 'should find matching plugin' () {
         given:
         def r1 = new PluginInfo.PluginRelease(version: '1.4.0', url: 'http://xyz')
-        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz', requires: ">=${Const.APP_VER}")
-        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: ">=${Const.APP_VER}")
-        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: ">=${Const.APP_VER}")
+        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz', requires: ">=${BuildInfo.version}")
+        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: ">=${BuildInfo.version}")
+        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: ">=${BuildInfo.version}")
         def r5 = new PluginInfo.PluginRelease(version: '3.0.0', url: 'http://xyz', requires: '99.01.0')
         def PLUGINS = [
                 'nf-foo': new PluginInfo(id:'nf-foo', releases: [r1, r2, r3, r4, r5]),
@@ -285,7 +387,8 @@ class PluginUpdaterTest extends Specification {
         ret == r4
     }
 
-    def 'should save move plugin directory' () {
+
+    def 'should safely move plugin directory' () {
         given:
         def folder = Files.createTempDirectory('test')
         and:
@@ -302,7 +405,8 @@ class PluginUpdaterTest extends Specification {
         and:
         def target = folder.resolve('new-plugin-1.0')
         and:
-        Files.createDirectory(target); target.resolve('foo').text = 'some content'
+        Files.createDirectory(target)
+        target.resolve('foo').text = 'some content'
         and:
         def updater = new PluginUpdater(Mock(CustomPluginManager))
 
@@ -321,6 +425,7 @@ class PluginUpdaterTest extends Specification {
         cleanup:
         folder.deleteDir()
     }
+
 
     def 'should move plugin directory' () {
         given:
@@ -359,6 +464,7 @@ class PluginUpdaterTest extends Specification {
         folder.deleteDir()
     }
 
+
     @Unroll
     def 'validate should update method' () {
         given:
@@ -383,8 +489,8 @@ class PluginUpdaterTest extends Specification {
         'nf-amazon'     | '1.0.0'       | '1.0.0'   | false
         'nf-amazon'     | '1.0.0'       | '1.1.0'   | false
         'nf-amazon'     | '1.1.0'       | '1.0.0'   | true
-
     }
+
 
     @Unroll
     def 'should match meta file name' () {
@@ -393,13 +499,313 @@ class PluginUpdaterTest extends Specification {
         then:
         matcher.matches() == EXPECTED
         !EXPECTED || matcher.group(1) == PLUGIN
-        
+
         where:
         FILE_NAME                               | EXPECTED  | PLUGIN
         'foo'                                   | false     | null
         'foo.json'                              | false     | null
         'nf-foo-1.0.0-meta.json'                | true      | 'nf-foo'
         'xpack-google-1.0.0-beta.3-meta.json'   | true      | 'xpack-google'
+    }
 
+    def 'should replace the default registry with the configured registries' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg-a.example/api', 'https://reg-b.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the default registry repo is dropped; only the configured registries remain, in order'
+        repos.size() == 2
+        repos[0] instanceof HttpPluginRepository
+        repos[0].id == 'registry-0'
+        repos[0].url.toString().startsWith('https://reg-a.example/api')
+        and:
+        repos[1] instanceof HttpPluginRepository
+        repos[1].id == 'registry-1'
+        repos[1].url.toString().startsWith('https://reg-b.example/api')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should replace the default registry even when a configured url matches it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def remote = new URL('http://primary.example/api')
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['http://primary.example/api', 'http://other.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the default registry is replaced and all configured registries are added, in order'
+        repos.size() == 2
+        repos*.id == ['registry-0', 'registry-1']
+        repos[0].url.toString().startsWith('http://primary.example/api')
+        repos[1].url.toString().startsWith('http://other.example/api')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not add registry repos when offline' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, true)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then:
+        repos.size() == 1
+        repos[0].id == 'downloaded'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should be no-op when registry config is null' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        def before = updater.getRepositories().size()
+
+        when:
+        updater.addRegistryRepos(null)
+
+        then:
+        updater.getRepositories().size() == before
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should apply the registry config only once when invoked repeatedly' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg-a.example/api', 'https://reg-b.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the second call is a no-op: only the two configured registries remain, no duplicates'
+        repos.size() == 2
+        repos*.id == ['registry-0', 'registry-1']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not let a later repository override the default on a version clash' () {
+        given: 'the default registry (first) plus a second repository, mirroring the NXF_PLUGINS_TEST_REPOSITORY layout [default, extra]'
+        def folder = Files.createTempDirectory('test')
+        def defaultRepo = remoteRepository(folder.resolve('default'), ['1.0.0'])
+        def extraRepo = remoteRepository(folder.resolve('extra'), ['1.0.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, defaultRepo, false)
+        updater.addRepository(new DefaultUpdateRepository('extra', extraRepo))
+
+        when:
+        def releases = updater.getPluginsMap()['my-plugin'].releases
+
+        then: 'first-listed (default) wins the 1.0.0 clash; the extra repo only contributes 2.0.0'
+        releases.size() == 2
+        releases.find { it.version == '1.0.0' }.url.contains('default')
+        releases.find { it.version == '2.0.0' }.url.contains('extra')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should union plugin releases across registries, first-listed wins' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and: 'two registries serving the same plugin id with overlapping versions'
+        def repoA = remoteRepository(folder.resolve('repoA'), ['1.0.0', '2.0.0'])
+        def repoB = remoteRepository(folder.resolve('repoB'), ['1.5.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, repoA, false)
+        updater.addRepository(new DefaultUpdateRepository('repo-b', repoB))
+
+        when:
+        def merged = updater.getPluginsMap()['my-plugin']
+        def releases = merged.releases
+
+        then: 'releases from both registries are unioned, de-duplicated by version'
+        releases.size() == 3
+        releases*.version.toSet() == ['1.0.0', '2.0.0', '1.5.0'].toSet()
+        and: 'on a version clash the earlier-listed registry (repoA) wins'
+        releases.find { it.version == '2.0.0' }.url.contains('repoA')
+        and: 'the copied PluginInfo keeps the source repositoryId for diagnostics'
+        merged.repositoryId == 'nextflow.io'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    // -------------------------------------------------------------------------------------
+    // setup helpers
+
+    static private URL remoteRepository(Path dir, List<String> versions) {
+        Files.createDirectory(dir)
+
+        List<MockPlugin> plugins = versions
+            .collect ( version -> createPlugin(dir, version) )
+            .collect { plugin ->
+                plugin.zip = zipDir(plugin.path)
+                plugin
+            }
+
+        return createRepositoryIndex(dir, plugins).toUri().toURL()
+    }
+
+    static private Path localCache(Path dir, List<String> versions) {
+        Files.createDirectory(dir)
+        versions.each { version -> createPlugin(dir, version) }
+        return dir
+    }
+
+    // create a plugin 'hosted' at a digest url (eg an OCI registry)
+    static private MockPlugin createDigestPlugin(Path baseDir, String ver) {
+        // construct plugin as normal
+        def plugin = createPlugin(baseDir, ver)
+        def zipped = zipDir(plugin.path)
+        // but rename the zip file to a digest-based path
+        def digest = CacheHelper.hasher(zipped, CacheHelper.HashMode.SHA256).hash().toString()
+        plugin.zip = zipped.resolveSibling("sha256:$digest")
+        Files.move(zipped, plugin.zip)
+        return plugin
+    }
+
+    static private MockPlugin createPlugin(Path baseDir, String ver, String id=PLUGIN_ID, String dependencies=null) {
+        def clazz = FooPlugin.class
+        def fqn = "$id-$ver".toString()
+        def pluginDir = baseDir.resolve(fqn)
+        pluginDir.mkdirs()
+
+        pluginDir.resolve('file1.txt').text = 'foo'
+        pluginDir.resolve('file2.txt').text = 'bar'
+        pluginDir.resolve('MANIFEST.MF').text = """\
+                Manifest-Version: 1.0
+                Plugin-Class: ${clazz.getName()}
+                Plugin-Id: $id
+                Plugin-Version: $ver
+                """.stripIndent() + (dependencies ? "Plugin-Dependencies: $dependencies\n" : '')
+
+        return new MockPlugin(version: ver, path: pluginDir)
+    }
+
+    static private Path createRepositoryIndex(Path repoDir, List<MockPlugin> plugins) {
+        String releases = plugins
+            .collect ( p ->
+                """
+                {
+                "version": "${p.version}",
+                "date": "Jun 25, 2020 9:58:35 PM",
+                "url": "file:${p.zip}"
+                }
+                """
+            )
+            .join(",")
+
+        Path index = repoDir.resolve('plugins.json')
+        index.text = """
+            [{
+            "id": "my-plugin",
+            "description": "Test plugin",
+            "releases": [${releases}]
+            }]
+            """
+        return index
+    }
+
+    static private Path zipDir(final Path folder) throws IOException {
+        def zipFilePath = folder.resolveSibling( "${folder.name}.zip" )
+
+        try (
+            FileOutputStream fos = new FileOutputStream(zipFilePath.toFile());
+            ZipOutputStream zos = new ZipOutputStream(fos)
+        ) {
+            Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
+                FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    zos.putNextEntry(new ZipEntry(folder.relativize(file).toString()));
+                    Files.copy(file, zos);
+                    zos.closeEntry();
+                    return FileVisitResult.CONTINUE;
+                }
+
+                FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    zos.putNextEntry(new ZipEntry(folder.relativize(dir).toString() + "/"));
+                    zos.closeEntry();
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+
+        return zipFilePath
+    }
+
+    def 'should prefetch plugin metadata when pulling plugins' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def mockRepo = Mock(PrefetchUpdateRepository)
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = Spy(PluginUpdater, constructorArgs: [manager, local, remote, false])
+
+        // Replace repositories with our mock repo
+        updater.@repositories = [mockRepo]
+
+        and:
+        def pluginList = ['my-plugin@1.0.0', 'another-plugin@2.0.0']
+
+        when:
+        updater.pullPlugins(pluginList)
+
+        then:
+        // Verify prefetch is called with the correct plugin specs
+        1 * mockRepo.prefetch({ List<PluginRef> specs ->
+            specs.size() == 2 &&
+            specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
+            specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'
+        })
+
+        and:
+        // Mock pullPlugin0 to prevent real implementation calls
+        2 * updater.pullPlugin0(_, _) >> { }
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

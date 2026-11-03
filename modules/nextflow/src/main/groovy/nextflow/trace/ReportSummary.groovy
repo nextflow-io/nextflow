@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,9 +62,11 @@ class ReportSummary {
             if( !request ) return null
             return realtime / request * 100 as Double
         }
+
+        mappers.gpuUsage = { TraceRecord record -> record.getGpuMetrics()?.get('pct') as Double }
+        mappers.gpuMemPeak = { TraceRecord record -> record.getGpuMetrics()?.get('peak_mem_used') as Double }
+        mappers.gpuMemAvg = { TraceRecord record -> record.getGpuMetrics()?.get('avg_mem') as Double }
     }
-
-
 
     /**
      * Hold the summary for each series ie. cpu, memory, time, disk reads, disk writes
@@ -113,11 +115,11 @@ class ReportSummary {
      *      - q3: third quartile
      *      - max: maximum value
      *      - mean: average value
-     *      - minLabel: label fot the task reporting the min value
-     *      - q1Label: label fot the task reporting the q1 value
-     *      - q2Label: label fot the task reporting the q2 value
-     *      - q3Label: label fot the task reporting the q3 value
-     *      - maxLabel: label fot the task reporting the max value
+     *      - minLabel: label for the task reporting the min value
+     *      - q1Label: label for the task reporting the q1 value
+     *      - q2Label: label for the task reporting the q2 value
+     *      - q3Label: label for the task reporting the q3 value
+     *      - maxLabel: label for the task reporting the max value
      */
     Map<String,?> compute(String name) {
         if( !names.contains(name) )
@@ -207,11 +209,11 @@ class ReportSummary {
          *      - q3: third quartile
          *      - max: maximum value
          *      - mean: average value
-         *      - minLabel: label fot the task reporting the min value
-         *      - q1Label: label fot the task reporting the q1 value
-         *      - q2Label: label fot the task reporting the q2 value
-         *      - q3Label: label fot the task reporting the q3 value
-         *      - maxLabel: label fot the task reporting the max value
+         *      - minLabel: label for the task reporting the min value
+         *      - q1Label: label for the task reporting the q1 value
+         *      - q2Label: label for the task reporting the q2 value
+         *      - q3Label: label for the task reporting the q3 value
+         *      - maxLabel: label for the task reporting the max value
          */
         Map<String,?> compute() {
             if( count==0 )
@@ -226,7 +228,7 @@ class ReportSummary {
             result.q2 = round(quantile(sorted, 50))
             result.q3 = round(quantile(sorted, 75))
             result.max = round(quantile(sorted, 100))
-            // discard entry with all zero 
+            // discard entry with all zero
             if( result.min == 0 && result.min == result.max  )
                 return null
 

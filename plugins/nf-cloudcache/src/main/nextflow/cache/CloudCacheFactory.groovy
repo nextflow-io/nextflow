@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cache
@@ -20,8 +19,9 @@ package nextflow.cache
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.cache.CacheDB
-import nextflow.cache.CacheFactory
+import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Priority
 /**
@@ -31,15 +31,38 @@ import nextflow.plugin.Priority
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Priority(-10)
 class CloudCacheFactory extends CacheFactory {
+
+    /**
+     * Serve only the sessions that asked for the cloud cache. This is the same condition that adds
+     * this plugin to the run (see {@code PluginsFacade.defaultPluginsConf}), so in a configured run
+     * nothing changes; what it covers is the plugin being loaded some other way — listed explicitly
+     * in {@code plugins}, or injected — where taking over the cache was never the intent.
+     *
+     * <p>A path without {@code enabled} is warned about rather than silently ignored: that run used
+     * to fail with "Cloud-cache path not defined", and handing the run to the next factory without a
+     * word would turn a loud misconfiguration into a quiet one.
+     */
+    @Override
+    protected boolean isEnabled(Map config) {
+        if( config?.navigate('cloudcache.enabled') == true )
+            return true
+        if( config?.navigate('cloudcache.path') )
+            log.warn "Cloud cache is NOT enabled — `cloudcache.path` is set but `cloudcache.enabled` is not `true`, so this run uses the default cache"
+        return false
+    }
 
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new CloudCacheStore(uniqueId, runName, home)
+        final path = (Global.session as Session).cloudCachePath
+        if( !path )
+            throw new IllegalArgumentException("Cloud-cache path not defined - use either -with-cloudcache run option or NXF_CLOUDCACHE_PATH environment variable")
+        final store = new CloudCacheStore(uniqueId, runName, path)
         return new CacheDB(store)
     }
 

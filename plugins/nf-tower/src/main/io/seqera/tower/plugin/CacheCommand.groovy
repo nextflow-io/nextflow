@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cli.PluginAbstractExec
 /**
  * Implements nextflow cache and restore commands
@@ -43,13 +43,32 @@ class CacheCommand implements PluginAbstractExec {
     }
 
     protected void cacheBackup() {
-        log.debug "Running Nextflow cache backup"
-        new LogsHandler(getSession(), System.getenv()).saveFiles()
+        // note: use directly NXF_CLOUDCACHE_PATH along with `session.cloudCachePath`
+        // because the latter required to be initialized via the execution
+        // CmdRun. However this command is only executed to be used via Seqera Platform
+        // that's providing the cache path via the env variable
+        if( !getSession().cloudCachePath && !SysEnv.get('NXF_CLOUDCACHE_PATH') ) {
+            log.debug "Running Nextflow cache backup (CacheManager)"
+            // legacy cache manager
+            new CacheManager(SysEnv.get()).saveCacheFiles()
+        }
+        else {
+            log.debug "Running Nextflow cache backup (LogsHandler)"
+            new LogsHandler(getSession(), SysEnv.get()).saveFiles()
+        }
     }
 
     protected void cacheRestore() {
-        log.debug "Running Nextflow cache restore - DO NOTHING"
-        // this command is only kept for backward compatibility
+        final env = SysEnv.get()
+        if( !env.get('NXF_CLOUDCACHE_PATH') ) {
+            log.debug "Running Nextflow cache restore"
+            // legacy cache manager
+            new CacheManager(env).restoreCacheFiles()
+        }
+        else {
+            // this command is only kept for backward compatibility
+            log.debug "Running Nextflow cache restore - DO NOTHING"
+        }
     }
 
 }

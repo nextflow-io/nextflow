@@ -1,0 +1,26 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > splitLetters'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > massage'` == 2 ]] || false
+
+grep 'HELLO' stdout
+grep 'WORLD!' stdout
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > splitLetters'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > massage'` == 2 ]] || false
+
+grep 'HELLO' stdout
+grep 'WORLD!' stdout

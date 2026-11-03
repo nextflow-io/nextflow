@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,18 @@
 
 package nextflow.util
 
+import java.time.temporal.ChronoUnit
 import java.time.temporal.Temporal
+import java.time.temporal.TemporalAmount
+import java.time.temporal.TemporalUnit
+import java.time.temporal.UnsupportedTemporalTypeException
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
-import org.apache.commons.lang.time.DurationFormatUtils
+import nextflow.script.types.Duration as IDuration
+import org.apache.commons.lang3.time.DurationFormatUtils
 /**
  * A simple time duration representation
  *
@@ -31,7 +36,9 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'durationInMillis')
-class Duration implements Comparable<Duration>, Serializable, Cloneable {
+class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Serializable, Cloneable {
+
+    static private final List<TemporalUnit> SUPPORTED_UNITS = List.<TemporalUnit>of(ChronoUnit.DAYS, ChronoUnit.HOURS, ChronoUnit.MINUTES, ChronoUnit.SECONDS, ChronoUnit.MILLIS)
 
     static private final FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]+)/
 
@@ -146,7 +153,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
                 def digit = groups[1]
                 def unit = groups[2]
 
-                result += convert( digit.toFloat(), unit )
+                result += convert( digit.toDouble(), unit )
                 str = str.substring(all.length()).trim()
                 continue
             }
@@ -166,7 +173,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
      * @param unit A valid duration unit e.g. {@code d}, {@code d}, {@code h}, {@code hour}, etc
      * @return The duration in millisecond
      */
-    private long convert( float digit, String unit ) {
+    private long convert( double digit, String unit ) {
 
         if( unit in MILLIS ) {
             return Math.round(digit)
@@ -212,9 +219,11 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
     }
 
     static Duration between( Temporal start, Temporal end ) {
-        new Duration(java.time.Duration.between(start, end).toMillis())
+        final millis = java.time.Duration.between(start, end).toMillis()
+        new Duration(Math.max(0L, millis))
     }
 
+    @Override
     long toMillis() {
         durationInMillis
     }
@@ -223,6 +232,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         durationInMillis
     }
 
+    @Override
     long toSeconds() {
         TimeUnit.MILLISECONDS.toSeconds(durationInMillis)
     }
@@ -231,6 +241,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toSeconds()
     }
 
+    @Override
     long toMinutes() {
         TimeUnit.MILLISECONDS.toMinutes(durationInMillis)
     }
@@ -239,6 +250,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toMinutes()
     }
 
+    @Override
     long toHours() {
         TimeUnit.MILLISECONDS.toHours(durationInMillis)
     }
@@ -247,6 +259,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toHours()
     }
 
+    @Override
     long toDays() {
         TimeUnit.MILLISECONDS.toDays(durationInMillis)
     }
@@ -283,7 +296,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
 
         // when less than 60 seconds round up to 100th of millis
         if( durationInMillis < 60_000 ) {
-            return String.valueOf( Math.round(durationInMillis / 1_000 * 10 as float) / 10 ) + 's'
+            return String.valueOf( Math.round(durationInMillis / 1_000 * 10 as double) / 10 ) + 's'
         }
 
         def secs
@@ -357,6 +370,66 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
             return left <=> Duration.of(right.toString())
 
         throw new IllegalArgumentException("Not a valid duration value: $right")
+    }
+
+    // TemporalAmount interface methods
+
+    /**
+     * Gets the value of the requested unit.
+     *
+     * @param unit the TemporalUnit for which to return the value
+     * @return the long value of the unit
+     */
+    @Override
+    long get(TemporalUnit unit) {
+        if (unit == ChronoUnit.MILLIS) {
+            return durationInMillis
+        }
+        if (unit == ChronoUnit.SECONDS) {
+            return toSeconds()
+        }
+        if (unit == ChronoUnit.MINUTES) {
+            return toMinutes()
+        }
+        if (unit == ChronoUnit.HOURS) {
+            return toHours()
+        }
+        if (unit == ChronoUnit.DAYS) {
+            return toDays()
+        }
+        throw new UnsupportedTemporalTypeException("Unsupported unit: " + unit)
+    }
+
+    /**
+     * Returns a list of units uniquely defining the value of this TemporalAmount.
+     *
+     * @return a list of the supported ChronoUnits, not null
+     */
+    @Override
+    List<TemporalUnit> getUnits() {
+        return SUPPORTED_UNITS
+    }
+
+    /**
+     * Adds this amount to the specified temporal object.
+     *
+     * @param temporal the temporal object to adjust, not null
+     * @return an object of the same type with the adjustment made, not null
+     */
+    @Override
+    Temporal addTo(Temporal temporal) {
+        return temporal.plus(durationInMillis, ChronoUnit.MILLIS)
+    }
+
+    /**
+     * Subtracts this amount from the specified temporal object.
+     *
+     * @param temporal the temporal object to adjust, not null
+     * @return an object of the same type with the adjustment made, not null
+     */
+    @Override
+    Temporal subtractFrom(Temporal temporal) {
+        return temporal.minus(durationInMillis, ChronoUnit.MILLIS)
     }
 
 }

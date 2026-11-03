@@ -154,7 +154,7 @@
 
     var appendLabel = function (gParent, yAxisMapping, index, hasLabel, datum) {
       var fullItemHeight    = itemHeight + itemMargin;
-      var rowsDown          = fullItemHeight + fullItemHeight * (yAxisMapping[index] || 1);
+      var rowsDown          = margin.top + (fullItemHeight/2) + fullItemHeight * (yAxisMapping[index] || 1);
 
       gParent.append("text")
         .attr("class", "timeline-label")
@@ -177,7 +177,7 @@
       setWidth();
 
       // check if the user wants relative time
-      // if so, substract the first timestamp from each subsequent timestamps
+      // if so, subtract the first timestamp from each subsequent timestamps
       if(timeIsRelative){
         g.each(function (d, i) {
           d.forEach(function (datum, index) {

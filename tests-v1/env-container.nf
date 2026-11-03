@@ -1,0 +1,5 @@
+println """
+  THIS IS JUST A PLACEHOLDER 
+  THE REAL TEST SCRIPT IS CREATED THE `.checks` FILE
+  SEE THE CONTENT OF `env-container.nf` DIRECTORY 
+"""

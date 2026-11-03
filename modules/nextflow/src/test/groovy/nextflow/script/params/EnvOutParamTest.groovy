@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package nextflow.script.params
 
-import static test.TestParser.*
-
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -30,12 +30,13 @@ class EnvOutParamTest extends Dsl2Spec {
         def text = '''
             process hola {
               output:
-              env FOO
-              env BAR
-              
-              /echo command/ 
+              env 'FOO'
+              env 'BAR'
+
+              script:
+              /echo command/
             }
-            
+
             workflow { hola() }
             '''
 
@@ -59,12 +60,13 @@ class EnvOutParamTest extends Dsl2Spec {
         def text = '''
             process hola {
               output:
-              env FOO optional false
-              env BAR optional true
+              env 'FOO', optional: false
+              env 'BAR', optional: true
 
+              script:
               /echo command/
             }
-            
+
             workflow { hola() }
             '''
 
@@ -83,6 +85,31 @@ class EnvOutParamTest extends Dsl2Spec {
 
         out1.getName() == 'BAR'
         out1.getOptional() == true
+
+    }
+
+    def 'should handle invalid env definition' () {
+        given:
+        def text = '''
+            process hola {
+              output:
+              env { 0 }
+
+              script:
+              /echo command/
+            }
+
+            workflow { hola() }
+            '''
+
+        when:
+        def binding = [:]
+        parseAndReturnProcess(text, binding)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        and:
+        e.message.startsWith('Unexpected environment output definition')
 
     }
 }

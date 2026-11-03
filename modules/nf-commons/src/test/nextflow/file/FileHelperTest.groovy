@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,24 @@ package nextflow.file
 
 import static java.nio.file.LinkOption.*
 
+import java.nio.channels.SeekableByteChannel
+import java.nio.file.AccessMode
+import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileStore
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemLoopException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
+import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
@@ -45,6 +55,29 @@ class FileHelperTest extends Specification {
         Path tmp = fs.getPath("/tmp");
         tmp.mkdir()
         Files.createTempDirectory(tmp, 'test')
+    }
+
+    def 'should match invalid url prefix' (){
+        expect:
+        FileHelper.INVALID_URL_PREFIX.matcher(STR).matches() == EXPECTED
+
+        where:
+        EXPECTED| STR
+        true    | 's3:/foo'
+        true    | 'az:/foo'
+        true    | 'gs:/foo'
+        true    | 'xyz:/foo'
+        and:
+        false   | 'file:/foo'   // <- this is ok
+        and:
+        false   | 's3://foo'
+        false   | 'az://foo'
+        false   | 'gs://foo'
+        false   | 'http://foo'
+        false   | 'https://foo'
+        false   | 'ftp://foo'
+        false   | 'xyz://foo'
+
     }
 
     def 'should return a Path object' () {
@@ -79,6 +112,12 @@ class FileHelperTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Path string cannot ends with a blank or special characters -- Offending path: '/some/file.txt\\n'"
+
+        when:
+        FileHelper.asPath('s3:/some/broken/url')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "File path is prefixed with an invalid URL scheme - Offending path: 's3:/some/broken/url'"
     }
 
     def 'should strip query params from http files' () {
@@ -88,6 +127,17 @@ class FileHelperTest extends Specification {
         path.toString() == '/some/path/file.txt'
         path.getFileName().toString() == 'file.txt'
         path.toUri() == new URI('http://host.com/some/path/file.txt?x=1')
+    }
+
+    @Unroll
+    def 'should remove consecutive slashes in the path' () {
+        expect:
+        FileHelper.asPath(STR).toUri() == EXPECTED
+        where:
+        STR                         | EXPECTED
+        'http://foo//this///that'   | new URI('http://foo/this/that')
+        'http://foo/this//that?x'   | new URI('http://foo/this/that?x')
+        'http://foo/this//that?x//' | new URI('http://foo/this/that?x//') // <-- ignore slashes in the params
     }
 
     def 'should create a valid uri' () {
@@ -665,6 +715,105 @@ class FileHelperTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should skip dirs when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('.fusion') {
+                        file('trace.json', '{}')
+                    }
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                        dir('.fusion') {
+                            dir('chks') {
+                                file('part_0', 'xxx')
+                            }
+                        }
+                    }
+                }
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        target = createInMemTempDir().resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        // the root dir is never skipped
+        target = root.resolve('copy-fusion')
+        FileHelper.copyPath(source.resolve('.fusion'), target, skip)
+        then:
+        target.resolve('trace.json').text == '{}'
+
+        when:
+        // the option is not passed to the provider when copying a file
+        target = root.resolve('file_1.copy')
+        FileHelper.copyPath(source.resolve('file_1'), target, skip)
+        then:
+        target.text == 'alpha'
+
+        when:
+        // without the option the dirs are copied
+        target = root.resolve('copy-all')
+        FileHelper.copyPath(source, target)
+        then:
+        target.resolve('dir1/.fusion/chks/part_0').text == 'xxx'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should skip dirs failing to be accessed when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                    }
+                }
+        // a link to an ancestor dir makes the walker fail before `preVisitDirectory` is invoked
+        Files.createSymbolicLink(source.resolve('dir1/.fusion'), source)
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        FileHelper.copyPath(source, root.resolve('copy-all'))
+        then:
+        thrown(FileSystemLoopException)
+
+        cleanup:
+        root?.deleteDir()
+    }
+
     def 'should copy path content' () {
 
         given:
@@ -918,7 +1067,7 @@ class FileHelperTest extends Specification {
         FS.provider() >> PROVIDER
         PROVIDER.getScheme() >> SCHEME
         result == EXPECTED
-        
+
         where:
         SCHEME      | EXPECTED
          'file'     |  true
@@ -1008,6 +1157,25 @@ class FileHelperTest extends Specification {
         null                 | '1234://xyz.com/abc'
     }
 
+    @Unroll
+    def 'should detect shared file system type'() {
+        expect:
+        FileHelper.isSharedFsType(TYPE) == EXPECTED
+
+        where:
+        TYPE        | EXPECTED
+        'nfs'       | true
+        'lustre'    | true
+        'ceph'      | true
+        'beegfs'    | true
+        'gpfs'      | true
+        'ext2/ext3' | false
+        'xfs'       | false
+        'overlayfs' | false
+        'tmpfs'     | false
+        null        | false
+    }
+
     def 'should check symlink status'() {
         given:
         def folder = Files.createTempDirectory('test')
@@ -1059,6 +1227,7 @@ class FileHelperTest extends Specification {
         Paths.get('/file.txt')      | Paths.get('/file.txt')
         and:
         'http://foo/file.txt'       | Paths.get(new URI('http://foo/file.txt'))
+        'http://foo/some///file.txt'| Paths.get(new URI('http://foo/some/file.txt'))
         Paths.get(new URI('http://foo/file.txt'))      | Paths.get(new URI('http://foo/file.txt'))
 
     }
@@ -1089,4 +1258,141 @@ class FileHelperTest extends Specification {
         Paths.get('/file.txt')      | Paths.get('/file.txt')
 
     }
+
+    @Unroll
+    def 'should remove invalid double slashed'  () {
+        expect:
+        FileHelper.normalisePathSlashes0(PATH) == EXPECTED
+        where:
+        PATH                                            | EXPECTED
+        null                                            | null
+        'foo'                                           | 'foo'
+        'http://foo/bar'                                | 'http://foo/bar'
+        '/some/file'                                    | '/some/file'
+        '//some/file'                                   | '//some/file'             // <-- by design ignore multi-slash at root
+        'file:/some/file'                               | 'file:/some/file'
+        'file://some/file'                              | 'file://some/file'
+        'file:///some/file'                             | 'file:///some/file'
+        'http://example.com//path//to//resource'            | 'http://example.com/path/to/resource'
+        'https://example.com////another///path/'            | 'https://example.com/another/path/'
+        'https://example.com////another///path//'           | 'https://example.com/another/path/'
+        'https://example.com////another///path/?and////'    | 'https://example.com/another/path/?and////'
+        'https://example.com////another///path//?and////'   | 'https://example.com/another/path/?and////'
+        's3://example.com////another///path//?and////'      | 's3://example.com/another/path/?and////'
+        's3:///example.com////another///path'               | 's3:///example.com/another/path'
+        'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
+    }
+
+    def 'getAttemptFromPath parses the attempt from the suffix of a work dir'() {
+        expect:
+        FileHelper.getAttemptFromPath(PATH == null ? null : Paths.get(PATH)) == ATTEMPT
+
+        where:
+        PATH                                            | ATTEMPT
+        null                                            | 1
+        '/work/ab/cdef0123456789abcdef0123456789'       | 1
+        '/work/ab/cdef0123456789abcdef0123456789-2'     | 2
+        '/work/ab/cdef0123456789abcdef0123456789-12'    | 12
+    }
+
+    def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {
+        given:
+        def work = Paths.get('/work')
+        def hash = 'abcdef0123456789abcdef0123456789'
+
+        expect: 'the two-level <2hex>/<30hex> layout'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789/out.bam"), work).toString() == hash
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789"), work).toString() == hash
+
+        and: 'an attempt suffix on the leaf is tolerated -- the attempt is a path segment, not part of the hash'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/out.bam"), work).toString() == hash
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-12/sub/out.bam"), work).toString() == hash
+
+        and: 'anything else is not a task work dir'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/stage-1234/foo"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-x/out.bam"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
+    }
+
+    def 'getTaskDirFromPath returns the directory the file is really in, attempt suffix included'() {
+        given:
+        def work = Paths.get('/work')
+
+        expect: 'the unsuffixed layout'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789")
+
+        and: 'an attempt dir resolves to ITSELF, not to the unsuffixed sibling getWorkFolder builds'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789-2")
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-12/sub/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789-12")
+
+        and: 'so relativizing an output against it never yields a `..` segment'
+        def src = Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/sub/out.bam")
+        FileHelper.getTaskDirFromPath(src, work).relativize(src).toString() == 'sub/out.bam'
+
+        and: 'anything that is not a task work dir has none'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/work/stage-1234/foo"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
+    }
+    def 'should delete a local directory and rethrow when it cannot be deleted' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def missing = folder.resolve('missing')
+
+        when:
+        FileHelper.deleteDirEntry(folder)
+        then:
+        !Files.exists(folder)
+
+        when:
+        // the pseudo-directory exemption applies to gs paths only, a local path must still fail
+        FileHelper.deleteDirEntry(missing)
+        then:
+        thrown(NoSuchFileException)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should register a provider without installing it in the JDK' () {
+        when:
+        def provider = FileHelper.getOrInstallProvider(FakeFileSystemProvider)
+        then:
+        provider instanceof FakeFileSystemProvider
+        FileHelper.getProviderFor('fake').is(provider)
+        FileHelper.getOrInstallProvider(FakeFileSystemProvider).is(provider)
+        !FileSystemProvider.installedProviders().any { it.scheme == 'fake' }
+        FileHelper.getProviderSchemes().containsAll(['file', 'fake'])
+
+        cleanup:
+        FileHelper.providersMap.remove('fake')
+    }
+
+    static class FakeFileSystemProvider extends FileSystemProvider {
+        String getScheme() { 'fake' }
+        FileSystem newFileSystem(URI uri, Map<String,?> env) { throw new UnsupportedOperationException() }
+        FileSystem getFileSystem(URI uri) { throw new UnsupportedOperationException() }
+        Path getPath(URI uri) { throw new UnsupportedOperationException() }
+        SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) { throw new UnsupportedOperationException() }
+        void createDirectory(Path dir, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        void delete(Path path) { throw new UnsupportedOperationException() }
+        void copy(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        void move(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        boolean isSameFile(Path path, Path path2) { throw new UnsupportedOperationException() }
+        boolean isHidden(Path path) { throw new UnsupportedOperationException() }
+        FileStore getFileStore(Path path) { throw new UnsupportedOperationException() }
+        void checkAccess(Path path, AccessMode... modes) { throw new UnsupportedOperationException() }
+        <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        Map<String,Object> readAttributes(Path path, String attributes, LinkOption... options) { throw new UnsupportedOperationException() }
+        void setAttribute(Path path, String attribute, Object value, LinkOption... options) { throw new UnsupportedOperationException() }
+    }
+
 }

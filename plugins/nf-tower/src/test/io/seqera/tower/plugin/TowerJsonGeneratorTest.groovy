@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,12 @@
 
 package io.seqera.tower.plugin
 
+import java.time.Instant
+import java.time.ZoneOffset
+
 import groovy.json.JsonGenerator
 import groovy.json.JsonSlurper
+import nextflow.container.resolver.ContainerMeta
 import nextflow.trace.ProgressRecord
 import nextflow.trace.WorkflowStats
 import spock.lang.Specification
@@ -46,6 +50,26 @@ class TowerJsonGeneratorTest extends Specification {
         x = gen.toJson( [bar: [one: "Hello world", two: "Hola mundo"]] )
         then:
         x == '{"bar":{"one":"Hello","two":"Hola mundo"}}'
+    }
+
+    static class Unserializable {
+        String getName() { 'foo' }
+        String getBroken() { throw new IllegalStateException('boom') }
+    }
+
+    def 'should write null for a value that fails to serialise' () {
+        given:
+        def gen = new TowerJsonGenerator(new JsonGenerator.Options(), [:])
+
+        when:
+        def json = gen.toJson( [before: 1, bad: new Unserializable(), after: 2] )
+        then:
+        new JsonSlurper().parseText(json) == [before: 1, bad: null, after: 2]
+
+        when:
+        json = gen.toJson( [before: 1, bad: [new Unserializable()], after: 2] )
+        then:
+        new JsonSlurper().parseText(json) == [before: 1, bad: [null], after: 2]
     }
 
     def 'should normalise gitmodules attribute' () {
@@ -108,6 +132,7 @@ class TowerJsonGeneratorTest extends Specification {
         progress.get(0) == [
                 index:1,
                 name: 'foo',
+                workDir: null,
                 pending: 0,
                 submitted: 0,
                 running: 0,
@@ -128,6 +153,7 @@ class TowerJsonGeneratorTest extends Specification {
         progress[1] == [
                 index:2,
                 name: 'bar',
+                workDir: null,
                 pending: 1,
                 submitted: 2,
                 running: 3,
@@ -240,6 +266,66 @@ class TowerJsonGeneratorTest extends Specification {
             peakMemory == 15
             terminated == true
         }
+    }
+
+    def 'should serialise the execution dag faithfully' () {
+        given:
+        def gen = TowerJsonGenerator.create([:])
+        and:
+        // a process -> operator -> process chain; the operator must survive serialization
+        def dag = [
+            vertices: [
+                [id: '0', type: 'PROCESS',  label: 'RNASEQ:FOO', scope: 'RNASEQ'],
+                [id: '1', type: 'OPERATOR', label: 'map',        scope: 'RNASEQ'],
+                [id: '2', type: 'PROCESS',  label: 'RNASEQ:BAR', scope: 'RNASEQ'],
+            ],
+            edges: [
+                [source: '0', target: '1', label: 'ch_reads'],
+                [source: '1', target: '2', label: null],
+            ]
+        ]
+
+        when:
+        def json = gen.toJson([dag: dag])
+        def copy = (Map) new JsonSlurper().parseText(json)
+
+        then:
+        // the operator vertex between the two processes is preserved, not dropped
+        copy.dag.vertices.size() == 3
+        copy.dag.vertices*.type == ['PROCESS', 'OPERATOR', 'PROCESS']
+        copy.dag.vertices.find { it.type == 'OPERATOR' && it.label == 'map' }
+        and:
+        // fully-qualified process labels and enclosing scope round-trip intact
+        copy.dag.vertices[0].label == 'RNASEQ:FOO'
+        copy.dag.vertices[0].scope == 'RNASEQ'
+        and:
+        // edges join vertices by id, optional channel label preserved
+        copy.dag.edges.size() == 2
+        copy.dag.edges[0] == [source: '0', target: '1', label: 'ch_reads']
+        copy.dag.edges[1].source == '1'
+        copy.dag.edges[1].target == '2'
+    }
+
+    def 'should serialise container meta' () {
+        given:
+        def gen = TowerJsonGenerator.create([:])
+        and:
+        def ts = Instant.ofEpochSecond(1742421070).atOffset(ZoneOffset.ofHours(2))
+        def c1 = new ContainerMeta(
+            requestId:'r-1',
+            requestTime:ts,
+            buildId: 'bd-2',
+            scanId: 'sc-3',
+            mirrorId: 'mr-4',
+            cached: false,
+            freeze: true,
+            sourceImage: 'debian:latest',
+            targetImage: 'wave/debian')
+
+        when:
+        def json = gen.toJson([containers: [c1]])
+        then:
+        json == '{"containers":[{"requestId":"r-1","sourceImage":"debian:latest","targetImage":"wave/debian","buildId":"bd-2","mirrorId":"mr-4","scanId":"sc-3","cached":false,"freeze":true,"requestTime":"2025-03-19T23:51:10+02:00"}]}'
     }
 
 }

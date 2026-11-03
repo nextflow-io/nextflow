@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.extension.plugin
@@ -21,9 +20,15 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
+import nextflow.Session
+import nextflow.plugin.extension.Function
+import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -49,14 +54,29 @@ class PluginExtensionProviderTest extends Specification {
     def 'should invoke ext method' () {
         given:
         def ext = PluginExtensionProvider.INSTANCE()
-        def ch = new DataflowQueue(); ch<<1<<2<<3
 
         when:
-        def result = ext.invokeExtensionMethod(ch, 'map', { it -> it * it })
+        def result = runDataflow {
+            def ch = Channel.of(1, 2, 3)
+            ext.invokeExtensionMethod(ch, 'map', { v -> v * v })
+        }
         then:
         result instanceof DataflowReadChannel
         result.val == 1
         result.val == 4
         result.val == 9
+    }
+
+    static class ChannelFunctions extends PluginExtensionPoint {
+        @Override protected void init(Session session) {}
+        @Function DataflowWriteChannel fromFoo(String value) { null }
+        @Function DataflowWriteChannel mapFoo(DataflowWriteChannel source) { null }
+    }
+
+    def 'should not detect channel functions as factories or operators' () {
+        expect:
+        PluginExtensionProvider.getDeclaredFactoryExtensionMethods0(ChannelFunctions).isEmpty()
+        PluginExtensionProvider.getDeclaredOperatorExtensionMethods0(ChannelFunctions).isEmpty()
+        PluginExtensionProvider.getDeclaredFunctionsExtensionMethods0(ChannelFunctions) == ['fromFoo', 'mapFoo'] as Set
     }
 }

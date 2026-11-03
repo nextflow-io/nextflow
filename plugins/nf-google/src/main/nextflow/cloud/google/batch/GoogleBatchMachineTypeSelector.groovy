@@ -1,5 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 package nextflow.cloud.google.batch
 
+import io.seqera.cloudinfo.api.CloudPrice
+import io.seqera.cloudinfo.client.CloudInfoClient
+
 import java.math.RoundingMode
 
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.Memoized
@@ -39,11 +40,10 @@ import nextflow.util.MemoryUnit
  * @author Jordi Deu-Pons <jordi@jordeu.net>
  */
 @CompileStatic
+@Deprecated
 class GoogleBatchMachineTypeSelector {
 
     static GoogleBatchMachineTypeSelector INSTANCE = new GoogleBatchMachineTypeSelector()
-
-    private static final CLOUD_INFO_API = "https://cloudinfo.seqera.io/api/v1"
 
     /*
      * Some families CPUs are faster so this is a cost correction factor
@@ -77,6 +77,37 @@ class GoogleBatchMachineTypeSelector {
 
     private static final List<String> DEFAULT_FAMILIES = ['n1-*', 'n2-*', 'n2d-*', 'c2-*', 'c2d-*', 'm1-*', 'm2-*', 'm3-*', 'e2-*']
 
+    /*
+     * Accelerator optimized families. See: https://cloud.google.com/compute/docs/accelerator-optimized-machines
+     * LAST UPDATE 2024-10-16
+     */
+    private static final List<String> ACCELERATOR_OPTIMIZED_FAMILIES = ['a2-*', 'a3-*', 'g2-*']
+
+    /*
+     * Families that only support Hyperdisk disk types (not pd-standard, pd-balanced, pd-ssd).
+     * These require 'hyperdisk-*' as boot disk type.
+     * https://docs.cloud.google.com/compute/docs/general-purpose-machines?hl=en#supported_disk_types_for_c4
+     */
+    private static final List<String> HYPERDISK_ONLY_FAMILIES = ['c4-*', 'c4a-*', 'c4d-*', 'n4-*', 'n4a-*', 'n4d-*', 'z3-*']
+    /*
+     * Families that do not support Local SSD
+     */
+    private static final List<String> PD_ONLY_FAMILIES = ['e2-*']
+    /*
+     * Families that do not support Local SSD
+     */
+    private static final List<String> NO_LOCAL_SSD_SUPPORT_FAMILIES = ['e2-*', 'h3-*', 'm2-*', 'm4-*', 'n4-*', 't2a-*', 't2d-*', 'x4-*']
+    /*
+     * Families that support local SSD with 'lssd' suffix
+     */
+    private static final List<String> PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES = ['c3-*', 'c3a-*', 'c3d-*', 'c4-*', 'c4a-*', 'c4d-*', 'h4d-*', 'z3-*']
+
+    private CloudInfoClient cloudInfo
+
+    GoogleBatchMachineTypeSelector(){
+        cloudInfo = CloudInfoClient.create()
+    }
+
     @Immutable
     static class MachineType {
         String type
@@ -86,11 +117,11 @@ class GoogleBatchMachineTypeSelector {
         float onDemandPrice
         int cpusPerVm
         int memPerVm
+        int gpusPerVm
         PriceModel priceModel
     }
 
     MachineType bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
-        final machineTypes = getAvailableMachineTypes(region, spot)
         if (families == null)
             families = Collections.<String>emptyList()
 
@@ -98,9 +129,9 @@ class GoogleBatchMachineTypeSelector {
         if (families.size() == 1) {
             final familyOrType = families.get(0)
             if (familyOrType.contains("custom-"))
-                return new MachineType(type: familyOrType, family: 'custom', cpusPerVm: cpus, memPerVm: memoryMB, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
+                return new MachineType(type: familyOrType, family: 'custom', cpusPerVm: cpus, memPerVm: memoryMB, gpusPerVm: 0, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
 
-            final machineType = machineTypes.find { it.type == familyOrType }
+            final machineType = getAvailableMachineTypes(region, spot).find { it.type == familyOrType }
             if( machineType )
                 return machineType
         }
@@ -117,11 +148,13 @@ class GoogleBatchMachineTypeSelector {
         final matchMachineType = {String type -> !families || families.find { matchType(it, type) }}
 
         // find machines with enough resources and SSD local disk
-        final validMachineTypes = machineTypes.findAll {
+        def validMachineTypes = getAvailableMachineTypes(region, spot).findAll {
                     it.cpusPerVm >= cpus &&
                     it.memPerVm >= memoryGB &&
                     matchMachineType(it.type)
         }.collect()
+        if (fusionEnabled)
+            validMachineTypes = validMachineTypes.findAll { hasLocalSsd(it.type)}.collect()
 
         final sortedByCost = validMachineTypes.sort {
             (it.cpusPerVm > 2 || it.memPerVm > 2 ? FAMILY_COST_CORRECTION.get(it.family, 1.0) : 1.0) * (spot ? it.spotPrice : it.onDemandPrice)
@@ -130,7 +163,7 @@ class GoogleBatchMachineTypeSelector {
         return sortedByCost.first()
     }
 
-    protected boolean matchType(String family, String vmType) {
+    protected static boolean matchType(String family, String vmType) {
         if (!family)
             return true
         if (family.contains('*'))
@@ -144,19 +177,18 @@ class GoogleBatchMachineTypeSelector {
     @Memoized
     protected List<MachineType> getAvailableMachineTypes(String region, boolean spot) {
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
-        final json = "${CLOUD_INFO_API}/providers/google/services/compute/regions/${region}/products".toURL().text
-        final data = new JsonSlurper().parseText(json)
-        final products = data['products'] as List<Map>
-        final averageSpotPrice = (List<Map> prices) -> prices.collect{it.price as float}.average() as float
+        final products = cloudInfo.getProducts('google', region)
+        final averageSpotPrice = (List<CloudPrice> prices) -> prices ? prices.collect{it.price as float}.average() as float : 0.0f
 
         products.collect {
             new MachineType(
                     type: it.type,
                     family: it.type.toString().split('-')[0],
-                    spotPrice: averageSpotPrice(it.spotPrice as List<Map>),
+                    spotPrice: averageSpotPrice(it.spotPrice as List<CloudPrice>),
                     onDemandPrice: it.onDemandPrice as float,
                     cpusPerVm: it.cpusPerVm as int,
                     memPerVm: it.memPerVm as int,
+                    gpusPerVm: it.gpusPerVm as int,
                     location: region,
                     priceModel: priceModel
             )
@@ -223,8 +255,44 @@ class GoogleBatchMachineTypeSelector {
             return findFirstValidSize(requested, [4,8])
         }
 
-        // other special families the user must provide a valid size
+        if( machineType.family == "a2" ) {
+            if ( machineType.type == 'a2-highgpu-1g' )
+                return findFirstValidSize(requested, [1, 2, 4, 8])
+            if ( machineType.type == 'a2-highgpu-2g' )
+                return findFirstValidSize(requested, [2, 4, 8])
+            if ( machineType.type == 'a2-highgpu-4g' )
+                return findFirstValidSize(requested, [4, 8])
+            if ( machineType.type == 'a2-highgpu-8g' || machineType.type == 'a2-megagpu-16g' )
+                return findFirstValidSize(requested, [8])
+        }
+
+        if( machineType.family == "g2" ) {
+            if( machineType.type == 'g2-standard-4' || machineType.type == 'g2-standard-8' ||
+                machineType.type == 'g2-standard-12' || machineType.type == 'g2-standard-16' ||
+                machineType.type == 'g2-standard-32' )
+                return findFirstValidSize(requested, [1])
+            if( machineType.type == 'g2-standard-24' )
+                return findFirstValidSize(requested, [2])
+            if( machineType.type == 'g2-standard-48' )
+                return findFirstValidSize(requested, [4])
+            if( machineType.type == 'g2-standard-96' )
+                return findFirstValidSize(requested, [8])
+        }
+
+        if( notConfigurableLocalSSD(machineType) )
+            return new MemoryUnit( 0 )
+
+        // For other special families, the user must provide a valid size. If a family does not
+        // support local disks, then Google Batch shall return an appropriate error.
         return requested
+    }
+
+    protected notConfigurableLocalSSD(MachineType machineType) {
+        // These families have a local SSD already attached and is not configurable.
+        return  ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
+                ((machineType.family == "c4" || machineType.family == "c4a" || machineType.family == "c4d") && machineType.type.endsWith("-lssd")) ||
+                machineType.family == "a3" ||
+                machineType.type.startsWith("a2-ultragpu-")
     }
 
     /**
@@ -248,6 +316,68 @@ class GoogleBatchMachineTypeSelector {
             numberOfDisks = allowedPartitions.last()
 
         return new MemoryUnit( numberOfDisks * 375L * (1<<30) )
+    }
+
+    /**
+     * Check if the machine type belongs to a family that only supports Hyperdisk.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type requires Hyperdisk.
+     */
+    static boolean isHyperdiskOnly(String machineType) {
+        return HYPERDISK_ONLY_FAMILIES.any { matchType(it, machineType) }
+    }
+
+    /**
+     * Check if the machine type belongs to a family that only supports pd-* disk.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type requires pd-* disk type.
+     */
+    static boolean isPdOnly(String machineType) {
+        return PD_ONLY_FAMILIES.any { matchType(it, machineType) }
+    }
+
+    /**
+     * Check if the machine type allow to have a local-ssd .
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type can have local ssd disks.
+     */
+    static boolean hasLocalSsd(String machineType) {
+        if( machineType.contains('lssd') )
+            return true
+
+        if( PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES.any { matchType(it, machineType) } )
+            return false
+
+        if( NO_LOCAL_SSD_SUPPORT_FAMILIES.any { matchType(it, machineType) } )
+            return false
+
+        return true
+    }
+    /**
+     * Check if a machine type doesn't support
+     * @param machineTypeOrFamily
+     * @return
+     */
+    static boolean unsupportedLocalSSD(String machineTypeOrFamily) {
+        return NO_LOCAL_SSD_SUPPORT_FAMILIES.any { matchType(it, machineTypeOrFamily) }
+    }
+
+    /**
+     * Determine whether GPU drivers should be installed.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if GPU drivers should be installed.
+     */
+    protected boolean installGpuDrivers(MachineType machineType) {
+        if ( machineType.gpusPerVm > 0 ) {
+            return true
+        }
+        // Cloud Info service currently does not currently return gpusPerVm values (or the user
+        // could have disabled use of the service) so also check against a known set of families.
+        return ACCELERATOR_OPTIMIZED_FAMILIES.any { matchType(it, machineType.type) }
     }
 
 }

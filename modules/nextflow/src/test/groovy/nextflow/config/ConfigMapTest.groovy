@@ -1,14 +1,22 @@
 /*
- * Copyright (c) 2020-2021. Seqera Labs, S.L.
+ * Copyright 2013-2026, Seqera Labs
  *
- * All Rights reserved
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.config
 
-import nextflow.secret.DummySecretsProvider
-import nextflow.secret.SecretHolder
+
 import spock.lang.Specification
 /**
  *
@@ -29,30 +37,6 @@ class ConfigMapTest extends Specification {
         cfg.get('bar') == 'two'
         cfg.get('unknown') == null
 
-    }
-
-    def 'should return secret values' () {
-        given:
-        def SECRET1 = "I'm the secret value"
-        def SECRET2 = "The other secret"
-        and:
-        def provider = new DummySecretsProvider([foo:SECRET1, bar:SECRET2])
-        def holder1 = new SecretHolder('foo')
-        def holder2 = new SecretHolder('bar')
-        def cfg = new ConfigMap()
-
-        when:
-        cfg.put('alpha', holder1)
-        cfg.put('delta', new ConfigMap(gamma: holder2))
-        then:
-        cfg.alpha == holder1
-        cfg.delta.gamma == holder2 
-
-        when:
-        cfg.withSecretProvider(provider)
-        then:
-        cfg.alpha == SECRET1
-        cfg.delta.gamma == SECRET2
     }
 
 }

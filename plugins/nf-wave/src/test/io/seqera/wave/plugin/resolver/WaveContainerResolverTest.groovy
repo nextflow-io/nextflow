@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,14 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.resolver
 
 import io.seqera.wave.plugin.WaveClient
+import io.seqera.wave.plugin.config.WaveConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.executor.Executor
 import nextflow.processor.TaskProcessor
@@ -35,6 +36,7 @@ class WaveContainerResolverTest extends Specification {
         given:
         def CONTAINER_NAME = "ubuntu:latest"
         def WAVE_CONTAINER = new ContainerInfo(CONTAINER_NAME, "wave.io/ubuntu:latest", "12345")
+        def ORAS_CONTAINER = new ContainerInfo(CONTAINER_NAME, "oras://wave.io/ubuntu:latest", "12345")
         def SINGULARITY_CONTAINER = new ContainerInfo('ubuntu:latest', '/some/singularity/ubuntu.img')
         and:
         def defaultResolver = Spy(DefaultContainerResolver)
@@ -46,48 +48,57 @@ class WaveContainerResolverTest extends Specification {
             }
         }
 
+        // docker images
         when:
         def result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
         and:
-        1 * resolver.waveContainer(task, CONTAINER_NAME) >> WAVE_CONTAINER
+        1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
         and:
         result == WAVE_CONTAINER
 
-
+        // singularity images
         when:
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true }
-        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
-        1 * resolver.waveContainer(task, CONTAINER_NAME) >> WAVE_CONTAINER
-        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> SINGULARITY_CONTAINER
+        1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
+        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target, WAVE_CONTAINER.hashKey) >> SINGULARITY_CONTAINER
         and:
         result == SINGULARITY_CONTAINER
+
+        // singularity images + oras protocol
+        when:
+        result = resolver.resolveImage(task, CONTAINER_NAME)
+        then:
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) { freezeMode()>>true } }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
+        and:
+        1 * resolver.waveContainer(task, CONTAINER_NAME, true) >> ORAS_CONTAINER
+        0 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> null
+        and:
+        result == ORAS_CONTAINER
     }
 
-    def 'should validate container name' () {
-        when:
-        WaveContainerResolver.validateContainerRepo('ubuntu')
-        then:
-        noExceptionThrown()
+    def 'should return container meta' () {
+        given:
+        def containerKey = 'abc'
+        def client = Mock(WaveClient)
+        def resolver = Spy(new WaveContainerResolver())
+        def meta = Mock(ContainerMeta)
 
         when:
-        WaveContainerResolver.validateContainerRepo('ubuntu:latest')
+        def result = resolver.getContainerMeta(containerKey)
         then:
-        noExceptionThrown()
-
-        when:
-        WaveContainerResolver.validateContainerRepo('quay.io/wtsicgp/nanoseq:3.3.0')
-        then:
-        noExceptionThrown()
-
-        when:
-        WaveContainerResolver.validateContainerRepo('docker://quay.io/wtsicgp/nanoseq:3.3.0')
-        then:
-        thrown(IllegalArgumentException)
+        resolver.client()>>client
+        and:
+        client.enabled()>>true
+        client.getContainerMeta(containerKey)>>meta
+        and:
+        result == meta
     }
 }

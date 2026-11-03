@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.cli.CliOptions
 import nextflow.extension.OpCall
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
@@ -41,30 +41,30 @@ class LoggerHelperTest extends Specification {
         given:
         final pwd = System.getProperty("user.dir")
         Map<String,Path> names = [
-                'Script_f1bbc0ef': Paths.get('/some/path/main.nf'),
-                'Script_1b751fe9': Paths.get('/other/path/module.nf'),
-                'Script_12345678': Paths.get("$pwd/foo/script.nf")
+                '_nf_script_f1bbc0eff1bbc0ef': Paths.get('/some/path/main.nf'),
+                '_nf_script_1b751fe91b751fe9': Paths.get('/other/path/module.nf'),
+                '_nf_script_1234567812345678': Paths.get("$pwd/foo/script.nf")
         ]
 
         expect:
         LoggerHelper.getErrorLine(LINE, names) == EXPECTED
-        
+
         where:
         EXPECTED                        | LINE
         null                            | 'at nextflow.script.ScriptRunner.run(ScriptRunner.groovy:289)'
         null                            | 'at nextflow.script.BaseScript.run(BaseScript.groovy:151)'
-        ['/some/path/main.nf', '63']    | 'at Script_f1bbc0ef.runScript(Script_f1bbc0ef:63)'
-        null                            | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe9)'
-        ['/other/path/module.nf', '10'] | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe9:10)'
-        ['foo/script.nf', '55']         | 'at Script_12345678.runScript(Script_12345678:55)'
-        null                            | 'at Script_12345678.runScript(Script_xxxxxxxx:63)'
+        ['/some/path/main.nf', '63']    | 'at _nf_script_f1bbc0ef.runScript(_nf_script_f1bbc0eff1bbc0ef:63)'
+        null                            | 'at Script_1b751fe9$_runScript_closure1.doCall(_nf_script_1b751fe91b751fe9)'
+        ['/other/path/module.nf', '10'] | 'at _nf_script_1b751fe9$_runScript_closure1.doCall(_nf_script_1b751fe91b751fe9:10)'
+        ['foo/script.nf', '55']         | 'at _nf_script_12345678.runScript(_nf_script_1234567812345678:55)'
+        null                            | 'at _nf_script_12345678.runScript(_nf_script_xxxxxxxxxxxxxxxx:63)'
     }
 
 
     def 'should create LoggerHelper object' () {
 
         given:
-        def logger = new LoggerHelper(Mock(CliOptions))
+        def logger = new LoggerHelper(new LoggerOptions(false, false, null, null, false, null, null))
         when:
         logger.setDaemon(true)
         then:
@@ -79,7 +79,7 @@ class LoggerHelperTest extends Specification {
         def message =
                 """
                 startup failed:
-                _nf_script_c9a99616: 3: Unknown process block definition: `outpu` @ line 3, column 4.
+                _nf_script_c9a99616: 3: Unknown process block definition: `output` @ line 3, column 4.
                 stdout() into (A,B,C)
                 """
                 .stripIndent().leftTrim()
@@ -88,7 +88,7 @@ class LoggerHelperTest extends Specification {
         expect:
         LoggerHelper.formatStartupErrorMessage(message) ==
                 """
-                Unknown process block definition: `outpu` @ line 3, column 4.
+                Unknown process block definition: `output` @ line 3, column 4.
                 stdout() into (A,B,C)
                 """
                 .stripIndent().leftTrim()
@@ -145,6 +145,23 @@ class LoggerHelperTest extends Specification {
         ScriptBinding   | 'printx'      | 'Unknown method invocation `printx`'
         BaseScript      | 'printq'      | 'Unknown method invocation `printq` -- Did you mean?\n  print\n  printf'
         DataflowQueue   | 'view'        | 'Unknown method invocation `view` on channel type'
+    }
+
+    @Unroll
+    def 'should format missing property error' () {
+        given:
+        def event = Mock(ILoggingEvent)
+        def buffer = new StringBuilder()
+
+        when:
+        LoggerHelper.appendFormattedMessage(buffer, event, ERROR, null)
+        then:
+        buffer.toString().startsWith("ERROR ~ ${MSG}")
+
+        where:
+        ERROR                                                   | MSG
+        new MissingPropertyException('foo', ScriptBinding)      | 'No such variable: foo'
+        new MissingPropertyException('Unknown variable `bar`')  | 'No such variable: Unknown variable `bar`'
     }
 
     @Unroll

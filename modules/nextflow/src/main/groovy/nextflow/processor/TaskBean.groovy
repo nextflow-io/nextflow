@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
-
 /**
  * Serializable task value object. Holds configuration values required to
  * launch the task execution
@@ -41,11 +41,15 @@ class TaskBean implements Serializable, Cloneable {
 
     Map<String,String> environment
 
+    Set<String> inputEnvNames
+
     String headerScript
 
     String containerImage
 
     Path condaEnv
+
+    Boolean useMicromamba
 
     Path spackEnv
 
@@ -71,20 +75,23 @@ class TaskBean implements Serializable, Cloneable {
 
     boolean statsEnabled
 
+    boolean fusionEnabled
+
     List<String> outputEnvNames
+
+    Map<String,String> outputEvals
 
     String beforeScript
 
     String afterScript
-
-    @Deprecated
-    boolean containerExecutable
 
     boolean containerNative
 
     boolean containerEnabled
 
     String containerOptions
+
+    String containerPlatform
 
     Map<String,Path> inputFiles
 
@@ -103,6 +110,16 @@ class TaskBean implements Serializable, Cloneable {
     List<String> secretNames
 
     Map<String,String> resourceLabels
+
+    String arrayIndexName
+
+    Integer arrayIndexStart
+
+    List<Path> arrayWorkDirs
+
+    List<Path> arrayInputFiles
+
+    Boolean stageFileEnabled
 
     @PackageScope
     TaskBean() {
@@ -123,8 +140,10 @@ class TaskBean implements Serializable, Cloneable {
 
         // set the environment
         this.environment = task.getEnvironment()
+        this.inputEnvNames = task.inputEnv ? new HashSet<String>(task.inputEnv.keySet()) : null
 
         this.condaEnv = task.getCondaEnv()
+        this.useMicromamba = task.getCondaConfig()?.useMicromamba()
         this.spackEnv = task.getSpackEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
@@ -141,21 +160,33 @@ class TaskBean implements Serializable, Cloneable {
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+        this.containerPlatform = task.getContainerPlatform()
         // secret management
         this.secretNative = task.isSecretNative()
         this.secretNames = task.config.getSecret()
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
+        this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
+        this.fusionEnabled = task.getProcessor().isFusionEnabled()
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
         this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
-
         this.resourceLabels = task.config.getResourceLabels()
+        this.stageFileEnabled = task.isStageFileEnabled()
+
+        // job array
+        if( task instanceof TaskArrayRun ) {
+            final executor = (TaskArrayExecutor)task.getProcessor().getExecutor()
+            this.arrayIndexName = executor.getArrayIndexName()
+            this.arrayIndexStart = executor.getArrayIndexStart()
+            this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
+            this.arrayInputFiles = task.children.collectMany { h -> h.task.getInputFilesMap().values() }
+        }
     }
 
     @Override

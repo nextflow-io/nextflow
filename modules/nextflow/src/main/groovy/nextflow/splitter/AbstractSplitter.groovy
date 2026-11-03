@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ package nextflow.splitter
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.locks.Lock
 import java.util.zip.GZIPInputStream
 
+import com.google.common.util.concurrent.Striped
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -38,6 +40,8 @@ import nextflow.util.CheckHelper
 @Slf4j
 @CompileStatic
 abstract class AbstractSplitter<T> implements SplitterStrategy {
+
+    private static final Striped<Lock> locks = Striped.lock(64)
 
     protected Map fOptionsMap
 
@@ -141,23 +145,17 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         setSource(source)
 
-
-        final chunks = collector = createCollector()
-        if( chunks instanceof CacheableCollector && chunks.checkCached() ) {
-            log.debug "Operator `$operatorName` reusing cached chunks at path: ${chunks.getBaseFile()}"
-            result = resumeFromCache(chunks)
+        this.collector = createCollector()
+        // concurrent splits of the same input share the same chunk files and marker,
+        // therefore they are serialised to let the first one create them and the others reuse them
+        final lock = collector instanceof CacheableCollector ? locks.get(collector.getMarkerFile()) : null
+        lock?.lock()
+        try {
+            result = applyOrResume(source)
         }
-
-        else {
-            try {
-                def stream = normalizeSource(source)
-                result = process(stream)
-            }
-            catch ( StopSplitIterationException e ) {
-                log.trace 'Split iteration interrupted'
-            }
+        finally {
+            lock?.unlock()
         }
-
 
         /*
          * now close and return the result
@@ -175,12 +173,29 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         return result
     }
 
+    private applyOrResume(source) {
+        if( collector instanceof CacheableCollector && collector.checkCached() ) {
+            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.getBaseFile()}"
+            return resumeFromCache(collector)
+        }
+        try {
+            final result = process(normalizeSource(source))
+            if( collector instanceof CacheableCollector )
+                collector.markComplete()
+            return result
+        }
+        catch ( StopSplitIterationException e ) {
+            log.trace 'Split iteration interrupted'
+            return null
+        }
+    }
+
     /**
      * @param tuple
      *      A non-empty list of objects
      * @return
      *      Returns the item at position defined by the attribute {@code #elem} in the list specified as parameter.
-     *      When {@code #elem} is equal to -1 find find out the first occourence of a file object.
+     *      When {@code #elem} is equal to -1 find find out the first occurrence of a file object.
      *      If no file is available the first item in the list is returned
      */
     @PackageScope
@@ -246,7 +261,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param index the current split count
      * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
      */
-    protected abstract process( T targetObject )
+    abstract protected process( T targetObject )
 
     /**
      * Normalise the source object to be splitted

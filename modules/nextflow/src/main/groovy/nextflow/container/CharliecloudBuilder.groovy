@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
  */
 
 package nextflow.container
+import java.nio.file.Path
+import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 /**
  * Implements a builder for Charliecloud containerisation
  *
@@ -25,29 +28,38 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
  * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
+ * @author Niklas Schandry <niklas@bio.lmu.de>
  */
 @CompileStatic
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
-    CharliecloudBuilder(String name) {
+    private boolean writeFake
+
+    CharliecloudBuilder(String name, CharliecloudConfig config) {
         this.image = name
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+
+        if( config.temp )
+            this.temp = config.temp
+
+        if( !config.writableInputMounts )
+            this.readOnlyInputs = true
+
+        this.writeFake = config.writeFake
+    }
+
+    CharliecloudBuilder(String name) {
+        this(name, new CharliecloudConfig([:]))
     }
 
     @Override
     CharliecloudBuilder params(Map params) {
 
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
         return this
     }
@@ -59,11 +71,22 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     @Override
     CharliecloudBuilder build(StringBuilder result) {
-        assert image
 
-        result << 'ch-run --unset-env="*" -c "$PWD" --set-env '
-        if (!readOnlyInputs)
+        assert image
+        def imageStorage = Paths.get(image).parent.parent
+        def imageName = image.split('/')[-1]
+
+        result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
+
+        if ( writeFake  )
+            result << '--write-fake '
+
+        if ( !writeFake && !readOnlyInputs ) {
+            // -w and CH_IMAGE_STORAGE are incompatible.
+            if(System.getenv('CH_IMAGE_STORAGE') == imageStorage)
+                throw new Exception('It is not possible to run writeable images from `$CH_IMAGE_STORAGE`')
             result << '-w '
+        }
 
         appendEnv(result)
 
@@ -75,7 +98,14 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
-        result << image
+        if( writeFake && System.getenv('CH_IMAGE_STORAGE') ) {
+            // Run by name if writeFake is true and CH_IMAGE_STORAGE is set
+            result << imageName
+        } else {
+            // Otherwise run by path
+            result << image
+        }
+
         result << ' --'
 
         runCommand = result.toString()
@@ -93,7 +123,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         return rootPath
     }
-    
+
     @Override
     protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
         def mountCmd = "-b ${escape(path)}"

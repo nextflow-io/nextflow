@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.config
@@ -118,12 +117,12 @@ class TowerConfigTest extends Specification {
         when:
         config = new TowerConfig([:], [:])
         then:
-        config.endpoint == 'https://api.tower.nf'
+        config.endpoint == 'https://api.cloud.seqera.io'
 
         when:
         config = new TowerConfig([endpoint:'-'], [:])
         then:
-        config.endpoint == 'https://api.tower.nf'
+        config.endpoint == 'https://api.cloud.seqera.io'
 
         when:
         config = new TowerConfig([endpoint:'http://foo.com'], [:])

@@ -1,0 +1,20 @@
+#
+# run normal mode 
+#
+$NXF_RUN -c ../../config-vars.config | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+< stdout grep "foo 1,2" || false
+< stdout grep "bar 3,4" || false
+
+
+#
+# run resume mode 
+#
+$NXF_RUN -c ../../config-vars.config -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 2 ]] || false
+< stdout grep "foo 1,2" || false
+< stdout grep "bar 3,4" || false
+
+

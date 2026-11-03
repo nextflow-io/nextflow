@@ -1,0 +1,8 @@
+echo ''
+echo \$ $NXF_RUN
+$NXF_RUN | tee stdout
+
+[[ `<stdout grep -c 'Entries are saved to file'` == 1 ]] || false
+[[ `<stdout grep -c 'alpha'` == 1 ]] || false
+[[ `<stdout grep -c 'beta'` == 1 ]] || false
+[[ `<stdout grep -c 'gamma'` == 1 ]] || false

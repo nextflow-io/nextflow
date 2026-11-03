@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.util
@@ -22,7 +21,7 @@ import groovy.transform.CompileStatic
 
 /**
  * Model a CLI option defined a key-value pairs
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
@@ -38,7 +37,7 @@ class BasicCliOpts implements CliOpts {
             return result
         for( String item : cli ) {
             final p = item.indexOf('=')
-            if( p!==-1 ) {
+            if( p!=-1 ) {
                 result.options.put( item.substring(0,p), item.substring(p+1) )
             }
             else {

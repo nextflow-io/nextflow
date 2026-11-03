@@ -1,0 +1,11 @@
+set -e
+
+echo ''
+$NXF_RUN -stub | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > stubtest'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Re-submitted process > stubtest'` == 1 ]] || false
+
+[[ `grep -c 'Stubbing. Creating file' stdout` == 1 ]] || false
+
+

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.config
@@ -27,6 +26,7 @@ import nextflow.trace.TraceHelper
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
+@Deprecated
 class ReportOpts {
 
     final private Boolean enabled

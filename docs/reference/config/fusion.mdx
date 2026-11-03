@@ -1,0 +1,71 @@
+---
+title: fusion
+description: Reference for the fusion config scope, which provides advanced configuration for the use of the Fusion file system.
+---
+
+# `fusion`
+
+The `fusion` scope provides advanced configuration for the use of the [Fusion file system][fusion-page].
+
+##### `fusion.cacheSize`
+
+<AddedInVersion version="24.04" />
+
+The maximum size of the local cache used by the Fusion client.
+
+##### `fusion.containerConfigUrl`
+
+The URL of the container layer that provides the Fusion client.
+Supports `http(s)://...` and `file:/...` (absolute, no authority) schemes. The latter is intended for local development against a custom manifest.
+For example, `file:/path/to/manifest.json`.
+
+##### `fusion.enabled`
+
+Enable the Fusion file system (default: `false`).
+
+##### `fusion.exportStorageCredentials`
+
+Export access credentials required by the underlying object storage as environment variables (e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for AWS S3) to task execution environments (default: `false`).
+
+:::note
+This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
+
+```bash
+eval "$(aws configure export-credentials --format env)"
+```
+:::
+
+:::warning
+This option leaks credentials is the task launcher script. It should only be used for testing and development purposes.
+:::
+
+##### `fusion.logLevel`
+
+The log level of the Fusion client.
+
+##### `fusion.logOutput`
+
+The output location of the Fusion log.
+
+##### `fusion.privileged`
+
+<AddedInVersion version="23.10" />
+
+Enable privileged containers for Fusion (default: `true`).
+Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin.
+
+##### `fusion.snapshots`
+
+<AddedInVersion version="25.04" />
+
+*Currently only supported for AWS Batch*
+
+Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
+
+##### `fusion.tags`
+
+*Currently only supported for S3.*
+
+The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`). Set to `false` to disable tags.
+
+[fusion-page]: ../../fusion

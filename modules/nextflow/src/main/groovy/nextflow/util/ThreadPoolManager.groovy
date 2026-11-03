@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
@@ -26,6 +28,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.exception.AbortOperationException
+
 /**
  * Holder object for file transfer thread pool
  *
@@ -36,10 +40,10 @@ import nextflow.Session
 class ThreadPoolManager {
 
     private static final AtomicInteger poolCount = new AtomicInteger()
-    
+
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
-    final static public int DEFAULT_QUEUE_SIZE = 10_000
+    final static public int DEFAULT_QUEUE_SIZE = -1 // use -1 for using an unbound queue
     final static public Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
     final static public Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
@@ -50,7 +54,10 @@ class ThreadPoolManager {
     private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
     private ExecutorService executorService
-    final private String name
+    private final AtomicInteger runningTasks = new AtomicInteger()
+    private String name
+    private String waitMsg = "Waiting for file transfers to complete (%d files)"
+    private String exitMsg = "Exiting before file transfers were completed -- Some files may be lost"
 
     ThreadPoolManager(String name) {
         this.name = name
@@ -72,15 +79,45 @@ class ThreadPoolManager {
         return this
     }
 
+    ThreadPoolManager withShutdownMessage(String waitMsg, String exitMsg) {
+        this.waitMsg = waitMsg
+        this.exitMsg = exitMsg
+        return this
+    }
+
     ExecutorService create() {
         if( minThreads>maxThreads ) {
             log.debug("Thread pool '$name' minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
             minThreads = maxThreads
         }
 
-        return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
-                : legacyThreadPool()
+        executorService = Threads.useVirtual()
+            ? virtualThreadService()
+            : legacyThreadPool()
+
+        return executorService
+    }
+
+    protected ExecutorService virtualThreadService() {
+        final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
+        final factory = VirtualThreadFactoryBuilder.create(poolName)
+        final ThreadFactory countingFactory = (Runnable task) -> factory.newThread(() -> {
+            runningTasks.incrementAndGet()
+            try {
+                task.run()
+            }
+            finally {
+                runningTasks.decrementAndGet()
+            }
+        })
+        return Executors.newThreadPerTaskExecutor(countingFactory)
+    }
+
+    // this class is required to avoid failures when using Java version < 21
+    private static class VirtualThreadFactoryBuilder {
+        static ThreadFactory create(String name) {
+            return Thread.ofVirtual().name(name).factory()
+        }
     }
 
     protected ExecutorService legacyThreadPool() {
@@ -92,6 +129,12 @@ class ThreadPoolManager {
                 .withKeepAliveTime(keepAlive)
                 .withAllowCoreThreadTimeout(allowThreadTimeout)
                 .build()
+    }
+
+    protected int pending() {
+        return executorService instanceof ThreadPoolExecutor
+            ? ThreadPoolHelper.pending(executorService)
+            : runningTasks.get()
     }
 
     ExecutorService createAndRegisterShutdownCallback(Session session) {
@@ -116,11 +159,22 @@ class ThreadPoolManager {
         }
 
         executorService.shutdown()
-        // wait for ongoing file transfer to complete
-        final waitMsg = "Waiting for file transfers to complete (%d files)"
-        final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files may be lost"
-        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
+        // wait for remaining threads to complete
+        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg, () -> pending())
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
+    }
+
+    void shutdownOrAbort(boolean hard, Session session) throws AbortOperationException {
+        try {
+            shutdown(hard)
+        }
+        catch( TimeoutException e ) {
+            final ignoreErrors = session.config.navigate('workflow.output.ignoreErrors', false)
+            if( ignoreErrors )
+                log.warn(e.message)
+            else
+                throw new AbortOperationException("Timed out while waiting to publish outputs", e)
+        }
     }
 
     static ExecutorService create(String name, int maxThreads=0) {

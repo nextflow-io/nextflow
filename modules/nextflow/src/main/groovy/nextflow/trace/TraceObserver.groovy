@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 
 package nextflow.trace
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-
-import java.nio.file.Path
 
 /**
  * Defines the defaults method for application flow observer
@@ -28,15 +29,16 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Deprecated
 trait TraceObserver {
 
     /**
-     * The is method is invoked when the flow is going to start
+     * This method is invoked when the flow is going to start
      */
     void onFlowCreate(Session session) {}
 
     /**
-     * The is method is invoked when the flow is going to start
+     * This method is invoked when the flow is going to start
      */
     void onFlowBegin() {}
 
@@ -71,7 +73,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
 
@@ -81,7 +83,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onProcessStart(TaskHandler handler, TraceRecord trace){}
 
@@ -91,7 +93,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onProcessComplete(TaskHandler handler, TraceRecord trace){}
 
@@ -118,9 +120,19 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onFlowError(TaskHandler handler, TraceRecord trace){}
+
+    /**
+     * Method that is invoked when a value is published from a channel.
+     *
+     * NOTE: This method is no longer used.
+     *
+     * @param value
+     */
+    @Deprecated
+    void onWorkflowPublish(Object value){}
 
     /**
      * Method that is invoke when an output file is published

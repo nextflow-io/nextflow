@@ -1,0 +1,185 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.processor
+
+import java.nio.file.Path
+
+import nextflow.Session
+import nextflow.script.ProcessConfig
+import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.CacheHelper
+import spock.lang.Specification
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class TaskHasherTest extends Specification {
+
+    def 'should compute unique task hash' () {
+
+        given:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+        }
+        and:
+        def task = Mock(TaskRun) {
+            getSource() >> 'hello world'
+            isContainerEnabled() >> false
+            getContainer() >> null
+            getConfig() >> Mock(TaskConfig)
+            getProcessor() >> processor
+        }
+        and:
+        def hasher = Spy(new TaskHasher(task))
+
+        when:
+        def uuid1 = hasher.compute()
+        def uuid2 = hasher.compute()
+        then:
+        hasher.getTaskGlobalVars() >>> [
+            [foo:'a', bar:'b'],
+            [bar:'b', foo:'a']
+        ]
+        and: 'global vars should not affect task hash'
+        uuid1 == uuid2
+    }
+
+    def 'should include referenced bin files in the task hash' () {
+
+        given:
+        def session = Mock(Session) {
+            getBinEntries() >> [
+                'foo.sh': Path.of('/some/path/foo.sh'),
+                'bar.sh': Path.of('/some/path/bar.sh')
+            ]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+        def hasher = new TaskHasher(task)
+
+        when:
+        def result = hasher.getTaskBinEntries('var=x foo.sh')
+        then:
+        result.size() == 1
+        result.contains(Path.of('/some/path/foo.sh'))
+
+        when:
+        result = hasher.getTaskBinEntries('echo $(foo.sh); bar.sh')
+        then:
+        result.size() == 2
+        result.contains(Path.of('/some/path/foo.sh'))
+        result.contains(Path.of('/some/path/bar.sh'))
+    }
+
+    def 'should include module bundle fingerprint in the task hash' () {
+
+        given: 'two module bundles with the same fingerprint, then one with a different fingerprint'
+        def bundleA1 = Mock(ResourcesBundle) { asBoolean() >> true; hasEntries() >> true; fingerprint() >> 'aaaaaaaa' }
+        def bundleA2 = Mock(ResourcesBundle) { asBoolean() >> true; hasEntries() >> true; fingerprint() >> 'aaaaaaaa' }
+        def bundleB = Mock(ResourcesBundle) { asBoolean() >> true; hasEntries() >> true; fingerprint() >> 'bbbbbbbb' }
+        and: 'a task whose process resolves those bundles across successive hash computations'
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+            enableModuleBinaries() >> true
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+            getModuleBundle() >>> [bundleA1, bundleA2, bundleB]
+        }
+        def task = Mock(TaskRun) {
+            getSource() >> 'hello world'
+            isContainerEnabled() >> false
+            getConfig() >> Mock(TaskConfig)
+            getProcessor() >> processor
+        }
+        def hasher = Spy(new TaskHasher(task))
+        hasher.getTaskGlobalVars() >> [:]
+
+        when:
+        def hashA1 = hasher.compute()
+        def hashA2 = hasher.compute()
+        def hashB = hasher.compute()
+
+        then: 'the same bundle fingerprint yields the same hash'
+        hashA1 == hashA2
+        and: 'a different bundle fingerprint invalidates the cache'
+        hashA1 != hashB
+    }
+
+    def 'should get task directive vars' () {
+        given:
+        def processor = Spy(TaskProcessor) {
+            getConfig() >> Mock(ProcessConfig)
+        }
+        and:
+        def config = new TaskConfig()
+        config.cpus = 4
+        config.ext.alpha = 'AAAA'
+        config.ext.delta = { foo }
+        config.ext.omega = "${-> bar}"
+        config.context = [foo: 'DDDD', bar: 'OOOO']
+        and:
+        def task = Mock(TaskRun) {
+            getConfig() >> config
+            getProcessor() >> processor
+            getVariableNames() >> { [ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set }
+        }
+
+        when:
+        def result = new TaskHasher(task).getTaskExtensionDirectiveVars()
+        then:
+        result == [
+            'task.ext.alpha': 'AAAA',
+            'task.ext.delta': 'DDDD',
+            'task.ext.omega': 'OOOO',
+        ]
+    }
+
+    def 'should hash eval outputs independently of map order'() {
+        given:
+        // same entries, different insertion order and different map implementation
+        def evals1 = new LinkedHashMap(['nxf_out_eval_0': 'echo one', 'nxf_out_eval_1': 'echo two'])
+        def evals2 = new HashMap(['nxf_out_eval_1': 'echo two', 'nxf_out_eval_0': 'echo one'])
+
+        expect:
+        CacheHelper.hasher(evals1).hash() == CacheHelper.hasher(evals2).hash()
+    }
+
+    def 'should hash eval outputs depending on the name-command binding'() {
+        given:
+        // same names and same commands, but paired the other way round
+        def evals1 = ['nxf_out_eval_0': 'echo one', 'nxf_out_eval_1': 'echo two']
+        def evals2 = ['nxf_out_eval_0': 'echo two', 'nxf_out_eval_1': 'echo one']
+
+        expect:
+        CacheHelper.hasher(evals1).hash() != CacheHelper.hasher(evals2).hash()
+    }
+}

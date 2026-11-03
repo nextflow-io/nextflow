@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 /**
  *
@@ -67,5 +70,25 @@ class ThreadPoolManagerTest extends Specification {
         then:
         pool.getCorePoolSize()  == 2
         pool.getMaximumPoolSize() == 8
+    }
+
+    def 'should count running tasks in virtual thread pool' () {
+        given:
+        def manager = new ThreadPoolManager('foo')
+        def pool = manager.virtualThreadService()
+        manager.@executorService = pool
+        def latch = new CountDownLatch(1)
+
+        when:
+        2.times { pool.submit { latch.await() } }
+        then:
+        new PollingConditions(timeout: 5).eventually { assert manager.pending() == 2 }
+
+        when:
+        latch.countDown()
+        pool.shutdown()
+        pool.awaitTermination(5, TimeUnit.SECONDS)
+        then:
+        new PollingConditions(timeout: 5).eventually { assert manager.pending() == 0 }
     }
 }

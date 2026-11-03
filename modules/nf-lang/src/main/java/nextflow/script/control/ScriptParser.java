@@ -1,0 +1,118 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package nextflow.script.control;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import groovy.lang.GroovyClassLoader;
+import nextflow.script.ast.ScriptNode;
+import nextflow.script.dsl.Types;
+import nextflow.script.parser.ScriptAstBuilder;
+import nextflow.script.parser.ScriptParserPluginFactory;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.control.messages.WarningMessage;
+
+/**
+ * Parse and analyze scripts without compiling to Groovy.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class ScriptParser {
+
+    private Path projectDir;
+    private Compiler compiler;
+
+    public ScriptParser(Path projectDir, GroovyClassLoader classLoader) {
+        this.projectDir = projectDir;
+        this.compiler = new Compiler(getConfig(), classLoader);
+    }
+
+    public ScriptParser(Path projectDir) {
+        this(projectDir, new GroovyClassLoader());
+    }
+
+    public ScriptParser() {
+        this(null);
+    }
+
+    public Compiler compiler() {
+        return compiler;
+    }
+
+    public SourceUnit parse(File file) {
+        var source = compiler.createSourceUnit(file);
+        parse0(source);
+        return source;
+    }
+
+    public SourceUnit parse(String name, String contents) {
+        var source = compiler.createSourceUnit(name, contents);
+        parse0(source);
+        return source;
+    }
+
+    private void parse0(SourceUnit source) {
+        var uri = source.getSource().getURI();
+        if( compiler.getSource(uri) != null )
+            return;
+        compiler.addSource(source);
+        compiler.compile(source);
+    }
+
+    public void analyze() {
+        var moduleResolver = new ModuleResolver(projectDir, compiler());
+        var sources = new ArrayList<>(compiler.getSources().values());
+        for( var source : sources ) {
+            moduleResolver.resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
+        }
+
+        // include and name checking
+        for( var source : compiler.getSources().values() ) {
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
+            includeResolver.visit();
+            for( var error : includeResolver.getErrors() )
+                source.getErrorCollector().addErrorAndContinue(error);
+            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit();
+        }
+
+        // type checking -- included modules must be checked before the files
+        // that include them, so that cross-file inferred types (e.g. a
+        // process's record output) are resolved before a consumer reads them
+        for( var source : moduleResolver.orderByDependencies(compiler.getSources().values()) ) {
+            if( source.getErrorCollector().hasErrors() )
+                continue;
+            if( !(source.getAST() instanceof ScriptNode sn) )
+                continue;
+            if( sn.isTypingEnabled() )
+                new TypeCheckingVisitor(source).visit();
+            else
+                new CallArityVisitor(source).visit();
+        }
+    }
+
+    private static CompilerConfiguration getConfig() {
+        var config = new CompilerConfiguration();
+        config.setPluginFactory(new ScriptParserPluginFactory());
+        config.setWarningLevel(WarningMessage.POSSIBLE_ERRORS);
+        config.getOptimizationOptions().put(ScriptAstBuilder.COMMENTS_OPTION, true);
+        return config;
+    }
+
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.google.cloud.batch.v1.Volume
 
 /**
  * Defines the operation supported by Google Batch tasks launcher
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface GoogleBatchLauncherSpec {
@@ -46,7 +46,7 @@ interface GoogleBatchLauncherSpec {
         return ['/bin/bash','-o','pipefail','-c', runCommand() ]
     }
 
-    default Map<String,String> getEnvironment() {
+    default Map<String,String> getBatchEnvironment() {
         return Map.of()
     }
 }

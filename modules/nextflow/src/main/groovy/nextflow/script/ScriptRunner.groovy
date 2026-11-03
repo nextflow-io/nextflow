@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,11 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.exception.ExitException
+import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -45,7 +48,7 @@ class ScriptRunner {
     /**
      * The script interpreter
      */
-    private ScriptParser scriptParser
+    private ScriptLoader scriptLoader
 
     /**
      * The pipeline file (it may be null when it's provided as string)
@@ -53,14 +56,14 @@ class ScriptRunner {
     private ScriptFile scriptFile
 
     /**
-     * The script result
-     */
-    private def result
-
-    /**
      * Simulate execution and exit
      */
     private boolean preview
+
+    /**
+     * Optional callback to perform a custom action on a preview event
+     */
+    private Closure previewAction
 
     /**
      * Instantiate the runner object creating a new session
@@ -86,8 +89,9 @@ class ScriptRunner {
         return this
     }
 
-    ScriptRunner setPreview(boolean  value ) {
+    ScriptRunner setPreview(boolean value, Closure<Void> action) {
         this.preview = value
+        this.previewAction = action
         return this
     }
 
@@ -96,52 +100,65 @@ class ScriptRunner {
     /**
      * @return The interpreted script object
      */
-    @Deprecated BaseScript getScriptObj() { scriptParser.script }
+    @Deprecated BaseScript getScriptObj() { scriptLoader.getScript() }
 
     /**
-     * @return The result produced by the script execution
-     */
-    def getResult() { result }
-
-
-    /**
-     * Execute a Nextflow script, it does the following:
-     * <li>parse the script
-     * <li>launch script execution
-     * <li>await for all tasks completion
+     * Execute a Nextflow script:
+     * 1. compile and load the script
+     * 2. execute the script
+     * 3. await for all tasks to complete
      *
-     * @param scriptFile The file containing the script to be executed
-     * @param args The arguments to be passed to the script
-     * @return The result as returned by the {@code #run} method
+     * @param args command-line positional arguments
+     * @param cliParams parameters specified on the command-line
+     * @param configParams parameters specified in the config
+     * @param entryName named workflow entrypoint
      */
-
-    def execute( List<String> args = null, String entryName=null ) {
+    def execute( List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null, String entryName=null ) {
         assert scriptFile
 
         // init session
-        session.init(scriptFile, args)
+        session.init(scriptFile, args, cliParams, configParams)
 
         // start session
         session.start()
         try {
             // parse the script
-            parseScript(scriptFile, entryName)
-            // run the code
-            run()
+            try {
+                parseScript(scriptFile, entryName)
+                // run the code
+                run()
+            }
+            finally {
+                log.debug "Parsed script files:${scriptFiles0()}"
+            }
             // await completion
             await()
             // shutdown session
             shutdown()
         }
+        catch( ExitException e ) {
+            // the script requested to stop the execution via `exit()`
+            log.debug "Exit requested by the pipeline script -- exitCode=${e.exitCode}; message=${e.message ?: '-'}"
+            if( e.exitCode )
+                abort(e)
+            else
+                shutdown()
+            throw e
+        }
         catch (Throwable e) {
-            session.abort(e)
+            abort(e)
             throw e
         }
 
         if( !session.success ) {
             throw new AbortRunException()
         }
+    }
 
+    protected String scriptFiles0() {
+        def result = ''
+        for( Map.Entry<String,Path> it : ScriptMeta.allScriptNames() )
+            result += "\n  ${it.key}: ${it.value.toUriString()}"
         return result
     }
 
@@ -200,15 +217,13 @@ class ScriptRunner {
         }
     }
 
-    def normalizeOutput(output) {
-        return output
-    }
-
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
-        scriptParser = new ScriptParser(session)
+        scriptLoader = ScriptLoaderFactory.create(session)
                             .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
                             .parse(scriptFile.main)
-        session.script = scriptParser.script
+        session.script = scriptLoader.getScript()
     }
 
 
@@ -219,24 +234,32 @@ class ScriptRunner {
      */
     protected run() {
         log.debug "> Launching execution"
-        assert scriptParser, "Missing script instance to run"
+        assert scriptLoader, "Missing script instance to run"
         // -- launch the script execution
-        scriptParser.runScript()
-        // -- normalise output
-        result = normalizeOutput(scriptParser.getResult())
+        scriptLoader.runScript()
         // -- ignite dataflow network
         session.fireDataflowNetwork(preview)
     }
 
     protected await() {
-        if( preview )
+        if( preview ) {
+            previewAction?.call(session)
             return
+        }
         log.debug "> Awaiting termination "
         session.await()
     }
 
+    protected void abort(Throwable e) {
+        session.abort(e)
+        // the session may have been aborted already by another thread, which may still be
+        // running the observers completion handlers - wait for it before the JVM exits
+        session.awaitShutdown()
+    }
+
     protected shutdown() {
         session.destroy()
+        Plugins.stop()
         session.cleanup()
         Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"

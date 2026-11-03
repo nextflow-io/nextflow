@@ -1,0 +1,35 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN --alpha uno --beta \* --delta 'x_{1,2}.fasta' --gamma hello\ world --omega '--foo bar' a b c | tee stdout
+
+< stdout grep -F 'alpha: uno'
+< stdout grep -F 'beta : *' 
+< stdout grep -F 'delta: x_{1,2}.fasta' 
+< stdout grep -F 'gamma: hello world' 
+< stdout grep -F 'omega: --foo bar' 
+< stdout grep -F 'args : a_b_c' 
+
+#
+# check quotes
+#
+echo ''
+$NXF_RUN --alpha "a'b" --beta 'a"b' --delta 'x'  --gamma "x" --omega x "a b c" | tee stdout
+
+< stdout grep -F "alpha: a'b"
+< stdout grep -F 'beta : a"b' 
+< stdout grep -F 'delta: x' 
+< stdout grep -F 'gamma: x' 
+< stdout grep -F 'omega: x' 
+< stdout grep -F 'args : a b c' 
+
+#
+# check the log command handle properly quoted filter options 
+#
+$NXF_CMD -log .nextflow.log log last -F 'container = "ubuntu"' | tee log 
+[[ $? == 0 ]] || exit 1
+$NXF_CMD -log .nextflow.log log last -F "container = 'ubuntu'" | tee log
+[[ $? == 0 ]] || exit 1

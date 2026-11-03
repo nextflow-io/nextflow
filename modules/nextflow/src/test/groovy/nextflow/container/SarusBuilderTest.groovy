@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, Pawsey Supercomputing Research Centre
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import java.nio.file.Paths
  *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
-class SarusrBuilderTest extends Specification {
+class SarusBuilderTest extends Specification {
 
     def 'test sarus env'() {
 
@@ -38,30 +38,28 @@ class SarusrBuilderTest extends Specification {
         expect:
         new SarusBuilder('busybox')
                 .build()
-                .@runCommand == 'sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" busybox'
+                .@runCommand == 'sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
-        new SarusBuilder('busybox')
-                .params(verbose: true)
+        new SarusBuilder('busybox', new SarusConfig(verbose: true))
                 .build()
-                .@runCommand == 'sarus --verbose run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" busybox'
+                .@runCommand == 'sarus --verbose run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
         new SarusBuilder('fedora')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addEnv("VAR_Z=3")
                 .build()
-                .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" -e "VAR_Z=3" --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" fedora'
+                .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" -e "VAR_Z=3" --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new SarusBuilder('busybox')
-                .params(runOptions: '-x --zeta')
+        new SarusBuilder('busybox', new SarusConfig(runOptions: '-x --zeta'))
                 .build()
-                .@runCommand == 'sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" -x --zeta busybox'
+                .@runCommand == 'sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" -x --zeta busybox'
 
         new SarusBuilder('fedora')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addMount(Paths.get('/home/db'))
                 .addMount(Paths.get('/home/db'))  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" --mount=type=bind,source=/home/db,destination=/home/db --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" fedora'
+                .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" --mount=type=bind,source=/home/db,destination=/home/db --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
     }
 
@@ -72,7 +70,7 @@ class SarusrBuilderTest extends Specification {
         then:
         cli ==  '''\
         sarus pull ubuntu:14 1>&2
-        sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14
+        sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14
         '''
         .stripIndent().trim()
 
@@ -81,7 +79,7 @@ class SarusrBuilderTest extends Specification {
         then:
         cli ==  '''\
         sarus pull ubuntu:14 1>&2
-        sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta
+        sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14 bwa --this --that file.fasta
         '''
         .stripIndent().trim()
 
@@ -90,7 +88,7 @@ class SarusrBuilderTest extends Specification {
         then:
         cli ==  '''\
         sarus pull ubuntu:14 1>&2
-        sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
+        sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
         '''
         .stripIndent().trim()
 

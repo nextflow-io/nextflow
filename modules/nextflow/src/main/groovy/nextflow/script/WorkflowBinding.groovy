@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,15 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.IllegalInvocationException
+import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.CH
 import nextflow.extension.OpCall
+import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models the execution context of a workflow component
  *
@@ -42,6 +48,8 @@ class WorkflowBinding extends Binding  {
     private BaseScript owner
 
     private ScriptMeta meta
+
+    private Map<String,DataflowWriteChannel> published = new LinkedHashMap<>()
 
     WorkflowBinding() { }
 
@@ -95,26 +103,42 @@ class WorkflowBinding extends Binding  {
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
-            log.trace "Trying to invoke component: $name - args=${args}"
+            log.trace "Trying to invoke component: $name - args=${renderArgs(args)}"
             final component = getComponent0(name)
             if( component ) {
                 checkScope0(component)
-                return component.invoke_o(args)
+                return invoke0(component, args)
             }
 
             // check it's an operator name
-            if( NF.hasOperator(name) )
+            if( !owner?.isTypingEnabled() && NF.hasOperator(name) )
                 return OpCall.create(name, args)
         }
 
         throw new MissingMethodException(name,this.getClass())
     }
 
+    private static String renderArgs(Object args) {
+        try {
+            return InvokerHelper.toString(args)
+        }
+        catch( Throwable t ) {
+            return "<unable to render args: ${t.class.simpleName}>"
+        }
+    }
+
+    private Object invoke0(ComponentDef component, Object args) {
+        final componentTyped = component instanceof WorkflowDef && component.getOwner().isTypingEnabled()
+        final args1 = DataflowTypeHelper.normalizeArray(args, componentTyped)
+        final result = component.invoke_a(args1)
+        return DataflowTypeHelper.normalize(result, owner?.isTypingEnabled())
+    }
+
     @Override
     void setProperty(String name, Object value) {
-        // when a script variable name matches a BaseScript attribute name
+        // when a script variable name matches a BaseScript or binding attribute name
         // set it directly via `setVariable` otherwise groovy will try to
-        // set into the base script attribute
+        // set into the attribute
         if( name in BaseScriptConsts.PRIVATE_NAMES )
             setVariable(name, value)
         else
@@ -132,6 +156,10 @@ class WorkflowBinding extends Binding  {
     @Override
     void setVariable(String name, Object value) {
         lookupTable.put(value, name)
+        setVariable0(name, value)
+    }
+
+    protected void setVariable0(String name, Object value) {
         super.setVariable(name, value)
     }
 
@@ -140,9 +168,12 @@ class WorkflowBinding extends Binding  {
             super.getVariable(name)
         }
         catch( MissingPropertyException e ) {
+            if( owner?.isTypingEnabled() )
+                throw e
+
             if( !meta )
-                 throw e
-            
+                throw e
+
             def component = getComponent0(name)
             if( component )
                 return component
@@ -153,6 +184,23 @@ class WorkflowBinding extends Binding  {
 
             throw e
         }
+    }
+
+    @PackageScope
+    Map<String,DataflowWriteChannel> getPublished() { published }
+
+    void _publish_(String name, Object source) {
+        if( source instanceof ChannelOut ) {
+            if( source.size() > 1 )
+                throw new ScriptRuntimeException("Cannot assign a multi-channel to a workflow output: $name")
+            source = source[0]
+        }
+
+        published[name] =
+            source instanceof ChannelImpl ? source.getSource() :
+            source instanceof ValueImpl ? source.getSource() :
+            source instanceof DataflowWriteChannel ? source :
+            CH.value(source)
     }
 
 }

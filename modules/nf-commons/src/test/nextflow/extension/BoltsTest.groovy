@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,6 +143,18 @@ class BoltsTest extends Specification {
         1024 as MemoryUnit == MemoryUnit.of('1 KB')
         '10 GB' as MemoryUnit == MemoryUnit.of('10 GB')
         "$x MB" as MemoryUnit == MemoryUnit.of('5 MB')
+    }
+
+    def testAsURL() {
+        expect:
+        'http://foo.com' as URL == new URL('http://foo.com')
+        'http://foo.com/some/file.txt' as URL == new URL('http://foo.com/some/file.txt')
+    }
+
+    def testAsURI() {
+        expect:
+        'http://foo.com' as URI == URI.create('http://foo.com')
+        'http://foo.com/some/file.txt' as URI == URI.create('http://foo.com/some/file.txt')
     }
 
     def testConfigToMap  () {
@@ -381,7 +393,7 @@ class BoltsTest extends Specification {
         def merge = Bolts.deepMerge(origMap, newMap)
 
         then:
-        merge.foo == 1 
+        merge.foo == 1
         merge.bar.x == 4
         merge.bar.y == 3
         merge.bar.z == 5

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.file;
@@ -33,10 +32,12 @@ class CopyOptions {
     private boolean replaceExisting = false;
     private boolean copyAttributes = false;
     private boolean followLinks = true;
+    private SkipDirOption skipDir
 
     boolean replaceExisting() { replaceExisting }
     boolean copyAttributes() { copyAttributes }
     boolean followLinks() { followLinks }
+    SkipDirOption skipDir() { skipDir }
 
     private CopyOptions() { }
 
@@ -53,6 +54,10 @@ class CopyOptions {
             }
             if (option == StandardCopyOption.COPY_ATTRIBUTES) {
                 result.copyAttributes = true;
+                continue;
+            }
+            if (option instanceof SkipDirOption) {
+                result.skipDir = option
                 continue;
             }
             if (option == null)

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [[ "$*" == *".command."* ]] || [[ "$*" == *".exitcode"* ]]; then
+   /usr/local/bin/aws $@
+else
+   >&2 echo "Producing a failure in aws $@"
+   exit 2
+fi
+

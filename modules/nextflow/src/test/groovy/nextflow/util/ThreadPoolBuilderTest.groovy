@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
@@ -42,10 +41,11 @@ class ThreadPoolBuilderTest extends Specification {
         pool.getMaximumPoolSize() == 10
         pool.getKeepAliveTime(TimeUnit.MILLISECONDS) == 60_000
         pool.getThreadFactory() instanceof CustomThreadFactory
-        pool.getRejectedExecutionHandler() instanceof ThreadPoolExecutor.CallerRunsPolicy
+        pool.getRejectedExecutionHandler() instanceof ThreadPoolExecutor.AbortPolicy
         and:
         builder.getName().startsWith('nf-thread-pool-')
         builder.getWorkQueue() instanceof LinkedBlockingQueue
+        builder.getWorkQueue().remainingCapacity() == Integer.MAX_VALUE
     }
 
     def 'should create pool with all settings' () {
@@ -66,6 +66,8 @@ class ThreadPoolBuilderTest extends Specification {
         builder.queueSize == 1000
         builder.allowCoreThreadTimeout
         builder.rejectionPolicy instanceof ThreadPoolExecutor.AbortPolicy
+        builder.workQueue instanceof HardBlockingQueue
+        builder.workQueue.remainingCapacity() == 1000
 
         when:
         def pool = builder.build()

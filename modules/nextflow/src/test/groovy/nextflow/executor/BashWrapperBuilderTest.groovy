@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,23 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
+import nextflow.container.DockerConfig
+import nextflow.container.PodmanConfig
+import nextflow.container.SarusConfig
+import nextflow.container.ShifterConfig
 import nextflow.container.SingularityBuilder
+import nextflow.container.SingularityConfig
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -51,6 +57,8 @@ class BashWrapperBuilderTest extends Specification {
             bean.script = 'echo Hello world!'
         if( !bean.containsKey('inputFiles') )
             bean.inputFiles = [:]
+        if( !bean.containsKey('outputFiles') )
+            bean.outputFiles = []
         new BashWrapperBuilder(bean as TaskBean) {
             @Override
             protected String getSecretsEnv() {
@@ -89,7 +97,6 @@ class BashWrapperBuilderTest extends Specification {
 
 
     def 'should create bash launcher files' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -120,7 +127,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create bash launcher files with trace' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -191,24 +197,24 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.moduleLoad('foo/bar/')  == 'nxf_module_load foo/bar '
     }
 
-
     def 'should create container env' () {
         given:
-        def bash = Spy(BashWrapperBuilder)
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
         and:
         bash.getEnvironment() >> [:]
         bash.getBinDirs() >> [Paths.get('/my/bin') ]
         bash.getWorkDir() >> Paths.get('/my/work/dir')
-        bash.getStatsEnabled() >> false
+        bash.isStatsEnabled() >> false
         bash.getStageInMode() >> 'symlink'
         bash.getInputFiles() >> [:]
-        bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
+        bash.getContainerConfig() >> new SingularityConfig(envWhitelist: 'FOO,BAR')
         bash.getContainerImage() >> 'foo/bar'
         bash.getContainerMount() >> null
         bash.getContainerMemory() >> null
         bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
+        bash.getContainerPlatform() >> 'amd64'
         bash.isSecretNative() >> false
         bash.getSecretNames() >> []
 
@@ -216,16 +222,15 @@ class BashWrapperBuilderTest extends Specification {
         def builder = bash.createContainerBuilder(null)
         then:
         builder instanceof SingularityBuilder
-        builder.env == ['FOO','BAR']
+        builder.env == ['NXF_TASK_WORKDIR', 'FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
         builder.mounts == [ Paths.get('/my/bin') ]
-        
     }
 
     def 'should add resolved inputs'() {
         given:
-        def bash = Spy(new BashWrapperBuilder(bean: Mock(TaskBean)))
-        bash.getContainerConfig() >> [engine: 'docker']
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
+        bash.getContainerConfig() >> new DockerConfig([:])
 
         def BUILDER = Mock(DockerBuilder)
         def INPUTS = ['/some/path': Paths.get('/store/path.txt')]
@@ -234,7 +239,7 @@ class BashWrapperBuilderTest extends Specification {
         when:
         bash.createContainerBuilder(null)
         then:
-        bash.createContainerBuilder0('docker') >> BUILDER
+        bash.createContainerBuilder0() >> BUILDER
         bash.getInputFiles() >> INPUTS
         bash.getStageInMode() >> null
         1 * BUILDER.addMountForInputs(INPUTS) >> null
@@ -243,13 +248,12 @@ class BashWrapperBuilderTest extends Specification {
         when:
         bash.createContainerBuilder(null)
         then:
-        bash.createContainerBuilder0('docker') >> BUILDER
+        bash.createContainerBuilder0() >> BUILDER
         bash.getStageInMode() >> 'copy'
         0 * BUILDER.addMountForInputs(_) >> null
     }
 
     def 'should render launcher script' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -273,7 +277,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should render launcher script with trace' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -295,7 +298,6 @@ class BashWrapperBuilderTest extends Specification {
 
     @Unroll
     def 'test change to scratchDir' () {
-
         setup:
         def builder = newBashWrapperBuilder()
 
@@ -312,7 +314,6 @@ class BashWrapperBuilderTest extends Specification {
         '$SOME_DIR' | 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)"'
         '/my/temp'  | 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)"'
         'ram-disk'  | 'NXF_SCRATCH="$(nxf_mktemp /dev/shm)"'
-
     }
 
     def 'should return task name' () {
@@ -332,11 +333,153 @@ class BashWrapperBuilderTest extends Specification {
         bash = newBashWrapperBuilder(headerScript: '#BSUB -x 1\n#BSUB -y 2')
         then:
         bash.makeBinding().header_script == '#BSUB -x 1\n#BSUB -y 2'
+    }
 
+    def 'should create task metadata string' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: new DockerConfig(enabled: true),
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: "foo"
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: "quay.io/nextflow:bash"
+            ### outputs:
+            ### - "foo.txt"
+            ### - "*.bar"
+            ### - "**/baz"
+            ### ...
+            '''.stripIndent()
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == 'foo'
+        obj.array == [
+            'index-name':'SLURM_ARRAY_TASK_ID',
+            'index-start':0,
+            'work-dirs':['/work/01', '/work/02', '/work/03']
+        ]
+        obj.container == 'quay.io/nextflow:bash'
+        obj.outputs == ['foo.txt', '*.bar', '**/baz']
+    }
+
+    def 'should add task metadata' () {
+        when:
+        def bash = newBashWrapperBuilder([name:'task1'])
+        then:
+        bash.makeBinding().containsKey('task_metadata')
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: "task1"
+            ### ...
+            '''.stripIndent()
+
+        when:
+        bash = newBashWrapperBuilder(
+            name: 'task2',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: new DockerConfig(enabled: true),
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+        then:
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: "task2"
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: "quay.io/nextflow:bash"
+            ### outputs:
+            ### - "foo.txt"
+            ### - "*.bar"
+            ### - "**/baz"
+            ### ...
+            '''.stripIndent()
+    }
+
+    def 'should escape special characters in task metadata' () {
+        given:
+        def NAME = 'foo (it\'s a\nb a\\nb "c")'
+        def IMAGE = 'ubuntu\tlatest'
+        def OUTPUTS = ['out\r\nfile', 'x\u0000\u000by\u2028z']
+        def builder = newBashWrapperBuilder(
+            name: NAME,
+            containerConfig: new DockerConfig(enabled: true),
+            containerImage: IMAGE,
+            outputFiles: OUTPUTS
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: "foo (it's a\\nb a\\\\nb \\"c\\")"
+            ### container: "ubuntu\\tlatest"
+            ### outputs:
+            ### - "out\\r\\nfile"
+            ### - "x\\u0000\\u000by\\u2028z"
+            ### ...
+            '''.stripIndent()
+        and:
+        meta.readLines().every { it.startsWith('###') }
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == NAME
+        obj.container == IMAGE
+        obj.outputs == OUTPUTS
+    }
+
+    def 'should render yaml string' () {
+        expect:
+        BashWrapperBuilder.yamlString(VALUE) == EXPECTED
+
+        where:
+        VALUE           | EXPECTED
+        null            | 'null'
+        'foo'           | '"foo"'
+        'a b'           | '"a b"'
+        "it's"          | '"it\'s"'
+        'a"b'           | '"a\\"b"'
+        'a\\b'          | '"a\\\\b"'
+        'a\nb'          | '"a\\nb"'
+        'a\u007fb'      | '"a\\u007fb"'
+        'a\uffffb'      | '"a\\uffffb"'
+        'a\ud83db'      | '"a\\ud83db"'
+        'a\ude00b'      | '"a\\ude00b"'
+        'a\ud83d\ude00b' | '"a\ud83d\ude00b"'
     }
 
     def 'should copy control files' () {
-
         when:
         def binding = newBashWrapperBuilder(scratch: false).makeBinding()
         then:
@@ -359,11 +502,9 @@ class BashWrapperBuilderTest extends Specification {
                 cp .command.err /work/dir/.command.err || true
                 cp .command.trace /work/dir/.command.trace || true
                 '''.stripIndent()
-
     }
 
     def 'should stage inputs' () {
-
         given:
         def folder = Paths.get('/work/dir')
         def inputs = [
@@ -374,8 +515,8 @@ class BashWrapperBuilderTest extends Specification {
                 # stage input files
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
 
         when:
@@ -401,14 +542,15 @@ class BashWrapperBuilderTest extends Specification {
         def stageScript = '''\
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
         and:
         def builder = newBashWrapperBuilder([
                 workDir: folder,
                 targetDir: folder,
-                inputFiles: inputs ])
+                inputFiles: inputs,
+                stageFileEnabled: true ])
 
         when:
         def binding = builder.makeBinding()
@@ -425,8 +567,37 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should unstage outputs' () {
+    def 'should include sync command' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
 
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.sync_cmd == 'sync || true'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should flush the file system before writing the exit file' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
+
+        when:
+        def wrapper = newBashWrapperBuilder(workDir: Paths.get('/work/dir')).buildNew0()
+        then:
+        // the `.exitcode` file is the completion marker polled by the executors, therefore
+        // it must be written only after all other task writes have been flushed, otherwise
+        // a shared file system may expose the marker before the task outputs
+        wrapper.indexOf('sync || true') > 0
+        wrapper.indexOf('sync || true') < wrapper.indexOf('printf -- $exit_status > /work/dir/.exitcode')
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should unstage outputs' () {
         given:
         def folder = Paths.get('/work/dir')
         def outputs = ['test.bam','test.bai']
@@ -453,9 +624,11 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
-                for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_copy "$name" /work/dir || true
+                set -f
+                for name in $(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    nxf_fs_copy "$name" /work/dir
                 done
+                set +f
                 unset IFS
                 '''.stripIndent().rightTrim()
 
@@ -470,15 +643,16 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
-                for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_move "$name" /another/dir || true
+                set -f
+                for name in $(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    nxf_fs_move "$name" /another/dir
                 done
+                set +f
                 unset IFS
                 '''.stripIndent().rightTrim()
     }
 
     def 'should create env' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -486,6 +660,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('container_env')
         binding.task_env == null
         binding.container_env == null
+        binding.sync_cmd == null
 
         when:
         binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb']).makeBinding()
@@ -499,17 +674,17 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env == null
 
         when:
-        binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb'], containerEnabled: true, containerImage: 'foo', containerConfig: [engine: 'docker']).makeBinding()
+        binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb'], containerEnabled: true, containerImage: 'foo', containerConfig: new DockerConfig([:])).makeBinding()
         then:
         binding.containsKey('task_env')
         binding.containsKey('container_env')
         binding.task_env == null
         binding.container_env == /\
                 nxf_container_env() {
-                cat << EOF
+                cat << 'NXF_ENV_EOF'
                 export FOO="aa"
                 export BAR="bb"
-                EOF
+                NXF_ENV_EOF
                 }
                 /.stripIndent()
         binding.launch_cmd.contains('nxf_container_env')
@@ -525,8 +700,97 @@ class BashWrapperBuilderTest extends Specification {
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
-    def 'should create secret env' () {
+    @Unroll
+    def 'should export env inputs verbatim and expand other env values [container: #CONTAINER]' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def foo = 'a;b $(c) `d` "e" \\ $HOME'
+        def baz = 'x  y | z\nw\r\nv'
+        def env = [BAR: 'w x:$PATH', FOO: foo, BAZ: baz, EMPTY: '', SUB: 'x$(touch${IFS}created)']
+        def opts = [workDir: folder, script: 'printf "%s|%s|%s|%s|%s" "$BAR" "$FOO" "$BAZ" "$EMPTY" "$SUB"', environment: env, inputEnvNames: ['FOO', 'BAZ', 'EMPTY', 'SUB'] as Set]
+        if( CONTAINER )
+            opts += [containerEnabled: true, containerImage: 'img', containerConfig: new DockerConfig([:])]
+        newBashWrapperBuilder(opts).build()
+        // fake docker: run the command with only the `-e` variables, like a container
+        def docker = '''
+            docker() {
+                [[ $1 == run ]] || return 0
+                local envs=(); shift
+                while (( $# )); do
+                    case "$1" in
+                        -e) [[ $2 == *=* ]] && envs+=("$2") || envs+=("$2=${!2-}"); shift 2 ;;
+                        -v|-w|--name) shift 2 ;;
+                        img) shift; break ;;
+                        *) shift ;;
+                    esac
+                done
+                env -i PATH="$PATH" "${envs[@]}" "$@"
+            }
+            export -f docker
+            '''.stripIndent()
 
+        when:
+        // run the rendered wrapper, so the template indentation of the env script is covered too
+        def proc = new ProcessBuilder('bash', '-c', docker + 'bash .command.run').directory(folder.toFile()).start()
+        proc.waitFor(60, java.util.concurrent.TimeUnit.SECONDS)
+
+        then:
+        folder.resolve('.exitcode').text.trim() == '0'
+        folder.resolve('.command.out').text == 'w x:' + System.getenv('PATH') + '|' + foo + '|' + baz + '||' + env.SUB
+        and:
+        !folder.resolve('created').exists()
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        CONTAINER << [false, true]
+    }
+
+    def 'should keep a multi-line env input value on one line' () {
+        when:
+        def binding = newBashWrapperBuilder(environment: [X: 'a\nb\rc'], inputEnvNames: ['X'] as Set).makeBinding()
+        then:
+        binding.task_env == 'export X=""$\'a\\nb\\rc\'""\n'
+    }
+
+    def 'should not export a container env without valid variable names' () {
+        when:
+        def binding = newBashWrapperBuilder(environment: ['MY.VAR': 'x'], containerEnabled: true, containerImage: 'img', containerConfig: new DockerConfig([:])).makeBinding()
+        then:
+        binding.container_env == null
+        !binding.launch_cmd.contains('nxf_container_env')
+    }
+
+    def 'should export a large multi-line env input value in a container' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def value = (1..9000).collect { String.format('%09d', it) }.join('\n')
+        newBashWrapperBuilder(workDir: folder, script: 'printf "%s" "$BIG" | tail -1', environment: [BIG: value], inputEnvNames: ['BIG'] as Set,
+                containerEnabled: true, containerImage: 'img', containerConfig: new DockerConfig([:])).build()
+        // fake docker: run the command as a container would, as a separate process
+        def docker = '''
+            docker() {
+                [[ $1 == run ]] || return 0
+                while (( $# )) && [[ $1 != img ]]; do shift; done; shift
+                env -i PATH="$PATH" "$@"
+            }
+            export -f docker
+            '''.stripIndent()
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', docker + 'bash .command.run').directory(folder.toFile()).start()
+        proc.waitFor(60, java.util.concurrent.TimeUnit.SECONDS)
+
+        then:
+        folder.resolve('.exitcode').text.trim() == '0'
+        folder.resolve('.command.out').text == '000009000'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create secret env' () {
         when:
         def binding0 = newBashWrapperBuilder().makeBinding()
         then:
@@ -554,7 +818,6 @@ class BashWrapperBuilderTest extends Specification {
         binding2.secrets_env == null
     }
 
-
     def 'should enable trace feature' () {
         when:
         def binding = newBashWrapperBuilder(statsEnabled: false).makeBinding()
@@ -579,11 +842,40 @@ class BashWrapperBuilderTest extends Specification {
                         cp .command.err /work/dir/.command.err || true
                         cp .command.trace /work/dir/.command.trace || true
                         '''.stripIndent()
+    }
 
+    def 'should enable trace feature with custom shell' () {
+        when:
+        def binding = newBashWrapperBuilder(statsEnabled: false, shell: ['/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, scratch: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == '''\
+                        cp .command.out /work/dir/.command.out || true
+                        cp .command.err /work/dir/.command.err || true
+                        cp .command.trace /work/dir/.command.trace || true
+                        '''.stripIndent()
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/usr/local/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/usr/local/bin/bash -ue /work/dir/.command.run nxf_trace'
     }
 
     def 'should create launcher command with input' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -624,7 +916,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create module load snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -644,7 +935,7 @@ class BashWrapperBuilderTest extends Specification {
                   local mod=$1
                   local ver=${2:-}
                   local new_module="$mod"; [[ $ver ]] && new_module+="/$ver"
-                
+
                   if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
                     old_module=$(module list 2>&1 | grep -Eow "$mod\\/[^\\( \\n]+" || true)
                     if [[ $ver && $old_module ]]; then
@@ -654,13 +945,11 @@ class BashWrapperBuilderTest extends Specification {
                     fi
                   fi
                 }
-                
-                '''.stripIndent()
 
+                '''.stripIndent()
     }
 
     def 'should create conda activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -675,11 +964,26 @@ class BashWrapperBuilderTest extends Specification {
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
+    }
 
+    def 'should create micromamba activate snippet' () {
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.conda_activate == null
+        binding.containsKey('conda_activate')
+
+        when:
+        def CONDA = Paths.get('/some/conda/env/foo')
+        binding = newBashWrapperBuilder([condaEnv: CONDA, 'useMicromamba': true]).makeBinding()
+        then:
+        binding.conda_activate == '''\
+                # conda environment
+                eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
+                '''.stripIndent()
     }
 
     def 'should create spack activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -698,7 +1002,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should cleanup scratch dir' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -717,10 +1020,10 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder(
                 containerImage: 'busybox',
                 containerEnabled: true,
-                containerConfig: [engine: 'docker', temp: 'auto', enabled: true] ).makeBinding()
+                containerConfig: new DockerConfig(temp: 'auto', enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
@@ -731,18 +1034,18 @@ class BashWrapperBuilderTest extends Specification {
                 containerImage: 'busybox',
                 containerEnabled: true,
                 environment: [FOO: 'something'],
-                containerConfig: [engine: 'docker', temp: 'auto', enabled: true] ).makeBinding()
+                containerConfig: new DockerConfig(temp: 'auto', enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -c "$(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
         and:
         binding.container_env == '''\
                     nxf_container_env() {
-                    cat << EOF
+                    cat << 'NXF_ENV_EOF'
                     export FOO="something"
-                    EOF
+                    NXF_ENV_EOF
                     }
                     '''.stripIndent()
     }
@@ -752,10 +1055,10 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder(
                 containerImage: 'busybox',
                 containerEnabled: true,
-                containerConfig: [engine: 'docker', temp: 'auto', enabled: true, entrypointOverride: false] ).makeBinding()
+                containerConfig: new DockerConfig(temp: 'auto', enabled: true, entrypointOverride: false) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
@@ -766,18 +1069,18 @@ class BashWrapperBuilderTest extends Specification {
                 containerImage: 'busybox',
                 containerEnabled: true,
                 environment: [FOO:'hello'],
-                containerConfig: [engine: 'docker', temp: 'auto', enabled: true, entrypointOverride: false] ).makeBinding()
+                containerConfig: new DockerConfig(temp: 'auto', enabled: true, entrypointOverride: false) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -c "$(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
         and:
         binding.container_env == '''\
                     nxf_container_env() {
-                    cat << EOF
+                    cat << 'NXF_ENV_EOF'
                     export FOO="hello"
-                    EOF
+                    NXF_ENV_EOF
                     }
                     '''.stripIndent()
     }
@@ -786,11 +1089,11 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder(
                 containerImage: 'busybox',
-                containerConfig: [engine: 'docker', sudo: true, enabled: true],
+                containerConfig: new DockerConfig(sudo: true, enabled: true),
                 containerEnabled: true  ).makeBinding()
 
         then:
-        binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'sudo docker run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'sudo docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'sudo docker stop $NXF_BOXID'
     }
@@ -800,10 +1103,10 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder(
                 containerEnabled: true,
                 containerImage: 'ubuntu',
-                containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: false] ).makeBinding()
+                containerConfig: new DockerConfig(temp: 'auto', enabled: true, remove: false, kill: false) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID ubuntu /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID ubuntu /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == ""
         binding.kill_cmd == null
         binding.containsKey('kill_cmd')
@@ -814,10 +1117,10 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder(
                 containerEnabled: true,
                 containerImage: 'ubuntu',
-                containerConfig: [engine: 'docker', enabled: true, remove:false, kill: 'SIGXXX'] ).makeBinding()
+                containerConfig: new DockerConfig(enabled: true, remove: false, kill: 'SIGXXX') ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID ubuntu /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID ubuntu /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == ""
         binding.kill_cmd == 'docker kill -s SIGXXX $NXF_BOXID'
         binding.containsKey('kill_cmd')
@@ -829,10 +1132,10 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'busybox',
                 containerMount: '/folder with blanks' as Path,
-                containerConfig: [engine: 'docker', enabled: true] ).makeBinding()
+                containerConfig: new DockerConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v /work/dir:/work/dir -w "\$PWD" --name \$NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v /work/dir:/work/dir -w "\$NXF_TASK_WORKDIR" --name \$NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
@@ -844,10 +1147,10 @@ class BashWrapperBuilderTest extends Specification {
                 script: 'echo Hello world!',
                 containerEnabled: true,
                 containerImage: 'busybox',
-                containerConfig: [engine: 'docker', sudo: true, enabled: true] ).makeBinding()
+                containerConfig: new DockerConfig(sudo: true, enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'sudo docker run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.kill_cmd == 'sudo docker stop $NXF_BOXID'
         binding.cleanup_cmd == '''\
                 (sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true
@@ -861,12 +1164,26 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'busybox',
                 containerOptions: '-v /foo:/bar',
-                containerConfig: [engine: 'docker', enabled: true] ).makeBinding()
+                containerConfig: new DockerConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+    }
+
+    def 'should create wrapper with container platform' () {
+        when:
+        def binding = newBashWrapperBuilder(
+            containerImage: 'busybox',
+            containerEnabled: true,
+            containerPlatform: 'linux/arm64',
+            containerConfig: new DockerConfig(temp: 'auto', enabled: true) ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'docker run -i --platform linux/arm64 -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with sarus'() {
@@ -874,12 +1191,12 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder(
                 containerEnabled: true,
                 containerImage: 'busybox',
-                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+                containerConfig: new SarusConfig(enabled: true) ).makeBinding()
 
         then:
         binding.launch_cmd == '''\
         sarus pull busybox 1>&2
-        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
+        sarus run -e "NXF_TASK_WORKDIR" --mount=type=bind,source=/work/dir,destination=/work/dir -w "$NXF_TASK_WORKDIR" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
@@ -891,21 +1208,21 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'busybox',
                 environment: [FOO: 'xxx'],
-                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+                containerConfig: new SarusConfig(enabled: true) ).makeBinding()
 
         then:
         binding.launch_cmd == '''\
         sarus pull busybox 1>&2
-        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
+        sarus run -e "NXF_TASK_WORKDIR" --mount=type=bind,source=/work/dir,destination=/work/dir -w "$NXF_TASK_WORKDIR" busybox /bin/bash -c "$(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
         and:
         binding.container_env == '''\
                     nxf_container_env() {
-                    cat << EOF
+                    cat << 'NXF_ENV_EOF'
                     export FOO="xxx"
-                    EOF
+                    NXF_ENV_EOF
                     }
                     '''.stripIndent()
     }
@@ -916,12 +1233,12 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'busybox',
                 containerMount: '/folder with blanks' as Path,
-                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+                containerConfig: new SarusConfig(enabled: true) ).makeBinding()
 
         then:
         binding.launch_cmd == '''\
         sarus pull busybox 1>&2
-        sarus run --mount=type=bind,source=/folder\\ with\\ blanks,destination=/folder\\ with\\ blanks --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
+        sarus run -e "NXF_TASK_WORKDIR" --mount=type=bind,source=/folder\\ with\\ blanks,destination=/folder\\ with\\ blanks --mount=type=bind,source=/work/dir,destination=/work/dir -w "$NXF_TASK_WORKDIR" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
@@ -933,12 +1250,12 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'busybox',
                 containerOptions: '--mount=type=bind,source=/foo,destination=/bar',
-                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+                containerConfig: new SarusConfig(enabled: true) ).makeBinding()
 
         then:
         binding.launch_cmd == '''\
         sarus pull busybox 1>&2
-        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" --mount=type=bind,source=/foo,destination=/bar busybox /bin/bash -ue /work/dir/.command.sh
+        sarus run -e "NXF_TASK_WORKDIR" --mount=type=bind,source=/work/dir,destination=/work/dir -w "$NXF_TASK_WORKDIR" --mount=type=bind,source=/foo,destination=/bar busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
@@ -950,7 +1267,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'docker://ubuntu:latest',
                 environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
-                containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig ).makeBinding()
+                containerConfig: new ShifterConfig(enabled: true) ).makeBinding()
 
         then:
         binding.launch_cmd == '''\
@@ -961,7 +1278,7 @@ class BashWrapperBuilderTest extends Specification {
             STATUS=$(shifterimg -v pull docker://ubuntu:latest | tail -n2 | head -n1 | awk \'{print $6}\')
             [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker://ubuntu:latest\'" >&2  && exit 1
         done
-        shifter --image docker://ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
+        ${NXF_TASK_WORKDIR:+"NXF_TASK_WORKDIR=$NXF_TASK_WORKDIR"} shifter --image docker://ubuntu:latest /bin/bash -c "$(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
@@ -974,10 +1291,24 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'docker://ubuntu:latest',
                 environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
-                containerConfig: [enabled: true, engine: 'singularity'] as ContainerConfig ).makeBinding()
+                containerConfig: new SingularityConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
+    }
+
+    def 'should create wrapper with singularity and no env'() {
+        when:
+        def binding = newBashWrapperBuilder(
+            containerEnabled: true,
+            containerImage: 'docker://ubuntu:latest',
+            environment: [:],
+            containerConfig: new SingularityConfig(enabled: true) ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -988,10 +1319,24 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true,
                 containerImage: 'docker://ubuntu:latest',
                 environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
-                containerConfig: [enabled: true, engine: 'singularity', entrypointOverride: true] as ContainerConfig ).makeBinding()
+                containerConfig: new SingularityConfig(enabled: true, entrypointOverride: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
+    }
+
+    def 'should create wrapper with singularity oci mode'() {
+        when:
+        def binding = newBashWrapperBuilder(
+            containerEnabled: true,
+            containerImage: 'docker://ubuntu:latest',
+            environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
+            containerConfig: new SingularityConfig(enabled: true, ociMode: true) ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -1021,31 +1366,32 @@ class BashWrapperBuilderTest extends Specification {
         binding = newBashWrapperBuilder(environment: ENV,
                 containerEnabled: true,
                 containerImage: 'busybox',
-                containerConfig: [enabled: true, engine: 'docker']).makeBinding()
+                containerConfig: new DockerConfig(enabled: true)).makeBinding()
         then:
         binding.task_env == null
         binding.container_env ==  '''
                 nxf_container_env() {
-                cat << EOF
+                cat << 'NXF_ENV_EOF'
                 export FOO="hello"
                 export BAR="hello world"
-                export PATH="/some/path:\\$PATH"
-                EOF
+                export PATH="/some/path:$PATH"
+                NXF_ENV_EOF
                 }
                 '''
                 .stripIndent().leftTrim()
     }
 
     def 'should include fix ownership command' () {
-
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            shell >> BashWrapperBuilder.BASH
+            outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
         and:
-        def builder = Spy(new BashWrapperBuilder(bean:bean))
+        def builder = Spy(new BashWrapperBuilder(bean))
         builder.copyStrategy = copy
 
         when:
@@ -1075,27 +1421,90 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('after_script')
     }
 
-
     def 'should get output env capture snippet' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
 
         when:
-        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'])
+        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'], Map.of())
         then:
         str == '''
             # capture process environment
             set +u
-            echo FOO=${FOO[@]} > .command.env
-            echo BAR=${BAR[@]} >> .command.env
+            set +e
+            cd "$NXF_TASK_WORKDIR"
+
+            nxf_eval_cmd() {
+                {
+                    IFS=$'\\n' read -r -d '' "${1}";
+                    IFS=$'\\n' read -r -d '' "${2}";
+                    (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+                } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+            }
+
+            echo '' > .command.env
+            #
+            echo FOO="${FOO[@]}" >> .command.env
+            echo /FOO/ >> .command.env
+            #
+            echo BAR="${BAR[@]}" >> .command.env
+            echo /BAR/ >> .command.env
             '''
             .stripIndent()
+    }
 
+    def 'should return env & cmd capture snippet' () {
+        given:
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
+
+        when:
+        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other "quoted" --cmd'])
+        then:
+        str == '''
+            # capture process environment
+            set +u
+            set +e
+            cd "$NXF_TASK_WORKDIR"
+
+            nxf_eval_cmd() {
+                {
+                    IFS=$'\\n' read -r -d '' "${1}";
+                    IFS=$'\\n' read -r -d '' "${2}";
+                    (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+                } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+            }
+
+            echo '' > .command.env
+            #
+            echo FOO="${FOO[@]}" >> .command.env
+            echo /FOO/ >> .command.env
+            #
+            nxf_eval_cmd STDOUT STDERR bash -c "this --cmd"
+            status=$?
+            if [ $status -eq 0 ]; then
+              echo THIS="$STDOUT" >> .command.env
+              echo /THIS/=exit:0 >> .command.env
+            else
+              echo THIS="$STDERR" >> .command.env
+              echo /THIS/=exit:$status >> .command.env
+            fi
+            #
+            nxf_eval_cmd STDOUT STDERR bash -c "other \\"quoted\\" --cmd"
+            status=$?
+            if [ $status -eq 0 ]; then
+              echo THAT="$STDOUT" >> .command.env
+              echo /THAT/=exit:0 >> .command.env
+            else
+              echo THAT="$STDERR" >> .command.env
+              echo /THAT/=exit:$status >> .command.env
+            fi
+            '''
+            .stripIndent()
     }
 
     def 'should validate bash interpreter' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
         expect:
         builder.isBash('/bin/bash')
         builder.isBash('/usr/bin/bash')
@@ -1106,7 +1515,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should get stage and unstage commands' () {
-
         when:
         def builder = newBashWrapperBuilder()
         then:
@@ -1118,34 +1526,78 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
-        
     }
 
+    def 'should get unstage control script'(){
+        given:
+        BashWrapperBuilder builder
+        when:
+        builder = newBashWrapperBuilder()
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                '''.stripIndent()
+
+
+        when:
+        builder = newBashWrapperBuilder(statsEnabled: true)
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.trace /work/dir/.command.trace || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEnvNames: ['some-data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEvals: [some:'data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+    }
 
     def 'should create wrapper with podman' () {
         when:
         def binding = newBashWrapperBuilder(
                 containerImage: 'busybox',
                 containerEnabled: true,
-                containerConfig: [engine: 'podman', enabled: true] ).makeBinding()
+                containerConfig: new PodmanConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
     }
 
     def 'should create wrapper with podman with legacy entrypoint' () {
+        given:
+        SysEnv.push(NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true')
+
         when:
         def binding = newBashWrapperBuilder(
                 containerImage: 'busybox',
                 containerEnabled: true,
-                containerConfig: [engine: 'podman', enabled: true, entrypointOverride: true] ).makeBinding()
+                containerConfig: new PodmanConfig(enabled: true, entrypointOverride: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should create wrapper with podman and scratch' () {
@@ -1154,11 +1606,61 @@ class BashWrapperBuilderTest extends Specification {
                 scratch: true,
                 containerImage: 'busybox',
                 containerEnabled: true,
-                containerConfig: [engine: 'podman', enabled: true] ).makeBinding()
+                containerConfig: new PodmanConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+    }
+
+    def 'should skip trace wrapper when NXF_FUSION_TRACE is enabled and Fusion is active'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        !builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should keep trace wrapper when NXF_FUSION_TRACE is disabled even with Fusion'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'false'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    @Unroll
+    def 'should check retryable errors' () {
+        expect:
+        BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
+        where:
+        ERROR                               | EXPECTED
+        new RuntimeException()              | true
+        new SocketException()               | true
+        new SocketTimeoutException('foo')   | true
+        new FileSystemException('foo')      | true
+        new IOException()                   | false
+        new Exception()                     | false
     }
 }

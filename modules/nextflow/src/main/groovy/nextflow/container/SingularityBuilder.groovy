@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,16 +31,29 @@ import nextflow.SysEnv
 @Slf4j
 class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
-    private boolean autoMounts
+    protected boolean autoMounts
 
     private boolean homeMount
 
     private boolean newPidNamespace
 
+    private String runCmd0
+
+    private Boolean ociMode
+
+    protected boolean resourceLimits
+
     SingularityBuilder(String name) {
         this.image = name
         this.homeMount = defaultHomeMount()
+        this.autoMounts = defaultAutoMounts()
         this.newPidNamespace = defaultNewPidNamespace()
+        this.runCmd0 = defaultRunCommand()
+    }
+
+    SingularityBuilder(String name, SingularityConfig config) {
+        this(name)
+        applyConfig(config)
     }
 
     private boolean defaultHomeMount() {
@@ -51,25 +64,39 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         SysEnv.get("NXF_${getBinaryName().toUpperCase()}_NEW_PID_NAMESPACE", 'true').toString() == 'true'
     }
 
+    private boolean defaultAutoMounts() {
+        SysEnv.get("NXF_${getBinaryName().toUpperCase()}_AUTO_MOUNTS", 'true').toString() == 'true'
+    }
+
+    private String defaultRunCommand() {
+        final result = SysEnv.get("NXF_${getBinaryName().toUpperCase()}_RUN_COMMAND", 'exec')
+        if( result !in ['run','exec'] )
+            throw new IllegalArgumentException("Invalid singularity launch command '$result' - it should be either 'run' or 'exec'")
+        return result
+    }
+
     protected String getBinaryName() { 'singularity' }
+
+    protected void applyConfig(SingularityConfig config) {
+
+        if( config.autoMounts != null )
+            this.autoMounts = config.autoMounts
+
+        if( config.engineOptions )
+            this.addEngineOptions(config.engineOptions)
+
+        this.ociMode = config.ociMode
+        this.resourceLimits = config.resourceLimits
+
+        if( config.runOptions )
+            this.addRunOptions(config.runOptions)
+    }
 
     @Override
     SingularityBuilder params(Map params) {
 
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
-
-        if( params.containsKey('engineOptions') )
-            addEngineOptions(params.engineOptions.toString())
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if( params.autoMounts )
-            autoMounts = params.autoMounts.toString() == 'true'
 
         if( params.newPidNamespace!=null )
             newPidNamespace = params.newPidNamespace.toString() == 'true'
@@ -97,13 +124,23 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( engineOptions )
             result << engineOptions.join(' ') << ' '
 
-        result << 'exec '
+        result << runCmd0 << ' '
 
         if( !homeMount )
             result << '--no-home '
 
-        if( newPidNamespace )
+        if( newPidNamespace && !ociMode )
             result << '--pid '
+
+        if( ociMode != null )
+            result << (ociMode ? '--oci ' : '--no-oci ')
+
+        if( resourceLimits ) {
+            if( cpus )
+                result << "--cpus ${cpus} "
+            if( memory )
+                result << "--memory ${memory} "
+        }
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
@@ -130,6 +167,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     protected CharSequence appendEnv(StringBuilder result) {
         makeEnv('TMP',result) .append(' ')
         makeEnv('TMPDIR',result) .append(' ')
+        // add magic variables required by singularity to run in OCI-mode
+        if( ociMode ) {
+            result .append('${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ')
+            result .append('${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ')
+        }
         super.appendEnv(result)
     }
 
@@ -197,7 +239,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( launcher ) {
             def result = getRunCommand()
-            result += entryPoint ? " $entryPoint -c \"cd \$PWD; $launcher\"" : " $launcher"
+            result += entryPoint ? " $entryPoint -c \"cd \\\"\$NXF_TASK_WORKDIR\\\"; $launcher\"" : " $launcher"
             return result
         }
         return getRunCommand() + ' ' + launcher

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,10 @@ import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystemException
+import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotLinkException
@@ -132,14 +134,16 @@ class FilesEx {
                 }
 
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    Files.delete(dir)
+                    FileHelper.deleteDirEntry(dir)
                     FileVisitResult.CONTINUE
                 }
 
             })
             return true
         }
-        catch( IOException e ) {
+        catch( IOException | InvalidPathException e ) {
+            // deleteDirEntry rethrows the unchecked CloudStoragePseudoDirectoryException when a
+            // cloud directory still holds a real object, which is a failure like any other here
             return false
         }
     }
@@ -494,6 +498,7 @@ class FilesEx {
             return true
         }
         catch(IOException e) {
+            log.debug "Failed to create directory '${toUriString(self)}'", e
             return false
         }
     }
@@ -513,7 +518,7 @@ class FilesEx {
             Files.isReadable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get read permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get read permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -534,7 +539,7 @@ class FilesEx {
             Files.isWritable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get write permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get write permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -558,7 +563,7 @@ class FilesEx {
             Files.isExecutable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get execute permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get execute permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -588,7 +593,7 @@ class FilesEx {
             Files.getLastModifiedTime(self,options).toMillis()
         }
         catch( IOException e ) {
-            log.trace "Cannot get lastModified time on file: $self -- Cause: ${e.getMessage()}"
+            log.trace "Cannot get lastModified time on file '${toUriString(self)}' -- Cause: ${e.getMessage()}"
             return 0
         }
     }
@@ -625,7 +630,7 @@ class FilesEx {
      * @return A list of strings or {@code null} if the path is not a folder
      */
     static String[] list(Path self) {
-        listFiles(self).collect { getName(it) } as String[]
+        return listFiles0(self).collect { getName(it) } as String[]
     }
 
     /**
@@ -636,33 +641,49 @@ class FilesEx {
      * @return A list of {@code Path} or {@code null} if the path is not a folder
      */
     static Path[] listFiles(Path self, @ClosureParams(value = FromString.class, options = ["java.nio.file.Path", "java.nio.file.Path,java.nio.file.attribute.BasicFileAttributes"]) Closure<Boolean> filter=null) {
+        return listFiles0(self, filter) as Path[]
+    }
+
+    /**
+     * List the files in a directory.
+     *
+     * This method is preferred over `listFiles()` in the Nextflow language
+     * because it returns a Collection<Path> instead of a Path[].
+     *
+     * @param self
+     */
+    static Collection<Path> listDirectory(Path self) {
+        return listFiles0(self, null, true)
+    }
+
+    private static Collection<Path> listFiles0(Path self, Closure<Boolean> filter=null, boolean followLinks=false) {
 
         if( !self.isDirectory() )
             return null
 
-        def result = []
-        Files.walkFileTree(self, new SimpleFileVisitor<Path>() {
+        final result = []
+        final opts = followLinks ? EnumSet.of(FileVisitOption.FOLLOW_LINKS) : EnumSet.noneOf(FileVisitOption)
+
+        Files.walkFileTree(self, opts, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                if( filter==null || invokeFilter(filter,file,attrs) )
-                    result.add( file )
+                if( filter == null || invokeFilter(filter, file, attrs) )
+                    result.add(file)
                 FileVisitResult.CONTINUE
             }
 
             FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                if( self == dir )
+                if( self == dir ) {
                     FileVisitResult.CONTINUE
-
+                }
                 else {
                     result.add(dir)
                     FileVisitResult.SKIP_SUBTREE
                 }
             }
-
         } )
 
-        return result as Path[]
-
+        return result
     }
 
     @CompileStatic

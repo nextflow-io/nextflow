@@ -1,0 +1,87 @@
+---
+title: nextflow pull
+description: Reference for the nextflow pull command. Download or update a project.
+---
+
+# `nextflow pull`
+
+Download or update a project.
+
+## Usage
+
+```console
+$ nextflow pull [options] [project]
+```
+
+## Description
+
+The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets` and modifies it accordingly. To download a pipeline into a local directory, use the `nextflow clone` command.
+
+## Options
+
+##### `-a, -all`
+
+Update all downloaded projects.
+
+##### `-d, -deep`
+
+<DeprecatedInVersion version="26.04">
+Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+</DeprecatedInVersion>
+
+Create a shallow clone of the specified depth.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-hub` (`github`)
+
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+
+##### `-migrate`
+
+<AddedInVersion version="26.04" />
+
+Update the project asset to the new multi-revision strategy.
+
+##### `-r, -revision`
+
+Project revision to run. Can be a git branch, tag, or commit SHA number.
+
+When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+
+##### `-user`
+
+Private repository user name.
+
+## Examples
+
+Download a project, or pull the latest revision if it is already downloaded:
+
+```console
+$ nextflow pull nextflow-io/hello
+
+Checking nextflow-io/hello ...
+done - revision: 96eb04d6a4 [master]
+```
+
+Pull the latest revision for all downloaded projects:
+
+```console
+$ nextflow pull -all
+
+Checking nextflow-io/hello ...
+done - revision: 96eb04d6a4 [master]
+Checking nextflow-hub/fastqc ...
+done - revision: 087659b18e [master]
+```
+
+Pull a specific revision of a project:
+
+```console
+$ nextflow pull nextflow-io/hello -r v1.1
+
+Checking nextflow-io/hello ...
+checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
+```

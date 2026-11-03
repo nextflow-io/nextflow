@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,13 +28,15 @@ import java.nio.file.WatchService
 import java.nio.file.attribute.UserPrincipalLookupService
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
+import java.util.concurrent.TimeoutException
+import dev.failsafe.function.CheckedPredicate
 
 import com.azure.core.util.polling.SyncPoller
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobContainerItem
 import com.azure.storage.blob.models.BlobCopyInfo
 import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobListDetails
 import com.azure.storage.blob.models.BlobStorageException
 import com.azure.storage.blob.models.ListBlobsOptions
 import dev.failsafe.Failsafe
@@ -62,7 +64,12 @@ class AzFileSystem extends FileSystem {
         boolean empty
     }
 
-    private static String EMPTY_DIR_MARKER = '.azure_blob_dir'
+    /**
+     * Object written inside a folder to materialise it, since blob storage has no directories.
+     * It is a placeholder, NOT content: anything enumerating a folder's members must skip it
+     * (see {@code AzObjectStoreReader}).
+     */
+    static final String EMPTY_DIR_MARKER = '.azure_blob_dir'
 
     private static String SLASH = '/'
 
@@ -125,7 +132,7 @@ class AzFileSystem extends FileSystem {
         final containers = new ArrayList()
         storageClient
                 .listBlobContainers()
-                .forEach { BlobContainerItem it -> provider.getPath(it.getName()) }
+                .forEach { BlobContainerItem it -> containers.add(provider.getPath(it.getName())) }
         return containers
     }
 
@@ -269,8 +276,11 @@ class AzFileSystem extends FileSystem {
         }
 
         // -- list the bucket content
+        final options = new ListBlobsOptions()
+                .setPrefix(prefix)
+                .setDetails(new BlobListDetails().setRetrieveMetadata(true))
         final blobs = dir.containerClient()
-                .listBlobsByHierarchy(prefix)
+                .listBlobsByHierarchy('/', options, null)
                 .iterator()
 
         // wrap the result with a directory stream
@@ -526,16 +536,23 @@ class AzFileSystem extends FileSystem {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
+        // this is needed because apparently bytebuddy used by testing framework is not able
+        // to handle properly this method signature using both generics and `@Memoized` annotation.
+        // therefore the `@Memoized` has been moved to the inner method invocation
+        return (RetryPolicy<T>) retryPolicy0(cond)
+    }
+
     @Memoized
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected RetryPolicy retryPolicy0(CheckedPredicate<? extends Throwable> cond) {
         final cfg = AzConfig.getConfig().retryConfig()
-        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
-            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastFailure?.message}")
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastException?.message}")
             }
         }
-        return RetryPolicy.<T>builder()
+        return RetryPolicy.builder()
                 .handleIf(cond)
                 .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
                 .withMaxAttempts(cfg.maxAttempts)
@@ -552,7 +569,7 @@ class AzFileSystem extends FileSystem {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException)
+        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException || t instanceof TimeoutException || t.cause instanceof TimeoutException)
         return Failsafe.with(policy).get(action)
     }
 }

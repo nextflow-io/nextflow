@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,16 @@ def rule( file ) {
     return null
 
   if( file == 'file_3.txt' )
-     return "$PWD/results/gamma/$file"
+     return "${env('PWD')}/results/gamma/$file"
 
 }
 
 process foo {
-  publishDir path: 'results', saveAs: this.&rule
+  publishDir path: 'results', saveAs: { file -> rule(file) }
 
   input: each x
   output: path '*.txt'
+  script:
   """
   touch file_${x}.txt
   """

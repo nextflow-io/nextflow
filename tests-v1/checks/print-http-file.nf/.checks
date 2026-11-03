@@ -1,0 +1,4 @@
+$NXF_RUN | tee stdout
+
+[[ `< stdout grep -c 'User-agent'` != 0 ]] || false 
+[[ `< stdout grep -c 'Disallow'` != 0 ]] || false 

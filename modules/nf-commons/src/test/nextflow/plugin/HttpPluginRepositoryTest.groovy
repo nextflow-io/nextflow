@@ -1,0 +1,318 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.plugin
+
+
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import nextflow.BuildInfo
+import org.junit.Rule
+import spock.lang.Specification
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
+
+class HttpPluginRepositoryTest extends Specification {
+    @Rule
+    WireMockRule wiremock = new WireMockRule(0)
+
+    HttpPluginRepository unit
+
+    def setup() {
+        unit = new HttpPluginRepository("test-repo", new URI(wiremock.baseUrl()))
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'prefetch metadata for plugin with no releases'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    {
+                      "id": "nf-fake"
+                    }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        def plugins = unit.getPlugins()
+        plugins.size() == 0
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'prefetch plugin metadata with release'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    {
+                      "id": "nf-fake",
+                      "releases": [
+                        {
+                          "version": "0.0.1",
+                          "url": "http://example.com/fake-plugin/0.0.1/plugin.zip",
+                          "date": "2025-03-21T10:40:36Z",
+                          "sha512sum": "cbc4a7f0bc10c955ff10b85da85f4df8303e4174f1c44922c52a274a59afd786ee3bc685f332d1e0a7497d0b28b0cfc9939d052d6fa992607f43c870825f6caf",
+                          "requires": ">=24.10.0"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        def plugins = unit.getPlugins()
+        plugins.size() == 1
+        def p1 = plugins.get("nf-fake")
+        p1.id == "nf-fake"
+        p1.releases.size() == 1
+        def r1 = p1.releases[0]
+        r1.version == "0.0.1"
+        r1.url == "http://example.com/fake-plugin/0.0.1/plugin.zip"
+        r1.date == toDate(ZonedDateTime.of(2025, 3, 21, 10, 40, 36, 0, ZoneOffset.UTC))
+        r1.sha512sum == "cbc4a7f0bc10c955ff10b85da85f4df8303e4174f1c44922c52a274a59afd786ee3bc685f332d1e0a7497d0b28b0cfc9939d052d6fa992607f43c870825f6caf"
+        r1.requires == ">=24.10.0"
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'handle prefetch error when metadata service is unavailable'() {
+        setup:
+        wiremock.stop()
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        // Prefetch is an optimization, not a hard requirement: a connection failure must not
+        // abort Nextflow startup. Downstream code falls back to per-plugin lookups.
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'handle prefetch error with percent chars in error message'() {
+        given:
+        // Test that URLs containing '%' characters (like URL-encoded values) don't trip
+        // String.format inside PluginRuntimeException when the underlying call fails.
+        def repoWithEncodedUrl = new HttpPluginRepository("test-repo", new URI("http://localhost:${wiremock.port()}/path%20with%20spaces/"))
+        wiremock.stop()
+
+        when:
+        repoWithEncodedUrl.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        // Should not throw - in particular, no IllegalFormatException from the '%' chars
+        noExceptionThrown()
+        repoWithEncodedUrl.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'handle prefetch error when metadata service returns an error response'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(500)
+                .withBody("Server error!")))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'handle prefetch when registry returns empty plugins list'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('{"plugins": []}')))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'handle prefetch error caused by nextflow sending a bad request to metadata service'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(400)
+                .withBody("""{
+                  "type": "SOME_ERROR",
+                  "message": "Unparseable request"
+                }""")))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'prefetch degrades gracefully when the registry keeps returning 429'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(429)
+                .withHeader("Retry-After", "1")
+                .withBody('Too Many Requests')))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        // The map is initialised to empty so getPlugin() doesn't NPE downstream
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'test mapToPluginInfo with comprehensive date conversion validation'() {
+        given:
+        // Test the mapToPluginInfo method with real date conversion using GsonEncoder
+        def utcDateStr = "2023-12-25T14:30:45Z"
+        def estDateStr = "2023-06-15T09:15:30-05:00"
+        def cestDateStr = "2023-08-10T16:45:00+02:00"
+
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=date-test-plugin&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    {
+                      "id": "date-test-plugin",
+                      "projectUrl": "https://example.com/test-plugin",
+                      "provider": "Test Provider",
+                      "releases": [
+                        {
+                          "version": "1.0.0",
+                          "url": "https://example.com/plugin-1.0.0.zip",
+                          "date": "${utcDateStr}",
+                          "sha512sum": "hash1",
+                          "requires": ">=20.0.0"
+                        },
+                        {
+                          "version": "1.1.0",
+                          "url": "https://example.com/plugin-1.1.0.zip",
+                          "date": "${estDateStr}",
+                          "sha512sum": "hash2",
+                          "requires": ">=21.0.0"
+                        },
+                        {
+                          "version": "1.2.0",
+                          "url": "https://example.com/plugin-1.2.0.zip",
+                          "date": "${cestDateStr}",
+                          "sha512sum": "hash3",
+                          "requires": ">=22.0.0"
+                        },
+                        {
+                          "version": "1.3.0",
+                          "url": "https://example.com/plugin-1.3.0.zip",
+                          "sha512sum": "hash4",
+                          "requires": ">=23.0.0"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("date-test-plugin")])
+
+        then:
+        def plugins = unit.getPlugins()
+        plugins.size() == 1
+
+        def pluginInfo = plugins.get("date-test-plugin")
+
+        // Verify basic plugin mapping through the mapToPluginInfo method
+        pluginInfo.id == "date-test-plugin"
+        pluginInfo.projectUrl == "https://example.com/test-plugin"
+        pluginInfo.provider == "Test Provider"
+        pluginInfo.releases.size() == 4
+        pluginInfo.releases != null // Verify never null
+
+        // Verify UTC date conversion (Z suffix)
+        def release1 = pluginInfo.releases[0]
+        release1.version == "1.0.0"
+        release1.date == toDate(ZonedDateTime.of(2023, 12, 25, 14, 30, 45, 0, ZoneOffset.UTC))
+        release1.sha512sum == "hash1"
+        release1.requires == ">=20.0.0"
+
+        // Verify EST date conversion (-05:00 offset)
+        def release2 = pluginInfo.releases[1]
+        release2.version == "1.1.0"
+        // 09:15 EST (-5 hours) = 14:15 UTC
+        release2.date == toDate(ZonedDateTime.of(2023, 6, 15, 14, 15, 30, 0, ZoneOffset.UTC))
+        release2.sha512sum == "hash2"
+        release2.requires == ">=21.0.0"
+
+        // Verify CEST date conversion (+02:00 offset)
+        def release3 = pluginInfo.releases[2]
+        release3.version == "1.2.0"
+        // 16:45 CEST (+2 hours) = 14:45 UTC
+        release3.date == toDate(ZonedDateTime.of(2023, 8, 10, 14, 45, 0, 0, ZoneOffset.UTC))
+        release3.sha512sum == "hash3"
+        release3.requires == ">=22.0.0"
+
+        // Verify null date handling (missing date field)
+        def release4 = pluginInfo.releases[3]
+        release4.version == "1.3.0"
+        release4.date == null
+        release4.sha512sum == "hash4"
+        release4.requires == ">=23.0.0"
+    }
+
+
+    // ------------------------------------------------------------------------
+
+    private static Date toDate(ZonedDateTime from) {
+        return Date.from(from.toInstant())
+    }
+}

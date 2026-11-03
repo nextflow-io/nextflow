@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,19 +25,31 @@ sourceSets {
 }
 
 dependencies {
-    api "ch.qos.logback:logback-classic:1.4.6"
-    api "org.codehaus.groovy:groovy:3.0.18"
-    api "org.codehaus.groovy:groovy-nio:3.0.18"
-    api "commons-lang:commons-lang:2.6"
-    api 'com.google.guava:guava:31.1-jre'
-    api 'org.pf4j:pf4j:3.4.1'
+    api(project(':nf-lang'))
+    api "ch.qos.logback:logback-classic:${logbackVersion}"
+    api "org.apache.groovy:groovy:${groovyVersion}"
+    api "org.apache.groovy:groovy-nio:${groovyVersion}"
+    api "org.apache.commons:commons-lang3:${commonsLang3Version}"
+    api 'com.google.guava:guava:33.7.2-jre'
+    api "org.pf4j:pf4j:${pf4jVersion}"
     api 'org.pf4j:pf4j-update:2.3.0'
-    api 'dev.failsafe:failsafe:3.1.0'
+    api "dev.failsafe:failsafe:${failsafeVersion}"
+    api "io.seqera:lib-httpx:${libHttpxVersion}"
+    api 'io.seqera:lib-util-net:0.2.0'
+    api 'io.seqera:lib-retry:2.1.0'
     // patch gson dependency required by pf4j
-    api 'com.google.code.gson:gson:2.10.1'
+    api "com.google.code.gson:gson:${gsonVersion}"
+    api "io.seqera:npr-api:${nprVersion}"
+    // jackson 2.21.7 addresses high-severity PolymorphicTypeValidator bypasses
+    // (GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm) and related @JsonView/@JsonIgnore
+    // deserialization advisories; pinned here so it propagates to all downstream modules
+    api "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
     testFixturesImplementation(project(":nextflow"))
+
+    testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock
+    testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
 }
 

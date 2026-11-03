@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,22 @@
  */
 
 package nextflow.container
+
+
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 /**
  * Helper methods to handle Docker containers
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean sudo
 
-    private boolean remove = true
-
-    private boolean userEmulation
+    private boolean remove
 
     private String registry
 
@@ -36,15 +38,13 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean tty
 
-    private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
-
     private String removeCommand
 
     private String killCommand
 
     private kill = true
 
-    private boolean legacy = System.getenv('NXF_DOCKER_LEGACY')=='true'
+    private boolean legacy
 
     private String mountFlags0
 
@@ -52,34 +52,44 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private String capAdd
 
-    DockerBuilder( String name ) {
+    private boolean cpuLimits
+
+    DockerBuilder(String name, DockerConfig config) {
         this.image = name
+
+        this.cpuLimits = config.cpuLimits
+
+        if( config.engineOptions )
+            addEngineOptions(config.engineOptions)
+
+        this.legacy = config.legacy
+
+        if( config.mountFlags )
+            this.mountFlags0 = config.mountFlags
+
+        this.remove = config.remove
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+
+        this.sudo = config.sudo
+
+        if( config.temp )
+            this.temp = config.temp
+
+        this.tty = config.tty
+
+        if( !config.writableInputMounts )
+            this.readOnlyInputs = true
+    }
+
+    DockerBuilder(String name) {
+        this(name, new DockerConfig([:]))
     }
 
     @Override
     DockerBuilder params( Map params ) {
         if( !params ) return this
-
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
-        if( params.containsKey('engineOptions') )
-            addEngineOptions(params.engineOptions.toString())
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if ( params.containsKey('userEmulation') )
-            this.userEmulation = params.userEmulation?.toString() == 'true'
-
-        if ( params.containsKey('remove') )
-            this.remove = params.remove?.toString() == 'true'
-
-        if( params.containsKey('sudo') )
-            this.sudo = params.sudo?.toString() == 'true'
-
-        if( params.containsKey('tty') )
-            this.tty = params.tty?.toString() == 'true'
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
@@ -87,17 +97,8 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('kill') )
             this.kill = params.kill
 
-        if( params.containsKey('legacy') )
-            this.legacy = params.legacy?.toString() == 'true'
-
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
-        if( params.containsKey('mountFlags') )
-            this.mountFlags0 = params.mountFlags
-
         if( params.containsKey('privileged') )
-            this.privileged = params.privileged?.toString() == 'true'
+            this.privileged = params.privileged
 
         if( params.containsKey('device') )
             this.device = params.device
@@ -128,7 +129,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         result << 'run -i '
 
-        if( cpus && !legacy )
+        if( cpus && cpuLimits )
+            result << "--cpus ${cpus} "
+        else if( cpus && !legacy )
             result << "--cpu-shares ${cpus * 1024} "
 
         if( cpuset ) {
@@ -141,6 +144,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( memory )
             result << "--memory ${memory} "
 
+        if( platform )
+            result << "--platform ${platform} "
+
         if( tty )
             result << '-t '
 
@@ -150,12 +156,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( temp )
             result << "-v $temp:/tmp "
 
-        if( userEmulation )
-            result << USER_AND_HOME_EMULATION << ' '
-
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" '
+        result << '-w "$NXF_TASK_WORKDIR" '
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '

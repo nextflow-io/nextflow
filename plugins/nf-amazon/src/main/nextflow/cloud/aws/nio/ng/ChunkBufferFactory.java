@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio.ng;
@@ -59,10 +58,10 @@ public class ChunkBufferFactory {
 
         // add logistic delay to slow down the allocation of new buffer
         // when the request approach or exceed the max capacity
-        final int indx = count.getAndIncrement();
+        final int index = count.getAndIncrement();
         if( log.isTraceEnabled() )
-            log.trace("Creating a new buffer index={}; capacity={}", indx, capacity);
-        return new ChunkBuffer(this, chunkSize, indx);
+            log.trace("Creating a new buffer index={}; capacity={}", index, capacity);
+        return new ChunkBuffer(this, chunkSize, index);
     }
 
     void giveBack(ChunkBuffer buffer) {

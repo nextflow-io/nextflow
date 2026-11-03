@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.batch.logging
@@ -29,8 +28,8 @@ import com.google.cloud.logging.Payload.StringPayload
 import com.google.cloud.logging.Severity
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.cloud.google.batch.client.BatchConfig
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -48,26 +47,24 @@ class BatchLoggingTest extends Specification {
         def OUT_ENTRY2 = LogEntry.newBuilder(StringPayload.of('Hello world')).setSeverity(Severity.INFO).build()
         def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Oops something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
         def ERR_ENTRY2 = LogEntry.newBuilder(StringPayload.of('blah blah')).setSeverity(Severity.ERROR).build()
-        and:
-        def client = new BatchLogging()
 
         when:
         def stdout = new StringBuilder()
         def stderr = new StringBuilder()
         and:
-        client.parseOutput(OUT_ENTRY1, stdout, stderr)
+        BatchLogging.parseOutput(OUT_ENTRY1, stdout, stderr)
         then:
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
         and:
         stderr.toString() == ''
 
         when:
-        client.parseOutput(ERR_ENTRY1, stdout, stderr)
+        BatchLogging.parseOutput(ERR_ENTRY1, stdout, stderr)
         then:
         stderr.toString() == 'Oops something has failed. We are sorry.\n'
 
         when:
-        client.parseOutput(ERR_ENTRY2, stdout, stderr)
+        BatchLogging.parseOutput(ERR_ENTRY2, stdout, stderr)
         then:
         // the message is appended to the stderr because not prefix is provided
         stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
@@ -76,7 +73,7 @@ class BatchLoggingTest extends Specification {
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
 
         when:
-        client.parseOutput(OUT_ENTRY2, stdout, stderr)
+        BatchLogging.parseOutput(OUT_ENTRY2, stdout, stderr)
         then:
         // the message is added to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\nHello world'
@@ -92,7 +89,7 @@ class BatchLoggingTest extends Specification {
     def 'should fetch logs' () {
         given:
         def sess = Mock(Session) { getConfig() >> [:] }
-        def config = BatchConfig.create(sess)
+        def config = GoogleOpts.create(sess)
         and:
         def batchClient = new BatchClient(config)
         def logClient = new BatchLogging(config)
@@ -126,20 +123,23 @@ class BatchLoggingTest extends Specification {
         log.debug "Test job uid=$uid"
         then:
         uid
-        
+
         when:
         def state=null
         do {
-            state = batchClient.getJobState(jobId)
-            log.debug "Test job state=$state"
+            if( batchClient.listTasks(jobId).iterator().hasNext() )
+                state = batchClient.getTaskState(jobId, '0')
+            else
+                state = 'PENDING'
+            log.debug "Test task state=$state"
             sleep 10_000
         } while( state !in ['SUCCEEDED', 'FAILED'] )
         then:
         state in ['SUCCEEDED', 'FAILED']
 
         when:
-        def stdout = logClient.stdout(uid)
-        def stderr = logClient.stderr(uid)
+        def stdout = logClient.stdout(uid, '0')
+        def stderr = logClient.stderr(uid, '0')
         log.debug "STDOUT: $stdout"
         log.debug "STDERR: $stderr"
         then:

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import nextflow.script.params.InputsList;
 import nextflow.script.params.InParam;
 import nextflow.script.params.OutputsList;
 import nextflow.script.params.OutParam;
+import nextflow.script.params.v2.ProcessInputsDef
+import nextflow.script.params.v2.ProcessOutputsDef
 import nextflow.Session
 /**
  *
@@ -48,12 +50,12 @@ class DAGTest extends Specification {
         then:
         v1.label == 'Label A'
         v1.order == 0
-        v1.name == 'p0'
+        v1.name == 'v0'
         v1.type == DAG.Type.PROCESS
 
         v2.label == 'Label B'
         v2.order == 1
-        v2.name == 'p1'
+        v2.name == 'v1'
         v2.type == DAG.Type.OPERATOR
         v1.id != v2.id
     }
@@ -305,8 +307,8 @@ class DAGTest extends Specification {
         dag.addDataflowBroadcastPair(ch1r, ch1)
         dag.addDataflowBroadcastPair(ch2r, ch2)
 
-        dag.addSourceNode( 'Channel.from', ch1r)
-        dag.addSourceNode( 'Channel.from', ch2r)
+        dag.addSourceNode( 'channel.of', ch1r)
+        dag.addSourceNode( 'channel.of', ch2r)
 
         dag.addOperatorNode( 'combine', [ch1r, ch2r], chC )
 
@@ -324,6 +326,47 @@ class DAGTest extends Specification {
 
         // All channels converted back to DataflowBroadcast.
         dag.edges.each{ it.channel instanceof DataflowBroadcast }
+    }
+
+    def 'should connect source channel to typed process' () {
+
+        given:
+        def source = new DataflowQueue()
+        def sourceR = Mock(DataflowChannel)
+        def output = new DataflowQueue()
+
+        def dag = new DAG()
+
+        def inputs = new ProcessInputsDef()
+        inputs.addParam('x', Integer, false)
+        inputs.getParams()[0].setChannel(sourceR)
+
+        def outputs = new ProcessOutputsDef()
+        outputs.addParam('\$out', Object, null)
+        outputs.getParams()[0].setChannel(output)
+
+        when:
+        dag.addSourceNode('channel.of', source)
+        dag.addDataflowBroadcastPair(sourceR, source)
+        dag.addProcessNode('HELLO', inputs, outputs)
+
+        def v1 = dag.vertices[0]
+        def v2 = dag.vertices[1]
+
+        then:
+        dag.vertices.size() == 2
+        v1.label == 'channel.of'
+        v2.label == 'HELLO'
+
+        dag.edges.size() == 2
+
+        dag.edges[0].channel .is source
+        dag.edges[0].from == v1
+        dag.edges[0].to == v2
+
+        dag.edges[1].channel .is output
+        dag.edges[1].from == v2
+        dag.edges[1].to == null
     }
 
 }

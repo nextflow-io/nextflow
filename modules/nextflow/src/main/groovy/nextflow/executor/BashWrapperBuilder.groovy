@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package nextflow.executor
 
+import static java.nio.file.StandardOpenOption.*
+
 import java.nio.file.FileSystemException
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -24,22 +26,22 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
-
-import static java.nio.file.StandardOpenOption.*
-
 import nextflow.util.MemoryUnit
-
+import nextflow.util.TestOnly
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -50,15 +52,15 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class BashWrapperBuilder {
 
-    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
-    private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
-    private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
-    private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
+    final private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
+    final private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
+    final private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
+    final private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
-    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
-    private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
-    private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
-    private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
+    final private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
+    final private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
+    final private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
+    final private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
 
     static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
 
@@ -75,16 +77,15 @@ class BashWrapperBuilder {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
          * - 0: no debug
-         * - 1: dump current environment in the `.command.log` file
-         * - 2: trace the execution of user script adding the `set -x` flag
-         * - 3: trace the execution of wrapper scripts
+         * - 1: dump current environment in the `.command.log` file and trace the execution of user script
+         * - 2: trace the execution of wrapper scripts
          */
         def str = System.getenv('NXF_DEBUG')
         try {
             level = str ? str as int : 0
         }
         catch( Exception e ) {
-            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
+            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See https://docs.seqera.io/nextflow/reference/config/env"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
 
@@ -126,8 +127,8 @@ class BashWrapperBuilder {
         this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)
     }
 
-    /** only for testing -- do not use */
-    protected BashWrapperBuilder() { }
+    @TestOnly
+    protected BashWrapperBuilder() {}
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -160,8 +161,25 @@ class BashWrapperBuilder {
         return targetDir && workDir!=targetDir
     }
 
+    /**
+     * Template method that allows controlling if it's required to unstage
+     * task control files (.command.out, .command.err, .command.trace, .command.env)
+     *
+     * See also https://github.com/nextflow-io/nextflow/pull/6364
+     *
+     * @return false by default; executors may override to implement their own logic
+     */
+    protected boolean shouldUnstageControls() {
+        return false
+    }
+
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
+        // note: only for docker (other container runtimes are not affected)
+        ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
+    }
+
+    protected isLinuxOS() {
+        systemOsName == 'Linux'
     }
 
     protected isMacOS() {
@@ -178,19 +196,76 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getOutputEnvCaptureSnippet(List<String> names) {
-        def result = new StringBuilder()
-        result.append('\n')
-        result.append('# capture process environment\n')
-        result.append('set +u\n')
-        for( int i=0; i<names.size(); i++) {
-            final key = names[i]
-            result.append "echo $key=\${$key[@]} "
-            result.append( i==0 ? '> ' : '>> ' )
-            result.append(TaskRun.CMD_ENV)
-            result.append('\n')
+    /**
+     * Generate a Bash script to be appended to the task command script
+     * that takes care of capturing the process output environment variables
+     * and evaluation commands
+     *
+     * @param outEnvs
+     *      The list of environment variables names whose value need to be captured
+     * @param outEvals
+     *      The set of commands to be evaluated to determine the output value to be captured
+     * @return
+     *      The Bash script to capture the output environment and eval commands
+     */
+    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outEvals) {
+        // load the env template
+        final template = BashWrapperBuilder.class
+            .getResourceAsStream('command-env.txt')
+            .newReader()
+        final binding = Map.of('env_file', TaskRun.CMD_ENV)
+        final result = new StringBuilder()
+        result.append( engine.render(template, binding) )
+        appendOutEnv(result, outEnvs)
+        appendOutEval(result, outEvals)
+        return result.toString()
+    }
+
+    /**
+     * Render a Bash script to capture the one or more env variables
+     *
+     * @param result A {@link StringBuilder} instance to which append the result Bash script
+     * @param outEnvs The environment variables to be captured
+     */
+    protected void appendOutEnv(StringBuilder result, List<String> outEnvs) {
+        if( outEnvs==null )
+            outEnvs = List.<String>of()
+        // out env
+        for( String key : outEnvs ) {
+            result << "#\n"
+            result << "echo $key=\"\${$key[@]}\" >> ${TaskRun.CMD_ENV}\n"
+            result << "echo /$key/ >> ${TaskRun.CMD_ENV}\n"
         }
-        result.toString()
+    }
+
+    /**
+     * Render a Bash script to capture the result of one or more commands
+     * evaluated in the task script context
+     *
+     * @param result
+     *      A {@link StringBuilder} instance to which append the result Bash script
+     * @param outEvals
+     *      A {@link Map} of key-value pairs modeling the commands to be evaluated;
+     *      where the key represents the environment variable (name) holding the
+     *      resulting output, and the pair value represent the Bash command to be
+     *      evaluated.
+     */
+    protected void appendOutEval(StringBuilder result, Map<String,String> outEvals) {
+        if( outEvals==null )
+            outEvals = Map.<String,String>of()
+        // out eval
+        for( Map.Entry<String,String> eval : outEvals ) {
+            result << "#\n"
+            result <<"nxf_eval_cmd STDOUT STDERR bash -c \"${eval.value.replace('"','\\\"')}\"\n"
+            result << 'status=$?\n'
+            result << 'if [ $status -eq 0 ]; then\n'
+            result << "  echo $eval.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"
+            result << "  echo /$eval.key/=exit:0 >> ${TaskRun.CMD_ENV}\n"
+            result << 'else\n'
+            result << "  echo $eval.key=\"\$STDERR\" >> ${TaskRun.CMD_ENV}\n"
+            result << "  echo /$eval.key/=exit:\$status >> ${TaskRun.CMD_ENV}\n"
+            result << 'fi\n'
+        }
     }
 
     protected String stageCommand(String stagingScript) {
@@ -198,7 +273,10 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+        // Write large staging scripts to a separate .command.stage file to avoid command line length limits.
+        // This is enabled only for executors that support it (e.g. HPC grid schedulers with shared filesystem,
+        // See https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
@@ -237,18 +315,26 @@ class BashWrapperBuilder {
          */
         final interpreter = TaskProcessor.fetchInterpreter(script)
 
-        if( outputEnvNames ) {
-            if( !isBash(interpreter) ) throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
-            script += getOutputEnvCaptureSnippet(outputEnvNames)
+        /*
+         * append to the command script a prolog to capture the declared
+         * output environment (variable) and evaluation commands
+         */
+        if( outputEnvNames || outputEvals ) {
+            if( !isBash(interpreter) && outputEnvNames )
+                throw new IllegalArgumentException("Process output of type 'env' is only allowed with Bash process scripts -- Current interpreter: $interpreter")
+            if( !isBash(interpreter) && outputEvals )
+                throw new IllegalArgumentException("Process output of type 'eval' is only allowed with Bash process scripts -- Current interpreter: $interpreter")
+            script += getOutputEnvCaptureSnippet(outputEnvNames, outputEvals)
         }
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
+        binding.task_metadata = getTaskMetadata()
         binding.task_name = name
         binding.helpers_script = getHelpersScript()
 
         if( runWithContainer ) {
-            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"'
+            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A | tr -d \'\\r\\n\')"'
             binding.container_helpers = containerBuilder.getScriptHelpers()
             binding.kill_cmd = containerBuilder.getKillCommand()
         }
@@ -273,7 +359,7 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames), runWithContainer)
         if( runWithContainer ) {
             binding.task_env = null
             binding.container_env = env
@@ -307,7 +393,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
@@ -322,7 +408,7 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+
         return binding
     }
 
@@ -339,6 +425,22 @@ class BashWrapperBuilder {
     protected String getTraceScript(Map binding) {
         def res = BashWrapperBuilder.class.getResource('command-trace.txt')
         engine.render(res.newReader(), binding)
+    }
+
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            final value = result.get(name)
+            // exported as `export NAME=""$'value'""`: ANSI-C quoting, with line breaks as `\n`/`\r` to keep it on one line
+            if( value )
+                result.put(name, '"$\'' + value.replace('\\','\\\\').replace("'","\\'").replace('\n','\\n').replace('\r','\\r') + '\'"')
+        }
+        return result
     }
 
     @PackageScope String buildNew0(BufferedReader template) {
@@ -384,7 +486,9 @@ class BashWrapperBuilder {
                 }
                 return path
             }
-            catch (FileSystemException | SocketException | RuntimeException e) {
+            catch (Exception e) {
+                if( !isRetryable0(e) )
+                    throw e
                 final isLocalFS = path.getFileSystem()==FileSystems.default
                 // the retry logic is needed for non-local file system such as S3.
                 // when the file is local fail without retrying
@@ -396,6 +500,93 @@ class BashWrapperBuilder {
                 Thread.sleep(delay)
             }
         }
+    }
+
+    static protected boolean isRetryable0(Exception e) {
+        if( e instanceof FileSystemException )
+            return true
+        if( e instanceof SocketException )
+            return true
+        if( e instanceof SocketTimeoutException )
+            return true
+        if( e instanceof RuntimeException )
+            return true
+        if( e.class.getSimpleName() == 'HttpResponseException' )
+            return true
+        return false
+    }
+
+    /**
+     * Render a value as a YAML double-quoted string, escaping backslashes, double quotes
+     * and control characters so that the value is kept on a single comment line
+     * and can be decoded back to the original string
+     */
+    @PackageScope
+    static String yamlString(Object value) {
+        if( value == null )
+            return 'null'
+        final str = value.toString()
+        final result = new StringBuilder(str.length() + 2)
+        result.append('"')
+        for( int i=0; i<str.length(); i++ ) {
+            final char ch = str.charAt(i)
+            if( ch == '\\' as char )
+                result.append('\\\\')
+            else if( ch == '"' as char )
+                result.append('\\"')
+            else if( ch == '\n' as char )
+                result.append('\\n')
+            else if( ch == '\r' as char )
+                result.append('\\r')
+            else if( ch == '\t' as char )
+                result.append('\\t')
+            else if( isNonPrintable(str, i) )
+                result.append(String.format('\\u%04x', (int) ch))
+            else
+                result.append(ch)
+        }
+        result.append('"')
+        return result.toString()
+    }
+
+    /**
+     * Check if the char at the given index must be emitted as a `\\uXXXX` escape, i.e. control chars,
+     * line/paragraph separators, non-characters and unpaired surrogates (not allowed in a YAML stream)
+     */
+    private static boolean isNonPrintable(String str, int i) {
+        final char ch = str.charAt(i)
+        if( Character.isISOControl(ch) || ch == '\u2028' as char || ch == '\u2029' as char || ch == '\ufffe' as char || ch == '\uffff' as char )
+            return true
+        if( Character.isHighSurrogate(ch) )
+            return i+1 >= str.length() || !Character.isLowSurrogate(str.charAt(i+1))
+        if( Character.isLowSurrogate(ch) )
+            return i == 0 || !Character.isHighSurrogate(str.charAt(i-1))
+        return false
+    }
+
+    protected String getTaskMetadata() {
+        final lines = new StringBuilder()
+        lines << '### ---\n'
+        lines << "### name: ${yamlString(bean.name)}\n"
+        if( bean.arrayIndexName ) {
+            lines << '### array:\n'
+            lines << "###   index-name: ${bean.arrayIndexName}\n"
+            lines << "###   index-start: ${bean.arrayIndexStart}\n"
+            lines << "###   work-dirs:\n"
+            for( Path it : bean.arrayWorkDirs )
+                lines << "###   - ${Escape.path(FilesEx.toUriString(it))}\n"
+        }
+
+        if( containerConfig?.isEnabled() )
+            lines << "### container: ${yamlString(bean.containerImage)}\n"
+
+        if( outputFiles.size() > 0 ) {
+            lines << '### outputs:\n'
+            for( final output : bean.outputFiles )
+                lines << "### - ${yamlString(output)}\n"
+        }
+
+        lines << '### ...\n'
     }
 
     protected String getHelpersScript() {
@@ -429,10 +620,13 @@ class BashWrapperBuilder {
     private String getCondaActivateSnippet() {
         if( !condaEnv )
             return null
-        def result = "# conda environment\n"
-        result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
-        result += "/bin/activate ${Escape.path(condaEnv)}\n"
-        return result
+        final command = useMicromamba
+            ? 'eval "$(micromamba shell hook --shell bash)" && micromamba activate'
+            : 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate'
+        return """\
+            # conda environment
+            ${command} ${Escape.path(condaEnv)}
+            """.stripIndent()
     }
 
     private String getSpackActivateSnippet() {
@@ -453,7 +647,17 @@ class BashWrapperBuilder {
     }
 
     protected boolean isTraceRequired() {
-        statsEnabled || fixOwnership()
+        if( fusionEnabled && Global.isFusionTraceEnabled() )
+            return fixOwnership()
+        return statsEnabled || fixOwnership()
+    }
+
+    protected String shellPath() {
+        // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
+        // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
+        return shell.is(BASH)
+            ? "/bin/bash"
+            : shell.join(' ')
     }
 
     protected String getLaunchCommand(String interpreter, String env) {
@@ -467,7 +671,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${shellPath()} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -477,10 +681,15 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
-            if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
-                    cmd = 'cd $PWD; ' + cmd
+            // the container env lines are inserted in the `bash -c` string and evaluated once in the container
+            String cmd = env ? '$(nxf_container_env); ' + launcher : launcher
+            // wrap the command with an extra bash invocation either :
+            // - to propagate the container environment or
+            // - to change in the task work directory as required by singularity
+            final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
+            if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
+                if( needChangeTaskWorkDir )
+                    cmd = 'cd \\"$NXF_TASK_WORKDIR\\"; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
@@ -500,7 +709,7 @@ class BashWrapperBuilder {
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
     }
-    
+
 
     String getCleanupCmd(String scratch) {
         String result = ''
@@ -525,15 +734,15 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
             return 'sync || true'
         }
         return null
     }
 
     @PackageScope
-    ContainerBuilder createContainerBuilder0(String engine) {
-        ContainerBuilder.create(engine, containerImage)
+    ContainerBuilder createContainerBuilder0() {
+        ContainerBuilder.create(containerConfig, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -550,8 +759,7 @@ class BashWrapperBuilder {
     @PackageScope
     ContainerBuilder createContainerBuilder(String changeDir) {
 
-        final engine = containerConfig.getEngine()
-        ContainerBuilder builder = createContainerBuilder0(engine)
+        final builder = createContainerBuilder0()
 
         /*
          * initialise the builder
@@ -582,6 +790,11 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        if( this.containerPlatform )
+            builder.setPlatform(this.containerPlatform)
+
+        // export task work directory
+        builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
         if( isTraceRequired() )
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
@@ -589,10 +802,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)
@@ -605,22 +814,14 @@ class BashWrapperBuilder {
                 builder.addEnv(var)
         }
 
-        // set up run docker params
-        builder.params(containerConfig)
-
-        // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig.temp?.toString()
-        if( temp == 'auto' || temp == 'true' ) {
+        // extra rule for the 'auto' temp dir
+        if( containerConfig.getTemp() == 'auto' )
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
-        }
 
-        if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig.kill)
+        if( containerConfig.getKill() != null )
+            builder.params(kill: containerConfig.getKill())
 
-        if( containerConfig.writableInputMounts==false )
-            builder.params(readOnlyInputs: true)
-
-        if( this.containerConfig.entrypointOverride() )
+        if( containerConfig.entrypointOverride() )
             builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`
@@ -651,7 +852,7 @@ class BashWrapperBuilder {
         result += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
         if( statsEnabled )
             result += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-        if(  outputEnvNames )
+        if( outputEnvNames || outputEvals )
             result += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
         return result
     }

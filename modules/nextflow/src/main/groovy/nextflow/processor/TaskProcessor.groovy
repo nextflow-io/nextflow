@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,15 @@ package nextflow.processor
 
 import static nextflow.processor.ErrorStrategy.*
 
-import java.lang.reflect.InvocationTargetException
 import java.nio.file.FileSystems
-import java.nio.file.LinkOption
-import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -49,38 +44,41 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.NF
-import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
+import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.exception.ShowOnlyExceptionMessage
-import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.plugin.Plugins
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
+import nextflow.script.ProcessConfigV1
+import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
-import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.dsl.Nullable
+import nextflow.script.dsl.Types
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -97,12 +95,12 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.util.ArrayBag
-import nextflow.util.BlankSeparatedList
-import nextflow.util.CacheHelper
-import nextflow.util.Escape
-import nextflow.util.LockManager
-import nextflow.util.LoggerHelper
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.script.types.Record
+import nextflow.script.types.Tuple
+import nextflow.trace.TraceRecord
+import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -126,14 +124,6 @@ class TaskProcessor {
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
-
-    final private static Pattern QUESTION_MARK = ~/(\?+)/
-
-    @Memoized
-    static boolean getInvalidateCacheOnTaskDirectiveChange() {
-        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
-        return value==null || value =='true'
-    }
 
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
@@ -203,15 +193,36 @@ class TaskProcessor {
     private static final AtomicBoolean errorShown = new AtomicBoolean()
 
     /**
+     * The {@link TaskHasherFactory} extensions registered by plugins, in priority order --
+     * resolved once, on the first task hashed by this processor. See {@link #createTaskHasher}.
+     *
+     * <p>This and the three fields below are lazily initialised without a lock and read from every
+     * operator thread that submits a task, plus the retry executor -- so they must be {@code
+     * volatile}: without it a reader may see a non-null reference to a list whose contents are not
+     * yet visible, fall back to the default hasher, and give that ONE task a different cache key
+     * from the rest of the run (a silent miss, not a crash). With it the benign race is correct,
+     * since resolving twice is harmless.
+     */
+    @PackageScope volatile List<TaskHasherFactory> hasherFactories
+
+    /**
+     * The {@link TaskCacheStrategy} extensions registered by plugins, in priority order -- resolved
+     * once, on the first task resolved by this processor. See {@link #getCacheStrategy}.
+     */
+    @PackageScope volatile List<TaskCacheStrategy> cacheStrategies
+
+    /** The strategy chosen among {@link #cacheStrategies} for this run, else the default. */
+    private volatile TaskCacheStrategy cacheStrategy
+
+    /** The {@link TaskResolver} adapter over this processor, created on first use. */
+    private volatile TaskResolver taskResolver
+
+    /**
      * Flag set {@code true} when the processor termination has been invoked
      *
      * See {@code #checkProcessTermination}
      */
     protected volatile boolean completed
-
-    protected boolean allScalarValues
-
-    protected boolean hasEachParams
 
     /**
      * The state is maintained by using an agent
@@ -245,13 +256,14 @@ class TaskProcessor {
 
     private static int processCount
 
-    private static LockManager lockManager = new LockManager()
 
-    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+    private List<TaskRun> fairBuffers = new ArrayList<>()
 
     private int currentEmission
 
     private Boolean isFair0
+
+    private TaskArrayCollector arrayCollector
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -279,8 +291,8 @@ class TaskProcessor {
         currentProcessor0 = this
     }
 
-    /* for testing purpose - do not remove */
-    protected TaskProcessor() { }
+    @TestOnly
+    protected TaskProcessor() {}
 
     /**
      * Create and initialize the processor object
@@ -304,20 +316,35 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks ? config.maxForks as int : 0
+        this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+        final arraySize = config.getArray()
+        this.arrayCollector = createArrayCollector(arraySize)
+        log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
+    }
+
+    private TaskArrayCollector createArrayCollector(int arraySize) {
+        if( arraySize > 0 && executor instanceof TaskArrayExecutor )
+            return new TaskArrayCollector(this, executor, arraySize)
+        if( arraySize > 0 )
+            log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
+        return null
     }
 
     /**
      * @return The processor unique id
      */
     int getId() { id }
-  
+
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
     ProcessConfig getConfig() { config }
+
+    private ProcessConfigV1 configV1() { config as ProcessConfigV1 }
+
+    private ProcessConfigV2 configV2() { config as ProcessConfigV2 }
 
     /**
      * @return The current {@code Session} instance
@@ -333,6 +360,8 @@ class TaskProcessor {
      * @return The {@link Executor} associated to this processor
      */
     Executor getExecutor() { executor }
+
+    boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
 
     /**
      * @return The {@code DataflowOperator} underlying this process
@@ -355,9 +384,15 @@ class TaskProcessor {
     BodyDef getTaskBody() { taskBody }
 
     Set<String> getDeclaredNames() {
-        Set<String> result = new HashSet<>(20)
-        result.addAll(config.getInputs().getNames())
-        result.addAll(config.getOutputs().getNames())
+        final result = new HashSet<String>(20)
+        if( config instanceof ProcessConfigV1 ) {
+            result.addAll(config.getInputs().getNames())
+            result.addAll(config.getOutputs().getNames())
+        }
+        else if( config instanceof ProcessConfigV2 ) {
+            result.addAll(config.getInputs().getParams()*.getName())
+            result.addAll(config.getOutputs().getParams()*.getName())
+        }
         return result
     }
 
@@ -367,8 +402,34 @@ class TaskProcessor {
 
     boolean hasErrors() { errorCount>0 }
 
+    boolean isSingleton() { singleton }
+
+    /**
+     * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
+     * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
+     *
+     * Note this returns an "eventually" task configuration object. Also Inputs and output parameters are NOT
+     * resolved by this method.
+     *
+     * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
+     */
+    TaskRun createTaskPreview() {
+        final task = new TaskRun(
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this)
+        )
+        task.config.context = task.context
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+        task.config.setAutoResourceLabels(session?.getAutoResourceLabels())
+
+        return task
+    }
+
     protected void checkWarn(String msg, Map opts=null) {
-        if( NF.isStrictMode() )
+        if( NF.isSyntaxParserV2() || NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)
         if( opts )
             log.warn1(opts, msg)
@@ -376,37 +437,33 @@ class TaskProcessor {
             log.warn(msg)
     }
 
-    /**
-     * Launch the 'script' define by the code closure as a local bash script
-     *
-     * @param code A {@code Closure} retuning a bash script e.g.
-     *          <pre>
-     *              {
-     *                 """
-     *                 #!/bin/bash
-     *                 do this ${x}
-     *                 do that ${y}
-     *                 :
-     *                 """
-     *              }
-     *
-     * @return {@code this} instance
-     */
+    protected boolean allScalarValues
+
+    protected boolean hasEachParams
+
     def run() {
+        if( config instanceof ProcessConfigV1 )
+            runV1()
+        else if( config instanceof ProcessConfigV2 )
+            runV2()
+    }
+
+    def runV1() {
+        final config = configV1()
 
         // -- check that the task has a body
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
-        // -- check that input set defines at least two elements
-        def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
-        if( invalidInputSet )
-            checkWarn "Input `set` must define at least two component -- Check process `$name`"
+        // -- check that input tuple defines at least two elements
+        def invalidInputTuple = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
+        if( invalidInputTuple )
+            checkWarn "Input `tuple` must define at least two elements -- Check process `$name`"
 
-        // -- check that output set defines at least two elements
-        def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
-        if( invalidOutputSet )
-            checkWarn "Output `set` must define at least two component -- Check process `$name`"
+        // -- check that output tuple defines at least two elements
+        def invalidOutputTuple = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
+        if( invalidOutputTuple )
+            checkWarn "Output `tuple` must define at least two elements -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -428,19 +485,7 @@ class TaskProcessor {
         }
 
         // the state agent
-        state = new Agent<>(new StateObj(name))
-        state.addListener { StateObj old, StateObj obj ->
-            try {
-                log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
-                if( !completed && obj.isFinished() ) {
-                    terminateProcess()
-                    completed = true
-                }
-            }
-            catch( Throwable e ) {
-                session.abort(e)
-            }
-        }
+        createStateObj()
 
         // register the processor
         // note: register the task *before* creating (and starting the dataflow operator) in order
@@ -460,14 +505,24 @@ class TaskProcessor {
         return result.size() == 1 ? result[0] : result
     }
 
-    /**
-     * Template method which extending classes have to override in order to
-     * create the underlying *dataflow* operator associated with this processor
-     *
-     * See {@code DataflowProcessor}
-     */
+    protected void createStateObj() {
+        state = new Agent<>(new StateObj(name))
+        state.addListener { StateObj old, StateObj obj ->
+            try {
+                log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
+                if( !completed && obj.isFinished() ) {
+                    terminateProcess()
+                    completed = true
+                }
+            }
+            catch( Throwable e ) {
+                session.abort(e)
+            }
+        }
+    }
 
     protected void createOperator() {
+        def config = configV1()
         def opInputs = new ArrayList(config.getInputs().getChannels())
 
         /*
@@ -551,11 +606,7 @@ class TaskProcessor {
     }
 
     private start(DataflowProcessor op) {
-        if( !NF.dsl2 ) {
-            op.start()
-            return
-        }
-        session.addIgniter {
+        session.addProcessorIgniter {
             log.debug "Starting process > $name"
             op.start()
         }
@@ -566,6 +617,49 @@ class TaskProcessor {
         for( int i=0; i<size; i++ )
             result.set(i, 1)
         return result
+    }
+
+    void runV2() {
+        // -- check that the task has a body
+        if ( !taskBody )
+            throw new IllegalStateException("Missing task body for process `$name`")
+
+        // create the state agent
+        createStateObj()
+
+        // register the processor
+        session.processRegister(this)
+
+        // determine whether the process is executed only once
+        final inputs = config.getInputs().getChannels()
+        this.singleton = config.getInputs().isSingleton()
+
+        // create inputs with control channel
+        final control = CH.queue()
+        control.bind(Boolean.TRUE)
+
+        final opInputs = inputs + [control]
+        this.openPorts = createPortsArray(opInputs.size())
+
+        // The thread pool used by GPars. The thread pool to be used is set in the static
+        // initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
+        final group = Dataflow.retrieveCurrentDFPGroup()
+
+        // note: do not specify the output channels in the operator declaration
+        // this allows us to manage them independently from the operator life-cycle
+        final interceptor = new TaskProcessorInterceptor(opInputs, singleton)
+        final params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
+        final invoke = new InvokeTaskAdapter(this, opInputs.size())
+        this.operator = new DataflowOperator(group, params, invoke)
+        session.allOperators << operator
+
+        // notify the creation of a new vertex the execution DAG
+        NodeMarker.addProcessNode(this, configV2().getInputs(), configV2().getOutputs())
+
+        // start the operator
+        start(operator)
+
+        session.notifyProcessCreate(this)
     }
 
     /**
@@ -589,61 +683,57 @@ class TaskProcessor {
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
-        // -- validate input lengths
-        validateInputSets(values)
-
         // -- map the inputs to a map and use to delegate closure values interpolation
-        final secondPass = [:]
-        int count = makeTaskContextStage1(task, secondPass, values)
-        makeTaskContextStage2(task, secondPass, count)
+        final foreignFiles = session.filePorter.newBatch(executor.getStageDir())
+
+        resolveTaskInputs(task, values, foreignFiles)
 
         // verify that `when` guard, when specified, is satisfied
         if( !checkWhenGuard(task) )
             return
 
-        TaskClosure block
-        if( session.stubRun && (block=task.config.getStubBlock()) ) {
-            task.resolve(block)
-        }
-        else {
-            // -- resolve the task command script
-            task.resolve(taskBody)
-        }
+        // -- resolve the task command script
+        task.resolve(taskBody)
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )
             return
 
-        def hash = createTaskHashKey(task)
+        // -- download foreign files
+        session.filePorter.transfer(foreignFiles)
+
+        final hash = createTaskHasher(task).compute()
         checkCachedOrLaunchTask(task, hash, resumable)
     }
 
-    @Memoized
-    private List<TupleInParam> getDeclaredInputSet() {
-        getConfig().getInputs().ofType(TupleInParam)
-    }
-
-    protected void validateInputSets( List values ) {
-
-        def declaredSets = getDeclaredInputSet()
-        for( int i=0; i<declaredSets.size(); i++ ) {
-            final param = declaredSets[i]
-            final entry = values[param.index]
-            final expected = param.inner.size()
-            final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
-
-            if( actual != expected ) {
-                final msg = "Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry"
-                checkWarn(msg, [firstOnly: true, cacheKey: this])
+    /**
+     * Create the {@link TaskHasher} for the given task.
+     *
+     * The registered {@link TaskHasherFactory} extensions are asked in priority order and the
+     * first hasher returned is used; with none registered, or all abstaining, the default
+     * {@link TaskHasher} is used, exactly as when no plugin takes part in hashing.
+     *
+     * @param task The task to be hashed.
+     * @return The hasher computing the cache key of {@code task}.
+     */
+    @CompileStatic
+    protected TaskHasher createTaskHasher(TaskRun task) {
+        if( hasherFactories == null )
+            hasherFactories = Plugins.getPriorityExtensions(TaskHasherFactory) ?: Collections.<TaskHasherFactory>emptyList()
+        for( final factory : hasherFactories ) {
+            final hasher = factory.create(task)
+            if( hasher != null ) {
+                log.trace "Task: ${task.lazyName()} > Using task hasher: ${hasher.getClass().getName()}"
+                return hasher
             }
         }
+        return new TaskHasher(task)
     }
-
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
-     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     * The interpreter to be used define by the *taskConfig* property {@code shell}
      */
     static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
@@ -719,11 +809,19 @@ class TaskProcessor {
         task.config.index = task.index
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
+        task.config.setAutoResourceLabels(session?.getAutoResourceLabels())
 
+        if( config instanceof ProcessConfigV1 )
+            initializeTaskRunV1(task)
+
+        return task
+    }
+
+    private void initializeTaskRunV1(TaskRun task) {
         /*
          * initialize the inputs/outputs for this task instance
          */
-        config.getInputs().each { InParam param ->
+        configV1().getInputs().each { InParam param ->
             if( param instanceof TupleInParam )
                 param.inner.each { task.setInput(it)  }
             else if( param instanceof EachInParam )
@@ -732,78 +830,95 @@ class TaskProcessor {
                 task.setInput(param)
         }
 
-        config.getOutputs().each { OutParam param ->
+        configV1().getOutputs().each { OutParam param ->
             if( param instanceof TupleOutParam ) {
                 param.inner.each { task.setOutput(it) }
             }
             else
                 task.setOutput(param)
         }
-
-        return task
     }
 
     /**
      * Try to check if exists a previously executed process result in the a cached folder. If it exists
      * use the that result and skip the process execution, otherwise the task is sumitted for execution.
      *
+     * The resolution is delegated to the {@link TaskCacheStrategy} in use for this run -- see
+     * {@link #getCacheStrategy} -- which drives it through the {@link TaskResolver} primitives of
+     * this processor: with no plugin strategy applying, the {@link DefaultTaskCacheStrategy} runs
+     * the per-run resolution loop exactly as before.
+     *
      * @param task
      *      The {@code TaskRun} instance to be executed
      * @param hash
      *      The unique {@code HashCode} for the given task inputs
-     * @param script
-     *      The script to be run (only when it's a merge task)
-     * @return
-     *      {@code false} when a cached result has been found and the execution has skipped,
-     *      or {@code true} if the task has been submitted for execution
-     *
+     * @param shouldTryCache
+     *      Whether a cached execution may be resumed
      */
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
+        getCacheStrategy().resolve(task, hash, shouldTryCache, getTaskResolver())
+    }
 
-        int tries = task.failCount +1
-        while( true ) {
-            hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
-
-            Path resumeDir = null
-            boolean exists = false
-            try {
-                def entry = session.cache.getTaskEntry(hash, this)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
-
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
-                if( cached )
-                    break
+    /**
+     * The {@link TaskCacheStrategy} resolving the tasks of this run.
+     *
+     * The registered {@link TaskCacheStrategy} extensions are asked in priority order and the first
+     * one enabled for the session is used; with none registered, or none enabled, the
+     * {@link DefaultTaskCacheStrategy} is used, exactly as when no plugin takes part in the
+     * resolution. Resolved once, on the first task of this processor.
+     */
+    @CompileStatic
+    protected TaskCacheStrategy getCacheStrategy() {
+        if( cacheStrategy != null )
+            return cacheStrategy
+        if( cacheStrategies == null )
+            cacheStrategies = Plugins.getPriorityExtensions(TaskCacheStrategy) ?: Collections.<TaskCacheStrategy>emptyList()
+        for( final strategy : cacheStrategies ) {
+            if( strategy.isEnabled(session) ) {
+                log.trace "Process: ${name} > Using task cache strategy: ${strategy.getClass().getName()}"
+                return cacheStrategy = strategy
             }
-            catch (Throwable t) {
-                log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
-            }
+        }
+        return cacheStrategy = new DefaultTaskCacheStrategy()
+    }
 
-            if( exists ) {
-                tries++
-                continue
-            }
+    /**
+     * The {@link TaskResolver} a {@link TaskCacheStrategy} resolves the tasks of this processor with.
+     */
+    @CompileStatic
+    protected TaskResolver getTaskResolver() {
+        if( taskResolver == null )
+            taskResolver = new Resolver()
+        return taskResolver
+    }
 
-            final lock = lockManager.acquire(hash)
-            final workDir = task.getWorkDirFor(hash)
-            try {
-                if( resumeDir != workDir )
-                    exists = workDir.exists()
-                if( !exists && !workDir.mkdirs() )
-                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
-            }
-            finally {
-                lock.release()
-            }
+    /**
+     * Adapts the resume / launch primitives of this processor to the {@link TaskResolver} contract,
+     * so a strategy never touches the processor itself.
+     */
+    @CompileStatic
+    private class Resolver implements TaskResolver {
 
-            // submit task for execution
-            submitTask( task, hash, workDir )
-            break
+        @Override
+        TaskEntry entry(HashCode key) {
+            return session.cache.getTaskEntry(key, TaskProcessor.this)
         }
 
+        @Override
+        boolean resume(TaskRun task, HashCode key, Path workDir, TaskEntry entry) {
+            return checkCachedOutput(task.clone(), workDir, key, entry)
+        }
+
+        @Override
+        void launch(TaskRun task, HashCode key, Path workDir) {
+            submitTask(task, key, workDir)
+        }
+
+        @Override
+        Path workDirFor(HashCode key) {
+            return FileHelper.getWorkFolder(executor.getWorkDir(), key)
+        }
     }
 
     /**
@@ -816,28 +931,18 @@ class TaskProcessor {
      */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.config.storeDir ) {
-            log.trace "[${safeTaskName(task)}] Store dir not set -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir not set -- return false"
             return false
         }
 
         // -- when store path is set, only output params of type 'file' can be specified
-        final ctx = task.context
-        def invalid = task.getOutputs().keySet().any {
-            if( it instanceof ValueOutParam ) {
-                return !ctx.containsKey(it.name)
-            }
-            if( it instanceof FileOutParam ) {
-                return false
-            }
-            return true
-        }
-        if( invalid ) {
-            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
+        if( isInvalidStoreDir(task) ) {
+            checkWarn "[${safeTaskName(task)}] storeDir can only be used with `val` and `path` outputs"
             return false
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -859,11 +964,31 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
         }
+    }
+
+    protected boolean isInvalidStoreDir(TaskRun task) {
+        final ctx = task.context
+
+        if( config instanceof ProcessConfigV1 ) {
+            return task.getOutputs().keySet().any { param ->
+                if( param instanceof ValueOutParam )
+                    return false
+                if( param instanceof FileOutParam )
+                    return false
+                return true
+            }
+        }
+
+        if( config instanceof ProcessConfigV2 ) {
+            return config.getOutputs().getFiles().isEmpty()
+        }
+
+        return false
     }
 
     /**
@@ -920,16 +1045,17 @@ class TaskProcessor {
         }
 
         try {
-            // -- expose task exit status to make accessible as output value
+            // -- set task properties in order to resolve task outputs
+            task.workDir = folder
+            task.config.workDir = folder
+            task.stdout = stdoutFile
             task.config.exitStatus = exitCode
             // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, task.context)
+            collectOutputs(task)
 
             // set the exit code in to the task object
             task.cached = true
             task.hash = hash
-            task.workDir = folder
-            task.stdout = stdoutFile
             if( exitCode != null ) {
                 task.exitStatus = exitCode
             }
@@ -982,7 +1108,7 @@ class TaskProcessor {
      *      a {@link ErrorStrategy#TERMINATE})
      */
     @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
@@ -1014,8 +1140,11 @@ class TaskProcessor {
                 return RETRY
             }
 
-            final int taskErrCount = task ? ++task.failCount : 0
-            final int procErrCount = ++errorCount
+            final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
+            final submitErrMsg = submitTimeout ? error.cause.message : null
+            final int submitRetries = submitTimeout ? ++task.submitRetries : 0
+            final int taskErrCount = !submitTimeout && task ? ++task.failCount : 0
+            final int procErrCount = !submitTimeout ? ++errorCount : errorCount
 
             // -- when is a task level error and the user has chosen to ignore error,
             //    just report and error message and DO NOT stop the execution
@@ -1024,12 +1153,18 @@ class TaskProcessor {
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
+                //Add trace of the previous execution in the task context for next execution
+                if ( traceRecord )
+                    task.config.previousTrace = traceRecord
+                task.config.previousException = error
 
-                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
+                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
-                    def msg = "[$task.hashLog] NOTE: $error.message"
-                    if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
+                    def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
+                    if( errorStrategy == IGNORE )
+                        msg += " -- Error is ignored"
+                    else if( errorStrategy == RETRY )
+                        msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
                     task.errorAction = errorStrategy
@@ -1050,18 +1185,23 @@ class TaskProcessor {
             }
 
             def dumpStackTrace = log.isTraceEnabled()
+            def errorFormatter = new TaskErrorFormatter()
             message << "Error executing process > '${safeTaskName(task)}'"
             switch( error ) {
                 case ProcessException:
-                    formatTaskError( message, error, task )
+                    errorFormatter.formatTaskError( message, error, task )
+                    break
+
+                case ProcessEvalException:
+                    errorFormatter.formatCommandError( message, error, task )
                     break
 
                 case FailedGuardException:
-                    formatGuardError( message, error as FailedGuardException, task )
+                    errorFormatter.formatGuardError( message, error as FailedGuardException, task )
                     break;
 
                 default:
-                    message << formatErrorCause(error)
+                    message << errorFormatter.formatErrorCause(error)
                     dumpStackTrace = true
             }
 
@@ -1084,12 +1224,12 @@ class TaskProcessor {
                 : name
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
 
         final action = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessUnrecoverableException ) {
+        if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
             return !action.soft ? action : TERMINATE
         }
 
@@ -1103,11 +1243,12 @@ class TaskProcessor {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
-            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
+            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries && submitRetries <= maxRetries ) {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
                         taskCopy.config.attempt = taskErrCount+1
+                        taskCopy.config.submitAttempt = submitRetries+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
@@ -1126,122 +1267,17 @@ class TaskProcessor {
         return action
     }
 
-    final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
-        // compose a readable error message
-        message << formatErrorCause(error)
-
-        if( error.source )  {
-            message << "\nWhen block:"
-            error.source.stripIndent(true).eachLine {
-                message << "  $it"
-            }
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        return message
-    }
-
-    final protected List<String> formatTaskError( List<String> message, Throwable error, TaskRun task ) {
-
-        // compose a readable error message
-        message << formatErrorCause( error )
-
-        /*
-         * task executing scriptlets
-         */
-        if( task?.script ) {
-            // - print the executed command
-            message << "Command executed${task.template ? " [$task.template]": ''}:\n"
-            task.script?.stripIndent(true)?.trim()?.eachLine {
-                message << "  ${it}"
-            }
-
-            // - the exit status
-            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
-
-            // - the tail of the process stdout
-            message << "\nCommand output:"
-            final max = 50
-            def lines = task.dumpStdout(max)
-            if( lines.size() == 0 ) {
-                message << "  (empty)"
-            }
-            for( String it : lines ) {
-                message << "  ${stripWorkDir(it, task.workDir)}"
-            }
-
-            // - the tail of the process stderr
-            lines = task.dumpStderr(max)
-            if( lines ) {
-                message << "\nCommand error:"
-                for( String it : lines ) {
-                    message << "  ${stripWorkDir(it, task.workDir)}"
-                }
-            }
-            // - this is likely a task wrapper issue
-            else if( task.exitStatus != 0 ) {
-                lines = task.dumpLogFile(max)
-                if( lines ) {
-                    message << "\nCommand wrapper:"
-                    for( String it : lines ) {
-                        message << "  ${stripWorkDir(it, task.workDir)}"
-                    }
-                }
-            }
-
-        }
-        else {
-            if( task?.source )  {
-                message << "Source block:"
-                task.source.stripIndent(true).eachLine {
-                    message << "  $it"
-                }
-            }
-
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        message << "\nTip: ${getRndTip()}"
-
-        return message
-    }
-
-    private static String stripWorkDir(String line, Path workDir) {
-        if( workDir==null ) return line
-        if( workDir.fileSystem != FileSystems.default ) return line
-        return workDir ? line.replace(workDir.toString()+'/','') : line
-    }
-
-    static List tips = [
-            'when you have fixed the problem you can continue the execution adding the option `-resume` to the run command line',
-            "you can try to figure out what's wrong by changing to the process work dir and showing the script file named `${TaskRun.CMD_SCRIPT}`",
-            "view the complete command output by changing to the process work dir and entering the command `cat ${TaskRun.CMD_OUTFILE}`",
-            "you can replicate the issue by changing to the process work dir and entering the command `bash ${TaskRun.CMD_RUN}`"
-    ]
-
-    static Random RND = Random.newInstance()
-
-    /**
-     * Display a random tip at the bottom of the error report
-     *
-     * @return The tip string to display
-     */
-    protected String getRndTip() {
-        tips[ RND.nextInt( tips.size() ) ]
-    }
-
-
     /**
      * Send a poison pill over all the outputs channel
      */
     final protected synchronized void sendPoisonPill() {
         log.trace "<$name> Sending a poison pill(s)"
 
-        for( DataflowWriteChannel channel : config.getOutputs().getChannels() ){
+        final channels = config instanceof ProcessConfigV2
+            ? configV2().getOutputs().getChannels()
+            : configV1().getOutputs().getChannels()
+
+        for( DataflowWriteChannel channel : channels ){
 
             if( channel instanceof DataflowQueue ) {
                 channel.bind( PoisonPill.instance )
@@ -1253,47 +1289,6 @@ class TaskProcessor {
                 channel.bind( PoisonPill.instance )
             }
         }
-    }
-
-    private String formatErrorCause( Throwable error ) {
-
-        def result = new StringBuilder()
-        result << '\nCaused by:\n'
-
-        def message
-        if( error instanceof ShowOnlyExceptionMessage || !error.cause )
-            message = err0(error)
-        else
-            message = err0(error.cause)
-
-        result
-            .append('  ')
-            .append(message)
-            .append('\n')
-            .toString()
-    }
-
-
-    static String err0(Throwable e) {
-        final fail = e instanceof InvocationTargetException ? e.targetException : e
-
-        if( fail instanceof NoSuchFileException ) {
-            return "No such file or directory: $fail.message"
-        }
-        if( fail instanceof MissingPropertyException ) {
-            def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
-            def result = "No such variable: ${name}"
-            def details = LoggerHelper.findErrorLine(fail)
-            if( details )
-                result += " -- Check script '${details[0]}' at line: ${details[1]}"
-            return result
-        }
-        def result = fail.message ?: fail.toString()
-        def details = LoggerHelper.findErrorLine(fail)
-        if( details ){
-            result += " -- Check script '${details[0]}' at line: ${details[1]}"
-        }
-        return result
     }
 
     /**
@@ -1314,12 +1309,29 @@ class TaskProcessor {
         }
     }
 
+    @CompileStatic
     private void publishOutputs0( TaskRun task, PublishDir publish ) {
 
         if( publish.overwrite == null ) {
             publish.overwrite = !task.cached
         }
 
+        final files = getPublishFiles(task)
+
+        publish.apply(files, task)
+    }
+
+    @CompileStatic
+    private Set<Path> getPublishFiles(TaskRun task) {
+        if( config instanceof ProcessConfigV1 )
+            return getPublishFilesV1(task)
+        if( config instanceof ProcessConfigV2 )
+            return task.outputFiles
+        return null
+    }
+
+    @CompileStatic
+    private Set<Path> getPublishFilesV1(TaskRun task) {
         HashSet<Path> files = []
         def outputs = task.getOutputsByType(FileOutParam)
         for( Map.Entry entry : outputs ) {
@@ -1327,15 +1339,14 @@ class TaskProcessor {
             if( value instanceof Path ) {
                 files.add((Path)value)
             }
-            else if( value instanceof Collection<Path> ) {
+            else if( value instanceof Collection ) {
                 files.addAll(value)
             }
             else if( value != null ) {
                 throw new IllegalArgumentException("Unknown output file object [${value.class.name}]: ${value}")
             }
         }
-
-        publish.apply(files, task)
+        return files
     }
 
     /**
@@ -1344,9 +1355,64 @@ class TaskProcessor {
      */
     synchronized protected void bindOutputs( TaskRun task ) {
 
+        // bind the output
+        if( isFair0 ) {
+            fairBindOutputs0(task)
+        }
+        else {
+            bindOutputs0(task)
+        }
+
+        // -- finally prints out the task output when 'debug' is true
+        if( task.config.debug ) {
+            task.echoStdout(session)
+        }
+    }
+
+    protected void fairBindOutputs0(TaskRun task) {
+        synchronized (isFair0) {
+            // decrement -1 because tasks are 1-based
+            final index = task.index-1
+            // store the task emission values in a buffer
+            fairBuffers[index-currentEmission] = task
+            // check if the current task index matches the expected next emission index
+            if( currentEmission == index ) {
+                while( task!=null ) {
+                    // bind the emission values
+                    bindOutputs0(task)
+                    // remove the head and try with the following
+                    fairBuffers.remove(0)
+                    // increase the index of the next emission
+                    currentEmission++
+                    // take the next task
+                    task = fairBuffers[0]
+                }
+            }
+        }
+    }
+
+    protected void bindOutputs0(TaskRun task) {
+        if( config instanceof ProcessConfigV2 )
+            bindOutputsV2(task)
+        else if( config instanceof ProcessConfigV1 )
+            bindOutputsV1(task)
+    }
+
+    @CompileStatic
+    protected void bindOutputsV2(TaskRun task) {
+        for( final param : configV2().getOutputs().getParams() ) {
+            final value = task.outputs[param]
+
+            log.trace "Process $name > Emitting output: ${param.name} = ${value}"
+            param.getChannel().bind(value)
+        }
+    }
+
+    protected void bindOutputsV1(TaskRun task) {
+
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
-        for( OutParam param : config.getOutputs() ) {
+        for( OutParam param : configV1().getOutputs() ) {
             tuples.put(param.index, [])
         }
 
@@ -1378,45 +1444,8 @@ class TaskProcessor {
             }
         }
 
-        // bind the output
-        if( isFair0 ) {
-            fairBindOutputs0(tuples, task)
-        }
-        else {
-            bindOutputs0(tuples)
-        }
-
-        // -- finally prints out the task output when 'debug' is true
-        if( task.config.debug ) {
-            task.echoStdout(session)
-        }
-    }
-
-    protected void fairBindOutputs0(Map<Short,List> emissions, TaskRun task) {
-        synchronized (isFair0) {
-            // decrement -1 because tasks are 1-based
-            final index = task.index-1
-            // store the task emission values in a buffer
-            fairBuffers[index-currentEmission] = emissions
-            // check if the current task index matches the expected next emission index
-            if( currentEmission == index ) {
-                while( emissions!=null ) {
-                    // bind the emission values
-                    bindOutputs0(emissions)
-                    // remove the head and try with the following
-                    fairBuffers.remove(0)
-                    // increase the index of the next emission
-                    currentEmission++
-                    // take the next emissions 
-                    emissions = fairBuffers[0]
-                }
-            }
-        }
-    }
-
-    protected void bindOutputs0(Map<Short,List> tuples) {
         // -- bind out the collected values
-        for( OutParam param : config.getOutputs() ) {
+        for( OutParam param : configV1().getOutputs() ) {
             final outValue = tuples[param.index]
             if( outValue == null )
                 throw new IllegalStateException()
@@ -1445,256 +1474,60 @@ class TaskProcessor {
         }
     }
 
-    protected void collectOutputs( TaskRun task ) {
-        collectOutputs( task, task.getTargetDir(), task.@stdout, task.context )
-    }
-
     /**
      * Once the task has completed this method is invoked to collected all the task results
      *
      * @param task
      */
-    final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
-        log.trace "<$name> collecting output: ${task.outputs}"
+    @CompileStatic
+    protected void collectOutputs( TaskRun task ) {
+        if( config instanceof ProcessConfigV2 )
+            collectOutputsV2( task )
+        else if( config instanceof ProcessConfigV1 )
+            collectOutputsV1( task )
+    }
 
-        for( OutParam param : task.outputs.keySet() ) {
+    @CompileStatic
+    protected void collectOutputsV2(TaskRun task) {
+        final declaredOutputs = configV2().getOutputs()
+        final resolver = new TaskOutputResolver(declaredOutputs.getFiles(), task)
 
-            switch( param ) {
-                case StdOutParam:
-                    collectStdOut(task, (StdOutParam)param, stdout)
-                    break
-
-                case FileOutParam:
-                    collectOutFiles(task, (FileOutParam)param, workDir, context)
-                    break
-
-                case ValueOutParam:
-                    collectOutValues(task, (ValueOutParam)param, context)
-                    break
-
-                case EnvOutParam:
-                    collectOutEnvParam(task, (EnvOutParam)param, workDir)
-                    break
-
-                case DefaultOutParam:
-                    task.setOutput(param, DefaultOutParam.Completion.DONE)
-                    break
-
-                default:
-                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
-            }
+        for( final param : declaredOutputs.getParams() ) {
+            final value = resolver.resolve(param.getLazyValue())
+            task.setOutput(param, value)
         }
 
-        // mark ready for output binding
+        for( final topic : declaredOutputs.getTopics() ) {
+            final value = resolver.resolve(topic.getLazyValue())
+            topic.getChannel().bind(value)
+        }
+
         task.canBind = true
     }
 
-    protected void collectOutEnvParam(TaskRun task, EnvOutParam param, Path workDir) {
+    @CompileStatic
+    protected void collectOutputsV1( TaskRun task ) {
+        log.trace "<$name> collecting output: ${task.outputs}"
 
-        // fetch the output value
-        final val = collectOutEnvMap(workDir).get(param.name)
-        if( val == null && !param.optional )
-            throw new MissingValueException("Missing environment variable: $param.name")
-        // set into the output set
-        task.setOutput(param,val)
-        // trace the result
-        log.trace "Collecting param: ${param.name}; value: ${val}"
+        final resolver = new TaskOutputResolverV1(task)
 
-    }
+        for( OutParam param : task.outputs.keySet() )
+            resolver.resolve(param)
 
-    @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir) {
-        final env = workDir.resolve(TaskRun.CMD_ENV).text
-        final result = new HashMap(50)
-        for(String line : env.readLines() ) {
-            def (k,v) = tokenize0(line)
-            if (!k) continue
-            result.put(k,v)
-        }
-        return result
-    }
-
-    private List<String> tokenize0(String line) {
-        int p=line.indexOf('=')
-        return p==-1
-                ? List.of(line,'')
-                : List.of(line.substring(0,p), line.substring(p+1))
-    }
-    
-    /**
-     * Collects the process 'std output'
-     *
-     * @param task The executed process instance
-     * @param param The declared {@link StdOutParam} object
-     * @param stdout The object holding the task produced std out object
-     */
-    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
-
-        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
-        }
-
-        if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
-        }
-
-        task.setOutput(param, stdout)
-    }
-
-
-    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
-
-        final List<Path> allFiles = []
-        // type file parameter can contain a multiple files pattern separating them with a special character
-        def entries = param.getFilePatterns(context, task.workDir)
-        boolean inputsRemovedFlag = false
-        // for each of them collect the produced files
-        for( String filePattern : entries ) {
-            List<Path> result = null
-
-            def splitter = param.glob ? FilePatternSplitter.glob().parse(filePattern) : null
-            if( splitter?.isPattern() ) {
-                result = fetchResultFiles(param, filePattern, workDir)
-                // filter the inputs
-                if( result && !param.includeInputs ) {
-                    result = filterByRemovingStagedInputs(task, result, workDir)
-                    log.trace "Process ${safeTaskName(task)} > after removing staged inputs: ${result}"
-                    inputsRemovedFlag |= (result.size()==0)
-                }
-            }
-            else {
-                def path = param.glob ? splitter.strip(filePattern) : filePattern
-                def file = workDir.resolve(path)
-                def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
-                if( exists )
-                    result = [file]
-                else
-                    log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
-            }
-
-            if( result )
-                allFiles.addAll(result)
-
-            else if( !param.optional ) {
-                def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
-                if( inputsRemovedFlag )
-                    msg += " (note: input files are not included in the default matching set)"
-                throw new MissingFileException(msg)
-            }
-        }
-
-        task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
-
-    }
-
-
-    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
-
-        try {
-            // fetch the output value
-            final val = param.resolve(ctx)
-            // set into the output set
-            task.setOutput(param,val)
-            // trace the result
-            log.trace "Collecting param: ${param.name}; value: ${val}"
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
-        }
-
-    }
-
-    /**
-     * Collect the file(s) with the name specified, produced by the execution
-     *
-     * @param workDir The job working path
-     * @param namePattern The file name, it may include file name wildcards
-     * @return The list of files matching the specified name in lexicographical order
-     * @throws MissingFileException when no matching file is found
-     */
-    @PackageScope
-    List<Path> fetchResultFiles( FileOutParam param, String namePattern, Path workDir ) {
-        assert namePattern
-        assert workDir
-
-        List<Path> files = []
-        def opts = visitOptions(param, namePattern)
-        // scan to find the file with that name
-        try {
-            FileHelper.visitFiles(opts, workDir, namePattern) { Path it -> files.add(it) }
-        }
-        catch( NoSuchFileException e ) {
-            throw new MissingFileException("Cannot access directory: '$workDir'", e)
-        }
-
-        return files.sort()
-    }
-
-    /**
-     * Given a {@link FileOutParam} object create the option map for the
-     * {@link FileHelper#visitFiles(java.util.Map, java.nio.file.Path, java.lang.String, groovy.lang.Closure)} method
-     *
-     * @param param A task {@link FileOutParam}
-     * @param namePattern A file glob pattern
-     * @return A {@link Map} object holding the traverse options for the {@link FileHelper#visitFiles(java.util.Map, java.nio.file.Path, java.lang.String, groovy.lang.Closure)} method
-     */
-    @PackageScope
-    Map visitOptions( FileOutParam param, String namePattern ) {
-        final opts = [:]
-        opts.relative = false
-        opts.hidden = param.hidden ?: namePattern.startsWith('.')
-        opts.followLinks = param.followLinks
-        opts.maxDepth = param.maxDepth
-        opts.type = param.type ? param.type : ( namePattern.contains('**') ? 'file' : 'any' )
-        return opts
-    }
-
-    /**
-     * Given a list of {@code Path} removes all the hidden file i.e. the ones which names starts with a dot char
-     * @param files A list of {@code Path}
-     * @return The result list not containing hidden file entries
-     */
-    @PackageScope
-    List<Path> filterByRemovingHiddenFiles( List<Path> files ) {
-        files.findAll { !it.getName().startsWith('.') }
-    }
-
-    /**
-     * Given a list of {@code Path} removes all the entries which name match the name of
-     * file used as input for the specified {@code TaskRun}
-     *
-     * See TaskRun#getStagedInputs
-     *
-     * @param task
-     *      A {@link TaskRun} object representing the task executed
-     * @param collectedFiles
-     *      Collection of candidate output files
-     * @return
-     *      List of the actual output files (not including any input matching an output file name pattern)
-     */
-    @PackageScope
-    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> collectedFiles, Path workDir ) {
-
-        // get the list of input files
-        final List<String> allStaged = task.getStagedInputs()
-        final List<Path> result = new ArrayList<>(collectedFiles.size())
-
-        for( int i=0; i<collectedFiles.size(); i++ ) {
-            final it = collectedFiles.get(i)
-            final relName = workDir.relativize(it).toString()
-            if( !allStaged.contains(relName) )
-                result.add(it)
-        }
-
-        return result
+        // mark ready for output binding
+        task.canBind = true
     }
 
     @Memoized
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta?.isModule() ? meta.getModuleBundle() : null
+        // No script meta registered (e.g. processors not tied to a loaded script): nothing to resolve.
+        if( meta == null )
+            return null
+        // Resolve the bundle when the owner script is either an included module,
+        // or the entry script of a `nextflow module run` invocation (see #7087).
+        return (meta.isModule() || session.isModuleRun()) ? meta.getModuleBundle() : null
     }
 
     @Memoized
@@ -1726,7 +1559,11 @@ class TaskProcessor {
         // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {
             session.config.env.each { name, value ->
-                result.put( name, value?.toString() )
+                // skip entries with a null value (e.g. `env(HOST_VAR)` referencing a
+                // host environment variable that is not set) instead of exporting
+                // them as an empty string with a spurious warning -- see #5722
+                if( value != null )
+                    result.put( name, value.toString() )
             }
         }
         else {
@@ -1755,207 +1592,10 @@ class TaskProcessor {
     }
 
     /**
-     * An input file parameter can be provided with any value other than a file.
-     * This function normalize a generic value to a {@code Path} create a temporary file
-     * in the for it.
-     *
-     * @param input The input value
-     * @param altName The name to be used when a temporary file is created.
-     * @return The {@code Path} that will be staged in the task working folder
-     */
-    protected FileHolder normalizeInputToFile( Object input, String altName ) {
-
-        /*
-         * when it is a local file, just return a reference holder to it
-         */
-        if( input instanceof Path ) {
-            return new FileHolder(input)
-        }
-
-        /*
-         * default case, convert the input object to a string and save
-         * to a local file
-         */
-        def source = input?.toString() ?: ''
-        def result = Nextflow.tempFile(altName)
-        result.text = source
-        return new FileHolder(source, result)
-    }
-
-    protected Path normalizeToPath( obj ) {
-        if( obj instanceof Path )
-            return obj
-
-        if( !obj == null )
-            throw new ProcessUnrecoverableException("Path value cannot be null")
-        
-        if( !(obj instanceof CharSequence) )
-            throw new ProcessUnrecoverableException("Not a valid path value type: ${obj.getClass().getName()} ($obj)")
-
-        def str = obj.toString().trim()
-        if( str.contains('\n') )
-            throw new ProcessUnrecoverableException("Path value cannot contain a new-line character: $str")
-        if( str.startsWith('/') )
-            return FileHelper.asPath(str)
-        if( FileHelper.getUrlProtocol(str) )
-            return FileHelper.asPath(str)
-        if( !str )
-            throw new ProcessUnrecoverableException("Path value cannot be empty")
-        
-        throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
-    }
-
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
-
-        Collection allItems = obj instanceof Collection ? obj : [obj]
-        def len = allItems.size()
-
-        // use a bag so that cache hash key is not affected by file entries order
-        def files = new ArrayBag<FileHolder>(len)
-        for( def item : allItems ) {
-
-            if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
-                def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
-                def holder = new FileHolder(target)
-                files << holder
-            }
-            else {
-                files << normalizeInputToFile(item, "input.${++count}")
-            }
-        }
-
-        return files
-    }
-
-    protected singleItemOrList( List<FileHolder> items, ScriptType type ) {
-        assert items != null
-
-        if( items.size() == 1 ) {
-            return makePath(items[0],type)
-        }
-
-        def result = new ArrayList(items.size())
-        for( int i=0; i<items.size(); i++ ) {
-            result.add( makePath(items[i],type) )
-        }
-        return new BlankSeparatedList(result)
-    }
-
-    private Path makePath( FileHolder holder, ScriptType type ) {
-        if( type == ScriptType.SCRIPTLET ) {
-            return new TaskPath(holder)
-        }
-        if( type == ScriptType.GROOVY) {
-            // the real path for the native task needs to be fixed -- see #378
-            return Paths.get(holder.stageName)
-        }
-        throw new IllegalStateException("Unknown task type: $type")
-    }
-
-
-    /**
-     * An input file name may contain wildcards characters which have to be handled coherently
-     * given the number of files specified.
-     *
-     * @param name A file name with may contain a wildcard character star {@code *} or question mark {@code ?}.
-     *  Only one occurrence can be specified for star or question mark wildcards.
-     *
-     * @param value Any value that have to be managed as an input files. Values other than {@code Path} are converted
-     * to a string value, using the {@code #toString} method and saved in the local file-system. Value of type {@code Collection}
-     * are expanded to multiple values accordingly.
-     *
-     * @return
-     */
-    @CompileStatic
-    protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
-        assert files != null
-
-        // use an unordered so that cache hash key is not affected by file entries order
-        final result = new ArrayBag(files.size())
-        if( files.size()==0 ) { return result }
-
-        if( !name || name == '*' ) {
-            result.addAll(files)
-            return result
-        }
-
-        if( !name.contains('*') && !name.contains('?') && files.size()>1 ) {
-            /*
-             * When name do not contain any wildcards *BUT* multiple files are provide
-             * it is managed like having a 'star' at the end of the file name
-             */
-            name += '*'
-        }
-
-        for( int i=0; i<files.size(); i++ ) {
-            def holder = files[i]
-            def newName = expandWildcards0(name, holder.stageName, i+1, files.size())
-            result << holder.withName( newName )
-        }
-
-        return result
-    }
-
-    @CompileStatic
-    protected String replaceQuestionMarkWildcards(String name, int index) {
-        def result = new StringBuffer()
-
-        Matcher m = QUESTION_MARK.matcher(name)
-        while( m.find() ) {
-            def match = m.group(1)
-            def repString = String.valueOf(index).padLeft(match.size(), '0')
-            m.appendReplacement(result, repString)
-        }
-        m.appendTail(result)
-        result.toString()
-    }
-
-    @CompileStatic
-    protected String replaceStarWildcards(String name, int index, boolean strip=false) {
-        name.replaceAll(/\*/, strip ? '' : String.valueOf(index))
-    }
-
-    @CompileStatic
-    protected String expandWildcards0( String path, String stageName, int index, int size ) {
-
-        String name
-        String parent
-        int p = path.lastIndexOf('/')
-        if( p == -1 ) {
-            parent = null
-            name = path
-        }
-        else {
-            parent = path.substring(0,p)
-            name = path.substring(p+1)
-        }
-
-        if( name == '*' || !name ) {
-            name = stageName
-        }
-        else {
-            final stripWildcard = size<=1 // <-- string the start wildcard instead of expanding to an index number when the collection contain only one file
-            name = replaceStarWildcards(name, index, stripWildcard)
-            name = replaceQuestionMarkWildcards(name, index)
-        }
-
-        if( parent ) {
-            parent = replaceStarWildcards(parent, index)
-            parent = replaceQuestionMarkWildcards(parent, index)
-            return "$parent/$name"
-        }
-        else {
-            return name
-        }
-
-    }
-
-    /**
      * Given a map holding variables key-value pairs, create a script fragment
      * exporting the required environment variables
      */
-    static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
+    static String bashEnvironmentScript( Map<String,String> environment ) {
         if( !environment )
             return null
 
@@ -1968,12 +1608,8 @@ class TaskProcessor {
                 log.warn "Environment variable `$name` evaluates to an empty value"
                 script << "export $name=''"
             }
-            else if( !escape ) {
-                script << /export $name="$value"/
-            }
             else {
-                // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${Escape.variable(value)}"/
+                script << /export $name="$value"/
             }
         }
         script << ''
@@ -1981,10 +1617,31 @@ class TaskProcessor {
         return script.join('\n')
     }
 
-    final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
+    final protected void resolveTaskInputs(TaskRun task, List values, FilePorter.Batch foreignFiles) {
+        if( config instanceof ProcessConfigV1 )
+            resolveTaskInputsV1(task, values, foreignFiles)
+        else if( config instanceof ProcessConfigV2 )
+            resolveTaskInputsV2(task, values, foreignFiles)
+    }
 
-        final contextMap = task.context
-        int count = 0
+    private void resolveTaskInputsV1(TaskRun task, List values, FilePorter.Batch foreignFiles) {
+
+        // -- validate input lengths
+        for( final param : configV1().getInputs().ofType(TupleInParam) ) {
+            final value = values[param.index]
+            final expected = param.inner.size()
+            final actual = value instanceof Collection
+                ? value.size()
+                : (value instanceof Map ? value.size() : 1)
+
+            if( actual != expected ) {
+                final message = "Input tuple does not match tuple declaration in process `$name` -- offending value: $value"
+                checkWarn(message, [firstOnly: true, cacheKey: this])
+            }
+        }
+
+        // -- add input params to task context
+        final Map<FileInParam,?> fileParams = [:]
 
         task.inputs.keySet().each { InParam param ->
 
@@ -1993,16 +1650,19 @@ class TaskProcessor {
 
             switch(param) {
                 case ValueInParam:
-                    contextMap.put( param.name, val )
+                    task.context.put(param.name, val)
                     break
 
                 case FileInParam:
-                    secondPass[param] = val
+                    fileParams[param] = val
                     return // <-- leave it, because we do not want to add this 'val' at this stage
 
                 case StdInParam:
+                    task.stdin = val
+                    break
+
                 case EnvInParam:
-                    // nothing to do
+                    task.inputEnv.put(param.name, val?.toString())
                     break
 
                 default:
@@ -2013,183 +1673,207 @@ class TaskProcessor {
             task.setInput(param, val)
         }
 
-        return count
-    }
-
-    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
-
-        final ctx = task.context
-        final allNames = new HashMap<String,Integer>()
-
-        final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
-
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
-        for( Map.Entry<FileInParam,?> entry : secondPass.entrySet() ) {
+        final resolver = new TaskInputResolver(task, foreignFiles, executor)
+
+        for( Map.Entry<FileInParam,?> entry : fileParams.entrySet() ) {
             final param = entry.getKey()
             final val = entry.getValue()
-            final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
-            final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, singleItemOrList(resolved, task.type) )
-            count += resolved.size()
-            for( FileHolder item : resolved ) {
-                Integer num = allNames.getOrCreate(item.stageName, 0) +1
-                allNames.put(item.stageName,num)
-            }
+            final resolved = resolver.resolve(param, val)
+
+            if( !param.isValidArity(resolved.size()) )
+                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
 
             // add the value to the task instance context
             task.setInput(param, resolved)
+            task.inputFiles.addAll(resolved)
+        }
+
+        // -- set the delegate map as context in the task config
+        //    so that lazy directives will be resolved against it
+        task.config.context = task.context
+
+        // check conflicting file names
+        checkConflicts(task.inputFiles)
+    }
+
+    /**
+     * Check that no stage name is used by more than one file.
+     * The same file staged multiple times under the same name
+     * is not a conflict.
+     */
+    @CompileStatic
+    private void checkConflicts(List<FileHolder> allFiles) {
+        final allNames = new LinkedHashMap<String,Map<Path,FileHolder>>()
+        for( final holder : allFiles )
+            allNames.computeIfAbsent(holder.stageName, k -> new LinkedHashMap<Path,FileHolder>()).putIfAbsent(holder.storePath, holder)
+
+        final conflicts = allNames.findAll { name, holders -> holders.size() > 1 }
+        if( conflicts ) {
+            final names = conflicts.collect { name, holders ->
+                final paths = holders.values().collect { FileHolder h -> h.sourcePath ?: h.storePath }
+                "${name} (${truncateList(paths, 3)})".toString()
+            }
+            final message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${truncateList(names, 10)}"
+            throw new ProcessUnrecoverableException(message)
+        }
+    }
+
+    @CompileStatic
+    private static String truncateList(List items, int max) {
+        return items.size() > max
+            ? items.take(max).join(', ') + ", ... ${items.size() - max} more"
+            : items.join(', ')
+    }
+
+    @CompileStatic
+    private void resolveTaskInputsV2(TaskRun task, List values, FilePorter.Batch foreignFiles) {
+        final declaredInputs = configV2().getInputs()
+        final ctx = task.context
+
+        // -- remove control input
+        values = values.init()
+
+        // -- validate input lengths
+        if( declaredInputs.size() != values.size() )
+            throw new ProcessUnrecoverableException("Process `$name` declares ${declaredInputs.size()} inputs but received ${values.size()} -- offending value: $values")
+
+        // -- add input params to task context
+        for( int i = 0; i < declaredInputs.getParams().size(); i++ ) {
+            final param = declaredInputs.getParams()[i]
+            final value = values[i]
+            if( param instanceof ProcessTupleInput && param.getType() == Record.class )
+                assignTaskRecordInput(task, param, value, i)
+            else if( param instanceof ProcessTupleInput && param.getType() == Tuple.class )
+                assignTaskTupleInput(task, param, value, i)
+            else
+                assignTaskInput(task, param, value, i)
+        }
+
+        // -- resolve environment vars
+        for( final entry : declaredInputs.getEnv() ) {
+            final value = ctx.resolveLazy(entry.value)
+            task.inputEnv.put(entry.key, value?.toString())
+        }
+
+        // -- resolve stdin
+        task.stdin = ctx.resolveLazy(declaredInputs.stdin)
+
+        // -- resolve input files
+        final resolver = new TaskInputResolver(task, foreignFiles, executor)
+        final resolvedValues = new HashSet<>()
+
+        for( final fileInput : declaredInputs.getFiles() ) {
+            final value = fileInput.resolve(ctx)
+            // allow nullable file inputs
+            if( value == null )
+                continue
+            // user-defined file stagers take precedence over default file stagers
+            if( resolvedValues.contains(value) )
+                continue
+            final resolved = resolver.resolve(fileInput, value)
+            task.inputFiles.addAll(resolved)
+            resolvedValues.add(value)
+        }
+
+        // -- check conflicting file names
+        checkConflicts(task.inputFiles)
+
+        // -- normalize input values by replacing source paths with staged paths
+        final Map<Path,FileHolder> holders = [:]
+        for( final holder : task.inputFiles )
+            holders.put(holder.getSourcePath(), holder)
+
+        for( final param : declaredInputs.getParams() ) {
+            if( param instanceof ProcessTupleInput ) {
+                for( final innerParam : param.getComponents() ) {
+                    final value = task.inputs[innerParam]
+                    final normalizedValue = resolver.normalizeValue(value, holders)
+                    task.context.put( innerParam.name, normalizedValue )
+                }
+            }
+            else {
+                final value = task.inputs[param]
+                final normalizedValue = resolver.normalizeValue(value, holders)
+                task.context.put( param.name, normalizedValue )
+            }
         }
 
         // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
-
-        // check conflicting file names
-        def conflicts = allNames.findAll { name, num -> num>1 }
-        if( conflicts ) {
-            log.debug("Process $name > collision check staging file names: $allNames")
-            def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
-            throw new ProcessUnrecoverableException(message)
-        }
-
-        // -- download foreign files
-        session.filePorter.transfer(batch)
     }
 
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
-
-        // set hash-code & working directory
-        task.hash = hash
-        task.workDir = folder
-        task.config.workDir = folder
-        task.config.hash = hash.toString()
-        task.config.name = task.getName()
-
+    @CompileStatic
+    private void assignTaskRecordInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
+        }
+        if( value !instanceof RecordMap ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a record but received: ${value} [${value.class.simpleName}]")
+        }
+        final recordParams = param.getComponents()
+        final record = value as Map
+        for( final recordParam : recordParams ) {
+            assignTaskInput(task, recordParam, record[recordParam.getName()], index)
+        }
     }
 
-    final protected HashCode createTaskHashKey(TaskRun task) {
-
-        List keys = [ session.uniqueId, name, task.source ]
-
-        if( task.isContainerEnabled() )
-            keys << task.getContainerFingerprint()
-
-        // add all the input name-value pairs to the key generator
-        for( Map.Entry<InParam,Object> it : task.inputs ) {
-            keys.add( it.key.name )
-            keys.add( it.value )
+    @CompileStatic
+    private void assignTaskTupleInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
         }
-
-        // add all variable references in the task script but not declared as input/output
-        def vars = getTaskGlobalVars(task)
-        if( vars ) {
-            log.trace "Task: $name > Adding script vars hash code: ${vars}"
-            keys.add(vars.entrySet())
+        if( value !instanceof List ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple but received: ${value} [${value.class.simpleName}]")
         }
-
-        final binEntries = getTaskBinEntries(task.source)
-        if( binEntries ) {
-            log.trace "Task: $name > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
-            keys.addAll(binEntries)
+        final tupleParams = param.getComponents()
+        final tupleValues = value as List
+        if( tupleParams.size() != tupleValues.size() ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple with ${tupleParams.size()} elements but received ${tupleValues.size()} -- offending value: $tupleValues")
         }
-
-        final modules = task.getConfig().getModule()
-        if( modules ) {
-            keys.addAll(modules)
+        for( int i = 0; i < tupleParams.size(); i++ ) {
+            assignTaskInput(task, tupleParams[i], tupleValues[i], index)
         }
-        
-        final conda = task.getCondaEnv()
-        if( conda ) {
-            keys.add(conda)
+    }
+
+    @CompileStatic
+    private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
+        checkTaskInput(task, param.type, param.optional, value, index, '')
+        task.context.put(param.getName(), value)
+        task.setInput(param, value)
+    }
+
+    @CompileStatic
+    private void checkTaskInput(TaskRun task, Class expectedType, boolean optional, Object value, int index, String field) {
+        final location = field ? "input field `${field}` at index ${index}" : "input at index ${index}"
+        if( value == null && !optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] ${location} cannot be null -- append `?` to the type annotation to mark it as nullable")
         }
-
-        final spack = task.getSpackEnv()
-        final arch = task.getConfig().getArchitecture()
-
-        if( spack ) {
-            keys.add(spack)
-
-            if( arch ) {
-                keys.add(arch)
+        if( value == null || expectedType == null )
+            return
+        final actualType = value.getClass()
+        if( !isAssignableFrom(expectedType, actualType) )
+            log.warn "[${safeTaskName(task)}] invalid argument type for ${location} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
+        // record types are not validated by `nextflow run`, so check the fields of named record types here
+        if( expectedType != Record.class && Record.class.isAssignableFrom(expectedType) && value instanceof Map ) {
+            final record = value as Map
+            for( final fn : expectedType.getDeclaredFields() ) {
+                if( fn.isSynthetic() )
+                    continue
+                final name = field ? "${field}.${fn.getName()}".toString() : fn.getName()
+                checkTaskInput(task, fn.getType(), fn.isAnnotationPresent(Nullable.class), record[fn.getName()], index, name)
             }
         }
-
-        if( session.stubRun ) {
-            keys.add('stub-run')
-        }
-
-        final mode = config.getHashMode()
-        final hash = computeHash(keys, mode)
-        if( session.dumpHashes ) {
-            traceInputsHashes(task, keys, mode, hash)
-        }
-        return hash
     }
 
-    HashCode computeHash(List keys, CacheHelper.HashMode mode) {
-        try {
-            return CacheHelper.hasher(keys, mode).hash()
-        }
-        catch (Throwable e) {
-            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
-            throw new UnexpectedException(msg,e)
-        }
-    }
-
-
-    /**
-     * This method scans the task command string looking for invocations of scripts
-     * defined in the project bin folder.
-     *
-     * @param script The task command string
-     * @return The list of paths of scripts in the project bin folder referenced in the task command
-     */
-    @Memoized
-    protected List<Path> getTaskBinEntries(String script) {
-        List<Path> result = []
-        def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
-        while( tokenizer.hasMoreTokens() ) {
-            def token = tokenizer.nextToken()
-            def path = session.binEntries.get(token)
-            if( path )
-                result.add(path)
-        }
-        return result
-    }
-
-    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
-
-        def buffer = new StringBuilder()
-        buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
-        for( Object item : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
-        }
-
-        log.info(buffer.toString())
-    }
-
-    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        final result = task.getGlobalVars(ownerScript.binding)
-        if( invalidateCacheOnTaskDirectiveChange ) {
-            final directives = getTaskDirectiveVars(task)
-            result.putAll(directives)
-        }
-        return result
-    }
-
-    protected Map<String,Object> getTaskDirectiveVars(TaskRun task) {
-        final variableNames = task.getVariableNames()
-        final result = new HashMap(variableNames.size())
-        final taskConfig = task.config
-        for( String key : variableNames ) {
-            if( !key.startsWith('task.') ) continue
-            final value = taskConfig.eval(key.substring(5))
-            result.put(key, value)
-        }
-
-        return result
+    private static boolean isAssignableFrom(Class targetType, Class sourceType) {
+        // treat all record types as compatible
+        // record types are validated at compile-time
+        if( Record.class.isAssignableFrom(targetType) && Record.class.isAssignableFrom(sourceType) )
+            return true
+        return targetType.isAssignableFrom(sourceType)
     }
 
     /**
@@ -2201,17 +1885,25 @@ class TaskProcessor {
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
         log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
 
-        makeTaskContextStage3(task, hash, folder)
+        // set name, hash, and working directory
+        task.hash = hash
+        task.workDir = folder
+        task.config.workDir = folder
+        task.config.hash = hash.toString()
+        task.config.name = task.getName()
 
+        // when no collector is define OR it's a task retry, then submit directly for execution
+        if( !arrayCollector || task.config.getAttempt() > 1 )
+            executor.submit(task)
         // add the task to the collection of running tasks
-        executor.submit(task)
-
+        else
+            arrayCollector.collect(task)
     }
 
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
+            def pass = task.config.getWhenGuard()
             if( pass ) {
                 return true
             }
@@ -2233,10 +1925,10 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskHandler handler) {
+        def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
-        def fault = null
         try {
             // -- verify task exit status
             if( task.error )
@@ -2256,14 +1948,28 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error)
-            log.trace "Task fault (3): $fault"
+            return finalizeFailedTask(handler, error)
         }
 
-        // -- finalize the task
+        finalizeTask0(task)
+        return null
+    }
+
+    /**
+     * Finalize a task that failed with the given error, unless
+     * the task is retried according to its error strategy
+     *
+     * @param handler The {@link TaskHandler} of the failed task
+     * @param error The error raised by the task
+     * @return The error strategy or {@link TaskFault} returned by {@link #resumeOrDie}
+     */
+    @PackageScope
+    final finalizeFailedTask( TaskHandler handler, Throwable error ) {
+        final task = handler.task
+        final fault = resumeOrDie(task, error, handler.getTraceRecord())
+        log.trace "Task fault (3): $fault"
         if( fault != ErrorStrategy.RETRY )
             finalizeTask0(task)
-
         return fault
     }
 
@@ -2298,6 +2004,10 @@ class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
+    protected void closeProcess() {
+        arrayCollector?.close()
+    }
+
     protected void terminateProcess() {
         log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
@@ -2321,10 +2031,18 @@ class TaskProcessor {
 
         def statusStr = !completed && !terminated ? 'status=ACTIVE' : ( completed && terminated ? 'status=TERMINATED' : "completed=$completed; terminated=$terminated" )
         result << "  $statusStr\n"
+
         // add extra info about port statuses
+        if( config instanceof ProcessConfigV1 )
+            dumpOpenPorts(result)
+
+        return result.toString()
+    }
+
+    void dumpOpenPorts(StringBuilder result) {
         for( int i=0; i<openPorts.length(); i++ ) {
             def last = i == openPorts.length()-1
-            def param = config.getInputs()[i]
+            def param = configV1().getInputs()[i]
             def chnnl = param?.inChannel
             def isValue = chnnl instanceof DataflowExpression
             def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
@@ -2333,8 +2051,6 @@ class TaskProcessor {
             else status = type == '(queue)' ? (openPorts.get(i) ? 'OPEN  ' : 'closed') : '-     '
             result << "  port $i: $type ${status}; channel: $channel\n"
         }
-
-        return result.toString()
     }
 
     /*
@@ -2388,7 +2104,9 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "<${name}> Before run -- messages: ${messages}"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
@@ -2403,14 +2121,17 @@ class TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "<${name}> After run"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After run"
             currentTask.remove()
         }
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( log.isTraceEnabled() ) {
-                def channelName = config.getInputs()?.names?.get(index)
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() && config instanceof ProcessConfigV1 ) {
+                def channelName = configV1().getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
                 log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
             }
@@ -2420,8 +2141,9 @@ class TaskProcessor {
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( log.isTraceEnabled() ) {
-                def channelName = config.getInputs()?.names?.get(index)
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() && config instanceof ProcessConfigV1 ) {
+                def channelName = configV1().getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
                 log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
@@ -2429,7 +2151,9 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.trace "<${name}> Poison pill arrived; port: $index"
+                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+                if( log.isTraceEnabled() )
+                    log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
@@ -2439,7 +2163,10 @@ class TaskProcessor {
 
         @Override
         void afterStop(final DataflowProcessor processor) {
-            log.trace "<${name}> After stop"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**

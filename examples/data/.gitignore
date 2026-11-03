@@ -1,0 +1,8 @@
+# The fixtures themselves are fetched, not committed: the sarscov2 read set is 5.5 MB
+# gzipped and 28 MB raw, and it is upstream test data with a canonical home (see
+# README.md). The DIRECTORY is committed, though -- `examples/agents/*/data` are symlinks
+# into it, and a symlink to a path that does not exist reads as a broken example rather
+# than as a missing download.
+*
+!.gitignore
+!README.md

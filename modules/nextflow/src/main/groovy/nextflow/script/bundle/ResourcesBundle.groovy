@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.script.bundle
@@ -45,13 +44,15 @@ class ResourcesBundle {
     private Path root
     private LinkedHashMap<String,Path> content = new LinkedHashMap<>(100)
     private Path dockerfile
+    private Path singularityfile
     private MemoryUnit maxFileSize = MAX_FILE_SIZE
     private MemoryUnit maxBundleSize = MAX_BUNDLE_SIZE
     private String baseDirectory
 
     ResourcesBundle(Path root) {
         this.root = root
-        this.dockerfile = dockefile0(root.resolveSibling('Dockerfile'))
+        this.dockerfile = pathIfExists0(root.resolveSibling('Dockerfile'))
+        this.singularityfile = pathIfExists0(root.resolveSibling('Singularityfile'))
     }
 
     ResourcesBundle withMaxFileSize(MemoryUnit mem) {
@@ -68,7 +69,7 @@ class ResourcesBundle {
 
     Map<String,Path> content() { content }
 
-    static private Path dockefile0(Path path) {
+    static private Path pathIfExists0(Path path) {
         return path?.exists() ? path : null
     }
 
@@ -100,6 +101,10 @@ class ResourcesBundle {
         return dockerfile
     }
 
+    Path getSingularityfile() {
+        return singularityfile
+    }
+
     Set<Path> getPaths() {
         return new HashSet<Path>(content.values())
     }
@@ -125,7 +130,7 @@ class ResourcesBundle {
     }
 
     boolean asBoolean() {
-        return content.size() || dockerfile
+        return content.size() || dockerfile || singularityfile
     }
 
     /**
@@ -152,7 +157,7 @@ class ResourcesBundle {
             result.maxBundleSize = config.maxBundleSize as MemoryUnit
         if( config.baseDirectory )
             result.baseDirectory = config.baseDirectory as String
-        
+
         // load bundle files
         final files = new HashSet(10)
         final pattern = config.filePattern as String ?: '**'
@@ -189,6 +194,9 @@ class ResourcesBundle {
         if( dockerfile ) {
             allMeta.add(fileMeta(dockerfile.name, dockerfile))
         }
+        if( singularityfile ) {
+            allMeta.add(fileMeta(singularityfile.name, singularityfile))
+        }
 
         return CacheHelper.hasher(allMeta).hash().toString()
     }
@@ -196,7 +204,7 @@ class ResourcesBundle {
     final private static List<String> BIN_PATHS = ['bin','usr/bin','usr/local/bin']
 
     List<Path> getBinDirs() {
-        final result = new ArrayList(10)
+        final result = new ArrayList<Path>(10)
         for( Map.Entry<String,Path> it : content ) {
             if( it.key in BIN_PATHS && Files.isDirectory(it.value) && !result.contains(it.value) )
                 result.add(it.value)

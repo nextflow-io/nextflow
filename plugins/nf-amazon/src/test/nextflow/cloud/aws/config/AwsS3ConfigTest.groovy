@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.config
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -38,6 +38,8 @@ class AwsS3ConfigTest extends Specification {
         !client.debug
         !client.s3Acl
         !client.pathStyleAccess
+        !client.anonymous
+        !client.isCustomEndpoint()
     }
 
     def 'should set config' () {
@@ -48,7 +50,8 @@ class AwsS3ConfigTest extends Specification {
                 storageKmsKeyId: 'key-1',
                 storageEncryption: 'AES256',
                 s3Acl: 'public-read',
-                s3PathStyleAccess: true
+                s3PathStyleAccess: true,
+                anonymous: true
         ]
 
         when:
@@ -58,8 +61,9 @@ class AwsS3ConfigTest extends Specification {
         client.storageClass == 'STANDARD'
         client.storageKmsKeyId == 'key-1'
         client.storageEncryption == 'AES256'
-        client.s3Acl == CannedAccessControlList.PublicRead
+        client.s3Acl == ObjectCannedACL.PUBLIC_READ
         client.pathStyleAccess
+        client.anonymous
     }
 
     def 'should use legacy upload storage class' () {
@@ -95,6 +99,21 @@ class AwsS3ConfigTest extends Specification {
         [AWS_S3_ENDPOINT: 'http://foo'] | [endpoint: 'http://bar']      | 'http://bar'  // <-- config should have priority
     }
 
+    @Unroll
+    def 'should fail with invalid endpoint protocol' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                          | EXPECTED
+        [endpoint: 'bar.com']           |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'bar.com'"
+        [endpoint: 'ftp://bar.com']     |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'ftp://bar.com'"
+
+    }
+
     def 'should get s3 legacy properties' () {
         given:
         SysEnv.push([:])
@@ -121,4 +140,66 @@ class AwsS3ConfigTest extends Specification {
         SysEnv.pop()
 
     }
+
+    def 'should get maxDownloadHeapMemory' () {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = new AwsConfig([client:[ maxDownloadHeapMemory: '100 MB']])
+        def env = config.getS3Config().getAwsClientConfig()
+        then:
+        env.max_download_heap_memory == Long.toString( 100 * 1024 * 1024)
+
+        cleanup:
+        SysEnv.pop()
+
+    }
+
+    @Unroll
+    def 'should check is custom endpoint' () {
+        given:
+        def config = new AwsS3Config(CONFIG)
+
+        expect:
+        config.isCustomEndpoint() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        false       | [:]
+        false       | [endpoint: 'https://s3.us-east-2.amazonaws.com']
+        true        | [endpoint: 'https://foo.com']
+        // consider AWS china as custom endpoint
+        // see https://github.com/nextflow-io/nextflow/issues/5836
+        true        | [endpoint: 'https://xxxx.s3.cn-north-1.vpce.amazonaws.com.cn']
+    }
+
+    @Unroll
+    def 'should fail with invalid maxDownloadHeapMemory and minimumPartSize are incorrect' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                                                      | EXPECTED
+        [ maxDownloadHeapMemory: '0MB' ]                            | "Configuration option `aws.client.maxDownloadHeapMemory` can't be 0"
+        [ minimumPartSize: '0MB' ]                                  | "Configuration option `aws.client.minimumPartSize` can't be 0"
+        [ maxDownloadHeapMemory: '50 MB', minimumPartSize: '6 MB']  | "Configuration option `aws.client.maxDownloadHeapMemory` must be at least 10 times `aws.client.minimumPartSize`"
+    }
+
+    @Unroll
+    def 'should get region from endpoint' () {
+        expect:
+        new AwsS3Config(CONFIG).getEndpointRegion() == REGION
+
+        where:
+        CONFIG                                                                                  | REGION
+        [:]                                                                                     | null
+        [endpoint: "http://custom.endpoint.com"]                                                | null
+        [endpoint: "https://s3.eu-west-1.amazonaws.com"]                                        | Region.EU_WEST_1.id()
+        [endpoint: "https://bucket.s3-global.amazonaws.com"]                                    | null
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,25 @@
 
 package nextflow.trace
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.json.JsonSlurper
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.extension.Bolts
 import nextflow.processor.TaskId
 import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.SecretHelper
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
@@ -41,8 +45,11 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    // note: ?i stands for ignore case - ?m stands for multiline
-    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*)=(.*)$/
+    /**
+     * @deprecated Use {@link SecretHelper#SECRET_REGEX} instead
+     */
+    @Deprecated
+    static public final Pattern SECRET_REGEX = SecretHelper.SECRET_REGEX
 
     TraceRecord() {
         this.store = new LinkedHashMap<>(FIELDS.size())
@@ -98,10 +105,12 @@ class TraceRecord implements Serializable {
             time:       'time',
             env:        'str',
             error_action:'str',
-            vol_ctxt: 'num',
-            inv_ctxt: 'num',
+            vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
+            inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
-            cpu_model:  'str'
+            cpu_model:  'str',
+            accelerator: 'num',
+            accelerator_type: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -118,6 +127,13 @@ class TraceRecord implements Serializable {
 
     transient private String executorName
     transient private CloudMachineInfo machineInfo
+    transient private ContainerMeta containerMeta
+    transient private Integer numSpotInterruptions
+    transient private Integer numAttempts
+    transient private Long retryTime
+    transient private String logStreamId
+    transient private Map<String,Object> resourceAllocation
+    transient private Map<String,Object> gpuMetrics
 
     /**
      * Convert the given value to a string
@@ -176,7 +192,7 @@ class TraceRecord implements Serializable {
     }
 
     /**
-     * Coverts the value to a duration string.
+     * Converts the value to a duration string.
      *
      * See {@link Duration}
      * @param value
@@ -237,9 +253,10 @@ class TraceRecord implements Serializable {
         }
     }
 
-
     @PackageScope
     Map<String,Object> store
+
+    Map<String,Object> getStore() { store }
 
     @Memoized
     Set<String> keySet() {
@@ -269,7 +286,7 @@ class TraceRecord implements Serializable {
     }
 
     protected String secureEnvString( String str ) {
-        str.replaceAll(SECRET_REGEX, '$1=[secure]')
+        SecretHelper.secureEnvString(str)
     }
 
 
@@ -401,7 +418,7 @@ class TraceRecord implements Serializable {
     }
 
     String toString() {
-        "${this.class.simpleName} ${store}"
+        "${this.class.simpleName} ${this.store}"
     }
 
 
@@ -415,53 +432,52 @@ class TraceRecord implements Serializable {
      * </pre>
      *
      */
-
     TraceRecord parseTraceFile( Path file ) {
 
-        final text = file.text
+        try(BufferedReader reader = Files.newBufferedReader(file)) {
+            final lines = reader.readLines()
+            if( !lines )
+                return this
+            if( lines[0] != 'nextflow.trace/v2' )
+                return parseLegacy(file, lines)
 
-        final lines = text.readLines()
-        if( !lines )
-            return this
-        if( lines[0] != 'nextflow.trace/v2' )
-            return parseLegacy(file, lines)
+            for( int i=0; i<lines.size(); i++ ) {
+                final pair = lines[i].tokenize('=')
+                final name = pair[0]
+                final value = pair[1]
+                if( value == null )
+                    continue
 
-        for( int i=0; i<lines.size(); i++ ) {
-            final pair = lines[i].tokenize('=')
-            final name = pair[0]
-            final value = pair[1]
-            if( value == null )
-                continue
+                switch (name) {
+                    case '%cpu':
+                    case '%mem':
+                        // fields '%cpu' and '%mem' are expressed as percent value
+                        this.put(name, parseInt(value, file, name) / 10F)
+                        break
 
-            switch (name) {
-                case '%cpu':
-                case '%mem':
-                    // fields '%cpu' and '%mem' are expressed as percent value
-                    this.put(name, parseInt(value, file, name) / 10F)
-                    break
+                    case 'rss':
+                    case 'vmem':
+                    case 'peak_rss':
+                    case 'peak_vmem':
+                        // these fields are provided in KB, so they are normalized to bytes
+                        def val = parseLong(value, file, name) * 1024
+                        this.put(name, val)
+                        break
 
-                case 'rss':
-                case 'vmem':
-                case 'peak_rss':
-                case 'peak_vmem':
-                    // these fields are provided in KB, so they are normalized to bytes
-                    def val = parseLong(value, file, name) * 1024
-                    this.put(name, val)
-                    break
+                    case 'cpu_model':
+                        this.put(name, value)
+                        break
 
-                case 'cpu_model':
-                    this.put(name, value)
-                    break
+                    default:
+                        def val = parseLong(value, file, name)
+                        this.put(name, val)
+                        break
+                }
 
-                default:
-                    def val = parseLong(value, file, name)
-                    this.put(name, val)
-                    break
             }
 
+            return this
         }
-
-        return this
     }
 
     private TraceRecord parseLegacy( Path file, List<String> lines) {
@@ -512,6 +528,49 @@ class TraceRecord implements Serializable {
         }
 
         return this
+    }
+
+    /**
+     * Parse the Fusion trace file (.fusion/trace.json) produced by the Fusion client.
+     * The file contains task metrics in the following format:
+     * <pre>
+     * {
+     *   "proc": {
+     *     "realtime": 660541, "pct_cpu": 1045, "cpu_name": "Intel Xeon ...",
+     *     "rchar": 14112539262, "wchar": 12668821375, "syscr": 1823378, "syscw": 169293,
+     *     "read_bytes": 8011776, "write_bytes": 102400,
+     *     "vmem": 39015152, "rss": 14826068, "peak_vmem": 39047920, "peak_rss": 15775480,
+     *     "pct_mem": 56, "vol_ctxt": 413015, "inv_ctxt": 1540
+     *   },
+     *   "gpu": {
+     *     "name": "Tesla T4", "mem": 15360, "driver": "580.126.09",
+     *     "pct": 75, "peak": 100, "pct_mem": 40.1, "peak_mem": 74.1
+     *   },
+     *   "cgroup": {
+     *     "version": "v2", "memory_current": 25469927424, "memory_peak": 41178980352,
+     *     "memory_rss": 67919872, "memory_peak_rss": 14783070208,
+     *     "memory_limit": 77309411328, "cpu_usage_usec": 785302059
+     *   }
+     * }
+     * </pre>
+     *
+     * @param file Path to the .fusion/trace.json file
+     * @return The parsed JSON as a map with keys: {@code proc}, {@code gpu}, {@code cgroup}
+     */
+    static Map<String,Object> parseFusionTraceFile(Path file) {
+        return (Map<String,Object>) new JsonSlurper().parse(file)
+    }
+
+    static long toLong(Object value) {
+        if( value instanceof Number )
+            return value.longValue()
+        return value != null ? value.toString().toLong() : 0L
+    }
+
+    static float toFloat(Object value) {
+        if( value instanceof Number )
+            return value.floatValue()
+        return value != null ? value.toString().toFloat() : 0.0f
     }
 
     private long parseInt( String str, Path file, String row )  {
@@ -588,6 +647,10 @@ class TraceRecord implements Serializable {
         store.status == 'CACHED'
     }
 
+    boolean isCompleted() {
+        store.status == 'COMPLETED'
+    }
+
     String getExecutorName() {
         return executorName
     }
@@ -604,4 +667,65 @@ class TraceRecord implements Serializable {
         this.machineInfo = value
     }
 
+    Integer getNumSpotInterruptions() {
+        return numSpotInterruptions
+    }
+
+    void setNumSpotInterruptions(Integer numSpotInterruptions) {
+        this.numSpotInterruptions = numSpotInterruptions
+    }
+
+    /**
+     * @return The number of executor-level attempts made to run the task, or {@code null} when the executor does not retry internally
+     */
+    Integer getNumAttempts() {
+        return numAttempts
+    }
+
+    void setNumAttempts(Integer numAttempts) {
+        this.numAttempts = numAttempts
+    }
+
+    /**
+     * @return Milliseconds lost to executor-level retries before the final attempt started, or {@code null} when not available
+     */
+    Long getRetryTime() {
+        return retryTime
+    }
+
+    void setRetryTime(Long retryTime) {
+        this.retryTime = retryTime
+    }
+
+    String getLogStreamId() {
+        return logStreamId
+    }
+
+    void setLogStreamId(String logStreamId) {
+        this.logStreamId = logStreamId
+    }
+
+    ContainerMeta getContainerMeta() {
+        return containerMeta
+    }
+
+    void setContainerMeta(ContainerMeta meta) {
+        this.containerMeta = meta
+    }
+
+    Map<String,Object> getResourceAllocation() {
+        return resourceAllocation
+    }
+
+    void setResourceAllocation(Map<String,Object> value) {
+        this.resourceAllocation = value
+    }
+
+    Map<String,Object> getGpuMetrics() {
+        return gpuMetrics
+    }
+
+    void setGpuMetrics(Map<String,Object> value) {
+        this.gpuMetrics = value
+    }
 }

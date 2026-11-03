@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2020, Université de Nantes, CNRS, INSERM, l’institut du thorax, F-44000 Nantes, France.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package nextflow.dag
 import java.io.File
 
 import groovyx.gpars.dataflow.DataflowQueue
-import groovy.util.XmlSlurper
+import groovy.xml.XmlSlurper
 import spock.lang.Specification
 
 import nextflow.Session

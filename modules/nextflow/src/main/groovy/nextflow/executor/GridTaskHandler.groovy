@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import static nextflow.processor.TaskStatus.*
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
 import java.util.regex.Pattern
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedPredicate
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -38,11 +38,14 @@ import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.StringUtils
+import nextflow.util.TestOnly
 import nextflow.util.Throttle
 /**
  * Handles a job execution in the underlying grid platform
@@ -78,11 +81,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private Duration sanityCheckInterval
 
-    static private final Duration READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
-
     BatchCleanup batch
 
-    /** only for testing purpose */
+    @TestOnly
     protected GridTaskHandler() {}
 
     GridTaskHandler( TaskRun task, AbstractGridExecutor executor ) {
@@ -94,10 +95,16 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        final duration = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
+        final duration = executor.config.getExitReadTimeout(executor.name)
         this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
+    }
+
+    @Override
+    void prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
     }
 
     protected ProcessBuilder createProcessBuilder() {
@@ -119,9 +126,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Memoized
-    protected Predicate<? extends Throwable> retryCondition(String reasonPattern) {
+    protected CheckedPredicate<? extends Throwable> retryCondition(String reasonPattern) {
         final pattern = Pattern.compile(reasonPattern)
-        return new Predicate<Throwable>() {
+        return new CheckedPredicate<Throwable>() {
             @Override
             boolean test(Throwable failure) {
                 if( failure instanceof ProcessNonZeroExitStatusException ) {
@@ -135,16 +142,11 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected <T> RetryPolicy<T> retryPolicy() {
 
-        final delay = executor.session.getConfigAttribute("executor.retry.delay", '500ms') as Duration
-        final maxDelay = executor.session.getConfigAttribute("executor.retry.maxDelay", '30s') as Duration
-        final jitter = executor.session.getConfigAttribute("executor.retry.jitter", '0.25') as double
-        final maxAttempts = executor.session.getConfigAttribute("executor.retry.maxAttempts", '3') as int
-        final reason = executor.session.getConfigAttribute("executor.submit.retry.reason", 'Socket timed out') as String
-
+        final retry = executor.config.retry
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
-                final failure = event.getLastFailure()
+                final failure = event.getLastException()
                 if( failure instanceof ProcessNonZeroExitStatusException ) {
                     final failure0 = (ProcessNonZeroExitStatusException)failure
                     final msg = """\
@@ -162,10 +164,10 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return RetryPolicy.<T>builder()
-                .handleIf(retryCondition(reason))
-                .withBackoff(delay.toMillis(), maxDelay.toMillis(), ChronoUnit.MILLIS)
-                .withMaxAttempts(maxAttempts)
-                .withJitter(jitter)
+                .handleIf(retryCondition(retry.reason))
+                .withBackoff(retry.delay.toMillis(), retry.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(retry.maxAttempts)
+                .withJitter(retry.jitter)
                 .onFailedAttempt(listener)
                 .build()
     }
@@ -181,7 +183,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             // -- forward the job launcher script to the command stdin if required
             if( pipeScript ) {
-                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
+                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${StringUtils.stripSecrets(pipeScript).indent()}"
                 process.out << pipeScript
                 process.out.close()
             }
@@ -222,7 +224,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final containerOpts = task.config.getContainerOptions()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit, task.getContainerPlatform())
         // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }
@@ -254,17 +256,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     void submit() {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
-            // -- save the JobId in the
-            this.jobId = executor.parseJobId(result)
-            this.status = SUBMITTED
+            // -- save the job id
+            final jobId = (String)executor.parseJobId(result)
+            updateStatus(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 
         }
@@ -281,9 +281,21 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
-
     }
 
+    private void updateStatus(String jobId) {
+        if( task instanceof TaskArrayRun ) {
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as GridTaskHandler
+                final arrayTaskId = ((TaskArrayExecutor)executor).getArrayTaskId(jobId, i)
+                handler.updateStatus(arrayTaskId)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.status = SUBMITTED
+        }
+    }
 
     private long startedMillis
 
@@ -302,7 +314,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     protected Integer readExitStatus() {
 
         String workDirList = null
-        if( exitTimestampMillis1 && FileHelper.workDirIsNFS ) {
+        if( exitTimestampMillis1 && FileHelper.workDirIsSharedFS ) {
             /*
              * When the file is in a NFS folder in order to avoid false negative
              * list the content of the parent path to force refresh of NFS metadata
@@ -375,13 +387,14 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             catch( Exception e ) {
                 log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
+                return Integer.MAX_VALUE
             }
         }
 
         else {
             /*
              * Since working with NFS it may happen that the file exists BUT it is empty due to network latencies,
-             * before retuning an invalid exit code, wait some seconds.
+             * before returning an invalid exit code, wait some seconds.
              *
              * More in detail:
              * 1) the very first time that arrive here initialize the 'exitTimestampMillis' to the current timestamp
@@ -400,9 +413,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return null
             }
             log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
+            return -1
         }
-
-        return Integer.MAX_VALUE
     }
 
     @Override
@@ -478,7 +490,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return true
             }
             // if the task is not complete (ie submitted or running)
-            // AND the work-dir does not exists ==> something is wrong
+            // AND the work-dir does not exist ==> something is wrong
             task.error = new ProcessException("Task work directory is missing (!)")
             // sanity check does not pass
             return false
@@ -486,7 +498,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( batch ) {
             batch.collect(executor, jobId)
         }

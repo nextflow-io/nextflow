@@ -1,7 +1,6 @@
 /*
- * Copyright 2021, Microsoft Corp
- * Copyright 2022, Seqera Labs
- * 
+ * Copyright 2013-2026, Seqera Labs
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +16,9 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure azcopy tool config settings from nextflow config file
@@ -24,13 +26,22 @@ import groovy.transform.CompileStatic
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @CompileStatic
-class AzCopyOpts {
+class AzCopyOpts implements ConfigScope {
 
     static public final String DEFAULT_BLOCK_SIZE = "4"
     static public final String DEFAULT_BLOB_TIER = "None"
 
-    String blockSize
-    String blobTier
+    @ConfigOption
+    @Description("""
+        The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: `4`).
+    """)
+    final String blockSize
+
+    @ConfigOption
+    @Description("""
+        The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `None`, `Hot`, or `Cool` (default: `None`).
+    """)
+    final String blobTier
 
     AzCopyOpts() {
         this.blockSize = DEFAULT_BLOCK_SIZE

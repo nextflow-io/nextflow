@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,27 @@
 
 package nextflow.processor
 
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PublishDirTest extends Specification {
 
-    def 'should create a publish dir obj'() {
+    def setup() {
+        Global.session = Mock(Session) { getConfig()>>[:] }
+    }
 
-        PublishDir publish
+    def 'should create a publish dir obj'() {
+        given:
+        def publish
 
         when:
         publish = PublishDir.create(path: '/data')
@@ -39,17 +44,17 @@ class PublishDirTest extends Specification {
         publish.path == Paths.get('/data')
 
         when:
-        publish =  PublishDir.create(path: 'data')
+        publish = PublishDir.create(path: 'data')
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( path: Paths.get('data') )
+        publish = PublishDir.create( path: Paths.get('data') )
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
+        publish = PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
         then:
         publish.path == Paths.get('/some/dir')
         publish.mode == PublishDir.Mode.LINK
@@ -58,7 +63,7 @@ class PublishDirTest extends Specification {
         publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
+        publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
@@ -67,7 +72,7 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
+        publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
@@ -76,15 +81,7 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
-        publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
-        then:
-        publish.path == Paths.get('this/folder').complete()
-        publish.mode == PublishDir.Mode.COPY
-        publish.pattern == '*.txt'
-        publish.overwrite == false
-
-        when:
-        publish =  PublishDir.create( [path:'this/folder', overwrite: 'false', pattern: '*.txt', mode: 'copy'] )
+        publish = PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
         publish.mode == PublishDir.Mode.COPY
@@ -95,7 +92,7 @@ class PublishDirTest extends Specification {
 
     def 'should create publish dir with extended params' () {
         given:
-        PublishDir publish
+        def publish
 
         when:
         publish = PublishDir.create(tags: ['foo','bar'])
@@ -114,7 +111,6 @@ class PublishDirTest extends Specification {
     }
 
     def 'should create symlinks for output files' () {
-
         given:
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
@@ -128,7 +124,7 @@ class PublishDirTest extends Specification {
         def task = new TaskRun(workDir: workDir, config: new TaskConfig(), name: 'foo')
 
         when:
-        def outputs =  [
+        def outputs = [
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
@@ -267,38 +263,6 @@ class PublishDirTest extends Specification {
 
     }
 
-    def 'should default mode to `symlink`' () {
-
-        given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
-        def targetDir = Paths.get('/scratch/dir')
-        def publisher = new PublishDir(path: targetDir, sourceFileSystem: FileSystems.default)
-
-        when:
-        publisher.validatePublishMode()
-        then:
-        publisher.mode == PublishDir.Mode.SYMLINK
-    }
-
-
-    def 'should change mode to `copy` when the target is a foreign file system' () {
-
-        given:
-        def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
-        def targetDir = TestHelper.createInMemTempDir()
-        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
-
-        when:
-        publisher.validatePublishMode()
-        then:
-        publisher.mode == PublishDir.Mode.COPY
-    }
-
     def 'should check null path' () {
         given:
         def pub = new PublishDir()
@@ -322,7 +286,7 @@ class PublishDirTest extends Specification {
         def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
-        def outputs =  [
+        def outputs = [
                 workDir.resolve('file1.txt'),
         ] as Set
         def publisher = new PublishDir(path: publishDir, enabled: false)
@@ -350,56 +314,50 @@ class PublishDirTest extends Specification {
         ['/foo/x1','/foo/x1/y', '/bar/x2']                  | ['/foo/x1','/bar/x2']
     }
 
-    def 'should detected overlapping paths' () {
+    def 'should set failOnError via env variable' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        SysEnv.push(ENV)
+
+        when:
+        def publish = new PublishDir()
+        then:
+        publish.failOnError == EXPECTED
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                         | EXPECTED
+        [:]                                         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'true']         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'false']        | false
+    }
+
+
+    def 'should use rellink as default mode when the stage in mode is rellink' () {
+        given:
+        def folder = Files.createTempDirectory('nxf')
         def workDir = folder.resolve('work-dir'); workDir.mkdir()
-        and:
-        def publisher = new PublishDir(sourceDir: workDir)
+        workDir.resolve('file1.txt').text = 'aaa'
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig(stageInMode: 'rellink'), name: 'foo')
 
         when:
-        def foo = pubDir.resolve('foo.txt'); foo.text = 'This is foo'
-        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
+        new PublishDir(path: publishDir).apply([workDir.resolve('file1.txt')] as Set, task)
         then:
-        !publisher.checkSourcePathConflicts(foo)
-        publisher.checkSourcePathConflicts(bar)
-
-        when:
-        def linkOK = Files.createSymbolicLink(pubDir.resolve("link1.txt"), foo)
-        then:
-        !publisher.checkSourcePathConflicts(linkOK)
-
-        when:
-        def linkNotOK = Files.createSymbolicLink(pubDir.resolve("link2.txt"), bar)
-        then:
-        publisher.checkSourcePathConflicts(linkNotOK)
+        Files.isSymbolicLink(publishDir.resolve('file1.txt'))
+        !Files.readSymbolicLink(publishDir.resolve('file1.txt')).isAbsolute()
+        publishDir.resolve('file1.txt').text == 'aaa'
 
         cleanup:
         folder?.deleteDir()
     }
 
-    def 'should check same path' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
-        def workDir = folder.resolve('work-dir'); workDir.mkdir()
-        and:
-        def foo = workDir.resolve('foo.txt'); foo.text = 'This is bar'
-        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
-        and:
-        def linkToFoo = Files.createSymbolicLink(pubDir.resolve("link-to-foo"), foo)
-        def linkToBar = Files.createSymbolicLink(pubDir.resolve("link-to-bar"), bar)
-        and:
-        def publisher = new PublishDir()
-
-        expect:
-        publisher.checkIsSameRealPath(bar, linkToBar)
-        !publisher.checkIsSameRealPath(bar, foo)
-
-        cleanup:
-        folder?.deleteDir()
+    def 'should reject an invalid publish mode' () {
+        when:
+        PublishDir.create(path: '/data', mode: 'nope')
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.startsWith "Invalid publish mode 'nope'"
     }
+
 }

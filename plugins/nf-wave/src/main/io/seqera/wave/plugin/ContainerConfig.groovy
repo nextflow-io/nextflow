@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin
@@ -29,7 +28,7 @@ import nextflow.util.CacheHelper
  */
 @Canonical
 @CompileStatic
-@ToString(includePackage = false, includeNames = true)
+@ToString(includePackage = false, includeNames = true, ignoreNulls = true)
 class ContainerConfig {
 
     List<String> entrypoint
@@ -101,11 +100,23 @@ class ContainerConfig {
         allMeta.add( env ?: 'no-env' )
         allMeta.add( workingDir ?: 'no-workdir')
         final layers0 = layers ?: Collections.<ContainerLayer>emptyList()
-        
+
         for( ContainerLayer it : layers0 ) {
             if( !it.skipHashing )
                 allMeta.add(it.fingerprint())
         }
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+    boolean asBoolean() {
+        return !empty()
+    }
+
+    boolean empty() {
+        return !entrypoint &&
+            !cmd &&
+            !env &&
+            !workingDir &&
+            !layers
     }
 }

@@ -1,5 +1,203 @@
 nf-azure changelog
 ===================
+1.24.2 - 15 Oct 2026
+- Update azure-identity to 1.18.7 (#7796) [f1c2234a6]
+- Fix unit tests that depend on global state from other tests (#7804) [49bdb37ee]
+
+1.24.1 - 6 Oct 2026
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
+1.24.0 - 22 Sep 2026
+- Add extension points for task caching and object-storage access (#7638) [631ed9734]
+- Add Azure Compute Gallery image and verification options (#7338) [77c91520e]
+- Add automatic resource labels for any executor (#7528) [1d7b6655a]
+- Fix jackson, netty and grpc CVEs via api-scoped dependency constraints (#7329) [7ea2029ac]
+- chore: update dependency com.azure:azure-identity to v1.18.6 (#7590) [5287f6d47]
+- chore: update dependency com.azure:azure-core-http-netty to v1.16.7 (#7589) [11cfd335a]
+- chore: update dependency com.azure:azure-identity to v1.18.5 (#7562) [e6b9cec5b]
+- Fix nf-azure plugin tier-1 bugs (#6831) [640ddc354]
+
+1.23.2 - 20 Aug 2026
+- Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
+- Detect Azure virtual directories without a trailing slash (#6428) [b4ab2e165]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+- Update dependency com.azure:azure-identity to v1.18.4 (#7389) [353567cd6]
+
+1.23.1 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- Tolerate stale/transient resize errors on autoscale Azure Batch pools (#7312) [46392e625]
+- Update dependency com.azure:azure-compute-batch to v1.0.0-beta.6 (#7128) [1c9841221]
+
+1.23.0 - 19 Jun 2026
+- Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ab6a6e65e]
+- Improve Azure Batch VM image diagnostics and fix stale 24.04 docs (#7200) [8e5e61143]
+
+1.22.5 - 28 May 2026
+- Bump Failsafe to 3.3.2 (#7181) [1c47215a8]
+
+1.22.4 - 21 May 2026
+- chore: update dependency com.azure:azure-storage-blob to v12.33.4 (#7153) [514f2e5c3]
+- Pin netty in nf-azure (#7131) [c3ce1d0f5]
+
+1.22.3 - 11 May 2026
+- Address Netty CVEs by bumping AWS SDK and excluding micronaut-core-bom from test classpath (#7100) [f54039606]
+
+1.22.2 - 26 Mar 2026
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+
+1.22.1 - 17 Mar 2026
+- Record types (#6679) [d54ff29af]
+
+1.22.0 - 28 Feb 2026
+- Handle Azure Batch ActiveJobAndScheduleQuotaReached with retry (#6874) [6e66aaa58]
+- Update default Azure Batch VM image to Ubuntu 24.04 (#6844) [b621fc7cb]
+
+1.21.0 - 28 Nov 2025
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
+
+1.20.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.20.1 - 8 Oct 2025
+- Fix unstage controls in command.run when using storeDir (#6364) [a5756da3e]
+
+1.19.0 - 15 Aug 2025
+- Fix Azure Batch startTask concatenation issue (#6300) (#6305) [ci fast] [81d5c0dc]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update Azure and AWS deps (#6343) [ci fast] [ff00e2de]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump netty-codec-http2:4.1.124.Final [7e690b44]
+
+1.18.0 - 6 Jun 2025
+- Allow users to provide implicit managed identity to Azure Batch (#6144) [d1f70f50]
+- Minor Azure Batch disk slot calculation demoted to debug (#6234) [ci skip] [c65955ce]
+- Bump Slf4j version 2.0.17 [93199e09]
+
+1.17.0 - 2 Jun 2025
+- Add support for Azure Managed identities on Azure worker nodes with Fusion (#6118) [37981a5f]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+
+1.16.0 - 8 May 2025
+- Add azure.batch.jobMaxWallClockTime config option (#5996) [74963fdc]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+1.15.0 - 23 Apr 2025
+- Update Azure Batch VM sizes and regions (#5985) [297150b8]
+
+1.14.1 - 19 Mar 2025
+- Fix handling of exit status with Azure Batch and Fusion (#5806) [7085862d]
+- Removing Azure vmList from log [67ffc8ab]
+
+1.14.0 - 17 Mar 2025
+- Add  cpu-shares and memory limits to Azure Batch tasks (#5799) [f9c0cbfd]
+- Add disk directive support in Azure Batch (#5784) [113d7250]
+- Validates Azure region before checking available VMs (#5108) [080893a2]
+- Fix Ignore Azure pool already exists error (#5721) [e267961b]
+- Bump Ubuntu 22.04 as default SKU for Azure Batch (#5804) [e0ba536d]
+- Bump groovy 4.0.26 [f740bc56]
+
+1.13.0 - 12 Feb 2025
+- Allow Azure Batch tasks to be submitted to different pools (#5766) [76790d2a]
+- Fix Check for number of low priority nodes in Azure Batch before raising a pool resize error (#5576) [9b528c11]
+- Update azure deps [b163da95]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+- Bump net.minidev:json-smart:2.5.2 [b5c4faf4]
+- Bump netty-common:4.1.118.Final [8574e243]
+
+1.12.0 - 20 Jan 2025
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
+1.11.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump com.azure:azure-identity from 1.11.3 to 1.12.2 (#5449) [cb70f1df]
+- Target Java 17 as minimal Java version (#5045) [0140f954]
+
+1.10.1 - 27 Oct 2024
+- Demote azure batch task status log level to trace (#5416) [ci skip] [d6c684bb]
+
+1.10.0 - 2 Oct 2024
+- Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
+- Bump groovy 4.0.23 (#5303) [fe3e3ac7]
+
+1.9.0 - 4 Sep 2024
+- Support Azure Managed Identities in Fusion configuration logic (#5278) [a0bf8b40]
+
+1.8.1 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+
+1.8.0 - 8 Jul 2024
+- Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
+- Add retry options to Azure Blob client (#5098) [7d5e5d2b]
+- Bump groovy 4.0.22 [284a6606]
+
+1.7.0 - 17 Jun 2024
+- Add support for Azure managed identity (#4897) [21ca16e6]
+- Fix Azure system-assigned managed identity [a639a17d]
+- Fix support for Azure managed identity clientId [306814e7]
+- Bump azure-compute-batch:1.0.0-beta.2 [c08dc49b]
+- Bump azure-storage-blob 12.26.1 [c76ff5e7]
+
+1.6.1 - 1 Aug 2024
+- Update Azure batch deps [72576648]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
+1.6.0 - 15 Apr 2024
+- Add support for Azure custom startTask (#4913) [27d01e3a]
+- Improve control on azcopy install (#4883) [01447d5c]
+- Fix Azure pool creation [2ee4d11e]
+- Bump groovy 4.0.21 [9e08390b]
+
+1.5.1 - 10 Mar 2024
+- Update Azure dependencies [1bcbaf0d]
+- Bump groovy 4.0.19 [854dc1f0]
+
+1.5.0 - 5 Feb 2024
+- Fix azure retry policy (#4638) [85bab699]
+- Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e02afbf]
+- Bump Groovy 4 (#4443) [9d32503b]
+
+1.4.0 - 24 Nov 2023
+- Fix security vulnerabilities (#4513) [a310c777]
+- Add support for Azure low-priority pool (#4527) [8320ea10]
+
+1.3.3-patch3 - 31 Jul 2024
+- Update Azure batch deps [e0c6d77d]
+
+1.3.3-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+1.3.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
+1.3.3 - 12 Jan 2023
+- Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e1cb413]
+- Fix azure retry policy (#4638) [2bc3cf0e]
+
+1.3.2 - 28 Sep 2023
+- Retry TimeoutException in azure file system (#4295) [79248355]
+
+1.3.1 - 10 Sep 2023
+- Disable staging script for remote work dir (#4282) [80f7cd46]
+- Fix IOException should be thrown when failing to create Azure directory [b0bdfd79]
+- Fix security deps in nf-azure plugin [c30d5211]
+- Bump groovy 3.0.19 [cb411208]
+
+1.3.0 - 17 Aug 2023
+- Add resource labels support for Azure Batch (#4178) [7b5e50a1]
+- Fix typos in source code comments (#4173) [e78bc37e]
+
+1.2.0 - 5 Aug 2023
+- Add deleteTasksOnCompletion to Azure Batch configuration (#4114) [b14674dc]
+
 1.1.4 - 22 Jul 2023
 - Fix failing test [9a52f848]
 - Fix Improve error message for invalid Azure URI [0f4d8867]
@@ -21,7 +219,7 @@ nf-azure changelog
 - Fix S3 path normalization [b75ec444]
 
 1.1.0 - 15 May 2023
-- Add support for `time` directive in Azure Batch (#3869) [ci fast] [5c11a0d4]
+- Add support for `time` directive in Azure Batch (#3869) [5c11a0d4]
 - Increase Azure default maxRetries to 10 [a017139f]
 - Fix Azure jobs correctly deleted after completion (#3927) [b173a983]
 - Fix missing SAS token fusion env for Azure [43015029]
@@ -42,7 +240,7 @@ nf-azure changelog
 0.16.0 - 19 Mar 2023
 - Add azure batch pool virtualNetwork option (#3723) [e3917b8e]
 - Update Azure VM sizes (#3751) [1d06e9a6]
-- Increase pwd obfuscation min length [ci fast] [ba23d036]
+- Increase pwd obfuscation min length [ba23d036]
 - Bump groovy 3.0.16 [d3ff5dcb]
 
 0.15.1 - 14 Jan 2023

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -305,6 +305,15 @@ class FilePorter {
             }
         }
 
+        protected void cleanup(Path path) {
+            try {
+                FileHelper.deletePath(path)
+            }
+            catch (IOException e) {
+                log.warn "Unable to cleanup file path: ${path.toUriString()} - cause: ${e.message}"
+            }
+        }
+
         /**
          * Download a foreign file (ie. remote) storing it the current pipeline execution directory
          *
@@ -319,8 +328,11 @@ class FilePorter {
                     return stageForeignFile0(filePath, stagePath)
                 }
                 catch( IOException e ) {
-                    if( count++ < maxRetries && e !instanceof NoSuchFileException && e !instanceof InterruptedIOException && !Thread.currentThread().isInterrupted() ) {
-                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
+                    // remove the target file that could be have partially downloaded
+                    cleanup(stagePath)
+                    // check if a stage/download retry is allowed
+                    if( count++ < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted() ) {
+                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
                         sleep (10 + RND.nextInt(300))
@@ -332,8 +344,18 @@ class FilePorter {
             }
         }
 
+        private boolean recoverableError(IOException e){
+            // network errors such as a connection reset are transient, interruption
+            // is checked by the caller -- see https://github.com/nextflow-io/nextflow/issues/7798
+            final result =
+                e !instanceof NoSuchFileException
+                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
+            log.debug "Stage foreign file exception: recoverable=$result; type=${e.class.name}; message=${e.message}"
+            return result
+        }
+
         private String fmtError(Path filePath, Exception e) {
-            def message = "Can't stage file ${filePath.toUri().toString()}"
+            def message = "Can't stage file ${FilesEx.toUriString(filePath)}"
             if( e instanceof NoSuchFileException )
                 message += " -- file does not exist"
             else if( e.message )
@@ -349,6 +371,10 @@ class FilePorter {
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
             if( debugDelay )
                 sleep ( new Random().nextInt(debugDelay) )
+            return copyForeignFile(source, target)
+        }
+
+        protected Path copyForeignFile(Path source, Path target) {
             return FileHelper.copyPath(source, target)
         }
 
@@ -394,7 +420,7 @@ class FilePorter {
     static private boolean checkPathIntegrity(Path source, Path target) {
         try {
             // the file must have the same size. this is needed
-            // to prevent re-using broken files left by a previous interrupted download
+            // to prevent reusing broken files left by a previous interrupted download
             final attrs = Files.readAttributes(source, BasicFileAttributes)
             final same = attrs.isDirectory()
                     ? checkDirIntegrity0(source, target)

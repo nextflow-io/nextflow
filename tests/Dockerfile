@@ -5,7 +5,7 @@ MAINTAINER Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 RUN apt-get update -y && apt-get install -q -y gnuplot python && apt-get clean 
 
 #
-# Required PERL moduls
+# Required PERL modules
 #
 RUN cpanm Math::CDF Math::Round && \
   rm -rf /root/.cpanm/work/

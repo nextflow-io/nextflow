@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, Pawsey Supercomputing Research Centre
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.spackPrefixPath(ENV,null) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
-        1 * cache.runCommand( "spack env activate $PREFIX ; spack install -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env activate $PREFIX ; spack install -y ; spack env deactivate" ) >> { }
         result == PREFIX
 
         when:
@@ -125,7 +125,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> { }
         result == PREFIX
 
     }
@@ -144,7 +144,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> { }
         result == PREFIX
     }
 
@@ -162,7 +162,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -j 2 -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -j 2 -y ; spack env deactivate" ) >> { }
         result == PREFIX
     }
 
@@ -179,7 +179,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "spack env create -d $PREFIX /usr/base/$ENV ; spack env activate $PREFIX ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX /usr/base/$ENV ; spack env activate $PREFIX ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> { }
         result == PREFIX
 
     }
@@ -187,7 +187,8 @@ class SpackCacheTest extends Specification {
     def 'should get options from the config' () {
 
         when:
-        def cache = new SpackCache(new SpackConfig())
+        def config = new SpackConfig()
+        def cache = new SpackCache(config)
         then:
         cache.createTimeout.minutes == 60
         cache.configCacheDir0 == null
@@ -195,7 +196,8 @@ class SpackCacheTest extends Specification {
         cache.parallelBuilds == null
 
         when:
-        cache = new SpackCache(new SpackConfig(createTimeout: '5 min', cacheDir: '/spack/cache', checksum: false, parallelBuilds: 2))
+        config = new SpackConfig([createTimeout: '5 min', cacheDir: '/spack/cache', checksum: false, parallelBuilds: 2], [:])
+        cache = new SpackCache(config)
         then:
         cache.createTimeout.minutes == 5
         cache.configCacheDir0 == Paths.get('/spack/cache')
@@ -207,7 +209,7 @@ class SpackCacheTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
-        def config = new SpackConfig(cacheDir: folder.toString())
+        def config = new SpackConfig([cacheDir: folder.toString()], [:])
         SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:
@@ -225,7 +227,7 @@ class SpackCacheTest extends Specification {
 
         given:
         def folder = Paths.get('.test-spack-cache-' + Math.random())
-        def config = new SpackConfig(cacheDir: folder.toString())
+        def config = new SpackConfig([cacheDir: folder.toString()], [:])
         SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:

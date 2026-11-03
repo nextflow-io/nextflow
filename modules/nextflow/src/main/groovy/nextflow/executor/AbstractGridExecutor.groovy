@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,22 @@
 package nextflow.executor
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.ResourceTracker
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.MemoryUnit
 import nextflow.util.Throttle
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -40,7 +44,9 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
+    private final static Pattern CONTROL_CHARS = ~/\p{Cntrl}/
+
+    private final static Pattern INVALID_NAME_CHARS = ~/[ \/:@*?=\p{Cntrl}]/
 
     private Map lastQueueStatus
 
@@ -50,7 +56,7 @@ abstract class AbstractGridExecutor extends Executor {
     @Override
     protected void register () {
         super.register()
-        queueInterval = session.getQueueStatInterval(name)
+        queueInterval = config.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
     }
 
@@ -59,7 +65,18 @@ abstract class AbstractGridExecutor extends Executor {
      * @return
      */
     TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 100, Duration.of('5 sec'))
+        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'), createResourceTracker())
+    }
+
+    /**
+     * Create a resource tracker from the `executor.cpus` and `executor.memory`
+     * settings, or {@code null} when neither is specified
+     */
+    @PackageScope
+    ResourceTracker createResourceTracker() {
+        final cpus = config.getExecConfigProp(name, 'cpus', 0) as int
+        final memory = config.getExecConfigProp(name, 'memory', null) as MemoryUnit
+        return cpus || memory ? new ResourceTracker(cpus, memory?.toBytes() ?: 0L) : null
     }
 
     /*
@@ -135,6 +152,23 @@ abstract class AbstractGridExecutor extends Executor {
      */
     abstract protected List<String> getDirectives(TaskRun task, List<String> initial)
 
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String it : opts ) {
+                result.add(it)
+                result.add('')
+            }
+        }
+        else if( opts instanceof CharSequence ) {
+            result.add(opts.toString())
+            result.add('')
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
+    }
+
     /**
      * Given a task returns a *clean* name used to submit the job to the grid engine.
      * That string must not contain blank or special shell characters e.g. parenthesis, etc
@@ -147,17 +181,19 @@ abstract class AbstractGridExecutor extends Executor {
         // -- check for a custom `jobName` defined in the nextflow config file
         def customName = resolveCustomJobName(task)
         if( customName )
-            return sanitizeJobName(customName)
+            return sanitizeJobName(removeControlChars(customName))
 
         // -- if not available fallback on the custom naming strategy
 
-        final result = new StringBuilder("nf-")
-        final name = task.getName()
-        for( int i=0; i<name.size(); i++ ) {
-            final ch = name[i]
-            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
-        }
-        return sanitizeJobName(result.toString())
+        final name = "nf-" + INVALID_NAME_CHARS.matcher(task.getName()).replaceAll('_')
+        return sanitizeJobName(name)
+    }
+
+    /**
+     * Replace control characters (e.g. newlines) so that the job name is kept on a single directive line
+     */
+    private static String removeControlChars(String name) {
+        CONTROL_CHARS.matcher(name).replaceAll('_')
     }
 
     protected String sanitizeJobName(String name) {
@@ -173,11 +209,11 @@ abstract class AbstractGridExecutor extends Executor {
     @PackageScope
     String resolveCustomJobName(TaskRun task) {
         try {
-            def custom = (Closure)session?.getExecConfigProp(name, 'jobName', null)
+            final custom = (Closure)config.getExecConfigProp(name, 'jobName', null)
             if( !custom )
                 return null
 
-            def ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            final ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
             custom.cloneWith(ctx).call()?.toString()
         }
         catch( Exception e ) {
@@ -303,7 +339,7 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     Map<String,QueueStatus> getQueueStatus(queue) {
-        final global = session.getExecConfigProp(name, 'queueGlobalStatus',false)
+        final global = config.getExecConfigProp(name, 'queueGlobalStatus', false)
         if( global ) {
             log.debug1("Executor '$name' fetching queue global status")
             queue = null

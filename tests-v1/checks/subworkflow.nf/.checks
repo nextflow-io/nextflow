@@ -1,0 +1,36 @@
+set -e
+
+rm * || true
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'process > test1:flow1:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test1:flow1:bar'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test1:flow2:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test1:flow2:baz'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test2:flow1:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test2:flow1:bar'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test2:flow2:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > test2:flow2:baz'` == 1 ]] || false
+
+[[ `<test1.txt grep -c 'HELLO'` == 1 ]]
+[[ `<test1.txt grep -c 'olleH'` == 1 ]]
+[[ `<test2.txt grep -c 'HELLO'` == 1 ]]
+[[ `<test2.txt grep -c 'olleH'` == 1 ]]
+
+rm * || true
+$NXF_RUN -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test1:flow1:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test1:flow1:bar'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test1:flow2:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test1:flow2:baz'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test2:flow1:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test2:flow1:bar'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test2:flow2:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > test2:flow2:baz'` == 1 ]] || false
+
+
+[[ `<test1.txt grep -c 'HELLO'` == 1 ]]
+[[ `<test1.txt grep -c 'olleH'` == 1 ]]
+[[ `<test2.txt grep -c 'HELLO'` == 1 ]]
+[[ `<test2.txt grep -c 'olleH'` == 1 ]]

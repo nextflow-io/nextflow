@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.executor.local
 
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
 
@@ -73,7 +73,7 @@ class NativeTaskHandler extends TaskHandler {
         // submit for execution by using session executor service
         // it returns an error when everything is OK
         // of the exception throw in case of error
-        result = session.getExecService().submit(new TaskSubmit(task))
+        result = executor.getExecService().submit(new TaskSubmit(task))
         status = TaskStatus.SUBMITTED
     }
 
@@ -91,11 +91,15 @@ class NativeTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
         if( isRunning() && result.isDone() ) {
             status = TaskStatus.COMPLETED
-            if( result.get() instanceof Throwable ) {
-                task.error = (Throwable)result.get()
+            final ret = result.get()
+            if( ret instanceof InvocationTargetException ) {
+                task.error = ret.cause
+            }
+            else if( ret instanceof Throwable ) {
+                task.error = (Throwable)ret
             }
             else {
-                task.stdout = result.get()
+                task.stdout = ret
             }
             return true
         }
@@ -103,7 +107,7 @@ class NativeTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( result ) result.cancel(true)
     }
 

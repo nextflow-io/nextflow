@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowReadChannel
-import nextflow.ast.OpXform
-import nextflow.ast.OpXformImpl
+import nextflow.exception.ExitException
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
@@ -39,6 +38,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
+import nextflow.util.RecordMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -57,9 +57,19 @@ class Nextflow {
 
     private static final Random random = new Random()
 
+    /**
+     * Get the value of an environment variable from the launch environment.
+     *
+     * @param name
+     *      The environment variable name to be referenced
+     * @return
+     *      The value associate with the specified variable name or {@code null} if the variable does not exist.
+     */
+    static String env(String name) {
+        return SysEnv.get(name)
+    }
 
-    static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
-
+    private static List<Path> fileNamePattern( FilePatternSplitter splitter, Map opts ) {
         final scheme = splitter.scheme
         final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
         final folder = toCanonicalPath(target)
@@ -68,7 +78,7 @@ class Nextflow {
         if( opts == null ) opts = [:]
         if( !opts.type ) opts.type = 'file'
 
-        def result = new LinkedList()
+        def result = new LinkedList<Path>()
         try {
             FileHelper.visitFiles(opts, folder, pattern) { Path it -> result.add(it) }
         }
@@ -76,7 +86,6 @@ class Nextflow {
             log.debug "No such file or directory: $folder -- Skipping visit"
         }
         return result
-
     }
 
     static private String str0(value) {
@@ -104,11 +113,16 @@ class Nextflow {
      * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
      * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
      */
-    static file( Map options = null, def filePattern ) {
-
+    static file(Map options = null, def filePattern) {
         if( !filePattern )
-            throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
+            throw new IllegalArgumentException("Argument of `file()` function cannot be ${filePattern==null?'null':'empty'}")
+        final result = file0(options, filePattern)
+        if( result instanceof Collection && result.size() != 1 && NF.isSyntaxParserV2() )
+            log.warn "The `file()` function was called with a glob pattern that matched a collection of files -- use `files()` instead."
+        return result
+    }
 
+    private static file0( Map options = null, def filePattern ) {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
@@ -124,14 +138,28 @@ class Nextflow {
         }
 
         // revolve the glob pattern returning all matches
-        return fileNamePattern(splitter, options)
+        final result = fileNamePattern(splitter, options)
+        if( glob && options?.checkIfExists && result.isEmpty() )
+            throw new NoSuchFileException(path.toString())
+
+        return result
     }
 
-    static files( Map options=null, def path ) {
-        def result = file(options, path)
-        return result instanceof List ? result : [result]
+    static Collection<Path> files(Map options=null, def filePattern) {
+        if( !filePattern )
+            throw new IllegalArgumentException("Argument of `files()` function cannot be ${filePattern==null?'null':'empty'}")
+        final result = file0(options, filePattern)
+        return result instanceof Collection ? result : [result]
     }
 
+    /**
+     * Creates a {@link RecordMap} from the given named arguments.
+     *
+     * @param props
+     */
+    static RecordMap record(Map<String,?> props) {
+        return new RecordMap(props)
+    }
 
     /**
      * Creates a {@link ArrayTuple} object with the given open array items
@@ -192,20 +220,17 @@ class Nextflow {
      * @param exitCode The exit code to be returned
      * @param message The message that will be reported in the log file (optional)
      */
-    @Deprecated
     static void exit(int exitCode, String message = null) {
-        if( session.aborted ) {
-            log.debug "Ignoring exit because execution is already aborted -- message=$message"
+        // nothing left to stop once the session is terminating (e.g. `onComplete` / `onError` handlers)
+        if( session.aborted || session.terminated ) {
+            log.warn "Ignoring `exit()` because the pipeline execution is already terminating -- exitCode=$exitCode; message=$message"
             return
         }
-        
-        if ( exitCode && message ) {
+        if( exitCode && message )
             log.error message
-        }
-        else if ( message ) {
+        else if( message )
             log.info message
-        }
-        System.exit(exitCode)
+        throw new ExitException(exitCode, message)
     }
 
     /**
@@ -213,7 +238,6 @@ class Nextflow {
      *
      * @param message The message that will be reported in the log file
      */
-    @Deprecated
     static void exit( String message ) {
         exit(0, message)
     }
@@ -335,11 +359,8 @@ class Nextflow {
      *      - attach: One or more list attachment
      */
     static void sendMail( Map params ) {
-
-        new Mailer()
-            .setConfig(Global.session.config.mail as Map)
-            .send(params)
-
+        final opts = Global.session.config.mail as Map ?: Collections.emptyMap()
+        new Mailer(opts).send(params)
     }
 
     /**
@@ -361,9 +382,8 @@ class Nextflow {
      *    <code>
      */
     static void sendMail( Closure params ) {
-        new Mailer()
-                .setConfig(Global.session.config.mail as Map)
-                .send(params)
+        final opts = Global.session.config.mail as Map ?: Collections.emptyMap()
+        new Mailer(opts).send(params)
     }
 
     /**
@@ -407,6 +427,4 @@ class Nextflow {
      */
     static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
 
-    @Deprecated
-    static Closure<TokenMultiMapDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
 }

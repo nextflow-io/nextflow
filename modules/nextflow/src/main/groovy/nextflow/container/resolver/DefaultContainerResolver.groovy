@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.container.resolver
@@ -32,6 +31,25 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class DefaultContainerResolver implements ContainerResolver {
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    final boolean enabled() {
+        return true
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String defaultContainerPlatform() {
+        return null
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !imageName ) {
@@ -39,10 +57,32 @@ class DefaultContainerResolver implements ContainerResolver {
             return ContainerInfo.EMPTY
         }
 
-        final cfg = task.getContainerConfig()
-        final handler = new ContainerHandler(cfg)
-        final ret = handler.normalizeImageName(imageName)
+        final ret = resolveImage0(task, imageName)
         return new ContainerInfo(imageName, ret, ret)
     }
 
+    private String resolveImage0(TaskRun task, String imageName) {
+        final cfg = task.getContainerConfig()
+        final handler = new ContainerHandler(cfg)
+        return handler.normalizeImageName(imageName)
+    }
+
+    ContainerInfo resolveImage(TaskRun task, String imageName, String hashKey) {
+        assert imageName
+        final ret = resolveImage0(task, imageName)
+        return new ContainerInfo(imageName, ret, hashKey)
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean isContainerReady(String key) {
+        return true
+    }
+
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return new ContainerMeta(targetImage: key)
+    }
 }

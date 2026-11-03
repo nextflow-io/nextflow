@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,15 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.config
 
+import io.seqera.wave.api.BuildCompression
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -86,7 +87,8 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.9'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.5.10-noble'
+        opts.condaOpts().baseImage == 'ubuntu:24.04'
         opts.condaOpts().commands == null
 
         when:
@@ -94,22 +96,13 @@ class WaveConfigTest extends Specification {
         then:
         opts.condaOpts().mambaImage == 'mambaorg/foo:1'
         opts.condaOpts().commands == ['USER hola']
-        
-    }
-
-    def 'should get spack config' () {
-        when:
-        def opts = new WaveConfig([:])
-        then:
-        opts.spackOpts().basePackages == null
-        opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ basePackages: 'foo bar', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[conda:[baseImage:'debian:12', mambaImage:'mambaorg/micromamba:2-amazon2023']]])
         then:
-        opts.spackOpts().basePackages == 'foo bar'
-        opts.spackOpts().commands == ['USER hola']
-        
+        opts.condaOpts().baseImage == 'debian:12'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:2-amazon2023'
+
     }
 
     def 'should get build and cache repos' () {
@@ -126,12 +119,24 @@ class WaveConfigTest extends Specification {
         opts.cacheRepository() == 'some/cache'
     }
 
+    def 'should get build template' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.buildTemplate() == null
+
+        when:
+        opts = new WaveConfig([build:[template:'conda/pixi:v1']])
+        then:
+        opts.buildTemplate() == 'conda/pixi:v1'
+    }
+
     @Unroll
     def 'should set strategy' () {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == ['container','dockerfile','conda','spack']
+        opts.strategy() == ['container','dockerfile','conda']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -140,13 +145,12 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | ['container','dockerfile','conda','spack']
+        null                    | ['container','dockerfile','conda']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
         ['conda','container']   | ['conda','container']
         [' conda',' container'] | ['conda','container']
-        'spack'                 | ['spack']
     }
 
     def 'should fail to set strategy' () {
@@ -161,6 +165,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
+        opts.retryOpts().delay == Duration.of('450ms')
         opts.retryOpts().maxAttempts == 5
         opts.retryOpts().maxDelay == Duration.of('90s')
 
@@ -193,4 +198,166 @@ class WaveConfigTest extends Specification {
         then:
         opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(90)
     }
+
+    def 'should dump config' () {
+        given:
+        def config = new WaveConfig([enabled: true])
+        expect:
+        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT1M30S), scan:WaveScanConfig(allowedLevels:null, mode:null), soci:false, strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
+    }
+
+    def 'should not allow invalid setting' () {
+        when:
+        new WaveConfig(endpoint: 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: 'foo'"
+
+        when:
+        new WaveConfig(endpoint: 'ftp://foo.com')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: 'ftp://foo.com'"
+
+        when:
+        new WaveConfig(build: [repository: 'http://foo.com'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Config setting 'wave.build.repository' should not include any protocol prefix - offending value: 'http://foo.com'"
+
+        when:
+        new WaveConfig(build: [cacheRepository: 'http://foo.com'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: 'http://foo.com'"
+    }
+
+    def 'should set preserve timestamp' () {
+        when:
+        def config = new WaveConfig([:])
+        then:
+        !config.preserveFileTimestamp()
+
+        when:
+        config = new WaveConfig(preserveFileTimestamp: true)
+        then:
+        config.preserveFileTimestamp()
+    }
+
+    def 'should enabled mirror mode' () {
+        expect:
+        !new WaveConfig([:]).mirrorMode()
+        and:
+        new WaveConfig([mirror:true]).mirrorMode()
+    }
+
+    def 'should enable soci mode' () {
+        expect:
+        !new WaveConfig([:]).sociMode()
+        and:
+        new WaveConfig([soci:true]).sociMode()
+    }
+
+    @Unroll
+    def 'should validate scan mode' () {
+        expect:
+        new WaveConfig(scan: [mode: MODE]).scanMode() == EXPECTED
+        where:
+        MODE        | EXPECTED
+        null        | null
+        'none'      | ScanMode.none
+        'async'     | ScanMode.async
+        'required'  | ScanMode.required
+    }
+
+    @Unroll
+    def 'should validate scan levels' () {
+        expect:
+        new WaveConfig(scan: [allowedLevels: LEVEL]).scanAllowedLevels() == EXPECTED
+        where:
+        LEVEL               | EXPECTED
+        null                | null
+        'low'               | List.of(ScanLevel.LOW)
+        'LOW'               | List.of(ScanLevel.LOW)
+        'low,high'          | List.of(ScanLevel.LOW,ScanLevel.HIGH)
+        'LOW, HIGH'         | List.of(ScanLevel.LOW,ScanLevel.HIGH)
+        ['medium','high']   | List.of(ScanLevel.MEDIUM,ScanLevel.HIGH)
+    }
+
+    def 'should validate build compression' () {
+        expect:
+        new WaveConfig(build: [compression: COMPRESSION]).buildCompression() == EXPECTED
+        where:
+        COMPRESSION         | EXPECTED
+        null                | null
+        [mode:'gzip']       | BuildCompression.gzip
+        [mode:'estargz']    | BuildCompression.estargz
+        and:
+        [mode:'gzip', level: 1]   | new BuildCompression().withMode(BuildCompression.Mode.gzip).withLevel(1)
+        [mode:'estargz', level: 2]| new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2)
+        [mode:'zstd', level: 3]   | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3)
+        and:
+        [mode:'gzip', level: 1, force:true]     | new BuildCompression().withMode(BuildCompression.Mode.gzip).withLevel(1).withForce(true)
+        [mode:'estargz', level: 2, force:true ] | new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2).withForce(true)
+        [mode:'zstd', level: 3,force:true]      | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3).withForce(true)
+    }
+
+    def 'should expose build compression and conda as nested scopes so their keys are recognized' () {
+        given:
+        def root = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
+        expect:
+        // compression is a nested scope exposing its keys as documented options
+        root.getScope(['build','compression']) != null
+        root.getOption(['build','compression','mode']) != null
+        root.getOption(['build','compression','level']) != null
+        root.getOption(['build','compression','force']) != null
+        and:
+        // conda is a nested scope exposing its keys as documented options
+        root.getScope(['build','conda']) != null
+        root.getOption(['build','conda','mambaImage']) != null
+        root.getOption(['build','conda','baseImage']) != null
+        root.getOption(['build','conda','basePackages']) != null
+        root.getOption(['build','conda','commands']) != null
+        and:
+        // the options carry descriptions (unlike a map option or @NestedScope)
+        root.getOption(['build','compression','mode']).description().contains('compression algorithm')
+        root.getOption(['build','conda','mambaImage']).description().contains('Mamba container image')
+    }
+
+    def 'should adapt config scopes to wave-api domain objects' () {
+        when:
+        def config = new WaveConfig([build: [
+                conda: [mambaImage: 'mambaorg/foo:1', commands: ['USER hola']],
+                compression: [mode: 'estargz', level: 2] ]])
+        then:
+        config.condaOpts() instanceof io.seqera.wave.config.CondaOpts
+        config.condaOpts().mambaImage == 'mambaorg/foo:1'
+        config.condaOpts().commands == ['USER hola']
+        // defaults still applied by the adaptor for unset keys
+        config.condaOpts().baseImage == 'ubuntu:24.04'
+        config.condaOpts().basePackages == 'conda-forge::procps-ng'
+        and:
+        config.buildCompression() == new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2)
+        and:
+        // no compression options -> null domain object, as before
+        new WaveConfig([:]).buildCompression() == null
+    }
+
+    def 'config scopes should mirror every field of their backing wave-api type' () {
+        given:
+        def root = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
+        and:
+        // instance (non-static, non-synthetic) field names of a wave-api type
+        def instanceFields = { Class type -> type.declaredFields
+                .findAll { f -> !java.lang.reflect.Modifier.isStatic(f.modifiers) && !f.synthetic }
+                .collect { f -> f.name } as Set }
+
+        expect:
+        // guards against drift: if a wave-api type gains a field, the mirror scope
+        // must expose it too, otherwise that config key would be flagged again
+        root.getScope(['build','conda']).children().keySet() == instanceFields(io.seqera.wave.config.CondaOpts)
+        and:
+        root.getScope(['build','compression']).children().keySet() == instanceFields(io.seqera.wave.api.BuildCompression)
+    }
+
 }

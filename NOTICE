@@ -1,6 +1,6 @@
 NEXTFLOW
 
-Copyright 2013-2023, Seqera Labs
+Copyright 2013-2024, Seqera Labs
 
 
 This software includes source code and libraries developed by:
@@ -142,7 +142,7 @@ This software includes source code and libraries developed by:
 
     Spack
     https://github.com/spack/spack
-    Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
+    Copyright 2013-2024 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
     Licensed under Apache License, Version 2.0
 
 Nextflow is a registered trademark of Seqera Labs, Spain.

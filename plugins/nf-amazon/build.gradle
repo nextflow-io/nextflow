@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '26.10.0'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
+    className = 'nextflow.cloud.aws.AmazonPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.cloud.aws.batch.AwsBatchExecutor',
+        'nextflow.cloud.aws.config.AwsConfig',
+        'nextflow.cloud.aws.fusion.AwsFusionEnv',
+        'nextflow.cloud.aws.mail.AwsMailProvider',
+        'nextflow.cloud.aws.nio.S3AtomicLockProvider',
+        'nextflow.cloud.aws.nio.S3ObjectStoreReader',
+        'nextflow.cloud.aws.util.S3PathFactory',
+        'nextflow.cloud.aws.util.S3PathSerializer',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -30,32 +50,36 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
 }
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
-    compileOnly 'org.pf4j:pf4j:3.4.1'
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "org.pf4j:pf4j:${pf4jVersion}"
 
-    api ('javax.xml.bind:jaxb-api:2.3.1')
-    api ('com.amazonaws:aws-java-sdk-s3:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-ec2:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-batch:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-iam:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-ecs:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-logs:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-sts:1.12.429')
-    api ('com.amazonaws:aws-java-sdk-ses:1.12.429')
-    api ('software.amazon.awssdk:sso:2.20.89')
-    api ('software.amazon.awssdk:ssooidc:2.20.89')
+    api ("javax.xml.bind:jaxb-api:${jaxbApiVersion}")
+    api ("software.amazon.awssdk:s3:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ec2:${awsSdkVersion}")
+    api ("software.amazon.awssdk:batch:${awsSdkVersion}")
+    api ("software.amazon.awssdk:iam:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ecs:${awsSdkVersion}")
+    api ("software.amazon.awssdk:cloudwatchlogs:${awsSdkVersion}")
+    api ("software.amazon.awssdk:codecommit:${awsSdkVersion}")
+    api ("software.amazon.awssdk:sts:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ses:${awsSdkVersion}")
+    api ("software.amazon.awssdk:sso:${awsSdkVersion}")
+    api ("software.amazon.awssdk:ssooidc:${awsSdkVersion}")
+    api ("software.amazon.awssdk:s3-transfer-manager:${awsSdkVersion}")
+    api ("software.amazon.awssdk:apache-client:${awsSdkVersion}")
+    api ("software.amazon.awssdk:aws-crt-client:${awsSdkVersion}")
 
-    constraints {
-        api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
-    }
-        
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.18"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.18"
+    testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+    testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
+    // wiremock required by S3ClientRetryTest: the SDK's retry lives inside the real S3 client, so a
+    // mocked client cannot exercise it -- only an HTTP-level stub below the SDK can
+    testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock
+    testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
 }

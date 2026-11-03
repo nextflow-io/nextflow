@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.container
@@ -29,10 +28,29 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ApptainerBuilder extends SingularityBuilder {
 
-    ApptainerBuilder(String name) {
+    ApptainerBuilder(String name, ApptainerConfig config) {
         super(name)
+        applyConfig(config)
+    }
+
+    ApptainerBuilder(String name) {
+        this(name, new ApptainerConfig([:]))
     }
 
     @Override
     protected String getBinaryName() { 'apptainer' }
+
+    protected void applyConfig(ApptainerConfig config) {
+
+        if( config.autoMounts != null )
+            this.autoMounts = config.autoMounts
+
+        if( config.engineOptions )
+            this.addEngineOptions(config.engineOptions)
+
+        this.resourceLimits = config.resourceLimits
+
+        if( config.runOptions )
+            this.addRunOptions(config.runOptions)
+    }
 }

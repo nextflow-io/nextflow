@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package nextflow.script
 
-import nextflow.exception.ScriptCompilationException
-import nextflow.plugin.extension.PluginExtensionProvider
-import nextflow.plugin.Plugins
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -31,7 +27,15 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
-import nextflow.exception.IllegalModulePath
+import nextflow.exception.IllegalModulePathException
+import nextflow.exception.ScriptCompilationException
+import nextflow.module.ModuleReference
+import nextflow.module.spi.RemoteModuleResolver
+import nextflow.module.spi.RemoteModuleResolverProvider
+import nextflow.plugin.Plugins
+import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
+import nextflow.script.parser.v1.ScriptLoaderV1
 /**
  * Implements a script inclusion
  *
@@ -56,34 +60,9 @@ class IncludeDef {
     @PackageScope Map addedParams
     private Session session
 
-    @Deprecated
-    IncludeDef( String module ) {
-        final msg = "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-        this.path = module
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(null,null)
-    }
-
-    IncludeDef(TokenVar token, String alias=null) {
-        def component = token.name; if(alias) component += " as $alias"
-        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(token.name, alias)
-    }
-
     protected IncludeDef(List<Module> modules) {
         this.modules = new ArrayList<>(modules)
     }
-
-    /** only for testing purpose -- do not use */
-    protected IncludeDef() { }
 
     IncludeDef from(Object path) {
         this.path = path
@@ -91,11 +70,13 @@ class IncludeDef {
     }
 
     IncludeDef params(Map args) {
+        log.warn1 "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
         this.params = args != null ? new HashMap(args) : null
         return this
     }
 
     IncludeDef addParams(Map args) {
+        log.warn1 "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
         this.addedParams = args
         return this
     }
@@ -105,11 +86,11 @@ class IncludeDef {
         return this
     }
 
-    /*
-     * Note: this method invocation is injected during the Nextflow AST manipulation.
-     * Do not use it explicitly.
+    /**
+     * Used internally by the script DSL to include modules
+     * into a script.
      *
-     * @param ownerParams The params in the owner context
+     * @param ownerParams The params in the including script context
      */
     void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
@@ -118,9 +99,11 @@ class IncludeDef {
             return
         }
         // -- resolve the concrete against the current script
-        final moduleFile = realModulePath(path)
+        final moduleFile = realModulePath(path).normalize()
         // -- load the module
-        final moduleScript = loadModule0(moduleFile, resolveParams(ownerParams), session)
+        final moduleScript = NF.isSyntaxParserV2()
+            ? loadModuleV2(moduleFile, ownerParams)
+            : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
         for( Module module : modules ) {
             meta.addModule(moduleScript, module.name, module.alias)
@@ -142,13 +125,36 @@ class IncludeDef {
     @PackageScope
     Path getOwnerPath() { getMeta().getScriptPath() }
 
+    /**
+     * When using the strict parser, the included script will already
+     * have been compiled, so simply execute it to load its definitions.
+     *
+     * @param path    The included script path
+     * @param params  The params of the including script
+     */
+    @PackageScope
+    static BaseScript loadModuleV2(Path path, Map params) {
+        final script = ScriptMeta.getScriptByPath(path)
+        if( !script )
+            throw new IllegalStateException("Unable to find module script for path: $path")
+        script.getBinding().setParams(params)
+        script.runModule()
+        return script
+    }
+
+    /**
+     * When using the legacy parser, compile and execute the
+     * included script to load its definitions.
+     *
+     * @param path    The included script path
+     * @param params  The params of the including script
+     * @param session The current workflow run
+     */
     @PackageScope
     @Memoized
-    static BaseScript loadModule0(Path path, Map params, Session session) {
+    static BaseScript loadModuleV1(Path path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
-
-        // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+        new ScriptLoaderV1(session)
                 .setModule(true)
                 .setBinding(binding)
                 .runScript(path)
@@ -158,14 +164,28 @@ class IncludeDef {
     @PackageScope
     Path resolveModulePath(include) {
         assert include
-
         final result = include as Path
         if( result.isAbsolute() ) {
             if( result.scheme == 'file' ) return result
-            throw new IllegalModulePath("Cannot resolve module path: ${result.toUriString()}")
+            throw new IllegalModulePathException("Cannot resolve module path: ${result.toUriString()}")
         }
+        final str = include.toString()
+        if( ScriptModuleResolver.isLocalModule(str) ) {
+            return getOwnerPath().resolveSibling(str).normalize()
+        }
+        // Not a local path — treat as remote module reference (scope/name)
+        return resolveRemoteModulePath(str)
+    }
 
-        return getOwnerPath().resolveSibling(include.toString())
+    @PackageScope
+    Path resolveRemoteModulePath(String moduleName) {
+        // Use SPI to get the remote module resolver implementation
+        def resolver = RemoteModuleResolverProvider.getInstance()
+        // Resolve relative to the including module's directory (context-relative) so that a
+        // workflow module's own dependencies are found under its nested `modules/` directory
+        // (nested vendoring). Any other script resolves against the project base dir.
+        final base = RemoteModuleResolver.resolveBaseDir(getOwnerPath(), session.baseDir)
+        return resolver.resolve(moduleName, base)
     }
 
     @PackageScope
@@ -196,15 +216,21 @@ class IncludeDef {
     @PackageScope
     void checkValidPath(path) {
         if( !path )
-            throw new IllegalModulePath("Missing module path attribute")
+            throw new IllegalModulePathException("Missing module path attribute")
 
         if( path instanceof Path && path.scheme != 'file' )
-            throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
+            throw new IllegalModulePathException("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
-        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
-            throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
+        if( str.startsWith('/') || str.startsWith('./') || str.startsWith('../') || str.startsWith('plugin/') )
+            return
 
+        // Otherwise must be a valid remote module reference in scope/name format
+        try {
+            ModuleReference.parse(str)
+        } catch( Exception e ) {
+            throw new IllegalModulePathException("Module path must start with '/', './', '../' or 'plugin/' prefix, or be a valid remote module reference (scope/name) -- Offending module: $str")
+        }
     }
 
     @PackageScope

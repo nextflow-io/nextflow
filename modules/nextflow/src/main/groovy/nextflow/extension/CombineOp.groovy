@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ class CombineOp {
     }
 
     CombineOp setPivot( pivot ) {
-        this.pivot = (List<Integer>)(pivot instanceof List<Integer> ? pivot : [pivot])
+        this.pivot = (List<Integer>)(pivot instanceof List ? pivot : [pivot])
         return this
     }
 

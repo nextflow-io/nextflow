@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin.hello
@@ -28,6 +27,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
+import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
@@ -50,7 +50,7 @@ class HelloExtension extends PluginExtensionPoint {
     private Session session
 
     /*
-     * nf-core initializes the plugin once loaded and session is ready
+     * Nextflow initializes the plugin once loaded and session is ready
      * @param session
      */
     @Override
@@ -65,14 +65,18 @@ class HelloExtension extends PluginExtensionPoint {
      * - it's public
      * - it returns a DataflowWriteChannel
      *
-     * nf-core will inspect the extension class and allow the script to call all these kind of methods
+     * Nextflow will inspect the extension class and allow the script to call all these kind of methods
      *
      * the method can require arguments but it's not mandatory, it depends of the business logic of the method
      *
      * business logic can write into the channel once ready and values will be consumed from it
      */
     DataflowWriteChannel reverse(String message) {
-        createReverseChannel(message)
+        final channel = CH.create()
+        session.addIgniter { ->
+            businessLogicHere(channel, message)
+        }
+        return channel
     }
 
     /*
@@ -115,19 +119,7 @@ class HelloExtension extends PluginExtensionPoint {
      */
     @Operator
     String goodbyeWrongSignature(DataflowReadChannel source) {
-        source.val
-    }
-
-    protected DataflowWriteChannel createReverseChannel(final String message){
-        final channel = CH.create()
-        if( NF.isDsl2() ){
-            session.addIgniter { ->
-                businessLogicHere(channel, message)
-            }
-        }else{
-            businessLogicHere(channel, message)
-        }
-        channel
+        'goodbye'
     }
 
     HelloFunctions functions = new HelloFunctions()
@@ -139,9 +131,30 @@ class HelloExtension extends PluginExtensionPoint {
      */
     @Function
     String sayHello(String lang='en'){
-        assert initialized, "PluginExtension was not initilized"
+        assert initialized, "PluginExtension was not initialized"
         // sayHello is the entrypoint where we can write all the logic or delegate to other classes, ...
         return functions.sayHello(lang)
+    }
+
+    /**
+     * A @Function that returns a channel, i.e. a factory as a plain function
+     */
+    @Function
+    DataflowWriteChannel reverseFn(Map opts = [:], String message) {
+        return reverse(opts.upper ? message.toUpperCase() : message)
+    }
+
+    /**
+     * A @Function that takes a channel, i.e. an operator as a plain function
+     */
+    @Function
+    DataflowWriteChannel goodbyeFn(Map opts = [:], DataflowWriteChannel source) {
+        final prefix = opts.prefix ?: ''
+        final target = CH.create()
+        final next = { target.bind(prefix + it) }
+        final done = { target.bind(Channel.STOP) }
+        DataflowHelper.subscribeImpl(CH.getReadChannel(source), [onNext: next, onComplete: done])
+        return target
     }
 
     String aNonImportedFunction(){

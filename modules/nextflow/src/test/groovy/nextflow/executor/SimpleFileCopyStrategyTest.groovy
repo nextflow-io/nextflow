@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,13 @@
 package nextflow.executor
 
 
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.file.FilePatternSplitter
 import nextflow.processor.TaskBean
+import nextflow.util.Escape
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -50,11 +54,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines[2] == "rm -f seq_2.fa"
         lines[3] == "rm -f seq\\ 3.fa"
         lines[4] == "rm -f sub/dir/seq_4.fa"
-        lines[5] == "ln -s /home/data/sequences file.txt"
-        lines[6] == "ln -s /home/data/file1 seq_1.fa"
-        lines[7] == "ln -s /home/data/file2 seq_2.fa"
-        lines[8] == "ln -s /home/data/file\\ 3 seq\\ 3.fa"
-        lines[9] == "mkdir -p sub/dir && ln -s /home\\'data/file4 sub/dir/seq_4.fa"
+        lines[5] == "ln -sfn /home/data/sequences file.txt"
+        lines[6] == "ln -sfn /home/data/file1 seq_1.fa"
+        lines[7] == "ln -sfn /home/data/file2 seq_2.fa"
+        lines[8] == "ln -sfn /home/data/file\\ 3 seq\\ 3.fa"
+        lines[9] == "mkdir -p sub/dir && ln -sfn /home\\'data/file4 sub/dir/seq_4.fa"
         lines.size() == 10
 
 
@@ -67,7 +71,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines = script.readLines()
 
         then:
-        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -s /data/file file.txt; ln -s /data/seq seq_1.fa"
+        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -sfn /data/file file.txt; ln -sfn /data/seq seq_1.fa"
         lines.size() == 1
 
     }
@@ -110,23 +114,23 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source                      | target               | mode              | result
-        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -s some/path/to/file.txt file.txt'
-        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -s some/path/to/file\\'3.txt file\\'3.txt"
-        'some/path/to/file.txt'     | 'file.txt'           | 'link'            | 'ln some/path/to/file.txt file.txt'
+        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -sfn some/path/to/file.txt file.txt'
+        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -sfn some/path/to/file\\'3.txt file\\'3.txt"
+        'some/path/to/file.txt'     | 'file.txt'           | 'link'            | 'ln -f some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'file.txt'           | 'copy'            | 'cp -fRL /some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'here/to/abc.txt'    | 'copy'            | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
 
-        // Check the various combinations of relative/absolute inputs to 
+        // Check the various combinations of relative/absolute inputs to
         // rellink when workDir is defined:
-        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -s ../../../some/path/to/file.txt abc.txt'
-        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -s ../../../../some/path/to/file.txt xyz/abc.txt'
-        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -s some/path/to/file.txt abc.txt'
-        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -s ../../other/file.txt abc.txt'
-        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -s file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -sfn ../../../some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -sfn ../../../../some/path/to/file.txt xyz/abc.txt'
+        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sfn some/path/to/file.txt abc.txt'
+        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -sfn ../../other/file.txt abc.txt'
+        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sfn file.txt abc.txt'
 
         // Check that the 'symlink' mode is default and uses absolute paths
-        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -s /some/path/to/file.txt abc.txt'
-        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -s /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -sfn /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -sfn /some/path/to/file.txt abc.txt'
 
     }
 
@@ -228,8 +232,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         script == '''
                 rm -f hello.txt
                 rm -f dir/to/file.txt
-                ln -s /some/file.txt hello.txt
-                mkdir -p dir/to && ln -s /other/file.txt dir/to/file.txt
+                ln -sfn /some/file.txt hello.txt
+                mkdir -p dir/to && ln -sfn /other/file.txt dir/to/file.txt
                 '''
                 .stripIndent().trim()
 
@@ -256,12 +260,75 @@ class SimpleFileCopyStrategyTest extends Specification {
     }
 
 
+    @Unroll
+    def 'should match output pattern #PATTERN in eval as the output file collector does' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        (OTHERS + FILE).each { folder.resolve(it).text = 'x' }
+        def splitter = FilePatternSplitter.glob().parse(PATTERN)
+        def collected = { String name ->
+            splitter.isPattern()
+                ? FileSystems.default.getPathMatcher('glob:' + PATTERN).matches(Paths.get(name))
+                : splitter.strip(PATTERN) == name
+        }
+
+        when:
+        def script = 'eval "ls -1d ' + Escape.doubleQuoted(SimpleFileCopyStrategy.escapePattern(PATTERN)) + '"'
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+
+        then:
+        proc.inputStream.text == FILE + '\n'
+        proc.waitFor() == 0
+        and:
+        collected(FILE)
+        !OTHERS.any(collected)
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        PATTERN             | FILE                  | OTHERS
+        'g\\[1\\].txt'      | 'g[1].txt'            | ['g1.txt']
+        '\\{a,b\\}.txt'     | '{a,b}.txt'           | ['a.txt', 'b.txt']
+        'f\\*.txt'          | 'f*.txt'              | ['f1.txt']
+        'f\\?.txt'          | 'f?.txt'              | ['f1.txt']
+        'x\\\\y.txt'        | 'x\\\\y.txt'          | ['x\\y.txt']
+        'x\\:y\\!z.txt'     | 'x\\:y\\!z.txt'       | ['x:y!z.txt']
+        'd$x.txt'           | 'd$x.txt'             | ['d.txt']
+        'd$*'               | 'd$x.txt'             | ['dx.txt']
+        '*.csv'             | 'data.csv'            | ['data.txt']
+        '*\\.txt'           | 'a.txt'               | ['a.csv']
+        'a\\b*'             | 'ab.txt'              | ['a\\b.txt']
+        'x\\\\y*'           | 'x\\y.txt'            | ['xy.txt']
+        'a b;c `d` "e".txt' | 'a b;c `d` "e".txt'   | ['a']
+    }
+
+    def 'should unstage only the files matching the output patterns' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        ['g[1].txt', 'g1.txt', 'a.csv'].each { folder.resolve(it).text = 'x' }
+        def strategy = new SimpleFileCopyStrategy(new TaskBean(workDir: folder, targetDir: folder))
+        // stub the copy function to record the names it receives
+        def script = 'nxf_fs_copy() { printf "%s\\n" "$1" >> copied.log; }\n'
+        script += strategy.getUnstageOutputFilesScript(['g\\[1\\].txt', '*.csv'], folder)
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('copied.log').readLines().sort() == ['a.csv', 'g[1].txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should return cp script to unstage output files' () {
 
         given:
         def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
         def target = Paths.get('/target/work dir')
-        def task = new TaskBean(workDir: target)
+        def task = new TaskBean(workDir: target, targetDir: target)
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
@@ -269,12 +336,32 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
-                    nxf_fs_copy "$name" /target/work\\ dir || true
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_copy "$name" /target/work\\ dir
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
+
+    }
+
+    def 'should return cp script to unstage output files when the unstage dir is a container mount' () {
+
+        given:
+        // the Google Batch launcher remaps the task dirs onto a gcsfuse container mount,
+        // which must not be mistaken for a storeDir -- see issue #4819
+        def outputs = [ 'out/*' ]
+        def workDir = Paths.get('/work/da/2fe756')
+        def mount = Paths.get('/mnt/disks/my-bucket/work/da/2fe756')
+        def task = new TaskBean(workDir: workDir, targetDir: workDir)
+
+        when:
+        def strategy = new SimpleFileCopyStrategy(task)
+        def script = strategy.getUnstageOutputFilesScript(outputs, mount)
+        then:
+        script.contains('nxf_fs_copy "$name" /mnt/disks/my-bucket/work/da/2fe756')
 
     }
 
@@ -284,7 +371,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
         def workDir = Paths.get('/target/work')
         def storeDir = Paths.get('/target/store')
-        def task = new TaskBean(workDir: workDir)
+        def task = new TaskBean(workDir: workDir, targetDir: storeDir)
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
@@ -292,9 +379,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
-                    nxf_fs_move "$name" /target/store || true
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_move "$name" /target/store
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -314,9 +403,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
-                    nxf_fs_rsync "$name" /target/work\\'s || true
+                set -f
+                for name in $(set +f; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_rsync "$name" /target/work\\'s
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -331,6 +422,39 @@ class SimpleFileCopyStrategyTest extends Specification {
         expect:
         strategy.getStagingDir() == Paths.get('/work/stage')
 
+    }
+
+    def 'stage-in symlink command should replace a stale directory symlink on re-run' () {
+        // Regression test for #4971: re-running a task with a directory input
+        // must not fail nor nest a link inside the previously staged directory.
+        // Without `-n`, `ln -sf <src> <target>` dereferences an existing
+        // symlink-to-directory and creates the link *inside* it instead of
+        // replacing the stale symlink.
+        given:
+        def workDir = Files.createTempDirectory('stage-test')
+        def realDir1 = Files.createDirectory(workDir.resolve('realDir1'))
+        def realDir2 = Files.createDirectory(workDir.resolve('realDir2'))
+        and:
+        // simulate a previous run: 'inputDir' already staged as a symlink to realDir1
+        Files.createSymbolicLink(workDir.resolve('inputDir'), realDir1)
+        and:
+        def task = new TaskBean(workDir: workDir)
+        def strategy = new SimpleFileCopyStrategy(task)
+        def cmd = strategy.stageInCommand(realDir2.toString(), 'inputDir', 'symlink')
+
+        when:
+        def proc = ['bash', '-c', cmd].execute(null as List, workDir.toFile())
+        def exit = proc.waitFor()
+
+        then:
+        exit == 0
+        // the stale symlink is replaced, not dereferenced
+        Files.readSymbolicLink(workDir.resolve('inputDir')) == realDir2
+        // no nested link leaked into the previously staged directory
+        Files.list(realDir1).count() == 0
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
     }
 
 }

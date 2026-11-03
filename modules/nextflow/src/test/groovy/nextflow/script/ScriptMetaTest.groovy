@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import java.nio.file.Files
@@ -23,13 +39,17 @@ class ScriptMetaTest extends Dsl2Spec {
         NF.init()
     }
 
+    def createProcessDef(BaseScript script, String name) {
+        new ProcessDef(script, name, new ProcessConfig(script, name), Mock(BodyDef))
+    }
+
     def 'should return all defined names' () {
 
         given:
         def script = new FooScript(new ScriptBinding())
 
-        def proc1 = new ProcessDef(script, Mock(Closure), 'proc1')
-        def proc2 = new ProcessDef(script, Mock(Closure), 'proc2')
+        def proc1 = createProcessDef(script, 'proc1')
+        def proc2 = createProcessDef(script, 'proc2')
         def func1 = new FunctionDef(name: 'func1', alias: 'func1')
         def work1 = new WorkflowDef(name:'work1')
 
@@ -66,19 +86,19 @@ class ScriptMetaTest extends Dsl2Spec {
 
         // defs in the root script
         def func1 = new FunctionDef(name: 'func1', alias: 'func1')
-        def proc1 = new ProcessDef(script1, Mock(Closure), 'proc1')
+        def proc1 = createProcessDef(script1, 'proc1')
         def work1 = new WorkflowDef(name:'work1')
         meta1.addDefinition(proc1, func1, work1)
 
         // defs in the second script imported in the root namespace
         def func2 = new FunctionDef(name: 'func2', alias: 'func2')
-        def proc2 = new ProcessDef(script2, Mock(Closure), 'proc2')
+        def proc2 = createProcessDef(script2, 'proc2')
         def work2 = new WorkflowDef(name:'work2')
         meta2.addDefinition(proc2, func2, work2)
 
         // defs in the third script imported in a separate namespace
         def func3 = new FunctionDef(name: 'func3', alias: 'func3')
-        def proc3 = new ProcessDef(script2, Mock(Closure), 'proc3')
+        def proc3 = createProcessDef(script2, 'proc3')
         def work3 = new WorkflowDef(name:'work3')
         meta3.addDefinition(proc3, func3, work3)
 
@@ -120,7 +140,8 @@ class ScriptMetaTest extends Dsl2Spec {
 
     def 'should add a module component' () {
         given:
-        def meta = Spy(ScriptMeta)
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
         def comp1 = Mock(ComponentDef)
         def comp2 = Mock(ComponentDef)
 
@@ -142,18 +163,6 @@ class ScriptMetaTest extends Dsl2Spec {
 
     }
 
-    def 'should not throw a duplicate process name exception' () {
-        given:
-        def meta = Spy(ScriptMeta)
-        def comp1 = Mock(ComponentDef)
-
-        when:
-        meta.@imports.clear()
-        meta.addModule0(comp1)
-        then:
-        2 * comp1.getName() >> 'foo'
-    }
-
     def 'should get module bundle' () {
         given:
         def folder = TestHelper.createInMemTempDir()
@@ -168,7 +177,9 @@ class ScriptMetaTest extends Dsl2Spec {
         Files.createFile(mod.resolve('resources/foo.txt'))
         Files.createFile(mod.resolve('resources/bar.txt'))
         and:
-        def meta = new ScriptMeta(scriptPath: scriptPath)
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
+        meta.setScriptPath(scriptPath)
 
         when:
         def bundle = meta.getModuleBundle()
@@ -176,5 +187,41 @@ class ScriptMetaTest extends Dsl2Spec {
         bundle.dockerfile == dockerPath
         bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
 
+    }
+
+    def 'should determine which definitions are directly executable' () {
+        given:
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
+        and:
+        if( processes )
+            meta.addDefinition(processes.collect { n -> createProcessDef(script, n) } as ComponentDef[])
+        if( workflows )
+            meta.addDefinition(workflows.collect { n -> new WorkflowDef(name: n) } as ComponentDef[])
+        if( agents )
+            meta.addDefinition(agents.collect { n -> new AgentDef(script, n, [:], [], null, null) } as ComponentDef[])
+        if( module )
+            meta.setModule(true)
+
+        expect:
+        meta.hasExecutableWorkflows() == EXEC_WORKFLOW
+        meta.hasExecutableProcesses() == EXEC_PROCESS
+        meta.hasExecutableAgents() == EXEC_AGENT
+
+        where:
+        processes    | workflows    | agents       | module | EXEC_WORKFLOW | EXEC_PROCESS | EXEC_AGENT
+        []           | []           | []           | false  | false         | false        | false
+        ['p1']       | []           | []           | false  | false         | true         | false
+        ['p1', 'p2'] | []           | []           | false  | false         | false        | false
+        []           | ['w1']       | []           | false  | true          | false        | false
+        []           | ['w1', 'w2'] | []           | false  | false         | false        | false
+        ['p1']       | ['w1']       | []           | false  | false         | false        | false
+        ['p1']       | []           | []           | true   | false         | false        | false
+        []           | ['w1']       | []           | true   | false         | false        | false
+        []           | []           | ['a1']       | false  | false         | false        | true
+        ['p1']       | []           | ['a1']       | false  | false         | false        | true
+        []           | []           | ['a1', 'a2'] | false  | false         | false        | false
+        []           | ['w1']       | ['a1']       | false  | true          | false        | false
+        []           | []           | ['a1']       | true   | false         | false        | false
     }
 }

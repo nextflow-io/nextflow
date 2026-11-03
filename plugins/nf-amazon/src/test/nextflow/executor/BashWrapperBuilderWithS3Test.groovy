@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,15 +57,17 @@ class BashWrapperBuilderWithS3Test extends Specification {
         then:
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai bla\\ nk.txt" | sort | uniq); do
-                        nxf_s3_upload $name s3://some/buck\\ et || true
+                    set -f
+                    for name in $(set +f; eval "ls -1d test.bam test.bai bla\\\\ nk.txt" | sort | uniq); do
+                        nxf_s3_upload $name s3://some/buck\\ et
                     done
+                    set +f
                     unset IFS
                     '''.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
             # aws cli retry config
-            export AWS_RETRY_MODE=standard 
+            export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
@@ -79,7 +81,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -87,11 +89,11 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
-            
+
             '''.stripIndent(true)
     }
 
@@ -122,9 +124,12 @@ class BashWrapperBuilderWithS3Test extends Specification {
         binding.unstage_outputs == '''\
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://some/bucket")
+                    set -f
+                    for name in $(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://some/bucket")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent()
@@ -134,6 +139,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
             nxf_cp_retry() {
                 local max_attempts=1
                 local timeout=10
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( \$attempt < \$max_attempts ))
@@ -144,16 +150,17 @@ class BashWrapperBuilderWithS3Test extends Specification {
                   else
                     exitCode=\$?
                   fi
-                  if [[ \$exitCode == 0 ]]
+                  attempt=\$(( attempt + 1 ))
+                  if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                   then
                     break
                   fi
                   nxf_sleep \$timeout
-                  attempt=\$(( attempt + 1 ))
-                  timeout=\$(( timeout * 2 ))
+                  timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
+                return \$exitCode
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n\'
                 local cmd=("$@")
@@ -171,7 +178,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -186,7 +193,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws helper
             nxf_s3_upload() {
                 local name=$1
@@ -199,7 +206,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -207,11 +214,11 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
-            
+
             '''.stripIndent(true)
     }
 }

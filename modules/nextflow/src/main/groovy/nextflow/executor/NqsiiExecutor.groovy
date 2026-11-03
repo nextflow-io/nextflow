@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the NQSII cluster
  *
- * Read more 
+ * Read more
  *   https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster
  *   https://wickie.hlrs.de/platforms/index.php/Batch_system
  *
@@ -71,9 +71,7 @@ class NqsiiExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

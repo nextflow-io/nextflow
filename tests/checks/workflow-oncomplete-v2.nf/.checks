@@ -1,0 +1,19 @@
+set -e
+
+#
+# Successful run invokes only the `onComplete:` section
+#
+echo ''
+$NXF_RUN > stdout
+
+[[ `grep -c 'workflow onComplete: true' stdout` == 1 ]] || false
+[[ `grep -c 'workflow onError' stdout` == 0 ]] || false
+
+#
+# Failed run invokes both the `onComplete:` and `onError:` sections
+#
+echo ''
+$NXF_RUN --command xxx > stdout || true
+
+[[ `grep -c 'workflow onComplete: false' stdout` == 1 ]] || false
+[[ `grep -c 'workflow onError: 127' stdout` == 1 ]] || false

@@ -1,104 +1,128 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.trace
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.Session
+import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
+import nextflow.trace.config.DagConfig
+import nextflow.trace.config.ReportConfig
+import nextflow.trace.config.TimelineConfig
+import nextflow.trace.config.TraceConfig
 
 /**
  * Creates Nextflow observes object
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DefaultObserverFactory implements TraceObserverFactory {
+@CompileStatic
+class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
-    private Map config
     private Session session
 
     @Override
-    Collection<TraceObserver> create(Session session) {
+    Collection<TraceObserverV2> create(Session session) {
         this.session = session
-        this.config = session.config
 
-        final result = new ArrayList(10)
-        createTraceFileObserver(result)
+        final result = new ArrayList<TraceObserverV2>(5)
+        createAnsiLogObserver(result)
+        createAgentLogObserver(result)
+        createGraphObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
-        createDagObserver(result)
-        createAnsiLogObserver(result)
+        createTraceFileObserver(result)
         return result
     }
 
-    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
+    protected void createAnsiLogObserver(Collection<TraceObserverV2> result) {
         if( session.ansiLog ) {
-            session.ansiLogObserver = new AnsiLogObserver()
-            result << session.ansiLogObserver
+            def observer = new AnsiLogObserver()
+            session.logObserver = observer
+            result << observer
+        }
+    }
+
+    protected void createAgentLogObserver(Collection<TraceObserverV2> result) {
+        if( session.agentLog ) {
+            def observer = new AgentLogObserver()
+            observer.setStatsObserver(session.statsObserver)
+            session.logObserver = observer
+            result << observer
+        }
+    }
+
+    protected void createReportObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.report as Map ?: Collections.emptyMap()
+        final config = new ReportConfig(opts)
+        if( config.enabled ) {
+            final path = resolve('report', config.directory, config.file)
+            result << new ReportObserver(config, path)
+        }
+    }
+
+    protected void createTimelineObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.timeline as Map ?: Collections.emptyMap()
+        final config = new TimelineConfig(opts)
+        if( config.enabled ) {
+            final path = resolve('timeline', config.directory, config.file)
+            result << new TimelineObserver(config, path)
+        }
+    }
+
+    protected void createGraphObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.dag as Map ?: Collections.emptyMap()
+        final config = new DagConfig(opts)
+        if( config.enabled ) {
+            final path = resolve('dag', config.directory, config.file)
+            result << new GraphObserver(config, path)
+        }
+    }
+
+    protected void createTraceFileObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.trace as Map ?: Collections.emptyMap()
+        final config = new TraceConfig(opts)
+        if( config.enabled ) {
+            final path = resolve('trace', config.directory, config.file)
+            result << new TraceFileObserver(config, path)
         }
     }
 
     /**
-     * Create workflow report file observer
+     * Resolve the path of a report file. When `<scope>.directory` is given, the
+     * file is resolved against it, which in turn is resolved against the workflow
+     * output directory. Otherwise the file is resolved against the launch directory
+     * (the legacy behavior).
      */
-    protected void createReportObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('report.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('report.file')
-        def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
-        if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
-        def report = (fileName as Path).complete()
-        def observer = new ReportObserver(report)
-        observer.maxTasks = maxTasks
-        config.navigate('report.overwrite') { observer.overwrite = it }
-        result << observer
-    }
-
-    /**
-     * Create timeline report file observer
-     */
-    protected void createTimelineObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('timeline.file')
-        if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new TimelineObserver(traceFile)
-        config.navigate('timeline.overwrite')  { observer.overwrite = it }
-        result << observer
-    }
-
-    protected void createDagObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('dag.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('dag.file')
-        if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new GraphObserver(traceFile)
-        config.navigate('dag.overwrite')  { observer.overwrite = it }
-        result << observer
-    }
-
-    /*
-     * create the execution trace observer
-     */
-    protected void createTraceFileObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('trace.file')
-        if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new TraceFileObserver(traceFile)
-        config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
-        config.navigate('trace.sep') { observer.separator = it }
-        config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
-        config.navigate('trace.overwrite') { observer.overwrite = it }
-        result << observer
+    protected Path resolve(String scope, String directory, String file) {
+        final path = FileHelper.asPath(file)
+        if( !directory )
+            return path
+        if( path.isAbsolute() )
+            throw new AbortOperationException("Config option `${scope}.directory` cannot be used when `${scope}.file` is an absolute path -- offending value: ${file}")
+        final dir = FileHelper.asPath(directory)
+        if( dir.isAbsolute() )
+            throw new AbortOperationException("Config option `${scope}.directory` must be a relative path -- offending value: ${directory}")
+        final result = session.outputDir.resolve(directory).resolve(file).normalize()
+        if( !result.startsWith(session.outputDir) )
+            throw new AbortOperationException("Config option `${scope}.directory` cannot refer to a location outside of the workflow output directory -- offending value: ${directory}")
+        return result
     }
 
 }

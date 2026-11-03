@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,13 @@
 
 package nextflow.splitter
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
 
@@ -78,14 +84,13 @@ class FastaSplitterTest extends Specification {
                 IENY
                 """.stripIndent()
 
-        def count = 0
-        def q = new FastaSplitter().options(each:{ count++; it }).target(fasta).channel()
+        def result = new FastaSplitter().target(fasta).list()
 
         then:
-        count == 2
-        q.val == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
-        q.val == ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
-        q.val == Channel.STOP
+        result == [
+            ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n",
+            ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
+        ]
 
     }
 
@@ -107,13 +112,14 @@ class FastaSplitterTest extends Specification {
                 """.stripIndent()
 
         when:
-        def q = new FastaSplitter().options(record: [id:true, seqString:true]).target(fasta) .channel()
+        def result = new FastaSplitter().options(record: [id:true, seqString:true]).target(fasta) .list()
 
         then:
-        q.val == [id:'1aboA', seqString: 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN']
-        q.val == [id:'1ycsB', seqString: 'KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGYVPRNLLGLYP']
-        q.val == [id:'1pht', seqString: 'GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIGWLNGYNETTGERGDFPGTYVEYIGRKKISP']
-        q.val == Channel.STOP
+        result == [
+            [id:'1aboA', seqString: 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN'],
+            [id:'1ycsB', seqString: 'KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGYVPRNLLGLYP'],
+            [id:'1pht', seqString: 'GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIGWLNGYNETTGERGDFPGTYVEYIGRKKISP']
+        ]
 
     }
 
@@ -416,6 +422,29 @@ class FastaSplitterTest extends Specification {
         splitter.counter.increment == 31
         splitter.counter.size == 1024 * 1024
 
+    }
+
+    def 'should split the same file concurrently' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def session = new Session()
+        session.workDir = folder.resolve('work')
+        def fasta = folder.resolve('sample.fa')
+        fasta.text = (1..1000).collect { ">seq$it\nACDEFGHIKLMNPQRSTVWY\n" }.join()
+        def pool = Executors.newFixedThreadPool(100)
+
+        when:
+        // stagger the calls so that some of them start while another one is writing the chunks
+        def futures = (1..100).collect { int i ->
+            pool.submit({ sleep(i * 5); new FastaSplitter().options(by: 10, file: true).target(fasta).list() } as Callable<List<Path>>)
+        }
+        def counts = futures.collect { f -> f.get().sum { Path it -> it.text.count('>') } }
+        then:
+        counts.every { it == 1000 }
+
+        cleanup:
+        pool?.shutdown()
+        folder?.deleteDir()
     }
 
 }

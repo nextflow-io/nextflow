@@ -1,5 +1,5 @@
 # Nextflow tests
 
-This repository contains a collection of scripts used to validate Nextflow builds 
+This repository contains the integration tests for Nextflow.
 
-[![Build Status](https://travis-ci.org/nextflow-io/tests.svg?branch=master)](https://travis-ci.org/nextflow-io/tests)
+![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)

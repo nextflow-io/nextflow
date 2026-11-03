@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import nextflow.exception.ScriptCompilationException
@@ -8,7 +24,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import nextflow.ast.NextflowDSL
-import nextflow.exception.IllegalModulePath
+import nextflow.exception.IllegalModulePathException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -24,18 +40,18 @@ class IncludeDefTest extends Specification {
 
         given:
         def script = '/some/path/main.nf' as Path
-        def include = Spy(IncludeDef)
+        def include = Spy(new IncludeDef([]))
         include.getOwnerPath() >> script
 
         expect:
         include.resolveModulePath('/abs/foo.nf') == '/abs/foo.nf' as Path
-        include.resolveModulePath('module.nf') == '/some/path/module.nf' as Path
-        include.resolveModulePath('foo/bar.nf') == '/some/path/foo/bar.nf' as Path
+        include.resolveModulePath('./module.nf') == '/some/path/module.nf' as Path
+        include.resolveModulePath('./foo/bar.nf') == '/some/path/foo/bar.nf' as Path
 
         when:
         include.resolveModulePath('http://foo.com/bar')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
     }
 
@@ -46,21 +62,21 @@ class IncludeDefTest extends Specification {
         def script = folder.resolve('main.nf'); script.text = 'echo ciao'
         def module = folder.resolve('mod-x.nf'); module.text = 'blah blah'
 
-        def include = Spy(IncludeDef)
+        def include = Spy(new IncludeDef([]))
         include.getOwnerPath() >> script
-        
+
         when:
-        def result = include.realModulePath( 'mod-x.nf')
+        def result = include.realModulePath( './mod-x.nf')
         then:
         result == module
 
         when:
-        result = include.realModulePath('mod-x')
+        result = include.realModulePath('./mod-x')
         then:
         result == module
 
         when:
-        include.realModulePath('xyz')
+        include.realModulePath('./xyz')
         then:
         thrown(NoSuchFileException)
 
@@ -76,32 +92,32 @@ class IncludeDefTest extends Specification {
         module.text = "I'm the module script"
 
         and:
-        def include = Spy(IncludeDef)
+        def include = Spy(new IncludeDef([]))
         include.getOwnerPath() >> script
 
         // when the module name reference a directory that contains
         // a file named 'main.nf', it's considered a module 'bundle'
         when:
-        def result = include.realModulePath('foo')
+        def result = include.realModulePath('./foo')
         then:
         result == module
 
         when:
-        include.realModulePath('bar')
+        include.realModulePath('./bar')
         then:
         thrown(NoSuchFileException)
 
         when:
         folder.resolve('bar').mkdir()
-        include.realModulePath('bar')
+        include.realModulePath('./bar')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message == "Include 'bar' does not provide any module script -- the following path should contain a 'main.nf' script: '${folder.resolve('bar')}'"
+        e.message == "Include './bar' does not provide any module script -- the following path should contain a 'main.nf' script: '${folder.resolve('bar')}'"
     }
 
     def 'should check valid path' () {
         given:
-        def include = Spy(IncludeDef)
+        def include = new IncludeDef([])
 
         when:
         include.checkValidPath('./module.nf')
@@ -121,28 +137,38 @@ class IncludeDefTest extends Specification {
         when:
         include.checkValidPath('this/dir')
         then:
-        thrown(IllegalModulePath)
+        noExceptionThrown()  // valid remote module reference (scope/name)
+
+        when:
+        include.checkValidPath('nf-core/fastqc')
+        then:
+        noExceptionThrown()  // valid remote module reference
+
+        when:
+        include.checkValidPath('invalid!')
+        then:
+        thrown(IllegalModulePathException)
 
         when:
         include.checkValidPath( 'http://foo.com/x.y')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
         when:
         include.checkValidPath(FileHelper.asPath('http://foo.com/x/y/z'))
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
     }
 
-    // ==== DSL tests === 
+    // ==== DSL tests ===
 
     static class TestInclude extends IncludeDef {
         boolean loadInvoked
 
         TestInclude(IncludeDef include) {
+            super(include.modules)
             this.path = include.path
-            this.modules = include.modules
         }
 
         @Override
@@ -168,6 +194,7 @@ class IncludeDefTest extends Specification {
         }
     }
 
+    @Unroll
     def 'should add includes' () {
         given:
         def binding = new ScriptBinding([params: [foo:1, bar:2]])
@@ -186,14 +213,12 @@ class IncludeDefTest extends Specification {
 
 
         where:
-        INCLUDE                                         | PATH          | NAME      | ALIAS     | PARAMS
-        "include 'some/path'"                           | 'some/path'   | null      | null      | null
-        "include ALPHA from 'modules/path'"             | 'modules/path'| 'ALPHA'   | null      | null
-        "include ALPHA as BRAVO from 'modules/x'"       | 'modules/x'   | 'ALPHA'   | 'BRAVO'   | null
-        "include 'modules/1' params(a:1, b:2)"          | 'modules/1'   | null      | null      | [a:1, b:2]
-        "include DELTA from 'abc' params(x:1)"          | 'abc'         | 'DELTA'   | null      | [x:1]
-        "include GAMMA as FOO from 'm1' params(p:2)"    | 'm1'          | 'GAMMA'   | 'FOO'     | [p:2]
-        "include GAMMA as FOO from 'm1' params([:])"    | 'm1'          | 'GAMMA'   | 'FOO'     | [:]
+        INCLUDE                                          | PATH          | NAME      | ALIAS     | PARAMS
+        "include { ALPHA } from 'modules/path'"          | 'modules/path'| 'ALPHA'   | null      | null
+        "include { ALPHA as BRAVO } from 'modules/x'"    | 'modules/x'   | 'ALPHA'   | 'BRAVO'   | null
+        "include { DELTA } from 'abc' params(x:1)"       | 'abc'         | 'DELTA'   | null      | [x:1]
+        "include { GAMMA as FOO } from 'm1' params(p:2)" | 'm1'          | 'GAMMA'   | 'FOO'     | [p:2]
+        "include { GAMMA as FOO } from 'm1' params([:])" | 'm1'          | 'GAMMA'   | 'FOO'     | [:]
 
     }
 

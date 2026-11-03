@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.executor
@@ -26,7 +25,7 @@ import spock.lang.Specification
 
 /**
  * Test HyperQueue executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Henrik Nortamo <henrik.nortamo@csc.fi>
  */
@@ -63,7 +62,7 @@ class HyperQueueExecutorTest extends Specification {
             error: submit failed this and that
             '''.stripIndent().leftTrim()
 
-        
+
         when:
         def result = exec.parseJobId(JOB_OK)
         then:
@@ -117,7 +116,7 @@ class HyperQueueExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
             #HQ --name nf-task-1
-            #HQ --log /work/dir/.command.log
+            #HQ --stream /work/dir/.command.log
             #HQ --cwd /work/dir
             '''
             .stripIndent().leftTrim()
@@ -131,9 +130,9 @@ class HyperQueueExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
             #HQ --name nf-task-1
-            #HQ --log /work/dir/.command.log
+            #HQ --stream /work/dir/.command.log
             #HQ --cwd /work/dir
-            #HQ --resource mem=8589934592
+            #HQ --resource mem=8192
             #HQ --cpus 4
             #HQ --time-limit 60sec
             #HQ --resource gpus=2

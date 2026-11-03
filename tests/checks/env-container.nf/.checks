@@ -21,11 +21,12 @@ EOF
 #
 cat << EOF > foo.nf
 process foo {
-  echo true
+  debug true
   input: 
-  env BAR
+  env 'BAR'
+  script:
   '''
-  env | sort 
+  env | grep -E "^(FOO|BAR)" | sort
   hello.sh
   '''
 }

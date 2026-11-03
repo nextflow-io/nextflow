@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.file
 
 import java.nio.file.Path
 
+import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -56,4 +57,29 @@ class FileHelperS3Test extends Specification {
 
     }
 
+    def 'should convert to a canonical path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+
+        expect:
+        FileHelper.toCanonicalPath(VALUE).toUri() == EXPECTED
+
+        where:
+        VALUE                       | EXPECTED
+        's3://foo/some/file.txt'    | new URI('s3:///foo/some/file.txt')
+        's3://foo/some///file.txt'  | new URI('s3:///foo/some/file.txt')
+    }
+
+    @Unroll
+    def 'should remove consecutive slashes in the path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+
+        expect:
+        FileHelper.asPath(STR).toUri() == EXPECTED
+        where:
+        STR                         | EXPECTED
+        's3://foo//this/that'       | new URI('s3:///foo/this/that')
+        's3://foo//this///that'     | new URI('s3:///foo/this/that')
+    }
 }

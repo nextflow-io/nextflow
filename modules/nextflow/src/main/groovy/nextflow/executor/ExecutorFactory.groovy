@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.local.AgentExecutor
 import nextflow.executor.local.LocalExecutor
-import nextflow.k8s.K8sExecutor
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
@@ -45,6 +45,7 @@ class ExecutorFactory {
     final static Map<String, Class<? extends Executor>> BUILT_IN_EXECUTORS = [
             'nope': NopeExecutor,
             'local': LocalExecutor,
+            'agent': AgentExecutor,
             'flux': FluxExecutor,
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
@@ -57,18 +58,18 @@ class ExecutorFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
             'oar': OarExecutor,
-            'hq': HyperQueueExecutor
+            'hq': HyperQueueExecutor,
+            'tcs': TcsExecutor
     ]
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap
 
-    private Map<Class<? extends Executor>,? extends Executor> executors = new HashMap<>()
+    private Map<Class<? extends Executor>,Executor> executors = new HashMap<>()
 
-    @PackageScope Map<Class<? extends Executor>,? extends Executor> getExecutors() { executors }
+    @PackageScope Map<Class<? extends Executor>,Executor> getExecutors() { executors }
 
     ExecutorFactory() {
         init0(Collections.<Class<Executor>>emptyList())
@@ -188,7 +189,7 @@ class ExecutorFactory {
         def clazz = getExecutorClass(name)
 
         if( !isTypeSupported(script.type, clazz) ) {
-            log.warn "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
+            log.warn1 "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
             name = 'local'
             clazz = LocalExecutor.class
         }
@@ -203,16 +204,44 @@ class ExecutorFactory {
         return result
     }
 
+    /**
+     * Resolve (and cache) the {@link Executor} instance for the given executor name WITHOUT
+     * requiring a task body, so an executor CAPABILITY can be interrogated before the body exists.
+     *
+     * <p>An instance is unavoidable: {@link Executor#isContainerNative()} and
+     * {@link Executor#containerConfigEngine()} are instance methods and can depend on the session
+     * (e.g. {@link LocalExecutor#isContainerNative()} is true when Fusion is enabled), so the
+     * executor class alone is not enough. The instance is stored in the same per-class cache
+     * {@link #getExecutor} uses, hence the executor is created at most once per run.
+     *
+     * <p>Unlike {@link #getExecutor} this performs NO {@code SupportedScriptTypes} check and never
+     * falls back to the local executor: an unknown name raises instead of being silently downgraded.
+     * The instance is returned fully initialised ({@code init()} has run, so its task monitor is
+     * started) and is the SAME one {@link #getExecutor} later hands the task, so asking an executor
+     * about itself here commits the run to it. See {@link nextflow.script.AgentDef#buildAgentTask},
+     * which interrogates exactly the executor the agent task is about to run on.
+     */
+    Executor getExecutorByName(String executorName, Session session) {
+        final clazz = getExecutorClass(executorName)
+        def result = executors.get(clazz)
+        if( result )
+            return result
+        result = createExecutor(clazz, executorName ?: DEFAULT_EXECUTOR, session)
+        executors.put(clazz, result)
+        return result
+    }
+
     protected Executor createExecutor( Class<? extends Executor> clazz, String name, Session session) {
         def result = clazz.newInstance()
         result.session = session
+        result.config = new ExecutorConfig(session.config.executor as Map ?: Collections.emptyMap())
         result.name = name
         result.init()
         return result
     }
 
     /**
-     * Find out the 'executor' to be used in the process definition or in teh session configuration object
+     * Find out the 'executor' to be used in the process definition or in the session configuration object
      *
      * @param taskConfig
      */
@@ -221,13 +250,8 @@ class ExecutorFactory {
         // create the processor object
         def result = taskConfig.executor?.toString()
 
-        if( !result ) {
-            if( session.config.executor instanceof String ) {
-                result = session.config.executor
-            }
-            else if( session.config.executor?.name instanceof String ) {
-                result = session.config.executor.name
-            }
+        if( !result && session.config.executor?.name instanceof String ) {
+            result = session.config.executor.name
         }
 
         log.debug "<< taskConfig executor: $result"
@@ -247,5 +271,5 @@ class ExecutorFactory {
             log.warn "Unable to gracefully shutdown executor: $exec.name", e
         }
     }
-    
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Hospices Civils de Lyon (HCL)
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for OAR resource manager
@@ -73,21 +74,32 @@ class OarExecutor extends AbstractGridExecutor {
                 result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}".toString()
             }
         }
-        
+
         // the requested queue name
         if( task.config.queue ) {
             result << '-q' << (task.config.queue.toString())
         }
 
         // -- at the end append the command script wrapped file name
-        // Options need to be semicolon ";" separated, if several are needed
-        if( task.config.clusterOptions ) {
-          for (String item : task.config.clusterOptions.toString().tokenize(';')) {
-            result << item << ''
-          }
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
+    }
+
+    @Override
+    void addClusterOptionsDirective(TaskConfig config, List result) {
+        final opts = config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String it in opts ) {
+                result << it << ''
+            }
+        }
+        // Options need to be semicolon ";" separated, if several are needed
+        else if( opts instanceof CharSequence ) {
+            for (String item : opts.toString().tokenize(';')) {
+                result << item << ''
+            }
+        }
     }
 
     String getHeaderToken() { '#OAR' }
@@ -113,7 +125,7 @@ class OarExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     static private Pattern SUBMIT_REGEX = ~/OAR_JOB_ID=(\d+)/
-    
+
     @Override
     def parseJobId(String text) {
         for( String line : text.readLines() ) {

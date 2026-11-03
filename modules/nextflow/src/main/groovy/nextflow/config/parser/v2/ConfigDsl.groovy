@@ -1,0 +1,431 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.config.parser.v2
+
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.SysEnv
+import nextflow.exception.ConfigParseException
+import nextflow.extension.Bolts
+import nextflow.file.FileHelper
+/**
+ * Builder DSL for Nextflow config files.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class ConfigDsl extends Script {
+
+    /**
+     * The config scopes accepting `withName:`/`withLabel:` selectors. Agents are
+     * configured with the same selector semantics as processes, in their own
+     * independent {@code agent} scope.
+     */
+    private static final List<String> SELECTOR_SCOPES = List.of('process', 'agent')
+
+    private boolean ignoreIncludes
+
+    private boolean renderClosureAsString
+
+    private boolean strict
+
+    private boolean stripSecrets
+
+    private Path configPath
+
+    private Map cliParams
+
+    private List<String> profiles
+
+    private Map target = [params: [:]]
+
+    private Set<String> declaredProfiles = []
+
+    private Map<String,Object> declaredParams = [:]
+
+    void setIgnoreIncludes(boolean value) {
+        this.ignoreIncludes = value
+    }
+
+    void setRenderClosureAsString(boolean value) {
+        this.renderClosureAsString = value
+    }
+
+    void setStrict(boolean value) {
+        this.strict = value
+    }
+
+    void setStripSecrets(boolean value) {
+        this.stripSecrets = value
+    }
+
+    void setConfigPath(Path path) {
+        this.configPath = path
+    }
+
+    void setParams(Map params) {
+        this.cliParams = params
+        // deep copy so that nested config assignments don't modify the CLI params
+        (target.params as Map).putAll(Bolts.deepClone(params))
+    }
+
+    void setConfigParams(Map params) {
+        (target.params as Map).putAll(params)
+    }
+
+    void setProfiles(List<String> profiles) {
+        this.profiles = profiles
+    }
+
+    void declareProfile(String profile) {
+        declaredProfiles.add(profile)
+    }
+
+    Set<String> getDeclaredProfiles() {
+        return declaredProfiles
+    }
+
+    void declareParam(String name, Object value) {
+        declaredParams.put(name, value)
+    }
+
+    Map<String,Object> getDeclaredParams() {
+        return declaredParams
+    }
+
+    Map getTarget() {
+        return target
+    }
+
+    Object run() {}
+
+    @Override
+    def getProperty(String name) {
+        if( name == 'params' )
+            return target.params
+
+        try {
+            return super.getProperty(name)
+        }
+        catch( MissingPropertyException e ) {
+            if( strict )
+                throw e
+            else
+                return null
+        }
+    }
+
+    /**
+     * Assign a value to a config option.
+     *
+     * When assigning a param (e.g. `params.input` or `params.rnaseq.fasta`),
+     * the corresponding command line value takes precedence. CLI params are
+     * applied here in order to ensure that if the param is referenced later
+     * in the config file, the command line value is used.
+     *
+     * @param names
+     * @param value
+     */
+    void assign(List<String> names, Object value) {
+        final isParam = names.size() > 1 && names.first() == 'params'
+        if( isParam )
+            value = withCliOverride(names.tail(), value)
+        navigate(names.init()).put(names.last(), value)
+        if( isParam )
+            declareParam(names[1], (target.params as Map).get(names[1]))
+    }
+
+    /**
+     * Apply the command line value of a param, if any, to its config value.
+     * A map value is merged with the corresponding command line values.
+     *
+     * @param path
+     * @param value
+     */
+    private Object withCliOverride(List<String> path, Object value) {
+        Object cliValue = cliParams
+        for( final name : path ) {
+            if( cliValue !instanceof Map || !((Map)cliValue).containsKey(name) )
+                return value
+            cliValue = ((Map)cliValue).get(name)
+        }
+        return cliValue instanceof Map && value instanceof Map
+            ? Bolts.deepMerge((Map)value, (Map)cliValue)
+            : asDeclaredType(cliValue, value)
+    }
+
+    /**
+     * Convert a CLI param override to an appropriate type based
+     * on the default param value in the config file.
+     *
+     * Note: this applies only to numbers and booleans.
+     *
+     * @param value
+     * @param declValue
+     */
+    private Object asDeclaredType(Object value, Object declValue) {
+        if( value == null )
+            return null
+
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( declValue instanceof Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        }
+
+        if( declValue instanceof Number ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
+        }
+
+        return value
+    }
+
+    private Map navigate(List<String> names) {
+        Map ctx = target
+        for( final name : names ) {
+            if( name !in ctx ) ctx[name] = [:]
+            ctx = ctx[name] as Map
+        }
+        return ctx
+    }
+
+    void block(String name, Closure closure) {
+        block([name], closure)
+    }
+
+    void block(List<String> names, Closure closure) {
+        final dsl = blockDsl(names)
+        final cl = (Closure)closure.clone()
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.setDelegate(dsl)
+        cl.call()
+        dsl.apply()
+    }
+
+    private ConfigBlockDsl blockDsl(List<String> names) {
+        if( names.size() == 1 && names.first() == 'plugins' )
+            return new PluginsDsl(this)
+
+        final relativeNames = names.size() == 3 && names.first() == 'profiles'
+            ? List.of(names.last())
+            : names
+
+        if( relativeNames.size() == 1 && relativeNames.last() in SELECTOR_SCOPES )
+            return new SelectorBlockDsl(this, names)
+
+        if( names.size() == 1 && names.first() == 'profiles' )
+            return new ProfilesDsl(this, profiles)
+
+        return new ConfigBlockDsl(this, names)
+    }
+
+    /**
+     * Get the value of an environment variable from the launch environment.
+     *
+     * @param name
+     */
+    String env(String name) {
+        return SysEnv.get(name)
+    }
+
+    void includeConfig(String includeFile) {
+        includeConfig([], includeFile)
+    }
+
+    void includeConfig(List<String> names, String includeFile) {
+        assert includeFile
+
+        if( ignoreIncludes )
+            return
+
+        Path includePath = FileHelper.asPath(includeFile)
+        log.trace "Include config file: $includeFile [parent: $configPath]"
+
+        if( !includePath.isAbsolute() && configPath )
+            includePath = configPath.resolveSibling(includeFile)
+
+        final configText = readConfigFile(includePath)
+        final parser = new ConfigParserV2()
+                .setIgnoreIncludes(ignoreIncludes)
+                .setRenderClosureAsString(renderClosureAsString)
+                .setStrict(strict)
+                .setStripSecrets(stripSecrets)
+                .setBinding(binding.getVariables())
+                .setParams(cliParams)
+                .setConfigParams(target.params as Map)
+                .setProfiles(profiles)
+        final config = parser.parse(configText, includePath)
+        declaredProfiles.addAll(parser.getDeclaredProfiles())
+        declaredParams.putAll(parser.getDeclaredParams())
+
+        final ctx = navigate(names)
+        ctx.putAll(Bolts.deepMerge(ctx, config))
+    }
+
+    /**
+     * Read the content of a config file. The result is cached to
+     * avoid multiple reads.
+     *
+     * @param includePath
+     */
+    @Memoized
+    @CompileDynamic // required to support ProviderPath::getText() over NioExtensions::getText()
+    protected static String readConfigFile(Path includePath) {
+        try {
+            return includePath.getText()
+        }
+        catch (NoSuchFileException | FileNotFoundException ignored) {
+            throw new NoSuchFileException("Config file does not exist: ${includePath.toUriString()}")
+        }
+        catch (IOException e) {
+            throw new IOException("Cannot read config file include: ${includePath.toUriString()}", e)
+        }
+    }
+
+    private static class ConfigBlockDsl {
+        protected ConfigDsl dsl
+        protected List<String> scope
+
+        ConfigBlockDsl(ConfigDsl dsl, List<String> scope) {
+            this.dsl = dsl
+            this.scope = scope
+        }
+
+        void assign(List<String> names, Object value) {
+            dsl.assign(scope + names, value)
+        }
+
+        void block(String name, Closure closure) {
+            dsl.block(scope + [name], closure)
+        }
+
+        void withLabel(String label, Closure closure) {
+            throw new ConfigParseException("Config selectors are only allowed in the `process` and `agent` scopes (offending scope: `${scope.join('.')}`)")
+        }
+
+        void withName(String selector, Closure closure) {
+            throw new ConfigParseException("Config selectors are only allowed in the `process` and `agent` scopes (offending scope: `${scope.join('.')}`)")
+        }
+
+        void includeConfig(String includeFile) {
+            dsl.includeConfig(scope, includeFile)
+        }
+
+        void apply() {
+        }
+    }
+
+    private static class PluginsDsl extends ConfigBlockDsl {
+        private Set<String> plugins = new LinkedHashSet<>()
+
+        PluginsDsl(ConfigDsl dsl) {
+            super(dsl, Collections.<String>emptyList())
+        }
+
+        void id(String value) {
+            plugins.add(value)
+        }
+
+        @Override
+        void apply() {
+            dsl.getTarget().put('plugins', plugins)
+        }
+    }
+
+    /**
+     * The block DSL of a scope accepting `withName:`/`withLabel:` selectors
+     * (see {@link #SELECTOR_SCOPES}). A selector is rewritten into a nested
+     * block whose key carries the selector prefix.
+     */
+    private static class SelectorBlockDsl extends ConfigBlockDsl {
+        SelectorBlockDsl(ConfigDsl dsl, List<String> scope) {
+            super(dsl, scope)
+        }
+
+        @Override
+        void withLabel(String label, Closure closure) {
+            dsl.block(scope + ["withLabel:${label}".toString()], closure)
+        }
+
+        @Override
+        void withName(String selector, Closure closure) {
+            dsl.block(scope + ["withName:${selector}".toString()], closure)
+        }
+    }
+
+    private static class ProfilesDsl extends ConfigBlockDsl {
+        private List<String> profiles
+        private Map<String,Closure> blocks = [:]
+
+        ProfilesDsl(ConfigDsl dsl, List<String> profiles) {
+            super(dsl, Collections.<String>emptyList())
+            this.profiles = profiles
+        }
+
+        @Override
+        void assign(List<String> names, Object value) {
+            throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
+        }
+
+        @Override
+        void block(String name, Closure closure) {
+            blocks[name] = closure
+            dsl.declareProfile(name)
+        }
+
+        @Override
+        void includeConfig(String includeFile) {
+            throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
+        }
+
+        @Override
+        void apply() {
+            if( profiles != null ) {
+                // apply profiles in the order they were specified
+                for( final name : profiles ) {
+                    final closure = blocks[name]
+                    if( closure )
+                        dsl.block(scope, closure)
+                }
+            }
+            else {
+                // append all profiles to the config map
+                for( final name : blocks.keySet() ) {
+                    final closure = blocks[name]
+                    dsl.block(['profiles', name], closure)
+                }
+            }
+        }
+    }
+
+}
