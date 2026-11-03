@@ -210,6 +210,18 @@ Disables the history file (`.nextflow/history`) used to track previous runs (def
 
 When the history file is disabled, `nextflow run` requires an explicit run name (`-name`), and `-resume` requires an explicit session ID. See [Cache stores][cache-stores] for more information.
 
+##### `NXF_JAVA_BUNDLE`
+
+<AddedInVersion version="27.04" />
+
+When `true`, the launcher runs Nextflow with the Java bundle of the selected version, which contains its own Java runtime and a startup cache (default: `false`). The bundle is downloaded once per version and platform from the same location as the Nextflow JAR. When no bundle is available, the JAR and the system Java are used. Bundles are available for Linux (x86-64 and ARM64, glibc) and macOS (ARM64). `NXF_JAVA_HOME` takes precedence over this setting. An [install without Java](../install.mdx#install-without-java) sets it to `true` by default.
+
+##### `NXF_JAVA_BUNDLE_BASE`
+
+<AddedInVersion version="27.04" />
+
+The base URL from which `NXF_JAVA_BUNDLE` downloads the bundles, such as a mirror or a `file://` path (default: `https://www.nextflow.io/releases`, next to the Nextflow JAR). It must contain `v<version>/nextflow-<version>-<platform>.tar.gz` and its `.sha256` checksum file.
+
 ##### `NXF_JAVA_HOME`
 
 Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the `JAVA_HOME` variable if defined.

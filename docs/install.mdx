@@ -19,11 +19,7 @@ Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 26)](http://
 java -version
 ```
 
-<DeprecatedInVersion version="25.04">
-Support for Java versions prior to 17 was dropped.
-</DeprecatedInVersion>
-
-If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions of Java.
+If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. Alternatively, you can [install Nextflow without Java](#install-without-java).
 
 To install Java with SDKMAN:
 
@@ -49,7 +45,7 @@ To install Java with SDKMAN:
 
 ## Install Nextflow
 
-Nextflow is distributed as an easy to use self-installing package. It is also distributed via Conda and as a standalone distribution.
+Nextflow is distributed as a self-installing package. It is also distributed via Conda and as a standalone distribution.
 
 ### Self-install
 
@@ -78,15 +74,31 @@ To install Nextflow with the self-installing package:
     mv nextflow $HOME/.local/bin/
     ```
 
-    :::tip
-    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Temporarily add this directory to `PATH` by setting `export PATH="$PATH:$HOME/.local/bin"`. Add the directory to `PATH` permanently by adding the export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
-    :::
+    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Add the directory to `PATH` by adding `export PATH="$PATH:$HOME/.local/bin"` to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
 
 4. Confirm Nextflow is installed correctly:
 
     ```bash
     nextflow info
     ```
+
+### Install without Java
+
+<AddedInVersion version="27.04" />
+
+Nextflow can be installed with its own Java runtime. It is available for Linux (x86-64 and ARM64, glibc) and macOS (ARM64).
+
+To install Nextflow without Java, follow the [self-install](#self-install) steps, but download Nextflow with:
+
+```bash
+curl -s https://get.nextflow.io | NXF_JAVA_BUNDLE=true bash
+```
+
+Nextflow downloads the bundle of each version that it runs, which contains the Java runtime and a startup cache. `nextflow self-update` keeps this setting. Set `NXF_JAVA_BUNDLE=false` to use the system Java instead, or set `NXF_JAVA_HOME` to use another Java installation.
+
+The bundle is downloaded when a version first runs, unless `NXF_OFFLINE=true` is set. If it can't be downloaded, Nextflow uses the system Java and tries again at the next launch.
+
+The bundled Java runtime trusts the certificates of the operating system on macOS and on Linux distributions with a Java trust store (e.g. RHEL and derivatives, or Debian and Ubuntu with `ca-certificates-java`), and its own certificates otherwise. Behind a proxy that inspects TLS traffic, set `NXF_JAVA_HOME` to a Java installation that trusts the proxy, or specify a trust store in `NXF_OPTS`, e.g. `-Djavax.net.ssl.trustStore=/path/to/cacerts`.
 
 ### Conda
 
@@ -114,7 +126,11 @@ To install Nextflow with Conda:
 Installing Nextflow via Conda may lead to outdated versions, dependency conflicts, and Java compatibility issues. Using the self-installing package is recommended for a more reliable and up-to-date installation.
 :::
 
-### Standalone distribution
+### Standalone distribution (legacy) {#standalone-distribution}
+
+<DeprecatedInVersion version="27.04">
+To run Nextflow offline, use the [Java bundle](#install-without-java) instead.
+</DeprecatedInVersion>
 
 The Nextflow standalone distribution (i.e., the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime.
 This distribution is useful for offline environments as well as building and testing Nextflow locally.

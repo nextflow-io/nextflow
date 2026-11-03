@@ -112,10 +112,25 @@ pack:
 	BUILD_PACK=1 $(gradle) pack
 
 #
-# Upload NF launcher to nextflow.io web site
+# Create the standalone bundle (Java runtime + jar + AOT cache) for the current platform,
+# or for all platforms with `make bundle-all` (only the current one has the AOT cache)
+#
+.PHONY: bundle bundle-all
+bundle:
+	$(gradle) bundle
+
+bundle-all:
+	$(gradle) bundleAll
+
+#
+# Upload NF launcher to nextflow.io web site, with the Java bundles in the directory
+# NXF_RELEASE_BUNDLES (or NXF_RELEASE_BUNDLES=none to deploy a release without them)
 #
 deploy:
 	BUILD_PACK=1 $(gradle) deploy
+
+check-release-bundles:
+	$(gradle) checkReleaseBundles
 
 #
 # Close artifacts uploaded to Maven central
