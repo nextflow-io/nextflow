@@ -34,6 +34,8 @@ class XFileSystemConfigTest extends Specification {
         config.backOffDelay() == XFileSystemConfig.DEFAULT_BACK_OFF_DELAY
         config.backOffBase() == XFileSystemConfig.DEFAULT_BACK_OFF_BASE
         config.maxAttempts() == XFileSystemConfig.DEFAULT_MAX_ATTEMPTS
+        config.connectTimeoutMillis() == 60_000
+        config.readTimeoutMillis() == 60_000
     }
 
     def 'should create with custom config settings' () {
@@ -50,6 +52,39 @@ class XFileSystemConfigTest extends Specification {
         config.backOffDelay() == 400
         config.backOffBase() == 300
         config.maxAttempts() == 10
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should create with custom timeouts' () {
+        given:
+        SysEnv.push(ENV)
+
+        when:
+        def config = new XFileSystemConfig()
+        then:
+        config.connectTimeoutMillis() == CONNECT
+        config.readTimeoutMillis() == READ
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                                                         | CONNECT   | READ
+        [NXF_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_HTTPCLIENT_READ_TIMEOUT: '2m']   | 5_000     | 120_000
+        [NXF_HTTPCLIENT_READ_TIMEOUT: '0s']                                         | 60_000    | 0
+    }
+
+    def 'should reject a zero connect timeout' () {
+        given:
+        SysEnv.push([NXF_HTTPCLIENT_CONNECT_TIMEOUT: '0s'])
+
+        when:
+        new XFileSystemConfig()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('NXF_HTTPCLIENT_CONNECT_TIMEOUT')
 
         cleanup:
         SysEnv.pop()

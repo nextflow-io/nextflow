@@ -192,9 +192,17 @@ Nextflow home directory (default: `$HOME/.nextflow`).
 
 <AddedInVersion version="26.10" />
 
-Maximum time to wait for a connection to the Git hosting service API, such as GitHub or GitLab, for a single attempt (default: `60s`). Must be greater than zero.
+Maximum time to wait for a connection to the Git hosting service API, such as GitHub or GitLab, or to an HTTP/FTP server when reading `http://`, `https://` or `ftp://` files, for a single attempt (default: `60s`). Must be greater than zero.
 
 Nextflow retries connection attempts that time out, because the request never reached the server. An unreachable host fails after this timeout multiplied by `NXF_RETRY_POLICY_MAX_ATTEMPTS`, about 5 minutes with the default settings. Set a lower value, such as `5s`, to cap the worst case at about 30 seconds. The `NXF_RETRY_POLICY_*` variables configure the retry behavior.
+
+##### `NXF_HTTPCLIENT_READ_TIMEOUT`
+
+<AddedInVersion version="26.10" />
+
+Maximum time to wait for data from an HTTP/FTP server when reading `http://`, `https://` or `ftp://` files, such as remote pipeline inputs (default: `60s`). It bounds each read, not the whole download, so large files are not affected. Set to `0s` to wait indefinitely.
+
+When staging a remote input file, Nextflow retries a download that times out (see `filePorter.maxRetries`).
 
 ##### `NXF_HTTPCLIENT_REQUEST_TIMEOUT`
 
