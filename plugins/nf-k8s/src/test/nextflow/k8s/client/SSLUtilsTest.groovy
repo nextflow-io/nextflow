@@ -176,22 +176,23 @@ class SSLUtilsTest extends Specification {
         def key = (ECPrivateKey) store.getKey(store.aliases().nextElement(), PASS)
         def expected = bouncyCastleKey(REF)
 
-        // compare key values rather than getEncoded(), since the JDK keeps
-        // the input PKCS#8 encoding while Bouncy Castle re-encodes it
         expect:
         key.s == expected.s
         key.params.curve == expected.params.curve
         key.params.generator == expected.params.generator
         key.params.order == expected.params.order
         key.params.cofactor == expected.params.cofactor
+        // the JDK keeps the input PKCS#8 encoding while Bouncy Castle
+        // re-encodes it, so the bytes only match for SEC1 keys
+        !SAME_ENCODING || key.encoded == expected.encoded
 
         where:
         // Bouncy Castle could not read a leading EC PARAMETERS block,
         // so that case is compared against the bare SEC1 key
-        DESC                    | CERT        | KEY                       | REF
-        'P-256 SEC1'            | P256_CERT   | P256_SEC1                 | P256_SEC1
-        'P-256 SEC1 w/ params'  | P256_CERT   | P256_PARAMS + P256_SEC1   | P256_SEC1
-        'P-256 PKCS#8'          | P256_CERT   | P256_PKCS8                | P256_PKCS8
-        'P-384 SEC1'            | P384_CERT   | P384_SEC1                 | P384_SEC1
+        DESC                    | CERT        | KEY                       | REF          | SAME_ENCODING
+        'P-256 SEC1'            | P256_CERT   | P256_SEC1                 | P256_SEC1    | true
+        'P-256 SEC1 w/ params'  | P256_CERT   | P256_PARAMS + P256_SEC1   | P256_SEC1    | true
+        'P-256 PKCS#8'          | P256_CERT   | P256_PKCS8                | P256_PKCS8   | false
+        'P-384 SEC1'            | P384_CERT   | P384_SEC1                 | P384_SEC1    | true
     }
 }
