@@ -184,6 +184,8 @@ Users without Java install Nextflow with `curl -s https://get.nextflow.io | NXF_
 - The decision is per platform, since an `NXF_HOME` can be shared across platforms (e.g. x86 login nodes and arm64 compute nodes, or a macOS `NXF_HOME` mounted into a Linux container). When the jar of `NXF_VER` is not installed, but the bundle of another platform is, the launcher uses the jar of that bundle with the system Java instead of downloading the jar.
 - The bundle is extracted into a temporary directory, removed if the download is interrupted, and installed with an atomic symlink, so that concurrent first launches install it once. It is only installed if its checksum matches and its runtime runs (it may not, e.g. on a `noexec` mount). The download times out after 10 s without a connection, and reports to stderr, so that the output of commands such as `nextflow config` is not affected.
 - The hand-off happens after `-download` and `self-update` are handled by the installed script. The bundle launcher is started with a marker in its environment, which it removes, and fails if it is not in a bundle, to avoid a loop. `NXF_VER` is not exported, and the bundle launcher does not export the `JAVA_CMD` of its runtime, so that tasks (e.g. a child `nextflow` of another version) do not inherit them.
+- `self-update` fails in a bundle, e.g. an extracted one: replacing its launcher would leave its runtime and jar unused, and install the new version in `$NXF_HOME` instead. An extracted bundle is updated by extracting the bundle of the new version.
+- Old versions accumulate in `$NXF_HOME/framework` as today; `self-update -clean` removes them, including their bundles.
 - Mirrors and air-gapped installs can set `NXF_JAVA_BUNDLE_BASE` to another host with the same layout (`<base>/v<version>/<bundle>.tar.gz` and `.sha256`), including a `file://` URL. Mirrors of `NXF_BASE` get the bundles too.
 - `NXF_JVM_ARGS=-XX:AOTMode=off` disables the AOT cache.
 
@@ -204,6 +206,8 @@ The JVM ignores the cache silently (the launcher sets `-Xlog:aot=off`) when:
 - the module options differ, e.g. an extra `--add-opens` in `NXF_OPTS`.
 - compressed oops are disabled, which the JVM does for a heap of 32 GB or more, i.e. by default on hosts with 128 GB of RAM or more. The launcher does not force compressed oops, since that would cap the heap below 32 GB (also with `-XX:MaxRAMPercentage`): on these hosts the cache is not used unless the heap is set below 32 GB.
 - ZGC (until JDK 26) or compact object headers are used.
+
+The training pipeline covers a typical run: commands such as `lint` load classes that it does not cover, which are loaded as usual.
 
 G1 or Parallel GC instead of Serial, the C2 compiler, `-Xmx` up to 32 GB, `-D` properties and moving the bundle to another directory are all fine.
 
@@ -255,12 +259,6 @@ In bare containers (linux-x64), with the bundles served from a local mirror:
 | `NXF_VER` without a bundle (25.10.9) | jar and system Java used, no error |
 
 CI builds each bundle on its platform, runs the training pipeline from an extracted copy with `-XX:AOTMode=on`, reads a file over HTTPS, and tests the hand-off of the installed launcher to the bundle from a `file://` mirror, with a subset of the integration tests on linux-x64.
-
-### Open questions
-
-- `self-update` run from an extracted bundle replaces the bundle's launcher with the plain one. It keeps working, through the hand-off, but the bundle is no longer self-contained.
-- Old versions accumulate in `$NXF_HOME/framework` as today; `self-update -clean` removes them, including their bundles.
-- The training pipeline covers a typical run. Commands such as `lint` load classes that it does not cover, which are loaded as usual.
 
 ## Links
 

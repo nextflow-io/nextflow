@@ -337,6 +337,8 @@ while [[ $# != 0 ]]; do
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
+      # replacing the launcher of a bundle would leave its runtime and jar unused
+      [[ -x "$(dirname "$(resolve_link "$0")")/../runtime/bin/java" ]] && die "ERROR: A Nextflow Java bundle can't be updated -- extract the bundle of the new version instead"
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
