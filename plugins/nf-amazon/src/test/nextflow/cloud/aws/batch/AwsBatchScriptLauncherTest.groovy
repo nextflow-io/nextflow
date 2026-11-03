@@ -66,6 +66,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=5
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -76,14 +77,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
 
                 nxf_parallel() {
@@ -248,6 +250,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=5
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -258,14 +261,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -420,6 +424,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=3
                         local timeout=9
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -430,14 +435,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -533,6 +539,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=3
                         local timeout=9
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -543,14 +550,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -644,8 +652,8 @@ class AwsBatchScriptLauncherTest extends Specification {
         def workDir = S3PathFactory.parse('s3://my-bucket/work')
         and:
         def inputFiles = [
-                'sample_1.fq': Paths.get('/my-bucket/data/sample_1.fq'),
-                'sample_2.fq': Paths.get('/my-bucket/data/sample_2.fq'),
+                'sample_1.fq': S3PathFactory.parse('s3://my-bucket/data/sample_1.fq'),
+                'sample_2.fq': S3PathFactory.parse('s3://my-bucket/data/sample_2.fq'),
         ]
         def stageScript = '''\
                 # stage input files

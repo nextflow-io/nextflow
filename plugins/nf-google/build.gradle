@@ -75,6 +75,7 @@ dependencies {
         api("com.fasterxml.jackson.core:jackson-databind:${jacksonCloudSdkVersion}") { because 'jackson-databind deserialization CVEs' }
         api("com.fasterxml.jackson.core:jackson-core:${jacksonCloudSdkVersion}") { because 'GHSA-72hv-8253-57qq' }
         api("com.fasterxml.jackson.core:jackson-annotations:${jacksonCloudSdkVersion}") { because 'keep jackson aligned' }
+        api("com.google.guava:guava:33.7.2-jre") { because 'GHSA-xxph-c9ww-hj94' }
     }
     // grpc artifacts do not self-align: google-cloud-batch requests grpc-api/core/util/context at
     // 1.71.0 independently of grpc-netty-shaded, so a constraint naming only grpc-netty-shaded

@@ -38,7 +38,7 @@ Available options:
 
 <AddedInVersion version="26.04" />
 
-The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+The interval after which the Kubernetes client configuration is refreshed (default: `50.m`).
 
 This setting is useful when the Kubernetes authentication token has a limited lifespan and needs to be periodically refreshed. The client configuration will be automatically reloaded after the specified interval, allowing Nextflow to obtain fresh credentials from the Kubernetes configuration.
 
@@ -73,11 +73,11 @@ The FUSE device plugin to be used when enabling Fusion in unprivileged mode (def
 
 ##### `k8s.httpConnectTimeout`
 
-The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
+The Kubernetes HTTP client request connection timeout e.g. `60.s`.
 
 ##### `k8s.httpReadTimeout`
 
-The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
+The Kubernetes HTTP client request connection read timeout e.g. `60.s`.
 
 ##### `k8s.imagePullPolicy`
 
@@ -133,7 +133,7 @@ Save the pod spec for each task to `.command.yaml` in the task directory (defaul
 
 ##### `k8s.retryPolicy.delay`
 
-Delay when retrying failed API requests (default: `250ms`).
+Delay when retrying failed API requests (default: `250.ms`).
 
 ##### `k8s.retryPolicy.jitter`
 
@@ -145,6 +145,6 @@ Max attempts when retrying failed API requests (default: `4`).
 
 ##### `k8s.retryPolicy.maxDelay`
 
-Max delay when retrying failed API requests (default: `90s`).
+Max delay when retrying failed API requests (default: `90.s`).
 
 [process-pod]: ../process/directives/pod

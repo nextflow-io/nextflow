@@ -50,7 +50,6 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.InsensitiveMap
-import sun.net.www.protocol.ftp.FtpURLConnection
 /**
  * Implements a read-only JSR-203 compliant file system provider for http/ftp protocols
  *
@@ -180,10 +179,10 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         log.trace "File remote URL: $url"
-        return toConnection0(url, 0)
+        return toConnection0(url, url, 0)
     }
 
-    protected URLConnection toConnection0(URL url, int attempt) {
+    protected URLConnection toConnection0(URL origin, URL url, int attempt) {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( conn instanceof HttpURLConnection ) {
@@ -197,24 +196,26 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         else {
             XAuthRegistry.instance.authorize(conn)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in REDIRECT_CODES && attempt < MAX_REDIRECT_HOPS ) {
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in REDIRECT_CODES ) {
+            if( attempt >= MAX_REDIRECT_HOPS )
+                throw new IOException("Too many redirects (max ${MAX_REDIRECT_HOPS}) - origin: $origin - last location: $url")
             final header = InsensitiveMap.of(conn.getHeaderFields())
             final location = header.get("Location")?.get(0)
             log.debug "Remote redirect location=$location; attempt=$attempt"
             final newUrl = new URI(absLocation(location,url)).toURL()
             if( url.protocol=='https' && newUrl.protocol=='http' )
                 throw new IOException("Refuse to follow redirection from HTTPS to HTTP (unsafe) URL - origin: $url - target: $newUrl")
-            return toConnection0(newUrl, attempt+1)
+            return toConnection0(origin, newUrl, attempt+1)
         }
         else if( conn instanceof HttpURLConnection && conn.getResponseCode() in config().retryCodes() && attempt < config().maxAttempts() ) {
             final delay = (Math.pow(config().backOffBase(), attempt) as long) * config().backOffDelay()
             log.debug "Got HTTP error=${conn.getResponseCode()} waiting for ${delay}ms (attempt=${attempt+1})"
             Thread.sleep(delay)
-            return toConnection0(url, attempt+1)
+            return toConnection0(origin, url, attempt+1)
         }
         else if( conn instanceof HttpURLConnection && conn.getResponseCode()==401 && attempt==0 ) {
             if( XAuthRegistry.instance.refreshToken(conn) ) {
-                return toConnection0(url, attempt+1)
+                return toConnection0(origin, url, attempt+1)
             }
         }
         return conn
@@ -480,14 +481,14 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     protected XFileAttributes readHttpAttributes(XPath path) {
         final conn = toConnection(path)
-        if( conn instanceof FtpURLConnection ) {
+        if( conn.getURL().protocol == 'ftp' ) {
             return new XFileAttributes(null,-1)
         }
         if( conn !instanceof HttpURLConnection ) {
             return null
         }
         try {
-            if( conn.getResponseCode() in [200, 301, 302, 307, 308] )
+            if( conn.getResponseCode() == 200 )
                 return readHttpAttributes(conn.getHeaderFields())
             return null
         }

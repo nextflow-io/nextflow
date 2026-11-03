@@ -49,7 +49,7 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Determines how often to log the executor status (default: `5 min`).
+        Determines how often to log the executor status (default: `5.m`).
     """)
     final Duration dumpInterval
 
@@ -57,7 +57,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         *Used only by grid executors.*
 
-        Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
+        Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270.s`).
     """)
     final Duration exitReadTimeout
 
@@ -146,7 +146,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         *Used only by grid executors.*
 
-        Determines how often to fetch the queue status from the scheduler (default: `1 min`).
+        Determines how often to fetch the queue status from the scheduler (default: `1.m`).
     """)
     final Duration queueStatInterval
 

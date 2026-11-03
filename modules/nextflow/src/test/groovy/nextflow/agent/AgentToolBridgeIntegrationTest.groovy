@@ -53,7 +53,7 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
             // the bridge exposes a `greet` tool with a scalar `name:String` input
             assert req.toolSpecs.size() == 1
             assert req.toolSpecs[0].name == 'greet'
-            assert req.toolSpecs[0].inputSchema.properties.name.type == 'string'
+            assert req.toolSpecs[0].inputSchema.get('properties').name.type == 'string'
             // invoke the tool: this drives the REAL greet process through the executor
             dispatchResult = req.dispatch.call('greet', '{"name":"Ada"}')
             // the returned JSON proves the process actually ran and produced the value
@@ -166,7 +166,7 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
         captured != null
         captured.outputSchema != null
         captured.outputSchema.type == 'object'
-        captured.outputSchema.properties.containsKey('greeting')
+        captured.outputSchema.get('properties').containsKey('greeting')
     }
 
     def 'a structured runner returning non-JSON aborts the run on the task path'() {
@@ -285,6 +285,6 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
         captured.skills*.name == ['greet']
         captured.outputSchema != null
         captured.outputSchema.type == 'object'
-        captured.outputSchema.properties.containsKey('greeting')
+        captured.outputSchema.get('properties').containsKey('greeting')
     }
 }

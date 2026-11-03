@@ -291,6 +291,36 @@ class ScriptResolveTest extends Specification {
         warnings[0].contains('The `when` section is deprecated')
     }
 
+    def 'should warn when a publish statement has a type annotation' () {
+        given:
+        def source = '''\
+            nextflow.enable.types = true
+
+            workflow {
+                main:
+                ch = channel.of(1)
+
+                publish:
+                a: Channel<Integer> = ch
+            }
+
+            output {
+                a: Channel<Integer> {
+                    path 'a'
+                }
+            }
+            '''
+        when:
+        def result = scriptParser.parse('main.nf', source.stripIndent())
+        scriptParser.analyze()
+        def errors = TestUtils.getErrors(result)
+        def warnings = TestUtils.getWarnings(result)
+        then:
+        errors.size() == 0
+        warnings.size() == 1
+        warnings[0].contains('Workflow output type should be declared in the output block')
+    }
+
     def 'should not warn when a workflow emits a channel by name' () {
         given:
         def source = '''\

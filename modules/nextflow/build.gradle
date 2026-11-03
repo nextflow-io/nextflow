@@ -49,7 +49,7 @@ dependencies {
     api('org.iq80.leveldb:leveldb:0.12')
     api('org.eclipse.jgit:org.eclipse.jgit:7.1.1.202505221757-r')
     api ('javax.activation:activation:1.1.1')
-    api ('javax.mail:mail:1.4.7')
+    api ('com.sun.mail:javax.mail:1.6.2')
     api ("org.yaml:snakeyaml:${snakeyamlVersion}")
     api ('org.jsoup:jsoup:1.23.2')
     api 'jline:jline:2.9'
@@ -69,8 +69,8 @@ dependencies {
     testFixturesApi ("org.apache.groovy:groovy-test:${groovyVersion}") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
-    testFixturesApi ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }
-    testFixturesApi ('org.spockframework:spock-junit4:2.4-groovy-4.0') { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.spockframework:spock-core:2.5-groovy-5.0") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ('org.spockframework:spock-junit4:2.5-groovy-5.0') { exclude group: 'org.apache.groovy' }
     testFixturesApi "com.google.jimfs:jimfs:${jimfsVersion}"
 }
 

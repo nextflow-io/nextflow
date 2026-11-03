@@ -27,7 +27,7 @@ public class RetryPolicyConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Delay used for retryable operations (default: `350ms`).
+        Delay used for retryable operations (default: `350.ms`).
     """)
     public Duration delay;
 
@@ -45,7 +45,7 @@ public class RetryPolicyConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Max delay used for retryable operations (default: `90s`).
+        Max delay used for retryable operations (default: `90.s`).
     """)
     public Duration maxDelay;
 

@@ -634,8 +634,6 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucketName)
     }
 
-    // test fails on GHA, likely due to concurrent execution
-    @IgnoreIf({ System.getenv('GITHUB_ACTIONS') })
     def 'should list root directory' () {
         given:
         def bucketName1 = createBucket()
@@ -659,7 +657,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         when:
         Set<String> dirs = []
         Set<String> files = []
-        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+        def visitor = new SimpleFileVisitor<Path>() {
 
             @Override
             FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
@@ -676,11 +674,15 @@ class AzNioTest extends Specification implements AzBaseSpec {
                 return FileVisitResult.CONTINUE;
             }
 
-        })
+        }
+        // walk each container created by this test rather than the whole account from the root:
+        // walking the root reads the attributes of every container, which fails when a concurrent
+        // test run deletes its own containers meanwhile, and it's slow when the account holds other data
+        for( String bucket : [bucketName1, bucketName2, bucketName3] )
+            Files.walkFileTree(Paths.get(new URI("az://$bucket/")), visitor)
         then:
         println dirs
         println files
-        dirs.contains('/')
         dirs.contains("/$bucketName1" as String)
         dirs.contains("/$bucketName2" as String)
         dirs.contains("/$bucketName2/foo" as String)

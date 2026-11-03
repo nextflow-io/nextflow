@@ -243,7 +243,7 @@ public interface ProcessDsl extends DslScope {
         void maxSubmitAwait(Duration value);
 
         @Description("""
-            The `memory` directive allows you to define how much memory is required by each task. Can be a string (e.g. `\'8 GB\'`) or a memory unit (e.g. `8.GB`).
+            The `memory` directive allows you to define how much memory is required by each task. Can be specified as a memory unit (e.g. `8.GB`).
 
             [Read more](https://docs.seqera.io/nextflow/reference/process#memory)
         """)

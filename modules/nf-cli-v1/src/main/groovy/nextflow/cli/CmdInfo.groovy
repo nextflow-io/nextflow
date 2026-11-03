@@ -17,7 +17,6 @@
 package nextflow.cli
 
 import java.lang.management.ManagementFactory
-import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -28,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -229,21 +229,11 @@ class CmdInfo extends CmdBase {
         if( level == 0  )
             return result.toString()
 
-        List<String> capsule = []
-        List<String> args = []
-        ManagementFactory
-                .getRuntimeMXBean()
-                .getInputArguments()
-                .each { String it ->
-                        if( it.startsWith('-Dcapsule.'))
-                            capsule << it.substring(2)
-                        else
-                            args << it
-                    }
+        final args = ManagementFactory.getRuntimeMXBean().getInputArguments()
 
         // file system
         result << BLANK << "File systems: "
-        result << FileSystemProvider.installedProviders().collect { it.scheme }.join(', ')
+        result << FileHelper.getProviderSchemes().join(', ')
         result << NEWLINE
 
         // plugins
@@ -264,9 +254,6 @@ class CmdInfo extends CmdBase {
                 dump(entry,null,2, result)
             }
         }
-
-        // Capsule options
-        dump("Capsule", capsule, 1, result)
 
         // Env
         result << BLANK << "Environment:" << NEWLINE
