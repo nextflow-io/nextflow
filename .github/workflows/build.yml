@@ -307,7 +307,7 @@ jobs:
   test-e2e:
     if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]')) && needs.build.outputs.docs_only != 'true' }}
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -358,7 +358,7 @@ jobs:
   release:
     if: ${{ always() && github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/STABLE-')) && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     needs: [build, test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
     # bootstrapping buildkit, pulling two base images and running an emulated arm64 `npm ci`
     # and `apt-get` do not fit the old budget. Sized as a ceiling, not a budget - a timeout

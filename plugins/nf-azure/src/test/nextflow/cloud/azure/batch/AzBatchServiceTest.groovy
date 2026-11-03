@@ -603,7 +603,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.terminateJobs() >> null
+        1 * svc.terminateJobs() >> { }
     }
 
     def 'should not cleanup jobs by default' () {
@@ -614,7 +614,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupJobs() >> null
+        0 * svc.cleanupJobs() >> { }
     }
 
     def 'should cleanup jobs if specified' () {
@@ -625,7 +625,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupJobs() >> null
+        1 * svc.cleanupJobs() >> { }
     }
 
     def 'should not cleanup pools by default' () {
@@ -636,7 +636,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupPools() >> null
+        0 * svc.cleanupPools() >> { }
     }
 
     def 'should cleanup pools with autoPoolMode' () {
@@ -647,7 +647,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupPools() >> null
+        1 * svc.cleanupPools() >> { }
     }
 
     def 'should cleanup pools with allowPoolCreation' () {
@@ -658,7 +658,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupPools() >> null
+        1 * svc.cleanupPools() >> { }
     }
 
 
@@ -670,7 +670,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupPools() >> null
+        0 * svc.cleanupPools() >> { }
     }
 
     def 'should get spec from pool config' () {
@@ -1013,7 +1013,7 @@ class AzBatchServiceTest extends Specification {
         service.safeCreatePool(spec)
 
         then: 'createPool is called once'
-        1 * service.createPool(spec) >> null
+        1 * service.createPool(spec) >> { }
         and:
         noExceptionThrown()
 
