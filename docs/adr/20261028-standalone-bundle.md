@@ -209,16 +209,16 @@ G1 or Parallel GC instead of Serial, the C2 compiler, `-Xmx` up to 32 GB, `-D` p
 
 ### Results
 
-Measured on linux-x64 (16 CPUs, shared, ~5% noise) with the linux-x64 bundle of 26.10.3, median of 10 runs. The full JDK is Temurin 25.0.5, the same build as the bundle runtime, run through the bundle launcher with `NXF_JAVA_HOME`, so the jar and JVM options (C1 compiler, serial GC) are the same:
+Measured on linux-x64 (16 CPUs) with the linux-x64 bundle of 26.10.3, median of 10 runs. The full JDK is Temurin 25.0.5, the same build as the bundle runtime, run through the bundle launcher with `NXF_JAVA_HOME`, so the jar and JVM options (C1 compiler, serial GC) are the same:
 
 | | full JDK | bundle runtime | bundle runtime + AOT cache |
 |---|---|---|---|
-| `nextflow info` | 798 ms | 793 ms | 505 ms |
-| hello | 1,653 ms | 1,681 ms | 1,112 ms |
-| pipeline with 10 tasks | 1,688 ms | 1,855 ms | 1,211 ms |
-| nf-core/rnaseq `--help` | 10,036 ms | 9,742 ms | 9,445 ms |
+| `nextflow info` | 582 ms | 714 ms | 453 ms |
+| hello | 1,386 ms | 1,461 ms | 891 ms |
+| pipeline with 10 tasks | 1,445 ms | 1,587 ms | 1,019 ms |
+| nf-core/rnaseq `--help` | 9,217 ms | 8,751 ms | 8,823 ms |
 
-The cache saves a roughly constant 0.3-0.6 s per launch, and lowers the peak RSS of short runs by ~10% (e.g. 240 MB instead of 267 MB for hello). On large pipelines, startup is dominated by script compilation, which the cache does not cover.
+The cache saves 0.5-0.6 s on short runs (0.1-0.3 s for `info`), and lowers their peak RSS by ~10% (e.g. 239 MB instead of 264 MB for hello). On large pipelines, startup is dominated by script compilation, which the cache does not cover: on rnaseq, the gain is within noise.
 
 ### Release
 
