@@ -5,111 +5,39 @@ description: Reference for the nextflow kuberun command. Launch a Nextflow pipel
 
 # `nextflow kuberun`
 
-Launch a Nextflow pipeline on a Kubernetes cluster.
+<DeprecatedInVersion version="27.04">
+The `kuberun` command has been removed. It is available as the [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, but it is no longer maintained. See [Kubernetes][k8s-page] for alternatives.
+</DeprecatedInVersion>
 
-## Usage
+The `kuberun` command deployed the Nextflow runtime as a Kubernetes pod, which ran the specified pipeline and submitted each task as a Kubernetes job (or pod).
 
-```console
-$ nextflow kuberun [options] [project]
+## Migrating to nf-kuberun
+
+To launch a pipeline with the nf-kuberun plugin, replace `nextflow kuberun` with `nextflow plugin nf-kuberun:run`. The plugin accepts only double-dash options in the `--name=value` form, and launcher options such as `-c` must be given after the command. For example:
+
+```bash
+# before
+nextflow -c my.config kuberun nextflow-io/hello -v my-pvc:/mnt -n my-ns -r master --foo bar
+
+# after
+nextflow plugin nf-kuberun:run nextflow-io/hello --config=my.config --volume-mount=my-pvc:/mnt --namespace=my-ns --revision=master --foo=bar
 ```
 
-## Description
+The `kuberun` options map to the following plugin options:
 
-:::warning
-The `kuberun` command is an obsolete approach for running Nextflow pipelines on Kubernetes and is no longer maintained. See [Kubernetes][k8s-page] for alternatives.
-:::
+| `kuberun` option | Plugin option |
+|---|---|
+| `-v`, `-volume-mount` | `--volume-mount` (comma-separated) |
+| `-n`, `-namespace` | `--namespace` |
+| `-head-image` | `--head-image` |
+| `-head-cpus` | `--head-cpus` |
+| `-head-memory` | `--head-memory` |
+| `-head-prescript` | `--head-prescript` |
+| `-remoteConfig` | `--remote-config` (comma-separated) |
+| `-remoteProfile` | `--remote-profile` |
+| `-c` (launcher option) | `--config` (comma-separated) |
+| `-bg` (launcher option) | `--background` |
 
-The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The pod runs the specified pipeline and submits each task as a Kubernetes job (or pod). The pod prints the pipeline console output in the foreground.
+The `run` options supported by `kuberun` keep their names with a double dash, for example `-r` becomes `--revision` and `-resume` becomes `--resume`. Short option names such as `-r` and `-w` are not supported. See the [nf-kuberun README](https://github.com/nextflow-io/nf-kuberun#readme) for the full list of options.
 
-The pipeline must be an existing Nextflow project or the absolute path of a pipeline already deployed in the Kubernetes cluster. The `kuberun` command cannot run local Nextflow scripts. It is intended only for testing the deployment of pipelines to a Kubernetes cluster.
-
-Use the `-v` option to specify the persistent volume claim and mount path to use for the pipeline execution. You can also specify volume claims in the Nextflow configuration. See [k8s][config-k8s] for details.
-
-## Options
-
-The `kuberun` command supports the following options from [`run`](./run):
-
-- `-cache`
-- `-disable-jobs-cancellation`
-- `-dump-channels`
-- `-dump-hashes`
-- `-e.<key>=<value>`
-- `-entry`
-- `-h, -help`
-- `-hub`
-- `-latest`
-- `-main-script`
-- `-name`
-- `-offline`
-- `-params-file`
-- `-plugins`
-- `-preview`
-- `-profile`
-- `-qs, -queue-size`
-- `-resume`
-- `-r, -revision`
-- `-stub, -stub-run`
-- `-user`
-- `-with-conda`
-- `-with-dag`
-- `-N, -with-notification`
-- `-with-report`
-- `-with-spack`
-- `-with-timeline`
-- `-with-tower`
-- `-with-trace`
-- `-with-wave`
-- `-w, -work-dir`
-
-The following new options are also available:
-
-##### `-head-cpus`
-
-Number of CPUs requested for the Nextflow pod.
-
-##### `-head-image`
-
-Container image for the Nextflow driver pod.
-
-##### `-head-memory`
-
-Amount of memory requested for the Nextflow pod.
-
-##### `-head-prescript`
-
-Script to run before the Nextflow pod starts.
-
-##### `-n, -namespace`
-
-Kubernetes namespace to use.
-
-##### `-remoteConfig`
-
-Add the specified file from the Kubernetes cluster to the configuration set.
-
-##### `-remoteProfile`
-
-Configuration profile to use from `-remoteConfig`.
-
-##### `-v, -volume-mount`
-
-Volume claim mounts. For example, `my-pvc:/mnt/path`.
-
-## Examples
-
-Run a pipeline on a Kubernetes cluster, using the persistent volume claim `vol-claim` mounted at `/mount/path`:
-
-```console
-$ nextflow kuberun nextflow-io/hello -v vol-claim:/mount/path
-```
-
-Launch an interactive shell in a Nextflow pod for debugging:
-
-```console
-$ nextflow kuberun login -v vol-claim:/mount/path
-```
-
-This command creates a pod, sets up the volume claim(s), configures the Nextflow environment, and launches a Bash login session. The pod is automatically destroyed when the shell session terminates. Do not use it to launch long-running pipelines in the background.
-
-[config-k8s]: ../config/k8s
 [k8s-page]: ../executor/kubernetes

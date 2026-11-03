@@ -56,6 +56,7 @@ import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.exception.ScriptCompilationException
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.extension.FilesEx
@@ -286,6 +287,8 @@ class Session implements ISession {
 
     /** Orchestration pool for agent tasks; lazily created -- see {@link #getAgentExecService}. */
     private volatile ExecutorService agentExecService
+
+    private volatile ArrayLauncherPool arrayLauncherPool
 
     private volatile TaskFault fault
 
@@ -744,6 +747,17 @@ class Session implements ISession {
         return agentExecService
     }
 
+    /**
+     * Get the pool that prepares the launchers of job array children.
+     *
+     * <p>Created lazily: a run with no job arrays allocates nothing.
+     */
+    synchronized ArrayLauncherPool getArrayLauncherPool() {
+        if( arrayLauncherPool == null )
+            arrayLauncherPool = new ArrayLauncherPool('ArrayLauncher')
+        return arrayLauncherPool
+    }
+
     ScriptBinding getBinding() { binding }
 
     @Memoized
@@ -881,6 +895,7 @@ class Session implements ISession {
             execService = null
             agentExecService?.shutdown()
             agentExecService = null
+            arrayLauncherPool?.shutdown()
             log.trace "Session > executor shutdown"
 
             // -- close db
@@ -1077,6 +1092,7 @@ class Session implements ISession {
 
         execService?.shutdownNow()
         agentExecService?.shutdownNow()
+        arrayLauncherPool?.shutdown()
         GParsConfig.shutdown()
     }
 
