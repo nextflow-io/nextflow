@@ -529,6 +529,7 @@ class TowerObserver implements TraceObserverV2 {
         record.cloudZone = trace.getMachineInfo()?.zone
         record.machineType = trace.getMachineInfo()?.type
         record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
+        record.instanceId = trace.getMachineInfo()?.instanceId
         record.numSpotInterruptions = trace.getNumSpotInterruptions()
         record.numAttempts = trace.getNumAttempts()
         record.retryTime = trace.getRetryTime()

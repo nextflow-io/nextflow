@@ -16,11 +16,18 @@
 
 package nextflow.cloud.aws.batch
 
+import nextflow.cloud.aws.AwsClientFactory
+import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.ec2.Ec2Client
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse
 import software.amazon.awssdk.services.ec2.model.Instance
 import software.amazon.awssdk.services.ec2.model.InstanceType
 import software.amazon.awssdk.services.ec2.model.InstanceLifecycleType
+import software.amazon.awssdk.services.ec2.model.Placement
+import software.amazon.awssdk.services.ec2.model.Reservation
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -65,5 +72,35 @@ class AwsBatchHelperTest extends Specification {
         'r8id.xlarge'   | _
         and:
         INSTANCE = Instance.builder().instanceType(InstanceType.fromValue(TYPE)).instanceType(TYPE).build()
+    }
+
+    def 'should get machine info by instance id'() {
+        given:
+        def instance = Instance.builder()
+            .instanceId('i-0abc123')
+            .instanceType('m5.large')
+            .placement(Placement.builder().availabilityZone('us-east-1a').build())
+            .instanceLifecycle(InstanceLifecycleType.SPOT)
+            .build()
+        def requests = []
+        def ec2 = new Ec2Client() {
+            String serviceName() { 'ec2' }
+            void close() {}
+            DescribeInstancesResponse describeInstances(DescribeInstancesRequest req) {
+                requests << req
+                DescribeInstancesResponse.builder()
+                    .reservations(Reservation.builder().instances(instance).build())
+                    .build()
+            }
+        }
+        def factory = Mock(AwsClientFactory) { getEc2Client() >> ec2 }
+        def helper = new AwsBatchHelper(Mock(BatchClient), factory)
+
+        when:
+        def result = helper.getInfoByInstanceId('i-0abc123')
+
+        then:
+        requests*.instanceIds() == [['i-0abc123']]
+        result == new CloudMachineInfo('m5.large', 'us-east-1a', PriceModel.spot, 'i-0abc123')
     }
 }
