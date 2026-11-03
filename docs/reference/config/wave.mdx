@@ -48,7 +48,9 @@ The container registry authentication must be managed by the underlying infrastr
 
 The number of downstream process levels whose containers are requested ahead (default: `0`, disabled). When the first task of a process is submitted, Nextflow requests the Wave containers of the processes up to this many levels downstream in the workflow, so that their provisioning, such as a SOCI index (`wave.soci`) or a container build, runs while the upstream tasks run instead of delaying the first task of each process. Operators between two processes do not count as a level.
 
-The requests are sent in the background, a few at a time, and each container is requested once. Containers that depend on the task inputs cannot be requested ahead, and are requested when their task is submitted.
+The requests are sent in the background, a few at a time, and each container is requested once within the Wave tokens cache duration (`wave.tokensCacheMaxDuration`). Containers that depend on the task inputs cannot be requested ahead, and are requested when their task is submitted.
+
+Processes that never run, such as those in a branch whose condition is false, or that are fully cached when resuming a run, may still have their containers requested ahead, which can trigger container builds (e.g., conda) that are not used.
 
 ##### `wave.soci`
 

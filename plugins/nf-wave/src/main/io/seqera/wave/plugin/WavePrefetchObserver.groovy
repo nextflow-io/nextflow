@@ -89,12 +89,7 @@ class WavePrefetchObserver implements TraceObserverV2 {
 
     @Override
     void onFlowComplete() {
-        executor.shutdownNow()
-    }
-
-    @Override
-    void onFlowError(TaskEvent event) {
-        executor.shutdownNow()
+        executor.shutdown()
     }
 
     protected void prefetch(TaskProcessor process) {
@@ -120,12 +115,13 @@ class WavePrefetchObserver implements TraceObserverV2 {
     @PackageScope
     static List<TaskProcessor> downstream(DAG dag, TaskProcessor process, int depth) {
         final result = new LinkedHashSet<TaskProcessor>()
+        final successors = dag.edges.groupBy { DAG.Edge e -> e.from }
         List<DAG.Vertex> frontier = dag.vertices.findAll { DAG.Vertex v -> v.process.is(process) }
         for( int level=0; level<depth && frontier; level++ ) {
             final next = new ArrayList<DAG.Vertex>()
             for( DAG.Vertex v : frontier ) {
-                for( DAG.Vertex p : nextProcesses(dag, v) ) {
-                    if( p.process && !p.process.is(process) && result.add(p.process) )
+                for( DAG.Vertex p : nextProcesses(successors, v) ) {
+                    if( !p.process.is(process) && result.add(p.process) )
                         next.add(p)
                 }
             }
@@ -137,14 +133,14 @@ class WavePrefetchObserver implements TraceObserverV2 {
     /**
      * The process vertices fed by the given vertex, through any number of non-process vertices
      */
-    static private List<DAG.Vertex> nextProcesses(DAG dag, DAG.Vertex from) {
+    static private List<DAG.Vertex> nextProcesses(Map<DAG.Vertex,List<DAG.Edge>> successors, DAG.Vertex from) {
         final result = new ArrayList<DAG.Vertex>()
         final visited = new HashSet<DAG.Vertex>()
         final queue = new LinkedList<DAG.Vertex>([from])
         while( queue ) {
             final v = queue.removeFirst()
-            for( DAG.Edge e : dag.edges ) {
-                if( !e.from.is(v) || !e.to || !visited.add(e.to) )
+            for( DAG.Edge e : successors.getOrDefault(v, List.<DAG.Edge>of()) ) {
+                if( !e.to || !visited.add(e.to) )
                     continue
                 // a process vertex holds its processor, see NodeMarker
                 if( e.to.process != null )
