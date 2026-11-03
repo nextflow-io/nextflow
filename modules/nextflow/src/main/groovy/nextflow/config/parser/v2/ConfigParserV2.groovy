@@ -178,7 +178,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private String getRelativePath(SourceUnit source, Path path) {
         final uri = source.getSource().getURI()
-        return path.getParent().relativize(Path.of(uri)).toString()
+        // relativize the URIs, since a remote file system provider may not be visible to Path.of()
+        final relative = path.getParent().toUri().relativize(uri)
+        return relative.isAbsolute() ? uri.toString() : relative.getPath()
     }
 
     @Override

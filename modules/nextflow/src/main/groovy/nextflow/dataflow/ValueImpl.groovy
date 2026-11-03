@@ -85,7 +85,7 @@ class ValueImpl {
         return new ValueImpl(target)
     }
 
-    ChannelImpl flatMap(Function<?,Iterable> transform = null) {
+    ChannelImpl flatMap(Function<Object,Iterable> transform = null) {
         final target = CH.create()
         final onNext = { value ->
             final iterable = transform != null ? transform.apply(value) : value

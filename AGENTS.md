@@ -16,6 +16,7 @@ Nextflow is a scientific workflow management system written in Groovy and Java, 
 
 ## Further reading
 
+- [Writing docs](.docusaurus_site/README.md#writing-documentation): editing pages under `docs/`.
 - [Testing](.agents/docs/testing.md): S3 integration tests, integration workflows, cloud validation.
 - [Release](.agents/docs/release.md): cutting a Nextflow or plugin release.
 - `docs/adr/`: architecture decision records; check the relevant one before changing a design it covers.
