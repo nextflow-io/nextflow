@@ -402,7 +402,7 @@ if [[ ! $NXF_BIN && $NXF_PACK != dist ]]; then
             # get_bundle checked the content; the bundle launcher dies if it was damaged since
             [[ -x $bundle_dir/bin/nextflow ]] && NXF_JAVA_BUNDLE_EXEC=1 exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
         fi
-        # the jar of the bundle of another platform, e.g. in a NXF_HOME shared across architectures
+        # the jar of an installed bundle, e.g. with NXF_JAVA_HOME after an install without Java
         if [[ ! -f $NXF_DIST/$NXF_VER/$NXF_JAR ]]; then
             for f in "$NXF_DIST/$NXF_VER/nextflow-$NXF_VER"-*/lib/"$NXF_JAR"; do
                 [[ -f $f ]] && NXF_BIN=$f && break
