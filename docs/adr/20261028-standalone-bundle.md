@@ -35,51 +35,53 @@ Nextflow runs on whatever Java it finds, which causes two problems:
 
 ## Considered Options
 
-1. System Java with an AOT cache created on the user's machine.
-2. A Java runtime downloaded by the launcher for `NXF_VER`.
-3. A single runtime bundled with the launcher, used for every `NXF_VER`.
-4. A bundle per version and platform, to which the installed launcher hands off.
+The bundle answers two questions:
+
+1. **Runtime:** the stock Temurin JRE, or a `jlink` image with only the modules that Nextflow uses.
+2. **AOT cache:** created in CI and shipped with each version, or created on the user's machine.
 
 ## Pros and Cons of the Options
 
-### System Java with a local AOT cache
+### Stock JRE
 
-The first `run` records a training profile and the next launch creates the cache in the background.
+- Good, because every JDK module is available: third-party plugins, JDBC drivers and libraries run in the same JVM, and can need modules that no core code or plugin uses (e.g. `jdk.security.auth`, `java.instrument`, `jdk.jfr`, `jdk.crypto.cryptoki`, `java.xml.crypto`).
+- Good, because there is no module list to maintain, and it needs no `jmods`, which Temurin 25 does not ship.
+- Bad, because it is 19 MB larger than a `jlink` image, which trimming the jar can recover (see below).
 
-- Good, because it needs no new release artifacts.
-- Bad, because it only applies to users who have Java 25 or later.
-- Bad, because it only records in an interactive terminal, so CI jobs and containers with a fresh `NXF_HOME` never get a cache.
-- Bad, because creating the cache in a shared `NXF_HOME` needs coordination between parallel launches, and the cache is silently rejected on hosts with 128 GB of RAM or more when it was created on a smaller host (see below).
+### `jlink` image
 
-### Launcher-managed runtime
+| runtime (linux-x64) | tar.gz |
+|---|---|
+| `jlink` image with the modules found by `jdeps` | 43 MB |
+| Temurin 25 JRE | 62 MB |
+| Temurin 25 JDK | 134 MB |
 
-The launcher downloads a pinned Temurin JRE for `NXF_VER`, from a table of Java versions in the launcher.
+- Good, because it is smaller. Startup is the same (within noise of a full JDK): the gains come from the AOT cache.
+- Bad, because a missing module only fails at runtime, when a class of it is used: the basic list (`jdeps` + `jdk.zipfs`) broke S3 in nf-amazon (`NoClassDefFoundError: jdk/net/Sockets`).
+- Bad, because third-party code can't be tested against the module list, and since the runtime is fixed per version, a missing module could only be fixed with a new release.
 
-- Good, because each version gets a Java it supports, and runtimes are shared between versions.
-- Bad, because an installed launcher only knows the versions released before it: it can't pick the runtime of a later version that needs a newer Java.
-- Bad, because the JVM options still come from the installed launcher rather than from the version that runs.
-- Bad, because the AOT cache is only valid for the exact JVM build it was created with (e.g. 25.0.1, not 25.0.2), which conflicts with sharing runtimes: either the runtime build is pinned per version, which gives a runtime per version stored separately from the jar, or the cache is created on the user's machine.
-- Bad, because a cache created on the user's machine makes the first run slower, and each install runs an artifact that was never tested.
-- Bad, because the launcher must manage runtime versions and remove unused ones, and the runtime and jar are separate downloads that can fail independently.
+### AOT cache created in CI
 
-### A single bundled runtime
+The cache is only valid for the exact runtime build, jar and JVM options it was created with, so the runtime must ship with each version: a bundle per version and platform, to which the installed launcher hands off.
 
-- Good, because it is the simplest layout.
-- Bad, because it can't run older versions (24.10 and 25.04 fail on Java 25), nor a later version that needs a newer Java.
-
-### Per-version bundle with a hand-off
-
-- Good, because the runtime, the JVM options and the AOT cache are always those the version was built with, whatever launcher is installed.
-- Good, because a launcher installed today can run a later version that needs a newer Java: it downloads that version's bundle, which brings its own runtime.
-- Good, because the AOT cache can be created in CI, since the runtime and jar are fixed, so it works on first use.
+- Good, because the cache works on first use, including CI jobs and containers with a fresh `NXF_HOME`, and each install runs the artifact that was tested.
+- Good, because each version runs with the runtime and JVM options it was built with, whatever launcher is installed: a launcher installed today can run a later version that needs a newer Java.
 - Good, because the bundle is self-contained: it can be extracted and run directly, e.g. in container images or air-gapped sites.
-- Bad, because there are two layers: the installed script must keep supporting the bundle URL and layout for as long as old launchers exist.
-- Bad, because the installed script keeps the jar and system Java path for versions and platforms without a bundle.
-- Bad, because each version is a larger download (110 MB instead of 38 MB for the jar), and runtimes are not shared between versions.
+- Bad, because runtimes are not shared between versions: each version is 110 MB instead of 38 MB for the jar.
+- Bad, because the installed script must keep supporting the bundle URL and layout for as long as old launchers exist, and the jar and system Java for versions and platforms without a bundle.
+
+### AOT cache created on the user's machine
+
+The launcher downloads a runtime for `NXF_VER`, shared between versions that use the same Java. The first run records a training profile, and a later launch creates the cache.
+
+- Good, because runtimes are shared between versions, and downloaded separately from the jar.
+- Bad, because the first runs don't benefit, and CI jobs and containers with a fresh `NXF_HOME` never do.
+- Bad, because creating the cache in a shared `NXF_HOME` needs coordination between parallel launches, and a cache created on a smaller host is silently rejected on hosts with 128 GB of RAM or more (see below).
+- Bad, because the launcher must choose the runtime of each version: an installed launcher only knows the versions released before it, and the JVM options come from the installed launcher rather than from the version that runs.
 
 ## Solution or decision outcome
 
-Option 4: a bundle per version and platform (linux-x64, linux-arm64, macos-arm64), with the stock Temurin JRE, published by the release next to the jar. The installed launcher hands off to it only with `NXF_JAVA_BUNDLE=true`.
+The stock Temurin JRE, and an AOT cache created in CI: each release publishes a bundle per platform (linux-x64, linux-arm64, macos-arm64) next to the jar. The installed launcher hands off to it only with `NXF_JAVA_BUNDLE=true`.
 
 ## Rationale & discussion
 
@@ -96,18 +98,6 @@ nextflow-<version>-<os>-<arch>/
 - **Runtime.** The latest Temurin 25 JRE, resolved at build time from the Adoptium API and verified with its SHA-256 checksum, so each release ships the latest Java security fixes without a change in the repository. The version is resolved once for every platform: if the latest release differs between them (e.g. a staggered publish or a respin), the newest release that every platform has is used. `-PjreVersion=<version>` or the repository variable `NXF_BUNDLE_JRE_VERSION` override it. The version is recorded in `runtime/release`.
 - **AOT cache.** It is trained by running a small pipeline (`bundle/training`) with the bundle launcher, so that it is created with the same JVM options as when it is used. It can only be created by the target runtime, so each platform is built on a native CI runner.
 - **Size.** 110 MB per platform (tar.gz). On linux-x64, the runtime is 62 MB, the jar 34 MB and the AOT cache 14 MB.
-
-### Stock JRE or jlink
-
-The startup gains come from shipping a fixed runtime with a prebuilt AOT cache. `jlink` does not change startup (within noise of a full JDK); what it provides is size:
-
-| runtime (linux-x64) | tar.gz |
-|---|---|
-| `jlink` image with the modules found by `jdeps` | 43 MB |
-| Temurin 25 JRE | 62 MB |
-| Temurin 25 JDK | 134 MB |
-
-`jlink` was rejected. Its module list must be maintained, and a missing module only fails at runtime, when a class of it is used: the basic list (`jdeps` + `jdk.zipfs`) broke S3 in nf-amazon (`NoClassDefFoundError: jdk/net/Sockets`). Third-party plugins, JDBC drivers and libraries run in the same JVM, and can need modules that no core code or plugin uses (e.g. `jdk.security.auth`, `java.instrument`, `jdk.jfr`, `jdk.crypto.cryptoki`, `java.xml.crypto`). They can't be tested against the module list, and since the runtime is fixed per version, a missing module could only be fixed with a new release. The stock JRE removes this class of failure for ~19 MB more per download, which trimming the jar can recover (see below). It also needs no `jmods`, which Temurin 25 does not ship.
 
 ### Trimming the jar (follow-up)
 
