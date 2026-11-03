@@ -20,6 +20,7 @@ import java.nio.file.Paths
 
 import com.google.common.hash.HashCode
 import nextflow.Session
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
 import nextflow.platform.ResourceLabelPolicy
@@ -41,6 +42,12 @@ class TaskArrayCollectorTest extends Specification {
         String getArrayIndexName() { null }
         int getArrayIndexStart() { 0 }
         String getArrayTaskId(String jobId, int index) { null }
+    }
+
+    def pool = new ArrayLauncherPool('test')
+
+    def cleanup() {
+        pool.shutdown()
     }
 
     def 'should submit tasks as job arrays' () {
@@ -103,7 +110,7 @@ class TaskArrayCollectorTest extends Specification {
             getConfig() >> config
             getExecutor() >> exec
             getName() >> 'PROC'
-            getSession() >> Mock(Session)
+            getSession() >> Mock(Session) { getArrayLauncherPool() >> pool }
             isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
@@ -151,7 +158,7 @@ class TaskArrayCollectorTest extends Specification {
             getConfig() >> config
             getExecutor() >> exec
             getName() >> 'PROC'
-            getSession() >> Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_frog'] }
+            getSession() >> Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_frog']; getArrayLauncherPool() >> pool }
             isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
@@ -191,7 +198,7 @@ class TaskArrayCollectorTest extends Specification {
             getConfig() >> Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) { createTaskConfig() >> Mock(TaskConfig) }
             getExecutor() >> exec
             getName() >> 'PROC'
-            getSession() >> Mock(Session)
+            getSession() >> Mock(Session) { getArrayLauncherPool() >> pool }
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
         def collector = Spy(new TaskArrayCollector(proc, exec, 5))

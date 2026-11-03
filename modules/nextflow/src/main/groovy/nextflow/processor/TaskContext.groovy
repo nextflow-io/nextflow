@@ -199,7 +199,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return KryoHelper.serialize(map)
         }
         catch( Exception e ) {
-            log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
+            log.warn "Cannot serialize context map. Cause: ${e} -- Resume will not work on this process"
             log.debug "Failed to serialize delegate map items: ${dumpMap(holder)}", e
             return null
         }
