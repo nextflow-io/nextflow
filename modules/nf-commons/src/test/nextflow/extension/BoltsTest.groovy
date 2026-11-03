@@ -434,4 +434,20 @@ class BoltsTest extends Specification {
         [title: 'foo'].properties == null
     }
 
+    def 'should assign properties as a map entry'() {
+        given:
+        def map = [:]
+        def cfg = new ConfigObject()
+
+        when:
+        map.properties = [a: 1]
+        map['properties'] = [b: 2]
+        cfg.properties = [c: 3]
+
+        then:
+        map == [properties: [b: 2]]
+        cfg.get('properties') == [c: 3]
+        cfg.properties == [c: 3]
+    }
+
 }
