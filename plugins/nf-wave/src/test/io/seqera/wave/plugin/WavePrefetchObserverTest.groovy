@@ -150,9 +150,15 @@ class WavePrefetchObserverTest extends Specification {
         checks == 12
     }
 
-    def 'should request the container and await it to be ready' () {
+    static class WatchRecorder extends FastObserver {
+        List<String> watched = []
+        WatchRecorder(DAG dag, int depth) { super(dag, depth) }
+        @Override protected void watch(TaskProcessor process, TaskRun task, String container, long requestedAt) { watched << process.name }
+    }
+
+    def 'should not await a container already ready' () {
         given:
-        def observer = new FastObserver(new DAG(), 1)
+        def observer = new WatchRecorder(new DAG(), 1)
         def task = Mock(TaskRun)
         def B = Mock(TaskProcessor) { getName() >> 'B' }
 
@@ -161,7 +167,35 @@ class WavePrefetchObserverTest extends Specification {
         then:
         1 * B.createTaskPreview() >> task
         1 * task.getContainer() >> 'wave.io/wt/xyz/foo:latest'
-        3 * task.isContainerReady() >>> [false, false, true]
+        1 * task.isContainerReady() >> true
+        and:
+        observer.watched == []
+        observer.countReady.get() == 1
+    }
+
+    def 'should hand a container build to the watcher and await it' () {
+        given:
+        def observer = new WatchRecorder(new DAG(), 1)
+        def task = Mock(TaskRun)
+        def B = Mock(TaskProcessor) { getName() >> 'B' }
+
+        when: 'the container is building when requested'
+        observer.prefetch(B)
+        then: 'the request thread does not wait for it'
+        1 * B.createTaskPreview() >> task
+        1 * task.getContainer() >> 'wave.io/wt/xyz/foo:latest'
+        1 * task.isContainerReady() >> false
+        and:
+        observer.watched == ['B']
+        observer.countBuilding.get() == 1
+        observer.countReady.get() == 0
+
+        when: 'the watcher awaits it'
+        observer.await(B, task, 'wave.io/wt/xyz/foo:latest', System.currentTimeMillis())
+        then:
+        2 * task.isContainerReady() >>> [false, true]
+        and:
+        observer.countReady.get() == 1
     }
 
     def 'should skip a queued process whose own task already started' () {
@@ -176,10 +210,10 @@ class WavePrefetchObserverTest extends Specification {
         0 * p.B.createTaskPreview()
     }
 
-    def 'should provision at most maxConcurrent containers ahead at the same time' () {
+    def 'should not delay the requests behind the builds in progress' () {
         given:
-        def max = 2
-        def total = max + 3
+        def max = 1
+        def total = 5
         def ready = new AtomicBoolean(false)
         def previews = new AtomicInteger()
         def observer = new FastObserver(new DAG(), 1, max)
@@ -192,19 +226,20 @@ class WavePrefetchObserverTest extends Specification {
         }
         def conditions = new PollingConditions(timeout: 5)
 
-        when: 'the containers are not ready'
+        when: 'all the containers are building'
         processes.each { observer.submit(it) }
-        then: 'only maxConcurrent are requested'
-        conditions.eventually { assert previews.get() == max }
-        when:
-        sleep 200
-        then:
-        previews.get() == max
-
-        when: 'the containers are ready'
-        ready.set(true)
-        then: 'the queued ones are requested'
+        then: 'all of them are requested anyway'
         conditions.eventually { assert previews.get() == total }
+        and: 'at most maxConcurrent builds are awaited, the others wait for a watcher'
+        conditions.eventually {
+            assert observer.watcher.getActiveCount() == max
+            assert observer.watcher.getQueue().size() == total - max
+        }
+
+        when: 'the builds complete'
+        ready.set(true)
+        then:
+        conditions.eventually { assert observer.countReady.get() == total }
 
         cleanup:
         observer.onFlowComplete()

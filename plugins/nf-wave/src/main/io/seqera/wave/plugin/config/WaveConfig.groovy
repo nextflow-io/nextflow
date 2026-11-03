@@ -97,7 +97,7 @@ class WaveConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The max number of containers requested ahead that are provisioned at the same time, when `wave.prefetchDepth` is enabled (default: `4`). A container request ahead waits for the container to be ready before the next one is sent.
+        The max number of container builds requested ahead that are awaited at the same time, when `wave.prefetchDepth` is enabled (default: `4`). The requests themselves are sent one at a time, paced by the Wave client rate limit, and are not delayed by the builds in progress.
     """)
     final int prefetchMaxConcurrent
 

@@ -48,7 +48,7 @@ The container registry authentication must be managed by the underlying infrastr
 
 The number of downstream process levels whose containers are requested ahead (default: `0`, disabled). When the first task of a process is submitted, Nextflow requests the Wave containers of the processes up to this many levels downstream in the workflow, so that their provisioning, such as a SOCI index (`wave.soci`) or a container build, runs while the upstream tasks run instead of delaying the first task of each process. Operators between two processes do not count as a level.
 
-The requests are sent in the background, at most `wave.prefetchMaxConcurrent` at a time, and each container is requested once within the Wave tokens cache duration (`wave.tokensCacheMaxDuration`). Containers that depend on the task inputs cannot be requested ahead, and are requested when their task is submitted.
+The requests are sent in the background one at a time, nearest processes first, paced by the Wave client rate limit (`wave.httpClient.maxRate`), and each container is requested once within the Wave tokens cache duration (`wave.tokensCacheMaxDuration`). Containers that depend on the task inputs cannot be requested ahead, and are requested when their task is submitted.
 
 Processes that never run, such as those in a branch whose condition is false, or that are fully cached when resuming a run, may still have their containers requested ahead, which can trigger container builds (e.g., conda) that are not used.
 
@@ -56,7 +56,7 @@ Processes that never run, such as those in a branch whose condition is false, or
 
 <AddedInVersion version="27.04" />
 
-The max number of containers requested ahead that are provisioned at the same time, when `wave.prefetchDepth` is enabled (default: `4`). A container requested ahead is awaited until it is ready before the next one is requested, so that the containers nearest to the running processes are provisioned first.
+The max number of container builds requested ahead that are awaited at the same time, when `wave.prefetchDepth` is enabled (default: `4`). A request ahead does not wait for a container build to complete, so a container that is already available, whose request only starts its SOCI index, is not delayed by slower builds. This setting limits the background threads that poll the status of the builds in progress.
 
 ##### `wave.soci`
 
