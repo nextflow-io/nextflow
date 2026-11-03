@@ -84,6 +84,8 @@ class WaveClient {
         final SubmitContainerTokenResponse response
         final Instant createdAt
         int iteration
+        /** the container was found ready, therefore its status is not checked anymore */
+        volatile boolean ready
     }
 
     final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
@@ -753,6 +755,12 @@ class WaveClient {
         final handle = responses.get(key)
         if( !handle )
             throw new IllegalStateException("Unable to find any container with key: $key")
+        if( handle.ready )
+            return true
+        return handle.ready = checkContainerReady(handle)
+    }
+
+    protected boolean checkContainerReady(Handle handle) {
         final resp = handle.response
         if( resp.requestId ) {
             return resp.succeeded
