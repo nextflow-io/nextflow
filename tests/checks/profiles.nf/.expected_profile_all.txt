@@ -9,7 +9,7 @@ profiles {
    }
    advanced {
       process {
-         cpus = 8
+         cpus = 4
          memory = '10GB'
          disk = '300GB'
       }

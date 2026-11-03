@@ -1,0 +1,20 @@
+# ALLOWLIST: exclude everything, then re-admit exactly the files the Dockerfile COPYs.
+#
+# A denylist kept letting build output through -- node_modules/ (~170 MB, the tree this
+# image exists to STOP shipping inside the plugin), build/, and the compiled agent-rpc
+# binary a local `go build` leaves beside its source. None of it is copied, so uploading
+# it to the builder is pure cost, and a stale copy must never be reachable by a COPY.
+#
+# Adding a COPY to the Dockerfile means adding its source here, or the build fails with
+# "file not found" -- loudly, which is the point.
+*
+
+# proxy sources: built by the agent-rpc stage
+!agent-rpc/go.mod
+!agent-rpc/go.sum
+!agent-rpc/main.go
+
+# harness: installed into the runtime stage
+!package.json
+!package-lock.json
+!harness/runner.mjs

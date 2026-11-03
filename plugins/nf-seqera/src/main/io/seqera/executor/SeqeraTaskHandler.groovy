@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.config.MachineRequirementOpts
 import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
+import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.PredictionModel
@@ -77,6 +78,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile SchedTaskState cachedTaskState
 
     /**
+     * Cached task response from last describeTask call, carrying the scheduler's retry verdict
+     */
+    private volatile DescribeTaskResponse cachedTaskResponse
+
+    /**
      * Cached machine info extracted from task attempts
      */
     private volatile CloudMachineInfo machineInfo
@@ -101,11 +107,12 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void submit() {
         executor.ensureRunCreated()
-        int cpuShares = (task.config.getCpus() ?: 1) * 1024
-        int memoryMiB = task.config.getMemory() ? (int) (task.config.getMemory().toBytes() / (1024 * 1024)) : 1024
+        // cpus needs no unspecified handling: TaskConfig.getCpus() already guarantees at least 1
+        // and throws on a negative, so there is never an absent or non-positive value to forward.
+        // memory has no such guarantee — see memoryMiB().
         final resourceReq = new ResourceRequirement()
-            .cpuShares(cpuShares)
-            .memoryMiB(memoryMiB)
+            .cpuShares(task.config.getCpus() * 1024)
+            .memoryMiB(memoryMiB())
         // add accelerator settings if defined
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -130,10 +137,14 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             fusionConfig().snapshotsEnabled(),
             maxSpotAttempts(baseMachineOpts)
         )
-        // resolve optional per-task prediction model override from the seqera/predictionModel hint;
-        // when unset the task inherits the run-level model
+        // per-task prediction model, in order of precedence:
+        // - an explicit `seqera/predictionModel` hint
+        // - the automatic `task.memory` check, disabling the prediction
+        // - null, so the task inherits the run-level model
         final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
-        final predictionModel = predictionModelHint ? PredictionModel.fromValue(predictionModelHint) : null
+        final predictionModel = predictionModelHint
+            ? PredictionModel.fromValue(predictionModelHint)
+            : (shouldDisablePrediction() ? PredictionModel.NONE : null)
         // build resource limit from process resourceLimits directive (upper bound for OOM retry scaling)
         final resourceLim = toResourceLimit()
         // validate container - Seqera executor requires all processes to specify a container image
@@ -166,6 +177,40 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    /**
+     * Determine whether the resource prediction model must be disabled for this task.
+     *
+     * The prediction model can allocate less memory than the task requested. However the task script
+     * is rendered *before* the task is scheduled, therefore a script referencing {@code task.memory}
+     * carries the memory that was requested, not the one that has been allocated e.g. a JVM
+     * {@code -Xmx} setting exceeding the container memory and failing with an out-of-memory error.
+     *
+     * The reference is observed while the command is rendered -- see
+     * {@code TaskRun#isDirectiveReferenced} -- therefore it covers a value reached indirectly
+     * through a dynamic directive e.g. {@code ext.args = { "-Xmx${task.memory.toGiga()}g" }},
+     * but not a directive resolved after the command e.g. {@code beforeScript}.
+     *
+     * @return {@code true} when the task should be submitted with prediction model {@code none}
+     */
+    protected boolean shouldDisablePrediction() {
+        // Nothing to disable unless the run enables a prediction model. Checking this first
+        // also keeps the warning quiet for the runs where the resources are never adjusted,
+        // which would otherwise report a problem that cannot happen
+        final runModel = executor.getSeqeraConfig()?.predictionModel
+        if( !runModel || runModel == PredictionModel.NONE.getValue() )
+            return false
+        // Note only `memory` is checked. The scheduler can adjust the cpus as well, but a
+        // stale `task.cpus` costs an over-subscribed thread pool whereas a stale
+        // `task.memory` fails the task, and `task.cpus` is referenced by nearly every
+        // process -- disabling the prediction for those would defeat the feature
+        if( !task.isDirectiveReferenced('memory') )
+            return false
+        // warn once per process rather than once per task: the reference belongs to the
+        // process definition, so every one of its tasks would otherwise report it
+        log.warn1("Process `${task.processor?.name ?: task.lazyName()}` depends on the `task.memory` value -- resource prediction has been disabled for this process to prevent an under-allocation of the requested memory", firstOnly: true)
+        return true
     }
 
     protected int maxSpotAttempts(MachineRequirementOpts opts) {
@@ -235,6 +280,45 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
+     * The memory to request, in MiB, or {@code null} when the process declares none.
+     * <p>
+     * The {@code memory} directive is optional, and leaving it out is a legitimate way of saying
+     * "I have no opinion". Substituting a figure here fabricated an opinion the user never
+     * expressed: the scheduler received a concrete request indistinguishable from a declared one,
+     * so it could neither apply its own default nor report that nothing had been asked for, and a
+     * whole run of unspecified tasks looked deliberately sized. Omitting the field instead lets the
+     * scheduler resolve and surface its default (seqeralabs/sched#1086).
+     * <p>
+     * A zero-valued directive is omitted for the same reason, and warned about once per process,
+     * since unlike an absent directive it is a config accident rather than a choice. Exactly zero
+     * is the only invalid figure reachable here: {@code MemoryUnit(long)} asserts a non-negative
+     * value, and {@code TaskConfig.getMemory0} maps a falsy directive to null via
+     * {@code MemoryUnit.asBoolean}, so what survives is the string form — {@code memory '0 GB'} —
+     * whose string is truthy.
+     * <p>
+     * The conversion below can still yield zero for a <em>positive</em> sub-MiB directive: the
+     * size-derived idiom nf-core uses for index builds, {@code memory { 6.B * fasta.size() }} in
+     * {@code nf-core/bwa/index}, falls under 1 MiB for any reference below ~170 KB — which is what
+     * a test or CI profile supplies, and is why {@code BWAMEM1_INDEX} submits a zero today. That
+     * zero is forwarded deliberately rather than caught here. The scheduler already resolves any
+     * non-positive request to its default and reports having done so; restating that rule
+     * client-side would split one normalisation across two codebases that then have to be kept in
+     * agreement, which is the failure this whole change is undoing.
+     *
+     * @return the requested memory in MiB, or null to leave the axis unspecified
+     */
+    protected Integer memoryMiB() {
+        final memory = task.config.getMemory()
+        if( memory == null )
+            return null
+        if( memory.toBytes() <= 0 ) {
+            log.warn1("Process `${task.processor.name}` declares a zero `memory` directive -- ignoring it; the scheduler will apply its own default", firstOnly: true)
+            return null
+        }
+        return (int) (memory.toBytes() / (1024 * 1024))
+    }
+
+    /**
      * Build a {@link ResourceLimit} from the process {@code resourceLimits} directive.
      * Returns {@code null} if no resource limits are defined.
      */
@@ -252,7 +336,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected SchedTaskStatus schedTaskStatus() {
-        cachedTaskState = client.describeTask(taskId).getTaskState()
+        cachedTaskResponse = client.describeTask(taskId)
+        cachedTaskState = cachedTaskResponse.getTaskState()
         return cachedTaskState.getStatus()
     }
 
@@ -290,8 +375,17 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             final apiExitCode = cachedTaskState?.getExitCode()
             task.exitStatus = apiExitCode != null ? apiExitCode : readExitFile()
             if (isFailed(schedStatus)) {
+                // the scheduler reports an infrastructure failure (e.g. a failed Fusion snapshot restore):
+                // rerun the task in a new work dir, at most `maxRetries` times as any other failure.
+                // note: unlike K8s, `task.aborted` is not set since `makeCopy` would carry it over to the rerun
+                if (cachedTaskResponse?.getRetryable() && task.failCount < task.config.getMaxRetries()) {
+                    final errorMessage = cachedTaskState?.getErrorMessage()
+                    final msg = "Task failed with a retryable error (reason: ${cachedTaskResponse.getRetryReason()}; exit: ${task.exitStatus})" + (errorMessage ? " -- ${errorMessage}" : '')
+                    log.info "[SEQERA] Process `${task.lazyName()}` - ${msg} -- taskId=${taskId}; work-dir=${task.getWorkDirStr()}"
+                    task.error = new SeqeraRetryableException(msg)
+                }
                 // When no exit code available, get the error message from task state
-                if (task.exitStatus == Integer.MAX_VALUE) {
+                else if (task.exitStatus == Integer.MAX_VALUE) {
                     final errorMessage = cachedTaskState?.getErrorMessage() ?: "Task failed for unknown reason"
                     task.error = new ProcessException(errorMessage)
                 }
@@ -466,6 +560,32 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
+     * Re-anchor the trace on the attempt that produced it. Sched retries a spot-reclaimed or
+     * OOM-killed task internally, in the same work dir, so Nextflow's {@code start} is the first
+     * attempt's while {@code realtime} (from {@code .command.trace}) is the last one's: every lost
+     * attempt would otherwise land in the gap between them, read as staging (sched#1074).
+     * Moves {@code start} to the last attempt's start and reports that lost time as {@code retryTime}.
+     *
+     * @param record the trace record to update in place
+     */
+    protected void applyAttemptTiming(TraceRecord record) {
+        final attempts = cachedTaskState?.getAttempts()
+        if( !attempts )
+            return
+        record.numAttempts = attempts.size()
+        final lastStart = attempts.get(attempts.size() - 1).getStartedAt()?.toInstant()?.toEpochMilli()
+        if( attempts.size() < 2 || lastStart == null || !startTimeMillis || lastStart <= startTimeMillis )
+            return
+        // clamp to completion: the attempt timestamps come from the scheduler's clock
+        final newStart = completeTimeMillis ? Math.min(lastStart, completeTimeMillis) : lastStart
+        record.retryTime = newStart - startTimeMillis
+        record.put('start', newStart)
+        // the fallback realtime (no trace file) was computed from the first attempt's start
+        if( completeTimeMillis && (record.get('realtime') as Long) == completeTimeMillis - startTimeMillis )
+            record.put('realtime', completeTimeMillis - newStart)
+    }
+
+    /**
      * Get the trace record for this task, including machine info and spot interruptions metadata.
      *
      * @return the trace record with additional metadata fields
@@ -478,6 +598,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.numSpotInterruptions = getNumSpotInterruptions()
         result.logStreamId = getLogStreamId()
         result.resourceAllocation = getResourceAllocation()
+        applyAttemptTiming(result)
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
         return result

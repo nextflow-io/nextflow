@@ -19,7 +19,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.DockerConfig
@@ -29,8 +29,12 @@ import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
+import nextflow.script.BaseScript
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfigV2
+import nextflow.script.ScriptType
 import nextflow.script.ScriptBinding
+import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.TokenVar
 import nextflow.script.params.EnvInParam
@@ -202,6 +206,28 @@ class TaskRunTest extends Specification {
         then:
         task6.hasCacheableValues()
 
+    }
+
+    def 'should have cacheable values for an exec task'() {
+        given:
+        def binding = new Binding()
+        def list = []
+        // a plain file output, i.e. nothing cacheable in the declared outputs
+        def out = new FileOutParam(binding,list).bind('file_out.beta')
+
+        when:
+        // an `exec` task computes its result into the task context, hence it must be cached
+        def task1 = new TaskRun(type: ScriptType.GROOVY)
+        task1.setOutput(out)
+        then:
+        task1.hasCacheableValues()
+
+        when:
+        // a script task rebuilds its context when the body is resolved, hence there's nothing to cache
+        def task2 = new TaskRun(type: ScriptType.SCRIPTLET)
+        task2.setOutput(out)
+        then:
+        !task2.hasCacheableValues()
     }
 
 
@@ -896,8 +922,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveBody(body) >> null
-        0 * task.resolveStub(_) >> null
+        1 * task.resolveBody(body) >> { }
+        0 * task.resolveStub(_)
     }
 
     def 'should resolve task body when no stub' () {
@@ -913,8 +939,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveBody(body) >> null
-        0 * task.resolveStub(_) >> null
+        1 * task.resolveBody(body) >> { }
+        0 * task.resolveStub(_)
     }
 
     def 'should resolve task stub' () {
@@ -931,8 +957,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveStub(stub) >> null
-        0 * task.resolveBody(_) >> null
+        1 * task.resolveStub(stub) >> { }
+        0 * task.resolveBody(_)
     }
 
     def 'should get stub source via method access' () {
@@ -1005,5 +1031,33 @@ class TaskRunTest extends Specification {
         task.source == 'echo ${say_hello}'
         task.template == file
         task.traceScript == 'echo Ciao mondo'
+    }
+
+    def 'should echo the final answer of an agent task'() {
+        given:
+        def session = Mock(Session)
+        def agentInfo = new nextflow.agent.AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = new TaskRun(config: new TaskConfig([(nextflow.agent.AgentTaskInfo.CONFIG_KEY): agentInfo]))
+        task.stdout = 'log line\n{"type":"complete","output":"the answer"}'
+
+        when:
+        task.echoStdout(session)
+
+        then:
+        1 * session.printConsole('the answer')
+    }
+
+    def 'should echo the raw output of an agent task without a result frame'() {
+        given:
+        def session = Mock(Session)
+        def agentInfo = new nextflow.agent.AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = new TaskRun(config: new TaskConfig([(nextflow.agent.AgentTaskInfo.CONFIG_KEY): agentInfo]))
+        task.stdout = 'log line\nnot a frame'
+
+        when:
+        task.echoStdout(session)
+
+        then:
+        1 * session.printConsole('log line\nnot a frame')
     }
 }

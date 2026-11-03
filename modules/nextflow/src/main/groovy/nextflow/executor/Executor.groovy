@@ -18,12 +18,15 @@ package nextflow.executor
 
 import java.nio.file.Path
 
+import java.util.concurrent.ExecutorService
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.file.FileHelper
+import nextflow.plugin.Plugins
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
@@ -131,6 +134,17 @@ abstract class Executor {
         path.scheme != getStageDir().scheme
     }
 
+    private volatile List<ForeignFileFilter> foreignFileFilters
+
+    /**
+     * The {@link ForeignFileFilter} extensions, looked up once per run
+     */
+    List<ForeignFileFilter> getForeignFileFilters() {
+        if( foreignFileFilters == null )
+            foreignFileFilters = Plugins.getExtensions(ForeignFileFilter) ?: Collections.<ForeignFileFilter>emptyList()
+        return foreignFileFilters
+    }
+
     /**
      * Temporary work directory relative to the executor work directory
      *
@@ -225,6 +239,19 @@ abstract class Executor {
      */
     boolean isFusionEnabled() {
         return false
+    }
+
+    /**
+     * The thread pool this executor's task handlers run their work on.
+     *
+     * <p>Defaults to the session's execution pool, sized against
+     * {@link nextflow.processor.LocalPollingMonitor}'s cpu gate. An executor whose tasks BLOCK on
+     * other tasks -- an orchestrator such as {@link nextflow.executor.local.AgentExecutor} -- must
+     * override this with a pool of its own, or its blocked tasks will starve the very sub-tasks
+     * they are waiting for.
+     */
+    ExecutorService getExecService() {
+        return session.execService
     }
 
     /**

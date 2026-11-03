@@ -1,0 +1,25 @@
+---
+title: beforeScript
+description: Reference for the `beforeScript` process directive.
+---
+
+# `beforeScript`
+
+The `beforeScript` directive executes a custom Bash snippet *before* the main process script is run.
+
+## Usage
+
+Use it to initialize the underlying cluster environment or perform other custom initialization. For example:
+
+```nextflow
+process hello {
+    beforeScript 'source /cluster/bin/setup'
+
+    script:
+    """
+    echo 'hello'
+    """
+}
+```
+
+When the process is containerized (using the [container](./container) directive), the `beforeScript` is executed in the container only if the executor is *container-native* (for example, cloud batch executors and Kubernetes). Otherwise, the `beforeScript` is executed outside the container.

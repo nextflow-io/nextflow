@@ -83,6 +83,12 @@ class WaveConfig implements ConfigScope {
 
     final WaveScanConfig scan
 
+    @ConfigOption
+    @Description("""
+        Enable SOCI lazy loading for Wave containers (default: `false`). Wave attaches a SOCI index to the containers, so that hosts running the SOCI snapshotter start them before the whole image is downloaded. Not applied to Singularity containers.
+    """)
+    final boolean soci
+
     @ConfigOption(types=[String])
     @Description("""
         The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
@@ -106,6 +112,7 @@ class WaveConfig implements ConfigScope {
         this.mirror = opts.mirror as boolean
         this.retryPolicy = retryOpts0(opts)
         this.scan = new WaveScanConfig(opts.scan as Map ?: Collections.emptyMap())
+        this.soci = opts.soci as boolean
         this.strategy = parseStrategy(opts.strategy)
 
         this.bundleProjectResources = opts.bundleProjectResources
@@ -131,6 +138,8 @@ class WaveConfig implements ConfigScope {
     boolean freezeMode() { this.freeze }
 
     boolean mirrorMode() { this.mirror }
+
+    boolean sociMode() { this.soci }
 
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
@@ -280,7 +289,7 @@ class WaveBuildConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
+        The build template used to build Conda containers (default: `conda/micromamba:v2`). Can be `conda/micromamba:v1`, `conda/micromamba:v2`, `conda/micromamba:v2-fast`, `conda/pixi:v1`, or `conda/pixi:v1-fast`.
     """)
     final String template
 
@@ -329,7 +338,7 @@ class WaveBuildCondaConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when `wave.build.template` is set to `conda/micromamba:v2` or `conda/pixi:v1`.
+        The base image of the Conda containers built with the `conda/micromamba:v2` and `conda/micromamba:v2-fast` templates (default: `ubuntu:24.04`). Ignored by the other templates.
     """)
     final String baseImage
 

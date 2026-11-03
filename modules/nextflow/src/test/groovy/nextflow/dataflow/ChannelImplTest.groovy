@@ -326,6 +326,19 @@ class ChannelImplTest extends Specification {
         result.contains( record(id: 'Z', a: 3, b: 6) )
     }
 
+    def testJoinFieldPrecedence() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(id: 'X', a: 1, c: 'left'), record(id: 'Y', a: 2, c: 'left'))
+            def ch2 = channel.of(record(id: 'Y', b: 5, c: 'right'), record(id: 'X', b: 4, c: 'right'))
+            ch1.join(ch2, by: 'id').collect()
+        }.getVal()
+        then:
+        result.size() == 2
+        result.contains( record(id: 'X', a: 1, b: 4, c: 'right') )
+        result.contains( record(id: 'Y', a: 2, b: 5, c: 'right') )
+    }
+
     def testJoinDuplicates() {
         when:
         def result = runDataflow {

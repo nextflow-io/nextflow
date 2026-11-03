@@ -334,24 +334,6 @@ class K8sDriverLauncher {
             }
         }
 
-        // -- backward compatibility
-        if( k8s.isSet('volumeClaims') ) {
-            log.warn "Config setting k8s.volumeClaims has been deprecated -- Use k8s.storageClaimName and k8s.storageMountPath instead"
-            k8s.volumeClaims.each { k,v ->
-                def name = k as String
-                def path = v instanceof Map ? v.mountPath : v.toString()
-                if( !k8s.isSet('storageClaimName') ) {
-                    k8s.storageClaimName = name
-                    k8s.storageMountPath = path
-                }
-                else if( !cmd.volMounts ) {
-                    k8s.pod.add( [volumeClaim: name, mountPath: path] )
-                }
-            }
-            // remove it
-            k8s.remove('volumeClaims')
-        }
-
         // -- set k8s executor
         config.process.executor = 'k8s'
 
@@ -584,10 +566,6 @@ class K8sDriverLauncher {
 
     protected Path getScmFile() {
         ProviderConfig.getScmConfigPath()
-    }
-
-    String getPodImage() {
-        return podImage
     }
 
     int getHeadCpus() {

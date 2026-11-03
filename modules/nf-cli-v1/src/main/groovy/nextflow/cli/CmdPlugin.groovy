@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.cli.PluginExecAware
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.PluginRef
 import nextflow.plugin.Plugins
@@ -162,21 +163,24 @@ class CmdPlugin extends CmdBase implements UsageAware {
             refactor.withPluginDir(Path.of(args[3] ?: refactor.pluginName).toFile())
         }
         else {
+            // the same reader must be used for all the prompts
+            final input = new ConsoleInput()
+
             // Prompt for plugin name
             print "Enter plugin name: "
-            refactor.withPluginName(readLine())
+            refactor.withPluginName(input.readLine())
 
             // Prompt for provider name
             print "Enter provider name: "
-            refactor.withProviderName(readLine())
+            refactor.withProviderName(input.readLine())
 
             // Prompt for project path (default to the normalised plugin name)
             print "Enter project path [${refactor.pluginName}]: "
-            refactor.withPluginDir(Path.of(readLine() ?: refactor.pluginName).toFile())
+            refactor.withPluginDir(Path.of(input.readLine() ?: refactor.pluginName).toFile())
 
             // confirm and proceed
             print "All good, are you OK to continue [y/N]? "
-            final confirm = readLine()
+            final confirm = input.readLine()
             if( confirm?.toLowerCase()!='y' ) {
                 println "Plugin creation aborted."
                 return
@@ -221,7 +225,7 @@ class CmdPlugin extends CmdBase implements UsageAware {
             }
             args.addAll(mapped)
             // execute plugin command
-            final ret = plugin.exec(target, cmd, args)
+            final ret = plugin.exec(target, cmd, args, buildConfig())
             // use explicit exit to invoke the system shutdown hooks
             System.exit(ret)
         }
@@ -230,11 +234,15 @@ class CmdPlugin extends CmdBase implements UsageAware {
         }
     }
 
-    static private String readLine() {
-        final console = System.console()
-        return console != null
-            ? console.readLine()
-            : new BufferedReader(new InputStreamReader(System.in)).readLine()
+    /**
+     * Create the plugin command config honouring the CLI options,
+     * e.g. `-c` and `-config-ignore-includes`
+     */
+    protected Map buildConfig() {
+        return new ConfigCmdAdapter()
+                .setOptions(launcher.options)
+                .setBaseDir(Path.of('.'))
+                .build()
     }
 
     static private void clonePluginTemplate(File targetDir, String templateVersion) {
@@ -258,7 +266,7 @@ class CmdPlugin extends CmdBase implements UsageAware {
             gitCmd.call()
         }
         catch (Exception e) {
-            throw new AbortOperationException("Unable to clone pluging template repository - cause: ${e.message}")
+            throw new AbortOperationException("Unable to clone plugin template repository - cause: ${e.message}")
         }
     }
 

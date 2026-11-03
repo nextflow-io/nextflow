@@ -53,6 +53,12 @@ class DagConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The directory where the DAG file should be saved, relative to the workflow output directory.
+    """)
+    final String directory
+
+    @ConfigOption
+    @Description("""
         Graph file name (default: `'dag-<timestamp>.html'`).
     """)
     final String file
@@ -78,6 +84,7 @@ class DagConfig implements ConfigScope {
         enabled = opts.enabled as boolean
         depth = opts.depth != null ? opts.depth as int : -1
         direction = opts.direction ?: 'TB'
+        directory = opts.directory
         file = opts.file ?: defaultFileName()
         overwrite = opts.overwrite as boolean
         verbose = opts.verbose as boolean

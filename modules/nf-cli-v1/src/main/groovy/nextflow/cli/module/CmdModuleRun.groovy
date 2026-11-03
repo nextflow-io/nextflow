@@ -30,6 +30,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleResolver
 import nextflow.module.RegistryClientFactory
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
 
 /**
@@ -63,7 +64,7 @@ class CmdModuleRun extends CmdRun {
             throw new AbortOperationException("Module name/path not provided")
         }
 
-        final moduleFile = isLocalModule(args[0])
+        final moduleFile = ScriptModuleResolver.isLocalModule(args[0])
             ? resolveLocalModule(args[0])
             : resolveRemoteModule(args[0], version)
 
@@ -71,10 +72,6 @@ class CmdModuleRun extends CmdRun {
             args[0] = moduleFile.toAbsolutePath().toString()
             super.run()
         }
-    }
-
-    private boolean isLocalModule(String str) {
-        return str.startsWith('/') || str.startsWith('./') || str.startsWith('../')
     }
 
     private Path resolveLocalModule(String str) {
@@ -104,7 +101,9 @@ class CmdModuleRun extends CmdRun {
         final registryConfig = new RegistryConfig(config.registry as Map ?: Collections.emptyMap())
         try {
             final resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
-            return resolver.installModule(reference, version)
+            // vendor the module together with its transitive deps (pinned) before running,
+            // consistent with `module install` and include-time auto-install
+            return resolver.installWithDependencies(reference, version)
         } catch( Exception e ) {
             throw new AbortOperationException("Unable to install module: ${name}", e)
         }

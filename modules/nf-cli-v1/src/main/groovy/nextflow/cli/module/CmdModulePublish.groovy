@@ -27,12 +27,15 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSchemaValidator
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleResolver
 import nextflow.module.ModuleValidator
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleStorage
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -54,6 +57,9 @@ class CmdModulePublish extends CmdBase {
 
     @Parameter(names = ["-registry"], description = "Target registry URL.")
     String registryUrl
+
+    @Parameter(names = ["-schema"], description = "URL or local path of the JSON schema used to validate meta.yml")
+    String schema
 
     @Parameter(description = "Module directory path or scope/name")
     List<String> args
@@ -83,7 +89,9 @@ class CmdModulePublish extends CmdBase {
         log.info "Publishing module from: ${moduleDir}"
 
         // Step 1: Validate module structure and spec
-        def validationErrors = ModuleValidator.validate(moduleDir)
+        def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        def schemaLocation = ModuleSchemaValidator.resolveSchemaLocation(manifestPath, schema)
+        def validationErrors = ModuleValidator.validate(moduleDir, schemaLocation)
         if (!validationErrors.isEmpty()) {
             throw new AbortOperationException(
                 "Module validation failed:\n" + validationErrors.collect { "  - ${it}" }.join('\n')
@@ -91,8 +99,29 @@ class CmdModulePublish extends CmdBase {
         }
 
         // Step 2: Load spec for publish metadata
-        def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
         def spec = ModuleSpecFactory.fromYaml(manifestPath)
+
+        // Config / registry access (needed to verify dependencies and to publish)
+        def config = new ConfigCmdAdapter()
+            .setOptions(launcher.options)
+            .setBaseDir(moduleDir)
+            .build()
+        def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
+
+        // Step 3: Verify declared dependencies resolve in the registry. Dependencies are not
+        // bundled with the module -- consumers re-resolve them from the registry at install time --
+        // so each declared `requires.modules` reference must exist there at its pinned version.
+        if( spec.requiresModules ) {
+            def resolver = new ModuleResolver(moduleDir, client ?: RegistryClientFactory.forConfig(registryConfig))
+            def missing = resolver.findMissingDependencies(spec.requiresModules)
+            if( missing ) {
+                throw new AbortOperationException(
+                    "Module validation failed:\n" + missing.collect {
+                        "  - Declared dependency '${it}' was not found in the registry".toString()
+                    }.join('\n')
+                )
+            }
+        }
 
         log.info "Module validated: ${spec.name}@${spec.version}"
 
@@ -100,14 +129,6 @@ class CmdModulePublish extends CmdBase {
             printDryRunInfo(spec)
             return
         }
-
-        // Step 3: Get authentication token
-        def config = new ConfigCmdAdapter()
-            .setOptions(launcher.options)
-            .setBaseDir(moduleDir)
-            .build()
-
-        def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         publishModule(moduleDir, registryConfig, spec)
 
@@ -181,10 +202,13 @@ class CmdModulePublish extends CmdBase {
         if( spec.keywords ) {
             println "  Keywords: ${spec.keywords.join(', ')}"
         }
-        if( spec.requires ) {
+        if( spec.requires || spec.requiresModules ) {
             println "  Requires:"
-            spec.requires.each { name, version ->
+            spec.requires?.each { name, version ->
                 println "    - ${name}: ${version}"
+            }
+            spec.requiresModules?.each { module ->
+                println "    - module: ${module}"
             }
         }
         println ""
@@ -199,9 +223,10 @@ class CmdModulePublish extends CmdBase {
      */
     private Path determineModuleDir(String module) {
         //If local path exists return this path as module dir
-        if (Paths.get(module).exists()){
+        if( Paths.get(module).exists() )
             return Paths.get(module).toAbsolutePath().normalize()
-        }
+        if( ScriptModuleResolver.isLocalModule(module) )
+            throw new AbortOperationException("Module path not found: $module")
 
         final ref =  ModuleReference.parse(module)
         final localStorage = new ModuleStorage(root ?: Paths.get('.').toAbsolutePath().normalize())

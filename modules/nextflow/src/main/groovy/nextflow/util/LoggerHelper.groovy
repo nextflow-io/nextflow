@@ -18,7 +18,6 @@ package nextflow.util
 
 import static nextflow.Const.*
 
-import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
@@ -266,8 +265,10 @@ class LoggerHelper {
             filter.start()
 
             result.setContext(loggerContext)
-            if( result instanceof ConsoleAppender )
+            if( result instanceof ConsoleAppender ) {
+                result.setTarget(opts.background ? 'System.out' : 'System.err')
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            }
             (result as FilterAttachable).addFilter(filter)
             (result as LifeCycle).start()
         }
@@ -500,7 +501,7 @@ class LoggerHelper {
 
         // add the log message
         if( fail instanceof MissingPropertyException ) {
-            def name = fail.property ?: getDetailMessage(fail)
+            def name = fail.property ?: fail.messageWithoutLocationText
             buffer.append("No such variable: ${name}")
         }
         else if( fail instanceof MissingMethodException ) {
@@ -561,20 +562,6 @@ class LoggerHelper {
     @PackageScope
     static String formatStartupErrorMessage( String message ) {
         message.replace(STARTUP_ERROR,'').replaceFirst(/^_nf_script_[a-z0-9]+: *[0-9]+: */,'')
-    }
-
-    static String getDetailMessage(Throwable error) {
-        try {
-            def clazz = error.class
-            while(  clazz != Throwable && clazz )
-                clazz = clazz.getSuperclass()
-            Field field = clazz.getDeclaredField('detailMessage')
-            field.setAccessible(true)
-            return field.get(error)
-        }
-        catch( Throwable e ) {
-            return null
-        }
     }
 
     static String getMissingMethodMessage(MissingMethodException error) {

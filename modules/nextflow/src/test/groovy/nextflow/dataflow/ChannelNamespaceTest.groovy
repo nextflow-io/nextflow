@@ -109,42 +109,6 @@ class ChannelNamespaceTest extends Specification {
         result.val == CH.stop()
     }
 
-    def 'should create a channel from a range' () {
-        when:
-        def result = runDataflow {
-            channel.of(1..3)
-        }
-        then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == CH.stop()
-
-        when:
-        result = runDataflow {
-            channel.of(1..3,'X','Y')
-        }
-        then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == 'X'
-        result.val == 'Y'
-        result.val == CH.stop()
-
-        when:
-        result = runDataflow {
-            channel.of(1..3,'X'..'Y')
-        }
-        then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == 'X'
-        result.val == 'Y'
-        result.val == CH.stop()
-    }
-
     def 'should create channel from a list'() {
         when:
         def result = runDataflow {
@@ -167,6 +131,16 @@ class ChannelNamespaceTest extends Specification {
             channel.fromList(null)
         }
         then:
+        result.val == CH.stop()
+
+        when:
+        result = runDataflow {
+            channel.fromList(1..3)
+        }
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
         result.val == CH.stop()
 
         when:

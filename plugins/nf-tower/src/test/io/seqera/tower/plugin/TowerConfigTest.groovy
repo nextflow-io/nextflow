@@ -16,8 +16,11 @@
 
 package io.seqera.tower.plugin
 
+import nextflow.config.spec.SpecNode
+import nextflow.platform.AutoLabels
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Unit tests for TowerConfig
@@ -104,5 +107,46 @@ class TowerConfigTest extends Specification {
 
         then: 'the lookup is still bounded to one attempt'
         config.retryPolicy.maxAttempts == 1
+    }
+
+    @Unroll
+    def 'should keep the auto labels raw value for form: #VALUE'() {
+        when:
+        def config = new TowerConfig(OPTS, [:])
+
+        then:
+        // the value is carried over verbatim, because the runtime parses it with
+        // `AutoLabels.parse` and needs to tell the accepted forms apart
+        config.autoLabels == VALUE
+        and:
+        AutoLabels.parse(config.autoLabels, 'tower.autoLabels') == EXPECTED
+
+        where:
+        OPTS                                    | VALUE                        | EXPECTED
+        [:]                                     | null                         | [] as Set
+        [autoLabels: true]                      | true                         | AutoLabels.VALID_NAMES
+        [autoLabels: false]                     | false                        | [] as Set
+        [autoLabels: ['runName','projectName']] | ['runName','projectName']    | ['runName','projectName'] as Set
+        [autoLabels: 'runName,projectName']     | 'runName,projectName'        | ['runName','projectName'] as Set
+    }
+
+    def 'should expose the auto labels option in the config spec'() {
+        given:
+        def root = SpecNode.Scope.of(TowerConfig, '')
+
+        expect:
+        // the option must be part of the spec, otherwise `ConfigValidator` flags it
+        // as unrecognized and the config reference docs skip it
+        root.getOption(['autoLabels']) != null
+        and:
+        // all the accepted forms are declared
+        root.getOption(['autoLabels']).types().containsAll([Boolean, List, String])
+        and:
+        root.getOption(['autoLabels']).description().contains('`true`: include all available metadata labels')
+        root.getOption(['autoLabels']).description().contains('`false` (default): disable')
+        root.getOption(['autoLabels']).description().contains('a list or comma-separated string of short names')
+        and:
+        // every valid short name is documented
+        AutoLabels.VALID_NAMES.every { root.getOption(['autoLabels']).description().contains("`${it}`") }
     }
 }

@@ -35,14 +35,28 @@ class ParamsDef {
         this.closure = closure
     }
 
+    private ParamsDsl dsl
+
     void apply(Session session) {
-        final dsl = new ParamsDsl(clazz)
+        dsl().apply(session)
+    }
+
+    /**
+     * The declared params, keyed by name.
+     */
+    Map<String,Param> getDeclarations() {
+        return dsl().getDeclarations()
+    }
+
+    private ParamsDsl dsl() {
+        if( dsl != null )
+            return dsl
+        dsl = new ParamsDsl(clazz)
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.call()
-
-        dsl.apply(session)
+        return dsl
     }
 
 }

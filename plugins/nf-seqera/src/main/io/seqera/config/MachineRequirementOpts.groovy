@@ -45,6 +45,15 @@ class MachineRequirementOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Cost limit on the spot to on-demand fallback. With `spotFirst`, a task falls back to on-demand
+        only while on-demand costs at most this multiple of the spot price. When not set, the
+        scheduler's default for the cloud provider applies. Set to `0` to remove the limit, so tasks
+        always fall back whatever the price. Only used when provisioning is `spotFirst`.
+    """)
+    final Double onDemandCostRatio
+
+    @ConfigOption
+    @Description("""
         List of acceptable machine type patterns. Supports exact types (e.g., `t3.small`),
         family prefixes (e.g., `m5` matches all m5 sizes), and glob wildcards (e.g., `t*.small`).
     """)
@@ -112,6 +121,7 @@ class MachineRequirementOpts implements ConfigScope {
     MachineRequirementOpts(Map opts) {
         this.provisioning = opts.provisioning as String
         this.maxSpotAttempts = opts.maxSpotAttempts as Integer
+        this.onDemandCostRatio = opts.onDemandCostRatio as Double
         this.machineTypes = (opts.machineTypes ?: opts.machineFamilies) as List<String>
         this.diskType = opts.diskType as String
         this.diskThroughputMiBps = opts.diskThroughputMiBps as Integer
@@ -131,6 +141,10 @@ class MachineRequirementOpts implements ConfigScope {
 
     Integer getMaxSpotAttempts() {
         return maxSpotAttempts
+    }
+
+    Double getOnDemandCostRatio() {
+        return onDemandCostRatio
     }
 
     List<String> getMachineTypes() {

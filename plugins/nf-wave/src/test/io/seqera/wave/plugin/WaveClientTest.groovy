@@ -65,6 +65,18 @@ import test.OutputCapture
 @Slf4j
 class WaveClientTest extends Specification {
 
+    def 'should retry request timeouts' () {
+        // Retry a request timeout raised after the request was sent - which the httpx default
+        // excludes - so a single transient stall on the Wave/Tower API does not fail the request.
+        expect:
+        WaveClient.retryCondition(new java.net.http.HttpTimeoutException('request timeout'))
+        WaveClient.retryCondition(new java.net.http.HttpConnectTimeoutException('connect timeout'))
+        WaveClient.retryCondition(new SocketTimeoutException('socket timeout'))
+        WaveClient.retryCondition(new IOException('connection reset'))
+        and:
+        !WaveClient.retryCondition(new RuntimeException('not an I/O error'))
+    }
+
     @CompileStatic
     private static List<Path> untar(final InputStream is, final Path outputDir)  {
 
@@ -253,6 +265,24 @@ class WaveClientTest extends Specification {
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
+    }
+
+    def 'should create request object with soci mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[soci:true]]}
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage('foo:latest'))
+        then:
+        req.containerImage == 'foo:latest'
+        req.soci
+
+        when:
+        req = wave.makeRequest(new WaveAssets(null, null, null, null, 'From foo:latest', null, null, true))
+        then:
+        req.format == 'sif'
+        !req.soci
     }
 
     def 'should create request object with scan mode and levels' () {

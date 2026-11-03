@@ -184,7 +184,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names = ['-with-fusion'], hidden = true)
     String withFusion
 
-    @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+    @Parameter(names = ['-with-weblog'], hidden = true)
     String withWebLog
 
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
@@ -195,6 +195,9 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
     String withTimeline
+
+    @Parameter(names = ['-with-agent-trace'], description = 'Log a readable trace of agent execution: turns, model reasoning and tool invocations at INFO (tool inputs/outputs at DEBUG)', arity = 0)
+    boolean withAgentTrace
 
     @Parameter(names = '-with-charliecloud', description = 'Enable process execution in a Charliecloud container runtime')
     def withCharliecloud

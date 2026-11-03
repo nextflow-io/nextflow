@@ -122,6 +122,14 @@ class CmdModuleSearch extends CmdBase {
         }
     }
 
+    /**
+     * The module kind, defaulting to {@code Process} when the registry does not
+     * report one (older registries or process modules that predate the field).
+     */
+    private static String kindOf(ModuleSearchResult result) {
+        return result.kind != null ? result.kind.toString() : 'Process'
+    }
+
     private void printFormattedResults(SearchModulesResponse response) {
         println ""
         println "Top ${response.totalResults} matching module(s):"
@@ -129,6 +137,7 @@ class CmdModuleSearch extends CmdBase {
 
         response.results.each { ModuleSearchResult result ->
             println "  ${result.name}"
+            println "    Kind: ${kindOf(result)}"
             if( result.description ) {
                 println "    Description: ${result.description}"
             }
@@ -141,6 +150,7 @@ class CmdModuleSearch extends CmdBase {
             [
                 name          : result.name,
                 repositoryPath: result.repositoryPath,
+                kind          : kindOf(result),
                 description   : result.description,
                 relevanceScore: result.relevanceScore,
                 keywords      : result.keywords,

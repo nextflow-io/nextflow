@@ -24,7 +24,8 @@ import groovy.transform.TupleConstructor
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface CacheStore {
+// declared as a trait to keep binary compatibility with plugins compiled with Groovy 4
+trait CacheStore {
 
     @TupleConstructor
     static class Index {
@@ -32,17 +33,29 @@ interface CacheStore {
         final boolean cached
     }
 
-    CacheStore open()
-    CacheStore openForRead()
-    void close()
-    void drop()
+    abstract CacheStore open()
+    abstract CacheStore openForRead()
+    abstract void close()
+    abstract void drop()
 
-    byte[] getEntry(HashCode key)
-    void putEntry(HashCode key, byte[] value)
-    void deleteEntry(HashCode key)
+    abstract byte[] getEntry(HashCode key)
+    abstract void putEntry(HashCode key, byte[] value)
+    abstract void deleteEntry(HashCode key)
 
-    void writeIndex(HashCode key, boolean cached)
-    Iterator<Index> iterateIndex()
-    void deleteIndex()
+    /**
+     * Update an entry that already exists in this store, i.e. the read-modify-write of the
+     * reference count / last-used stamp in {@link CacheDB#incTaskEntry}, whose value is a record
+     * just read back through {@link #getEntry}.
+     *
+     * This is deliberately distinct from {@link #putEntry}, which stores a <b>new</b> entry: a
+     * composite store has to send an update to the member that served the read — and may have to
+     * drop it when that member is read-only — while a new entry must always go to the writable
+     * one. Defaults to {@link #putEntry}, which is the correct behaviour for a single store.
+     */
+    void updateEntry(HashCode key, byte[] value) { putEntry(key, value) }
+
+    abstract void writeIndex(HashCode key, boolean cached)
+    abstract Iterator<Index> iterateIndex()
+    abstract void deleteIndex()
 
 }

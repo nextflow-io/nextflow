@@ -71,7 +71,7 @@ export default function(Prism) {
     ],
     // Nextflow-specific directives and keywords
     'nextflow-directive': {
-      pattern: /\b(?:accelerator|afterScript|arch|array|beforeScript|cache|clusterOptions|conda|container|containerOptions|cpus|debug|disk|echo|errorStrategy|executor|ext|fair|label|machineType|maxErrors|maxForks|maxRetries|memory|module|penv|pod|publishDir|queue|resourceLabels|resourceLimits|scratch|secret|spack|stageInMode|stageOutMode|storeDir|tag|time)\b/,
+      pattern: /\b(?:accelerator|afterScript|arch|array|beforeScript|cache|clusterOptions|conda|container|containerOptions|cpus|debug|disk|echo|errorStrategy|executor|ext|fair|hints|label|machineType|maxErrors|maxForks|maxRetries|maxSubmitAwait|memory|module|penv|pod|publishDir|queue|resourceLabels|resourceLimits|scratch|secret|spack|stageInMode|stageOutMode|storeDir|tag|time)\b/,
       alias: 'property'
     },
     'nextflow-keyword': {

@@ -265,6 +265,36 @@ class LinCommandImplTest extends Specification{
         outputHtml.text == expectedOutput
     }
 
+    def 'should follow lid references inside a record input' (){
+        given:
+        def outputHtml = tmpDir.resolve('lineage.html')
+        def encoder = new LinEncoder()
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
+        def save = { String key, Object value ->
+            def file = storeLocation.resolve("$key/.data.json")
+            Files.createDirectories(file.parent)
+            file.text = encoder.encode(value)
+        }
+        save("12345/out.txt", new FileOutput("path/to/out.txt", new Checksum("45372qe","nextflow","standard"),
+            "lid://12345", "lid://45678", "lid://12345", 1234, time, time, null))
+        save("12345", new TaskRun("u345-2346-1stw2", "foo", new Checksum("abcde2345","nextflow","standard"),
+            'this is a script', null,
+            [new Parameter("Sample", "sample", [id: 'ggal_gut', reads: 'lid://45678/reads.txt'])],
+            null, null, null, null, [:], []))
+        save("45678/reads.txt", new FileOutput("path/to/reads.txt", new Checksum("45372qe","nextflow","standard"),
+            "lid://45678", "lid://45678", "lid://45678", 1234, time, time, null))
+        save("45678", new TaskRun("u345-2346-1stw2", "bar", new Checksum("abfs2556","nextflow","standard"),
+            'this is a script', null, null, null, null, null, null, [:], []))
+
+        when:
+        new LinCommandImpl().render(configMap, ["lid://12345/out.txt", outputHtml.toString()])
+
+        then:
+        outputHtml.text.contains('lid://45678/reads.txt --> lid://12345')
+        outputHtml.text.contains('lid://45678 --> lid://45678/reads.txt')
+        outputHtml.text.contains('ggal_gut --> lid://12345')
+    }
+
     def 'should get lineage from workflow lid content' (){
         given:
 

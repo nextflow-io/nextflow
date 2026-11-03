@@ -24,7 +24,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
 import nextflow.processor.TaskId
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.config.ReportConfig
@@ -73,8 +72,8 @@ class ReportObserver implements TraceObserverV2 {
      */
     private boolean overwrite
 
-    ReportObserver(ReportConfig config) {
-        this.reportFile = FileHelper.asPath(config.file)
+    ReportObserver(ReportConfig config, Path reportFile) {
+        this.reportFile = reportFile
         this.maxTasks = config.maxTasks
         this.overwrite = config.overwrite
     }

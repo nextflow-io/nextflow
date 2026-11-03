@@ -19,6 +19,7 @@ package nextflow.module
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import groovy.json.JsonOutput
+import nextflow.SysEnv
 import nextflow.config.RegistryConfig
 import io.seqera.npr.client.RegistryException
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
@@ -47,6 +48,9 @@ class RegistryClientFactoryTest extends Specification {
     String url
     static final String MODULES_API_PATH = "/api/v1/modules"
     def setup() {
+        // isolate from the host environment, otherwise `NXF_REGISTRY_TOKEN`
+        // leaks into the client via `RegistryConfig.getApiKey()`
+        SysEnv.push([:])
         wireMock = new WireMockServer(wireMockConfig().dynamicPort())
         wireMock.start()
         WireMock.configureFor("localhost", wireMock.port())
@@ -55,6 +59,7 @@ class RegistryClientFactoryTest extends Specification {
 
     def cleanup() {
         wireMock?.stop()
+        SysEnv.pop()
     }
 
     def 'should fetch module metadata from registry'() {

@@ -31,7 +31,11 @@ export default async function createConfigAsync() {
       },
       ['docusaurus-plugin-llms', {
         id: 'llms-nextflow',
-        docsDir: 'docs',
+        // The plugin writes each Markdown copy to build/<docsDir>/ and links it
+        // from there, ignoring routeBasePath. `nextflow` is a second symlink to
+        // ../docs so the copies land under /nextflow/, the only path that
+        // docs.seqera.io proxies to this site.
+        docsDir: 'nextflow',
         llmsTxtFilename: 'llms-nextflow.txt',
         llmsFullTxtFilename: 'llms-nextflow-full.txt',
         title: 'Nextflow',
@@ -43,7 +47,7 @@ export default async function createConfigAsync() {
         includeBlog: false,
         excludeImports: true,
         removeDuplicateHeadings: true,
-        ignoreFiles: ['**/tags', '**/tags/**'],
+        ignoreFiles: ['**/tags', '**/tags/**', 'adr/**', 'specs/**'],
         processingBatchSize: 50,
       }],
       [
@@ -53,6 +57,15 @@ export default async function createConfigAsync() {
           routeBasePath: "/nextflow",
           path: "docs",
           sidebarPath: "./sidebars.js",
+          exclude: [
+            "**/_*.{js,jsx,ts,tsx,md,mdx}",
+            "**/_*/**",
+            "**/*.test.{js,jsx,ts,tsx}",
+            "**/__tests__/**",
+            // design records for contributors, not user docs
+            "adr/**",
+            "specs/**",
+          ],
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
           // For PR Previews we want to see the latest doc-set with expected changes.
@@ -94,6 +107,10 @@ export default async function createConfigAsync() {
       ],
     ],
     themeConfig: getSeqeraThemeConfig({
+      // Follow the system light/dark setting, as the rest of docs.seqera.io does.
+      colorMode: {
+        respectPrefersColorScheme: true,
+      },
       prism: {
         additionalLanguages: ['nextflow', 'groovy', 'java', 'bash', 'yaml', 'json'],
       },

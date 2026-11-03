@@ -63,7 +63,9 @@ class ScriptHelper {
      * This function compiles and executes the script without
      * running the pipeline. The entry workflow is executed
      * (i.e. to construct the workflow DAG) unless opts.module
-     * is enabled.
+     * is enabled. Set opts.moduleRun to emulate `nextflow module
+     * run`, which allows a single process or named workflow to be
+     * executed directly.
      *
      * @param opts
      * @param text
@@ -73,6 +75,8 @@ class ScriptHelper {
         session.setBinding(new ScriptBinding())
 
         session.init(null, null, opts.params, opts.configParams)
+        if( opts.moduleRun )
+            session.setModuleRun(true)
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)
@@ -163,6 +167,8 @@ class ScriptHelper {
         session.setBinding(new ScriptBinding())
 
         session.init(null, null, opts.params, opts.configParams)
+        if( opts.moduleRun )
+            session.setModuleRun(true)
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)
@@ -196,7 +202,9 @@ class ScriptHelper {
         def session = opts.config ? new MockSession(opts.config) : new MockSession()
         session.setBinding(new ScriptBinding())
 
-        session.init( new ScriptFile(path), null, opts.params, null )
+        session.init( new ScriptFile(path), null, opts.params, opts.configParams )
+        if( opts.moduleRun )
+            session.setModuleRun(true)
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)
@@ -344,7 +352,7 @@ class MockTaskHandler extends TaskHandler {
             task.exitStatus = 0
         }
         else {
-            task.code.call()
+            task.stdout = task.code.call()
         }
         status = TaskStatus.COMPLETED
         final fault = task.processor.finalizeTask(this)

@@ -106,12 +106,12 @@ class CmdModuleList extends CmdBase {
         println ""
         println "Installed modules:"
         println ""
-        println "Module".padRight(40) + "Version".padRight(15) + "Status"
-        println("-" * 70)
+        println "Module".padRight(40) + "Version".padRight(15) + "Kind".padRight(12) + "Status"
+        println("-" * 82)
 
         installed.each { module ->
             def status = getStatusString(module.integrity)
-            println "${module.reference.toString().padRight(40)}${(module.installedVersion ?: 'unknown').padRight(15)}${status}"
+            println "${module.reference.toString().padRight(40)}${(module.installedVersion ?: 'unknown').padRight(15)}${(module.kind ?: 'Process').padRight(12)}${status}"
         }
         println ""
     }
@@ -121,6 +121,7 @@ class CmdModuleList extends CmdBase {
             [
                 name     : module.reference.toString(),
                 version  : module.installedVersion ?: 'unknown',
+                kind     : module.kind ?: 'Process',
                 integrity: module.integrity.toString(),
                 directory: module.directory.toString(),
                 registry : module.registryUrl ?: 'unknown'

@@ -17,19 +17,27 @@
 package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.time.Duration as JavaDuration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import dev.failsafe.function.CheckedPredicate
 
+import com.azure.compute.batch.BatchClientBuilder
 import com.azure.compute.batch.models.AllocationState
+import com.azure.compute.batch.models.BatchErrorException
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchJobCreateParameters
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.ResizeError
+import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.exception.HttpResponseException
+import com.azure.core.http.HttpClient
+import com.azure.core.http.HttpHeaders
+import com.azure.core.http.HttpRequest
 import com.azure.core.http.HttpResponse
 import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
@@ -50,6 +58,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -511,7 +520,7 @@ class AzBatchServiceTest extends Specification {
                 getMemory() >> MEM
                 getCpus() >> CPUS
                 getMachineType() >> TYPE
-                getResourceLabels() >> [foo: 'bar']
+                getResourceLabels(_) >> [foo: 'bar']
             }
         }
 
@@ -525,6 +534,67 @@ class AzBatchServiceTest extends Specification {
 
     }
 
+    def 'should sanitise the auto resource labels in the autopool metadata' () {
+        given:
+        def LOC = 'europe'
+        def CFG = new AzConfig([batch: [location: LOC]])
+        def CPUS = 2
+        def MEM = MemoryUnit.of('1 GB')
+        def TYPE = 'Standard_X1'
+        def VM = new AzVmType(name: TYPE, numberOfCores: CPUS)
+        and:
+        def exec = createExecutor(CFG)
+        AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
+        and:
+        def CONFIG = new TaskConfig(cpus: CPUS, memory: MEM, machineType: TYPE, resourceLabels: ['microsoft.dept': 'the/user value'])
+        CONFIG.setAutoResourceLabels(['nextflow.io/runName': 'crazy_curie', 'microsoft.io/workflowId': '12345'])
+        and:
+        def TASK = Mock(TaskRun) { getConfig() >> CONFIG }
+
+        when:
+        def spec = svc.specFromAutoPool(TASK)
+        then:
+        1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
+        and:
+        // the auto labels are normalised for Azure Batch i.e. the reserved `microsoft` name
+        // prefix is stripped, while the label declared by the process is applied verbatim
+        spec.metadata == ['nextflow.io/runName': 'crazy_curie', 'io/workflowId': '12345', 'microsoft.dept': 'the/user value']
+        and:
+        spec.metadata.keySet() as List == ['nextflow.io/runName', 'io/workflowId', 'microsoft.dept']
+    }
+
+    def 'should derive the autopool id from the sanitised labels' () {
+        given:
+        def LOC = 'europe'
+        def CFG = new AzConfig([batch: [location: LOC]])
+        def CPUS = 2
+        def MEM = MemoryUnit.of('1 GB')
+        def TYPE = 'Standard_X1'
+        def VM = new AzVmType(name: TYPE, numberOfCores: CPUS)
+        and:
+        def exec = createExecutor(CFG)
+        AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
+        and:
+        def AUTO = new TaskConfig(cpus: CPUS, memory: MEM, machineType: TYPE)
+        AUTO.setAutoResourceLabels(['microsoft.io/dept': 'bio'])
+        and:
+        def DECLARED = new TaskConfig(cpus: CPUS, memory: MEM, machineType: TYPE, resourceLabels: ['io/dept': 'bio'])
+        and:
+        def TASK1 = Mock(TaskRun) { getConfig() >> AUTO }
+        def TASK2 = Mock(TaskRun) { getConfig() >> DECLARED }
+
+        when:
+        def spec1 = svc.specFromAutoPool(TASK1)
+        def spec2 = svc.specFromAutoPool(TASK2)
+        then:
+        2 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
+        and:
+        // the pool id is hashed from the sanitised map, therefore it only depends on the
+        // labels as they are applied to the pool
+        spec1.metadata == ['io/dept': 'bio']
+        spec1.poolId == spec2.poolId
+    }
+
     def 'should set jobs to automatically terminate by default' () {
         given:
         def CONFIG = [:]
@@ -533,7 +603,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.terminateJobs() >> null
+        1 * svc.terminateJobs() >> { }
     }
 
     def 'should not cleanup jobs by default' () {
@@ -544,7 +614,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupJobs() >> null
+        0 * svc.cleanupJobs() >> { }
     }
 
     def 'should cleanup jobs if specified' () {
@@ -555,7 +625,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupJobs() >> null
+        1 * svc.cleanupJobs() >> { }
     }
 
     def 'should not cleanup pools by default' () {
@@ -566,7 +636,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupPools() >> null
+        0 * svc.cleanupPools() >> { }
     }
 
     def 'should cleanup pools with autoPoolMode' () {
@@ -577,7 +647,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupPools() >> null
+        1 * svc.cleanupPools() >> { }
     }
 
     def 'should cleanup pools with allowPoolCreation' () {
@@ -588,7 +658,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupPools() >> null
+        1 * svc.cleanupPools() >> { }
     }
 
 
@@ -600,7 +670,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupPools() >> null
+        0 * svc.cleanupPools() >> { }
     }
 
     def 'should get spec from pool config' () {
@@ -943,7 +1013,7 @@ class AzBatchServiceTest extends Specification {
         service.safeCreatePool(spec)
 
         then: 'createPool is called once'
-        1 * service.createPool(spec) >> null
+        1 * service.createPool(spec) >> { }
         and:
         noExceptionThrown()
 
@@ -984,6 +1054,51 @@ class AzBatchServiceTest extends Specification {
         then: 'exception is not caught'
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
+    }
+
+    private static HttpClient stubHttpClient(int statusCode, String errorCode) {
+        final body = """{"odata.metadata":"x","code":"${errorCode}","message":{"lang":"en-US","value":"error"}}""".getBytes(StandardCharsets.UTF_8)
+        final headers = new HttpHeaders().set('Content-Type', 'application/json;odata=minimalmetadata')
+        return { HttpRequest request ->
+            Mono.just(new HttpResponse(request) {
+                int getStatusCode() { statusCode }
+                String getHeaderValue(String name) { headers.getValue(name) }
+                HttpHeaders getHeaders() { headers }
+                Flux<ByteBuffer> getBody() { Flux.just(ByteBuffer.wrap(body)) }
+                Mono<byte[]> getBodyAsByteArray() { Mono.just(body) }
+                Mono<String> getBodyAsString() { Mono.just(new String(body, StandardCharsets.UTF_8)) }
+                Mono<String> getBodyAsString(Charset charset) { Mono.just(new String(body, charset)) }
+            } as HttpResponse)
+        } as HttpClient
+    }
+
+    @Unroll
+    def 'should handle pool lookup response with status #STATUS' () {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def client = new BatchClientBuilder()
+            .endpoint('https://acct.westeurope.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('acct', Base64.encoder.encodeToString('key'.bytes)))
+            .httpClient(stubHttpClient(STATUS, CODE))
+            .buildClient()
+        service.getClient() >> client
+
+        when:
+        def result = null
+        Throwable error = null
+        try { result = service.getPool('test-pool') }
+        catch (Throwable t) { error = t }
+
+        then:
+        result == null
+        error?.class == ERROR
+
+        where:
+        STATUS | CODE                   | ERROR
+        404    | 'PoolNotFound'         | null
+        403    | 'AuthorizationFailure' | BatchErrorException
+        401    | 'AuthenticationFailed' | BatchErrorException
     }
 
     def 'should test createJobConstraints method with Duration input' () {
@@ -1293,5 +1408,121 @@ class AzBatchServiceTest extends Specification {
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationTimedout'), new ResizeError(code: 'AccountCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
+    }
+
+    def 'should include resize error codes in the pool check error' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached', message: 'Core quota reached') ])
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
+    }
+
+    private AzBatchService serviceWithJob(Map config, String jobId, String poolId) {
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[createExecutor(config)]) {
+            createJob0(poolId, _) >> jobId
+        }
+        svc.getOrCreateJob(poolId, Mock(TaskRun) { getProcessor() >> Mock(TaskProcessor) })
+        return svc
+    }
+
+    def 'should fail queued tasks on a fixed pool that cannot allocate nodes' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        def KEY = new AzTaskKey('job-1', 'task-1')
+        def POOL = poolWithResizeError(enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached', message: 'Core quota reached') ])
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def retried = svc.poolAllocationError(new AzTaskKey('job-1', 'task-2'))
+
+        then:
+        1 * svc.getPool('pool-1') >> POOL
+        first == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
+        retried == first
+    }
+
+    def 'should stop checking a fixed pool once it is allocated' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def second = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> POOL
+        first == null
+        second == null
+
+        where:
+        POOL << [
+            poolWithResizeError(enableAutoScale: false, resizeErrors: null, currentDedicatedNodes: 1),
+            poolWithResizeError(enableAutoScale: false, currentDedicatedNodes: 1),
+        ]
+    }
+
+    def 'should keep tasks waiting on an autoscale pool with resize errors' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def second = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ])
+        first == null
+        second == null
+    }
+
+    def 'should wait until a fixed pool allocation is steady' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def throttled = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(enableAutoScale: false, allocationState: AllocationState.RESIZING, resizeErrors: null)
+        first == null
+        throttled == null
+
+        when:
+        def failedLookup = svc.poolAllocationError(KEY)
+        def steady = svc.poolAllocationError(KEY)
+
+        then:
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        1 * svc.getPool('pool-1') >> { throw new IllegalStateException('Service unavailable') }
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AllocationFailed') ])
+        failedLookup == null
+        steady == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AllocationFailed"
+    }
+
+    def 'should not check the pool of an unknown job' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+
+        when:
+        def result = svc.poolAllocationError(new AzTaskKey('job-2', 'task-1'))
+
+        then:
+        0 * svc.getPool(_)
+        result == null
     }
 }

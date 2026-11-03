@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import nextflow.config.scopes.Config;
+import nextflow.config.scopes.RetryPolicyConfig;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.DslScope;
 import nextflow.script.dsl.FeatureFlag;
@@ -44,10 +45,28 @@ public sealed interface SpecNode {
 
     private static Scope rootScope() {
         var result = Scope.of(Config.class, "");
-        // derive `nextflow` config options from feature flags.
+        // derive `nextflow` config options from feature flags and the retry policy.
         result.children().put("nextflow", nextflowScope());
-        // derive `process` config options from process directives.
-        result.children().put("process", processScope());
+        // derive `process` and `agent` config options from process directives: an agent
+        // task accepts the same task directives, in its own independent scope.
+        // NOTE: the descriptions are inlined because an interface cannot declare private fields.
+        var processScope = directiveScope("""
+            The `process` scope allows you to specify default directives for processes in your pipeline.
+
+            [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
+        """);
+        processScope.children().put("when", new Option("""
+            When `false`, the process is not executed. Can be a closure to evaluate the condition for each task.
+
+            [Read more](https://docs.seqera.io/nextflow/config#disabling-processes)
+        """, List.of(Boolean.class)));
+        result.children().put("process", processScope);
+        result.children().put("agent", directiveScope("""
+            The `agent` scope allows you to specify default directives for agents in your pipeline. An
+            agent task accepts the same task directives as a process, in its own independent scope.
+
+            [Read more](https://docs.seqera.io/nextflow/agent#configuration)
+        """));
         return result;
     }
 
@@ -70,38 +89,46 @@ public sealed interface SpecNode {
             "",
             Map.ofEntries(
                 Map.entry("enable", (SpecNode) new Scope("", enableOpts)),
-                Map.entry("preview", (SpecNode) new Scope("", previewOpts))
+                Map.entry("preview", (SpecNode) new Scope("", previewOpts)),
+                Map.entry("retryPolicy", (SpecNode) Scope.of(RetryPolicyConfig.class, ""))
             )
         );
     }
 
     /**
-     * Initialize the `process` config scope from the set of
-     * process directives.
+     * Initialize a task-directive config scope (`process`, `agent`) from the
+     * set of process directives.
      *
      * Directives with multiple method overloads are treated as
-     * options with multiple supported types. Method overloads with
-     * multiple parameters are ignored because they are not supported
-     * in the configuration.
+     * options with multiple supported types. Only one overload needs
+     * to provide a description. Method overloads with multiple parameters
+     * are ignored because they are not supported in the configuration.
+     *
+     * @param description
      */
-    private static SpecNode processScope() {
-        var description = """
-            The `process` scope allows you to specify default directives for processes in your pipeline.
-
-            [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
-        """;
+    private static Scope directiveScope(String description) {
         var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             if( method.getParameters().length != 1 )
                 continue;
-            if( !children.containsKey(method.getName()) ) {
-                var desc = annotatedDescription(method, "");
-                children.put(method.getName(), new Option(desc, new ArrayList<>()));
+            var name = method.getName();
+            var desc = annotatedDescription(method, "");
+            var option = (Option) children.get(name);
+            if( option == null ) {
+                option = new Option(desc, new ArrayList<>());
+                children.put(name, option);
             }
-            var option = (Option) children.get(method.getName());
+            else if( option.description().isEmpty() && !desc.isEmpty() ) {
+                option = new Option(desc, option.types());
+                children.put(name, option);
+            }
             var paramType = method.getParameterTypes()[0];
             option.types.add(paramType);
         }
+        // the `secret` directive is repeatable in a process definition,
+        // but must be a list in the configuration
+        var secret = children.get("secret");
+        children.put("secret", new Option(secret.description(), List.of(List.class)));
         return new Scope(description, children);
     }
 

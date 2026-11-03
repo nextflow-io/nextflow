@@ -49,6 +49,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.nio.file.Paths
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 /**
  * Tests for SeqeraTaskHandler metadata fetching functionality
@@ -264,6 +267,36 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getExecutorName() == 'seqera/aws'
     }
 
+    def 'should anchor the trace start on the last attempt and report the retry time: #desc'() {
+        given: 'Nextflow saw the task RUNNING at t=100s and complete at t=1000s'
+        def handler = createHandlerForTraceTest()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 50_000
+        handler.startTimeMillis = 100_000
+        handler.completeTimeMillis = 1_000_000
+        handler.cachedTaskState = new SchedTaskState().attempts(starts.collect { Long ms ->
+            new TaskAttempt().startedAt(ms != null ? OffsetDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneOffset.UTC) : null)
+        })
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.get('start') == start
+        trace.get('realtime') == realtime
+        trace.getNumAttempts() == attempts
+        trace.getRetryTime() == retry
+
+        where:
+        desc                        | starts                 || start      | realtime | attempts | retry
+        'single attempt'            | [100_000L]             || 100_000L   | 900_000L | 1        | null
+        'reclaimed, then succeeded' | [100_000L, 700_000L]   || 700_000L   | 300_000L | 2        | 600_000L
+        'last attempt never ran'    | [100_000L, null]       || 100_000L   | 900_000L | 2        | null
+        'last start after complete' | [100_000L, 1_200_000L] || 1_000_000L | 0L       | 2        | 900_000L
+        'last start not after seen' | [50_000L, 100_000L]    || 100_000L   | 900_000L | 2        | null
+    }
+
     def 'should detect completion when batch submission fails'() {
         given:
         def error = new RuntimeException('Batch submission failed')
@@ -412,6 +445,64 @@ class SeqeraTaskHandlerTest extends Specification {
         completed
         capturedExitStatus == 1
         capturedError == null
+    }
+
+    @Unroll
+    def 'should handle the scheduler retry verdict [status=#STATUS; exit=#EXIT; retryable=#RETRYABLE; failCount=#FAIL_COUNT]'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig) { getMaxRetries() >> 3 }
+            lazyName() >> 'test_task'
+            getFailCount() >> FAIL_COUNT
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(STATUS)
+            .exitCode(EXIT)
+            .errorMessage('Fusion snapshot restore failed')
+        def describeResponse = new DescribeTaskResponse()
+            .taskState(taskState)
+            .retryable(RETRYABLE)
+            .retryReason(RETRYABLE ? 'SNAPSHOT_RESTORE_FAILED' : null)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+        handler.setBatchTaskId('task-175')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == (EXIT != null ? EXIT : Integer.MAX_VALUE)
+        capturedError?.getClass() == ERROR
+        capturedError?.message == MESSAGE
+        0 * taskRun.setAborted(_)
+
+        where:
+        STATUS                    | EXIT | RETRYABLE | FAIL_COUNT  | ERROR                    | MESSAGE
+        SchedTaskStatus.FAILED    | 175  | true      | 0           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | true      | 2           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | true      | 3           | null                     | null
+        SchedTaskStatus.FAILED    | null | true      | 3           | ProcessException         | 'Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | false     | 0           | null                     | null
+        SchedTaskStatus.FAILED    | 175  | null      | 0           | null                     | null
+        SchedTaskStatus.SUCCEEDED | 0    | true      | 0           | null                     | null
     }
 
     def 'should use scheduler API exit code when exit file is not available on a failed task'() {
@@ -873,6 +964,79 @@ class SeqeraTaskHandlerTest extends Specification {
         handler.getGrantedTime() == Duration.of('6h').toMillis()
     }
 
+    def 'should request memory only when the directive declares a usable figure: #scenario'() {
+        given:
+        def taskConfig = Mock(TaskConfig) { getMemory() >> memory }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+            getProcessor() >> Mock(TaskProcessor) { getName() >> 'test_process' }
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect: 'an unusable figure leaves the axis unset, so the scheduler applies and reports its own default'
+        handler.memoryMiB() == expected
+
+        where:
+        scenario                            | memory                     | expected
+        'declared'                          | MemoryUnit.of('2 GB')      | 2048
+        'absent'                            | null                       | null
+        'exactly 1 MiB'                     | MemoryUnit.of('1 MB')      | 1
+        // Exactly zero is the only invalid figure that can reach here: MemoryUnit(long) asserts
+        // non-negative, and TaskConfig maps a falsy directive to null, so only the string form
+        // survives -- its *string* is truthy
+        'string-form zero, the only real 0' | MemoryUnit.of('0 GB')      | null
+        // A positive sub-MiB directive truncates to 0 and is forwarded on purpose: normalising a
+        // non-positive request is the scheduler's job, and restating it here would split one rule
+        // across two codebases. nf-core/bwa/index computes `6.B * fasta.size()`, which lands here
+        // for the small reference a test profile supplies
+        'positive but sub-MiB'              | MemoryUnit.of(6) * 100_000 | 0
+    }
+
+    def 'submit should leave memoryMiB unset when the process declares no memory'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> capturedTask = args[1] as Task }
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) { getMachineRequirement() >> null }
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 2
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) { fusionEnv() >> [:] }
+        }
+
+        when:
+        handler.submit()
+
+        then: 'the axis reaches the scheduler absent, not as a fabricated figure'
+        capturedTask != null
+        capturedTask.getResourceRequirement().memoryMiB == null
+        capturedTask.getResourceRequirement().cpuShares == 2048
+    }
+
     def 'should build resource limit from task config'() {
         given:
         def taskConfig = Mock(TaskConfig) {
@@ -1198,10 +1362,77 @@ class SeqeraTaskHandlerTest extends Specification {
         [:]                                  | null
     }
 
+    def 'submit disables the prediction model when the process references task.memory'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: true,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.NONE
+    }
+
+    def 'submit keeps the run-level prediction model when the process does not reference task.memory'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+    }
+
+    @Unroll
+    def 'submit does not disable the prediction model when the run-level model is #runModel'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: runModel,
+            memoryReferenced: true,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+
+        where:
+        runModel << [null, '', 'none']
+    }
+
+    def 'submit lets an explicit predictionModel hint win over the task.memory check'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: true,
+            hints: ['seqera/predictionModel': 'qr/v1'],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.QR_V1
+    }
+
     private SeqeraTaskHandler createSubmitHandler(Map args) {
         final hints = args.hints as Map<String,Object> ?: [:]
         final baseMachineReq = args.baseMachineReq as MachineRequirementOpts
         final Closure onSubmit = args.onSubmit as Closure ?: {}
+        final memoryReferenced = args.memoryReferenced as boolean
+        final runPredictionModel = args.predictionModel as String
 
         def taskConfig = Mock(TaskConfig) {
             getCpus() >> 1
@@ -1216,6 +1447,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getContainer() >> 'ubuntu:latest'
             getId() >> TaskId.of(1)
             getHash() >> HashCode.fromInt(1)
+            isDirectiveReferenced('memory') >> memoryReferenced
             lazyName() >> 'sample_task'
         }
         def executor = Mock(SeqeraExecutor) {
@@ -1225,6 +1457,7 @@ class SeqeraTaskHandlerTest extends Specification {
             }
             getSeqeraConfig() >> Mock(ExecutorOpts) {
                 getMachineRequirement() >> baseMachineReq
+                getPredictionModel() >> runPredictionModel
             }
             getRunResourceLabels() >> [:]
         }
@@ -1235,6 +1468,104 @@ class SeqeraTaskHandlerTest extends Specification {
                 fusionEnv() >> [:]
             }
         }
+    }
+
+    def 'submit leaves Task.labels unset when the task declares no labels of its own'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def autoLabels = ['nextflow.io/runName': 'crazy_darwin', 'nextflow.io/resume': 'false']
+        // a real task config, so that the runtime merge of the auto labels is exercised
+        def taskConfig = new TaskConfig([cpus: 2, memory: '1 GB'])
+        taskConfig.setAutoResourceLabels(autoLabels)
+        and:
+        // the merge must have happened, otherwise the empty delta below would prove nothing
+        assert taskConfig.getResourceLabels() == autoLabels
+        and:
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            // the run baseline holds the very same auto labels -- see
+            // SeqeraExecutor#computeRunResourceLabels
+            getRunResourceLabels() >> autoLabels
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'the auto labels are attached to the run, therefore not re-sent with every task'
+        captured != null
+        captured.getLabels() == null
+    }
+
+    def 'submit sends the task labels missing from the run baseline'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        // a real task config, so that the runtime merge of the auto labels is exercised
+        def taskConfig = new TaskConfig([cpus: 2, memory: '1 GB', resourceLabels: [team: 'genomics']])
+        taskConfig.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin', 'nextflow.io/resume': 'false'])
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            // the run baseline only holds part of the labels carried by the task
+            getRunResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'only the delta against the run baseline is sent'
+        captured != null
+        captured.getLabels() == ['nextflow.io/resume': 'false', team: 'genomics']
     }
 
     def 'submit leaves Task.labels unset when the task labels equal the run baseline'() {

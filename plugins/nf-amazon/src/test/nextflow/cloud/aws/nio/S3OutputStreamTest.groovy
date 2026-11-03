@@ -43,9 +43,8 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
     S3Client getS3Client() { s3Client0 }
 
     static private Map config0() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-        return [aws: [accessKey: accessKey, secretKey: secretKey]]
+        // no static keys: the default provider chain also reads the session token of the CI role credentials
+        return [aws: [:]]
     }
 
     def setup() {
@@ -58,7 +57,7 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should ensure multipart is used'() {
         given:
         def bucket = createBucket()
@@ -88,7 +87,7 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should upload empty stream'() {
         given:
         def bucket = createBucket()
@@ -108,7 +107,7 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         if( bucket ) deleteBucket(bucket)
     }
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should upload without multipart'() {
         given:
         def bucket = createBucket()

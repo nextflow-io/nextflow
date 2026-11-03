@@ -19,33 +19,7 @@ module.exports = {
             items: [
                 "cli",
                 "config",
-                {
-                    type: "category",
-                    label: "Executors",
-                    collapsed: true,
-                    link: { type: "doc", id: "executor" },
-                    items: [
-                        "executor/local",
-                        "executor/aws-batch",
-                        "executor/azure-batch",
-                        "executor/google-batch",
-                        "executor/kubernetes",
-                        "executor/seqera",
-                        "executor/bridge",
-                        "executor/flux",
-                        "executor/htcondor",
-                        "executor/hyperqueue",
-                        "executor/lsf",
-                        "executor/moab",
-                        "executor/nqsii",
-                        "executor/oar",
-                        "executor/pbs",
-                        "executor/pbspro",
-                        "executor/sge",
-                        "executor/slurm",
-                        "executor/tcs"
-                    ]
-                },
+                "executor",
                 "cache-and-resume",
                 "reports"
             ]
@@ -59,6 +33,7 @@ module.exports = {
                 "working-with-files",
                 "process",
                 "workflow",
+                "agent",
                 {
                     type: "category",
                     label: "Static typing",
@@ -117,14 +92,12 @@ module.exports = {
         },
         {
             type: "category",
-            label: "Compute and storage",
+            label: "Storage",
             collapsed: true,
             items: [
-                "aws",
                 "amazons3",
-                "azure",
-                "google",
-                "kubernetes",
+                "azure-blob",
+                "google-storage",
                 "fusion"
             ]
         },
@@ -132,8 +105,8 @@ module.exports = {
             type: "category",
             label: "Plugins",
             collapsed: true,
+            link: { type: "doc", id: "plugins/plugins" },
             items: [
-                "plugins/plugins",
                 "plugins/using-plugins",
                 "plugins/developing-plugins",
                 "plugins/plugin-registry"
@@ -191,7 +164,64 @@ module.exports = {
                         "reference/stdlib-groovy"
                     ]
                 },
-                "reference/process",
+                {
+                    type: "category",
+                    label: "Process",
+                    link: { type: "doc", id: "reference/process" },
+                    items: [
+                        "reference/process/task-properties",
+                        "reference/process/inputs-outputs-typed",
+                        "reference/process/inputs-outputs",
+                        {
+                            type: "category",
+                            label: "Directives",
+                            link: { type: "doc", id: "reference/process/directives" },
+                            items: [
+                                    "reference/process/directives/accelerator",
+                                    "reference/process/directives/after-script",
+                                    "reference/process/directives/arch",
+                                    "reference/process/directives/array",
+                                    "reference/process/directives/before-script",
+                                    "reference/process/directives/cache",
+                                    "reference/process/directives/cluster-options",
+                                    "reference/process/directives/conda",
+                                    "reference/process/directives/container",
+                                    "reference/process/directives/container-options",
+                                    "reference/process/directives/cpus",
+                                    "reference/process/directives/debug",
+                                    "reference/process/directives/disk",
+                                    "reference/process/directives/error-strategy",
+                                    "reference/process/directives/executor",
+                                    "reference/process/directives/ext",
+                                    "reference/process/directives/fair",
+                                    "reference/process/directives/hints",
+                                    "reference/process/directives/label",
+                                    "reference/process/directives/machine-type",
+                                    "reference/process/directives/max-errors",
+                                    "reference/process/directives/max-forks",
+                                    "reference/process/directives/max-retries",
+                                    "reference/process/directives/max-submit-await",
+                                    "reference/process/directives/memory",
+                                    "reference/process/directives/module",
+                                    "reference/process/directives/penv",
+                                    "reference/process/directives/pod",
+                                    "reference/process/directives/publish-dir",
+                                    "reference/process/directives/queue",
+                                    "reference/process/directives/resource-labels",
+                                    "reference/process/directives/resource-limits",
+                                    "reference/process/directives/scratch",
+                                    "reference/process/directives/secret",
+                                    "reference/process/directives/shell",
+                                    "reference/process/directives/spack",
+                                    "reference/process/directives/stage-in-mode",
+                                    "reference/process/directives/stage-out-mode",
+                                    "reference/process/directives/store-dir",
+                                    "reference/process/directives/tag",
+                                    "reference/process/directives/time"
+                            ]
+                        }
+                    ]
+                },
                 "reference/operator"
             ]
         },
@@ -271,6 +301,32 @@ module.exports = {
                         "reference/config/workflow"
                     ]
                 },
+                {
+                    type: "category",
+                    label: "Executors",
+                    link: { type: "doc", id: "reference/executor" },
+                    items: [
+                        "reference/executor/local",
+                        "reference/executor/aws-batch",
+                        "reference/executor/azure-batch",
+                        "reference/executor/google-batch",
+                        "reference/executor/kubernetes",
+                        "reference/executor/seqera",
+                        "reference/executor/bridge",
+                        "reference/executor/flux",
+                        "reference/executor/htcondor",
+                        "reference/executor/hyperqueue",
+                        "reference/executor/lsf",
+                        "reference/executor/moab",
+                        "reference/executor/nqsii",
+                        "reference/executor/oar",
+                        "reference/executor/pbs",
+                        "reference/executor/pbspro",
+                        "reference/executor/sge",
+                        "reference/executor/slurm",
+                        "reference/executor/tcs"
+                    ]
+                },
                 "reference/env-vars"
             ]
         },
@@ -280,12 +336,15 @@ module.exports = {
             collapsed: true,
             items: [
                 "updating-nextflow",
+                "deprecations",
                 "strict-syntax",
+                "static-typing-prep",
                 {
                     type: "category",
                     label: "Migration notes",
                     link: { type: "doc", id: "migrations/index" },
                     items: [
+                        "migrations/26-10",
                         "migrations/26-04",
                         "migrations/25-10",
                         "migrations/25-04",
@@ -303,34 +362,7 @@ module.exports = {
             items: [
                 "developer/index",
                 "developer/diagram",
-                "developer/config-scopes",
-                {
-                    type: "category",
-                    label: "Packages",
-                    link: { type: "doc", id: "developer/packages" },
-                    items: [
-                        "developer/nextflow",
-                        "developer/nextflow.ast",
-                        "developer/nextflow.cache",
-                        "developer/nextflow.cli",
-                        "developer/nextflow.cloud.aws",
-                        "developer/nextflow.cloud.aws.nio",
-                        "developer/nextflow.cloud.azure",
-                        "developer/nextflow.cloud.google",
-                        "developer/nextflow.config",
-                        "developer/nextflow.container",
-                        "developer/nextflow.dag",
-                        "developer/nextflow.executor",
-                        "developer/nextflow.extension",
-                        "developer/nextflow.k8s",
-                        "developer/nextflow.plugin",
-                        "developer/nextflow.processor",
-                        "developer/nextflow.scm",
-                        "developer/nextflow.script",
-                        "developer/nextflow.secret",
-                        "developer/nextflow.trace"
-                    ]
-                }
+                "developer/config-scopes"
             ]
         },
         {
@@ -353,6 +385,7 @@ module.exports = {
             label: "Guides",
             collapsed: true,
             items: [
+                "guides/aws-custom-ami",
                 "guides/aws-java-sdk-v2",
                 "guides/gradle-plugin",
                 "guides/migrate-plugin",

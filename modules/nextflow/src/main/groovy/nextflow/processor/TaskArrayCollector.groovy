@@ -140,7 +140,8 @@ class TaskArrayCollector {
         }
 
         // create work directory
-        final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
+        // from the work dirs rather than the hashes, which every attempt of a task shares
+        final hash = CacheHelper.hasher( tasks.collect( t -> t.workDir.toUriString() ) ).hash()
         final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
         Files.createDirectories(workDir)
 
@@ -173,6 +174,9 @@ class TaskArrayCollector {
         taskArray.config.context = taskArray.context
         taskArray.config.process = taskArray.processor.name
         taskArray.config.executor = taskArray.processor.executor.name
+        // the array job is submitted as a task on its own, therefore it needs the auto-derived
+        // resource labels as much as the tasks it wraps -- see TaskProcessor#createTaskRun
+        taskArray.config.setAutoResourceLabels(processor.session?.getAutoResourceLabels())
 
         return taskArray
     }

@@ -34,6 +34,7 @@ import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.SecretHelper
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
@@ -44,8 +45,11 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    // note: ?i stands for ignore case - ?m stands for multiline
-    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*)=(.*)$/
+    /**
+     * @deprecated Use {@link SecretHelper#SECRET_REGEX} instead
+     */
+    @Deprecated
+    static public final Pattern SECRET_REGEX = SecretHelper.SECRET_REGEX
 
     TraceRecord() {
         this.store = new LinkedHashMap<>(FIELDS.size())
@@ -125,6 +129,8 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
+    transient private Integer numAttempts
+    transient private Long retryTime
     transient private String logStreamId
     transient private Map<String,Object> resourceAllocation
     transient private Map<String,Object> gpuMetrics
@@ -280,7 +286,7 @@ class TraceRecord implements Serializable {
     }
 
     protected String secureEnvString( String str ) {
-        str.replaceAll(SECRET_REGEX, '$1=[secure]')
+        SecretHelper.secureEnvString(str)
     }
 
 
@@ -667,6 +673,28 @@ class TraceRecord implements Serializable {
 
     void setNumSpotInterruptions(Integer numSpotInterruptions) {
         this.numSpotInterruptions = numSpotInterruptions
+    }
+
+    /**
+     * @return The number of executor-level attempts made to run the task, or {@code null} when the executor does not retry internally
+     */
+    Integer getNumAttempts() {
+        return numAttempts
+    }
+
+    void setNumAttempts(Integer numAttempts) {
+        this.numAttempts = numAttempts
+    }
+
+    /**
+     * @return Milliseconds lost to executor-level retries before the final attempt started, or {@code null} when not available
+     */
+    Long getRetryTime() {
+        return retryTime
+    }
+
+    void setRetryTime(Long retryTime) {
+        this.retryTime = retryTime
     }
 
     String getLogStreamId() {

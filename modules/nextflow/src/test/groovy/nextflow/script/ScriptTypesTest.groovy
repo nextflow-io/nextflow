@@ -62,11 +62,18 @@ class ScriptTypesTest extends Dsl2Spec {
             '''\
             workflow {
                 s = record(id: '1', fastq: file('1.fastq'))
-                printSample(s)
+                [
+                    text: printSample(s),
+                    sample: check(s)
+                ]
             }
 
             def printSample(s: Sample) {
                 return "Sample(id: ${s.id}, fastq: ${s.fastq.name})"
+            }
+
+            def check(s: Sample) -> Sample {
+                return s
             }
 
             record Sample {
@@ -76,7 +83,8 @@ class ScriptTypesTest extends Dsl2Spec {
             '''
         )
         then:
-        result == 'Sample(id: 1, fastq: 1.fastq)'
+        result.text == 'Sample(id: 1, fastq: 1.fastq)'
+        result.sample instanceof RecordMap
     }
 
     def 'should cast value to record type' () {

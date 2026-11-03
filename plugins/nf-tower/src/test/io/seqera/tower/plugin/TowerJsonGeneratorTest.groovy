@@ -52,6 +52,26 @@ class TowerJsonGeneratorTest extends Specification {
         x == '{"bar":{"one":"Hello","two":"Hola mundo"}}'
     }
 
+    static class Unserializable {
+        String getName() { 'foo' }
+        String getBroken() { throw new IllegalStateException('boom') }
+    }
+
+    def 'should write null for a value that fails to serialise' () {
+        given:
+        def gen = new TowerJsonGenerator(new JsonGenerator.Options(), [:])
+
+        when:
+        def json = gen.toJson( [before: 1, bad: new Unserializable(), after: 2] )
+        then:
+        new JsonSlurper().parseText(json) == [before: 1, bad: null, after: 2]
+
+        when:
+        json = gen.toJson( [before: 1, bad: [new Unserializable()], after: 2] )
+        then:
+        new JsonSlurper().parseText(json) == [before: 1, bad: [null], after: 2]
+    }
+
     def 'should normalise gitmodules attribute' () {
         given:
         def scheme = ['workflow.manifest.gitmodules': 10]

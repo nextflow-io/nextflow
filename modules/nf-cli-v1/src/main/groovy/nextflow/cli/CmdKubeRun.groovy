@@ -48,9 +48,6 @@ class CmdKubeRun extends CmdRun {
     @Parameter(names = '-head-image', description = 'Specify the container image for the Nextflow driver pod')
     String headImage
 
-    @Parameter(names = '-pod-image', description = 'Alias for -head-image (deprecated)')
-    String podImage
-
     @Parameter(names = '-head-cpus', description = 'Specify number of CPUs requested for the Nextflow driver pod')
     int headCpus
 
@@ -90,10 +87,6 @@ class CmdKubeRun extends CmdRun {
             throw new AbortOperationException("No project name was specified")
         if( hasAnsiLogFlag() )
             log.warn "Ansi logging not supported by kuberun command"
-        if( podImage ) {
-            log.warn "-pod-image is deprecated (use -head-image instead)"
-            headImage = podImage
-        }
         checkRunName()
         final driver = new K8sDriverLauncher(
             cmd: this,

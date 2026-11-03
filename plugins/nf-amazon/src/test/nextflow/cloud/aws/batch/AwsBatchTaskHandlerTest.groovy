@@ -361,7 +361,9 @@ class AwsBatchTaskHandlerTest extends Specification {
             fusionEnabled() >> false
             getAwsOptions() >> Mock(AwsOptions) {
                 getRetryMode() >> RETRY_MODE
-                getMaxTransferAttempts() >> MAX_ATTEMPTS
+                // getMaxTransferAttempts() returns a primitive int; a null stub
+                // cannot be cast to int under Groovy 5, so map null (unset) to 0
+                getMaxTransferAttempts() >> (MAX_ATTEMPTS ?: 0)
             }
         }
 
@@ -951,7 +953,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -959,7 +961,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -967,7 +969,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * handler.terminateJob('job1') >> null
+        0 * handler.terminateJob('job1')
     }
 
     def 'should create the trace record' () {
@@ -1131,6 +1133,38 @@ class AwsBatchTaskHandlerTest extends Specification {
                     EvaluateOnExit.builder().onReason('*').action('EXIT').build())
                 .build()
         req.tags() == [a:'b']
+        req.propagateTags() == true
+    }
+
+    def 'should create an aws submit request with auto resource labels'() {
+        given:
+        def VAR_FOO = KeyValuePair.builder().name('FOO').value('1').build()
+        def config = new TaskConfig(memory: '8GB', cpus: 4, resourceLabels: ['my!label': 'a,b#c'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy#frog',
+                'seqera.io/platform/workflowId': '4a#bcd' ])
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> config
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['sh', '-c', 'hello']
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO]
+
+        and:
+        // the auto labels are normalised to the Batch tag syntax, the declared one is untouched
+        req.tags() == [
+                'nextflow.io/runName': 'crazy_frog',
+                'seqera.io/platform/workflowId': '4a_bcd',
+                'my!label': 'a,b#c' ]
         req.propagateTags() == true
     }
 

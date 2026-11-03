@@ -352,7 +352,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         meta == '''\
             ### ---
-            ### name: 'foo'
+            ### name: "foo"
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
             ###   index-start: 0
@@ -360,11 +360,11 @@ class BashWrapperBuilderTest extends Specification {
             ###   - /work/01
             ###   - /work/02
             ###   - /work/03
-            ### container: 'quay.io/nextflow:bash'
+            ### container: "quay.io/nextflow:bash"
             ### outputs:
-            ### - 'foo.txt'
-            ### - '*.bar'
-            ### - '**/baz'
+            ### - "foo.txt"
+            ### - "*.bar"
+            ### - "**/baz"
             ### ...
             '''.stripIndent()
 
@@ -389,7 +389,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.makeBinding().containsKey('task_metadata')
         bash.makeBinding().task_metadata == '''\
             ### ---
-            ### name: 'task1'
+            ### name: "task1"
             ### ...
             '''.stripIndent()
 
@@ -406,7 +406,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         bash.makeBinding().task_metadata == '''\
             ### ---
-            ### name: 'task2'
+            ### name: "task2"
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
             ###   index-start: 0
@@ -414,13 +414,69 @@ class BashWrapperBuilderTest extends Specification {
             ###   - /work/01
             ###   - /work/02
             ###   - /work/03
-            ### container: 'quay.io/nextflow:bash'
+            ### container: "quay.io/nextflow:bash"
             ### outputs:
-            ### - 'foo.txt'
-            ### - '*.bar'
-            ### - '**/baz'
+            ### - "foo.txt"
+            ### - "*.bar"
+            ### - "**/baz"
             ### ...
             '''.stripIndent()
+    }
+
+    def 'should escape special characters in task metadata' () {
+        given:
+        def NAME = 'foo (it\'s a\nb a\\nb "c")'
+        def IMAGE = 'ubuntu\tlatest'
+        def OUTPUTS = ['out\r\nfile', 'x\u0000\u000by\u2028z']
+        def builder = newBashWrapperBuilder(
+            name: NAME,
+            containerConfig: new DockerConfig(enabled: true),
+            containerImage: IMAGE,
+            outputFiles: OUTPUTS
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: "foo (it's a\\nb a\\\\nb \\"c\\")"
+            ### container: "ubuntu\\tlatest"
+            ### outputs:
+            ### - "out\\r\\nfile"
+            ### - "x\\u0000\\u000by\\u2028z"
+            ### ...
+            '''.stripIndent()
+        and:
+        meta.readLines().every { it.startsWith('###') }
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == NAME
+        obj.container == IMAGE
+        obj.outputs == OUTPUTS
+    }
+
+    def 'should render yaml string' () {
+        expect:
+        BashWrapperBuilder.yamlString(VALUE) == EXPECTED
+
+        where:
+        VALUE           | EXPECTED
+        null            | 'null'
+        'foo'           | '"foo"'
+        'a b'           | '"a b"'
+        "it's"          | '"it\'s"'
+        'a"b'           | '"a\\"b"'
+        'a\\b'          | '"a\\\\b"'
+        'a\nb'          | '"a\\nb"'
+        'a\u007fb'      | '"a\\u007fb"'
+        'a\uffffb'      | '"a\\uffffb"'
+        'a\ud83db'      | '"a\\ud83db"'
+        'a\ude00b'      | '"a\\ude00b"'
+        'a\ud83d\ude00b' | '"a\ud83d\ude00b"'
     }
 
     def 'should copy control files' () {
@@ -519,6 +575,23 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder().makeBinding()
         then:
         binding.sync_cmd == 'sync || true'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should flush the file system before writing the exit file' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
+
+        when:
+        def wrapper = newBashWrapperBuilder(workDir: Paths.get('/work/dir')).buildNew0()
+        then:
+        // the `.exitcode` file is the completion marker polled by the executors, therefore
+        // it must be written only after all other task writes have been flushed, otherwise
+        // a shared file system may expose the marker before the task outputs
+        wrapper.indexOf('sync || true') > 0
+        wrapper.indexOf('sync || true') < wrapper.indexOf('printf -- $exit_status > /work/dir/.exitcode')
 
         cleanup:
         SysEnv.pop()

@@ -178,4 +178,14 @@ class AzFileSystemProviderTest extends Specification {
 
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new AzFileSystemProvider()
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'AzFileSystemProvider'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

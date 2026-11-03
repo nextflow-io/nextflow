@@ -78,7 +78,7 @@ process {
 
 ## Resources
 
-- [Kubernetes Executor Documentation](https://docs.seqera.io/nextflow/kubernetes)
+- [Kubernetes Executor Documentation](https://docs.seqera.io/nextflow/reference/executor/kubernetes)
 
 ## License
 

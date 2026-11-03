@@ -146,7 +146,11 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ### Kubernetes execution
 
-The `kuberun` command executes pipelines entirely within a Kubernetes cluster. This experimental feature runs the Nextflow driver itself inside Kubernetes.
+:::warning
+The `kuberun` command is no longer maintained. Consider [launching with Fusion][k8s-fusion] instead.
+:::
+
+The `kuberun` command executes pipelines entirely within a Kubernetes cluster. It runs the Nextflow driver itself inside Kubernetes.
 
 Use this when you want both the Nextflow driver and tasks running in Kubernetes. This differs from using the Kubernetes executor with `run`, where only tasks run in Kubernetes while the driver runs externally:
 
@@ -430,16 +434,6 @@ System utilities provide administrative and development tools for managing Nextf
 
 Use these commands for system administration, development, and testing.
 
-### Interactive console
-
-The `console` command launches an interactive Groovy console with Nextflow's execution context loaded.
-
-Use this to test Nextflow DSL code interactively, debug expressions, explore Nextflow's APIs, or experiment with syntax. It opens a GUI or REPL depending on your environment:
-
-```bash
-nextflow console
-```
-
 ### Remote filesystem operations
 
 The `fs` command performs filesystem operations on remote storage systems supported by Nextflow, such as S3, Google Cloud Storage, and Azure Blob Storage.
@@ -572,26 +566,15 @@ http://nextflow.io
 [cli-lint]: ./reference/cli/lint
 [cli-log]: ./reference/cli/log
 [cli-module]: ./reference/cli/module
-[cli-module-install]: ./reference/cli/module#module-install
-[cli-module-list]: ./reference/cli/module#module-list
-[cli-module-view]: ./reference/cli/module#module-view
-[cli-module-run]: ./reference/cli/module#module-run
-[cli-module-spec]: ./reference/cli/module#module-spec
-[cli-module-validate]: ./reference/cli/module#module-validate
-[cli-module-remove]: ./reference/cli/module#module-remove
-[cli-module-publish]: ./reference/cli/module#module-publish
-[cli-module-search]: ./reference/cli/module#module-search
-[cli-params]: ./cli#pipeline-parameters
 [cli-plugin]: ./reference/cli/plugin
 [cli-pull]: ./reference/cli/pull
 [cli-reference]: ./reference/cli
 [cli-run]: ./reference/cli/run
 [cli-secrets]: ./reference/cli/secrets
 [cli-view]: ./reference/cli/view
-[config-constants]: ./config#constants-and-functions
-[config-env-vars]: ./reference/env-vars
 [config-page]: ./config
 [config-params]: ./config#parameters
 [data-lineage-page]: ./tutorials/data-lineage
 [git-page]: ./git
+[k8s-fusion]: ./reference/executor/kubernetes#launch-with-fusion
 [using-modules-page]: ./modules/using-modules
