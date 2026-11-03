@@ -45,9 +45,9 @@ class RetryOpts implements ConfigScope, Retryable.Config {
 
     @ConfigOption
     @Description("""
-        The max number of attempts a failing HTTP request is retried (default: `5`).
+        The max number of attempts a failing HTTP request is retried (default: `10`).
     """)
-    int maxAttempts = 5
+    int maxAttempts = 10
 
     @ConfigOption
     @Description("""

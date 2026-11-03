@@ -355,8 +355,23 @@ class WaveClient {
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
         }
         catch (IOException e) {
-            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint - cause: ${describeFailure(e)}", e)
         }
+    }
+
+    /**
+     * Describe an I/O failure including its exception type and cause chain. The JDK HTTP client
+     * raises connection and DNS failures as a {@link java.net.ConnectException} with a null message,
+     * so the message alone does not tell what went wrong.
+     */
+    static protected String describeFailure(Throwable error) {
+        final result = new ArrayList<String>()
+        for( Throwable t=error; t!=null && result.size()<3; t=t.cause ) {
+            result.add(t.message ? "${t.class.name}: ${t.message}".toString() : t.class.name)
+            if( t.cause==t )
+                break
+        }
+        return result.join(' <- ')
     }
 
     protected ContainerStatusResponse jsonToContainerStatusResponse(String body) {

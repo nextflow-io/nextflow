@@ -30,7 +30,7 @@ class RetryOptsTest extends Specification {
         expect:
         new RetryOpts().delay == Duration.of('450ms')
         new RetryOpts().maxDelay == Duration.of('90s')
-        new RetryOpts().maxAttempts == 5
+        new RetryOpts().maxAttempts == 10
         new RetryOpts().jitter == 0.25d
         new RetryOpts().multiplier == 2.0d
 
