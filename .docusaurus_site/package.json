@@ -48,7 +48,7 @@
         "openapi-to-postmanv2": {
             "js-yaml": "4.3.2",
             "lodash": "4.18.1",
-            "yaml": "1.10.3"
+            "yaml": "2.9.1"
         },
         "serialize-javascript": "7.1.3",
         "tinypool": "2.1.2",
