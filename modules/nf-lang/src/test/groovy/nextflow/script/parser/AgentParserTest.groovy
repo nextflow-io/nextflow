@@ -45,7 +45,7 @@ class AgentParserTest extends Specification {
         scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
-        assert !TestUtils.hasSyntaxErrors(source)
+        assert TestUtils.getErrors(source) == []
         return source.getAST() as ScriptNode
     }
 
@@ -53,7 +53,7 @@ class AgentParserTest extends Specification {
         scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
-        assert !TestUtils.hasSyntaxErrors(source)
+        assert TestUtils.getErrors(source) == []
         return source
     }
 
@@ -220,15 +220,47 @@ class AgentParserTest extends Specification {
             }
 
             workflow {
-                channel.of('hi') | eval_agent | view
+                answer = eval_agent(record(text: 'hi'))
+                answer.view()
             }
             ''')
 
         then:
         script.agents.size() == 1
         script.workflows.size() == 1
-        // The `parse` helper asserts no syntax errors. If `eval_agent` failed
-        // to resolve in the workflow body, that assertion would fail.
+    }
+
+    def 'should report an agent used as a variable'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'x'
+
+                input:
+                q: String
+
+                output:
+                stdout()
+
+                prompt:
+                """
+                ${q}
+                """
+            }
+
+            workflow {
+                channel.of('hi') | eval_agent
+            }
+            ''')
+
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 20
+        errors[0].getStartColumn() == 24
+        errors[0].getOriginalMessage() == 'Agent `eval_agent` cannot be used as a variable'
     }
 
     def 'should resolve directives and prompt variables in an agent body'() {

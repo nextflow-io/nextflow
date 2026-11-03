@@ -27,6 +27,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.FieldSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -88,6 +89,8 @@ class KryoHelper {
         kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
 
         // special serializers
+        // NOTE: classes registered here and below are written by ID, which
+        // depends on the registration order -- changing it breaks existing caches
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)
 
         // users serializers
@@ -112,6 +115,7 @@ class KryoHelper {
         kryo.addDefaultSerializer(GString, GStringSerializer)
         // map entry serializer
         kryo.addDefaultSerializer(Map.Entry, MapEntrySerializer)
+        kryo.addDefaultSerializer(URI, URISerializer)
 
         return kryo
     }
@@ -333,6 +337,24 @@ class URLSerializer extends Serializer<URL> {
     URL read(Kryo kryo, Input input, Class<URL> type) {
         log.trace "URL de-serialization"
         return new URL(input.readString())
+    }
+}
+
+/**
+ * Write a {@link URI} as its string, in the same format previously
+ * written by the {@link FieldSerializer} for its only non-transient field
+ */
+@CompileStatic
+class URISerializer extends Serializer<URI> {
+
+    @Override
+    void write(Kryo kryo, Output output, URI uri) {
+        kryo.writeObjectOrNull(output, uri.toString(), String)
+    }
+
+    @Override
+    URI read(Kryo kryo, Input input, Class<URI> type) {
+        return new URI(kryo.readObjectOrNull(input, String))
     }
 }
 
