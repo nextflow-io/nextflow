@@ -23,6 +23,13 @@ sourceSets {
     test.java.srcDirs = []
     test.groovy.srcDirs = ['src/test/groovy']
     test.resources.srcDirs = ['src/test/resources']
+    // hello plugin loaded through pf4j by the plugin extension tests
+    testPlugin {
+        java.srcDirs = []
+        groovy.srcDirs = ['src/testPlugin/groovy']
+        resources.srcDirs = ['src/testPlugin/resources']
+        compileClasspath += main.output + main.compileClasspath
+    }
 }
 
 dependencies {
@@ -65,6 +72,9 @@ dependencies {
     testImplementation "org.subethamail:subethasmtp:${subethasmtpVersion}"
     testImplementation (project(':nf-lineage'))
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
+    // plugin classes only: its META-INF/extensions.idx must stay off the test classpath,
+    // otherwise pf4j registers the hello extensions as system extensions in every test
+    testImplementation files(sourceSets.testPlugin.output.classesDirs)
     // test configuration
     testFixturesApi ("org.apache.groovy:groovy-test:${groovyVersion}") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:${objenesisVersion}")
@@ -72,6 +82,13 @@ dependencies {
     testFixturesApi ("org.spockframework:spock-core:${spockVersion}") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.spockframework:spock-junit4:${spockVersion}") { exclude group: 'org.apache.groovy' }
     testFixturesApi "com.google.jimfs:jimfs:${jimfsVersion}"
+}
+
+// the plugin tests load the hello plugin from these dirs, see TestPluginClasspath
+test {
+    inputs.files(sourceSets.testPlugin.output).withPropertyName('testPlugin')
+    systemProperty 'nextflow.testPlugin.classesDirs', sourceSets.testPlugin.output.classesDirs.asPath
+    systemProperty 'nextflow.testPlugin.resourcesDir', sourceSets.testPlugin.output.resourcesDir
 }
 
 // The agent AST and its generated classes make this the heaviest Groovy compilation in the

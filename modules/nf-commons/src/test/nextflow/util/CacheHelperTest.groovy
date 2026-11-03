@@ -20,11 +20,12 @@ import java.nio.file.Files
 import java.nio.file.attribute.FileTime
 
 import com.google.common.hash.Hashing
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import nextflow.Global
-import nextflow.Session
+import nextflow.ISession
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -197,9 +198,9 @@ class CacheHelperTest extends Specification {
 
     def 'should hash content with sha256' () {
         given:
-        def file = TestHelper.createInMemTempFile('foo.txt', 'Hello world')
+        def file = Files.writeString(Jimfs.newFileSystem(Configuration.unix()).getPath('/foo.txt'), 'Hello world')
         and:
-        Global.session = Mock(Session) {
+        Global.session = Mock(ISession) {
             getBaseDir() >> file.getParent()
             getCommitId() >> '123456'
         }

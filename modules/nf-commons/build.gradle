@@ -45,11 +45,24 @@ dependencies {
     // deserialization advisories; pinned here so it propagates to all downstream modules
     api "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
-    /* testImplementation inherited from top gradle build file */
-    testImplementation(testFixtures(project(":nextflow")))
-    testFixturesImplementation(project(":nextflow"))
-
+    testImplementation ("org.spockframework:spock-core:${spockVersion}") { exclude group: 'org.apache.groovy' }
+    // provides the JUnit 4 @Rule support used by WireMockRule
+    testImplementation ("org.spockframework:spock-junit4:${spockVersion}") { exclude group: 'org.apache.groovy' }
+    testImplementation ("org.apache.groovy:groovy-test:${groovyVersion}") { exclude group: 'org.apache.groovy' }
+    testImplementation "com.google.jimfs:jimfs:${jimfsVersion}"
+    testImplementation "commons-codec:commons-codec:1.15"
+    // needed by Spock to mock classes
+    testRuntimeOnly "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
+    testRuntimeOnly "org.objenesis:objenesis:${objenesisVersion}"
+    // provides the http(s) file system provider
+    testRuntimeOnly(project(':nf-httpfs'))
     testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock
     testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
 }
 
+// the build metadata read by BuildInfo and DefaultPlugins is generated in the nextflow module
+processTestResources {
+    from(rootProject.file('modules/nextflow/src/main/resources')) {
+        include 'META-INF/build-info.properties', 'META-INF/plugins-info.txt'
+    }
+}
