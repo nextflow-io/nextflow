@@ -89,6 +89,14 @@ class Bolts {
     }
 
     /**
+     * Resolve `map.properties` to the map entry rather than the
+     * object's bean properties, preserving Groovy 4 semantics.
+     */
+    static Object getProperties(Map self) {
+        return self.get('properties')
+    }
+
+    /**
      * Format a {@link Date} object
      *
      * @param self The {@link Date} object to format

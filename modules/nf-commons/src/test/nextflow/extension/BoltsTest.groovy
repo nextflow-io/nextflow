@@ -25,6 +25,7 @@ import java.time.ZoneId
 
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -419,6 +420,18 @@ class BoltsTest extends Specification {
         result.bar instanceof ConfigObject
         and:
         !result.is( cfg )
+    }
+
+    def 'should resolve properties as a map entry'() {
+        given:
+        def map = [title: 'foo', properties: [a: 1]]
+
+        expect:
+        map.properties == [a: 1]
+        map['properties'] == [a: 1]
+        DefaultGroovyMethods.getAt((Object) map, 'properties') == [a: 1]
+        and:
+        [title: 'foo'].properties == null
     }
 
 }
