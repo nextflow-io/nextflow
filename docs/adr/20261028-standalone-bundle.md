@@ -95,7 +95,7 @@ nextflow-<version>-<os>-<arch>/
   lib/nextflow.aot              AOT cache
 ```
 
-- **Runtime.** The latest Temurin 25 JRE, resolved at build time from the Adoptium API and verified with its SHA-256 checksum, so each release ships the latest Java security fixes without a change in the repository. The version is resolved once for every platform: if the latest release differs between them (e.g. a staggered publish or a respin), the newest release that every platform has is used. `-PjreVersion=<version>` or the repository variable `NXF_BUNDLE_JRE_VERSION` override it. The version is recorded in `runtime/release`.
+- **Runtime.** The latest Temurin 25 JRE, resolved at build time from the Adoptium API and verified with its SHA-256 checksum, so each release ships the latest Java security fixes without a change in the repository. The version is resolved once for every platform: if the latest release differs between them, the newest release that every platform has is used. `-PjreVersion=<version>` or the repository variable `NXF_BUNDLE_JRE_VERSION` override it. The version is recorded in `runtime/release`.
 - **AOT cache.** It is trained by running a small pipeline (`bundle/training`) with the bundle launcher, so that it is created with the same JVM options as when it is used. It can only be created by the target runtime, so each platform is built on a native CI runner.
 - **Size.** 110 MB per platform (tar.gz). On linux-x64, the runtime is 62 MB, the jar 34 MB and the AOT cache 14 MB.
 
@@ -152,7 +152,7 @@ The bundle does not cover every use of `-dist`:
 | Java | the system Java, which some sites and Homebrew require | its own |
 | size | 38 MB | 110 MB |
 
-What only `-dist` provides is a single file that runs offline and is published on GitHub releases (the jar is only on the CDN). For users with Java, its replacement is the launcher and the jar, not the bundle.
+What only `-dist` provides is a single file that runs offline and is published on GitHub releases (the jar is only on the CDN). Its replacement is the bundle, or the launcher and the jar for users who need the system Java.
 
 Until 27.04:
 
@@ -182,8 +182,8 @@ Users without Java install Nextflow with `curl -s https://get.nextflow.io | NXF_
 - Otherwise, with `NXF_JAVA_BUNDLE=true`, on a supported platform and without `NXF_JAVA_HOME`, the installed script hands off to the bundle of `NXF_VER` in `$NXF_HOME/framework/<version>/`, downloading it from `$NXF_BASE/v<version>/` (next to the jar) if it is not installed, even if the jar is. With `NXF_OFFLINE=true`, it is not downloaded. On other platforms, the launcher prints a note and uses the jar.
 - If the bundle can't be used (not on the server, i.e. HTTP 403 or 404 from the CDN, e.g. for older versions; a bad checksum; or a runtime that doesn't run), the launcher writes a marker for this version and platform, so that later launches don't retry, and uses the jar and the system Java. Deleting the marker retries. A failed download (e.g. no network) is not marked and is retried at the next launch, so that an install without Java recovers.
 - The decision is per platform, since an `NXF_HOME` can be shared across platforms (e.g. x86 login nodes and arm64 compute nodes, or a macOS `NXF_HOME` mounted into a Linux container). When the jar of `NXF_VER` is not installed, but the bundle of another platform is, the launcher uses the jar of that bundle with the system Java instead of downloading the jar.
-- The bundle is extracted into a temporary directory, removed if the download is interrupted, and installed with an atomic symlink, so that concurrent first launches install it once. It is only installed if its checksum matches and its runtime runs (it may not, e.g. on a `noexec` mount). The download times out after 10 s without a connection, and reports to stderr, so that the output of commands such as `nextflow config` is not affected.
-- The hand-off happens after `-download` and `self-update` are handled by the installed script. The bundle launcher is started with a marker in its environment, which it removes, and fails if it is not in a bundle, to avoid a loop. `NXF_VER` is not exported, and the bundle launcher does not export the `JAVA_CMD` of its runtime, so that tasks (e.g. a child `nextflow` of another version) do not inherit them.
+- The bundle is installed with an atomic symlink, so that concurrent first launches install it once, and only if its checksum matches and its runtime runs (it may not, e.g. on a `noexec` mount).
+- The bundle launcher is started with a marker in its environment, and fails if it is not in a bundle, to avoid a loop. Neither launcher exports `NXF_VER` or the bundled `JAVA_CMD`, so that tasks (e.g. a child `nextflow` of another version) do not inherit them.
 - `self-update` fails in a bundle, e.g. an extracted one: replacing its launcher would leave its runtime and jar unused, and install the new version in `$NXF_HOME` instead. An extracted bundle is updated by extracting the bundle of the new version.
 - Old versions accumulate in `$NXF_HOME/framework` as today; `self-update -clean` removes them, including their bundles.
 - Mirrors and air-gapped installs can set `NXF_JAVA_BUNDLE_BASE` to another host with the same layout (`<base>/v<version>/<bundle>.tar.gz` and `.sha256`), including a `file://` URL. Mirrors of `NXF_BASE` get the bundles too.
@@ -230,35 +230,9 @@ The cache saves 0.5-0.6 s on short runs (0.1-0.3 s for `info`), and lowers their
 - `deploy` uploads them with the other release files to `s3://www2.nextflow.io/releases/v<version>/`, served by the CDN at `www.nextflow.io/releases`. It refuses to deploy a version that exists, so published bundles are never replaced. `NXF_RELEASE_BUNDLES=none` deploys a release without bundles, e.g. by hand.
 - The jar in the bundle is built from the same commit and build number as the published jar, in another job, so it is not byte-identical to it.
 
-### Distribution and packaging
-
-- **The `-dist` release** is legacy, and will be removed by 27.04; see [Removing the `-dist` release](#removing-the--dist-release).
-- **bioconda** installs the launcher and runs `nextflow -download` at build time, with `NXF_DIST` set inside the package. It is unaffected, since the bundle is opt-in.
-- **Docker image.** It is based on `amazoncorretto:25-al2023` (glibc), so it could use the bundle of its platform instead of installing a JDK.
-- **Package managers.** A package manager owns the Nextflow version, the Java dependency and updates. Packages could set a single variable, e.g. `NXF_INSTALLER=conda`, which makes `self-update` print the upgrade command of the package manager instead of overwriting a file that it owns. Not implemented yet.
-
 ### Testing
 
-In bare containers (linux-x64), with the bundles served from a local mirror:
-
-| Scenario | Result |
-|---|---|
-| Rocky 9, CentOS 7 (glibc 2.17), Debian slim, Ubuntu 24.04, no Java installed | bundle installed on first launch, pipeline runs with the AOT cache (`-XX:AOTMode=on`) |
-| Alpine (musl) | no bundle, same error as today when no Java is installed |
-| Debian slim with only `wget`, or neither `curl` nor `wget`, `file://` mirror | works |
-| No network, or dropped packets (blackhole IP) | falls back to the jar immediately, or after the 10 s timeout, and retries at the next launch |
-| Bundle missing on the server (HTTP 403/404, curl and wget), bad checksum | falls back to the jar and writes the marker |
-| HTTP 500, connection refused | falls back to the jar and retries at the next launch |
-| `NXF_OFFLINE=true` | an installed bundle is used, a missing one is not downloaded |
-| Read-only `NXF_HOME` with the bundle installed | works |
-| `NXF_HOME` on a `noexec` mount | bundle not installed, jar and system Java used |
-| Private CA added with `update-ca-trust` (Rocky 9) | HTTPS works through the OS trust store; fails with the bundled CA certificates only |
-| 4 concurrent first launches | all succeed, one bundle installed |
-| Download interrupted (SIGINT, SIGTERM) | no temporary directory left |
-| Only the bundle of another platform installed | its jar is used with the system Java, the jar is not downloaded |
-| `NXF_VER` without a bundle (25.10.9) | jar and system Java used, no error |
-
-CI builds each bundle on its platform, runs the training pipeline from an extracted copy with `-XX:AOTMode=on`, reads a file over HTTPS, and tests the hand-off of the installed launcher to the bundle from a `file://` mirror, with a subset of the integration tests on linux-x64.
+CI builds each bundle on its platform, reads a file over HTTPS, and tests the hand-off of the installed launcher to the bundle from a `file://` mirror with `-XX:AOTMode=on`, with a subset of the integration tests on linux-x64. The failure modes of the launcher (no network, missing bundle, bad checksum, `noexec`, concurrent launches, other distros) were tested by hand in bare containers.
 
 ## Links
 

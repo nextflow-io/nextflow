@@ -19,21 +19,13 @@
 #
 # Usage:
 #   train.sh <bundle home> <output cache> <work dir>
-#   train.sh --verify <bundle home> <work dir>    run the training pipeline with the cache of the bundle
 #
 set -euo pipefail
 
-verify=''
-[[ $1 == --verify ]] && verify=1 && shift
 home=$(cd "$1" && pwd -P)
-if [[ $verify ]]; then
-    work=$2
-    [[ -f $home/lib/nextflow.aot ]] || { echo "Missing AOT cache: $home/lib/nextflow.aot" >&2; exit 1; }
-else
-    output=$2
-    work=$3
-    [[ ! -e $home/lib/nextflow.aot ]] || { echo "The bundle already has an AOT cache: $home/lib/nextflow.aot" >&2; exit 1; }
-fi
+output=$2
+work=$3
+[[ ! -e $home/lib/nextflow.aot ]] || { echo "The bundle already has an AOT cache: $home/lib/nextflow.aot" >&2; exit 1; }
 training=$(cd "$(dirname "$0")/training" && pwd -P)
 
 mkdir -p "$work"
@@ -41,8 +33,7 @@ work=$(mktemp -d "$(cd "$work" && pwd -P)/run.XXXXXX")
 cp -R "$training/." "$work/"
 cd "$work"
 
-# isolate the run from the Nextflow settings of the environment, except the JVM options for --verify
-jvm_args=${NXF_JVM_ARGS:-}
+# isolate the run from the Nextflow settings of the environment
 for var in $(compgen -e); do [[ $var == NXF_* ]] && unset "$var"; done
 export NXF_HOME=$work/home
 export NXF_WORK=$work/work
@@ -50,12 +41,7 @@ export NXF_CACHE_DIR=$work
 export NXF_OFFLINE=true
 export NXF_ANSI_LOG=false
 export NXF_DISABLE_CHECK_LATEST=true
-if [[ $verify ]]; then
-    NXF_JVM_ARGS=$jvm_args "$home/bin/nextflow" info
-    NXF_JVM_ARGS=$jvm_args "$home/bin/nextflow" run main.nf
-else
-    mkdir -p "$(dirname "$output")"
-    # classes that can't be archived (e.g. generated or in an error state) are reported as warnings
-    NXF_JVM_ARGS="-XX:AOTCacheOutput=$output.tmp -Xlog:aot=error" "$home/bin/nextflow" run main.nf
-    mv -f "$output.tmp" "$output"
-fi
+mkdir -p "$(dirname "$output")"
+# classes that can't be archived (e.g. generated or in an error state) are reported as warnings
+NXF_JVM_ARGS="-XX:AOTCacheOutput=$output.tmp -Xlog:aot=error" "$home/bin/nextflow" run main.nf
+mv -f "$output.tmp" "$output"

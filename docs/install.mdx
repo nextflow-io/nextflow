@@ -94,9 +94,7 @@ To install Nextflow without Java, follow the [self-install](#self-install) steps
 curl -s https://get.nextflow.io | NXF_JAVA_BUNDLE=true bash
 ```
 
-Nextflow downloads the bundle of each version that it runs, which contains the Java runtime and a startup cache. `nextflow self-update` keeps this setting. Set `NXF_JAVA_BUNDLE=false` to use the system Java instead, or set `NXF_JAVA_HOME` to use another Java installation.
-
-The bundle is downloaded when a version first runs, unless `NXF_OFFLINE=true` is set. If it can't be downloaded, Nextflow uses the system Java and tries again at the next launch.
+Nextflow downloads the bundle of each version when it first runs, unless `NXF_OFFLINE=true` is set. The bundle contains the Java runtime and a startup cache. If it can't be downloaded, Nextflow uses the system Java and tries again at the next launch. `nextflow self-update` keeps this setting. Set `NXF_JAVA_BUNDLE=false` to use the system Java instead, or set `NXF_JAVA_HOME` to use another Java installation.
 
 The bundled Java runtime trusts the certificates of the operating system on macOS and on Linux distributions with a Java trust store (e.g. RHEL and derivatives, or Debian and Ubuntu with `ca-certificates-java`), and its own certificates otherwise. Behind a proxy that inspects TLS traffic, set `NXF_JAVA_HOME` to a Java installation that trusts the proxy, or specify a trust store in `NXF_OPTS`, e.g. `-Djavax.net.ssl.trustStore=/path/to/cacerts`.
 

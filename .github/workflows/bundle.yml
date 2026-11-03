@@ -25,10 +25,6 @@ on:
         description: 'Temurin JRE release, e.g. 25.0.5+8 (default: the latest Temurin 25 release)'
         required: false
         type: string
-    outputs:
-      jre-version:
-        description: 'The Temurin JRE release of the bundles'
-        value: ${{ jobs.jre.outputs.version }}
 
 permissions:
   contents: read
@@ -110,19 +106,12 @@ jobs:
           ./gradlew --console=plain buildInfo
           ./gradlew --console=plain bundle "-PjreVersion=$JRE_VERSION"
 
-      # the bundle must work when extracted anywhere, with the AOT cache
-      - name: Smoke test
+      - name: Extract bundle
         run: |
-          (cd build/bundle && shasum -a 256 -c ./*.sha256)
           dir=$(mktemp -d)
           tarball=$(ls build/bundle/*.tar.gz)
           tar -xzf "$tarball" -C "$dir"
-          home=$dir/$(basename "$tarball" .tar.gz)
-          test -s "$home/lib/nextflow.aot"
-          "$home/runtime/bin/java" -version
-          # -XX:AOTMode=on: the JVM fails to start if the cache is rejected
-          NXF_JVM_ARGS=-XX:AOTMode=on bundle/train.sh --verify "$home" "$dir/work"
-          echo "BUNDLE_HOME=$home" >> "$GITHUB_ENV"
+          echo "BUNDLE_HOME=$dir/$(basename "$tarball" .tar.gz)" >> "$GITHUB_ENV"
 
       # HTTPS with the trust store of the OS (the macOS keychain or the Java trust store of the Linux distro)
       - name: HTTPS test

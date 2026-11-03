@@ -133,7 +133,6 @@ function get_ver() {
 }
 
 # downloads the bundle of NXF_VER for this platform next to the jar and installs it as the symlink $1,
-# returns 1 when it is not available (e.g. versions released without bundles)
 # returns 1 if the download failed, which is retried at the next launch, or 2 if the bundle
 # can't be used: not on the server, a bad checksum or a runtime that doesn't run (e.g. noexec)
 function get_bundle() {
@@ -151,20 +150,24 @@ function get_bundle() {
     trap 'rm -rf "$bundle_tmp"' EXIT
     trap 'rm -rf "$bundle_tmp"; exit 130' INT
     trap 'rm -rf "$bundle_tmp"; exit 143' TERM
-    if [[ -t 2 ]]; then >&2 printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
-    else >&2 echo "Downloading nextflow dependencies. It may require a few seconds, please wait .."
-    fi
+    >&2 echo "Downloading nextflow dependencies. It may require a few seconds, please wait .."
     # the checksums are compared explicitly: `sha256sum -c` of macOS accepts a malformed checksum file;
     # the runtime may not run, e.g. on a noexec mount; the bundle is installed as a symlink,
     # because `mv` would nest the directory into the one of a concurrent launch
     get_file "$url" "$bundle_tmp/$name.tar.gz" && get_file "$url.sha256" "$bundle_tmp/sha256"
     status=$?
-    [[ $status == 0 ]] && { [[ $(cd "$bundle_tmp" && $sum "$name.tar.gz" | cut -d' ' -f1) == "$(cut -d' ' -f1 "$bundle_tmp/sha256")" ]] \
-        && tar -xzf "$bundle_tmp/$name.tar.gz" -C "$bundle_tmp" && [[ -f $bundle_tmp/$name/lib/$NXF_JAR ]] \
-        && "$bundle_tmp/$name/runtime/bin/java" -version &>/dev/null \
-        && rm -f "$bundle_tmp/$name.tar.gz" "$bundle_tmp/sha256" \
-        && { ln -sn "$(basename "$bundle_tmp")/$name" "$1" 2>/dev/null && bundle_tmp='' || [[ -d $1 ]]; } || status=2; }
-    [[ -t 2 ]] && >&2 printf "\r\033[K"
+    if [[ $status == 0 ]]; then
+        if [[ $(cd "$bundle_tmp" && $sum "$name.tar.gz" | cut -d' ' -f1) != "$(cut -d' ' -f1 "$bundle_tmp/sha256")" ]]; then status=2
+        elif ! tar -xzf "$bundle_tmp/$name.tar.gz" -C "$bundle_tmp" || [[ ! -f $bundle_tmp/$name/lib/$NXF_JAR ]]; then status=2
+        elif ! "$bundle_tmp/$name/runtime/bin/java" -version &>/dev/null; then status=2
+        else
+            rm -f "$bundle_tmp/$name.tar.gz" "$bundle_tmp/sha256"
+            # a concurrent launch may have installed it first
+            if ln -sn "$(basename "$bundle_tmp")/$name" "$1" 2>/dev/null; then bundle_tmp=''
+            elif [[ ! -d $1 ]]; then status=2
+            fi
+        fi
+    fi
     [[ $bundle_tmp ]] && rm -rf "$bundle_tmp"
     trap - EXIT INT TERM
     return $status
@@ -303,6 +306,9 @@ fi
 # see https://github.com/nextflow-io/nextflow/issues/1716
 unset JAVA_TOOL_OPTIONS
 
+# the home of the bundle that contains this script, if any
+this_home="$(dirname "$(resolve_link "$0")")/.."
+
 # parse the command line
 bg=''
 declare -a jvmopts=()
@@ -338,7 +344,7 @@ while [[ $# != 0 ]]; do
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
       # replacing the launcher of a bundle would leave its runtime and jar unused
-      [[ -x "$(dirname "$(resolve_link "$0")")/../runtime/bin/java" ]] && die "ERROR: A Nextflow Java bundle can't be updated -- extract the bundle of the new version instead"
+      [[ -x $this_home/runtime/bin/java ]] && die "ERROR: A Nextflow Java bundle can't be updated -- extract the bundle of the new version instead"
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
@@ -369,7 +375,6 @@ esac
 # to the bundle of NXF_VER when enabled by NXF_JAVA_BUNDLE, or use the jar with the system Java
 bundle_home=''
 if [[ ! $NXF_BIN && $NXF_PACK != dist ]]; then
-    this_home="$(dirname "$(resolve_link "$0")")/.."
     if [[ -x $this_home/runtime/bin/java && -f $this_home/lib/$NXF_JAR ]]; then
         bundle_home="$(cd "$this_home" && pwd -P)"
         NXF_BIN="$bundle_home/lib/$NXF_JAR"

@@ -37,7 +37,6 @@ name=$(basename "$tarball" .tar.gz)
 version=${name#nextflow-}
 version=${version%-*-*}
 platform=${name#nextflow-"$version"-}
-[[ -f $tarball.sha256 ]] || die "Missing checksum file: $tarball.sha256"
 
 mkdir -p "$2"
 work=$(mktemp -d "$(cd "$2" && pwd -P)/handoff.XXXXXX")

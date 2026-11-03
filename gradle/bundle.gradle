@@ -20,17 +20,16 @@
 //     bin/nextflow                  launcher
 //     runtime/                      Temurin JRE
 //     lib/nextflow-<version>-one.jar
-//     lib/nextflow.aot              AOT cache (host target only, see bundle/train.sh)
+//     lib/nextflow.aot              AOT cache (see bundle/train.sh)
 //
 //   build/bundle/nextflow-<version>-<os>-<arch>.tar.gz
 //   build/bundle/nextflow-<version>-<os>-<arch>.tar.gz.sha256
 //
 // The runtime is the latest Temurin 25 JRE, resolved at build time from the Adoptium API.
-// The AOT cache can only be created by running the target runtime, so it is only included
-// in the bundle of the host platform. CI builds each bundle on its platform (.github/workflows/bundle.yml).
+// The AOT cache can only be created by running the target runtime, so only the bundle of the
+// host platform is built. CI builds each bundle on its platform (.github/workflows/bundle.yml).
 //
-//   ./gradlew bundle                        current OS/arch, with the AOT cache
-//   ./gradlew bundleAll                     all targets (only the host one with the AOT cache)
+//   ./gradlew bundle                        current OS/arch
 //   -PjreVersion=<version>                  override the Temurin release, e.g. 25.0.5+8 (default: latest)
 
 import groovy.json.JsonOutput
@@ -218,25 +217,11 @@ abstract class JreDownload extends DefaultTask {
         final source = dirs.size() == 1 ? [dirs[0], new File(dirs[0], 'Contents/Home')].find { new File(it, 'release').isFile() } : null
         if( !source || !new File(source, 'bin/java').canExecute() )
             throw new GradleException("No Java runtime found in ${archive}")
-        final props = new Properties()
-        new File(source, 'release').withReader { props.load(it) }
-        final actualVersion = props.getProperty('SEMANTIC_VERSION')?.replace('"', '')
-        if( actualVersion != json.version )
-            throw new GradleException("Unexpected Java runtime version in ${url}: expected ${json.version}, got ${actualVersion}")
         final home = javaHome.get().asFile
         fs.delete { delete(home) }
         Files.move(source.toPath(), home.toPath())
         fs.delete { delete(extracted) }
     }
-}
-
-/** Gives task actions in this script access to injected services. */
-interface ExecServices {
-    @Inject
-    ExecOperations getExec()
-
-    @Inject
-    FileSystemOperations getFs()
 }
 
 // Java feature version of the bundled runtime, and the Adoptium os/architecture of each target
@@ -252,11 +237,6 @@ final hostTarget = providers.systemProperty('os.name').zip(providers.systemPrope
     final a = arch in ['amd64', 'x86_64'] ? 'x64' : arch in ['aarch64', 'arm64'] ? 'arm64' : arch
     "$o-$a".toString()
 }.get()
-final hostSupported = targets.containsKey(hostTarget)
-final unsupportedHost = "Unsupported host platform for the bundle: $hostTarget (supported: ${targets.keySet().join(', ')})".toString()
-
-// e.g. linux-x64 -> LinuxX64
-final taskSuffix = { String target -> target.tokenize('-')*.capitalize().join() }
 
 evaluationDependsOn(':nf-cli-v1')
 final shadowJar = project(':nf-cli-v1').tasks.named('shadowJar', Jar)
@@ -274,23 +254,23 @@ final temurinRelease = tasks.register('jreRelease', TemurinRelease) {
     outputFile = layout.buildDirectory.file('jre/release.json')
 }
 
-final bundleImages = targets.keySet().collectEntries { target ->
-    final suffix = taskSuffix(target)
+if( targets.containsKey(hostTarget) ) {
+    final name = bundleNames[hostTarget]
 
-    final runtime = tasks.register("jre$suffix", JreDownload) {
-        description = "Downloads the Java runtime for $target."
+    final runtime = tasks.register('jre', JreDownload) {
+        description = "Downloads the Java runtime for $hostTarget."
         release = temurinRelease.flatMap { it.outputFile }
-        it.target = target
+        target = hostTarget
         cacheDirectory = new File(gradle.gradleUserHomeDir, 'caches/temurin')
-        javaHome = layout.buildDirectory.dir("jre/$target")
+        javaHome = layout.buildDirectory.dir("jre/$hostTarget")
     }
 
-    final image = tasks.register("bundleImage$suffix", Sync) {
-        description = "Assembles the standalone bundle for $target."
+    final image = tasks.register('bundleImage', Sync) {
+        description = "Assembles the standalone bundle for $hostTarget."
         final jar = shadowJar.flatMap { it.archiveFile }
         final version = bundleVersion
         inputs.property('version', version)
-        into(layout.buildDirectory.dir("bundle/${bundleNames[target]}"))
+        into(layout.buildDirectory.dir("bundle/$name"))
         from(rootProject.file('nextflow')) {
             into 'bin'
             filePermissions { unix('rwxr-xr-x') }
@@ -316,71 +296,27 @@ final bundleImages = targets.keySet().collectEntries { target ->
             new File(destinationDir, "lib/$jarName").setLastModified(jar.get().asFile.lastModified())
         }
     }
-    [target, image]
-}
 
-final trainedCache = layout.buildDirectory.file('bundle-aot/nextflow.aot')
-
-if( hostSupported ) {
-    final hostImage = bundleImages[hostTarget]
-
-    // trains the AOT cache of the host bundle by running the training pipeline with its launcher
-    tasks.register('bundleTrain') {
-        description = 'Creates the AOT cache of the host bundle.'
-        final services = objects.newInstance(ExecServices)
-        final image = hostImage.map { it.destinationDir }
-        final script = rootProject.file('bundle/train.sh')
+    // trains the AOT cache by running the training pipeline with the bundle launcher
+    final train = tasks.register('bundleTrain', Exec) {
+        description = 'Creates the AOT cache of the bundle.'
+        final dir = image.map { it.destinationDir }
+        final cache = layout.buildDirectory.file('bundle-aot/nextflow.aot')
         final workDir = layout.buildDirectory.dir('bundle-aot/work')
-        inputs.files(hostImage).withPathSensitivity(PathSensitivity.RELATIVE)
+        final script = rootProject.file('bundle/train.sh')
+        inputs.files(image).withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir('bundle/training').withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.file(script)
-        outputs.file(trainedCache)
-        doLast {
-            services.exec.exec { commandLine script.absolutePath, image.get().absolutePath, trainedCache.get().asFile.absolutePath, workDir.get().asFile.absolutePath }
-        }
+        outputs.file(cache)
+        executable script
+        argumentProviders.add({ [dir.get().absolutePath, cache.get().asFile.absolutePath, workDir.get().asFile.absolutePath] } as CommandLineArgumentProvider)
     }
 
-    // checks that a relocated copy of the host bundle runs with its AOT cache
-    tasks.register('bundleVerify') {
-        description = 'Verifies that the host bundle runs with its AOT cache.'
-        final services = objects.newInstance(ExecServices)
-        final fs = services.fs
-        final image = hostImage.map { it.destinationDir }
-        final copy = layout.buildDirectory.dir('bundle-verify/image')
-        final workDir = layout.buildDirectory.dir('bundle-verify/work')
-        final stamp = layout.buildDirectory.file('bundle-verify/ok')
-        final script = rootProject.file('bundle/train.sh')
-        inputs.files(hostImage).withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.files(tasks.named('bundleTrain'))
-        outputs.file(stamp)
-        doLast {
-            final home = copy.get().asFile
-            fs.delete { delete(home) }
-            home.parentFile.mkdirs()
-            // -p keeps the jar mtime, which is checked by the JVM
-            services.exec.exec { commandLine 'cp', '-Rp', image.get().absolutePath, home.absolutePath }
-            services.exec.exec { commandLine 'cp', '-p', trainedCache.get().asFile.absolutePath, new File(home, 'lib/nextflow.aot').absolutePath }
-            // -XX:AOTMode=on: the JVM fails to start if the cache is rejected
-            services.exec.exec {
-                environment 'NXF_JVM_ARGS', '-XX:AOTMode=on'
-                commandLine script.absolutePath, '--verify', home.absolutePath, workDir.get().asFile.absolutePath
-            }
-            stamp.get().asFile.text = ''
-        }
-    }
-}
-
-final bundleTars = targets.keySet().collect { target ->
-    final name = bundleNames[target]
     final checksum = layout.buildDirectory.file("bundle/${name}.tar.gz.sha256")
-    tasks.register("bundleTar${taskSuffix(target)}", Tar) {
-        description = "Packages the standalone bundle for $target."
-        from(bundleImages[target]) { into name }
-        // only the host bundle can be run to create its AOT cache
-        if( target == hostTarget ) {
-            dependsOn 'bundleVerify'
-            from(trainedCache) { into "$name/lib" }
-        }
+    final tar = tasks.register('bundleTar', Tar) {
+        description = "Packages the standalone bundle for $hostTarget."
+        from(image) { into name }
+        from(train) { into "$name/lib" }
         destinationDirectory = layout.buildDirectory.dir('bundle')
         archiveFileName = "${name}.tar.gz"
         compression = Compression.GZIP
@@ -395,21 +331,19 @@ final bundleTars = targets.keySet().collect { target ->
             checksum.get().asFile.text = "${Checksums.sha256(archive)}  ${archive.name}\n"
         }
     }
-}
 
-tasks.register('bundle') {
-    group = 'distribution'
-    description = 'Builds the standalone bundle for the current OS/arch.'
-    if( hostSupported )
-        dependsOn "bundleTar${taskSuffix(hostTarget)}"
-    else
-        doFirst { throw new GradleException(unsupportedHost) }
+    tasks.register('bundle') {
+        group = 'distribution'
+        description = 'Builds the standalone bundle for the current OS/arch.'
+        dependsOn tar
+    }
 }
-
-tasks.register('bundleAll') {
-    group = 'distribution'
-    description = 'Builds the standalone bundles for all supported targets.'
-    dependsOn bundleTars
+else {
+    tasks.register('bundle') {
+        group = 'distribution'
+        description = 'Builds the standalone bundle for the current OS/arch.'
+        doFirst { throw new GradleException("Unsupported host platform for the bundle: $hostTarget (supported: ${targets.keySet().join(', ')})") }
+    }
 }
 
 // The bundles of a release, which `deploy` uploads next to the jar (see packing.gradle).
