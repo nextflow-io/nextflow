@@ -17,16 +17,20 @@
 package io.seqera.wave.plugin
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.dag.DAG
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.event.TaskEvent
+import nextflow.util.Duration
 
 /**
  * Request ahead the containers of the processes downstream of a running process, so that their
@@ -36,6 +40,10 @@ import nextflow.trace.event.TaskEvent
  * When the first task of a process is pending, the processes up to {@code depth} levels
  * downstream in the DAG are resolved with a task preview, the same way as {@code nextflow inspect}.
  * The requests go through a small pool of threads, and each process is requested at most once.
+ * As with {@code nextflow inspect -concretize}, a thread awaits the container to be ready before
+ * taking the next request, so that at most {@code maxConcurrent} containers are provisioned
+ * ahead at the same time, the nearest ones first. A queued process whose own task starts in the
+ * meantime is skipped.
  * The Wave client caches the response, so the actual task reuses it. A process whose container
  * depends on the task inputs cannot be resolved ahead, and it is requested by its task as usual.
  *
@@ -45,14 +53,17 @@ import nextflow.trace.event.TaskEvent
 @CompileStatic
 class WavePrefetchObserver implements TraceObserverV2 {
 
-    /** max number of container requests sent ahead at the same time */
-    static final int MAX_CONCURRENT = 4
+    /** default max number of containers provisioned ahead at the same time */
+    static final int DEFAULT_MAX_CONCURRENT = 4
 
     private DAG dag
 
     private int depth
 
-    private ExecutorService executor
+    /** max number of containers provisioned ahead at the same time */
+    private int maxConcurrent
+
+    private ThreadPoolExecutor executor
 
     /** the processes whose downstream was already looked up */
     private Set<String> triggered = ConcurrentHashMap.newKeySet()
@@ -60,10 +71,26 @@ class WavePrefetchObserver implements TraceObserverV2 {
     /** the processes whose container was already requested, ahead or by their own task */
     private Set<String> requested = ConcurrentHashMap.newKeySet()
 
+    /** the processes having a task pending, therefore requesting the container on their own */
+    private Set<String> started = ConcurrentHashMap.newKeySet()
+
+    /** the process whose first task caused a process to be requested ahead, for debugging */
+    private Map<String,String> triggers = new ConcurrentHashMap<>()
+
+    private AtomicInteger countRequested = new AtomicInteger()
+    private AtomicInteger countReady = new AtomicInteger()
+    private AtomicInteger countFailed = new AtomicInteger()
+    private AtomicInteger countSkipped = new AtomicInteger()
+
     WavePrefetchObserver(DAG dag, int depth) {
+        this(dag, depth, DEFAULT_MAX_CONCURRENT)
+    }
+
+    WavePrefetchObserver(DAG dag, int depth, int maxConcurrent) {
         this.dag = dag
         this.depth = depth
-        this.executor = Executors.newFixedThreadPool(MAX_CONCURRENT, (Runnable r) -> {
+        this.maxConcurrent = maxConcurrent
+        this.executor = new ThreadPoolExecutor(maxConcurrent, maxConcurrent, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), (Runnable r) -> {
             final thread = new Thread(r, 'wave-prefetch')
             thread.setDaemon(true)
             return thread
@@ -74,33 +101,106 @@ class WavePrefetchObserver implements TraceObserverV2 {
     void onTaskPending(TaskEvent event) {
         final process = event.handler.task.processor
         // its own task requests the container of this process
+        started.add(process.name)
         requested.add(process.name)
         if( !triggered.add(process.name) )
             return
-        for( TaskProcessor next : downstream(dag, process, depth) ) {
-            if( requested.add(next.name) )
+        final downstream = downstream(dag, process, depth)
+        final submitted = new ArrayList<String>()
+        for( TaskProcessor next : downstream ) {
+            if( requested.add(next.name) ) {
+                triggers.put(next.name, process.name)
+                submitted.add(next.name)
                 submit(next)
+            }
+        }
+        if( log.isDebugEnabled() ) {
+            log.debug "Wave prefetch triggered by process '${process.name}' - downstream (depth ${depth}): ${downstream*.name}; new to request: ${submitted}; ${slots()}"
         }
     }
 
     protected void submit(TaskProcessor process) {
-        executor.submit(() -> prefetch(process))
+        final queuedAt = System.currentTimeMillis()
+        executor.submit(() -> prefetch(process, queuedAt))
     }
 
     @Override
     void onFlowComplete() {
-        executor.shutdown()
+        log.debug "Wave prefetch completed - triggered by: ${triggered.size()} processes; requested ahead: ${countRequested}; ready: ${countReady}; failed: ${countFailed}; skipped: ${countSkipped}; ${slots()}"
+        // interrupt the threads still awaiting a container
+        executor.shutdownNow()
     }
 
     protected void prefetch(TaskProcessor process) {
+        prefetch(process, System.currentTimeMillis())
+    }
+
+    protected void prefetch(TaskProcessor process, long queuedAt) {
+        final trigger = triggers.get(process.name)
+        final startedAt = System.currentTimeMillis()
+        if( started.contains(process.name) ) {
+            countSkipped.incrementAndGet()
+            log.debug "Skip requesting ahead the Wave container of process '${process.name}' - its task already started (trigger: '${trigger}'; queued: ${elapsed(queuedAt, startedAt)})"
+            return
+        }
         try {
-            final container = process.createTaskPreview().getContainer()
-            log.debug "Wave container requested ahead for process '${process.name}': ${container}"
+            final task = process.createTaskPreview()
+            final container = task.getContainer()
+            final requestedAt = System.currentTimeMillis()
+            countRequested.incrementAndGet()
+            log.debug "Wave container requested ahead for process '${process.name}': ${container} (trigger: '${trigger}'; queued: ${elapsed(queuedAt, startedAt)}; request: ${elapsed(startedAt, requestedAt)}; ${describe(task, startedAt)}; ${slots()})"
+            // keep the thread busy until the container is ready, so the next request waits for it
+            final checks = awaitReady(task)
+            countReady.incrementAndGet()
+            log.debug "Wave container ready ahead for process '${process.name}': ${container} (await: ${elapsed(requestedAt, System.currentTimeMillis())}; status checks: ${checks})"
+        }
+        catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
         }
         catch( Throwable e ) {
             // e.g. a container depending on the task inputs, the task requests it as usual
-            log.debug "Unable to request ahead the Wave container of process '${process.name}' - cause: ${e.message}"
+            countFailed.incrementAndGet()
+            log.debug "Unable to request ahead the Wave container of process '${process.name}' (trigger: '${trigger}'; elapsed: ${elapsed(startedAt, System.currentTimeMillis())}) - cause: ${e.message}"
         }
+    }
+
+    /**
+     * Await the task container to be ready, polling it the same way as {@code nextflow inspect -concretize}.
+     * A failed or timed out provisioning is thrown by the Wave client.
+     *
+     * @return The number of times the container status was checked
+     */
+    protected int awaitReady(TaskRun task) {
+        int c=0
+        while( !task.isContainerReady() ) {
+            sleep(c++ < 10 ? 1_000 : 5_000)
+        }
+        return c+1
+    }
+
+    /**
+     * The Wave metadata of the task container, to match it with the Wave service logs
+     */
+    @PackageScope
+    static String describe(TaskRun task, long startedAt) {
+        final meta = task.containerMeta()
+        if( !meta )
+            return 'meta: none'
+        // the Wave client caches the response by the request assets, so a container already requested is not sent again
+        final reused = meta.requestTime && meta.requestTime.toInstant().toEpochMilli() < startedAt
+        return "response: ${reused ? 'reused' : 'new'}; requestId: ${meta.requestId}; buildId: ${meta.buildId ?: meta.mirrorId}; cached: ${meta.cached}; scanId: ${meta.scanId}; source: ${meta.sourceImage}"
+    }
+
+    private String slots() {
+        return "slots running: ${executor.getActiveCount()}/${maxConcurrent}; queued: ${executor.getQueue().size()}"
+    }
+
+    static private String elapsed(long from, long to) {
+        return Duration.of(to-from).toString()
+    }
+
+    protected void sleep(long millis) {
+        Thread.sleep(millis)
     }
 
     /**

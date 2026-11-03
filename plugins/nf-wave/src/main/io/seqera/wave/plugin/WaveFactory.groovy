@@ -42,8 +42,11 @@ class WaveFactory implements TraceObserverFactoryV2 {
     Collection<TraceObserverV2> create(Session session) {
         if( !shouldEnable(session) )
             return List.<TraceObserverV2>of()
-        final depth = new WaveConfig((Map)session.config.wave ?: Collections.emptyMap()).prefetchDepth()
-        return depth > 0 ? List.<TraceObserverV2>of(new WavePrefetchObserver(session.dag, depth)) : List.<TraceObserverV2>of()
+        final config = new WaveConfig((Map)session.config.wave ?: Collections.emptyMap())
+        final depth = config.prefetchDepth()
+        return depth > 0
+                ? List.<TraceObserverV2>of(new WavePrefetchObserver(session.dag, depth, config.prefetchMaxConcurrent()))
+                : List.<TraceObserverV2>of()
     }
 
     @Memoized // <-- declare as memoized to make it's invoked only once

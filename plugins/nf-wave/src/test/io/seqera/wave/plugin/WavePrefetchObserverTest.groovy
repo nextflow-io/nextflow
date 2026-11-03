@@ -16,7 +16,12 @@
 
 package io.seqera.wave.plugin
 
+import java.time.OffsetDateTime
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.container.resolver.ContainerMeta
 import nextflow.dag.DAG
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -27,6 +32,7 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
 import nextflow.trace.event.TaskEvent
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 /**
  *
@@ -124,5 +130,99 @@ class WavePrefetchObserverTest extends Specification {
         observer.onTaskPending(pending(p.A))
         then:
         observer.submitted == ['B']
+    }
+    static class FastObserver extends WavePrefetchObserver {
+        List<Long> sleeps = []
+        FastObserver(DAG dag, int depth, int maxConcurrent=WavePrefetchObserver.DEFAULT_MAX_CONCURRENT) { super(dag, depth, maxConcurrent) }
+        @Override protected void sleep(long millis) { sleeps << millis; Thread.sleep(5) }
+    }
+
+    def 'should await the container to be ready with a backoff' () {
+        given:
+        def observer = new FastObserver(new DAG(), 1)
+        def task = Mock(TaskRun)
+
+        when:
+        def checks = observer.awaitReady(task)
+        then:
+        12 * task.isContainerReady() >>> [false]*11 + [true]
+        observer.sleeps == [1_000L]*10 + [5_000L]
+        checks == 12
+    }
+
+    def 'should request the container and await it to be ready' () {
+        given:
+        def observer = new FastObserver(new DAG(), 1)
+        def task = Mock(TaskRun)
+        def B = Mock(TaskProcessor) { getName() >> 'B' }
+
+        when:
+        observer.prefetch(B)
+        then:
+        1 * B.createTaskPreview() >> task
+        1 * task.getContainer() >> 'wave.io/wt/xyz/foo:latest'
+        3 * task.isContainerReady() >>> [false, false, true]
+    }
+
+    def 'should skip a queued process whose own task already started' () {
+        given:
+        def p = [A: process('A'), B: process('B'), C: process('C'), D: process('D')]
+        def observer = new FastObserver(dag(p), 1)
+
+        when:
+        observer.onTaskPending(pending(p.B))
+        observer.prefetch(p.B)
+        then:
+        0 * p.B.createTaskPreview()
+    }
+
+    def 'should provision at most maxConcurrent containers ahead at the same time' () {
+        given:
+        def max = 2
+        def total = max + 3
+        def ready = new AtomicBoolean(false)
+        def previews = new AtomicInteger()
+        def observer = new FastObserver(new DAG(), 1, max)
+        def processes = (1..total).collect { int i ->
+            final task = Stub(TaskRun) { isContainerReady() >> { ready.get() } }
+            Stub(TaskProcessor) {
+                getName() >> "P$i"
+                createTaskPreview() >> { previews.incrementAndGet(); task }
+            }
+        }
+        def conditions = new PollingConditions(timeout: 5)
+
+        when: 'the containers are not ready'
+        processes.each { observer.submit(it) }
+        then: 'only maxConcurrent are requested'
+        conditions.eventually { assert previews.get() == max }
+        when:
+        sleep 200
+        then:
+        previews.get() == max
+
+        when: 'the containers are ready'
+        ready.set(true)
+        then: 'the queued ones are requested'
+        conditions.eventually { assert previews.get() == total }
+
+        cleanup:
+        observer.onFlowComplete()
+    }
+
+    def 'should describe the container request' () {
+        given:
+        def now = OffsetDateTime.now()
+        def meta = new ContainerMeta(requestId: '12345', buildId: 'bd-123_1', cached: true, scanId: 'sc-123_1', sourceImage: 'cr.io/wave/build:foo', requestTime: now)
+        def task = Stub(TaskRun) { containerMeta() >> meta }
+        def noMeta = Stub(TaskRun) { containerMeta() >> null }
+        def startedAt = now.toInstant().toEpochMilli()
+
+        expect: 'a response received after the prefetch started'
+        WavePrefetchObserver.describe(task, startedAt) == 'response: new; requestId: 12345; buildId: bd-123_1; cached: true; scanId: sc-123_1; source: cr.io/wave/build:foo'
+        and: 'a response received before is reused from the Wave client cache'
+        WavePrefetchObserver.describe(task, startedAt + 1).startsWith('response: reused; requestId: 12345;')
+        and:
+        WavePrefetchObserver.describe(noMeta, startedAt) == 'meta: none'
     }
 }
