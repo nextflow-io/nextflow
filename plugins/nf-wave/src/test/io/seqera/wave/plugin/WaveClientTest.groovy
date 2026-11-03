@@ -1541,4 +1541,30 @@ class WaveClientTest extends Specification {
         server?.stop(0)
     }
 
+
+    def 'should report the cause when wave cannot be reached' () {
+        given:
+        def port = new ServerSocket(0).withCloseable { it.localPort }
+        def config = [wave:[endpoint: "http://localhost:$port".toString(), retryPolicy: [maxAttempts: 1]], tower:[accessToken:'foo', endpoint: 'http://foo.com']]
+        def wave = new WaveClient(Mock(Session) { getConfig() >> config })
+
+        when:
+        wave.sendRequest(new SubmitContainerTokenRequest())
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.startsWith("Unable to connect Wave service: http://localhost:$port - cause: java.net.ConnectException")
+        e.cause instanceof java.net.ConnectException
+    }
+
+    def 'should describe a failure with its type and cause chain' () {
+        expect:
+        WaveClient.describeFailure(ERROR) == EXPECTED
+
+        where:
+        ERROR                                                                                   | EXPECTED
+        new IOException('boom')                                                                 | 'java.io.IOException: boom'
+        new java.net.ConnectException()                                                         | 'java.net.ConnectException'
+        new java.net.ConnectException().initCause(new java.nio.channels.UnresolvedAddressException()) | 'java.net.ConnectException <- java.nio.channels.UnresolvedAddressException'
+    }
+
 }
