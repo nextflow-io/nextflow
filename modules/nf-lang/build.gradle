@@ -32,7 +32,7 @@ dependencies {
     // jimfs pulls a vulnerable Guava, even in its latest release
     testFixturesApi('com.google.guava:guava:33.7.2-jre') { because 'GHSA-xxph-c9ww-hj94' }
   }
-  testImplementation ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }
+  testImplementation ("org.spockframework:spock-core:${spockVersion}") { exclude group: 'org.apache.groovy' }
   testRuntimeOnly "org.apache.groovy:groovy-json:${groovyVersion}"
 }
 
