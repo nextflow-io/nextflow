@@ -602,8 +602,6 @@ class TraceRecord implements Serializable {
 
     void setMachineInfo(CloudMachineInfo value) {
         this.machineInfo = value
-        if( value?.instanceId )
-            put('hostname', value.instanceId)
     }
 
 }
