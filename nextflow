@@ -152,6 +152,7 @@ function get_bundle() {
     if [[ -t 2 ]]; then >&2 printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
     else >&2 echo "Downloading nextflow dependencies. It may require a few seconds, please wait .."
     fi
+    # the checksums are compared explicitly: `sha256sum -c` of macOS accepts a malformed checksum file;
     # the runtime may not run, e.g. on a noexec mount; the bundle is installed as a symlink,
     # because `mv` would nest the directory into the one of a concurrent launch
     get_file "$url" "$bundle_tmp/$name.tar.gz" && get_file "$url.sha256" "$bundle_tmp/sha256" \
@@ -208,11 +209,12 @@ function install() {
     local tmpfile=$(make_temp)
     local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || current_ver)
     local action="a=${2:-default}"
+    local java_bundle=''
     get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
     # an install without Java, which self-update keeps
     if [[ $NXF_JAVA_BUNDLE == true ]]; then
         sed 's/^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-false}$/NXF_JAVA_BUNDLE=${NXF_JAVA_BUNDLE:-true}/' "$tmpfile" > "$tmpfile.bundle" && mv "$tmpfile.bundle" "$tmpfile" || exit $?
-        grep -q '^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-true}$' "$tmpfile" || echo_yellow "NOTE: This Nextflow version can't run with its own Java runtime -- it will use the system Java"
+        grep -q '^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-true}$' "$tmpfile" && java_bundle=1 || echo_yellow "NOTE: This Nextflow version can't run with its own Java runtime -- it will use the system Java"
     fi
     mv "$tmpfile" "$1" || exit $?
     chmod +rx "$1" || exit $?
@@ -220,7 +222,7 @@ function install() {
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
     echo -e $'- the executable file `nextflow` has been created in the folder:' $(dirname $1)
-    if grep -q '^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-true}$' "$1"; then
+    if [[ $java_bundle ]]; then
     echo -e $'- it runs Nextflow with its own Java runtime (set NXF_JAVA_BUNDLE=false to use the system Java)'
     fi
     if [[ ! "$PATH" =~ (^|:)"$(dirname $1)"(:|$) ]]; then
@@ -352,23 +354,26 @@ esac
 # use the Java runtime and the jar of the bundle that contains this script, otherwise hand off
 # to the bundle of NXF_VER when enabled by NXF_JAVA_BUNDLE, or use the jar with the system Java
 bundle_home=''
-if [[ ! $NXF_BIN && $NXF_PACK != dist ]]; then
+if [[ ! $NXF_BIN ]]; then
     this_home="$(dirname "$(resolve_link "$0")")/.."
     if [[ -x $this_home/runtime/bin/java && -f $this_home/lib/$NXF_JAR ]]; then
         bundle_home="$(cd "$this_home" && pwd -P)"
         NXF_BIN="$bundle_home/lib/$NXF_JAR"
-        [[ ! "$NXF_JAVA_HOME" ]] && JAVA_CMD="$bundle_home/runtime/bin/java"
+        # replaced by NXF_JAVA_HOME below, when set
+        JAVA_CMD="$bundle_home/runtime/bin/java"
     elif [[ ! $bundle_exec ]]; then
-        bundle_dir="$NXF_DIST/$NXF_VER/nextflow-$NXF_VER-$NXF_PLATFORM"
-        bundle_marker="$NXF_DIST/$NXF_VER/.nextflow-$NXF_VER-$NXF_PLATFORM.unavailable"
         if [[ $NXF_JAVA_BUNDLE == true && ! $NXF_JAVA_HOME ]]; then
+            bundle_dir="$NXF_DIST/$NXF_VER/nextflow-$NXF_VER-$NXF_PLATFORM"
+            bundle_marker="$NXF_DIST/$NXF_VER/.nextflow-$NXF_VER-$NXF_PLATFORM.unavailable"
             if [[ ! $NXF_PLATFORM ]]; then
                 echo_yellow "NOTE: Nextflow Java bundles are not available for this platform ($OSTYPE/$HOSTTYPE) -- using the system Java"
-            elif [[ ! -e $bundle_dir && ! -e $bundle_marker ]] && ! get_bundle "$bundle_dir"; then
+            elif [[ -e $bundle_dir || -e $bundle_marker ]] || get_bundle "$bundle_dir"; then
+                # get_bundle checked the content; the bundle launcher dies if it was damaged since
+                [[ -x $bundle_dir/bin/nextflow ]] && NXF_JAVA_BUNDLE_EXEC=1 exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
+            else
                 touch "$bundle_marker" 2>/dev/null
                 echo_yellow "NOTE: The Nextflow $NXF_VER Java bundle for $NXF_PLATFORM is not available -- using the system Java (delete $bundle_marker to retry)"
             fi
-            [[ $NXF_PLATFORM && -x $bundle_dir/bin/nextflow && -x $bundle_dir/runtime/bin/java && -f $bundle_dir/lib/$NXF_JAR ]] && NXF_JAVA_BUNDLE_EXEC=1 exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
         fi
         # the jar of the bundle of another platform, e.g. in a NXF_HOME shared across architectures
         if [[ ! -f $NXF_DIST/$NXF_VER/$NXF_JAR ]]; then
@@ -468,13 +473,6 @@ fi
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
 JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcom.sun.security.enableAIAcaIssuers=true)
-# the bundled runtime has its own CA certificates: trust those of the OS instead (e.g. of a
-# corporate proxy), as the Java of the OS would, unless a trust store is specified
-if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" && ! "$NXF_OPTS $NXF_JVM_ARGS" =~ javax\.net\.ssl\.trustStore ]]; then
-  if [[ $OSTYPE == darwin* ]]; then JAVA_OPTS+=(-Djavax.net.ssl.trustStoreType=KeychainStore-ROOT)
-  else for f in /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts; do [[ -r $f && -s $f ]] && JAVA_OPTS+=(-Djavax.net.ssl.trustStore="$f") && break; done
-  fi
-fi
 # versions before 26.11.0-edge launch the GUI console in the background
 if [[ $cmd == console && $(cmp_ver "$NXF_VER" "26.11.0-edge") -lt 0 ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
@@ -488,10 +486,7 @@ JAVA_OPTS+=(-XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m)
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
-# the runtime of a bundle is not inherited by tasks, e.g. a child `nextflow` of another version
-if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" ]]; then export -n JAVA_CMD
-else export JAVA_CMD
-fi
+export JAVA_CMD
 export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
@@ -541,10 +536,20 @@ if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
   elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25|26) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
   fi
 fi
-# the startup cache of the bundle, which the JVM ignores unless the runtime, jar, module options
-# and heap layout match the training (e.g. compressed oops are disabled for a heap of 32 GB or more)
-if [[ $bundle_home && $JAVA_CMD == "$bundle_home/runtime/bin/java" && -f $bundle_home/lib/nextflow.aot ]]; then
-    launcher+=(-XX:AOTCache="$bundle_home/lib/nextflow.aot" -Xlog:aot=off)
+# the runtime of a bundle, unless NXF_JAVA_HOME is set
+if [[ $bundle_home && ! $NXF_JAVA_HOME ]]; then
+    # not inherited by tasks, e.g. a child `nextflow` of another version
+    export -n JAVA_CMD
+    # the startup cache, which the JVM ignores unless the runtime, jar, module options and heap
+    # layout match the training (e.g. compressed oops are disabled for a heap of 32 GB or more)
+    [[ -f $bundle_home/lib/nextflow.aot ]] && launcher+=(-XX:AOTCache="$bundle_home/lib/nextflow.aot" -Xlog:aot=off)
+    # its own CA certificates: trust those of the OS instead (e.g. of a corporate proxy),
+    # as the Java of the OS would, unless a trust store is specified
+    if [[ ! "$NXF_OPTS $NXF_JVM_ARGS" =~ javax\.net\.ssl\.trustStore ]]; then
+        if [[ $OSTYPE == darwin* ]]; then launcher+=(-Djavax.net.ssl.trustStoreType=KeychainStore-ROOT)
+        else for f in /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts; do [[ -r $f && -s $f ]] && launcher+=(-Djavax.net.ssl.trustStore="$f") && break; done
+        fi
+    fi
 fi
 launcher+=("${cmd_tail[@]}")
 
