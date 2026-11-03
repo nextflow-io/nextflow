@@ -39,9 +39,9 @@ class RetryOpts implements ConfigScope, Retryable.Config {
 
     @ConfigOption
     @Description("""
-        The max delay when a failing HTTP request is retried (default: `90.s`).
+        The max delay when a failing HTTP request is retried (default: `15.s`).
     """)
-    Duration maxDelay = Duration.of('90s')
+    Duration maxDelay = Duration.of('15s')
 
     @ConfigOption
     @Description("""
