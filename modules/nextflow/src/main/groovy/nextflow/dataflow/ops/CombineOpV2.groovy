@@ -102,8 +102,8 @@ class CombineOpV2 {
         return result
     }
 
-    private Collection<?> leftValues = []
-    private Collection<?> rightValues = []
+    private Collection<Object> leftValues = []
+    private Collection<Object> rightValues = []
     private int count = 2
 
     private synchronized void onNext(DataflowWriteChannel target, Object value, int index) {

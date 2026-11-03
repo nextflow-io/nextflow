@@ -1,5 +1,8 @@
 # Release process
 
+0. For a patch release on a stable branch (`STABLE-<YY.MM>.x`), apply pending backports first. PRs to backport are labeled `backport/<YY.MM>`. They are pending if they haven't been backported to the stable branch yet.
+   - Show the list to the user and ask which to apply. Cherry-pick each selected PR in merge order, then amend the subject to append `[<YY.MM>.x backport]`, e.g. `Fix foo (#1234) [26.04.x backport]`. If a pick conflicts, resolve it against the stable branch and add an `Adapted for <YY.MM>.x: ...` paragraph to the message explaining what differs from master. Run the tests of the affected modules before moving on. Plugins touched by backports need a version bump in step 1.
+
 1. For each plugin changed since the last release, update its `CHANGELOG.md` and `VERSION` (semantic version by impact), and bump `nextflowVersion` in its `build.gradle` if it requires a newer Nextflow. Commit each plugin separately as `Bump <plugin>@<version>`, e.g. `Bump nf-amazon@2.0.0`.
    - On a stable branch (`STABLE-*`), the next semantic version has likely been published from master already, and the release would silently ship that build. Use a `-patchN` suffix on the last version released from the branch (e.g. `1.5.4-patch1`) and confirm it is unused at `https://registry.nextflow.io/api/v1/plugins/<name>`.
 2. Update the root `VERSION`. Versions in April and October are stable (`25.10.0`); all other months are edge (`25.09.0-edge`).
