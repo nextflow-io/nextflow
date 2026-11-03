@@ -5,6 +5,10 @@ description: Reference for the k8s executor, which submits tasks to a Kubernetes
 
 # Kubernetes
 
+<ChangedInVersion version="27.04">
+The `k8s` executor is no longer bundled with Nextflow. It is provided by the `nf-k8s` plugin, which Nextflow loads automatically when `process.executor = 'k8s'`. If you set the executor only in a process selector, such as `withLabel`, or disable default plugins with `NXF_PLUGINS_DEFAULT=false`, declare the plugin with `plugins { id 'nf-k8s' }`. In an offline environment, install the plugin before running the pipeline. See [Offline usage][offline-usage] for more information.
+</ChangedInVersion>
+
 The `k8s` executor runs pipeline tasks on a [Kubernetes](http://kubernetes.io/) cluster. It submits each task as a Kubernetes job, or as a Kubernetes pod when [`k8s.computeResourceType`][config-k8s] is set to `Pod`.
 
 To enable this executor, set `process.executor = 'k8s'` in the `nextflow.config` file. You can launch the pipeline from a pod in the cluster, or from any machine that can connect to the cluster when using [Fusion][fusion-page]. Every pipeline process must specify a container image using the `container` directive. The pipeline work directory must be in a shared persistent volume, or in object storage when using Fusion.
@@ -121,6 +125,7 @@ The `kuberun` command deployed the Nextflow runtime as a pod and ran a pipeline 
 
 [config-k8s]: ../config/k8s
 [fusion-page]: ../../fusion
+[offline-usage]: ../../plugins/using-plugins#offline-usage
 [process-accelerator]: ../process/directives/accelerator
 [process-container]: ../process/directives/container
 [process-cpus]: ../process/directives/cpus

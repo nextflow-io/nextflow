@@ -16,41 +16,23 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.exception.AbortOperationException
 
 /**
- * Stub for the removed `kuberun` command, kept to report a clear error.
- * Omitting the command description hides it from the command listing.
+ * Stub for the removed `kuberun` command.
  */
 @CompileStatic
 @Parameters
-class CmdKubeRun extends CmdBase implements UsageAware {
+class CmdKubeRun extends CmdRemoved {
 
     static final public String NAME = 'kuberun'
 
-    @Parameter
-    List<String> args
-
+    @Override
     String getName() { NAME }
 
-    void run() {
-        abort()
-    }
-
     @Override
-    void usage() {
-        abort()
-    }
-
-    @Override
-    void usage(List<String> args) {
-        abort()
-    }
-
-    private static void abort() {
-        throw new AbortOperationException("The `kuberun` command has been removed -- use the `nf-kuberun` plugin or launch with Fusion instead")
+    String getMessage() {
+        "The `kuberun` command has been removed -- use `nextflow plugin nf-kuberun:run` from the nf-kuberun plugin, which uses double-dash options (e.g. `--namespace`, `--volume-mount`), or launch with Fusion instead"
     }
 }

@@ -11,4 +11,33 @@ The `kuberun` command has been removed. It is available as the [nf-kuberun](http
 
 The `kuberun` command deployed the Nextflow runtime as a Kubernetes pod, which ran the specified pipeline and submitted each task as a Kubernetes job (or pod).
 
+## Migrating to nf-kuberun
+
+To launch a pipeline with the nf-kuberun plugin, replace `nextflow kuberun` with `nextflow plugin nf-kuberun:run`. The plugin accepts only double-dash options in the `--name=value` form, and launcher options such as `-c` must be given after the command. For example:
+
+```bash
+# before
+nextflow -c my.config kuberun nextflow-io/hello -v my-pvc:/mnt -n my-ns -r master --foo bar
+
+# after
+nextflow plugin nf-kuberun:run nextflow-io/hello --config=my.config --volume-mount=my-pvc:/mnt --namespace=my-ns --revision=master --foo=bar
+```
+
+The `kuberun` options map to the following plugin options:
+
+| `kuberun` option | Plugin option |
+|---|---|
+| `-v`, `-volume-mount` | `--volume-mount` (comma-separated) |
+| `-n`, `-namespace` | `--namespace` |
+| `-head-image` | `--head-image` |
+| `-head-cpus` | `--head-cpus` |
+| `-head-memory` | `--head-memory` |
+| `-head-prescript` | `--head-prescript` |
+| `-remoteConfig` | `--remote-config` (comma-separated) |
+| `-remoteProfile` | `--remote-profile` |
+| `-c` (launcher option) | `--config` (comma-separated) |
+| `-bg` (launcher option) | `--background` |
+
+The `run` options supported by `kuberun` keep their names with a double dash, for example `-r` becomes `--revision` and `-resume` becomes `--resume`. Short option names such as `-r` and `-w` are not supported. See the [nf-kuberun README](https://github.com/nextflow-io/nf-kuberun#readme) for the full list of options.
+
 [k8s-page]: ../executor/kubernetes
