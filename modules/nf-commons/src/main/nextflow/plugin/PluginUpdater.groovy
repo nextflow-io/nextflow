@@ -264,8 +264,9 @@ class PluginUpdater extends UpdateManager {
             log.trace "All requested plugins are already installed - skipping registry metadata prefetch"
             return
         }
-        // use direct field access to avoid the refresh() call in getRepositories()
-        // which could fail anything which hasn't had a chance to prefetch yet
+        // use direct field access because getRepositories() calls refresh() when the repository
+        // list is null (e.g. in the dev updater), which loads `repositories.json` from the
+        // working directory or fails if it does not exist
         for( def repo : this.@repositories ) {
             if( repo instanceof PrefetchUpdateRepository ) {
                 log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${needed}"
@@ -283,12 +284,10 @@ class PluginUpdater extends UpdateManager {
     protected void fetchMissingMetadata(String id) {
         if( offline )
             return
-        for( final repo : this.@repositories ) {
-            if( !(repo instanceof PrefetchUpdateRepository) || repo.getPlugins().containsKey(id) )
-                continue
+        // use direct field access for the same reason as prefetchMetadata()
+        for( def repo : this.@repositories ) {
             try {
-                log.trace "Fetching missing plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugin=${id}"
-                // HttpPluginRepository caches the fetched metadata, so it is visible to getPluginsMap()
+                // HttpPluginRepository fetches and caches the metadata when missing
                 repo.getPlugin(id)
             }
             catch( PluginRuntimeException e ) {
@@ -501,7 +500,7 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
         }
 
-        if( !requestedVersion || !Version.isValid(requestedVersion) || !FilesEx.exists(pluginsStore.resolve("$id-$requestedVersion")) )
+        if( !isAlreadyInstalled(new PluginRef(id, requestedVersion)) )
             fetchMissingMetadata(id)
 
         def version = requestedVersion
@@ -587,6 +586,7 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
+        fetchMissingMetadata(id)
         PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")

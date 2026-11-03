@@ -172,7 +172,7 @@ class PluginUpdaterTest extends Specification {
         def manager = new LocalPluginManager(local)
         def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
         def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
-        updater.@repositories = [lazy]
+        updater.setRepositories([lazy])
 
         when:
         // the prefetch is skipped because the requested plugin is already installed
@@ -206,7 +206,7 @@ class PluginUpdaterTest extends Specification {
         def manager = new LocalPluginManager(local)
         def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
         def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
-        updater.@repositories = [lazy]
+        updater.setRepositories([lazy])
 
         when:
         // e.g. a core plugin dependency, which is pinned to the default version
@@ -214,6 +214,33 @@ class PluginUpdaterTest extends Specification {
         then:
         lazy.fetched == [PLUGIN_ID]
         manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should fetch metadata when updating a plugin that was not prefetched' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = folder.resolve('repo'); repo.mkdirs()
+        def plugin = createPlugin(repo, '2.0.0')
+        plugin.zip = zipDir(plugin.path)
+        def index = createRepositoryIndex(repo, [plugin])
+        and:
+        // version 1.0.0 is installed and started
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        createPlugin(local, '1.0.0')
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.setRepositories([lazy])
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        when:
+        updater.updatePlugin(PLUGIN_ID, '2.0.0')
+        then:
+        lazy.fetched == [PLUGIN_ID]
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '2.0.0'
 
         cleanup:
         folder?.deleteDir()
