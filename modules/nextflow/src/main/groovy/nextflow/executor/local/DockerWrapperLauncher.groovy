@@ -154,12 +154,12 @@ class DockerWrapperLauncher {
         final readOnly = !config.writableInputMounts
         final inputs = new ArrayList<Path>()
         for( Path it : bean.inputFiles.values() ) {
-            if( it.parent )
+            if( it.parent != null )
                 inputs.add(it.parent)
         }
         if( bean.binDirs )
             inputs.addAll(bean.binDirs)
-        if( bean.containerMount )
+        if( bean.containerMount != null )
             inputs.add(bean.containerMount)
 
         final result = new ArrayList<String>()

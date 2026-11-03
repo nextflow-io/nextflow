@@ -206,7 +206,7 @@ class LocalTaskHandlerTest extends Specification {
         when:
         handler.destroy()
         then:
-        STOPS * handler.stopContainer() >> null
+        STOPS * handler.stopContainer()
 
         where:
         ALIVE   | STOPS
