@@ -53,7 +53,7 @@ class BlankSeparatedList implements KryoSerializable, PathEscapeAware, List {
         def result = new StringBuilder()
         for( int i=0; i<target.size(); i++ ) {
             if( i ) result.append(' ')
-            result.append(Escape.path(target.get(i).toString()))
+            result.append(Escape.scriptPath(target.get(i).toString()))
         }
         return result.toString()
     }

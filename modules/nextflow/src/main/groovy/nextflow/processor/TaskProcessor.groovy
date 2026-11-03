@@ -100,7 +100,6 @@ import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
-import nextflow.util.Escape
 import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -1340,7 +1339,7 @@ class TaskProcessor {
             if( value instanceof Path ) {
                 files.add((Path)value)
             }
-            else if( value instanceof Collection<Path> ) {
+            else if( value instanceof Collection ) {
                 files.addAll(value)
             }
             else if( value != null ) {
@@ -1596,7 +1595,7 @@ class TaskProcessor {
      * Given a map holding variables key-value pairs, create a script fragment
      * exporting the required environment variables
      */
-    static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
+    static String bashEnvironmentScript( Map<String,String> environment ) {
         if( !environment )
             return null
 
@@ -1609,12 +1608,8 @@ class TaskProcessor {
                 log.warn "Environment variable `$name` evaluates to an empty value"
                 script << "export $name=''"
             }
-            else if( !escape ) {
-                script << /export $name="$value"/
-            }
             else {
-                // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${Escape.variable(value)}"/
+                script << /export $name="$value"/
             }
         }
         script << ''

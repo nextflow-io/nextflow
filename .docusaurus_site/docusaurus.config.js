@@ -107,6 +107,10 @@ export default async function createConfigAsync() {
       ],
     ],
     themeConfig: getSeqeraThemeConfig({
+      // Follow the system light/dark setting, as the rest of docs.seqera.io does.
+      colorMode: {
+        respectPrefersColorScheme: true,
+      },
       prism: {
         additionalLanguages: ['nextflow', 'groovy', 'java', 'bash', 'yaml', 'json'],
       },
