@@ -9,14 +9,14 @@ nextflow.enable.types = true
 // Tool `score_threshold`: precision/recall/F1 of `score >= threshold` on the dataset.
 process score_threshold {
     input:
-    threshold: BigDecimal
+    threshold: Float
     output:
     result: String
     exec:
         def tp = 0
         def fp = 0
         def fn = 0
-        def t = threshold as Float
+        def t = threshold
         file(params.scores as String).readLines().tail().each { line ->
             def parts = line.trim().tokenize()
             if( parts.size() < 2 ) return
@@ -58,7 +58,7 @@ agent tuner {
     input:
     request: String
     output:
-    report: String
+    stdout()
 
     prompt:
     """

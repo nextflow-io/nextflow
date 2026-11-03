@@ -16,8 +16,6 @@
 
 package nextflow.processor
 import java.lang.management.ManagementFactory
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 
 import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
@@ -43,26 +41,6 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     static private OperatingSystemMXBean OS = { (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean() }()
 
     /**
-     * Number of `free` CPUs available to execute pending tasks
-     */
-    private final AtomicInteger availCpus
-
-    /**
-     * Total number of CPUs available in the system
-     */
-    private final int maxCpus
-
-    /**
-     * Amount of `free` memory available to execute pending tasks
-     */
-    private final AtomicLong availMemory
-
-    /**
-     * Total amount of memory available in the system
-     */
-    private final long maxMemory
-
-    /**
      * Tracks the total and available accelerators in the system
      */
     private AcceleratorTracker acceleratorTracker
@@ -82,13 +60,12 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     protected LocalPollingMonitor(Map params) {
         super(params)
-        this.maxCpus = params.cpus as int
-        this.maxMemory = params.memory as long
-        this.availCpus = new AtomicInteger(maxCpus)
-        this.availMemory = new AtomicLong(maxMemory)
+        final cpus = params.cpus as int
+        final memory = params.memory as long
+        assert cpus>0, "Executor `cpus` setting must be greater than zero"
+        assert memory>0, "Executor `memory` setting must be greater than zero"
+        this.resourceTracker = new ResourceTracker(cpus, memory)
         this.acceleratorTracker = AcceleratorTracker.create()
-        assert maxCpus>0, "Local avail `cpus` attribute cannot be zero"
-        assert maxMemory>0, "Local avail `memory` attribute cannot zero"
     }
 
     /**
@@ -148,27 +125,6 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      * @param handler
      *      A {@link TaskHandler} instance
      * @return
-     *      The number of cpus requested to execute the specified task
-     */
-    private static int cpus(TaskHandler handler) {
-        handler.task.getConfig()?.getCpus()
-    }
-
-    /**
-     *
-     * @param handler
-     *      A {@link TaskHandler} instance
-     * @return
-     *      The amount of memory (bytes) requested to execute the specified task
-     */
-    private static long mem(TaskHandler handler) {
-        handler.task.getConfig()?.getMemory()?.toBytes() ?: 1L
-    }
-
-    /**
-     * @param handler
-     *      A {@link TaskHandler} instance
-     * @return
      *      The number of accelerators requested to execute the specified task
      */
     private static int accelerators(TaskHandler handler) {
@@ -191,25 +147,14 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     @Override
     protected boolean canSubmit(TaskHandler handler) {
-
-        final taskCpus = cpus(handler)
-        if( taskCpus>maxCpus )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available CPUs -- req: $taskCpus; avail: $maxCpus")
-
-        final taskMemory = mem(handler)
-        if( taskMemory>maxMemory)
-            throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
-
         final taskAccelerators = accelerators(handler)
         if( acceleratorTracker.name() != null && taskAccelerators > acceleratorTracker.total() )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
+            throw new ProcessUnrecoverableException("Task requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
 
         final accelOk = acceleratorTracker.name() == null || taskAccelerators <= acceleratorTracker.available()
-        final freeCpus = availCpus.get()
-        final freeMemory = availMemory.get()
-        final result = super.canSubmit(handler) && taskCpus <= freeCpus && taskMemory <= freeMemory && accelOk
+        final result = super.canSubmit(handler) && accelOk
         if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $freeCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(freeMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: ${ResourceTracker.cpus(handler)} <= availCpus: ${resourceTracker.availableCpus()} && taskMemory: ${new MemoryUnit(ResourceTracker.memory(handler))} <= availMemory: ${new MemoryUnit(resourceTracker.availableMemory())} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
         }
         return result
     }
@@ -236,10 +181,6 @@ class LocalPollingMonitor extends TaskPollingMonitor {
                 acceleratorTracker.release(handler.acceleratorIds)
             throw e
         }
-
-        // note: submit and remove run on different threads, hence atomic updates are required
-        availCpus.addAndGet(-cpus(handler))
-        availMemory.addAndGet(-mem(handler))
     }
 
     /**
@@ -255,12 +196,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     @Override
     protected boolean remove(TaskHandler handler) {
         final result = super.remove(handler)
-        if( result ) {
-            availCpus.addAndGet(cpus(handler))
-            availMemory.addAndGet(mem(handler))
-            if( handler instanceof LocalTaskHandler )
-                acceleratorTracker.release(handler.acceleratorIds ?: Collections.<String>emptyList())
-        }
+        if( result && handler instanceof LocalTaskHandler )
+            acceleratorTracker.release(handler.acceleratorIds ?: Collections.<String>emptyList())
         return result
     }
 }

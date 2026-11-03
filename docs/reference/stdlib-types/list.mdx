@@ -69,6 +69,15 @@ Returns the index of the first occurrence of the given value in the list, or -1 
 
 Returns a shallow copy of the list with the last element excluded.
 
+##### `intersect( right: Iterable<E> ) -> List<E>`
+
+Returns the elements of the list that are also in the given iterable, preserving the order and duplicates of the list.
+
+For example:
+  ```nextflow
+  assert [3, 1, 2, 2].intersect([2, 3, 4]) == [3, 2, 2]
+  ```
+
 ##### `last() -> E`
 
 Returns the last element in the list. Raises an error if the list is empty.

@@ -41,15 +41,15 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        *Used only by the local executor.*
+        *Used only by the local executor and grid executors.*
 
-        The maximum number of CPUs made available by the underlying system.
+        The maximum number of CPUs that can be requested by submitted tasks. Pending tasks are not submitted until enough CPUs are available, and a task that requests more CPUs than this limit fails. A job array counts the CPUs of all its tasks. Only CPUs requested with the `cpus` directive are counted (not `clusterOptions`), and a task without it counts as 1 CPU. For the local executor, the default is the number of CPUs on the system. For grid executors, there is no limit by default.
     """)
     final Integer cpus
 
     @ConfigOption
     @Description("""
-        Determines how often to log the executor status (default: `5 min`).
+        Determines how often to log the executor status (default: `5.m`).
     """)
     final Duration dumpInterval
 
@@ -57,7 +57,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         *Used only by grid executors.*
 
-        Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
+        Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270.s`).
     """)
     final Duration exitReadTimeout
 
@@ -80,9 +80,9 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        *Used only by the local executor.*
+        *Used only by the local executor and grid executors.*
 
-        The maximum amount of memory made available by the underlying system.
+        The maximum amount of memory that can be requested by submitted tasks. Pending tasks are not submitted until enough memory is available, and a task that requests more memory than this limit fails. A job array counts the memory of all its tasks. Only memory requested with the `memory` directive is counted (not `clusterOptions`). For the local executor, the default is the total memory on the system. For grid executors, there is no limit by default.
     """)
     final MemoryUnit memory
 
@@ -146,7 +146,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         *Used only by grid executors.*
 
-        Determines how often to fetch the queue status from the scheduler (default: `1 min`).
+        Determines how often to fetch the queue status from the scheduler (default: `1.m`).
     """)
     final Duration queueStatInterval
 

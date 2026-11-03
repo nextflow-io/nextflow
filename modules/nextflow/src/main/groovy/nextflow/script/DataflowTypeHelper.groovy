@@ -100,8 +100,8 @@ class DataflowTypeHelper {
         if( source.size() == 1 )
             return normalizeV2(source[0])
         final result = new HashMap<String,Object>()
-        for( int i = 0; i < source.size(); i++ )
-            result.put(names[i], normalizeV2(source[i]))
+        for( final name : names )
+            result.put(name, normalizeV2(source.getProperty(name)))
         return new RecordMap(result)
     }
 

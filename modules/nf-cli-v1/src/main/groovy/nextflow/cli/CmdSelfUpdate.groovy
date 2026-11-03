@@ -16,6 +16,7 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 
 /**
@@ -25,6 +26,10 @@ import com.beust.jcommander.Parameters
  */
 @Parameters(commandDescription = "Update nextflow runtime to the latest available version")
 class CmdSelfUpdate extends CmdBase {
+
+    @Parameter(names = '-clean', description = 'Remove the files of all other Nextflow versions after updating')
+    boolean clean
+
     @Override
     String getName() { 'self-update' }
 

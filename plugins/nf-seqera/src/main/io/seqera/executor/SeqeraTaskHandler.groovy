@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.config.MachineRequirementOpts
 import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
+import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.PredictionModel
@@ -75,6 +76,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      * Cached task state from last describeTask call, used for trace record metadata
      */
     private volatile SchedTaskState cachedTaskState
+
+    /**
+     * Cached task response from last describeTask call, carrying the scheduler's retry verdict
+     */
+    private volatile DescribeTaskResponse cachedTaskResponse
 
     /**
      * Cached machine info extracted from task attempts
@@ -330,7 +336,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected SchedTaskStatus schedTaskStatus() {
-        cachedTaskState = client.describeTask(taskId).getTaskState()
+        cachedTaskResponse = client.describeTask(taskId)
+        cachedTaskState = cachedTaskResponse.getTaskState()
         return cachedTaskState.getStatus()
     }
 
@@ -368,8 +375,17 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             final apiExitCode = cachedTaskState?.getExitCode()
             task.exitStatus = apiExitCode != null ? apiExitCode : readExitFile()
             if (isFailed(schedStatus)) {
+                // the scheduler reports an infrastructure failure (e.g. a failed Fusion snapshot restore):
+                // rerun the task in a new work dir, at most `maxRetries` times as any other failure.
+                // note: unlike K8s, `task.aborted` is not set since `makeCopy` would carry it over to the rerun
+                if (cachedTaskResponse?.getRetryable() && task.failCount < task.config.getMaxRetries()) {
+                    final errorMessage = cachedTaskState?.getErrorMessage()
+                    final msg = "Task failed with a retryable error (reason: ${cachedTaskResponse.getRetryReason()}; exit: ${task.exitStatus})" + (errorMessage ? " -- ${errorMessage}" : '')
+                    log.info "[SEQERA] Process `${task.lazyName()}` - ${msg} -- taskId=${taskId}; work-dir=${task.getWorkDirStr()}"
+                    task.error = new SeqeraRetryableException(msg)
+                }
                 // When no exit code available, get the error message from task state
-                if (task.exitStatus == Integer.MAX_VALUE) {
+                else if (task.exitStatus == Integer.MAX_VALUE) {
                     final errorMessage = cachedTaskState?.getErrorMessage() ?: "Task failed for unknown reason"
                     task.error = new ProcessException(errorMessage)
                 }

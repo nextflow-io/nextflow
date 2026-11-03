@@ -46,7 +46,7 @@ This example is the clearest illustration of how module outputs reach the model:
      report `FAIL …`, skipping annotation;
    - otherwise it **PASSes**: annotate with `PROKKA`, write the summary, and
      report `PASS …` with the annotation path.
-   The output is a plain `verdict: String`.
+   The output is `stdout()`, the model's text.
 
 3. **With the sarscov2 test data** the assembly reaches ~N50 = 310, ~6 contigs,
    which **fails** the gate — so the agent returns a `FAIL` verdict and **skips
@@ -70,7 +70,7 @@ Docker fetches the image.
 | Three module tools | `SKESA`, `ASSEMBLYSCAN`, `PROKKA` via `nf:module_run` |
 | Path handles vs inlined output | Bulk artifacts are paths; small stats are inlined |
 | `fs:*` for artifacts | Writes the triage summary JSON to the sandbox |
-| Plain output | `verdict: String` (this example emits the model's text; tools *can* also return a record — see `tool-structured/`) |
+| Text output | `stdout()` (this example emits the model's text; tools *can* also return a record — see `tool-structured/`) |
 
 ## Running it
 

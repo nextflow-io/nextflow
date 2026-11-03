@@ -34,6 +34,9 @@ WITH_DOCKER=${WITH_DOCKER:=''}
 export NXF_WORK=$PWD/scratch
 rm -rf $NXF_WORK
 
+# agent mode changes console output; agent-output checks enable it explicitly
+export NXF_AGENT_MODE=false
+
 
 function run_checks() {
   NXF_SCRIPT="../../$1"

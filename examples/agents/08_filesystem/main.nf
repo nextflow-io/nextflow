@@ -25,7 +25,7 @@ agent analyst {
           2. Write the statistics as a JSON file named "report.json" in the work directory
              using the `write` tool.
           3. Read "report.json" back using the `read` tool to confirm it is there.
-          4. Reply: "Stats: <words> words, <chars> chars. Report written to <absolute path>."
+          4. Reply: "Stats: <words> words, <chars> chars."
         '''.stripIndent()
 
     tools 'nf:module_run', 'fs:*'
@@ -33,7 +33,7 @@ agent analyst {
     input:
     text: String
     output:
-    summary: String
+    record(summary: stdout(), report: file('report.json'))
 
     prompt:
     """
@@ -46,5 +46,5 @@ workflow {
     analyst(channel.of(
         'The quick brown fox jumps over the lazy dog'
     ))
-    .view { s -> "RESULT: ${s}" }
+    .view { r -> "RESULT: ${r.summary} REPORT: ${r.report}" }
 }

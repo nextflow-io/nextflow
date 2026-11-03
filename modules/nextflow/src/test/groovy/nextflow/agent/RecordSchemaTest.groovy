@@ -59,14 +59,14 @@ class RecordSchemaTest extends Dsl2Spec {
         parser.parse(file)
         parser.runScript()
         def agent = ScriptMeta.get(parser.script).getDefinitions().find { it instanceof AgentDef } as AgentDef
-        return agent.outputs[0].type
+        return agent.output.type
     }
 
     def 'should derive a JSON schema from a record output type'() {
         given:
         def cls = loadOutputType('''
             record Question { text: String }
-            record Answer { answer: String; confidence: Double }
+            record Answer { answer: String; confidence: Float }
             ''', 'a: Answer')
 
         when:
@@ -95,28 +95,31 @@ class RecordSchemaTest extends Dsl2Spec {
         def schema = RecordSchema.of(cls)
 
         then:
-        schema.properties.keySet() == ['answer', 'note'] as Set
+        schema.get('properties').keySet() == ['answer', 'note'] as Set
         schema.required == ['answer']
 
         and: 'the portable layer keeps a plain scalar type and does NOT itself emit a nullable union'
         // the union (type:['string','null']) is the downstream/plugin (langchain4j) responsibility;
         // core only omits @Nullable fields from `required`. Guards against the portable layer
         // starting to self-encode optionality (which would require the plan §6 contingency).
-        schema.properties.note == [type: 'string']
+        schema.get('properties').note == [type: 'string']
     }
 
-    def 'should reject a Path output field'() {
+    def 'should map Path output fields to path strings'() {
         given:
         def cls = loadOutputType('''
             record Question { text: String }
-            record WithPath { p: Path }
+            record WithPath {
+                p: Path
+                ps: List<Path>
+            }
             ''', 'a: WithPath')
 
         when:
-        RecordSchema.of(cls)
+        def schema = RecordSchema.of(cls)
 
         then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains('p')
+        schema.get('properties').p == [type: 'string', description: 'Absolute path of an existing file']
+        schema.get('properties').ps == [type: 'array', items: [type: 'string', description: 'Absolute path of an existing file']]
     }
 }

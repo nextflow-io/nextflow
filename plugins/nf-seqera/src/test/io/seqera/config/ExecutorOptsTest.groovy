@@ -52,6 +52,19 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement.provisioning == null
         !config.autoLabels
         !config.shellEnabled
+        config.fusionMode == null
+    }
+
+    def 'should validate the fusion mode' () {
+        expect:
+        new ExecutorOpts([endpoint: 'https://sched.example.com', fusionMode: 'native']).fusionMode == 'native'
+        new ExecutorOpts([endpoint: 'https://sched.example.com', fusionMode: 'wave']).fusionMode == 'wave'
+
+        when:
+        new ExecutorOpts([endpoint: 'https://sched.example.com', fusionMode: 'host'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid 'seqera.executor.fusionMode' value: 'host' - valid values: wave, native"
     }
 
     def 'should enable on-demand shell access when set' () {

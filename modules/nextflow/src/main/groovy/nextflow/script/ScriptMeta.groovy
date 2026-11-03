@@ -250,6 +250,11 @@ class ScriptMeta {
         return result instanceof ProcessDef ? result : null
     }
 
+    AgentDef getAgent(String name) {
+        final result = getComponent(name)
+        return result instanceof AgentDef ? result : null
+    }
+
     FunctionDef getFunction(String name) {
         final result = getComponent(name)
         return result instanceof FunctionDef ? result : null
@@ -326,6 +331,15 @@ class ScriptMeta {
         return result
     }
 
+    Set<String> getLocalAgentNames() {
+        def result = new HashSet(definitions.size())
+        for( def item : definitions.values() ) {
+            if( item instanceof AgentDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
     Set<String> getLocalWorkflowNames() {
         def result = new HashSet(definitions.size())
         for( def item : definitions.values() ) {
@@ -369,8 +383,30 @@ class ScriptMeta {
         if( !getLocalWorkflowNames().isEmpty() )
             return false
 
+        // Must not have any agent definitions, since a process
+        // alongside an agent is a tool for that agent
+        if( !getLocalAgentNames().isEmpty() )
+            return false
+
         // Must have exactly one process
         return getLocalProcessNames().size() == 1
+    }
+
+    /**
+     * Check if this script has a standalone agent that can be executed
+     * automatically without requiring workflows. Processes are allowed,
+     * since they can be used as tools by the agent.
+     *
+     * @return true if the script has exactly one agent and no workflows
+     */
+    boolean hasExecutableAgents() {
+        if( isModule() )
+            return false
+
+        if( !getLocalWorkflowNames().isEmpty() )
+            return false
+
+        return getLocalAgentNames().size() == 1
     }
 
     void addModule(BaseScript script, String name, String alias) {

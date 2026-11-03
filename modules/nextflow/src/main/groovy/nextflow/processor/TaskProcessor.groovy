@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Pattern
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -1048,6 +1048,7 @@ class TaskProcessor {
         try {
             // -- set task properties in order to resolve task outputs
             task.workDir = folder
+            task.config.workDir = folder
             task.stdout = stdoutFile
             task.config.exitStatus = exitCode
             // -- check if all output resources are available
@@ -1339,7 +1340,7 @@ class TaskProcessor {
             if( value instanceof Path ) {
                 files.add((Path)value)
             }
-            else if( value instanceof Collection<Path> ) {
+            else if( value instanceof Collection ) {
                 files.addAll(value)
             }
             else if( value != null ) {
@@ -1702,19 +1703,33 @@ class TaskProcessor {
         checkConflicts(task.inputFiles)
     }
 
+    /**
+     * Check that no stage name is used by more than one file.
+     * The same file staged multiple times under the same name
+     * is not a conflict.
+     */
+    @CompileStatic
     private void checkConflicts(List<FileHolder> allFiles) {
-        final allNames = new HashMap<String,Integer>()
-        for( final holder : allFiles ) {
-            final num = allNames.getOrCreate(holder.stageName, 0) + 1
-            allNames.put(holder.stageName, num)
-        }
+        final allNames = new LinkedHashMap<String,Map<Path,FileHolder>>()
+        for( final holder : allFiles )
+            allNames.computeIfAbsent(holder.stageName, k -> new LinkedHashMap<Path,FileHolder>()).putIfAbsent(holder.storePath, holder)
 
-        final conflicts = allNames.findAll { name, num -> num > 1 }
+        final conflicts = allNames.findAll { name, holders -> holders.size() > 1 }
         if( conflicts ) {
-            log.debug("Process $name > collision check staging file names: $allNames")
-            def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
+            final names = conflicts.collect { name, holders ->
+                final paths = holders.values().collect { FileHolder h -> h.sourcePath ?: h.storePath }
+                "${name} (${truncateList(paths, 3)})".toString()
+            }
+            final message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${truncateList(names, 10)}"
             throw new ProcessUnrecoverableException(message)
         }
+    }
+
+    @CompileStatic
+    private static String truncateList(List items, int max) {
+        return items.size() > max
+            ? items.take(max).join(', ') + ", ... ${items.size() - max} more"
+            : items.join(', ')
     }
 
     @CompileStatic
@@ -1766,6 +1781,9 @@ class TaskProcessor {
             task.inputFiles.addAll(resolved)
             resolvedValues.add(value)
         }
+
+        // -- check conflicting file names
+        checkConflicts(task.inputFiles)
 
         // -- normalize input values by replacing source paths with staged paths
         final Map<Path,FileHolder> holders = [:]
@@ -1916,7 +1934,6 @@ class TaskProcessor {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
-        def fault = null
         try {
             // -- verify task exit status
             if( task.error )
@@ -1936,14 +1953,28 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error, handler.getTraceRecord())
-            log.trace "Task fault (3): $fault"
+            return finalizeFailedTask(handler, error)
         }
 
-        // -- finalize the task
+        finalizeTask0(task)
+        return null
+    }
+
+    /**
+     * Finalize a task that failed with the given error, unless
+     * the task is retried according to its error strategy
+     *
+     * @param handler The {@link TaskHandler} of the failed task
+     * @param error The error raised by the task
+     * @return The error strategy or {@link TaskFault} returned by {@link #resumeOrDie}
+     */
+    @PackageScope
+    final finalizeFailedTask( TaskHandler handler, Throwable error ) {
+        final task = handler.task
+        final fault = resumeOrDie(task, error, handler.getTraceRecord())
+        log.trace "Task fault (3): $fault"
         if( fault != ErrorStrategy.RETRY )
             finalizeTask0(task)
-
         return fault
     }
 

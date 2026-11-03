@@ -40,10 +40,16 @@ import groovy.transform.CompileStatic
 class DispatchContext {
     final Path workDir
     final Set<Path> readablePaths
+    /**
+     * The staged inputs of the agent task, by stage name: the name the model sees in the
+     * work dir, mapped to the source the stage-in symlink points to.
+     */
+    final Map<String,Path> stagedInputs
 
     DispatchContext(Path workDir) {
         this.workDir = workDir
         this.readablePaths = ConcurrentHashMap.newKeySet()
+        this.stagedInputs = new ConcurrentHashMap<String,Path>()
         if( workDir != null )
             this.readablePaths.add(workDir)
     }
@@ -51,5 +57,12 @@ class DispatchContext {
     void addReadablePath(Path path) {
         if( path != null )
             readablePaths.add(path)
+    }
+
+    void addStagedInput(String name, Path source) {
+        if( name == null || source == null )
+            return
+        stagedInputs.put(name, source)
+        readablePaths.add(source)
     }
 }

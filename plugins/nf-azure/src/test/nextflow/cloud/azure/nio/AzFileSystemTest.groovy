@@ -123,17 +123,28 @@ class AzFileSystemTest extends Specification {
     def 'should test getPath' () {
         given:
         def BUCKET_NAME = 'bucket'
-        def provider = Stub(AzFileSystemProvider)
+        def provider = Mock(AzFileSystemProvider)
         final storage = GroovyMock(BlobServiceClient)
         and:
         def fs = new AzFileSystem(provider, storage, BUCKET_NAME)
+        def PATH = new AzPath(fs, Paths.get('/bucket/alpha/gamma/delta'), false)
 
         expect:
         fs.getPath('file-name.txt') == new AzPath(fs, Paths.get('file-name.txt'), false)
         fs.getPath('alpha/bravo') == new AzPath(fs, Paths.get('alpha/bravo'), false)
-        fs.getPath('/alpha/bravo') == new AzPath(fs, Paths.get('/bucket/alpha/bravo'), false)
-        fs.getPath('/alpha','/gamma','/delta') == new AzPath(fs, Paths.get('/bucket/alpha/gamma/delta'), false)
-        fs.getPath('/alpha','gamma//','delta//') == new AzPath(fs, Paths.get('/bucket/alpha/gamma/delta'), false)
+
+        // absolute paths are resolved by the provider
+        when:
+        def result = fs.getPath('/alpha','/gamma','/delta')
+        then:
+        1 * provider.getPath('alpha/gamma/delta') >> PATH
+        result.is(PATH)
+
+        when:
+        result = fs.getPath('/alpha','gamma//','delta//')
+        then:
+        1 * provider.getPath('alpha/gamma/delta') >> PATH
+        result.is(PATH)
     }
 
 }

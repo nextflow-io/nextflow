@@ -89,7 +89,7 @@ agent optimizer {
     input:
     isolate: Isolate
     output:
-    report: String
+    stdout()
 
     prompt:
     """

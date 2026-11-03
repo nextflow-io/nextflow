@@ -18,10 +18,12 @@ package io.seqera.executor
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
@@ -29,8 +31,8 @@ import io.seqera.sched.api.schema.v1a1.InputFilesMetrics
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.client.SchedClient
 import nextflow.SysEnv
+import nextflow.processor.TaskRun
 import nextflow.util.Duration
-import nextflow.util.ThreadPoolBuilder
 import nextflow.util.Threads
 
 /**
@@ -51,8 +53,11 @@ class SeqeraBatchSubmitter {
     /** Keep-alive interval - send empty submission to maintain run */
     static final Duration KEEP_ALIVE_INTERVAL = SysEnv.get('NXF_SEQERA_KEEP_ALIVE_INTERVAL', '60 sec') as Duration
 
-    /** Timeout for waiting on metrics computation */
+    /** Maximum time a batch waits for the input files metrics of its tasks */
     static final Duration METRICS_TIMEOUT = SysEnv.get('NXF_SEQERA_METRICS_TIMEOUT', '30 sec') as Duration
+
+    /** Number of threads statting input files, shared by the metrics computations of all tasks */
+    static final int METRICS_POOL_SIZE = Math.max(1, SysEnv.getInteger('NXF_SEQERA_METRICS_POOL_SIZE', 20))
 
     /**
      * Holds a task handler, its prepared Task object, and async metrics computation
@@ -73,8 +78,14 @@ class SeqeraBatchSubmitter {
     private Thread sender
     private volatile boolean completed = false
 
-    /** Executor pool for async input file metrics computation */
+    /** Executor pool statting input files for the metrics computation */
     private final ExecutorService metricsExecutor
+
+    /** Computes input files metrics, caching file stats across the tasks of the run */
+    private final InputFilesProfiler profiler
+
+    /** Maximum time a batch waits for metrics, see {@link #METRICS_TIMEOUT} */
+    protected Duration metricsTimeout = METRICS_TIMEOUT
 
     SeqeraBatchSubmitter(SchedClient client, String runId) {
         this(client, runId, REQUEST_INTERVAL, KEEP_ALIVE_INTERVAL)
@@ -90,14 +101,14 @@ class SeqeraBatchSubmitter {
         this.requestInterval = requestInterval
         this.keepAliveInterval = keepAliveInterval
         this.onError = onError
-        // Create a thread pool for metrics computation
-        this.metricsExecutor = new ThreadPoolBuilder()
-                .withName('seqera-metrics')
-                .withMinSize(0)
-                .withMaxSize(10)
-                .withKeepAliveTime(60_000L)
-                .withAllowCoreThreadTimeout(true)
+        // Fixed size pool: a ThreadPoolExecutor with an unbounded queue never grows beyond its core size.
+        // Daemon threads, so idle pool threads never keep the JVM alive if shutdown() is skipped
+        final threadFactory = new ThreadFactoryBuilder()
+                .setNameFormat('seqera-metrics-%d')
+                .setDaemon(true)
                 .build()
+        this.metricsExecutor = Executors.newFixedThreadPool(METRICS_POOL_SIZE, threadFactory)
+        this.profiler = new InputFilesProfiler(metricsExecutor)
     }
 
     /**
@@ -117,14 +128,20 @@ class SeqeraBatchSubmitter {
             throw new IllegalStateException("Batch submitter has been shutdown")
         }
 
-        // Start async metrics computation
-        final taskRun = handler.task
-        final metricsFuture = CompletableFuture.supplyAsync(
-            ()-> InputFilesProfiler.compute(taskRun),
-            metricsExecutor
-        )
+        pendingQueue.add(new PendingTask(handler, task, computeMetrics(handler.task)))
+    }
 
-        pendingQueue.add(new PendingTask(handler, task, metricsFuture))
+    /**
+     * Start the async computation of the input files metrics of a task
+     */
+    protected CompletableFuture<InputFilesMetrics> computeMetrics(TaskRun task) {
+        try {
+            return profiler.computeAsync(task?.inputFiles)
+        }
+        catch (Exception e) {
+            // a failure must not prevent the task submission, resolveMetrics reports it
+            return CompletableFuture.<InputFilesMetrics>failedFuture(e)
+        }
     }
 
     /**
@@ -292,26 +309,33 @@ class SeqeraBatchSubmitter {
 
     /**
      * Wait for and attach metrics to all tasks in the batch.
-     * Uses timeout to avoid blocking indefinitely on slow computations.
+     * The whole batch shares a single deadline, so a slow computation does not
+     * hold the batch: tasks whose metrics are not ready by then are sent without them.
      */
     private void resolveMetrics(List<PendingTask> batch) {
-        final timeout = METRICS_TIMEOUT.millis
+        final deadline = System.currentTimeMillis() + metricsTimeout.millis
+        int timedOut = 0
 
         for (PendingTask pending : batch) {
             try {
-                final metrics = pending.metricsFuture.get(timeout, TimeUnit.MILLISECONDS)
+                final remaining = Math.max(0L, deadline - System.currentTimeMillis())
+                final metrics = pending.metricsFuture.get(remaining, TimeUnit.MILLISECONDS)
                 if (metrics) {
                     pending.task.inputFiles(metrics)
                     log.debug "[SEQERA] Task `${pending.handler.task.name}` input files metrics: ${metrics}"
                 }
             }
             catch (TimeoutException e) {
-                log.warn "[SEQERA] Timeout computing input files metrics for task: ${pending.handler.task.name}"
+                log.debug "[SEQERA] Timeout computing input files metrics for task: ${pending.handler.task.name}"
                 pending.metricsFuture.cancel(true)
+                timedOut++
             }
             catch (Exception e) {
                 log.warn "[SEQERA] Failed to compute input files metrics for task: ${pending.handler.task.name} - ${e.message}"
             }
         }
+
+        if (timedOut)
+            log.warn "[SEQERA] Input files metrics not ready within ${metricsTimeout} for ${timedOut} of ${batch.size()} tasks - submitting them without metrics"
     }
 }

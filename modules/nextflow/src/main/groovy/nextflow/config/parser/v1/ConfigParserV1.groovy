@@ -18,7 +18,7 @@ package nextflow.config.parser.v1
 
 import java.nio.file.Path
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform

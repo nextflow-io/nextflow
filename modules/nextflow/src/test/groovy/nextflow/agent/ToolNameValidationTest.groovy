@@ -300,7 +300,7 @@ class ToolNameValidationTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -351,7 +351,7 @@ class ToolNameValidationTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """

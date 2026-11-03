@@ -190,4 +190,8 @@ class ConfigDiscovery {
         return null
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }

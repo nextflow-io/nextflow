@@ -20,7 +20,7 @@ Two things to take away:
    function-calling enforces those exact field names.
 
 2. **The LLM bridges mismatched shapes.** The agent's input record
-   (`AssemblyRequest{sample_id, reads}`) looks *nothing* like the module's input
+   (`record(sample_id, reads)`) looks *nothing* like the module's input
    (`{meta, fastq}`). There is no field-to-field mapping in the code — the model
    reads the prompt and the registry-derived tool schema and **synthesizes** the
    correct call, mapping `sample_id → meta.id` and `reads → fastq`. The
@@ -29,8 +29,8 @@ Two things to take away:
 
 ## How it works
 
-1. **`AssemblyRequest`** carries `sample_id` and `reads` (an absolute FASTQ
-   path, treated as an opaque handle).
+1. **The input record** is destructured into `sample_id` and `reads` (a FASTQ
+   file staged into the agent's work directory).
 
 2. **The `assembler` agent** declares `tools 'nf:module_run'` and a high-level
    `instruction` ("use the SKESA tool to assemble the provided reads, then report
@@ -44,8 +44,9 @@ Two things to take away:
    (provisioned by Wave), and its `fasta` output comes back to the model as JSON
    with the contigs path as an absolute handle.
 
-5. **Plain output:** the agent output is `assembly_path: Path` (a plain type) —
-   required because the agent declares `tools`.
+5. **Structured output:** the agent output is `assembly: Assembly`, a record the
+   model answers under a JSON schema. Its `contigs: Path` field is the contigs path
+   returned by the tool call, and the `sample_id` field keeps the sample attached.
 
 ## Key concepts
 
@@ -56,7 +57,7 @@ Two things to take away:
 | Record→tuple bridging | The LLM maps `sample_id`/`reads` to `meta.id`/`fastq` — no code mapping |
 | No structure in the prompt | The `instruction` stays high-level; the schema carries the shape |
 | Containerized module | SKESA runs in its container via Wave |
-| Plain output | `assembly_path: Path` (this example emits the model's text; tools *can* also return a record — see `tool-structured/`) |
+| Structured output | `assembly: Assembly`, a record with a `Path` field for the tool output |
 
 ## Running it
 
@@ -76,7 +77,7 @@ nextflow run main.nf
 Expected output (path varies):
 
 ```
-ASSEMBLY=/…/work/<hash>/sample1.fa
+ASSEMBLY sample1=/…/work/<hash>/sample1.fa
 ```
 
 See [examples/agents/README.md](../README.md) for the dev-build (run-from-repo)

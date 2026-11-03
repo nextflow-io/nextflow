@@ -23,7 +23,6 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | Workflow `\|` and `&` operators | Method calls and assignments |
 | `.out` to access process/workflow outputs | Assignments |
 | [Legacy operators][operator-page] | [Core operators][operator-typed-page] |
-| [Process `when` section][strict-process-when] | Conditional logic in the calling workflow |
 | Using global variables in a process | Process inputs |
 | [`publishDir`][process-publishDir] directive | [Workflow outputs][workflow-outputs] |
 
@@ -41,11 +40,7 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `Channel` to access channel factories | 25.10 | [`channel`][strict-channel] |
 | Legacy syntax parser (`NXF_SYNTAX_PARSER=v1`) | 26.04 | [Strict syntax][strict-syntax-page] |
 | `channel.fromSRA()` | 26.04 | [Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/) |
-
-### Process directives
-
-| Feature | Deprecated | Replacement |
-|---|---|---|
+| [Process `when` section][strict-process-when] | 26.10 | Conditional logic in the calling workflow, or [`process.when`][config-process-when] config setting |
 | [`storeDir`][process-storeDir] | 26.10 | [Explicit workflow logic][process-storeDir-alt] |
 
 ### Configuration
@@ -91,13 +86,14 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `echo` directive | 22.04 | 26.10 | `debug` |
 
 [config-manifest]: ./reference/config/manifest
+[config-process-when]: ./config#disabling-processes
 [config-seqera-executor-autoLabels]: ./reference/config/seqera#seqeraexecutorautolabels
 [config-tower-autoLabels]: ./reference/config/tower#towerautolabels
 [config-workflow-handlers]: ./config#workflow-handlers
 [dsl1-page]: ./migrations/dsl1
 [env-vars-NXF_CLOUDINFO_ENABLED]: ./reference/env-vars#nxf_cloudinfo_enabled
 [feature-flags-page]: ./reference/feature-flags
-[k8s-fusion]: ./kubernetes#launch-with-fusion
+[k8s-fusion]: ./reference/executor/kubernetes#launch-with-fusion
 [migrations-page]: ./migrations
 [operator-page]: ./reference/operator
 [operator-typed-page]: ./reference/stdlib-types/channel

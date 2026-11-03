@@ -345,10 +345,11 @@ class FilePorter {
         }
 
         private boolean recoverableError(IOException e){
+            // network errors such as a connection reset are transient, interruption
+            // is checked by the caller -- see https://github.com/nextflow-io/nextflow/issues/7798
             final result =
                 e !instanceof NoSuchFileException
                 && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
-                && e !instanceof SocketException
             log.debug "Stage foreign file exception: recoverable=$result; type=${e.class.name}; message=${e.message}"
             return result
         }
@@ -370,6 +371,10 @@ class FilePorter {
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
             if( debugDelay )
                 sleep ( new Random().nextInt(debugDelay) )
+            return copyForeignFile(source, target)
+        }
+
+        protected Path copyForeignFile(Path source, Path target) {
             return FileHelper.copyPath(source, target)
         }
 

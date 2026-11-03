@@ -67,18 +67,15 @@ public interface AgentDsl extends DslScope {
     }
 
     /**
-     * Functions available in an agent `output:` section.
-     *
-     * Deliberately a SUBSET of {@link ProcessDsl.OutputDslV2}, and a subset BY CONSTRUCTION: both
-     * scopes inherit `file`/`files` from the shared {@link FileOutputDsl}, so an option added to
-     * one is added to the other. `eval`/`stdout` stay process-only because an agent has no task
-     * script to read them back from — leaving them undeclared makes them a resolution error
-     * instead of a runtime surprise.
-     *
-     * <p>Named {@code AgentOutputDsl} rather than {@code OutputDsl} to stay distinct from the
-     * unrelated top-level {@link OutputDsl} (the workflow output DSL) in this same package.
+     * Functions available in an agent `output:` section. `file`/`files`
+     * are shared with the process scope via {@link FileOutputDsl}.
      */
-    /** Functions available in an agent `output:` section; `file`/`files` are shared with the process scope. */
     interface AgentOutputDsl extends FileOutputDsl {
+
+        @Description("""
+            Get the final answer of the agent run.
+        """)
+        String stdout();
+
     }
 }

@@ -177,17 +177,17 @@ class ProcessConfigBuilder extends ProcessBuilder {
             if( entry.key in ignoredKeys )      // e.g. the agent-only options of the `agent` scope
                 continue
 
-            if( !DIRECTIVES.contains(entry.key) )
+            if( !DIRECTIVES.contains(entry.key) && entry.key != 'when' )
                 log.warn "Unknown directive `$entry.key` for $kind `$processName`"
 
             if( entry.key == 'params' ) // <-- patch issue #242
                 continue
 
             if( entry.key == 'ext' ) {
-                if( config.getProperty('ext') instanceof Map ) {
+                final ext = config.getProperty('ext')
+                if( ext instanceof Map ) {
                     // update missing 'ext' properties found in 'process' scope
-                    final ext = config.getProperty('ext') as Map
-                    entry.value.each { String k, v -> ext[k] = v }
+                    ext.putAll(entry.value as Map)
                 }
                 continue
             }

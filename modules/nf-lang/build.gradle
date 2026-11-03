@@ -27,6 +27,10 @@ dependencies {
   api "org.pf4j:pf4j:${pf4jVersion}"
 
   testFixturesApi "com.google.jimfs:jimfs:${jimfsVersion}"
+  constraints {
+    // jimfs pulls a vulnerable Guava, even in its latest release
+    testFixturesApi('com.google.guava:guava:33.7.2-jre') { because 'GHSA-xxph-c9ww-hj94' }
+  }
   testImplementation(testFixtures(project(":nextflow")))
 }
 

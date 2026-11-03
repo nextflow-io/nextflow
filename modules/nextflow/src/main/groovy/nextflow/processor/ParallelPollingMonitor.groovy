@@ -92,9 +92,9 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
             // to submit a new task instance
             @Override
             protected void onFailure(Throwable e) {
-                if( !session.success )
-                    return // ignore error when the session has been interrupted
-                handleException(handler, e)
+                if( !session.canSubmitTasks() )
+                    return // ignore error when the session has been aborted or cancelled
+                handleSubmitException(handler, e, true)
                 notifyTaskComplete(handler)
             }
         }

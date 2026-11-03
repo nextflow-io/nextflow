@@ -57,6 +57,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 14
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 15
         errors[0].getOriginalMessage() == "Unexpected input: '3'"
 
         when:
@@ -76,6 +78,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 16
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 17
         errors[0].getOriginalMessage() == "Unexpected input: '\\n'"
 
         when:
@@ -96,6 +100,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 24
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 27
         errors[0].getOriginalMessage() == "Unexpected input: 'val'"
 
         when:
@@ -116,6 +122,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 40
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 44
         errors[0].getOriginalMessage() == "Unexpected input: 'emit'"
 
         when:
@@ -136,6 +144,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 4
         errors[0].getStartColumn() == 6
+        errors[0].getEndLine() == 4
+        errors[0].getEndColumn() == 7
         errors[0].getOriginalMessage() == "Unexpected input: ','"
     }
 
@@ -400,6 +410,32 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
+    }
+
+    def 'should report an error for invalid workflow publish statements' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                a = channel.of(1)
+
+                publish:
+                a
+            }
+
+            output {
+                a {
+                    path 'a'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 6
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow publish statement -- must be an assignment"
     }
 
     def 'should report an error for an invalid output assignment' () {

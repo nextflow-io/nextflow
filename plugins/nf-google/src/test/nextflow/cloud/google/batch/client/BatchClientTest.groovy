@@ -23,13 +23,17 @@ import com.google.api.gax.grpc.GrpcCallContext
 import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.ApiCallContext
+import com.google.api.gax.rpc.ApiException
 import com.google.api.gax.rpc.Callables
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.InvalidArgumentException
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.StatusCode
 import com.google.api.gax.rpc.UnaryCallable
+import com.google.api.gax.rpc.UnavailableException
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.CreateJobRequest
+import com.google.cloud.batch.v1.DeleteJobRequest
 import com.google.cloud.batch.v1.GetJobRequest
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
@@ -41,6 +45,7 @@ import com.google.cloud.batch.v1.TaskName
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.stub.BatchServiceStub
 import com.google.cloud.batch.v1.stub.BatchServiceStubSettings
+import com.google.longrunning.Operation
 import io.grpc.Status
 import nextflow.cloud.google.GoogleOpts
 import spock.lang.Specification
@@ -138,13 +143,77 @@ class BatchClientTest extends Specification{
         getJobCalls == []
     }
 
+    def 'should wait for the job deletion request to be accepted' () {
+        given:
+        def requests = []
+        def stub = new BatchServiceStub() {
+            @Override
+            UnaryCallable<DeleteJobRequest, Operation> deleteJobCallable() {
+                return new UnaryCallable<DeleteJobRequest, Operation>() {
+                    @Override
+                    ApiFuture<Operation> futureCall(DeleteJobRequest request, ApiCallContext context) {
+                        requests << request.getName()
+                        // fail the first request with a transient error
+                        return requests.size() == 1
+                            ? ApiFutures.<Operation>immediateFailedFuture(new UnavailableException('unavailable', null, GrpcStatusCode.of(Status.Code.UNAVAILABLE), true))
+                            : ApiFutures.immediateFuture(Operation.newBuilder().setName('op-1').build())
+                    }
+                }
+            }
+            @Override void close() {}
+            @Override void shutdown() {}
+            @Override boolean isShutdown() { false }
+            @Override boolean isTerminated() { false }
+            @Override void shutdownNow() {}
+            @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
+        }
+        def client = createClient(BatchServiceClient.create(stub))
+
+        when:
+        client.deleteJob('job-1')
+
+        then:
+        def name = JobName.of('project-id', 'location-id', 'job-1').toString()
+        requests == [name, name]
+    }
+
+    def 'should not retry the deletion of a job that does not exist' () {
+        given:
+        def requests = []
+        def stub = new BatchServiceStub() {
+            @Override
+            UnaryCallable<DeleteJobRequest, Operation> deleteJobCallable() {
+                return new UnaryCallable<DeleteJobRequest, Operation>() {
+                    @Override
+                    ApiFuture<Operation> futureCall(DeleteJobRequest request, ApiCallContext context) {
+                        requests << request.getName()
+                        return ApiFutures.<Operation>immediateFailedFuture(new NotFoundException('not found', null, GrpcStatusCode.of(Status.Code.NOT_FOUND), false))
+                    }
+                }
+            }
+            @Override void close() {}
+            @Override void shutdown() {}
+            @Override boolean isShutdown() { false }
+            @Override boolean isTerminated() { false }
+            @Override void shutdownNow() {}
+            @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
+        }
+        def client = createClient(BatchServiceClient.create(stub))
+
+        when:
+        client.deleteJob('job-1')
+
+        then:
+        noExceptionThrown()
+        requests.size() == 1
+    }
+
     def 'should return task status with getTaskInArray' () {
         given:
         def project = 'project-id'
         def location = 'location-id'
         def job1 = 'job1-id'
         def task1 = 'task1-id'
-        def task1Name = TaskName.of(project, location, job1, 'group0', task1).toString()
         def job2 = 'job2-id'
         def task2 = 'task2-id'
         def task2Name = TaskName.of(project, location, job2, 'group0', task2).toString()
@@ -165,8 +234,8 @@ class BatchClientTest extends Specification{
             list.add(makeTask(task3Name, TaskStatus.State.SUCCEEDED))
             return list
         }
-        arrayTasks.put(task1Name, makeTaskStatusRecord(TaskStatus.State.RUNNING, System.currentTimeMillis()))
-        arrayTasks.put(task2Name, makeTaskStatusRecord(TaskStatus.State.PENDING, System.currentTimeMillis() - 1_001))
+        arrayTasks.put("$job1/$task1".toString(), makeTaskStatusRecord(TaskStatus.State.RUNNING, System.currentTimeMillis()))
+        arrayTasks.put("$job2/$task2".toString(), makeTaskStatusRecord(TaskStatus.State.PENDING, System.currentTimeMillis() - 1_001))
 
         then:
         // recent cached task
@@ -187,7 +256,7 @@ class BatchClientTest extends Specification{
         def client = new BatchClient(projectId: project, location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
 
         when:
-        def tasks = client.listTasks(jobId).toList()
+        def tasks = client.listTasks(jobId)
 
         then:
         tasks.size() == COUNT
@@ -203,6 +272,78 @@ class BatchClientTest extends Specification{
         1500  | 4
     }
 
+    def 'should retry a transient error on a later page of tasks' () {
+        given:
+        def project = 'project-id'
+        def location = 'location-id'
+        def jobId = 'job-id'
+        def stub = new FakeBatchServiceStub(TaskGroupName.of(project, location, jobId, 'group0'), 1200)
+        // fail the second page request once, with an error the client library itself does not retry
+        stub.failRequests.put(2, new DeadlineExceededException('request 2 failed', null, GrpcStatusCode.of(Status.Code.DEADLINE_EXCEEDED), false))
+        def config = new GoogleOpts([batch: [retryPolicy: [delay: '10ms', maxDelay: '50ms']]])
+        def client = new BatchClient(projectId: project, location: location, config: config, batchServiceClient: BatchServiceClient.create(stub))
+
+        when:
+        def tasks = client.listTasks(jobId)
+
+        then:
+        tasks.size() == 1200
+        tasks*.name.toSet().size() == 1200
+        // pages 1, 2 (failed), 2 (retried) and 3
+        stub.requests.size() == 4
+        stub.requests*.pageToken == ['', '500:500', '500:500', '1000:500']
+    }
+
+    def 'should cache array task status when the API names tasks by project number' () {
+        given:
+        def location = 'location-id'
+        def jobId = 'job-id'
+        // the API returns task names with the project number, while the client is configured with the project ID
+        def stub = new FakeBatchServiceStub(TaskGroupName.of('123456789012', location, jobId, 'group0'), 1200)
+        def client = new BatchClient(projectId: 'project-id', location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
+
+        when:
+        def states = ['0', '600', '1199'].collect { client.getTaskInArrayStatus(jobId, it)?.state }
+
+        then:
+        states == [TaskStatus.State.RUNNING] * 3
+        // a single listing of three pages, the following lookups are served from the cache
+        stub.requests.size() == 3
+    }
+
+    def 'should remove array task status when the API names tasks by project number' () {
+        given:
+        def location = 'location-id'
+        def jobId = 'job-id'
+        def stub = new FakeBatchServiceStub(TaskGroupName.of('123456789012', location, jobId, 'group0'), 3)
+        def client = new BatchClient(projectId: 'project-id', location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
+        client.getTaskInArrayStatus(jobId, '0')
+
+        when:
+        ['0', '1', '2'].each { client.removeFromArrayTasks(jobId, it) }
+
+        then:
+        client.@arrayTaskStatus.isEmpty()
+    }
+
+    def 'should not list tasks again when the listing takes longer than the status lifetime' () {
+        given:
+        def project = 'project-id'
+        def location = 'location-id'
+        def jobId = 'job-id'
+        def stub = new FakeBatchServiceStub(TaskGroupName.of(project, location, jobId, 'group0'), 10)
+        // longer than the time a cached task status is considered valid
+        stub.requestDelayMillis = 1_100
+        def client = new BatchClient(projectId: project, location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
+
+        when:
+        def states = ['0', '1'].collect { client.getTaskInArrayStatus(jobId, it)?.state }
+
+        then:
+        states == [TaskStatus.State.RUNNING] * 2
+        stub.requests.size() == 1
+    }
+
     /**
      * Emulates the paging behaviour of the Google Batch ListTasks API: a request with no page
      * size gets the server default of 500, the page size is encoded in the returned page token,
@@ -212,6 +353,9 @@ class BatchClientTest extends Specification{
         static final int DEFAULT_PAGE_SIZE = 500
 
         final List<ListTasksRequest> requests = []
+        // request number (starting at 1) mapped to the exception that request fails with
+        final Map<Integer, ApiException> failRequests = [:]
+        long requestDelayMillis
         private final TaskGroupName parent
         private final int count
 
@@ -239,6 +383,11 @@ class BatchClientTest extends Specification{
 
         private ListTasksResponse listTasks(ListTasksRequest request) {
             requests.add(request)
+            if( requestDelayMillis )
+                sleep(requestDelayMillis)
+            final failure = failRequests.get(requests.size())
+            if( failure )
+                throw failure
             int offset = 0
             int pageSize = request.pageSize ?: DEFAULT_PAGE_SIZE
             if( request.pageToken ) {
@@ -251,7 +400,7 @@ class BatchClientTest extends Specification{
             final end = Math.min(offset + pageSize, count)
             final result = ListTasksResponse.newBuilder()
             for( int i = offset; i < end; i++ )
-                result.addTasks(Task.newBuilder().setName("${parent}/tasks/${i}"))
+                result.addTasks(Task.newBuilder().setName("${parent}/tasks/${i}").setStatus(TaskStatus.newBuilder().setState(TaskStatus.State.RUNNING)))
             // like the real API, a full page always returns a next page token, even when no tasks remain
             if( end - offset == pageSize )
                 result.setNextPageToken("${end}:${pageSize}")

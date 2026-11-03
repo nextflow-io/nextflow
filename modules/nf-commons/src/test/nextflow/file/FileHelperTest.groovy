@@ -18,14 +18,24 @@ package nextflow.file
 
 import static java.nio.file.LinkOption.*
 
+import java.nio.channels.SeekableByteChannel
+import java.nio.file.AccessMode
+import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileStore
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemLoopException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
+import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
@@ -705,6 +715,105 @@ class FileHelperTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should skip dirs when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('.fusion') {
+                        file('trace.json', '{}')
+                    }
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                        dir('.fusion') {
+                            dir('chks') {
+                                file('part_0', 'xxx')
+                            }
+                        }
+                    }
+                }
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        target = createInMemTempDir().resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('.fusion').exists()
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        // the root dir is never skipped
+        target = root.resolve('copy-fusion')
+        FileHelper.copyPath(source.resolve('.fusion'), target, skip)
+        then:
+        target.resolve('trace.json').text == '{}'
+
+        when:
+        // the option is not passed to the provider when copying a file
+        target = root.resolve('file_1.copy')
+        FileHelper.copyPath(source.resolve('file_1'), target, skip)
+        then:
+        target.text == 'alpha'
+
+        when:
+        // without the option the dirs are copied
+        target = root.resolve('copy-all')
+        FileHelper.copyPath(source, target)
+        then:
+        target.resolve('dir1/.fusion/chks/part_0').text == 'xxx'
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should skip dirs failing to be accessed when copying directory' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def skip = new SkipDirOption('.fusion')
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    dir('dir1')  {
+                        file('file_2', 'beta')
+                    }
+                }
+        // a link to an ancestor dir makes the walker fail before `preVisitDirectory` is invoked
+        Files.createSymbolicLink(source.resolve('dir1/.fusion'), source)
+
+        when:
+        def target = root.resolve('copy')
+        FileHelper.copyPath(source, target, skip)
+        then:
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('dir1/file_2').text == 'beta'
+        !target.resolve('dir1/.fusion').exists()
+
+        when:
+        FileHelper.copyPath(source, root.resolve('copy-all'))
+        then:
+        thrown(FileSystemLoopException)
+
+        cleanup:
+        root?.deleteDir()
+    }
+
     def 'should copy path content' () {
 
         given:
@@ -1174,6 +1283,18 @@ class FileHelperTest extends Specification {
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
 
+    def 'getAttemptFromPath parses the attempt from the suffix of a work dir'() {
+        expect:
+        FileHelper.getAttemptFromPath(PATH == null ? null : Paths.get(PATH)) == ATTEMPT
+
+        where:
+        PATH                                            | ATTEMPT
+        null                                            | 1
+        '/work/ab/cdef0123456789abcdef0123456789'       | 1
+        '/work/ab/cdef0123456789abcdef0123456789-2'     | 2
+        '/work/ab/cdef0123456789abcdef0123456789-12'    | 12
+    }
+
     def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {
         given:
         def work = Paths.get('/work')
@@ -1237,6 +1358,41 @@ class FileHelperTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should register a provider without installing it in the JDK' () {
+        when:
+        def provider = FileHelper.getOrInstallProvider(FakeFileSystemProvider)
+        then:
+        provider instanceof FakeFileSystemProvider
+        FileHelper.getProviderFor('fake').is(provider)
+        FileHelper.getOrInstallProvider(FakeFileSystemProvider).is(provider)
+        !FileSystemProvider.installedProviders().any { it.scheme == 'fake' }
+        FileHelper.getProviderSchemes().containsAll(['file', 'fake'])
+
+        cleanup:
+        FileHelper.providersMap.remove('fake')
+    }
+
+    static class FakeFileSystemProvider extends FileSystemProvider {
+        String getScheme() { 'fake' }
+        FileSystem newFileSystem(URI uri, Map<String,?> env) { throw new UnsupportedOperationException() }
+        FileSystem getFileSystem(URI uri) { throw new UnsupportedOperationException() }
+        Path getPath(URI uri) { throw new UnsupportedOperationException() }
+        SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) { throw new UnsupportedOperationException() }
+        void createDirectory(Path dir, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        void delete(Path path) { throw new UnsupportedOperationException() }
+        void copy(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        void move(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        boolean isSameFile(Path path, Path path2) { throw new UnsupportedOperationException() }
+        boolean isHidden(Path path) { throw new UnsupportedOperationException() }
+        FileStore getFileStore(Path path) { throw new UnsupportedOperationException() }
+        void checkAccess(Path path, AccessMode... modes) { throw new UnsupportedOperationException() }
+        <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        Map<String,Object> readAttributes(Path path, String attributes, LinkOption... options) { throw new UnsupportedOperationException() }
+        void setAttribute(Path path, String attribute, Object value, LinkOption... options) { throw new UnsupportedOperationException() }
     }
 
 }

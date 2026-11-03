@@ -53,7 +53,7 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
             // the bridge exposes a `greet` tool with a scalar `name:String` input
             assert req.toolSpecs.size() == 1
             assert req.toolSpecs[0].name == 'greet'
-            assert req.toolSpecs[0].inputSchema.properties.name.type == 'string'
+            assert req.toolSpecs[0].inputSchema.get('properties').name.type == 'string'
             // invoke the tool: this drives the REAL greet process through the executor
             dispatchResult = req.dispatch.call('greet', '{"name":"Ada"}')
             // the returned JSON proves the process actually ran and produced the value
@@ -86,7 +86,7 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
                 request: String
 
                 output:
-                answer: String
+                stdout()
 
                 prompt:
                 """
@@ -166,7 +166,7 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
         captured != null
         captured.outputSchema != null
         captured.outputSchema.type == 'object'
-        captured.outputSchema.properties.containsKey('greeting')
+        captured.outputSchema.get('properties').containsKey('greeting')
     }
 
     def 'a structured runner returning non-JSON aborts the run on the task path'() {
@@ -230,72 +230,6 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
         return false
     }
 
-    def 'should split a wrapper into N channels for a multi-output tools agent (PARTIAL)'() {
-        given:
-        // PARTIAL (M5): a tools agent with N>1 outputs requests a wrapper-object schema
-        // and the wrapper is fanned out to one channel per output name.
-        AgentRunnerRequest captured = null
-        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
-            captured = req
-            return '{"plan":{"title":"Assembly"},"score":7}'
-        } as AgentRunner
-
-        when:
-        def result = runScript('''
-            nextflow.enable.types = true
-
-            record Plan { title: String }
-
-            process greet {
-                input:
-                name: String
-
-                output:
-                greeting: String
-
-                exec:
-                greeting = "Hello ${name}!"
-            }
-
-            agent assistant {
-                model 'm'
-                instruction 'i'
-                tools 'nf:module_run:greet'
-
-                input:
-                request: String
-
-                output:
-                plan: Plan
-                score: Integer
-
-                prompt:
-                """
-                ${request}
-                """
-            }
-
-            workflow {
-                def r = assistant(channel.of('hi'))
-                [ r.plan, r.score ]
-            }
-            ''')
-
-        then:
-        // the wrapper schema was requested: object root, both output names required
-        captured != null
-        captured.outputSchema.type == 'object'
-        captured.outputSchema.required as Set == ['plan', 'score'] as Set
-        captured.outputSchema.properties.keySet() as Set == ['plan', 'score'] as Set
-
-        and:
-        // the wrapper was split: each out.<name> channel received its slice, coerced to type
-        def plan = result[0].val
-        plan.title == 'Assembly'
-        def score = result[1].val
-        score == 7
-    }
-
     def 'should allow skills with a record (structured) output and bind the JSON'() {
         given:
         // M5 decision 2: the guard is gone for skills too. A skills agent may declare a
@@ -351,6 +285,6 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
         captured.skills*.name == ['greet']
         captured.outputSchema != null
         captured.outputSchema.type == 'object'
-        captured.outputSchema.properties.containsKey('greeting')
+        captured.outputSchema.get('properties').containsKey('greeting')
     }
 }

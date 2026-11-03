@@ -35,7 +35,7 @@ class HttpOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The connection timeout for the Wave HTTP client (default: `30s`).
+        The connection timeout for the Wave HTTP client (default: `30.s`).
     """)
     final private Duration connectTimeout
 

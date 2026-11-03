@@ -45,7 +45,7 @@ agent qc {
     input:
     sample: Sample
     output:
-    report: String       // tools => plain (non-record) output; the LLM's final report
+    stdout()
 
     prompt:
     """

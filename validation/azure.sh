@@ -46,6 +46,29 @@ $NXF_CMD -C ./azure.config run ./test-complexpaths.nf -resume
 ## run test-subdirs inputs/outputs
 $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
+## pool creation: the pool must not exist before the run
+## first remove pools and jobs left by runs interrupted before deleting their pool
+if command -v az >/dev/null && [[ -n "${AZURE_BATCH_ACCOUNT_KEY:+set}" ]]; then (
+  { set +x; } 2>/dev/null
+  export AZURE_BATCH_ACCOUNT="$AZURE_BATCH_ACCOUNT_NAME"
+  export AZURE_BATCH_ACCESS_KEY="$AZURE_BATCH_ACCOUNT_KEY"
+  export AZURE_BATCH_ENDPOINT="https://$AZURE_BATCH_ACCOUNT_NAME.westeurope.batch.azure.com"
+  CUTOFF=$(( $(date +%s) - 3*3600 ))
+  POOLS=$(timeout 120 az batch pool list --query "[?starts_with(id,'nextflow-ci-')].id" -o tsv) || { echo "WARN: unable to list pools for cleanup"; exit 0; }
+  for P in $POOLS; do
+    TS=${P#nextflow-ci-}; TS=${TS%%-*}
+    [[ $TS =~ ^[0-9]+$ ]] && (( 10#$TS < CUTOFF )) || continue
+    for J in $(timeout 120 az batch job list --filter "executionInfo/poolId eq '$P'" --query "[].id" -o tsv); do
+      timeout 120 az batch job delete --job-id "$J" --yes || true
+    done
+    timeout 120 az batch pool delete --pool-id "$P" --yes && echo "Removed stale pool $P" || true
+  done
+) fi
+
+export POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
+$NXF_CMD -C ./pool-create.config run ./test-subdirs.nf
+grep -q "pool with id: $POOL_ID" .nextflow.log || { echo "Pool $POOL_ID was not created"; exit 1; }
+
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -c ./azure.config \
     run nextflow-io/rnaseq-nf \

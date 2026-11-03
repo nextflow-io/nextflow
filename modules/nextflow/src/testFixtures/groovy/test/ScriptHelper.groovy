@@ -352,7 +352,7 @@ class MockTaskHandler extends TaskHandler {
             task.exitStatus = 0
         }
         else {
-            task.code.call()
+            task.stdout = task.code.call()
         }
         status = TaskStatus.COMPLETED
         final fault = task.processor.finalizeTask(this)

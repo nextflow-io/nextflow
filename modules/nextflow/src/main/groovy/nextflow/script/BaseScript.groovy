@@ -315,14 +315,20 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 this.entryFlow = handler.createEntryWorkflow()
                 this.outputDef = handler.createOutputDef()
             }
+            else if( moduleRun && meta.hasExecutableAgents() ) {
+                // Execute a single agent directly
+                final handler = new AgentEntryHandler(this, session, meta)
+                this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
+            }
             else if( moduleRun && meta.hasExecutableProcesses() ) {
                 // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
                 this.outputDef = handler.createOutputDef()
             }
-            else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() ) {
-                throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process or named workflow, or be a code snippet")
+            else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() || meta.getLocalAgentNames() ) {
+                throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process, agent, or named workflow, or be a code snippet")
             }
             else {
                 // NOTE: remove after v1 parser is removed

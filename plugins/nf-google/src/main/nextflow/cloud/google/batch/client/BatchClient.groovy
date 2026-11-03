@@ -26,11 +26,14 @@ import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.InternalException
 import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.BatchServiceClient.ListTasksPage
 import com.google.cloud.batch.v1.BatchServiceSettings
+import com.google.cloud.batch.v1.DeleteJobRequest
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
@@ -133,7 +136,7 @@ class BatchClient {
         return apply(()-> batchServiceClient.getJob(name))
     }
 
-    Iterable<Task> listTasks(String jobId) {
+    List<Task> listTasks(String jobId) {
         // the page size must be set explicitly: the pager copies it from the first request into
         // each following page request, and the API rejects a page size of 0 (i.e. unset) combined
         // with a page token issued for its default page size of 500
@@ -141,7 +144,18 @@ class BatchClient {
             .setParent(TaskGroupName.of(projectId, location, jobId, 'group0').toString())
             .setPageSize(LIST_TASKS_PAGE_SIZE)
             .build()
-        return apply(()-> batchServiceClient.listTasks(request).iterateAll())
+        // fetch each page in its own retry block: iterateAll() loads pages after the first one
+        // lazily, so iterating it would leave those requests without a retry, and retrying the
+        // whole listing would restart it from the first page
+        final List<Task> result = []
+        ListTasksPage page = apply(()-> batchServiceClient.listTasks(request).getPage())
+        result.addAll(page.getValues())
+        while( page.hasNextPage() ) {
+            final current = page
+            page = apply(()-> current.getNextPage())
+            result.addAll(page.getValues())
+        }
+        return result
     }
 
     Task describeTask(String jobId, String taskId) {
@@ -150,8 +164,20 @@ class BatchClient {
     }
 
     void deleteJob(String jobId) {
-        final name = JobName.of(projectId, location, jobId).toString()
-        apply(()-> batchServiceClient.deleteJobAsync(name))
+        final request = DeleteJobRequest.newBuilder()
+            .setName(JobName.of(projectId, location, jobId).toString())
+            .build()
+        // wait for the deletion request to be accepted, but not for the deletion to complete
+        apply(()-> {
+            try {
+                return batchServiceClient.deleteJobCallable().call(request)
+            }
+            catch( NotFoundException e ) {
+                // the job no longer exists, there is nothing to delete or retry
+                log.debug "[GOOGLE BATCH] Job $jobId not found -- skipping deletion"
+                return null
+            }
+        })
     }
 
     TaskStatus getTaskStatus(String jobId, String taskId) {
@@ -220,6 +246,8 @@ class BatchClient {
                     return true
                 if( t instanceof DeadlineExceededException )
                     return true
+                if( t instanceof InternalException )
+                    return true
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
@@ -237,26 +265,36 @@ class BatchClient {
 
 
     TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
-        final taskName = generateTaskName(jobId,taskId)
-        final now = System.currentTimeMillis()
-        TaskStatusRecord record = arrayTaskStatus.get(taskName)
-        if( !record || now - record.timestamp > TASK_STATE_INVALID_TIME ){
+        final key = arrayTaskKey(jobId, taskId)
+        TaskStatusRecord record = arrayTaskStatus.get(key)
+        if( !record || System.currentTimeMillis() - record.timestamp > TASK_STATE_INVALID_TIME ){
             log.trace("[GOOGLE BATCH] Updating tasks status for job $jobId")
-            updateArrayTasks(jobId, now)
-            record = arrayTaskStatus.get(taskName)
+            updateArrayTasks(jobId)
+            record = arrayTaskStatus.get(key)
         }
         return record?.status
     }
 
-    private void updateArrayTasks(String jobId, long now){
-        for( Task t: listTasks(jobId) ){
-            arrayTaskStatus.put(t.name, new TaskStatusRecord(t.status, now))
+    private void updateArrayTasks(String jobId){
+        final tasks = listTasks(jobId)
+        // take the timestamp after the listing, which can take longer than TASK_STATE_INVALID_TIME for large arrays
+        final now = System.currentTimeMillis()
+        for( Task t: tasks ){
+            final name = TaskName.parse(t.name)
+            arrayTaskStatus.put(arrayTaskKey(name.getJob(), name.getTask()), new TaskStatusRecord(t.status, now))
         }
     }
 
     void removeFromArrayTasks(String jobId, String taskId){
-        final taskName = generateTaskName(jobId,taskId)
-        TaskStatusRecord record = arrayTaskStatus.remove(taskName)
+        arrayTaskStatus.remove(arrayTaskKey(jobId, taskId))
+    }
+
+    /*
+     * The API returns task names with the project number, while names created by
+     * generateTaskName() use the configured project ID, so they cannot be compared
+     */
+    private static String arrayTaskKey(String jobId, String taskId) {
+        return "${jobId}/${taskId}".toString()
     }
 }
 

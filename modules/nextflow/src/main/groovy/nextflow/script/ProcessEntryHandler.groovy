@@ -18,6 +18,7 @@ package nextflow.script
 
 import java.nio.file.Path
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.Nextflow
@@ -211,7 +212,7 @@ class ProcessEntryHandler {
             final config = processDef.getProcessConfig()
             final inputArgs = config instanceof ProcessConfigV1
                 ? getProcessArgumentsV1(config, params, paramTypes)
-                : getProcessArgumentsV2((ProcessConfigV2) config, params, cliParams)
+                : getProcessArgumentsV2(((ProcessConfigV2) config).getInputs().getParams(), params, cliParams)
 
             log.debug "Final input arguments: ${inputArgs}"
             return inputArgs
@@ -375,9 +376,8 @@ class ProcessEntryHandler {
         return str
     }
 
-    private static List getProcessArgumentsV2(ProcessConfigV2 config, Map params, Map cliParams) {
-        final declaredInputs = config.getInputs().getParams()
-
+    @PackageScope
+    static List getProcessArgumentsV2(List<ProcessInput> declaredInputs, Map params, Map cliParams) {
         if( declaredInputs.isEmpty() ) {
             return []
         }

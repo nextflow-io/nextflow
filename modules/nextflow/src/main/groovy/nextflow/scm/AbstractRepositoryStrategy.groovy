@@ -17,13 +17,16 @@
 package nextflow.scm
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.Manifest
+import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.transport.URIish
 
 /**
  * Abstract base class providing common repository operations shared by all strategies.
@@ -127,5 +130,30 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
             ?: Const.DEFAULT_BRANCH
     }
 
+    /**
+     * Remove the Bitbucket API token from the remote URL of a local repository, if present.
+     *
+     * Previous versions stored the Bitbucket API token in the clone URL, see
+     * https://github.com/nextflow-io/nextflow/issues/7868
+     */
+    @PackageScope
+    static void removeBitbucketToken(Git git, RepositoryProvider provider) {
+        if( provider !instanceof BitbucketRepositoryProvider || !provider.getToken() )
+            return
+        try {
+            final config = git.getRepository().getConfig()
+            final url = config.getString('remote', 'origin', 'url')
+            if( !url )
+                return
+            final uri = new URIish(url)
+            if( !uri.getPass() )
+                return
+            config.setString('remote', 'origin', 'url', uri.setPass(null).toString())
+            config.save()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to remove Bitbucket token from remote url -- cause: ${e.message}"
+        }
+    }
 
 }

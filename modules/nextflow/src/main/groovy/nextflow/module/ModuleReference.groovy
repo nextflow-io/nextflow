@@ -19,6 +19,7 @@ package nextflow.module
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import nextflow.exception.AbortOperationException
+import nextflow.script.control.ModuleResolver
 
 import java.util.regex.Pattern
 
@@ -59,6 +60,10 @@ class ModuleReference {
 
         // Trim whitespace
         source = source.trim()
+
+        if( ModuleResolver.isLocalModule(source) ) {
+            throw new AbortOperationException("Invalid module reference: '${source}' -- expected a registry module (scope/name), not a local path")
+        }
 
         def matcher = MODULE_NAME_PATTERN.matcher(source)
         if( !matcher.matches() ) {

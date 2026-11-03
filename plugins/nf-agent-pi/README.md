@@ -51,7 +51,7 @@ agent qa {
     question: String
 
     output:
-    answer: String
+    stdout()
 
     prompt:
     """
@@ -77,7 +77,7 @@ agent inspector {
     sample: Path
 
     output:
-    report: String
+    stdout()
 
     prompt:
     """

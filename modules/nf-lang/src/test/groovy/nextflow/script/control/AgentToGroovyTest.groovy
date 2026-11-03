@@ -57,7 +57,7 @@ class AgentToGroovyTest extends Specification {
                 input:
                 ${declaration}
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
             """)
@@ -74,6 +74,76 @@ class AgentToGroovyTest extends Specification {
         'n: Integer'                    || []
         's: String'                     || []
         'contigs: Path\nn: Integer'     || ['contigs']
+        'record(id: String, reads: Path)' || ['reads']
+        'tuple(id: String, reads: Path)'  || ['reads']
+    }
+
+    def 'should lower a destructured agent input into a tuple input'() {
+        when:
+        final blocks = lowerAgent('''
+            agent qa {
+                input:
+                record(id: String, reads: Path)
+                output:
+                record(id: id, summary: stdout())
+                prompt: "go"
+            }
+            ''')
+        final input = (MethodCallExpression) ((ExpressionStatement) blocks.inputs.statements[0]).getExpression()
+        final output = (MethodCallExpression) ((ExpressionStatement) blocks.outputs.statements[0]).getExpression()
+
+        then:
+        input.getMethodAsString() == '_input_'
+        input.getArguments().getExpressions().size() == 2
+        input.getArguments().getExpression(1).getType().getName() == 'nextflow.script.types.Record'
+
+        and: 'a bare expression becomes the implicit output, with stdout() decoded to the answer'
+        output.getArguments().getExpression(0).getText() == '$out'
+        closureBody((ClosureExpression) output.getArguments().getExpression(2)).getText().contains('nextflow.agent.AgentOutputPlan.answer(this.stdout())')
+    }
+
+    def 'should use the inferred type for an unnamed agent output'() {
+        when:
+        final blocks = lowerAgent("""
+            agent qa {
+                input:
+                q: String
+                output:
+                ${declaration}
+                prompt: "go"
+            }
+            """)
+        final output = (MethodCallExpression) ((ExpressionStatement) blocks.outputs.statements[0]).getExpression()
+
+        then:
+        output.getArguments().getExpression(1).getType().getName() == expected
+
+        where:
+        declaration         || expected
+        'stdout()'          || 'java.lang.String'
+        "file('report.md')" || 'java.nio.file.Path'
+    }
+
+    def 'should preserve a parameterized agent output type in a hidden class'() {
+        when:
+        final blocks = lowerAgent('''
+            agent qa {
+                input:
+                q: String
+                output:
+                scores: List<Integer>
+                prompt: "go"
+            }
+            ''')
+        final output = (MethodCallExpression) ((ExpressionStatement) blocks.outputs.statements[0]).getExpression()
+        final args = output.getArguments().getExpressions()
+        final field = args[1].getType().getField('scores')
+
+        then:
+        args.size() == 3
+        args[0].getText() == 'scores'
+        args[2].getText() == 'scores'
+        field.getType().toString(false) == 'java.util.List<java.lang.Integer>'
     }
 
     def 'should generate the same stagers an equivalent process generates'() {
@@ -102,7 +172,7 @@ class AgentToGroovyTest extends Specification {
                 sample: Sample
                 n: Integer
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
             '''
@@ -127,7 +197,7 @@ class AgentToGroovyTest extends Specification {
                 a: Path
                 b: Path?
                 output:
-                answer: String
+                stdout()
                 prompt: "go"
             }
             ''')
@@ -143,9 +213,10 @@ class AgentToGroovyTest extends Specification {
                 input:
                 q: String
                 output:
-                answer: String
-                report: Path = file('report.md')
-                notes: Set<Path> = files('*.txt')
+                record(
+                    report: file('report.md'),
+                    notes: files('*.txt')
+                )
                 prompt: "go"
             }
             ''')
@@ -154,8 +225,8 @@ class AgentToGroovyTest extends Specification {
         callNames(blocks.unstagers) == ['_unstage_files', '_unstage_files']
         unstagerKeys(blocks.unstagers) == ['$path0', '$path1']
 
-        and: 'a bare output stays 2-arg (the model answers it); an RHS output carries its closure'
-        blocks.outputs.statements.collect { arity(it) } == [2, 3, 3]
+        and: 'the output carries its closure'
+        blocks.outputs.statements.collect { arity(it) } == [3]
     }
 
     def 'should not lower env or eval in an agent output'() {
@@ -165,7 +236,7 @@ class AgentToGroovyTest extends Specification {
                 input:
                 q: String
                 output:
-                answer: String = env('HOME')
+                env('HOME')
                 prompt: "go"
             }
             ''')
@@ -181,7 +252,7 @@ class AgentToGroovyTest extends Specification {
                 input:
                 contigs: Path
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 prompt: "go"
             }
             ''')
@@ -203,10 +274,12 @@ class AgentToGroovyTest extends Specification {
                 input:
                 x: String
                 output:
-                one:   Path      = file('report.md')
-                typed: Path      = file(type: 'file', 'report.md')
-                many:  Set<Path> = files('*.tsv')
-                opts:  Set<Path> = files(hidden: true, '*.log')
+                record(
+                    one: file('report.md'),
+                    typed: file(type: 'file', 'report.md'),
+                    many: files('*.tsv'),
+                    opts: files(hidden: true, '*.log')
+                )
                 prompt: "go"
             }
             ''')
@@ -233,7 +306,7 @@ class AgentToGroovyTest extends Specification {
                 input:
                 x: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 prompt: "go"
             }
             ''')

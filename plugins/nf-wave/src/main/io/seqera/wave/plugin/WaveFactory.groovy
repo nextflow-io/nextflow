@@ -33,6 +33,10 @@ import nextflow.trace.TraceObserverFactoryV2
 @CompileStatic
 class WaveFactory implements TraceObserverFactoryV2 {
 
+    static final String SEQERA_EXECUTOR = 'seqera'
+
+    static final String FUSION_MODE_NATIVE = 'native'
+
     @Override
     Collection<TraceObserverV2> create(Session session) {
         shouldEnable(session)
@@ -51,7 +55,12 @@ class WaveFactory implements TraceObserverFactoryV2 {
             return false
         }
 
-        if( fusion.enabled ) {
+        // in native Fusion mode the Seqera executor hosts provide the Fusion client, therefore Wave is optional
+        if( fusion.enabled && isFusionNative(config) ) {
+            if( wave.enabled )
+                enableBundleProjectResources(session, wave, 'Fusion')
+        }
+        else if( fusion.enabled ) {
             checkWaveRequirement(session, wave, 'Fusion')
         }
         if( isAwsBatchFargateMode(config) ) {
@@ -65,10 +74,37 @@ class WaveFactory implements TraceObserverFactoryV2 {
             throw new AbortOperationException("$feature feature requires enabling Wave service")
         }
         else {
-            log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
-            wave.bundleProjectResources = true
-            session.disableRemoteBinDir = true
+            enableBundleProjectResources(session, wave, feature)
         }
+    }
+
+    static private void enableBundleProjectResources(Session session, Map wave, String feature) {
+        log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
+        wave.bundleProjectResources = true
+        session.disableRemoteBinDir = true
+    }
+
+    /**
+     * Whether the run uses the Seqera executor, i.e. it is the default executor for every process.
+     * A per-process ({@code withName}/{@code withLabel}) executor is not considered.
+     *
+     * @param config the session config
+     * @return {@code true} when the default executor is {@code seqera}
+     */
+    static boolean isSeqeraExecutor(Map config) {
+        final executor = config.navigate('process.executor') ?: config.navigate('executor.name')
+        return SEQERA_EXECUTOR == executor?.toString()
+    }
+
+    /**
+     * Whether the run uses the Seqera executor in native Fusion mode
+     * ({@code seqera.executor.fusionMode = 'native'}), i.e. the compute hosts provide the Fusion client.
+     *
+     * @param config the session config
+     * @return {@code true} when the default executor is {@code seqera} and its Fusion mode is {@code native}
+     */
+    static boolean isFusionNative(Map config) {
+        return isSeqeraExecutor(config) && FUSION_MODE_NATIVE == config.navigate('seqera.executor.fusionMode')?.toString()
     }
 
     static boolean isAwsBatchFargateMode(Map config) {
