@@ -54,6 +54,9 @@ import org.apache.commons.codec.binary.Base64;
 
 public class SSLUtils {
 
+    // DER encoding of OID 1.2.840.10045.2.1 (id-ecPublicKey)
+    private static final byte[] EC_PUBLIC_KEY_OID = {0x06, 0x07, 0x2A, (byte) 0x86, 0x48, (byte) 0xCE, 0x3D, 0x02, 0x01};
+
     public static boolean isNotNullOrEmpty(String val) {
         return val != null && val.length() > 0;
     }
@@ -86,9 +89,6 @@ public class SSLUtils {
                     keyStoreFile, getKeyStorePassphrase(keyStorePassphrase));
         }
     }
-
-    // DER encoding of OID 1.2.840.10045.2.1 (id-ecPublicKey)
-    private static final byte[] EC_PUBLIC_KEY_OID = {0x06, 0x07, 0x2A, (byte) 0x86, 0x48, (byte) 0xCE, 0x3D, 0x02, 0x01};
 
     /**
      * Read an EC private key in PKCS#8 (BEGIN PRIVATE KEY) or SEC1 (BEGIN EC PRIVATE KEY) PEM format.

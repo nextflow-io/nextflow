@@ -22,6 +22,11 @@ import java.security.Signature
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPrivateKey
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.openssl.PEMKeyPair
+import org.bouncycastle.openssl.PEMParser
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import spock.lang.Specification
 
 class SSLUtilsTest extends Specification {
@@ -150,5 +155,43 @@ class SSLUtilsTest extends Specification {
         DESC                | KEY
         'wrong PEM type'    | '-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n'
         'invalid PKCS#8'    | '-----BEGIN PRIVATE KEY-----\nMAMCAQA=\n-----END PRIVATE KEY-----\n'
+    }
+
+    /**
+     * Read an EC key with Bouncy Castle, as SSLUtils did before it was removed.
+     */
+    private static ECPrivateKey bouncyCastleKey(String pem) {
+        final converter = new JcaPEMKeyConverter().setProvider(new BouncyCastleProvider())
+        final object = new PEMParser(new StringReader(pem)).readObject()
+        if( object instanceof PEMKeyPair )
+            return (ECPrivateKey) converter.getKeyPair(object).getPrivate()
+        if( object instanceof PrivateKeyInfo )
+            return (ECPrivateKey) converter.getPrivateKey(object)
+        throw new IllegalArgumentException("Unexpected PEM object: ${object?.getClass()}")
+    }
+
+    def 'should read the same EC key as Bouncy Castle: #DESC' () {
+        given:
+        def store = keyStore(CERT, KEY)
+        def key = (ECPrivateKey) store.getKey(store.aliases().nextElement(), PASS)
+        def expected = bouncyCastleKey(REF)
+
+        // compare key values rather than getEncoded(), since the JDK keeps
+        // the input PKCS#8 encoding while Bouncy Castle re-encodes it
+        expect:
+        key.s == expected.s
+        key.params.curve == expected.params.curve
+        key.params.generator == expected.params.generator
+        key.params.order == expected.params.order
+        key.params.cofactor == expected.params.cofactor
+
+        where:
+        // Bouncy Castle could not read a leading EC PARAMETERS block,
+        // so that case is compared against the bare SEC1 key
+        DESC                    | CERT        | KEY                       | REF
+        'P-256 SEC1'            | P256_CERT   | P256_SEC1                 | P256_SEC1
+        'P-256 SEC1 w/ params'  | P256_CERT   | P256_PARAMS + P256_SEC1   | P256_SEC1
+        'P-256 PKCS#8'          | P256_CERT   | P256_PKCS8                | P256_PKCS8
+        'P-384 SEC1'            | P384_CERT   | P384_SEC1                 | P384_SEC1
     }
 }

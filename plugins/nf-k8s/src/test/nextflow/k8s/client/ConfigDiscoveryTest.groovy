@@ -16,7 +16,9 @@
 
 package nextflow.k8s.client
 import javax.net.ssl.KeyManager
+import javax.net.ssl.X509KeyManager
 import java.nio.file.Files
+import java.security.interfaces.ECPrivateKey
 
 import spock.lang.Specification
 import test.TestHelper
@@ -434,6 +436,59 @@ class ConfigDiscoveryTest extends Specification {
         def managers = discovery.createKeyManagers(CERT, KEY)
         then:
         managers.size()==1
+    }
+
+    def 'should create key managers from a kube config with an EC client credential' () {
+        given:
+        // CA-signed P-256 client cert and SEC1 key, as issued for a kubeconfig user
+        final CLIENT_CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJSVENCN1FJVUNveWFVbUg0eTBieXZldmFxWXdDWWJSRUZpQXdDZ1lJS29aSXpqMEVBd0l3R0RFV01CUUcKQTFVRUF3d05hM1ZpWlhKdVpYUmxjeTFqWVRBZUZ3MHlOakV4TURNeE5USTBNakJhRncweU56RXhNRE14TlRJMApNakJhTURReEZ6QVZCZ05WQkFvTURuTjVjM1JsYlRwdFlYTjBaWEp6TVJrd0Z3WURWUVFEREJCcmRXSmxjbTVsCmRHVnpMV0ZrYldsdU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRWtrRGlXMXl1NEgrTHVFc1YKcGtJSTJiN1M4N3hOWjJTNVZkL0VneE1GVStHSFUzMUttVmFaVTFBbVQ2R0JYY0x1N0JRbzZXbFQ3QVdGVlVhdQpaV2NaYXpBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCZTRSbWl0TVdaK2JqaGN6ZWQxZExKYzdweDdzYi9xSE5PCjF1M1JyNFV1V1FJZ1dHblpzUGlmbnRtQUtON0pmTit3Z3MxMno3Rk1mUmNCc1F5TEp0aXhLNTQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K'
+        final CLIENT_KEY = 'LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUpYWXN5dklrN2xyaEdseHRkdWlEWXBUS0NIaktBR05jNmxMN3J5TWg3TXlvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFa2tEaVcxeXU0SCtMdUVzVnBrSUkyYjdTODd4TloyUzVWZC9FZ3hNRlUrR0hVMzFLbVZhWgpVMUFtVDZHQlhjTHU3QlFvNldsVDdBV0ZWVWF1WldjWmF3PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo='
+
+        def CONFIG = TestHelper.createInMemTempFile('config')
+        CONFIG.text = """
+            apiVersion: v1
+            clusters:
+            - cluster:
+                server: https://localhost:6443
+              name: kind-cluster
+            contexts:
+            - context:
+                cluster: kind-cluster
+                user: kind-user
+              name: kind
+            current-context: kind
+            kind: Config
+            users:
+            - name: kind-user
+              user:
+                client-certificate-data: $CLIENT_CERT
+                client-key-data: $CLIENT_KEY
+            """
+            .stripIndent()
+
+        when:
+        def config = new ConfigDiscovery().fromKubeConfig(CONFIG, null, null, null)
+        then:
+        config.keyManagers.size() == 1
+        and:
+        def manager = (X509KeyManager) config.keyManagers[0]
+        def alias = manager.getClientAliases('EC', null)[0]
+        manager.getPrivateKey(alias) instanceof ECPrivateKey
+        manager.getCertificateChain(alias)[0].subjectX500Principal.name == 'CN=kubernetes-admin,O=system:masters'
+    }
+
+    def 'should report the EC error when a client key cannot be read' () {
+        given:
+        final CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJSVENCN1FJVUNveWFVbUg0eTBieXZldmFxWXdDWWJSRUZpQXdDZ1lJS29aSXpqMEVBd0l3R0RFV01CUUcKQTFVRUF3d05hM1ZpWlhKdVpYUmxjeTFqWVRBZUZ3MHlOakV4TURNeE5USTBNakJhRncweU56RXhNRE14TlRJMApNakJhTURReEZ6QVZCZ05WQkFvTURuTjVjM1JsYlRwdFlYTjBaWEp6TVJrd0Z3WURWUVFEREJCcmRXSmxjbTVsCmRHVnpMV0ZrYldsdU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRWtrRGlXMXl1NEgrTHVFc1YKcGtJSTJiN1M4N3hOWjJTNVZkL0VneE1GVStHSFUzMUttVmFaVTFBbVQ2R0JYY0x1N0JRbzZXbFQ3QVdGVlVhdQpaV2NaYXpBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCZTRSbWl0TVdaK2JqaGN6ZWQxZExKYzdweDdzYi9xSE5PCjF1M1JyNFV1V1FJZ1dHblpzUGlmbnRtQUtON0pmTit3Z3MxMno3Rk1mUmNCc1F5TEp0aXhLNTQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K'.decodeBase64()
+        // SEC1 key without the curve parameters
+        final KEY = '-----BEGIN EC PRIVATE KEY-----\nMCUCAQEEIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB\n-----END EC PRIVATE KEY-----\n'.bytes
+
+        when:
+        new ConfigDiscovery().createKeyManagers(CERT, KEY)
+        then:
+        def e = thrown(Exception)
+        e.suppressed.size() == 1
+        e.suppressed[0].message.contains('curve parameters')
     }
 
     def 'should not render the environment' () {
