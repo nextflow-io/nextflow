@@ -247,4 +247,45 @@ class PipelineManagerTest extends Specification {
         !Files.exists(m.pipelineDir('nf-core/rnaseq'))
         !m.remove('nf-core/rnaseq', false)
     }
+
+    def 'uses a pipeline dir without .pipeline-info as it is'() {
+        given:
+        def dir = manager().pipelineDir('nf-core/rnaseq')
+        Files.createDirectories(dir)
+        dir.resolve('main.nf').text = 'x'
+
+        when:
+        def main = manager().resolve('nf-core/rnaseq')
+        then:
+        0 * client._
+        0 * fetcher._
+        main == dir.resolve('main.nf')
+    }
+
+    def 'remove refuses a dir without .pipeline-info unless forced'() {
+        given:
+        def m = manager()
+        def dir = m.pipelineDir('nf-core/rnaseq')
+        Files.createDirectories(dir)
+
+        when:
+        m.remove('nf-core/rnaseq', false)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline nf-core/rnaseq has no registry origin (.pipeline-info missing) -- use -force to remove it'
+
+        expect:
+        m.remove('nf-core/rnaseq', true)
+    }
+
+    def 'rejects a workflowPath that escapes the pipeline dir'() {
+        when:
+        manager().install('nf-core/rnaseq', null, false)
+        then:
+        1 * client.getPipeline(_) >> pipeline(release('1.0.0')).workflowPath('../../evil.nf')
+        def e = thrown(AbortOperationException)
+        e.message.contains("Invalid workflow path '../../evil.nf'")
+        0 * fetcher._
+        !Files.exists(manager().pipelineDir('nf-core/rnaseq'))
+    }
 }

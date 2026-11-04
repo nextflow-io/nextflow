@@ -163,7 +163,19 @@ public class ModuleResolver {
      * @param projectDir the project directory, used to resolve remote modules
      */
     public static URI getIncludeUri(URI uri, IncludeNode node, Path projectDir) {
-        var source = node.source.getText();
+        var names = node.entries.stream().map(e -> e.name).toList();
+        return getIncludeUri(uri, node.source.getText(), projectDir, RemoteModuleResolver.isPipelineInclude(names));
+    }
+
+    /**
+     * Resolve an include source as a module (not a pipeline) include. Callers that have the
+     * include node should use the other overload so pipeline includes resolve.
+     */
+    public static URI getIncludeUri(URI uri, String source, Path projectDir) {
+        return getIncludeUri(uri, source, projectDir, false);
+    }
+
+    private static URI getIncludeUri(URI uri, String source, Path projectDir, boolean pipeline) {
         var localUri = getLocalIncludeUri(uri, source);
         if( localUri != null )
             return localUri;
@@ -173,8 +185,7 @@ public class ModuleResolver {
         // script, or a plain local script -- resolves against the project directory.
         var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
         var resolver = RemoteModuleResolverProvider.getInstance();
-        var names = node.entries.stream().map(e -> e.name).toList();
-        var path = RemoteModuleResolver.isPipelineInclude(names)
+        var path = pipeline
             ? resolver.resolvePipeline(source, base)
             : resolver.resolve(source, base);
         return path.normalize()

@@ -26,9 +26,14 @@ import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.pipeline.PipelineGitFetcher
 import spock.lang.Specification
+import org.junit.Rule
 import spock.lang.TempDir
+import test.OutputCapture
 
 class CmdPipelineInstallTest extends Specification {
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     @TempDir
     Path base
@@ -94,5 +99,19 @@ class CmdPipelineInstallTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('-force')
+    }
+
+    def 'should report an up to date pipeline instead of installing it again'() {
+        given:
+        client.getPipeline(_) >> pipeline()
+        fetcher.fetch(*_) >> { u, r, c2, Path t -> Files.writeString(t.resolve('main.nf'), 'x') }
+        cmd(['nf-core/rnaseq']).run()
+
+        when:
+        cmd(['nf-core/rnaseq']).run()
+
+        then:
+        capture.toString().contains('Pipeline nf-core/rnaseq@3.14.0 is already installed and up to date')
+        capture.toString().count('installed in') == 1
     }
 }

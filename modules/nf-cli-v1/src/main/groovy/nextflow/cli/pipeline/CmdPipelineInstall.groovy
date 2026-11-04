@@ -29,6 +29,7 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineGitFetcher
+import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
 import nextflow.util.TestOnly
 
@@ -70,8 +71,14 @@ class CmdPipelineInstall extends CmdBase {
         final baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
         final client = this.client ?: RegistryClientFactory.forConfig(registryConfig(baseDir))
         final manager = fetcher ? new PipelineManager(baseDir, client, fetcher) : new PipelineManager(baseDir, client)
+        final dir = manager.pipelineDir(args[0])
+        final before = PipelineInfo.load(dir)
+        final unmodified = before != null && !before.isModified(dir)
         final info = manager.install(args[0], version, force)
-        println "Pipeline ${info.name}@${info.version} installed in ${manager.pipelineDir(info.name)}"
+        if( unmodified && before.version == info.version )
+            println "Pipeline ${info.name}@${info.version} is already installed and up to date"
+        else
+            println "Pipeline ${info.name}@${info.version} installed in ${dir}"
     }
 
     private RegistryConfig registryConfig(Path baseDir) {

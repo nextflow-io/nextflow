@@ -395,4 +395,19 @@ class ResolveIncludeTest extends Specification {
         errors.size() == 1
         errors[0].getOriginalMessage().contains("not found in 'modules' directory")
     }
+
+    def 'should resolve a local and a module include by source string' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf', 'println 1')
+        def local = tempFile(root, 'hello.nf', 'println 2')
+        def module = tempFile(root, 'modules/nf-core/fastqc/main.nf', 'println 3')
+
+        expect:
+        ModuleResolver.getIncludeUri(main.toUri(), './hello.nf', root) == local.toUri()
+        ModuleResolver.getIncludeUri(main.toUri(), 'nf-core/fastqc', root) == module.toRealPath().toUri()
+
+        cleanup:
+        deleteDir(root)
+    }
 }

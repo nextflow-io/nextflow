@@ -18,6 +18,7 @@ package nextflow.cli.pipeline
 
 import groovy.json.JsonSlurper
 import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineMetadata
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.Launcher
@@ -50,6 +51,7 @@ class CmdPipelineViewTest extends Specification {
 
     static Pipeline pipeline() {
         new Pipeline().latest(release('3.14.0')).repositoryUrl('https://github.com/nf-core/rnaseq')
+            .metadata(new PipelineMetadata().keywords(['rna', 'seq']))
     }
 
     CmdPipelineView cmd(String output = 'text') {
@@ -74,12 +76,13 @@ class CmdPipelineViewTest extends Specification {
         out.contains('Repository:  https://github.com/nf-core/rnaseq')
         out.contains('Revision:    3.14.0')
         out.contains('Commit:      abc123')
+        out.contains('Keywords:    rna, seq')
         out.contains('/pipelines/nf-core/rnaseq@3.14.0')
         out.contains('--input (string)')
         out.contains('Samplesheet. CSV.')
         out.contains('--outdir\n')
         out.contains('--flag (boolean)')
-        out.contains("include { params as RnaseqParams ; workflow as NFCORE_RNASEQ } from 'nf-core/rnaseq'")
+        out.contains("include { params as RnaseqParams ; workflow as RNASEQ } from 'nf-core/rnaseq'")
     }
 
     def 'should fetch a given version'() {
@@ -114,6 +117,6 @@ class CmdPipelineViewTest extends Specification {
     def 'should build include snippet for hyphenated names'() {
         expect:
         CmdPipelineView.usageSnippet('nf-core/fetch-ngs') ==
-            "include { params as FetchNgsParams ; workflow as NFCORE_FETCH_NGS } from 'nf-core/fetch-ngs'"
+            "include { params as FetchNgsParams ; workflow as FETCH_NGS } from 'nf-core/fetch-ngs'"
     }
 }

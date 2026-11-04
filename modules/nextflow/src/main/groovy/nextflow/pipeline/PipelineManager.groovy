@@ -61,11 +61,23 @@ class PipelineManager {
         final dir = pipelineDir(name)
         final info = PipelineInfo.load(dir)
         if( info == null ) {
-            return dir.resolve(install(name, null, false).workflowPath)
+            if( Files.exists(dir) ) {
+                log.warn1 "Pipeline ${name} has no registry origin (.pipeline-info missing)"
+                return dir.resolve(DEFAULT_WORKFLOW)
+            }
+            return workflowFile(dir, name, install(name, null, false).workflowPath)
         }
         if( info.isModified(dir) )
             log.warn1 "Pipeline ${name} has local modifications (checksum mismatch)"
-        return dir.resolve(info.workflowPath ?: DEFAULT_WORKFLOW)
+        return workflowFile(dir, name, info.workflowPath ?: DEFAULT_WORKFLOW)
+    }
+
+    // the workflow path comes from the registry or .pipeline-info, so it must not escape the pipeline dir
+    private static Path workflowFile(Path dir, String name, String workflowPath) {
+        final file = dir.resolve(workflowPath).normalize()
+        if( !file.startsWith(dir) )
+            throw new AbortOperationException("Invalid workflow path '${workflowPath}' for pipeline ${name} -- it must stay inside the pipeline directory")
+        return file
     }
 
     PipelineInfo install(String name, String version, boolean force) {
@@ -76,6 +88,8 @@ class PipelineManager {
             throw new AbortOperationException("Pipeline ${name} has no published release")
         if( pipeline.revoked || release.status == PipelineReleaseStatus.REVOKED )
             throw new AbortOperationException("Pipeline ${name}@${release.version} is revoked")
+
+        workflowFile(dir, name, pipeline.workflowPath ?: DEFAULT_WORKFLOW)
 
         final existing = Files.exists(dir) ? PipelineInfo.load(dir) : null
         final modified = Files.exists(dir) && (existing == null || existing.isModified(dir))
@@ -118,7 +132,9 @@ class PipelineManager {
         if( !Files.exists(dir) )
             return false
         final info = PipelineInfo.load(dir)
-        if( !force && (info == null || info.isModified(dir)) )
+        if( !force && info == null )
+            throw new AbortOperationException("Pipeline ${name} has no registry origin (.pipeline-info missing) -- use -force to remove it")
+        if( !force && info.isModified(dir) )
             throw new AbortOperationException("Pipeline ${name} has local modifications -- use -force to remove it")
         dir.toFile().deleteDir()
         return true

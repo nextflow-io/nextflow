@@ -22,8 +22,6 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
-import io.seqera.npr.api.schema.v1.Pipeline
-import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigCmdAdapter
@@ -115,6 +113,8 @@ class CmdPipelineView extends CmdBase {
         println "URL:         ${url}"
         if( pipeline.metadata?.description )
             println "Description: ${pipeline.metadata.description}"
+        if( pipeline.metadata?.keywords )
+            println "Keywords:    ${pipeline.metadata.keywords.join(', ')}"
         if( params ) {
             println ""
             println "Parameters:"
@@ -158,7 +158,7 @@ class CmdPipelineView extends CmdBase {
 
     protected static String usageSnippet(String name) {
         final short_ = name.substring(name.lastIndexOf('/') + 1)
-        final alias = 'NFCORE_' + short_.toUpperCase().replace('-', '_')
+        final alias = short_.toUpperCase().replace('-', '_')
         final pascal = short_.split(/[-_]/).findAll { it }.collect { it.capitalize() }.join('')
         return "include { params as ${pascal}Params ; workflow as ${alias} } from '${name}'"
     }
