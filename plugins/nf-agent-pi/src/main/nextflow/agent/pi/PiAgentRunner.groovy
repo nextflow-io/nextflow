@@ -27,8 +27,8 @@ import org.pf4j.Extension
  * Pi SDK runner. Production execution is described by {@link #getLaunchSpec()} and runs as a
  * canonical Nextflow task in the runner container image, through the {@code agent-rpc} proxy.
  *
- * <p>The plugin ships no runtime of its own: both the proxy and the Node harness are provided by
- * the image, so an agent selecting this runner requires a container.
+ * <p>The plugin ships no runtime of its own: both the proxy and the harness executable are
+ * provided by the image, so an agent selecting this runner requires a container.
  */
 @Extension
 @CompileStatic
@@ -79,7 +79,7 @@ class PiAgentRunner implements AgentRunner {
     AgentLaunchSpec getLaunchSpec() {
         return new AgentLaunchSpec(
             containerProxyCommand: ['/usr/local/bin/agent-rpc'],
-            containerHarnessCommand: ['node', '/opt/nf-agent-pi/runner.mjs'] )
+            containerHarnessCommand: ['/opt/nf-agent-pi/runner'] )
     }
 
     @Override
