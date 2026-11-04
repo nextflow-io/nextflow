@@ -63,7 +63,7 @@ class CmdPipelineViewTest extends Specification {
         return cmd
     }
 
-    def 'should print pipeline info, params and include snippet'() {
+    def 'should print pipeline info, params and no usage'() {
         when:
         cmd().run()
         def out = capture.toString()
@@ -82,7 +82,7 @@ class CmdPipelineViewTest extends Specification {
         out.contains('Samplesheet. CSV.')
         out.contains('--outdir\n')
         out.contains('--flag (boolean)')
-        out.contains("include { params as RnaseqParams ; workflow as RNASEQ } from 'nf-core/rnaseq'")
+        !out.contains('Usage:')
     }
 
     def 'should fetch a given version'() {
@@ -112,11 +112,7 @@ class CmdPipelineViewTest extends Specification {
         json.commitId == 'abc123'
         json.repositoryUrl == 'https://github.com/nf-core/rnaseq'
         json.params*.name == ['input', 'outdir', 'flag']
+        !json.containsKey('usage')
     }
 
-    def 'should build include snippet for hyphenated names'() {
-        expect:
-        CmdPipelineView.usageSnippet('nf-core/fetch-ngs') ==
-            "include { params as FetchNgsParams ; workflow as FETCH_NGS } from 'nf-core/fetch-ngs'"
-    }
 }

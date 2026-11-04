@@ -51,7 +51,10 @@ class CmdPipelineListTest extends Specification {
         cmd.run()
 
         then:
-        capture.toString().contains('nf-core/rnaseq  3.14.0  git  ok')
+        def lines = capture.toString().readLines()
+        lines[0] == 'Pipeline'.padRight(40) + 'Version'.padRight(15) + 'Source'.padRight(10) + 'Status'
+        lines[1] == '-' * 75
+        lines[2] == 'nf-core/rnaseq'.padRight(40) + '3.14.0'.padRight(15) + 'git'.padRight(10) + 'ok'
     }
 
     def 'should flag modified pipelines in json'() {
@@ -61,9 +64,9 @@ class CmdPipelineListTest extends Specification {
 
         when:
         cmd.run()
-        def json = new JsonSlurper().parseText(capture.toString()) as List
+        def json = new JsonSlurper().parseText(capture.toString()) as Map
 
         then:
-        json == [[name: 'nf-core/rnaseq', version: '3.14.0', source: 'git', status: 'modified']]
+        json.pipelines == [[name: 'nf-core/rnaseq', version: '3.14.0', source: 'git', status: 'modified']]
     }
 }

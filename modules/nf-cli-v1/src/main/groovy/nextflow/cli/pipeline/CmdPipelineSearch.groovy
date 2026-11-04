@@ -77,6 +77,8 @@ class CmdPipelineSearch extends CmdBase {
             throw new AbortOperationException("Unexpected number of parameters")
 
         final client = this.client ?: RegistryClientFactory.forConfig(registryConfig())
+        if( output != 'json' )
+            println "Searching for '${args[0]}'..."
         final pipelines = client.searchPipelines(args[0], limit)?.pipelines ?: []
 
         if( output == 'json' ) {
@@ -95,8 +97,15 @@ class CmdPipelineSearch extends CmdBase {
             println "No pipelines found"
             return
         }
+        println ""
+        println "Top ${pipelines.size()} matching pipeline(s):"
+        println ""
         pipelines.each { p ->
-            println "${p.name}  ${p.latestVersion}  ${p.metadata?.description ?: ''}"
+            println "  ${p.name}"
+            println "    Version: ${p.latestVersion}"
+            if( p.metadata?.description )
+                println "    Description: ${p.metadata.description}"
+            println ""
         }
     }
 

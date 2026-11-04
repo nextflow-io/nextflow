@@ -73,6 +73,10 @@ class CmdPipelineInstallTest extends Specification {
         1 * client.getPipelineRelease('nf-core/rnaseq', '3.14.0') >> release('3.14.0')
         1 * fetcher.fetch(_, '3.14.0', 'abc', _) >> { u, r, c2, Path t -> Files.writeString(t.resolve('main.nf'), 'x') }
         Files.isDirectory(base.resolve('pipelines/nf-core/rnaseq'))
+        def out = capture.toString()
+        def dir = base.resolve('pipelines/nf-core/rnaseq').toAbsolutePath()
+        out.indexOf('Installing pipeline nf-core/rnaseq@3.14.0...') >= 0
+        out.indexOf('Installing pipeline nf-core/rnaseq@3.14.0...') < out.indexOf("Pipeline nf-core/rnaseq@3.14.0 installed in ${dir}")
     }
 
     def 'should install the latest version by default'() {

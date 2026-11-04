@@ -36,7 +36,7 @@ import java.nio.file.Paths
  * Pipeline view subcommand - displays pipeline info, parameters and include snippet
  */
 @CompileStatic
-@Parameters(commandDescription = "Show pipeline information and usage")
+@Parameters(commandDescription = "Show pipeline information")
 class CmdPipelineView extends CmdBase {
 
     @Parameter(names = ["-version"], description = "Pipeline version (default: latest)")
@@ -86,7 +86,6 @@ class CmdPipelineView extends CmdBase {
 
         final url = buildPipelineUrl(registryConfig.url, name, release.version)
         final params = schemaParams(release.schema)
-        final usage = usageSnippet(name)
 
         if( output == 'json' ) {
             final info = [
@@ -98,8 +97,7 @@ class CmdPipelineView extends CmdBase {
                 url          : url,
                 description  : pipeline.metadata?.description,
                 keywords     : pipeline.metadata?.keywords,
-                params       : params,
-                usage        : usage
+                params       : params
             ]
             println JsonOutput.prettyPrint(JsonOutput.toJson(info))
             return
@@ -124,9 +122,6 @@ class CmdPipelineView extends CmdBase {
                     println "      ${p.description}"
             }
         }
-        println ""
-        println "Usage:"
-        println usage
     }
 
     /** Lists params from `$defs`/`definitions` groups and top-level `properties`; types may be missing. */
@@ -154,13 +149,6 @@ class CmdPipelineView extends CmdBase {
             }
         }
         return result
-    }
-
-    protected static String usageSnippet(String name) {
-        final short_ = name.substring(name.lastIndexOf('/') + 1)
-        final alias = short_.toUpperCase().replace('-', '_')
-        final pascal = short_.split(/[-_]/).findAll { it }.collect { it.capitalize() }.join('')
-        return "include { params as ${pascal}Params ; workflow as ${alias} } from '${name}'"
     }
 
     private static String buildPipelineUrl(String registryUrl, String name, String version) {

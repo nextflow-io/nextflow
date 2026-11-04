@@ -70,13 +70,17 @@ class CmdPipelineList extends CmdBase {
             ]
         }
         if( output == 'json' ) {
-            println JsonOutput.prettyPrint(JsonOutput.toJson(rows))
+            println JsonOutput.prettyPrint(JsonOutput.toJson(pipelines: rows))
             return
         }
         if( !rows ) {
             println "No pipelines installed"
             return
         }
-        rows.each { r -> println "${r.name}  ${r.version}  ${r.source}  ${r.status}" }
+        println "Pipeline".padRight(40) + "Version".padRight(15) + "Source".padRight(10) + "Status"
+        println "-" * 75
+        rows.each { r ->
+            println "${r.name.padRight(40)}${r.version.padRight(15)}${r.source.padRight(10)}${r.status}"
+        }
     }
 }

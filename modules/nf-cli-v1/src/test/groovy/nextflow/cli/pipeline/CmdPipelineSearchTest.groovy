@@ -56,7 +56,9 @@ class CmdPipelineSearchTest extends Specification {
 
         then:
         1 * client.searchPipelines('rnaseq', 5) >> response()
-        capture.toString().contains('nf-core/rnaseq  3.14.0  RNA-seq analysis')
+        capture.toString().contains("Searching for 'rnaseq'...")
+        capture.toString().contains('Top 1 matching pipeline(s):')
+        capture.toString().contains('  nf-core/rnaseq\n    Version: 3.14.0\n    Description: RNA-seq analysis\n')
     }
 
     def 'should print json'() {

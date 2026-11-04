@@ -77,8 +77,6 @@ class CmdPipelineInstall extends CmdBase {
         final info = manager.install(args[0], version, force)
         if( unmodified && before.version == info.version )
             println "Pipeline ${info.name}@${info.version} is already installed and up to date"
-        else
-            println "Pipeline ${info.name}@${info.version} installed in ${dir}"
     }
 
     private RegistryConfig registryConfig(Path baseDir) {

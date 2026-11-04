@@ -98,6 +98,7 @@ class PipelineManager {
         if( modified && !force )
             throw new AbortOperationException("Pipeline ${name} has local modifications -- use -force to overwrite")
 
+        log.info "Installing pipeline ${name}@${release.version}..."
         final info = new PipelineInfo(
             name: name,
             version: release.version,
@@ -108,7 +109,7 @@ class PipelineManager {
             commitId: release.commitId,
             registryUrl: client.primaryUrl())
         fetchInto(dir, info)
-        log.info "Installed pipeline ${name}@${release.version}"
+        log.info "Pipeline ${name}@${release.version} installed in ${dir.toAbsolutePath()}"
         return info
     }
 
