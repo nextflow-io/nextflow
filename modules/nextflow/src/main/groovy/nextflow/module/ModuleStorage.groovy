@@ -368,6 +368,9 @@ class ModuleStorage {
 
                             // Write file
                             Files.copy(tis, targetPath)
+                            // keep the executable bit (e.g. bin/ scripts)
+                            if( (entry.mode & 0100) != 0 )
+                                targetPath.toFile().setExecutable(true, false)
                         }
                     }
                 }

@@ -18,6 +18,7 @@ package nextflow.pipeline
 
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
@@ -38,9 +39,11 @@ import org.eclipse.jgit.lib.RepositoryBuilder
 @CompileStatic
 class PipelineBundle {
 
-    /** Relative paths to bundle, sorted */
+    /** Relative paths to bundle, sorted. Symlinks are never followed */
     static List<Path> files(Path dir) {
-        final result = isGit(dir) ? tracked(dir) : walk(dir)
+        final repo = openRepository(dir)
+        final result = repo != null ? tracked(repo, dir) : walk(dir)
+        repo?.close()
         result.removeIf { Path p -> p.fileName.toString() == RemoteModuleResolver.PIPELINE_INFO_FILE }
         Collections.sort(result)
         return result
@@ -50,19 +53,26 @@ class PipelineBundle {
     static String create(Path dir, Path target) {
         if( target.parent )
             Files.createDirectories(target.parent)
-        Files.newOutputStream(target).withCloseable { fos ->
-            new GzipCompressorOutputStream(fos).withCloseable { gzos ->
-                new TarArchiveOutputStream(gzos).withCloseable { tos ->
-                    for( final rel : files(dir) ) {
-                        final file = dir.resolve(rel)
-                        final entry = new TarArchiveEntry(file.toFile(), rel.toString())
-                        entry.setSize(Files.size(file))
-                        tos.putArchiveEntry(entry)
-                        Files.copy(file, tos)
-                        tos.closeArchiveEntry()
+        try {
+            Files.newOutputStream(target).withCloseable { fos ->
+                new GzipCompressorOutputStream(fos).withCloseable { gzos ->
+                    new TarArchiveOutputStream(gzos).withCloseable { tos ->
+                        for( final rel : files(dir) ) {
+                            final file = dir.resolve(rel)
+                            final entry = new TarArchiveEntry(file.toFile(), rel.toString())
+                            entry.setSize(Files.size(file))
+                            entry.setMode(Files.isExecutable(file) ? 0755 : 0644)
+                            tos.putArchiveEntry(entry)
+                            Files.copy(file, tos)
+                            tos.closeArchiveEntry()
+                        }
                     }
                 }
             }
+        }
+        catch( Exception e ) {
+            Files.deleteIfExists(target)
+            throw e
         }
         return 'sha256:' + ModuleStorage.computeBundleChecksum(target)
     }
@@ -72,21 +82,33 @@ class PipelineBundle {
         ModuleStorage.extractTarGz(bundle, targetDir, false)
     }
 
-    private static boolean isGit(Path dir) {
-        // only a repo rooted at dir: index paths are relative to the repo root
-        return Files.exists(dir.resolve('.git'))
+    /** Open the Git repo whose work tree contains dir, or null when dir is not in a checkout. The caller closes it */
+    static Repository openRepository(Path dir) {
+        final gitDir = new RepositoryBuilder().findGitDir(dir.toFile()).gitDir
+        if( gitDir == null )
+            return null
+        final repo = new RepositoryBuilder().setGitDir(gitDir).build()
+        if( repo.bare ) {
+            repo.close()
+            return null
+        }
+        return repo
     }
 
-    private static List<Path> tracked(Path dir) {
-        final builder = new RepositoryBuilder().setWorkTree(dir.toFile()).findGitDir(dir.toFile())
+    private static List<Path> tracked(Repository repo, Path dir) {
+        final root = repo.workTree.toPath().toRealPath()
+        final base = root.relativize(dir.toRealPath()).toString()
+        final prefix = base.isEmpty() ? '' : base + '/'
         final result = new ArrayList<Path>()
-        try (Repository repo = builder.build()) {
-            final cache = repo.readDirCache()
-            for( int i = 0; i < cache.entryCount; i++ ) {
-                final rel = dir.fileSystem.getPath(cache.getEntry(i).pathString)
-                if( Files.isRegularFile(dir.resolve(rel)) )
-                    result.add(rel)
-            }
+        final cache = repo.readDirCache()
+        for( int i = 0; i < cache.entryCount; i++ ) {
+            final name = cache.getEntry(i).pathString
+            if( !name.startsWith(prefix) )
+                continue
+            final rel = dir.fileSystem.getPath(name.substring(prefix.length()))
+            final file = dir.resolve(rel)
+            if( Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) )
+                result.add(rel)
         }
         return result
     }
@@ -110,7 +132,7 @@ class PipelineBundle {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                if( attrs.isRegularFile() && !ignored(dir, file, false) )
+                if( attrs.isRegularFile() && !attrs.isSymbolicLink() && !ignored(dir, file, false) )
                     result.add(dir.relativize(file))
                 return FileVisitResult.CONTINUE
             }
