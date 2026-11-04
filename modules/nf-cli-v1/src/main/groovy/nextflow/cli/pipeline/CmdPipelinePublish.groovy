@@ -43,6 +43,9 @@ import nextflow.util.TestOnly
 @Parameters(commandDescription = "Publish a pipeline to the registry")
 class CmdPipelinePublish extends CmdBase {
 
+    // same rule as the registry server
+    static final String SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/
+
     static final long MAX_BUNDLE_SIZE = 50L * 1024 * 1024
 
     @Parameter(description = "[path]")
@@ -83,8 +86,10 @@ class CmdPipelinePublish extends CmdBase {
         final ver = version ?: manifest.version as String
         if( !name || !PipelineManager.NAME_PATTERN.matcher(name).matches() )
             throw new AbortOperationException("Pipeline name must be set as 'manifest.name' in the form 'scope/name' (found: ${name ?: 'none'})")
-        if( !ver || !(ver ==~ /\w[\w.+-]*/) )
-            throw new AbortOperationException("Pipeline version must be set as 'manifest.version' or with -version (found: ${ver ?: 'none'})")
+        if( !ver )
+            throw new AbortOperationException("Pipeline version must be set as 'manifest.version' or with -version")
+        if( !(ver ==~ SEMVER) )
+            throw new AbortOperationException("Pipeline version is not a valid semantic version (found: ${ver})")
 
         if( !PipelineBundle.files(dir) )
             throw new AbortOperationException("No files would be published from ${dir} -- note that untracked files are not included in a Git checkout")
@@ -106,7 +111,12 @@ class CmdPipelinePublish extends CmdBase {
                 .size(size)
                 .description(manifest.description as String)
                 .homePage(manifest.homePage as String)
-            if( git?.repositoryUrl ) {
+            if( manifest.keywords )
+                request.keywords(manifest.keywords as List<String>)
+            if( git && !git.clean ) {
+                println "Note: the checkout has uncommitted changes, publishing without Git provenance"
+            }
+            else if( git?.repositoryUrl ) {
                 request.repositoryUrl(git.repositoryUrl).gitRevision(git.revision).commitId(git.commitId)
             }
             else if( git ) {
@@ -130,16 +140,26 @@ class CmdPipelinePublish extends CmdBase {
         try {
             final releaseId = registry.createPipelineRelease(name, request).releaseId
             try {
-                registry.uploadPipelineRelease(releaseId, bundle)
+                upload(registry, releaseId, bundle)
             }
             catch( RegistryException e ) {
-                throw new AbortOperationException("Upload of ${name}@${request.version} failed: ${e.message} -- run the command again to retry; the draft expires in 1 hour", e)
+                throw new AbortOperationException("Upload of ${name}@${request.version} failed: ${e.message} -- this version can be published again after the draft expires (1 hour)", e)
             }
         }
         catch( RegistryException e ) {
             throw new AbortOperationException("Cannot publish ${name}@${request.version}: ${e.message}", e)
         }
         println "Published pipeline ${name}@${request.version}"
+    }
+
+    // a failed upload leaves a DRAFT that the server still accepts an upload for
+    private static void upload(RegistryClient registry, long releaseId, Path bundle) {
+        try {
+            registry.uploadPipelineRelease(releaseId, bundle)
+        }
+        catch( RegistryException e ) {
+            registry.uploadPipelineRelease(releaseId, bundle)
+        }
     }
 
     private void printDryRun(String name, CreatePipelineReleaseRequest request) {

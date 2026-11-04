@@ -24,44 +24,61 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleStorage
 import nextflow.module.spi.RemoteModuleResolver
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.eclipse.jgit.ignore.IgnoreNode
+import org.eclipse.jgit.lib.FileMode
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.lib.RepositoryBuilder
 
 /**
  * Creates and extracts the {@code .tar.gz} bundle of a pipeline
  */
+@Slf4j
 @CompileStatic
 class PipelineBundle {
 
     /** Relative paths to bundle, sorted. Symlinks are never followed */
     static List<Path> files(Path dir) {
+        return new ArrayList<Path>(entries(dir).keySet())
+    }
+
+    /** Relative path to executable flag, sorted by path */
+    private static Map<Path,Boolean> entries(Path dir) {
         final repo = openRepository(dir)
-        final result = repo != null ? tracked(repo, dir) : walk(dir)
-        repo?.close()
-        result.removeIf { Path p -> p.fileName.toString() == RemoteModuleResolver.PIPELINE_INFO_FILE }
-        Collections.sort(result)
+        final result = new TreeMap<Path,Boolean>()
+        try {
+            result.putAll(repo != null ? tracked(repo, dir) : walk(dir))
+        }
+        finally {
+            repo?.close()
+        }
+        result.keySet().removeIf { Path p -> p.fileName.toString() == RemoteModuleResolver.PIPELINE_INFO_FILE }
         return result
     }
 
     /** Write the bundle and return its checksum as {@code sha256:<hex>} */
     static String create(Path dir, Path target) {
-        if( target.parent )
-            Files.createDirectories(target.parent)
         try {
+            if( target.parent )
+                Files.createDirectories(target.parent)
             Files.newOutputStream(target).withCloseable { fos ->
                 new GzipCompressorOutputStream(fos).withCloseable { gzos ->
                     new TarArchiveOutputStream(gzos).withCloseable { tos ->
-                        for( final rel : files(dir) ) {
-                            final file = dir.resolve(rel)
-                            final entry = new TarArchiveEntry(file.toFile(), rel.toString())
+                        tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
+                        tos.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX)
+                        for( final it : entries(dir).entrySet() ) {
+                            final file = dir.resolve(it.key)
+                            // fixed mtime and no owner, so the same tree always gives the same checksum
+                            final entry = new TarArchiveEntry(it.key.toString())
                             entry.setSize(Files.size(file))
-                            entry.setMode(Files.isExecutable(file) ? 0755 : 0644)
+                            entry.setMode(it.value ? 0755 : 0644)
+                            entry.setModTime(0L)
                             tos.putArchiveEntry(entry)
                             Files.copy(file, tos)
                             tos.closeArchiveEntry()
@@ -72,7 +89,9 @@ class PipelineBundle {
         }
         catch( Exception e ) {
             Files.deleteIfExists(target)
-            throw e
+            if( e instanceof AbortOperationException )
+                throw e
+            throw new AbortOperationException("Failed to create pipeline bundle", e)
         }
         return 'sha256:' + ModuleStorage.computeBundleChecksum(target)
     }
@@ -95,31 +114,40 @@ class PipelineBundle {
         return repo
     }
 
-    private static List<Path> tracked(Repository repo, Path dir) {
+    private static Map<Path,Boolean> tracked(Repository repo, Path dir) {
         final root = repo.workTree.toPath().toRealPath()
         final base = root.relativize(dir.toRealPath()).toString()
         final prefix = base.isEmpty() ? '' : base + '/'
-        final result = new ArrayList<Path>()
+        final result = new LinkedHashMap<Path,Boolean>()
+        final skipped = new ArrayList<String>()
         final cache = repo.readDirCache()
         for( int i = 0; i < cache.entryCount; i++ ) {
-            final name = cache.getEntry(i).pathString
+            final entry = cache.getEntry(i)
+            final name = entry.pathString
             if( !name.startsWith(prefix) )
                 continue
+            final mode = entry.fileMode
+            if( mode == FileMode.SYMLINK || mode == FileMode.GITLINK ) {
+                skipped.add(name)
+                continue
+            }
             final rel = dir.fileSystem.getPath(name.substring(prefix.length()))
             final file = dir.resolve(rel)
             if( Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) )
-                result.add(rel)
+                result.put(rel, mode == FileMode.EXECUTABLE_FILE)
         }
+        if( skipped )
+            log.warn "Not bundling tracked symlinks or submodules: ${skipped.join(', ')}"
         return result
     }
 
     // ponytail: root .gitignore only outside git; nested .gitignore files are ignored
-    private static List<Path> walk(Path dir) {
+    private static Map<Path,Boolean> walk(Path dir) {
         final ignore = new IgnoreNode()
         final gitignore = dir.resolve('.gitignore')
         if( Files.exists(gitignore) )
             gitignore.withInputStream { is -> ignore.parse(is) }
-        final result = new ArrayList<Path>()
+        final result = new LinkedHashMap<Path,Boolean>()
         Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs) {
@@ -133,7 +161,7 @@ class PipelineBundle {
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if( attrs.isRegularFile() && !attrs.isSymbolicLink() && !ignored(dir, file, false) )
-                    result.add(dir.relativize(file))
+                    result.put(dir.relativize(file), Files.isExecutable(file))
                 return FileVisitResult.CONTINUE
             }
 
