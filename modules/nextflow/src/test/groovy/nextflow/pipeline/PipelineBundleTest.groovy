@@ -108,4 +108,70 @@ class PipelineBundleTest extends Specification {
         tmp.resolve('dst/main.nf').text == 'hello'
         tmp.resolve('dst/modules/local/m.nf').text == 'mod'
     }
+
+    def 'bundles a pipeline living in a repo subdirectory'() {
+        given:
+        write(tmp, 'other.txt')
+        write(tmp, 'pipelines/p/main.nf')
+        write(tmp, 'pipelines/p/untracked.txt')
+        Git.init().setDirectory(tmp.toFile()).call().withCloseable { git ->
+            git.add().addFilepattern('other.txt').addFilepattern('pipelines/p/main.nf').call()
+        }
+
+        expect:
+        names(PipelineBundle.files(tmp.resolve('pipelines/p'))) == ['main.nf']
+    }
+
+    def 'does not bundle symlinks'() {
+        given:
+        write(tmp, 'main.nf')
+        Files.createSymbolicLink(tmp.resolve('link.nf'), tmp.resolve('main.nf'))
+
+        expect:
+        names(PipelineBundle.files(tmp)) == ['main.nf']
+
+        when:
+        Git.init().setDirectory(tmp.toFile()).call().withCloseable { git ->
+            git.add().addFilepattern('.').call()
+        }
+
+        then:
+        names(PipelineBundle.files(tmp)) == ['main.nf']
+    }
+
+    def 'keeps the executable bit on round-trip'() {
+        given:
+        final src = tmp.resolve('src')
+        write(src, 'bin/run.sh').toFile().setExecutable(true)
+        write(src, 'main.nf')
+        final bundle = tmp.resolve('p.tar.gz')
+
+        when:
+        PipelineBundle.create(src, bundle)
+        PipelineBundle.extract(bundle, tmp.resolve('dst'))
+
+        then:
+        Files.isExecutable(tmp.resolve('dst/bin/run.sh'))
+        !Files.isExecutable(tmp.resolve('dst/main.nf'))
+    }
+
+    def 'extract rejects entries escaping the target'() {
+        given:
+        final bundle = tmp.resolve('evil.tar.gz')
+        new org.apache.commons.compress.archivers.tar.TarArchiveOutputStream(
+                new org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream(Files.newOutputStream(bundle))).withCloseable { tos ->
+            final e = new org.apache.commons.compress.archivers.tar.TarArchiveEntry('../evil')
+            e.setSize(1)
+            tos.putArchiveEntry(e)
+            tos.write(65)
+            tos.closeArchiveEntry()
+        }
+
+        when:
+        PipelineBundle.extract(bundle, tmp.resolve('dst'))
+
+        then:
+        thrown(Exception)
+        !Files.exists(tmp.resolve('evil'))
+    }
 }
