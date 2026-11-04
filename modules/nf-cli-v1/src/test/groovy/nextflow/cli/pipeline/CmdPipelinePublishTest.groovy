@@ -153,8 +153,9 @@ class CmdPipelinePublishTest extends Specification {
         c.run()
 
         then:
-        1 * client.createPipelineRelease(_, _) >> created()
+        1 * client.createPipelineRelease(_, { it.repositoryUrl == null && it.commitId == null }) >> created()
         1 * client.uploadPipelineRelease(7L, _) >> new UploadPipelineReleaseResponse()
+        capture.toString().contains('uncommitted changes, publishing without Git provenance')
     }
 
     def 'should refuse missing or invalid name or version'() {
@@ -170,7 +171,52 @@ class CmdPipelinePublishTest extends Specification {
 
         where:
         manifest << ["version = '1.0.0'", "name = 'mypipe'; version = '1.0.0'", "name = 'myorg/mypipe'",
+                    "name = 'myorg/mypipe'; version = '1.0'", "name = 'myorg/mypipe'; version = '3.15.0dev'",
                     "name = 'MyOrg/Pipe'; version = '1.0.0'", "name = 'org/_p'; version = '1.0.0'", "name = 'org/1p'; version = '1.0.0'"]
+    }
+
+    def 'should distinguish a missing from an invalid version'() {
+        given:
+        pipeline(manifest)
+
+        when:
+        cmd().run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains(expected)
+
+        where:
+        manifest                                | expected
+        "name = 'myorg/mypipe'"                 | 'must be set'
+        "name = 'myorg/mypipe'; version = '1.0'" | 'not a valid semantic version'
+    }
+
+    def 'should accept semantic versions'() {
+        given:
+        pipeline("name = 'myorg/mypipe'; version = '${ver}'")
+
+        when:
+        cmd().run()
+
+        then:
+        1 * client.createPipelineRelease('myorg/mypipe', { it.version == ver }) >> created()
+        1 * client.uploadPipelineRelease(7L, _) >> new UploadPipelineReleaseResponse()
+
+        where:
+        ver << ['1.2.0', '1.2.0-rc.1', '1.2.0+build.5']
+    }
+
+    def 'should send manifest keywords'() {
+        given:
+        pipeline("name = 'myorg/mypipe'; version = '1.2.0'; keywords = ['rna', 'seq']")
+
+        when:
+        cmd().run()
+
+        then:
+        1 * client.createPipelineRelease('myorg/mypipe', { it.keywords == ['rna', 'seq'] }) >> created()
+        1 * client.uploadPipelineRelease(7L, _) >> new UploadPipelineReleaseResponse()
     }
 
     def 'should refuse an empty bundle'() {
@@ -228,7 +274,7 @@ class CmdPipelinePublishTest extends Specification {
         out.contains('v1.2.0')
     }
 
-    def 'should report a failed upload with a retry hint'() {
+    def 'should retry a failed upload once with the same release'() {
         given:
         pipeline()
 
@@ -237,10 +283,23 @@ class CmdPipelinePublishTest extends Specification {
 
         then:
         1 * client.createPipelineRelease(_, _) >> created()
-        1 * client.uploadPipelineRelease(7L, _) >> { throw new RegistryException('upload failed: 500 boom') }
+        2 * client.uploadPipelineRelease(7L, _) >> { throw new RegistryException('upload failed: 500 boom') } >> new UploadPipelineReleaseResponse()
+        capture.toString().contains('Published pipeline myorg/mypipe@1.2.0')
+    }
+
+    def 'should report a twice failed upload'() {
+        given:
+        pipeline()
+
+        when:
+        cmd().run()
+
+        then:
+        1 * client.createPipelineRelease(_, _) >> created()
+        2 * client.uploadPipelineRelease(7L, _) >> { throw new RegistryException('upload failed: 500 boom') }
         def e = thrown(AbortOperationException)
         e.message.contains('500 boom')
-        e.message.contains('the draft expires in 1 hour')
+        e.message.contains('published again after the draft expires (1 hour)')
     }
 
     def 'should show the server reason on #status'() {

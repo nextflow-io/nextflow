@@ -113,6 +113,27 @@ class PipelineManagerTest extends Specification {
         !Files.exists(base.resolve('pipelines/nf-core') ) || base.resolve('pipelines/nf-core').toFile().list().length == 0
     }
 
+    def 'artifact checksum mismatch installs nothing'() {
+        given:
+        def src = Files.createDirectories(base.resolve('src'))
+        src.resolve('main.nf').text = 'hello'
+        def bundle = base.resolve('out/b.tgz')
+        PipelineBundle.create(src, bundle)
+        def wrong = 'sha256:' + ('0' * 64)
+
+        when:
+        manager().install('nf-core/rnaseq', null, false)
+        then:
+        1 * client.getPipeline(_) >> pipeline(release('2.0.0').artifact(new PipelineArtifact().url('u').checksum(wrong)))
+        client.primaryUrl() >> 'https://reg.io'
+        1 * client.downloadPipelineRelease(*_) >> { args -> Files.copy(bundle, args[2]); wrong }
+        def e = thrown(AbortOperationException)
+        e.message.contains('nf-core/rnaseq')
+        and:
+        !Files.exists(base.resolve('pipelines/nf-core/rnaseq'))
+        base.resolve('pipelines/nf-core').toFile().list().length == 0
+    }
+
     def 'null workflowPath defaults to main.nf'() {
         when:
         def info = manager().install('nf-core/rnaseq', null, false).info()

@@ -31,6 +31,7 @@ import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.module.ModuleStorage
 import nextflow.module.spi.RemoteModuleResolver
 
 /**
@@ -198,6 +199,9 @@ class PipelineManager {
                 // the archive lives in tmp only until extracted, so it never enters the checksum
                 final bundle = tmp.resolve('.bundle.tar.gz')
                 client.downloadPipelineRelease(info.name, info.version, bundle)
+                final expected = info.artifactChecksum?.replaceFirst(/(?i)^sha256:/, '')
+                if( !expected || !expected.equalsIgnoreCase(ModuleStorage.computeBundleChecksum(bundle)) )
+                    throw new AbortOperationException("Checksum mismatch for pipeline ${info.name}@${info.version} -- the downloaded bundle does not match the registry checksum")
                 PipelineBundle.extract(bundle, tmp)
                 Files.delete(bundle)
             }

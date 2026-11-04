@@ -155,6 +155,64 @@ class PipelineBundleTest extends Specification {
         !Files.isExecutable(tmp.resolve('dst/main.nf'))
     }
 
+    def 'round-trips a path longer than 100 bytes'() {
+        given:
+        final src = tmp.resolve('src')
+        final rel = 'deep/' + ('d' * 60) + '/' + ('e' * 60) + '/main.nf'
+        write(src, rel, 'long')
+        final bundle = tmp.resolve('p.tar.gz')
+
+        when:
+        PipelineBundle.create(src, bundle)
+        PipelineBundle.extract(bundle, tmp.resolve('dst'))
+
+        then:
+        tmp.resolve('dst').resolve(rel).text == 'long'
+    }
+
+    def 'gives the same checksum for the same tree'() {
+        given:
+        final src = tmp.resolve('src')
+        write(src, 'main.nf')
+        final a = PipelineBundle.create(src, tmp.resolve('a.tar.gz'))
+        sleep(1100)
+        src.resolve('main.nf').toFile().setLastModified(System.currentTimeMillis())
+
+        expect:
+        a == PipelineBundle.create(src, tmp.resolve('b.tar.gz'))
+    }
+
+    def 'takes the executable bit from the git index'() {
+        given:
+        write(tmp, 'run.sh').toFile().setExecutable(true)
+        write(tmp, 'main.nf')
+        Git.init().setDirectory(tmp.toFile()).call().withCloseable { git ->
+            git.add().addFilepattern('run.sh').addFilepattern('main.nf').call()
+        }
+        final bundle = tmp.resolve('p.tar.gz')
+        tmp.resolve('run.sh').toFile().setExecutable(false)
+
+        when:
+        PipelineBundle.create(tmp, bundle)
+        PipelineBundle.extract(bundle, tmp.resolve('dst'))
+
+        then:
+        Files.isExecutable(tmp.resolve('dst/run.sh'))
+        !Files.isExecutable(tmp.resolve('dst/main.nf'))
+    }
+
+    def 'wraps failures in AbortOperationException and removes the partial file'() {
+        given:
+        final bundle = tmp.resolve('p.tar.gz')
+
+        when:
+        PipelineBundle.create(tmp.resolve('missing'), bundle)
+
+        then:
+        thrown(nextflow.exception.AbortOperationException)
+        !Files.exists(bundle)
+    }
+
     def 'extract rejects entries escaping the target'() {
         given:
         final bundle = tmp.resolve('evil.tar.gz')
