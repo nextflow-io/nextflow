@@ -29,14 +29,17 @@ class PipelineInfoTest extends Specification {
 
     def 'save then load round-trips every field'() {
         given:
-        def info = new PipelineInfo(name: 'nf-core/rnaseq', version: '1.0.0', workflowPath: 'main.nf',
-                repositoryUrl: 'https://github.com/nf-core/rnaseq', revision: 'v1', commitId: 'abc', checksum: 'dead', registryUrl: 'https://r.io')
+        def info = new PipelineInfo(name: 'nf-core/rnaseq', version: '1.0.0', workflowPath: 'main.nf', source: 'artifact',
+                repositoryUrl: 'https://github.com/nf-core/rnaseq', revision: 'v1', commitId: 'abc', checksum: 'dead', registryUrl: 'https://r.io',
+                artifactUrl: 'https://a.io/b.tgz', artifactChecksum: 'sha256:beef')
         when:
         info.save(dir)
         def loaded = PipelineInfo.load(dir)
         then:
         loaded.properties.findAll { it.key != 'class' } == info.properties.findAll { it.key != 'class' }
         loaded.registryUrl == 'https://r.io'
+        loaded.artifactUrl == 'https://a.io/b.tgz'
+        loaded.artifactChecksum == 'sha256:beef'
     }
 
     def 'load returns null when .pipeline-info is missing'() {

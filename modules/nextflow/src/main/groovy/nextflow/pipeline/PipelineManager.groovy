@@ -27,6 +27,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.module.spi.RemoteModuleResolver
@@ -139,10 +140,13 @@ class PipelineManager {
             name: name,
             version: release.version,
             workflowPath: workflowPath,
+            source: release.artifact ? 'artifact' : 'git',
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
             commitId: release.commitId,
-            registryUrl: client.primaryUrl())
+            registryUrl: client.primaryUrl(),
+            artifactUrl: release.artifact?.url,
+            artifactChecksum: release.artifact?.checksum)
         fetchInto(dir, info)
         log.info "Pipeline ${name}@${release.version} installed in ${dir.toAbsolutePath()}"
         return new InstallResult(info, false)
@@ -189,7 +193,16 @@ class PipelineManager {
         Files.createDirectories(dir.parent)
         final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
         try {
-            fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+            if( info.source == 'artifact' ) {
+                // the archive lives in tmp only until extracted, so it never enters the checksum
+                final bundle = tmp.resolve('.bundle.tar.gz')
+                client.downloadPipelineRelease(info.name, info.version, bundle)
+                PipelineBundle.extract(bundle, tmp)
+                Files.delete(bundle)
+            }
+            else {
+                fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+            }
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)
             MODIFIED.remove(realPath(dir))
@@ -203,6 +216,8 @@ class PipelineManager {
             catch( IOException ex ) {
                 log.warn "Cannot delete temporary directory ${tmp}: ${ex.message}"
             }
+            if( e instanceof RegistryException )
+                throw new AbortOperationException("Cannot download pipeline ${info.name}@${info.version} -- ${e.message}", e)
             throw e
         }
     }

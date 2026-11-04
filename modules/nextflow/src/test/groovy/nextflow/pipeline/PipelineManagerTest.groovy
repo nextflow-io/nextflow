@@ -20,9 +20,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineArtifact
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -61,6 +63,54 @@ class PipelineManagerTest extends Specification {
         info.commitId == 'abc'
         info.registryUrl == 'https://reg.io'
         info.checksum
+    }
+
+    def 'installs from artifact when present'() {
+        given:
+        def src = Files.createDirectories(base.resolve('src'))
+        src.resolve('main.nf').text = 'hello'
+        def run = src.resolve('bin.sh')
+        run.text = 'echo'
+        run.toFile().setExecutable(true)
+        def bundle = base.resolve('out/b.tgz')
+        def sum = PipelineBundle.create(src, bundle)
+        def rel = release('2.0.0').artifact(new PipelineArtifact().url('https://a.io/b.tgz').checksum(sum))
+
+        when:
+        def info = manager().install('nf-core/rnaseq', null, false)
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline(rel)
+        client.primaryUrl() >> 'https://reg.io'
+        1 * client.downloadPipelineRelease('nf-core/rnaseq', '2.0.0', _) >> { args -> Files.copy(bundle, args[2]); sum }
+        0 * fetcher._
+        and:
+        def dir = base.resolve('pipelines/nf-core/rnaseq')
+        dir.resolve('main.nf').text == 'hello'
+        Files.isExecutable(dir.resolve('bin.sh'))
+        !Files.exists(dir.resolve('.bundle.tar.gz'))
+        def loaded = PipelineInfo.load(dir)
+        loaded.source == 'artifact'
+        loaded.artifactUrl == 'https://a.io/b.tgz'
+        loaded.artifactChecksum == sum
+        loaded.revision == '2.0.0'
+        loaded.commitId == 'abc'
+        loaded.repositoryUrl == 'https://github.com/nf-core/rnaseq'
+        !loaded.isModified(dir)
+        info.source == 'artifact'
+    }
+
+    def 'artifact checksum failure leaves no directory'() {
+        when:
+        manager().install('nf-core/rnaseq', null, false)
+        then:
+        1 * client.getPipeline(_) >> pipeline(release('2.0.0').artifact(new PipelineArtifact().url('u').checksum('sha256:x')))
+        client.primaryUrl() >> 'https://reg.io'
+        1 * client.downloadPipelineRelease(*_) >> { throw new RegistryException('checksum mismatch') }
+        def e = thrown(AbortOperationException)
+        e.message.contains('nf-core/rnaseq')
+        and:
+        !Files.exists(base.resolve('pipelines/nf-core/rnaseq'))
+        !Files.exists(base.resolve('pipelines/nf-core') ) || base.resolve('pipelines/nf-core').toFile().list().length == 0
     }
 
     def 'null workflowPath defaults to main.nf'() {
