@@ -34,8 +34,8 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Ignore
 import spock.lang.Specification
-import test.TestUtils
 import spock.lang.Unroll
+import test.TestUtils
 
 import static nextflow.script.types.TypeCheckingUtils.*
 
