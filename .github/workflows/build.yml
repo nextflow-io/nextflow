@@ -16,6 +16,15 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
+    inputs:
+      e2e:
+        description: 'Launch the e2e showcase test after the build (same as the [e2e stage] / [e2e prod] commit tags)'
+        type: choice
+        options:
+          - none
+          - staging
+          - production
+        default: none
 
 permissions:
   contents: read
@@ -305,7 +314,7 @@ jobs:
             integration-tests.tar.gz
 
   test-e2e:
-    if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]')) && needs.build.outputs.docs_only != 'true' }}
+    if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') || (github.event_name == 'workflow_dispatch' && inputs.e2e != 'none')) && needs.build.outputs.docs_only != 'true' }}
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -352,6 +361,8 @@ jobs:
           cd test-e2e
           bash run.sh
         env:
+          # explicit environment from workflow_dispatch; empty means use the commit tag
+          E2E_ENVIRONMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.e2e != 'none' && inputs.e2e || '' }}
           GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 

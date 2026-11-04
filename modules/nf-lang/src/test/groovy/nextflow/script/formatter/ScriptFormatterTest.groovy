@@ -741,10 +741,10 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             """
-            blastp \
-                -in ${input} \
-                -out ${output} \
-                -db ${blast_db} \
+            blastp \\
+                -in ${input} \\
+                -out ${output} \\
+                -db ${blast_db} \\
                 -html
             """
             '''
