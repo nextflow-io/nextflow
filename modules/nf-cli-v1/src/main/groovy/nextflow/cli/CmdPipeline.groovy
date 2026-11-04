@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 import nextflow.cli.pipeline.CmdPipelineInstall
 import nextflow.cli.pipeline.CmdPipelineList
 import nextflow.cli.pipeline.CmdPipelineRemove
+import nextflow.cli.pipeline.CmdPipelineSearch
+import nextflow.cli.pipeline.CmdPipelineView
 import nextflow.exception.AbortOperationException
 
 /**
@@ -43,6 +45,8 @@ class CmdPipeline extends CmdBase implements UsageAware {
         commands << new CmdPipelineInstall()
         commands << new CmdPipelineList()
         commands << new CmdPipelineRemove()
+        commands << new CmdPipelineSearch()
+        commands << new CmdPipelineView()
     }
 
     protected JCommander commander() {
