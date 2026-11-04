@@ -17,7 +17,6 @@
 package nextflow.script.control
 
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -28,14 +27,8 @@ import test.TestUtils
  */
 class CallArityTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 

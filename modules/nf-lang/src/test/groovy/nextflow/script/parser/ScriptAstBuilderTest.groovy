@@ -16,14 +16,14 @@
 
 package nextflow.script.parser
 
+import java.nio.file.Path
+
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -33,14 +33,11 @@ import static test.TestUtils.tempFile
  */
 class ScriptAstBuilderTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
+    @TempDir
+    Path root
 
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 
@@ -623,7 +620,7 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 0
     }
 
-    def 'should report an error for invalid process record input' () {
+    def 'should parse a multiline record input with a trailing comma' () {
         when:
         def errors = check(
             '''\
@@ -850,7 +847,6 @@ class ScriptAstBuilderTest extends Specification {
 
     def 'should report an invalid escape sequence after a line continuation' () {
         given:
-        def root = tempDir()
         // a line continuation followed by CRLF spans only one line
         def main = tempFile(root, 'main.nf', "x = \'\'\'a\\" + "\r\n" + "b\\.c\'\'\'" + "\r\n")
 
@@ -861,9 +857,6 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 2
         errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should allow escaped and interpolated gstring characters' () {

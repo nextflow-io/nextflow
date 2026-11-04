@@ -21,7 +21,6 @@ import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptToGroovyHelper
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -30,19 +29,13 @@ import test.TestUtils
  */
 class AgentParserTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 
     ScriptNode parse(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
         assert TestUtils.getErrors(source) == []
@@ -50,7 +43,7 @@ class AgentParserTest extends Specification {
     }
 
     SourceUnit parseSource(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
         assert TestUtils.getErrors(source) == []

@@ -28,7 +28,6 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -42,13 +41,6 @@ import test.TestUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AgentToGroovyTest extends Specification {
-
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
 
     def 'should generate an implicit stager for each Path-typed agent input'() {
         when:
@@ -327,7 +319,7 @@ class AgentToGroovyTest extends Specification {
     // -----------------------------------------------------------------------
 
     private analyze(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         final source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
         final errors = TestUtils.getErrors(source)
