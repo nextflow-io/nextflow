@@ -74,4 +74,12 @@ class PipelineGitFetcherTest extends Specification {
         def e = thrown(AbortOperationException)
         e.message.contains('does not match the pinned commit')
     }
+
+    def 'fails on an unknown revision'() {
+        when:
+        new PipelineGitFetcher().fetch(url, 'no-such-tag', sha1, dir.resolve('target'))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Cannot fetch revision')
+    }
 }

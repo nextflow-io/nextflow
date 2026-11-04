@@ -21,6 +21,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.errors.GitAPIException
+import org.eclipse.jgit.api.errors.JGitInternalException
 
 /**
  * Fetches the exact tree of a pinned commit from a public Git repository.
@@ -38,16 +40,20 @@ class PipelineGitFetcher {
             .setDirectory(target.toFile())
         if( !isSha )
             clone.setBranch(revision).setDepth(1)
-        def git = clone.call()
+        Git git = null
         try {
+            git = clone.call()
             if( isSha )
                 git.checkout().setName(commitId).call()
             final head = git.repository.resolve('HEAD')?.name()
-            if( head != commitId )
+            if( !commitId.equalsIgnoreCase(head) )
                 throw new AbortOperationException("Revision '$revision' of $repositoryUrl does not match the pinned commit $commitId")
         }
+        catch( GitAPIException | JGitInternalException e ) {
+            throw new AbortOperationException("Cannot fetch revision '$revision' of $repositoryUrl: ${e.message}", e)
+        }
         finally {
-            git.close()
+            git?.close()
         }
         target.resolve('.git').toFile().deleteDir()
     }
