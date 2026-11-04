@@ -70,6 +70,11 @@ class PipelineInfo {
         return checksum(dir) != this.checksum
     }
 
+    /** True when the dir is an installed module or pipeline (has its own info file) */
+    static boolean isNested(Path d) {
+        return Files.exists(d.resolve(ModuleInfo.MODULE_INFO_FILE)) || Files.exists(d.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))
+    }
+
     /**
      * Same digest as {@code ModuleChecksum.computeDirectory}, skipping {@code .git}
      * and nested modules/pipelines (they carry their own info file).
@@ -81,7 +86,7 @@ class PipelineInfo {
             FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs) {
                 if( d.fileName.toString() == '.git' )
                     return FileVisitResult.SKIP_SUBTREE
-                if( d != dir && (Files.exists(d.resolve(ModuleInfo.MODULE_INFO_FILE)) || Files.exists(d.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))) )
+                if( d != dir && isNested(d) )
                     return FileVisitResult.SKIP_SUBTREE
                 return FileVisitResult.CONTINUE
             }
