@@ -32,6 +32,7 @@ import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
 import org.pf4j.PluginRuntimeException
+import org.pf4j.PluginState
 import org.pf4j.PluginWrapper
 import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
@@ -151,6 +152,62 @@ class PluginUpdaterTest extends Specification {
         manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
 
         cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should install registry plugins alongside locally built plugins in dev mode' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        and:
+        // a locally built plugin, using the dev build layout
+        def devRoot = folder.resolve('dev')
+        def devManifest = devRoot.resolve('dev-plugin/build/classes/groovy/main/META-INF/MANIFEST.MF')
+        devManifest.parent.mkdirs()
+        devManifest.text = """\
+                Manifest-Version: 1.0
+                Plugin-Class: ${FooPlugin.class.getName()}
+                Plugin-Id: dev-plugin
+                Plugin-Version: 1.0.0
+                """.stripIndent()
+        devManifest.parent.resolveSibling('dev-marker.txt').text = 'dev'
+        and:
+        // a registry plugin that depends on the locally built plugin
+        def main = createPlugin(repo, '1.0.0', PLUGIN_ID, 'dev-plugin@>=1.0.0')
+        Files.createDirectory(main.path.resolve('classes')).resolve('marker.txt').text = 'registry'
+        main.zip = zipDir(main.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "$PLUGIN_ID", "description": "Test plugin", "releases": [
+                 {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${main.zip}"} ]}]
+            """
+        and:
+        def store = Files.createDirectory(folder.resolve('plugins'))
+        System.setProperty('pf4j.mode', 'development')
+        def manager = new DevPluginManager(devRoot)
+        manager.loadPlugins()
+        def updater = new PluginUpdater(manager, store, index.toUri().toURL(), false)
+
+        expect:
+        // the locally built plugin is used regardless of the requested version
+        updater.isAlreadyInstalled(PluginRef.parse('dev-plugin@9.9.9'))
+        !updater.isAlreadyInstalled(PluginRef.parse("$PLUGIN_ID@1.0.0"))
+
+        when:
+        updater.prepareAndStart('dev-plugin', null)
+        updater.prepareAndStart(PLUGIN_ID, '1.0.0')
+
+        then:
+        manager.getPlugin('dev-plugin').pluginPath == devRoot.resolve('dev-plugin')
+        manager.getPlugin('dev-plugin').pluginState == PluginState.STARTED
+        manager.getPlugin('dev-plugin').pluginClassLoader.getResource('dev-marker.txt') != null
+        and:
+        manager.getPlugin(PLUGIN_ID).pluginPath == store.resolve("$PLUGIN_ID-1.0.0")
+        manager.getPlugin(PLUGIN_ID).pluginState == PluginState.STARTED
+        manager.getPlugin(PLUGIN_ID).pluginClassLoader.getResource('marker.txt') != null
+
+        cleanup:
+        System.clearProperty('pf4j.mode')
         folder?.deleteDir()
     }
 

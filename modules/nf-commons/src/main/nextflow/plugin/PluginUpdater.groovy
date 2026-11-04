@@ -297,6 +297,9 @@ class PluginUpdater extends UpdateManager {
     }
 
     protected boolean isAlreadyInstalled(PluginRef ref) {
+        // in dev mode, a locally built plugin is used regardless of the requested version
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && pluginManager.getPlugin(ref.id) )
+            return true
         // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
         // to resolve the latest release.
         if( !ref.version )
