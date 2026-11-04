@@ -81,12 +81,21 @@ class GitProvenance {
         }
     }
 
+    /** Public https URL of the origin, or null when it cannot be expressed as one (e.g. a local path) */
     private static String normalize(String url) {
         if( !url )
             return null
-        final u = new GitUrl(url)
-        if( u.protocol in ['ssh', 'git', 'http', 'https'] )
-            return "${u.protocol in ['http', 'https'] ? u.protocol : 'https'}://${u.domain}/${u.path}".toString()
-        return url
+        try {
+            final u = new GitUrl(url)
+            final path = u.path?.replaceAll('/+$', '')
+            if( !(u.protocol in ['ssh', 'git', 'http', 'https']) || !u.domain || !path )
+                return null
+            final host = u.domain.replaceFirst(/:\d+$/, '')
+            final scheme = u.protocol == 'http' ? 'http' : 'https'
+            return "${scheme}://${host}/${path}".toString()
+        }
+        catch( IllegalArgumentException ignored ) {
+            return null
+        }
     }
 }
