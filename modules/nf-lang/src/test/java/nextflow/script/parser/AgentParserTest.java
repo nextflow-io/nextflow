@@ -59,10 +59,6 @@ class AgentParserTest {
         return (ScriptNode) source.getAST();
     }
 
-    private static List<String> messages(List<SyntaxException> errors) {
-        return errors.stream().map(SyntaxException::getOriginalMessage).toList();
-    }
-
     // The prompt closure's free-variable refs (params.*, task.ext.*) are captured via the same
     // collector that populates process-body BodyDef.valRefs, so AgentToGroovyVisitor can fold
     // them into the synthetic PromptDef/BodyDef cache key.
@@ -186,9 +182,7 @@ class AgentParserTest {
             }
             """);
 
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(14, "Unexpected input: '}'"));
+        assertErrors(errors, tuple(14, 1, "Unexpected input: '}'"));
     }
 
     @Test
@@ -439,7 +433,7 @@ class AgentParserTest {
             }
             """);
 
-        assertThat(messages(errors)).contains("Agent should have only one output -- combine outputs into a record");
+        assertErrors(errors, tuple(7, 5, "Agent should have only one output -- combine outputs into a record"));
     }
 
     @Test
@@ -462,8 +456,8 @@ class AgentParserTest {
         assertThat(errors).isEmpty();
     }
 
-    private static List<String> agentOutputErrors(String declaration) {
-        var errors = check("""
+    private static List<SyntaxException> agentOutputErrors(String declaration) {
+        return check("""
             nextflow.enable.types = true
 
             record Answer {
@@ -486,9 +480,6 @@ class AgentParserTest {
                 "go"
             }
             """.formatted(declaration));
-        return messages(errors).stream()
-            .filter(message -> message.startsWith("Agent output"))
-            .toList();
     }
 
     @ParameterizedTest
@@ -518,7 +509,7 @@ class AgentParserTest {
         q                   | Agent output `q` should declare a type -- typed outputs are answered by the model
         """)
     void rejectUnsupportedModelAnsweredOutputTypes(String declaration, String expected) {
-        assertThat(agentOutputErrors(declaration)).containsExactly(expected);
+        assertErrors(agentOutputErrors(declaration), tuple(17, 5, expected));
     }
 
     @Test

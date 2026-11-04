@@ -122,9 +122,7 @@ class ConfigAstBuilderTest {
                 }
             }
             """);
-        assertThat(errors)
-            .extracting(SyntaxException::getStartLine, SyntaxException::getOriginalMessage)
-            .containsExactly(tuple(9, "Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string"));
+        assertErrors(errors, tuple(9, 1, "Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string"));
     }
 
     @Test

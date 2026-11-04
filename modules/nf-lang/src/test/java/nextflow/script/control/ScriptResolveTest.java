@@ -602,9 +602,7 @@ class ScriptResolveTest {
                 workflow { FOO() }
                 """);
             var utils = TestUtils.tempFile(root, "utils.nf", UTILS);
-            assertThat(check(root, main, utils))
-                .extracting(SyntaxException::getStartLine, SyntaxException::getOriginalMessage)
-                .containsExactly(tuple(5, "`basename` is not defined"));
+            assertErrors(check(root, main, utils), tuple(5, 13, "`basename` is not defined"));
         }
 
         @Test

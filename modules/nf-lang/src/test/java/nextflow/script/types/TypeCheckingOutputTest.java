@@ -16,7 +16,6 @@
 package nextflow.script.types;
 
 import nextflow.script.control.TypeCheckingVisitor;
-import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -227,17 +226,10 @@ class TypeCheckingOutputTest {
                     fastq: Path
                 }
                 """);
-            assertThat(errors).satisfiesExactly(
-                e -> assertThat(e)
-                    .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-                    .containsExactly(14, 13, "Publish source should be a Path or Iterable<Path> but was specified as a String"),
-                e -> assertThat(e)
-                    .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-                    .containsExactly(14, 21, "Publish target should be a String but was specified as a Integer"),
-                e -> {
-                    assertThat(e).extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn).containsExactly(15, 13);
-                    assertThat(e.getOriginalMessage()).contains("Statement is not a valid publish statement");
-                });
+            assertErrors(errors,
+                tuple(14, 13, "Publish source should be a Path or Iterable<Path> but was specified as a String"),
+                tuple(14, 21, "Publish target should be a String but was specified as a Integer"),
+                tuple(15, 13, "Statement is not a valid publish statement (hint: make sure right-hand side of `>>` expression is wrapped in parentheses)"));
         }
 
         @Test

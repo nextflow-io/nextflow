@@ -116,12 +116,12 @@ class ScriptAstBuilderStringTest {
 
         @Test
         void unicodeEscapeRequiresSingleUAndFourHexDigits() {
-            assertThat(check("""
+            assertErrors(check("""
                 x = '\\uZZZZ'
                 y = '\\uu00e9'
-                """))
-                .extracting(SyntaxException::getOriginalMessage)
-                .containsExactly("Invalid escape sequence: '\\u'", "Invalid escape sequence: '\\u'");
+                """),
+                tuple(1, 6, "Invalid escape sequence: '\\u'"),
+                tuple(2, 6, "Invalid escape sequence: '\\u'"));
         }
 
         @Test
@@ -142,12 +142,12 @@ class ScriptAstBuilderStringTest {
 
         @Test
         void everyInvalidEscapeIsReported() {
-            assertThat(check("""
+            assertErrors(check("""
                 x = 'a\\.b'
                 y = 'c\\,d'
-                """))
-                .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn)
-                .containsExactly(tuple(1, 7), tuple(2, 7));
+                """),
+                tuple(1, 7, "Invalid escape sequence: '\\.'"),
+                tuple(2, 7, "Invalid escape sequence: '\\,'"));
         }
 
         @Test

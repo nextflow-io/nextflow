@@ -25,7 +25,6 @@ import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
-import org.codehaus.groovy.syntax.SyntaxException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -310,9 +309,7 @@ class TypeCheckingTest {
                     }
                 }
                 """);
-            assertThat(errors)
-                .extracting(SyntaxException::getStartLine, SyntaxException::getOriginalMessage)
-                .containsExactly(tuple(2, "Missing return statement"));
+            assertErrors(errors, tuple(2, 5, "Missing return statement"));
         }
 
         @Test
@@ -326,9 +323,7 @@ class TypeCheckingTest {
                     }
                 }
                 """);
-            assertThat(errors)
-                .extracting(SyntaxException::getStartLine, SyntaxException::getOriginalMessage)
-                .containsExactly(tuple(3, "Missing return statement"));
+            assertErrors(errors, tuple(3, 9, "Missing return statement"));
         }
 
         @Test

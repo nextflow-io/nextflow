@@ -33,7 +33,9 @@ import static nextflow.script.types.TypeCheckingTestUtils.getErrors;
 import static nextflow.script.types.TypeCheckingTestUtils.parseExpression;
 import static nextflow.script.types.TypeCheckingTestUtils.typeOf;
 import static nextflow.script.types.TypeCheckingUtils.getType;
+import static nextflow.test.TestUtils.assertErrors;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
@@ -326,11 +328,12 @@ class TypeCheckingRecordTest {
 
         @Test
         void reportCombineNamedArgumentThatIsChannel() {
-            assertThat(check("""
+            assertErrors(getErrors("""
                 samples = channel.of( record(id: 1, fastq: file('1.fq')) )
                 index = channel.of( file('index.fa') )
                 samples.combine( index: index )
-                """)).containsExactly("Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value");
+                """),
+                tuple(3, 25, "Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value"));
         }
 
         @ParameterizedTest
@@ -353,13 +356,13 @@ class TypeCheckingRecordTest {
 
         @Test
         void reportJoinFieldMissingFromBothRecords() {
-            assertThat(check("""
+            assertErrors(getErrors("""
                 left  = channel.of( record(id: 42, name: 'hello') )
                 right = channel.of( record(id: 42, alive: true) )
                 left.join(right, by: 'sample_id')
-                """)).containsExactly(
-                    "Join field `sample_id` is not present in left-hand side",
-                    "Join field `sample_id` is not present in right-hand side");
+                """),
+                tuple(3, 22, "Join field `sample_id` is not present in left-hand side"),
+                tuple(3, 22, "Join field `sample_id` is not present in right-hand side"));
         }
 
         @Test
@@ -369,10 +372,8 @@ class TypeCheckingRecordTest {
                 right = channel.of( record(id: 42, alive: true) )
                 left.join(right, by: 'id')
                 """);
-            assertThat(errors).singleElement().satisfies(e -> {
-                assertThat(SeverityAware.isSoftError(e)).isTrue();
-                assertThat(e.getOriginalMessage()).isEqualTo("Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values");
-            });
+            assertErrors(errors, tuple(3, 22, "Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values"));
+            assertThat(SeverityAware.isSoftError(errors.get(0))).isTrue();
         }
     }
 

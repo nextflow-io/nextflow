@@ -93,8 +93,7 @@ class ScriptAstBuilderProcessTest {
 
         @Test
         void typedProcessWithoutPreviewFlag() {
-            // only the first two errors are asserted
-            assertThat(check("""
+            assertErrors(check("""
                 process hello {
                     input:
                     message: String
@@ -105,11 +104,10 @@ class ScriptAstBuilderProcessTest {
                     exec:
                     result = message
                 }
-                """))
-                .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-                .startsWith(
-                    tuple(3, 5, "Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"),
-                    tuple(6, 5, "Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"));
+                """),
+                tuple(3, 5, "Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"),
+                tuple(6, 5, "Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"),
+                tuple(9, 14, "`message` is not defined"));
         }
 
         @Test
@@ -132,8 +130,7 @@ class ScriptAstBuilderProcessTest {
 
         @Test
         void legacyProcessWithPreviewFlag() {
-            // only the first error is asserted
-            assertThat(check("""
+            assertErrors(check("""
                 nextflow.enable.types = true
 
                 process hello {
@@ -146,9 +143,10 @@ class ScriptAstBuilderProcessTest {
                     exec:
                     result = message
                 }
-                """))
-                .extracting(SyntaxException::getStartLine, SyntaxException::getStartColumn, SyntaxException::getOriginalMessage)
-                .startsWith(tuple(5, 5, "Invalid input declaration in typed process"));
+                """),
+                tuple(5, 5, "Invalid input declaration in typed process"),
+                tuple(8, 5, "`val` is not defined"),
+                tuple(11, 14, "`message` is not defined"));
         }
 
         @Test

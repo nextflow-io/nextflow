@@ -134,37 +134,34 @@ class ScriptAstBuilderTest {
 
         @Test
         void unclosedBraceReportedAtEndOfFile() {
-            assertThat(check("""
+            assertErrors(check("""
                 workflow {
                     if( true ) {
                         println 'hello'
                 }
-                """))
-                .extracting(SyntaxException::getStartLine, SyntaxException::getOriginalMessage)
-                .containsExactly(tuple(5, UNEXPECTED_EOF));
+                """),
+                tuple(5, 1, UNEXPECTED_EOF));
         }
 
         @Test
         void unclosedBracketAtEndOfFile() {
-            assertThat(check("""
+            assertErrors(check("""
                 workflow {
                     println 'hello'
                 }
                 x = [1, 2
-                """))
-                .extracting(SyntaxException::getOriginalMessage)
-                .containsExactly(UNEXPECTED_EOF);
+                """),
+                tuple(5, 1, UNEXPECTED_EOF));
         }
 
         @Test
         void unclosedStringAtEndOfFile() {
-            assertThat(check("""
+            assertErrors(check("""
                 workflow {
                     println \"""hello
                 }
-                """))
-                .extracting(SyntaxException::getOriginalMessage)
-                .containsExactly(UNEXPECTED_EOF);
+                """),
+                tuple(4, 1, UNEXPECTED_EOF));
         }
 
         @Test
@@ -191,7 +188,7 @@ class ScriptAstBuilderTest {
 
         @Test
         void processInputAfterOutput() {
-            assertThat(check("""
+            assertErrors(check("""
                 process hello {
                     output:
                     stdout
@@ -202,9 +199,8 @@ class ScriptAstBuilderTest {
                     script:
                     "echo $x"
                 }
-                """))
-                .extracting(SyntaxException::getStartLine)
-                .containsExactly(5);
+                """),
+                tuple(5, 11, "Unexpected input: '\\n'"));
         }
     }
 
@@ -213,18 +209,13 @@ class ScriptAstBuilderTest {
 
         @Test
         void statementsMixedWithDeclarations() {
-            assertThat(check("""
+            assertErrors(check("""
                 println 'Hello world!'
 
                 workflow {
                 }
-                """))
-                .singleElement()
-                .satisfies(error -> {
-                    assertThat(error.getStartLine()).isEqualTo(1);
-                    assertThat(error.getStartColumn()).isEqualTo(1);
-                    assertThat(error.getOriginalMessage()).contains("Statements cannot be mixed with script declarations");
-                });
+                """),
+                tuple(1, 1, "Statements cannot be mixed with script declarations -- move statements into a process, workflow, or function"));
         }
 
         @Test
