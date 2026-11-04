@@ -154,4 +154,71 @@ class GitProvenanceTest extends Specification {
         p.commitId
         p.clean
     }
+
+    def 'normalizes origin #origin'() {
+        given:
+        def git = repo(origin)
+        commit(git)
+
+        when:
+        def p = GitProvenance.of(tmp)
+        git.close()
+
+        then:
+        p.repositoryUrl == expected
+        p.commitId
+
+        where:
+        origin                             | expected
+        'https://github.com/org/p.git'     | 'https://github.com/org/p'
+        'git@github.com:org/p.git'         | 'https://github.com/org/p'
+        'ssh://git@host/org/p.git'         | 'https://host/org/p'
+        'ssh://git@host:2222/org/p'        | 'https://host/org/p'
+        'https://user:tok@host/org/p.git'  | 'https://host/org/p'
+        'https://github.com/org/p/'        | 'https://github.com/org/p'
+        'https://github.com'               | null
+        'file:///tmp/p.git'                | null
+        '/tmp/p.git'                       | null
+        '../p.git'                         | null
+    }
+
+    def 'reads annotated tag at HEAD'() {
+        given:
+        def git = repo()
+        commit(git)
+        git.tag().setName('v2.0.0').setAnnotated(true).setMessage('rel').setSigned(false).call()
+
+        when:
+        def p = GitProvenance.of(tmp)
+        git.close()
+
+        then:
+        p.revision == 'v2.0.0'
+    }
+
+    def 'uses the commit id on detached HEAD'() {
+        given:
+        def git = repo()
+        commit(git)
+        commit(git, 'b.nf')
+        git.checkout().setName(git.repository.resolve('HEAD~1').name()).call()
+
+        when:
+        def p = GitProvenance.of(tmp)
+        git.close()
+
+        then:
+        p.revision == p.commitId
+    }
+
+    def 'null for a repo without commits'() {
+        given:
+        def git = repo()
+
+        expect:
+        GitProvenance.of(tmp) == null
+
+        cleanup:
+        git.close()
+    }
 }
