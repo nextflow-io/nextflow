@@ -383,7 +383,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
-      id-token: write  # OIDC token to assume the AWS release role
+      id-token: write # OIDC token to assume the AWS release role
     steps:
       # Intentionally persists credentials: the `release` task in
       # packing.gradle runs `git push origin vX.Y.Z` against this repo,
