@@ -16,8 +16,11 @@
 
 package nextflow.script.control
 
+import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.module.spi.FallbackRemoteModuleResolver
+import nextflow.module.spi.RemoteModuleResolverProvider
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -34,6 +37,14 @@ class ResolveIncludeTest extends Specification {
 
     @TempDir
     Path root
+
+    def setup() {
+        RemoteModuleResolverProvider.instance = new FallbackRemoteModuleResolver()
+    }
+
+    def cleanup() {
+        RemoteModuleResolverProvider.reset()
+    }
 
     List<SyntaxException> check(Path projectDir, List<Path> files) {
         final parser = new ScriptParser(projectDir)
@@ -331,4 +342,57 @@ class ResolveIncludeTest extends Specification {
         errors[0].getOriginalMessage() == "Included name 'nope' is not defined in module '${module}'"
     }
 
+    def 'should resolve a pipeline include from the pipelines directory' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { workflow as RNASEQ } from 'nf-core/rnaseq'
+            ''')
+        def pipeline = tempFile(root, 'pipelines/nf-core/rnaseq/main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                println 'hi'
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, pipeline])
+        then:
+        errors.isEmpty()
+    }
+
+    def 'should report an error for a missing pipeline' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { workflow as RNASEQ } from 'nf-core/rnaseq'
+            ''')
+
+        when:
+        def errors = check(root, [main])
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage().contains("Pipeline 'nf-core/rnaseq' not found in 'pipelines' directory")
+    }
+
+    def 'should not resolve a module include from the pipelines directory' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { FASTQC } from 'nf-core/fastqc'
+            ''')
+        Files.createDirectories(root.resolve('pipelines/nf-core/fastqc'))
+
+        when:
+        def errors = check(root, [main])
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage().contains("not found in 'modules' directory")
+    }
 }

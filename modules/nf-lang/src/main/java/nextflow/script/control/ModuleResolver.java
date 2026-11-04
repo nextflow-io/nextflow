@@ -101,15 +101,28 @@ public class ModuleResolver {
             return;
         if( source.getAST() instanceof ScriptNode sn ) {
             for( var in : sn.getIncludes() ) {
-                var include = in.source.getText();
-                if( include.startsWith("plugin/") )
+                if( in.source.getText().startsWith("plugin/") )
                     continue;
-                var dep = byUri.get(getIncludeUri(uri, include, projectDir));
+                var includeUri = tryGetIncludeUri(uri, in);
+                var dep = includeUri != null ? byUri.get(includeUri) : null;
                 if( dep != null )
                     visitDependencies(dep, byUri, visited, ordered);
             }
         }
         ordered.add(source);
+    }
+
+    /**
+     * @return the include URI, or null if it cannot be resolved (reported
+     * as an include error by {@link ResolveIncludeVisitor})
+     */
+    private URI tryGetIncludeUri(URI uri, IncludeNode node) {
+        try {
+            return getIncludeUri(uri, node, projectDir);
+        }
+        catch( Exception e ) {
+            return null;
+        }
     }
 
     private SourceUnit resolveInclude(IncludeNode node, SourceUnit sourceUnit, Function<URI,SourceUnit> sourceResolver) {
@@ -118,7 +131,9 @@ public class ModuleResolver {
             return null;
 
         var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source, projectDir);
+        var includeUri = tryGetIncludeUri(uri, node);
+        if( includeUri == null )
+            return null;
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -144,10 +159,11 @@ public class ModuleResolver {
      * Resolve an include source to the URI of the included script.
      *
      * @param uri the URI of the including script
-     * @param source the include source
+     * @param node the include node
      * @param projectDir the project directory, used to resolve remote modules
      */
-    public static URI getIncludeUri(URI uri, String source, Path projectDir) {
+    public static URI getIncludeUri(URI uri, IncludeNode node, Path projectDir) {
+        var source = node.source.getText();
         var localUri = getLocalIncludeUri(uri, source);
         if( localUri != null )
             return localUri;
@@ -156,9 +172,12 @@ public class ModuleResolver {
         // nested `modules/` directory (nested vendoring). Any other script -- the entry
         // script, or a plain local script -- resolves against the project directory.
         var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
-        return RemoteModuleResolverProvider.getInstance()
-            .resolve(source, base)
-            .normalize()
+        var resolver = RemoteModuleResolverProvider.getInstance();
+        var names = node.entries.stream().map(e -> e.name).toList();
+        var path = RemoteModuleResolver.isPipelineInclude(names)
+            ? resolver.resolvePipeline(source, base)
+            : resolver.resolve(source, base);
+        return path.normalize()
             .toUri();
     }
 

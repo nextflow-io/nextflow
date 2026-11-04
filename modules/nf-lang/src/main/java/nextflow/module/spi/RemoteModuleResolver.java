@@ -18,7 +18,9 @@ package nextflow.module.spi;
 
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 
 /**
  * Service Provider Interface for resolving remote modules referenced with '@scope/name' syntax.
@@ -43,6 +45,24 @@ public interface RemoteModuleResolver {
     String MODULES_DIR = "modules";
 
     /**
+     * Name of the directory under which pipelines are installed.
+     */
+    String PIPELINES_DIR = "pipelines";
+
+    /**
+     * Marker file at the root of an installed pipeline.
+     */
+    String PIPELINE_INFO_FILE = ".pipeline-info";
+
+    /**
+     * @return true if the include entries refer to a pipeline (its entry workflow or params)
+     * rather than to a module.
+     */
+    static boolean isPipelineInclude(Collection<String> entryNames) {
+        return entryNames.contains("workflow") || entryNames.contains("params");
+    }
+
+    /**
      * Determine the base directory against which a remote module include should be resolved,
      * i.e. the directory whose {@code modules/} directory is searched.
      *
@@ -64,7 +84,23 @@ public interface RemoteModuleResolver {
             return projectDir;
         if( projectDir == null )
             return parent;
-        return isVendoredModuleDir(parent, projectDir) ? parent : projectDir;
+        var root = findPipelineRoot(parent, projectDir);
+        return isVendoredModuleDir(parent, root) ? parent : root;
+    }
+
+    /**
+     * @return the nearest directory from {@code dir} up to {@code projectDir} (inclusive) that
+     * holds a pipeline info file, or {@code projectDir} if there is none.
+     */
+    private static Path findPipelineRoot(Path dir, Path projectDir) {
+        var stop = projectDir.toAbsolutePath().normalize();
+        var current = dir.toAbsolutePath().normalize();
+        while( current != null && current.startsWith(stop) ) {
+            if( Files.exists(current.resolve(PIPELINE_INFO_FILE)) )
+                return current;
+            current = current.getParent();
+        }
+        return projectDir;
     }
 
     /**
@@ -129,6 +165,27 @@ public interface RemoteModuleResolver {
      * @throws IllegalArgumentException if the module reference is invalid or resolution fails
      */
     Path resolve(String moduleName, Path baseDir);
+
+    /**
+     * Resolve a pipeline reference (e.g., 'scope/name') to the path of its main script.
+     *
+     * <p>The default implementation only looks on disk, under {@code baseDir/pipelines/}.
+     *
+     * @param name    The pipeline reference string
+     * @param baseDir0 The directory whose {@code pipelines/} directory is searched
+     * @return Path to the pipeline's main.nf file
+     * @throws IllegalStateException if the pipeline is invalid or not installed
+     */
+    default Path resolvePipeline(String name, Path baseDir0) {
+        var baseDir = baseDir0 != null ? baseDir0 : Path.of(".").toAbsolutePath();
+        var pipelinesDir = baseDir.resolve(PIPELINES_DIR).normalize();
+        var resolved = pipelinesDir.resolve(name).normalize();
+        if( !resolved.startsWith(pipelinesDir) )
+            throw new IllegalStateException("Invalid pipeline name '" + name + "' -- path escapes the pipelines directory");
+        if( !Files.exists(resolved) )
+            throw new IllegalStateException("Pipeline '" + name + "' not found in 'pipelines' directory -- use 'nextflow pipeline install' to install it first");
+        return resolved.resolve("main.nf");
+    }
 
     /**
      * Get the priority of this resolver. Higher priority resolvers are tried first.
