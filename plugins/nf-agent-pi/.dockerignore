@@ -14,7 +14,8 @@
 !agent-rpc/go.sum
 !agent-rpc/main.go
 
-# harness: installed into the runtime stage
+# harness: bundled by the harness stage
 !package.json
 !package-lock.json
 !harness/runner.mjs
+!harness/bundle.mjs

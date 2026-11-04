@@ -160,8 +160,8 @@ class PiAgentPackagingTest extends Specification {
         then: 'the proxy binary the launch command execs'
         spec.containerProxyCommand == [ copied['/agent-rpc'] ]
 
-        and: 'the harness the proxy runs after the `--` separator'
-        spec.containerHarnessCommand == [ 'node', copied['harness/runner.mjs'] ]
+        and: 'the harness bundle the proxy runs after the `--` separator'
+        spec.containerHarnessCommand == [ 'node', copied['/harness/runner.mjs'] ]
     }
 
     def 'the declared image is the image build-image.sh publishes'() {

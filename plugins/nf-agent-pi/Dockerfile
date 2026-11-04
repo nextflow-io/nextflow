@@ -32,15 +32,23 @@ COPY agent-rpc/main.go ./
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags='-s -w' -o /agent-rpc .
 
+# The harness is bundled with esbuild into a single file, so the runtime image ships no
+# node_modules. The bundle is platform-independent, so this stage also runs on $BUILDPLATFORM.
+FROM --platform=$BUILDPLATFORM node:24.4.1-bookworm-slim@sha256:36ae19f59c91f3303c7a648f07493fe14c4bd91320ac8d898416327bacf1bbfa AS harness
+
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY harness/runner.mjs harness/bundle.mjs ./harness/
+RUN node harness/bundle.mjs /harness
+
 FROM node:24.4.1-bookworm-slim@sha256:36ae19f59c91f3303c7a648f07493fe14c4bd91320ac8d898416327bacf1bbfa
 
 WORKDIR /opt/nf-agent-pi
 RUN apt-get update \
     && apt-get install -y --no-install-recommends procps \
     && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts --omit=dev && npm cache clean --force
-COPY harness/runner.mjs ./runner.mjs
+COPY --from=harness /harness/runner.mjs ./runner.mjs
 COPY --from=agent-rpc /agent-rpc /usr/local/bin/agent-rpc
 
 # Canonical Nextflow executors own the container command/entrypoint so they can
