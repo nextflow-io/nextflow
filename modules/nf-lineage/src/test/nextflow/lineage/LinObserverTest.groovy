@@ -890,12 +890,14 @@ class LinObserverTest extends Specification {
         observer.executionHash = 'hash'
         and:
         def file = folder.resolve('file.txt'); file.text = 'some data'
+        def typed = folder.resolve('typed.txt'); typed.text = 'typed data'
         def bin = folder.resolve('script.sh'); bin.text = 'echo hello'
         observer.getTaskGlobalVars(_) >> [:]
         observer.getTaskBinEntries(_) >> [bin]
         and:
         def inputs = new LinkedHashMap<InParam, Object>()
         inputs.put(new FileInParam(null, []).bind('file'), [new FileHolder(file)])
+        inputs.put(new ProcessInput('typed', Path, false), typed)
         def processor = Mock(TaskProcessor) {
             getConfig() >> Mock(ProcessConfig) { getHashMode() >> CacheHelper.HashMode.DEEP }
         }
@@ -912,6 +914,7 @@ class LinObserverTest extends Specification {
         then:
         result.codeChecksum == deep('echo task source')
         result.input[0].value[0].checksum == deep(file)
+        result.input[1].value.checksum == deep(typed)
         result.binEntries[0].checksum == deep(bin)
         and:
         deep(file) != Checksum.ofNextflow(file)
