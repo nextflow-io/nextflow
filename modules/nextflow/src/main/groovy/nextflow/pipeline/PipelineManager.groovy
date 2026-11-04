@@ -177,8 +177,17 @@ class PipelineManager {
         Files.createDirectories(dir.parent)
         final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
         try {
-            final commit = fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
-            info.commitId = info.commitId ?: commit
+            if( info.source == 'artifact' ) {
+                // the archive lives in tmp only until extracted, so it never enters the checksum
+                final bundle = tmp.resolve('.bundle.tar.gz')
+                client.downloadPipelineRelease(info.name, info.version, bundle)
+                PipelineBundle.extract(bundle, tmp)
+                Files.delete(bundle)
+            }
+            else {
+                final commit = fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+                info.commitId = info.commitId ?: commit
+            }
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)
             MODIFIED.remove(realPath(dir))
@@ -192,6 +201,8 @@ class PipelineManager {
             catch( IOException ex ) {
                 log.warn "Cannot delete temporary directory ${tmp}: ${ex.message}"
             }
+            if( e instanceof RegistryException )
+                throw new AbortOperationException("Cannot download pipeline ${info.name}@${info.version} -- ${e.message}", e)
             throw e
         }
     }
@@ -219,9 +230,12 @@ class PipelineManager {
             name: name,
             version: release.version,
             workflowPath: pipeline.workflowPath,
+            source: release.artifact ? 'artifact' : 'git',
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
             commitId: release.commitId,
-            registryUrl: client.primaryUrl())
+            registryUrl: client.primaryUrl(),
+            artifactUrl: release.artifact?.url,
+            artifactChecksum: release.artifact?.checksum)
     }
 }
