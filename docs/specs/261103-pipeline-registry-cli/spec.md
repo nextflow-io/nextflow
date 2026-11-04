@@ -63,7 +63,7 @@ An installed pipeline that uses registry-style includes behaves as it does when 
 2. `-version 3.14.0` installs that release. It replaces an installed different version only if the installed copy is unmodified.
 3. If the installed copy was edited by hand, install refuses and suggests `-force`. With `-force`, it replaces the copy.
 4. If the installed version and checksum already match, it prints that the pipeline is up to date and does nothing.
-5. The release's `repositoryUrl` is fetched at `commitId` through the existing repository providers (GitHub, GitLab, Bitbucket). `.git` is not kept.
+5. The release's `repositoryUrl` is fetched at `commitId` with Git (JGit). `.git` is not kept. If the revision no longer points to `commitId`, install fails. Credentials are not needed, because the registry accepts only public repositories.
 
 ### User Story 4: `list`, `remove`, `search`, `view` (P2)
 
