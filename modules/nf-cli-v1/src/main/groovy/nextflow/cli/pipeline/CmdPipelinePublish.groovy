@@ -33,6 +33,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.GitProvenance
 import nextflow.pipeline.PipelineBundle
+import nextflow.pipeline.PipelineManager
 import nextflow.util.TestOnly
 
 /**
@@ -76,10 +77,11 @@ class CmdPipelinePublish extends CmdBase {
         if( !Files.isDirectory(dir) )
             throw new AbortOperationException("Pipeline directory not found: ${dir}")
 
-        final manifest = (new ConfigBuilder().setBaseDir(dir).build(configFiles(dir)).get('manifest') ?: [:]) as Map
+        final config = new ConfigBuilder().setBaseDir(dir).build(configFiles(dir))
+        final manifest = (config.get('manifest') ?: [:]) as Map
         final name = manifest.name as String
         final ver = version ?: manifest.version as String
-        if( !name || !(name ==~ /[\w.-]+\/[\w.-]+/) )
+        if( !name || !PipelineManager.NAME_PATTERN.matcher(name).matches() )
             throw new AbortOperationException("Pipeline name must be set as 'manifest.name' in the form 'scope/name' (found: ${name ?: 'none'})")
         if( !ver || !(ver ==~ /\w[\w.+-]*/) )
             throw new AbortOperationException("Pipeline version must be set as 'manifest.version' or with -version (found: ${ver ?: 'none'})")
@@ -96,7 +98,7 @@ class CmdPipelinePublish extends CmdBase {
             final checksum = PipelineBundle.create(dir, bundle)
             final size = Files.size(bundle)
             if( size > MAX_BUNDLE_SIZE )
-                throw new AbortOperationException("The pipeline bundle is ${size} bytes, over the 50 MB limit")
+                throw new AbortOperationException("The pipeline bundle is ${String.format('%.1f', size / (1024d * 1024d))} MB, over the 50 MB limit")
 
             final request = new CreatePipelineReleaseRequest()
                 .version(ver)
@@ -115,15 +117,15 @@ class CmdPipelinePublish extends CmdBase {
                 printDryRun(name, request)
                 return
             }
-            publish(dir, name, request, bundle)
+            publish(config, name, request, bundle)
         }
         finally {
             Files.deleteIfExists(bundle)
         }
     }
 
-    private void publish(Path dir, String name, CreatePipelineReleaseRequest request, Path bundle) {
-        final registry = client ?: RegistryClientFactory.forConfig(registryConfig(dir))
+    private void publish(Map config, String name, CreatePipelineReleaseRequest request, Path bundle) {
+        final registry = client ?: newClient(config)
         println "Publishing pipeline ${name}@${request.version}..."
         try {
             final releaseId = registry.createPipelineRelease(name, request).releaseId
@@ -152,8 +154,11 @@ class CmdPipelinePublish extends CmdBase {
         println "Dry run complete. Run without -dry-run to publish to the registry."
     }
 
-    private RegistryConfig registryConfig(Path dir) {
-        final config = new ConfigBuilder().setBaseDir(dir).build(configFiles(dir))
+    protected RegistryClient newClient(Map config) {
+        return RegistryClientFactory.forConfig(registryConfig(config))
+    }
+
+    protected RegistryConfig registryConfig(Map config) {
         final registry = config.get('registry') as Map
         final opts = new LinkedHashMap(registry ?: [:])
         if( registryUrl )
