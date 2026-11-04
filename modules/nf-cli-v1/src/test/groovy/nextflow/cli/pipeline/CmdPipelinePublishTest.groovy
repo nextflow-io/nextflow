@@ -24,6 +24,7 @@ import io.seqera.npr.api.schema.v1.UploadPipelineReleaseResponse
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import nextflow.cli.Launcher
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.junit.Rule
@@ -168,15 +169,16 @@ class CmdPipelinePublishTest extends Specification {
         0 * client._
 
         where:
-        manifest << ["version = '1.0.0'", "name = 'mypipe'; version = '1.0.0'", "name = 'myorg/mypipe'"]
+        manifest << ["version = '1.0.0'", "name = 'mypipe'; version = '1.0.0'", "name = 'myorg/mypipe'",
+                    "name = 'MyOrg/Pipe'; version = '1.0.0'", "name = 'org/_p'; version = '1.0.0'", "name = 'org/1p'; version = '1.0.0'"]
     }
 
     def 'should refuse an empty bundle'() {
         given:
         pipeline()
-        def parent = Git.init().setDirectory(base.toFile()).call()
+        def repo = Git.init().setDirectory(base.toFile()).call()
         // everything untracked: nothing would be published
-        parent.close()
+        repo.close()
 
         when:
         cmd().run()
@@ -200,6 +202,7 @@ class CmdPipelinePublishTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
+        e.message.contains('51.0 MB')
         e.message.contains('50 MB')
         0 * client._
     }
@@ -275,5 +278,29 @@ class CmdPipelinePublishTest extends Specification {
             new UploadPipelineReleaseResponse()
         }
         !Files.exists(sent)
+    }
+
+    def 'should use the -registry url'() {
+        given:
+        pipeline()
+        RegistryConfig used
+        def mock = client
+        def c = new CmdPipelinePublish() {
+            @Override
+            protected RegistryClient newClient(Map config) {
+                used = registryConfig(config)
+                return mock
+            }
+        }
+        c.args = [base.toString()]
+        c.registryUrl = 'https://reg.example.com/'
+
+        when:
+        c.run()
+
+        then:
+        1 * client.createPipelineRelease(_, _) >> created()
+        1 * client.uploadPipelineRelease(7L, _) >> new UploadPipelineReleaseResponse()
+        used.url == 'https://reg.example.com'
     }
 }

@@ -38,7 +38,7 @@ import nextflow.module.spi.RemoteModuleResolver
 @CompileStatic
 class PipelineManager {
 
-    private static final Pattern NAME_PATTERN = ~/^[a-z0-9][a-z0-9._-]*\/[a-z][a-z0-9._-]*$/
+    static final Pattern NAME_PATTERN = ~/^[a-z0-9][a-z0-9._-]*\/[a-z][a-z0-9._-]*$/
 
     private static final String DEFAULT_WORKFLOW = 'main.nf'
 
