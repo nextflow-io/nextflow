@@ -185,6 +185,8 @@ class IncludeDef {
         // workflow module's own dependencies are found under its nested `modules/` directory
         // (nested vendoring). Any other script resolves against the project base dir.
         final base = RemoteModuleResolver.resolveBaseDir(getOwnerPath(), session.baseDir)
+        if( RemoteModuleResolver.isPipelineInclude(modules*.name) )
+            return resolver.resolvePipeline(moduleName, base)
         return resolver.resolve(moduleName, base)
     }
 

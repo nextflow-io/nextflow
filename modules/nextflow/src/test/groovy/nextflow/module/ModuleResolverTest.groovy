@@ -19,6 +19,13 @@ package nextflow.module
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import nextflow.extension.Bolts
+import org.slf4j.LoggerFactory
+import nextflow.module.spi.RemoteModuleResolver
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -214,4 +221,37 @@ class ModuleResolverTest extends Specification {
         ModuleResolver.pinnedVersion(tempDir, new ModuleReference('nf-core', 'fastqc')) == null
     }
 
+
+    def 'does not warn for a module without .module-info inside a pipeline root'() {
+        given:
+        // the warn1 cache is JVM-global and would swallow the message
+        def cache = Bolts.getDeclaredField('LOGGER_CACHE')
+        cache.setAccessible(true)
+        (cache.get(null) as Map).clear()
+        def logger = (Logger) LoggerFactory.getLogger(ModuleResolver)
+        def level = logger.level
+        logger.setLevel(Level.WARN)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+
+        and:
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = new ModuleStorage(tempDir).getModuleDir(reference)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        tempDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
+
+        when:
+        def result = new ModuleResolver(tempDir).resolve(reference, null, false)
+
+        then:
+        result == moduleDir.resolve('main.nf')
+        !appender.list*.formattedMessage.any { it.contains('no registry origin') }
+
+        cleanup:
+        logger.detachAppender(appender)
+        logger.setLevel(level)
+    }
 }
