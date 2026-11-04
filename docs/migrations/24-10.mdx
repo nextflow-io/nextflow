@@ -41,7 +41,7 @@ The `task` variable in the process definition has two new properties, `task.prev
 
 ## Breaking changes
 
-- The `all` release of Nextflow has been replaced with the `dist` release, which includes fewer core plugins by default and supports third-party plugins. See [Standalone distribution][install-standalone] for details.
+- The `all` release of Nextflow has been replaced with the `dist` release, which does not bundle any plugins and supports third-party plugins. See [Standalone distribution][install-standalone] for details.
 
 - The `nf-ga4gh` plugin has been moved into its own repository, [nextflow-io/nf-ga4gh](https://github.com/nextflow-io/nf-ga4gh). To continue using the TES executor, you must explicitly declare the `nf-ga4gh` plugin in your Nextflow configuration. Refer to the plugin repository for documentation and updates on GA4GH integrations.
 
