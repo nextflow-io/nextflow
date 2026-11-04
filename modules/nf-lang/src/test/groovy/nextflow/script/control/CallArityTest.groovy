@@ -104,9 +104,7 @@ class CallArityTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == 'Incorrect number of call arguments, expected 1 but received 2'
+        TestUtils.errorList(errors) == [[18, 5, 'Incorrect number of call arguments, expected 1 but received 2']]
 
         when: 'the call arity matches the declared inputs'
         errors = check(

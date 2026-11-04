@@ -147,9 +147,7 @@ class ConfigAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 9
-        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+        TestUtils.errorList(errors) == [[9, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
     }
 
     def 'should report an invalid escape sequence at the exact position' () {

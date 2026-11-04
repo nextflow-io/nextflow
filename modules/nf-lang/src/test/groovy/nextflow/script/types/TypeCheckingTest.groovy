@@ -34,6 +34,7 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Ignore
 import spock.lang.Specification
+import test.TestUtils
 import spock.lang.Unroll
 
 import static nextflow.script.types.TypeCheckingUtils.*
@@ -479,9 +480,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 2
-        errors[0].getOriginalMessage() == "Missing return statement"
+        TestUtils.errorList(errors) == [[2, 5, 'Missing return statement']]
 
         when:
         errors = getErrors(
@@ -496,9 +495,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 3
-        errors[0].getOriginalMessage() == "Missing return statement"
+        TestUtils.errorList(errors) == [[3, 9, 'Missing return statement']]
 
         when: 'the body is empty'
         errors = getErrors(
@@ -511,12 +508,10 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then: 'the error is reported against the function or closure'
-        errors.size() == 2
-        errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 1
-        errors[1].getStartLine() == 4
-        errors[1].getStartColumn() == 23
-        errors.every { it.getOriginalMessage() == "Missing return statement" }
+        TestUtils.errorList(errors) == [
+            [1, 1, 'Missing return statement'],
+            [4, 23, 'Missing return statement']
+        ]
     }
 
     @Unroll
@@ -2046,8 +2041,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage() == 'Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value'
+        TestUtils.errorList(errors) == [[3, 25, 'Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value']]
     }
 
     def 'should resolve a `groupBy` operation' () {
@@ -2098,9 +2092,10 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 2
-        errors[0].getOriginalMessage() == 'Join field `sample_id` is not present in left-hand side'
-        errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
+        TestUtils.errorList(errors) == [
+            [3, 22, 'Join field `sample_id` is not present in left-hand side'],
+            [3, 22, 'Join field `sample_id` is not present in right-hand side']
+        ]
     }
 
     def 'should report a soft error for a `join` that overwrites left-hand fields' () {
@@ -2113,9 +2108,8 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
+        TestUtils.errorList(errors) == [[3, 22, 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values']]
         errors[0].isSoftError()
-        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
 }

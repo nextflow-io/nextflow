@@ -177,9 +177,7 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 14
-        errors[0].getOriginalMessage() == "Unexpected input: '}'"
+        TestUtils.errorList(errors) == [[14, 1, "Unexpected input: '}'"]]
     }
 
     def 'should resolve an agent reference from a workflow'() {
@@ -443,7 +441,7 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.any { it.getOriginalMessage() == 'Agent should have only one output -- combine outputs into a record' }
+        TestUtils.errorList(errors) == [[7, 5, 'Agent should have only one output -- combine outputs into a record']]
     }
 
     def 'should allow a named output when it is the only agent output'() {
@@ -557,6 +555,6 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.any { it.getOriginalMessage().contains('eval') }
+        TestUtils.errorList(errors) == [[8, 5, '`eval` is not defined']]
     }
 }

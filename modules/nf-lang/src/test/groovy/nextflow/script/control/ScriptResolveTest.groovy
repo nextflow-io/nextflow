@@ -697,9 +697,7 @@ class ScriptResolveTest extends Specification {
         tempFile(root, 'a/utils.nf', module)
         def errors = check(root.resolve('a'), [a, root.resolve('a/utils.nf')])
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getOriginalMessage() == '`basename` is not defined'
+        TestUtils.errorList(errors) == [[5, 25, '`basename` is not defined']]
 
         // an implicit declaration in a process shadows an included name
         when:
