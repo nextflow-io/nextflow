@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.cli.pipeline.CmdPipelineInstall
 import nextflow.cli.pipeline.CmdPipelineList
+import nextflow.cli.pipeline.CmdPipelinePublish
 import nextflow.cli.pipeline.CmdPipelineRemove
 import nextflow.cli.pipeline.CmdPipelineSearch
 import nextflow.cli.pipeline.CmdPipelineView
@@ -38,6 +39,7 @@ class CmdPipeline extends CmdGroup {
     static {
         commands << new CmdPipelineInstall()
         commands << new CmdPipelineList()
+        commands << new CmdPipelinePublish()
         commands << new CmdPipelineRemove()
         commands << new CmdPipelineSearch()
         commands << new CmdPipelineView()
