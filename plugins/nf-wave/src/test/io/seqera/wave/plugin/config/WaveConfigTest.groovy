@@ -203,7 +203,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:15s, maxAttempts:10, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT15S), scan:WaveScanConfig(allowedLevels:null, mode:null), soci:false, prefetchDepth:0, prefetchMaxConcurrent:4, strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
+        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:15s, maxAttempts:10, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT15S), scan:WaveScanConfig(allowedLevels:null, mode:null), soci:false, prefetchDepth:0, strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
     }
 
     def 'should not allow invalid setting' () {
@@ -258,18 +258,6 @@ class WaveConfigTest extends Specification {
 
         when:
         new WaveConfig([prefetchDepth: -1])
-        then:
-        thrown(IllegalArgumentException)
-    }
-
-    def 'should get the prefetch max concurrent' () {
-        expect:
-        new WaveConfig([:]).prefetchMaxConcurrent() == 4
-        new WaveConfig([prefetchMaxConcurrent: 10]).prefetchMaxConcurrent() == 10
-        new WaveConfig([prefetchMaxConcurrent: '2']).prefetchMaxConcurrent() == 2
-
-        when:
-        new WaveConfig([prefetchMaxConcurrent: 0])
         then:
         thrown(IllegalArgumentException)
     }

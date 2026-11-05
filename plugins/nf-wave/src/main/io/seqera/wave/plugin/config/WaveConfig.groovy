@@ -95,12 +95,6 @@ class WaveConfig implements ConfigScope {
     """)
     final int prefetchDepth
 
-    @ConfigOption
-    @Description("""
-        The max number of container builds requested ahead that are awaited at the same time, when `wave.prefetchDepth` is enabled (default: `4`). The requests themselves are sent one at a time, paced by the Wave client rate limit, and are not delayed by the builds in progress.
-    """)
-    final int prefetchMaxConcurrent
-
     @ConfigOption(types=[String])
     @Description("""
         The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
@@ -126,7 +120,6 @@ class WaveConfig implements ConfigScope {
         this.scan = new WaveScanConfig(opts.scan as Map ?: Collections.emptyMap())
         this.soci = opts.soci as boolean
         this.prefetchDepth = opts.prefetchDepth ? opts.prefetchDepth as int : 0
-        this.prefetchMaxConcurrent = opts.prefetchMaxConcurrent != null ? opts.prefetchMaxConcurrent as int : 4
         this.strategy = parseStrategy(opts.strategy)
 
         this.bundleProjectResources = opts.bundleProjectResources
@@ -157,8 +150,6 @@ class WaveConfig implements ConfigScope {
 
     int prefetchDepth() { this.prefetchDepth }
 
-    int prefetchMaxConcurrent() { this.prefetchMaxConcurrent }
-
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
@@ -179,8 +170,6 @@ class WaveConfig implements ConfigScope {
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
         if( prefetchDepth < 0 )
             throw new IllegalArgumentException("Config setting 'wave.prefetchDepth' cannot be negative - offending value: $prefetchDepth")
-        if( prefetchMaxConcurrent < 1 )
-            throw new IllegalArgumentException("Config setting 'wave.prefetchMaxConcurrent' should be greater than zero - offending value: $prefetchMaxConcurrent")
         if( FileHelper.getUrlProtocol(build.repository) )
             throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$build.repository'")
         if( FileHelper.getUrlProtocol(build.cacheRepository) )
