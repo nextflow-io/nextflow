@@ -1463,6 +1463,17 @@ class WaveClientTest extends Specification {
         0 * wave.checkBuildCompletion(handle) >> null
         and:
         ready
+
+        // image not handled by wave
+        when:
+        ready = wave.isContainerReady('/cache/image.img')
+        then:
+        cache.get('/cache/image.img') >> null
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        ready
     }
 
     def 'should return container meta' () {

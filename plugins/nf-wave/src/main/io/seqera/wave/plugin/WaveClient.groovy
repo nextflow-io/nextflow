@@ -573,23 +573,14 @@ class WaveClient {
         else
             checkConflicts(attrs, task.lazyName())
 
-        // Wave cannot change a Singularity image, so use it as is
-        if( isSingularityImageUrl(task, attrs) )
+        // Wave cannot change a Singularity image URL, use it as is
+        // (unless Fusion needs Wave to add its layer)
+        final engine = task.getContainerConfig()?.getEngine()
+        if( engine in ['singularity','apptainer'] && FileHelper.getUrlProtocol(attrs.container) && !fusion.enabled() )
             return null
 
         //  resolve the wave assets
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
-    }
-
-    protected boolean isSingularityImageUrl(TaskRun task, Map<String,String> attrs) {
-        if( !attrs.container || attrs.conda || attrs.dockerfile || attrs.singularityfile )
-            return false
-        // Fusion needs Wave to add its layer to the image
-        if( fusion.enabled() )
-            return false
-        if( !FileHelper.getUrlProtocol(attrs.container) )
-            return false
-        return task.getContainerConfig()?.getEngine() in ['singularity', 'apptainer']
     }
 
     protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
@@ -748,14 +739,10 @@ class WaveClient {
         return false
     }
 
-    boolean hasContainer(String key) {
-        return responses.containsKey(key)
-    }
-
     boolean isContainerReady(String key) {
         final handle = responses.get(key)
         if( !handle )
-            throw new IllegalStateException("Unable to find any container with key: $key")
+            return true   // image not handled by Wave (e.g. local or URL Singularity image)
         final resp = handle.response
         if( resp.requestId ) {
             return resp.succeeded
