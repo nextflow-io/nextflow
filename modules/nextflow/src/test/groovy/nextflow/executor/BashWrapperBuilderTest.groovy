@@ -394,7 +394,7 @@ class BashWrapperBuilderTest extends Specification {
             script: '''\
                 array=( /work/01 /work/02 )
                 export nxf_array_task_dir=${array[SLURM_ARRAY_TASK_ID]}
-                exec bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+                exec bash $nxf_array_task_dir/.command.run > $nxf_array_task_dir/.command.log 2>&1
                 '''.stripIndent()
         )
 
@@ -415,9 +415,46 @@ class BashWrapperBuilderTest extends Specification {
             ###   - /work/02
             ### ...
             set -eu
+            [[ ${NXF_DEBUG:=0} > 1 ]] && set -x
             array=( /work/01 /work/02 )
             export nxf_array_task_dir=${array[SLURM_ARRAY_TASK_ID]}
-            exec bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+            exec bash $nxf_array_task_dir/.command.run > $nxf_array_task_dir/.command.log 2>&1
+            '''.stripIndent()
+    }
+
+    def 'should create job array wrapper without header script' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo',
+            arrayIndexName: 'AWS_BATCH_JOB_ARRAY_INDEX',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02') ],
+            script: '''\
+                array=( /work/01 /work/02 )
+                export nxf_array_task_dir=${array[AWS_BATCH_JOB_ARRAY_INDEX]}
+                exec bash $nxf_array_task_dir/.command.run
+                '''.stripIndent()
+        )
+
+        when:
+        def wrapper = builder.buildNew0()
+        then:
+        wrapper == '''\
+            #!/bin/bash
+            ### ---
+            ### name: "foo"
+            ### array:
+            ###   index-name: AWS_BATCH_JOB_ARRAY_INDEX
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ### ...
+            set -eu
+            [[ ${NXF_DEBUG:=0} > 1 ]] && set -x
+            array=( /work/01 /work/02 )
+            export nxf_array_task_dir=${array[AWS_BATCH_JOB_ARRAY_INDEX]}
+            exec bash $nxf_array_task_dir/.command.run
             '''.stripIndent()
     }
 

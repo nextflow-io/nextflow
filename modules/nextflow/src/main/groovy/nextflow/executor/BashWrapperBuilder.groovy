@@ -444,6 +444,7 @@ class BashWrapperBuilder {
     }
 
     @PackageScope String buildNew0(BufferedReader template) {
+        // also needed by job arrays, because it initialises the command files and normalises the script
         final binding = makeBinding()
         return bean.arrayIndexName
             ? getArrayWrapper(binding)
@@ -456,6 +457,9 @@ class BashWrapperBuilder {
      * (.command.begin, .exitcode, etc) into the array work directory, which is
      * shared by all array elements.
      *
+     * The header NXF_CHDIR variable is not used, because the array script only
+     * uses absolute paths and each child task wrapper changes to its own work dir.
+     *
      * @param binding The wrapper template binding
      * @return The job array wrapper script
      */
@@ -466,6 +470,7 @@ class BashWrapperBuilder {
             result << binding.header_script << '\n'
         result << binding.task_metadata
         result << 'set -eu\n'
+        result << '[[ ${NXF_DEBUG:=0} > 1 ]] && set -x\n'
         result << script.replaceFirst(/^#!.*\n/, '')
         return result.toString()
     }

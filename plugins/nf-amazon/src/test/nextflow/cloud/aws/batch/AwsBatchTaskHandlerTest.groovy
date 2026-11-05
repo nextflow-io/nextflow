@@ -1090,14 +1090,24 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageEncryption() >> 'aws:kms'
         }
         then:
-        result == ['bash', '-o', 'pipefail', '-c', 'aws s3 cp --only-show-errors --debug s3://work/.command.run .command.run && exec bash .command.run']
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && aws s3 cp --only-show-errors --debug s3://work/.command.run "$f" && exec bash "$f"']
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) {
+            getAwsCli() >> '/opt/aws/bin/aws --region eu-west-1'
+            getRequesterPays() >> true
+        }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && /opt/aws/bin/aws --region eu-west-1 s3 cp --only-show-errors --request-payer requester s3://work/.command.run "$f" && exec bash "$f"']
 
         when:
         result =  handler.getSubmitCommand()
         then:
         executor.getAwsOptions() >> Mock(AwsOptions) { getS5cmdPath() >> 's5cmd' }
         then:
-        result == ['bash', '-o', 'pipefail', '-c', 's5cmd cat s3://work/.command.run > .command.run && exec bash .command.run']
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && s5cmd cat s3://work/.command.run > "$f" && exec bash "$f"']
     }
 
     def 'should render submit command with s5cmd' () {
