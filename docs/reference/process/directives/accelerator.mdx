@@ -32,6 +32,41 @@ Additional options may be required to use accelerators. When using containers wi
 
 The following options are available:
 
+##### `cuda: String`
+
+<AddedInVersion version="27.04" />
+
+The CUDA release the task container image was built with, in the form `major.minor` (for example, `'12.2'`). The value must be a string: `cuda: 12.2` (a number) is rejected, because a number such as `12.10` would be read as `12.1`.
+
+```nextflow
+process hello {
+    accelerator 1, cuda: '12.2'
+
+    script:
+    """
+    your_gpu_enabled --command --line
+    """
+}
+```
+
+You can also set it from the configuration, without changing the pipeline:
+
+```groovy
+process {
+    withName: 'hello' {
+        accelerator = [request: 1, cuda: '12.2']
+    }
+}
+```
+
+It can be combined with `type`, in which case both constraints apply.
+
+This option is currently used only by the [Seqera](../../executor/seqera#gpus) executor, which runs the task only on a GPU model and driver that support the given CUDA release. Other executors ignore it.
+
+:::tip
+Build container images for the full compute-capability range supported by their CUDA release. An image built only for a subset of GPU architectures can fail at runtime on a GPU model that supports its CUDA release but is not among the image's targets.
+:::
+
 ##### `request: Integer`
 
 The number of requested accelerators.
