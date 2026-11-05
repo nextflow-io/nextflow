@@ -48,6 +48,14 @@ RUN case "${TARGETARCH}" in \
         *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
     && bun build harness/entry.mjs --compile --minify --target=${target} --outfile=/harness/runner
+# Pi passes every image a `read` returns through photon, and a compiled binary cannot embed its
+# wasm, so ship it next to the binary, where pi looks for it (`getFallbackWasmPaths`). Without it,
+# every image is dropped, not only ones that need resizing.
+RUN wasm=$(find node_modules -name photon_rs_bg.wasm) \
+    && if [ "$(printf '%s\n' "$wasm" | grep -c .)" -ne 1 ]; then \
+        echo "expected exactly one photon_rs_bg.wasm, found: ${wasm:-none}" >&2; exit 1; \
+    fi \
+    && cp "$wasm" /harness/photon_rs_bg.wasm
 
 FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 
@@ -55,6 +63,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends procps \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=harness /harness/runner /opt/nf-agent-pi/runner
+COPY --from=harness /harness/photon_rs_bg.wasm /opt/nf-agent-pi/photon_rs_bg.wasm
 COPY --from=agent-rpc /agent-rpc /usr/local/bin/agent-rpc
 
 # Canonical Nextflow executors own the container command/entrypoint so they can
