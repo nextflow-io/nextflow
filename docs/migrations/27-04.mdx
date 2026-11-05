@@ -38,8 +38,6 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Task wrapper scripts treat `$` in file names literally. Input file names that contain `${` or `$[` are rejected when they are referenced in the task script.
 
-- Map keys with the same name as a built-in Groovy property, such as `metaClass`, can no longer be accessed with `map.metaClass` or `map['metaClass']`. These now return the Groovy property instead of the map entry. Use `map.get('metaClass')` instead. The `properties` key is not affected.
-
 ### Cache-breaking changes
 
 - Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
