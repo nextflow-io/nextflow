@@ -31,7 +31,7 @@ class PiAgentLaunchSpecTest extends Specification {
         expect: 'the proxy, then the packaged harness after the separator, at their IN-IMAGE paths'
         // these must match the paths the runner image is built with (see the plugin Dockerfile);
         // a canonical agent task always runs in that image, so there is no driver-local variant
-        spec.command() == ['/usr/local/bin/agent-rpc', '--', 'node', '/opt/nf-agent-pi/runner.mjs']
+        spec.command() == ['/usr/local/bin/agent-rpc', '--', '/opt/nf-agent-pi/runner']
     }
 
     def 'the runner has no driver-local execution path'() {
