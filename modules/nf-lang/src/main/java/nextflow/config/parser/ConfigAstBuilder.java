@@ -864,7 +864,7 @@ public class ConfigAstBuilder {
             num = Numbers.parseInteger(text);
         }
         catch( Exception e ) {
-            numberFormatError = new Tuple2(ctx, e);
+            numberFormatError = new Tuple2<>(ctx, e);
         }
 
         var result = constX(num, true);
@@ -879,7 +879,7 @@ public class ConfigAstBuilder {
             num = Numbers.parseDecimal(text);
         }
         catch( Exception e ) {
-            numberFormatError = new Tuple2(ctx, e);
+            numberFormatError = new Tuple2<>(ctx, e);
         }
 
         var result = constX(num, true);
@@ -1391,10 +1391,10 @@ public class ConfigAstBuilder {
         parser.addErrorListener(createANTLRErrorListener());
     }
 
-    private ANTLRErrorListener createANTLRErrorListener() {
-        return new ANTLRErrorListener() {
+    private ANTLRErrorListener<Object> createANTLRErrorListener() {
+        return new ANTLRErrorListener<>() {
             @Override
-            public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+            public <T> void syntaxError(Recognizer<T,?> recognizer, T offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
                 var startColumn = charPositionInLine + 1;
                 var endColumn = offendingSymbol instanceof Token t && t.getType() != Token.EOF && t.getText() != null
                     ? startColumn + t.getText().length()
