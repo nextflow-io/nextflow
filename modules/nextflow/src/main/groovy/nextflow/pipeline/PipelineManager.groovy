@@ -19,6 +19,7 @@ package nextflow.pipeline
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
@@ -27,6 +28,7 @@ import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
 import io.seqera.npr.client.RegistryClient
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.module.spi.RemoteModuleResolver
 
 /**
@@ -40,6 +42,15 @@ class PipelineManager {
 
     private static final String DEFAULT_WORKFLOW = 'main.nf'
 
+    /** An installed pipeline directory with its {@code .pipeline-info} */
+    static record InstalledPipeline(Path dir, PipelineInfo info) {}
+
+    /** Outcome of {@link #install}: {@code upToDate} means nothing was fetched */
+    static record InstallResult(PipelineInfo info, boolean upToDate) {}
+
+    // ponytail: never evicted, fine for a CLI/run lifetime; add a TTL if a long-lived process needs it
+    private static final Map<Path,Boolean> MODIFIED = new ConcurrentHashMap<>()
+
     private final Path baseDir
     private final RegistryClient client
     private final PipelineGitFetcher fetcher
@@ -50,8 +61,12 @@ class PipelineManager {
         this.fetcher = fetcher
     }
 
+    private static boolean isValidName(String name) {
+        return name && NAME_PATTERN.matcher(name).matches()
+    }
+
     Path pipelineDir(String name) {
-        if( !name || !NAME_PATTERN.matcher(name).matches() )
+        if( !isValidName(name) )
             throw new AbortOperationException("Invalid pipeline name '$name' -- expected <scope>/<name>, e.g. nf-core/rnaseq")
         return baseDir.resolve(RemoteModuleResolver.PIPELINES_DIR).resolve(name)
     }
@@ -65,11 +80,30 @@ class PipelineManager {
                 log.warn1 "Pipeline ${name} has no registry origin (.pipeline-info missing)"
                 return dir.resolve(DEFAULT_WORKFLOW)
             }
-            return workflowFile(dir, name, install(name, null, false).workflowPath)
+            return workflowFile(dir, name, install(name, null, false).info().workflowPath)
         }
-        if( info.isModified(dir) )
+        if( isModified(info, dir) )
             log.warn1 "Pipeline ${name} has local modifications (checksum mismatch)"
         return workflowFile(dir, name, info.workflowPath ?: DEFAULT_WORKFLOW)
+    }
+
+    // the whole-tree checksum is costly and an include resolves the same pipeline several times per run
+    private boolean isModified(PipelineInfo info, Path dir) {
+        final key = realPath(dir)
+        Boolean modified = MODIFIED.get(key)
+        if( modified == null ) {
+            modified = computeModified(info, dir)
+            MODIFIED.put(key, modified)
+        }
+        return modified
+    }
+
+    protected boolean computeModified(PipelineInfo info, Path dir) {
+        return info.isModified(dir)
+    }
+
+    private static Path realPath(Path dir) {
+        return Files.exists(dir) ? dir.toRealPath() : dir.toAbsolutePath().normalize()
     }
 
     // the workflow path comes from the registry or .pipeline-info, so it must not escape the pipeline dir
@@ -80,7 +114,7 @@ class PipelineManager {
         return file
     }
 
-    PipelineInfo install(String name, String version, boolean force) {
+    InstallResult install(String name, String version, boolean force) {
         final dir = pipelineDir(name)
         final pipeline = client.getPipeline(name)
         final release = version ? client.getPipelineRelease(name, version) : pipeline.latest
@@ -89,12 +123,14 @@ class PipelineManager {
         if( pipeline.revoked || release.status == PipelineReleaseStatus.REVOKED )
             throw new AbortOperationException("Pipeline ${name}@${release.version} is revoked")
 
-        workflowFile(dir, name, pipeline.workflowPath ?: DEFAULT_WORKFLOW)
+        final workflowPath = pipeline.workflowPath ?: DEFAULT_WORKFLOW
+        workflowFile(dir, name, workflowPath)
 
-        final existing = Files.exists(dir) ? PipelineInfo.load(dir) : null
-        final modified = Files.exists(dir) && (existing == null || existing.isModified(dir))
+        final exists = Files.exists(dir)
+        final existing = exists ? PipelineInfo.load(dir) : null
+        final modified = exists && (existing == null || existing.isModified(dir))
         if( !modified && existing?.version == release.version )
-            return existing
+            return new InstallResult(existing, true)
         if( modified && !force )
             throw new AbortOperationException("Pipeline ${name} has local modifications -- use -force to overwrite")
 
@@ -102,7 +138,7 @@ class PipelineManager {
         final info = new PipelineInfo(
             name: name,
             version: release.version,
-            workflowPath: pipeline.workflowPath ?: DEFAULT_WORKFLOW,
+            workflowPath: workflowPath,
             source: 'git',
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
@@ -110,20 +146,28 @@ class PipelineManager {
             registryUrl: client.primaryUrl())
         fetchInto(dir, info)
         log.info "Pipeline ${name}@${release.version} installed in ${dir.toAbsolutePath()}"
-        return info
+        return new InstallResult(info, false)
     }
 
-    List<PipelineInfo> list() {
+    /** List installed pipelines; entries whose recorded name is invalid are skipped with a warning */
+    List<InstalledPipeline> list() {
         final root = baseDir.resolve(RemoteModuleResolver.PIPELINES_DIR)
-        final result = new ArrayList<PipelineInfo>()
+        final result = new ArrayList<InstalledPipeline>()
         if( !Files.isDirectory(root) )
             return result
-        for( final scope : children(root) ) {
-            for( final dir : children(scope) ) {
-                final info = PipelineInfo.load(dir)
-                if( info != null )
-                    result.add(info)
+        final dirs = Files.walk(root, 2).withCloseable { stream ->
+            stream
+                .filter { Path p -> root.relativize(p).nameCount == 2 && Files.exists(p.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)) }
+                .sorted()
+                .toList()
+        } as List<Path>
+        for( final dir : dirs ) {
+            final info = PipelineInfo.load(dir)
+            if( info.name != null && !isValidName(info.name) ) {
+                log.warn "Ignoring pipeline in ${dir} -- invalid name '${info.name}' in .pipeline-info"
+                continue
             }
+            result.add(new InstalledPipeline(dir, info))
         }
         return result
     }
@@ -137,7 +181,8 @@ class PipelineManager {
             throw new AbortOperationException("Pipeline ${name} has no registry origin (.pipeline-info missing) -- use -force to remove it")
         if( !force && info.isModified(dir) )
             throw new AbortOperationException("Pipeline ${name} has local modifications -- use -force to remove it")
-        dir.toFile().deleteDir()
+        MODIFIED.remove(realPath(dir))
+        FileHelper.deletePath(dir)
         return true
     }
 
@@ -148,25 +193,18 @@ class PipelineManager {
             fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)
-            if( Files.exists(dir) )
-                dir.toFile().deleteDir()
+            MODIFIED.remove(realPath(dir))
+            FileHelper.deletePath(dir)
             Files.move(tmp, dir, StandardCopyOption.ATOMIC_MOVE)
         }
         catch( Throwable e ) {
-            tmp.toFile().deleteDir()
+            try {
+                FileHelper.deletePath(tmp)
+            }
+            catch( IOException ex ) {
+                log.warn "Cannot delete temporary directory ${tmp}: ${ex.message}"
+            }
             throw e
         }
-    }
-
-    // skips in-flight '.tmp-' dirs
-    private static List<Path> children(Path dir) {
-        final result = new ArrayList<Path>()
-        Files.newDirectoryStream(dir).withCloseable { stream ->
-            for( final p : stream ) {
-                if( Files.isDirectory(p) && !p.fileName.toString().startsWith('.') )
-                    result.add(p)
-            }
-        }
-        return result
     }
 }

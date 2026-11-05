@@ -39,8 +39,10 @@ class ModuleResolver {
 
     private final RegistryClient registryClient
     private final ModuleStorage storage
+    private final Path baseDir
 
     ModuleResolver(Path baseDir, RegistryClient registryClient) {
+        this.baseDir = baseDir
         this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
     }
@@ -109,12 +111,9 @@ class ModuleResolver {
     }
 
     /** Modules vendored by a pipeline have no registry origin of their own */
-    private static boolean insidePipeline(Path dir) {
-        for( Path p = dir; p != null; p = p.parent ) {
-            if( Files.exists(p.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)) )
-                return true
-        }
-        return false
+    private boolean insidePipeline(Path dir) {
+        final root = RemoteModuleResolver.findPipelineRoot(dir, baseDir)
+        return Files.exists(root.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))
     }
 
     String resolveVersion(ModuleReference reference) {

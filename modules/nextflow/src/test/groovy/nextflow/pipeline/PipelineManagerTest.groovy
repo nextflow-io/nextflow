@@ -66,7 +66,7 @@ class PipelineManagerTest extends Specification {
 
     def 'null workflowPath defaults to main.nf'() {
         when:
-        def info = manager().install('nf-core/rnaseq', null, false)
+        def info = manager().install('nf-core/rnaseq', null, false).info()
         then:
         1 * client.getPipeline(_) >> pipeline(release('1.0.0')).workflowPath(null)
         1 * fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
@@ -133,10 +133,11 @@ class PipelineManagerTest extends Specification {
         m.install('nf-core/rnaseq', null, false)
 
         when:
-        def info = m.install('nf-core/rnaseq', null, false)
+        def result = m.install('nf-core/rnaseq', null, false)
         then:
         0 * fetcher._
-        info.version == '1.0.0'
+        result.upToDate()
+        result.info().version == '1.0.0'
     }
 
     def 'install -version replaces an unmodified different version'() {
@@ -149,9 +150,10 @@ class PipelineManagerTest extends Specification {
         m.install('nf-core/rnaseq', '1.0.0', false)
 
         when:
-        def info = m.install('nf-core/rnaseq', null, false)
+        def result = m.install('nf-core/rnaseq', null, false)
         then:
-        info.version == '2.0.0'
+        !result.upToDate()
+        result.info().version == '2.0.0'
         base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'new'
         // no leftover temp dirs
         Files.list(base.resolve('pipelines/nf-core')).count() == 1
@@ -224,7 +226,68 @@ class PipelineManagerTest extends Specification {
         m.install('nf-core/rnaseq', null, false)
         m.install('acme/tool', null, false)
         then:
-        m.list()*.name as Set == ['nf-core/rnaseq', 'acme/tool'] as Set
+        m.list()*.info()*.name as Set == ['nf-core/rnaseq', 'acme/tool'] as Set
+    }
+
+    def 'list tolerates a damaged .pipeline-info and skips invalid names'() {
+        given:
+        def bare = base.resolve('pipelines/acme/bare')
+        Files.createDirectories(bare)
+        bare.resolve('.pipeline-info').text = 'source=git\n'
+        def bad = base.resolve('pipelines/acme/bad')
+        Files.createDirectories(bad)
+        bad.resolve('.pipeline-info').text = 'name=../evil\n'
+
+        when:
+        def result = manager().list()
+        then:
+        result.size() == 1
+        result[0].dir() == bare
+        result[0].info().name == null
+        result[0].info().version == null
+    }
+
+    def 'resolve computes the checksum once per pipeline dir'() {
+        given:
+        def m = Spy(PipelineManager, constructorArgs: [base, client, fetcher])
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        m.resolve('nf-core/rnaseq')
+
+        when:
+        m.resolve('nf-core/rnaseq')
+        m.resolve('nf-core/rnaseq')
+        then:
+        1 * m.computeModified(_, _)
+    }
+
+    def 'remove and install -force delete a symlink without following it'() {
+        given:
+        def outside = base.resolve('outside')
+        Files.createDirectories(outside)
+        outside.resolve('keep.txt').text = 'keep'
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args ->
+            args[3].resolve('main.nf').text = 'x'
+            Files.createSymbolicLink(args[3].resolve('link'), outside)
+        }
+        def dir = m.pipelineDir('nf-core/rnaseq')
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        dir.resolve('main.nf').text = 'edited'
+        m.install('nf-core/rnaseq', null, true)
+        then:
+        Files.isSymbolicLink(dir.resolve('link'))
+        outside.resolve('keep.txt').text == 'keep'
+
+        when:
+        def removed = m.remove('nf-core/rnaseq', false)
+        then:
+        removed
+        !Files.exists(dir)
+        outside.resolve('keep.txt').text == 'keep'
     }
 
     def 'remove deletes, refuses modified without force'() {

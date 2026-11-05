@@ -381,6 +381,35 @@ class ResolveIncludeTest extends Specification {
         errors[0].getOriginalMessage().contains("Pipeline 'nf-core/rnaseq' not found in 'pipelines' directory")
     }
 
+    def 'should attempt a failing pipeline include only once' () {
+        given:
+        def calls = 0
+        RemoteModuleResolverProvider.instance = new FallbackRemoteModuleResolver() {
+            @Override
+            Path resolvePipeline(String name, Path baseDir) {
+                calls++
+                throw new IllegalStateException("cannot install ${name}")
+            }
+        }
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { workflow as RNASEQ } from 'nf-core/rnaseq'
+            ''')
+
+        when:
+        def errors = check(root, [main])
+        then:
+        calls == 1
+        errors.size() == 1
+        errors[0].getOriginalMessage() == 'cannot install nf-core/rnaseq'
+
+        cleanup:
+        deleteDir(root)
+    }
+
     def 'should not resolve a module include from the pipelines directory' () {
         given:
         def main = tempFile(root, 'main.nf',

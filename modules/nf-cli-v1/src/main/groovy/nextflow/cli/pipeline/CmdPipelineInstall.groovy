@@ -24,12 +24,9 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
-import nextflow.config.ConfigCmdAdapter
-import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineGitFetcher
-import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
 import nextflow.util.TestOnly
 
@@ -69,21 +66,10 @@ class CmdPipelineInstall extends CmdBase {
             throw new AbortOperationException("Unexpected number of parameters")
 
         final baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
-        final client = this.client ?: RegistryClientFactory.forConfig(registryConfig(baseDir))
+        final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, baseDir))
         final manager = fetcher ? new PipelineManager(baseDir, client, fetcher) : new PipelineManager(baseDir, client)
-        final dir = manager.pipelineDir(args[0])
-        final before = PipelineInfo.load(dir)
-        final unmodified = before != null && !before.isModified(dir)
-        final info = manager.install(args[0], version, force)
-        if( unmodified && before.version == info.version )
-            println "Pipeline ${info.name}@${info.version} is already installed and up to date"
-    }
-
-    private RegistryConfig registryConfig(Path baseDir) {
-        final config = new ConfigCmdAdapter()
-            .setOptions(launcher.options)
-            .setBaseDir(baseDir)
-            .build()
-        return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
+        final result = manager.install(args[0], version, force)
+        if( result.upToDate() )
+            println "Pipeline ${result.info().name}@${result.info().version} is already installed and up to date"
     }
 }

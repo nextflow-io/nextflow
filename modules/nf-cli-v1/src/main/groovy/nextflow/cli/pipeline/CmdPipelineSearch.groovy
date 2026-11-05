@@ -16,16 +16,12 @@
 
 package nextflow.cli.pipeline
 
-import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
-import nextflow.config.ConfigCmdAdapter
-import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
@@ -45,20 +41,9 @@ class CmdPipelineSearch extends CmdBase {
     @Parameter(
         names = ['-o', '-output'],
         description = 'Output mode for reporting search results: simple, json',
-        validateWith = OutputModeValidator
+        validateWith = PipelineCmdSupport.OutputModeValidator
     )
     String output = 'simple'
-
-    static class OutputModeValidator implements IParameterValidator {
-
-        private static final List<String> MODES = List.of('simple', 'json')
-
-        @Override
-        void validate(String name, String value) {
-            if( !MODES.contains(value) )
-                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
-        }
-    }
 
     @Parameter(description = "<query>", required = true)
     List<String> args
@@ -76,7 +61,7 @@ class CmdPipelineSearch extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 
-        final client = this.client ?: RegistryClientFactory.forConfig(registryConfig())
+        final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize()))
         if( output != 'json' )
             println "Searching for '${args[0]}'..."
         final pipelines = client.searchPipelines(args[0], limit)?.pipelines ?: []
@@ -107,13 +92,5 @@ class CmdPipelineSearch extends CmdBase {
                 println "    Description: ${p.metadata.description}"
             println ""
         }
-    }
-
-    private RegistryConfig registryConfig() {
-        final config = new ConfigCmdAdapter()
-            .setOptions(launcher.options)
-            .setBaseDir(Paths.get('.').toAbsolutePath().normalize())
-            .build()
-        return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
     }
 }

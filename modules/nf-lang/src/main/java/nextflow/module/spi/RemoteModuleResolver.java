@@ -92,7 +92,7 @@ public interface RemoteModuleResolver {
      * @return the nearest directory from {@code dir} up to {@code projectDir} (inclusive) that
      * holds a pipeline info file, or {@code projectDir} if there is none.
      */
-    private static Path findPipelineRoot(Path dir, Path projectDir) {
+    static Path findPipelineRoot(Path dir, Path projectDir) {
         var stop = projectDir.toAbsolutePath().normalize();
         var current = dir.toAbsolutePath().normalize();
         while( current != null && current.startsWith(stop) ) {

@@ -30,6 +30,7 @@ import io.seqera.npr.api.schema.v1.ModuleMetadata
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import io.seqera.npr.api.schema.v1.ModuleTool
 import nextflow.cli.CmdBase
+import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
@@ -290,9 +291,7 @@ class CmdModuleView extends CmdBase {
     }
 
     private static String buildModuleUrl(String registryUrl, ModuleReference reference, String version) {
-        // Strip /api suffix to get the base UI URL
-        def baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
-        return "${baseUrl}/modules/${reference.fullName}@${version}"
+        return PipelineCmdSupport.buildUrl(registryUrl, 'modules', reference.fullName, version)
     }
 
     private void printJsonInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {

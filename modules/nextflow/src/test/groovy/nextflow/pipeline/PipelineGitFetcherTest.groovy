@@ -67,6 +67,18 @@ class PipelineGitFetcherTest extends Specification {
         !Files.exists(target.resolve('.git'))
     }
 
+    def 'fetches the pinned commit when the revision is blank'() {
+        given:
+        def target = dir.resolve('target')
+        when:
+        new PipelineGitFetcher().fetch(url, revision, sha1, target)
+        then:
+        target.resolve('main.nf').text == 'one'
+        !Files.exists(target.resolve('.git'))
+        where:
+        revision << [null, '']
+    }
+
     def 'fails when the revision no longer points to the pinned commit'() {
         when:
         new PipelineGitFetcher().fetch(url, '1.0', sha2, dir.resolve('target'))

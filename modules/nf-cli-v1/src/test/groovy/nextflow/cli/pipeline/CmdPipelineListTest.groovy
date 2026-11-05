@@ -69,4 +69,18 @@ class CmdPipelineListTest extends Specification {
         then:
         json.pipelines == [[name: 'nf-core/rnaseq', version: '3.14.0', source: 'git', status: 'modified']]
     }
+
+    def 'should list a pipeline with a damaged .pipeline-info'() {
+        given:
+        def dir = base.resolve('pipelines/acme/bare')
+        Files.createDirectories(dir)
+        Files.writeString(dir.resolve('.pipeline-info'), 'source=git\n')
+        def cmd = new CmdPipelineList(root: base)
+
+        when:
+        cmd.run()
+
+        then:
+        capture.toString().readLines()[2] == '-'.padRight(40) + '-'.padRight(15) + 'git'.padRight(10) + 'modified'
+    }
 }

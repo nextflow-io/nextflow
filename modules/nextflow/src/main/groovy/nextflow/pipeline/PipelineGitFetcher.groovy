@@ -20,9 +20,11 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.GitAPIException
 import org.eclipse.jgit.api.errors.JGitInternalException
+import org.eclipse.jgit.transport.RefSpec
 
 /**
  * Fetches the exact tree of a pinned commit from a public Git repository.
@@ -34,27 +36,38 @@ import org.eclipse.jgit.api.errors.JGitInternalException
 class PipelineGitFetcher {
 
     void fetch(String repositoryUrl, String revision, String commitId, Path target) {
-        final isSha = revision ==~ /[0-9a-fA-F]{40}/
-        def clone = Git.cloneRepository()
-            .setURI(repositoryUrl)
-            .setDirectory(target.toFile())
-        if( !isSha )
-            clone.setBranch(revision).setDepth(1)
+        // a release may have no git revision: the pinned commit is then the only reference
+        final byCommit = !revision || revision.equalsIgnoreCase(commitId)
         Git git = null
         try {
-            git = clone.call()
-            if( isSha )
-                git.checkout().setName(commitId).call()
+            git = byCommit
+                ? fetchCommit(repositoryUrl, commitId, target)
+                : Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).setBranch(revision).setDepth(1).call()
             final head = git.repository.resolve('HEAD')?.name()
             if( !commitId.equalsIgnoreCase(head) )
                 throw new AbortOperationException("Revision '$revision' of $repositoryUrl does not match the pinned commit $commitId")
         }
         catch( GitAPIException | JGitInternalException e ) {
-            throw new AbortOperationException("Cannot fetch revision '$revision' of $repositoryUrl: ${e.message}", e)
+            throw new AbortOperationException("Cannot fetch revision '${revision ?: commitId}' of $repositoryUrl: ${e.message}", e)
         }
         finally {
             git?.close()
         }
-        target.resolve('.git').toFile().deleteDir()
+        FileHelper.deletePath(target.resolve('.git'))
+    }
+
+    /** Shallow-fetch the commit; servers that refuse unadvertised commits get a full clone */
+    private static Git fetchCommit(String repositoryUrl, String commitId, Path target) {
+        Git git = Git.init().setDirectory(target.toFile()).call()
+        try {
+            git.fetch().setRemote(repositoryUrl).setRefSpecs(new RefSpec(commitId)).setDepth(1).call()
+        }
+        catch( GitAPIException | JGitInternalException e ) {
+            git.close()
+            FileHelper.deletePath(target)
+            git = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
+        }
+        git.checkout().setName(commitId).call()
+        return git
     }
 }

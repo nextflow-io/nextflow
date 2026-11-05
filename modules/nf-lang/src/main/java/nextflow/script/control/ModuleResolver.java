@@ -118,7 +118,7 @@ public class ModuleResolver {
      */
     private URI tryGetIncludeUri(URI uri, IncludeNode node) {
         try {
-            return getIncludeUri(uri, node, projectDir);
+            return compiler.getIncludeUri(uri, node, projectDir);
         }
         catch( Exception e ) {
             return null;

@@ -19,9 +19,7 @@ package nextflow.cli.pipeline
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -36,19 +34,8 @@ import nextflow.util.TestOnly
 @Parameters(commandDescription = "List installed pipelines")
 class CmdPipelineList extends CmdBase {
 
-    @Parameter(names = ['-o', '-output'], description = 'Output mode: text, json', validateWith = OutputModeValidator)
+    @Parameter(names = ['-o', '-output'], description = 'Output mode: text, json', validateWith = PipelineCmdSupport.OutputModeValidator)
     String output = 'text'
-
-    static class OutputModeValidator implements IParameterValidator {
-
-        private static final List<String> MODES = List.of('text', 'json')
-
-        @Override
-        void validate(String name, String value) {
-            if( !MODES.contains(value) )
-                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
-        }
-    }
 
     @TestOnly
     protected Path root
@@ -61,12 +48,12 @@ class CmdPipelineList extends CmdBase {
     @Override
     void run() {
         final manager = new PipelineManager(root ?: Paths.get('.').toAbsolutePath().normalize(), null)
-        final rows = manager.list().collect { info ->
+        final rows = manager.list().collect { p ->
             [
-                name   : info.name,
-                version: info.version,
-                source : info.source,
-                status : info.isModified(manager.pipelineDir(info.name)) ? 'modified' : 'ok'
+                name   : p.info().name,
+                version: p.info().version,
+                source : p.info().source,
+                status : p.info().isModified(p.dir()) ? 'modified' : 'ok'
             ]
         }
         if( output == 'json' ) {
@@ -80,7 +67,12 @@ class CmdPipelineList extends CmdBase {
         println "Pipeline".padRight(40) + "Version".padRight(15) + "Source".padRight(10) + "Status"
         println "-" * 75
         rows.each { r ->
-            println "${r.name.padRight(40)}${r.version.padRight(15)}${r.source.padRight(10)}${r.status}"
+            println "${cell(r.name).padRight(40)}${cell(r.version).padRight(15)}${cell(r.source).padRight(10)}${r.status}"
         }
+    }
+
+    // a damaged .pipeline-info may lack any field
+    private static String cell(Object value) {
+        return value != null ? value.toString() : '-'
     }
 }

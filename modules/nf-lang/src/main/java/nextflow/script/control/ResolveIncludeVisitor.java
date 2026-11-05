@@ -96,7 +96,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
         URI includeUri;
         try {
-            includeUri = ModuleResolver.getIncludeUri(uri, node, projectDir);
+            includeUri = compiler.getIncludeUri(uri, node, projectDir);
         }
         catch( Exception e ) {
             addError(e.getMessage(), node);

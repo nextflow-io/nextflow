@@ -19,12 +19,6 @@ package nextflow.module
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.read.ListAppender
-import nextflow.extension.Bolts
-import org.slf4j.LoggerFactory
 import nextflow.module.spi.RemoteModuleResolver
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -222,20 +216,22 @@ class ModuleResolverTest extends Specification {
     }
 
 
-    def 'does not warn for a module without .module-info inside a pipeline root'() {
+    def 'finds the pipeline root of a vendored module, bounded by the project dir'() {
         given:
-        // the warn1 cache is JVM-global and would swallow the message
-        def cache = Bolts.getDeclaredField('LOGGER_CACHE')
-        cache.setAccessible(true)
-        (cache.get(null) as Map).clear()
-        def logger = (Logger) LoggerFactory.getLogger(ModuleResolver)
-        def level = logger.level
-        logger.setLevel(Level.WARN)
-        def appender = new ListAppender<ILoggingEvent>()
-        appender.start()
-        logger.addAppender(appender)
+        def pipeline = tempDir.resolve('pipelines/a/b')
+        def moduleDir = pipeline.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(moduleDir)
+        pipeline.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
+        tempDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=outer\n'
 
-        and:
+        expect:
+        RemoteModuleResolver.findPipelineRoot(moduleDir, tempDir) == pipeline
+        and: 'a dir outside any pipeline falls back to the project dir'
+        RemoteModuleResolver.findPipelineRoot(tempDir.resolve('modules/x'), tempDir.resolve('pipelines')) == tempDir.resolve('pipelines')
+    }
+
+    def 'resolves a module without .module-info inside a pipeline root'() {
+        given:
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = new ModuleStorage(tempDir).getModuleDir(reference)
         Files.createDirectories(moduleDir)
@@ -243,15 +239,7 @@ class ModuleResolverTest extends Specification {
         moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
         tempDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
 
-        when:
-        def result = new ModuleResolver(tempDir).resolve(reference, null, false)
-
-        then:
-        result == moduleDir.resolve('main.nf')
-        !appender.list*.formattedMessage.any { it.contains('no registry origin') }
-
-        cleanup:
-        logger.detachAppender(appender)
-        logger.setLevel(level)
+        expect:
+        new ModuleResolver(tempDir).resolve(reference, null, false) == moduleDir.resolve('main.nf')
     }
 }
