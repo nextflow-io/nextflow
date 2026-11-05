@@ -766,8 +766,11 @@ class WaveClient {
 
     boolean isContainerReady(String key) {
         final handle = responses.get(key)
-        if( !handle )
-            return true   // image not handled by Wave (e.g. local or URL Singularity image)
+        if( !handle ) {
+            // image not handled by Wave (e.g. local or URL Singularity image)
+            log.trace "Container key not handled by Wave, assume ready: $key"
+            return true
+        }
         if( handle.ready )
             return true
         return handle.ready = checkContainerReady(handle)
