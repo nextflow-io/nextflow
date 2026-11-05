@@ -45,6 +45,8 @@ public class ModuleResolver {
     private Compiler compiler;
     private Path projectDir;
 
+    private Map<String, RuntimeException> includeFailures = new HashMap<>();
+
     public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
         this.projectDir = projectDir;
@@ -118,10 +120,28 @@ public class ModuleResolver {
      */
     private URI tryGetIncludeUri(URI uri, IncludeNode node) {
         try {
-            return compiler.getIncludeUri(uri, node, projectDir);
+            return getIncludeUri(uri, node);
         }
         catch( Exception e ) {
             return null;
+        }
+    }
+
+    /**
+     * Resolve an include URI, remembering failures so that a failing remote include
+     * (e.g. a pipeline auto-install) is attempted once per resolver instance.
+     */
+    public URI getIncludeUri(URI uri, IncludeNode node) {
+        var key = uri + "|" + node.source.getText();
+        var failure = includeFailures.get(key);
+        if( failure != null )
+            throw failure;
+        try {
+            return getIncludeUri(uri, node, projectDir);
+        }
+        catch( RuntimeException e ) {
+            includeFailures.put(key, e);
+            throw e;
         }
     }
 

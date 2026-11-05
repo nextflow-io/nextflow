@@ -247,6 +247,16 @@ class PipelineManagerTest extends Specification {
         result[0].info().version == null
     }
 
+    def 'list skips in-flight install dirs'() {
+        given:
+        def tmp = base.resolve('pipelines/acme/.tmp-tool-123')
+        Files.createDirectories(tmp)
+        tmp.resolve('.pipeline-info').text = 'name=acme/tool\n'
+
+        expect:
+        manager().list() == []
+    }
+
     def 'resolve computes the checksum once per pipeline dir'() {
         given:
         def m = Spy(PipelineManager, constructorArgs: [base, client, fetcher])

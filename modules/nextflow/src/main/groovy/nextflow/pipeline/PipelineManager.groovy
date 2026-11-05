@@ -149,7 +149,7 @@ class PipelineManager {
         return new InstallResult(info, false)
     }
 
-    /** List installed pipelines; entries whose recorded name is invalid are skipped with a warning */
+    /** List installed pipelines, skipping in-flight '.tmp-' dirs; entries whose recorded name is invalid are skipped with a warning */
     List<InstalledPipeline> list() {
         final root = baseDir.resolve(RemoteModuleResolver.PIPELINES_DIR)
         final result = new ArrayList<InstalledPipeline>()
@@ -157,7 +157,7 @@ class PipelineManager {
             return result
         final dirs = Files.walk(root, 2).withCloseable { stream ->
             stream
-                .filter { Path p -> root.relativize(p).nameCount == 2 && Files.exists(p.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)) }
+                .filter { Path p -> root.relativize(p).nameCount == 2 && !p.fileName.toString().startsWith('.') && Files.exists(p.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)) }
                 .sorted()
                 .toList()
         } as List<Path>

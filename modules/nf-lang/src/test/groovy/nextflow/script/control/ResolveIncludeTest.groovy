@@ -410,6 +410,36 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should retry a failed pipeline include on a new analysis of the same compiler' () {
+        given:
+        def calls = 0
+        RemoteModuleResolverProvider.instance = new FallbackRemoteModuleResolver() {
+            @Override
+            Path resolvePipeline(String name, Path baseDir) {
+                calls++
+                throw new IllegalStateException("cannot install ${name}")
+            }
+        }
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { workflow as RNASEQ } from 'nf-core/rnaseq'
+            ''')
+        def parser = new ScriptParser(root)
+        parser.parse(main.toFile())
+
+        when:
+        parser.analyze()
+        parser.analyze()
+        then:
+        calls == 2
+
+        cleanup:
+        deleteDir(root)
+    }
+
     def 'should not resolve a module include from the pipelines directory' () {
         given:
         def main = tempFile(root, 'main.nf',

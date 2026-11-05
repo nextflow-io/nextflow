@@ -17,13 +17,11 @@ package nextflow.script.control;
 
 import java.io.File;
 import java.net.URI;
-import java.nio.file.Path;
 import java.security.CodeSource;
 import java.util.HashMap;
 import java.util.Map;
 
 import groovy.lang.GroovyClassLoader;
-import nextflow.script.ast.IncludeNode;
 import org.antlr.v4.runtime.RecognitionException;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
@@ -41,8 +39,6 @@ public class Compiler {
     private CompilationUnit compilationUnit;
 
     private Map<URI, SourceUnit> sourcesByUri = new HashMap<>();
-
-    private Map<String, RuntimeException> includeFailures = new HashMap<>();
 
     public Compiler(CompilerConfiguration configuration, GroovyClassLoader classLoader) {
         this(new CompilationUnit(configuration, null, classLoader));
@@ -95,24 +91,6 @@ public class Compiler {
 
     public SourceUnit getSource(URI uri) {
         return sourcesByUri.get(uri);
-    }
-
-    /**
-     * Resolve an include URI, remembering failures so that a failing remote include
-     * (e.g. a pipeline auto-install) is attempted once per compiler.
-     */
-    public URI getIncludeUri(URI uri, IncludeNode node, Path projectDir) {
-        var key = uri + "|" + node.source.getText();
-        var failure = includeFailures.get(key);
-        if( failure != null )
-            throw failure;
-        try {
-            return ModuleResolver.getIncludeUri(uri, node, projectDir);
-        }
-        catch( RuntimeException e ) {
-            includeFailures.put(key, e);
-            throw e;
-        }
     }
 
     public void compile(SourceUnit source) {
