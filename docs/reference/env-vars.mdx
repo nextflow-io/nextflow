@@ -120,7 +120,14 @@ Defines the DSL version that should be used in not specified otherwise in the sc
 
 <AddedInVersion version="26.08" />
 
-Use an automated development build of Nextflow, for testing only. Set to `master` for the latest master-branch build, or `pr-<number>` for the latest build of a pull request. The [nextflow-dev-builds](https://github.com/nextflow-io/nextflow-dev-builds) repository hosts the builds. Core plugins compiled from the same source as the build replace the released plugin versions. Nextflow downloads third-party plugins from the plugin registry as usual.
+Use an automated development build of Nextflow. For testing only.
+
+Set to one of:
+
+- `master`: the latest build of the master branch
+- `pr-<number>`: the latest build of a pull request
+
+The [nextflow-dev-builds](https://github.com/nextflow-io/nextflow-dev-builds) repository hosts the builds. Core plugins compiled from the same source as the build replace the released plugin versions. Nextflow downloads third-party plugins from the plugin registry as usual.
 
 ##### `NXF_DISABLE_CHECK_LATEST`
 
