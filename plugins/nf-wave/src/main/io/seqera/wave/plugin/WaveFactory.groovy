@@ -45,7 +45,7 @@ class WaveFactory implements TraceObserverFactoryV2 {
         final config = new WaveConfig((Map)session.config.wave ?: Collections.emptyMap())
         final depth = config.prefetchDepth()
         return depth > 0
-                ? List.<TraceObserverV2>of(new WavePrefetchObserver(session.dag, depth, config.prefetchMaxConcurrent()))
+                ? List.<TraceObserverV2>of(new WavePrefetchObserver(session.dag, depth))
                 : List.<TraceObserverV2>of()
     }
 

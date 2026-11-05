@@ -123,6 +123,9 @@ class WaveClient {
 
     final private RateLimiter limiter
 
+    /** limits the requests ahead to half the rate, so that they do not slow down the task requests */
+    final private RateLimiter prefetchLimiter
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
@@ -136,6 +139,7 @@ class WaveClient {
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         this.limiter = RateLimiter.create( config.httpOpts().maxRate().rate  )
+        this.prefetchLimiter = RateLimiter.create( limiter.rate / 2 )
         // create cache
         this.cache = CacheBuilder<String, Handle>
             .newBuilder()
@@ -316,6 +320,8 @@ class WaveClient {
     private void checkLimiter() {
         final ts = System.currentTimeMillis()
         try {
+            if( WavePrefetchObserver.isPrefetchThread() )
+                prefetchLimiter.acquire()
             limiter.acquire()
         } finally {
             final delta = System.currentTimeMillis()-ts

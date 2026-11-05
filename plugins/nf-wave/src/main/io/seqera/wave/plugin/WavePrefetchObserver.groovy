@@ -39,11 +39,15 @@ import nextflow.util.Duration
  *
  * When the first task of a process is pending, the processes up to {@code depth} levels
  * downstream in the DAG are resolved with a task preview, the same way as {@code nextflow inspect}.
- * The requests go through a small pool of threads, and each process is requested at most once.
- * As with {@code nextflow inspect -concretize}, a thread awaits the container to be ready before
- * taking the next request, so that at most {@code maxConcurrent} containers are provisioned
- * ahead at the same time, the nearest ones first. A queued process whose own task starts in the
- * meantime is skipped.
+ * Each process is requested at most once.
+ *
+ * The requests are sent one at a time by a single thread, the nearest processes first, at no more
+ * than half the Wave client rate limit, so that the requests of the tasks are not slowed down.
+ * The request thread never waits for a container build: Wave runs the build on its own, and the
+ * task awaits the container when submitted. This way a container already available, whose request
+ * only starts its SOCI index, is not queued behind a slow build. A queued process whose own task
+ * starts in the meantime is skipped.
+ *
  * The Wave client caches the response, so the actual task reuses it. A process whose container
  * depends on the task inputs cannot be resolved ahead, and it is requested by its task as usual.
  *
@@ -53,17 +57,15 @@ import nextflow.util.Duration
 @CompileStatic
 class WavePrefetchObserver implements TraceObserverV2 {
 
-    /** default max number of containers provisioned ahead at the same time */
-    static final int DEFAULT_MAX_CONCURRENT = 4
+    /** the name of the thread sending the requests ahead */
+    static final String THREAD_NAME = 'wave-prefetch'
 
     private DAG dag
 
     private int depth
 
-    /** max number of containers provisioned ahead at the same time */
-    private int maxConcurrent
-
-    private ThreadPoolExecutor executor
+    /** sends the requests ahead, one at a time in the order they are submitted */
+    private ThreadPoolExecutor requester
 
     /** the processes whose downstream was already looked up */
     private Set<String> triggered = ConcurrentHashMap.newKeySet()
@@ -77,21 +79,17 @@ class WavePrefetchObserver implements TraceObserverV2 {
     /** the process whose first task caused a process to be requested ahead, for debugging */
     private Map<String,String> triggers = new ConcurrentHashMap<>()
 
-    private AtomicInteger countRequested = new AtomicInteger()
-    private AtomicInteger countReady = new AtomicInteger()
-    private AtomicInteger countFailed = new AtomicInteger()
-    private AtomicInteger countSkipped = new AtomicInteger()
+    @PackageScope AtomicInteger countRequested = new AtomicInteger()
+    @PackageScope AtomicInteger countBuilding = new AtomicInteger()
+    @PackageScope AtomicInteger countReady = new AtomicInteger()
+    @PackageScope AtomicInteger countFailed = new AtomicInteger()
+    @PackageScope AtomicInteger countSkipped = new AtomicInteger()
 
     WavePrefetchObserver(DAG dag, int depth) {
-        this(dag, depth, DEFAULT_MAX_CONCURRENT)
-    }
-
-    WavePrefetchObserver(DAG dag, int depth, int maxConcurrent) {
         this.dag = dag
         this.depth = depth
-        this.maxConcurrent = maxConcurrent
-        this.executor = new ThreadPoolExecutor(maxConcurrent, maxConcurrent, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), (Runnable r) -> {
-            final thread = new Thread(r, 'wave-prefetch')
+        this.requester = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), (Runnable r) -> {
+            final thread = new Thread(r, THREAD_NAME)
             thread.setDaemon(true)
             return thread
         })
@@ -121,14 +119,14 @@ class WavePrefetchObserver implements TraceObserverV2 {
 
     protected void submit(TaskProcessor process) {
         final queuedAt = System.currentTimeMillis()
-        executor.submit(() -> prefetch(process, queuedAt))
+        requester.submit(() -> prefetch(process, queuedAt))
     }
 
     @Override
     void onFlowComplete() {
-        log.debug "Wave prefetch completed - triggered by: ${triggered.size()} processes; requested ahead: ${countRequested}; ready: ${countReady}; failed: ${countFailed}; skipped: ${countSkipped}; ${slots()}"
-        // interrupt the threads still awaiting a container
-        executor.shutdownNow()
+        log.debug "Wave prefetch completed - triggered by: ${triggered.size()} processes; requested ahead: ${countRequested}; building when requested: ${countBuilding}; ready: ${countReady}; failed: ${countFailed}; skipped: ${countSkipped}; ${slots()}"
+        // interrupt the thread still sending the requests
+        requester.shutdownNow()
     }
 
     protected void prefetch(TaskProcessor process) {
@@ -149,10 +147,15 @@ class WavePrefetchObserver implements TraceObserverV2 {
             final requestedAt = System.currentTimeMillis()
             countRequested.incrementAndGet()
             log.debug "Wave container requested ahead for process '${process.name}': ${container} (trigger: '${trigger}'; queued: ${elapsed(queuedAt, startedAt)}; request: ${elapsed(startedAt, requestedAt)}; ${describe(task, startedAt)}; ${slots()})"
-            // keep the thread busy until the container is ready, so the next request waits for it
-            final checks = awaitReady(task)
-            countReady.incrementAndGet()
-            log.debug "Wave container ready ahead for process '${process.name}': ${container} (await: ${elapsed(requestedAt, System.currentTimeMillis())}; status checks: ${checks})"
+            if( task.isContainerReady() ) {
+                countReady.incrementAndGet()
+                log.debug "Wave container ready ahead for process '${process.name}': ${container}"
+            }
+            else {
+                // a container build: Wave runs it on its own, and the task awaits it when submitted
+                countBuilding.incrementAndGet()
+                log.debug "Wave container building ahead for process '${process.name}': ${container}"
+            }
         }
         catch( InterruptedException e ) {
             Thread.currentThread().interrupt()
@@ -162,20 +165,6 @@ class WavePrefetchObserver implements TraceObserverV2 {
             countFailed.incrementAndGet()
             log.debug "Unable to request ahead the Wave container of process '${process.name}' (trigger: '${trigger}'; elapsed: ${elapsed(startedAt, System.currentTimeMillis())}) - cause: ${e.message}"
         }
-    }
-
-    /**
-     * Await the task container to be ready, polling it the same way as {@code nextflow inspect -concretize}.
-     * A failed or timed out provisioning is thrown by the Wave client.
-     *
-     * @return The number of times the container status was checked
-     */
-    protected int awaitReady(TaskRun task) {
-        int c=0
-        while( !task.isContainerReady() ) {
-            sleep(c++ < 10 ? 1_000 : 5_000)
-        }
-        return c+1
     }
 
     /**
@@ -192,15 +181,18 @@ class WavePrefetchObserver implements TraceObserverV2 {
     }
 
     private String slots() {
-        return "slots running: ${executor.getActiveCount()}/${maxConcurrent}; queued: ${executor.getQueue().size()}"
+        return "requests queued: ${requester.getQueue().size()}"
+    }
+
+    /**
+     * @return {@code true} when the current thread is the one sending the requests ahead
+     */
+    static boolean isPrefetchThread() {
+        return Thread.currentThread().name == THREAD_NAME
     }
 
     static private String elapsed(long from, long to) {
         return Duration.of(to-from).toString()
-    }
-
-    protected void sleep(long millis) {
-        Thread.sleep(millis)
     }
 
     /**
