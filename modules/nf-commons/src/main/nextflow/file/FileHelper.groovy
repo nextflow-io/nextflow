@@ -126,15 +126,17 @@ class FileHelper {
      * contains {@code /./}; object stores such as S3 treat {@code a/./b} and {@code a/b}
      * as different keys.
      *
-     * Absolute paths, {@code ..} segments, and a bare {@code .} or {@code ./} are left unchanged.
+     * Repeated slashes are collapsed first, so {@code .//x} becomes {@code x}, not the
+     * absolute {@code /x}. Absolute paths, {@code ..} segments, and a bare {@code .} or
+     * {@code ./} are left unchanged.
      *
      * @param path A relative path or glob pattern
-     * @return The same path without {@code .} segments
+     * @return The same path without {@code .} segments and repeated slashes
      */
     static String stripCurrentDirSegments( String path ) {
         if( !path || path.startsWith('/') )
             return path
-        String result = path
+        String result = path.replaceAll('/{2,}', '/')
         while( result.startsWith('./') && result.length() > 2 )
             result = result.substring(2)
         while( result.contains('/./') )
