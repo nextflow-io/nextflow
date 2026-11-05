@@ -746,6 +746,21 @@ class Bolts {
         new GStringImpl(values, self.strings)
     }
 
+    /**
+     * Read {@code list.size} as {@code list.size()}.
+     *
+     * Groovy used to resolve {@code list.size} by reading the private {@code size} field
+     * of {@link ArrayList} and {@link LinkedList}, which needs {@code java.util} to be open to
+     * deep reflection. Without the {@code --add-opens} flag it falls back to reading
+     * {@code size} on each element and fails. This getter keeps existing pipelines working.
+     *
+     * @param self The list
+     * @return The number of elements in the list
+     */
+    static int getSize(List self) {
+        self.size()
+    }
+
 
 
     /**

@@ -38,7 +38,7 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Task wrapper scripts treat `$` in file names literally. Input file names that contain `${` or `$[` are rejected when they are referenced in the task script.
 
-- Nextflow no longer opens the internal packages of the Java standard library (`java.lang`, `java.util`, `java.io`, etc.) to deep reflection. Plugins and libraries that rely on it fail with an `InaccessibleObjectException`, and scripts that use `list.size` instead of `list.size()` fail with a `MissingPropertyException`. As a workaround, open the package named in the error with [`NXF_OPTS`][env-vars-NXF_OPTS], for example:
+- Nextflow no longer opens the internal packages of the Java standard library (`java.lang`, `java.util`, `java.io`, etc.) to deep reflection. Plugins and libraries that rely on it fail with an `InaccessibleObjectException`. As a workaround, open the package named in the error with [`NXF_OPTS`][env-vars-NXF_OPTS], for example:
 
   ```bash
   export NXF_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED"
