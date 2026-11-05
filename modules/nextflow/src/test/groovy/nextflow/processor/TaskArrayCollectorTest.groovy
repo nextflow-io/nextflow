@@ -20,6 +20,7 @@ import java.nio.file.Paths
 
 import com.google.common.hash.HashCode
 import nextflow.Session
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
 import nextflow.platform.ResourceLabelPolicy
@@ -41,6 +42,12 @@ class TaskArrayCollectorTest extends Specification {
         String getArrayIndexName() { null }
         int getArrayIndexStart() { 0 }
         String getArrayTaskId(String jobId, int index) { null }
+    }
+
+    def pool = new ArrayLauncherPool('test')
+
+    def cleanup() {
+        pool.shutdown()
     }
 
     def 'should submit tasks as job arrays' () {
@@ -103,7 +110,7 @@ class TaskArrayCollectorTest extends Specification {
             getConfig() >> config
             getExecutor() >> exec
             getName() >> 'PROC'
-            getSession() >> Mock(Session)
+            getSession() >> Mock(Session) { getArrayLauncherPool() >> pool }
             isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
@@ -151,7 +158,7 @@ class TaskArrayCollectorTest extends Specification {
             getConfig() >> config
             getExecutor() >> exec
             getName() >> 'PROC'
-            getSession() >> Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_frog'] }
+            getSession() >> Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_frog']; getArrayLauncherPool() >> pool }
             isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
@@ -179,6 +186,31 @@ class TaskArrayCollectorTest extends Specification {
         and:
         // and the executor policy applies to the auto entries only
         taskArray.config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow_io_runname': 'crazy_frog', 'My.Label': 'Foo/Bar']
+    }
+
+    def 'should create the work dir of a task array from the work dirs of its tasks' () {
+        given:
+        def exec = Mock(DummyExecutor) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getArrayIndexName() >> 'ARRAY_JOB_INDEX'
+        }
+        def proc = Mock(TaskProcessor) {
+            getConfig() >> Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) { createTaskConfig() >> Mock(TaskConfig) }
+            getExecutor() >> exec
+            getName() >> 'PROC'
+            getSession() >> Mock(Session) { getArrayLauncherPool() >> pool }
+            getTaskBody() >> { new BodyDef(null, 'source') }
+        }
+        def collector = Spy(new TaskArrayCollector(proc, exec, 5))
+        collector.createArrayTaskScript(_) >> 'the-task-array-script'
+        def handler = Mock(TaskHandler)
+        handler.withArrayChild(true) >> handler
+        exec.createTaskHandler(_) >> handler
+        and: 'every attempt of a task has the same hash'
+        def task = { String dir -> Mock(TaskRun) { getHash() >> HashCode.fromString('0123456789abcdef'); getWorkDir() >> Paths.get(dir) } }
+
+        expect: 'a retry collected again gets an array work dir of its own'
+        collector.createTaskArray([task('/work/ab/cdef')]).workDir != collector.createTaskArray([task('/work/ab/cdef-2')]).workDir
     }
 
     def 'should get array ref' () {

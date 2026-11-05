@@ -21,8 +21,8 @@ nextflowPlugin {
     // A minimum core requirement, written into the jar manifest as `Plugin-Requires` and enforced
     // by BasePlugin.start(), so it must never exceed the root VERSION or the plugin cannot load
     // from this checkout. Bumping it to the release this plugin ships in is a release-phase step,
-    // as CLAUDE.md's release process requires.
-    nextflowVersion = '26.08.0-edge'
+    // as the release process in .agents/docs/release.md requires.
+    nextflowVersion = '26.10.0'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides a Pi-backed external agent runner for Nextflow agents'
@@ -161,10 +161,13 @@ dependencies {
     api "io.grpc:grpc-api:${grpcVersion}"
     api "io.grpc:grpc-stub:${grpcVersion}"
     api "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    constraints {
+        // gRPC pulls a vulnerable Guava
+        api("com.google.guava:guava:33.7.2-jre") { because 'GHSA-xxph-c9ww-hj94' }
+    }
 
     // Self-signed certificate construction for the broker's per-run TLS identity: the JDK has no
-    // public API for it. Same pinned versions as nf-k8s -- PF4J isolates plugin classloaders, so
-    // that copy is not visible here; bump the two together.
+    // public API for it.
     api "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
     api "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
 

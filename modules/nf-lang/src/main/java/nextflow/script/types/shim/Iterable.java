@@ -90,10 +90,6 @@ public interface Iterable<E> {
     <R> R inject(R initialValue, BiFunction<R,E,R> accumulator);
 
     @Description("""
-    """)
-    Iterable<E> intersect(Iterable<E> right);
-
-    @Description("""
         Returns `true` if the iterable is empty.
     """)
     boolean isEmpty();
@@ -124,12 +120,12 @@ public interface Iterable<E> {
     E max(BiFunction<E,E,Integer> comparator);
 
     @Description("""
-        Returns the maximum element in the iterable.
+        Returns the minimum element in the iterable.
     """)
     E min();
 
     @Description("""
-        Returns the maximum element in the iterable according to the given closure. The closure should follow the same semantics as the closure parameter of `toSorted()`.
+        Returns the minimum element in the iterable according to the given closure. The closure should follow the same semantics as the closure parameter of `toSorted()`.
     """)
     <R> E min(Function<E,R>  comparator);
 

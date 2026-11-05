@@ -43,6 +43,20 @@ trait PluginAbstractExec implements PluginExecAware {
 
     @Override
     final int exec(String pluginId, String cmd, List<String> args) {
+        return run0(pluginId, cmd, args, getConfig())
+    }
+
+    @Override
+    final int exec(String pluginId, String cmd, List<String> args, Map config) {
+        return run0(pluginId, cmd, args, config)
+    }
+
+    /*
+     * note: both `exec` methods must delegate to this private method, instead of
+     * invoking each other, because plugins compiled against a previous version
+     * only implement `exec(String,String,List)` and call into the trait helper
+     */
+    private int run0(String pluginId, String cmd, List<String> args, Map config) {
         if( !cmd || cmd !in getCommands() ) {
             def msg = cmd ? "Invalid command '$pluginId:$cmd' - usage: nextflow plugin ${pluginId}${CMD_SEP}<command>" : "Usage: nextflow plugin ${pluginId}${CMD_SEP}<command>"
             msg += "\nAvailable commands:"
@@ -52,7 +66,7 @@ trait PluginAbstractExec implements PluginExecAware {
         }
 
         // create the session object
-        this.session = new Session(getConfig())
+        this.session = new Session(config)
 
         // invoke the command
         try {

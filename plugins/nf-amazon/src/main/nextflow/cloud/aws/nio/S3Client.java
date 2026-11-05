@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 import nextflow.cloud.aws.nio.util.ExtendedS3TransferManager;
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration;
 import nextflow.extension.FilesEx;
+import nextflow.file.SkipDirOption;
 import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
 import nextflow.cloud.aws.util.AwsHelper;
@@ -535,7 +536,7 @@ public class S3Client {
         }
     }
 
-    public void downloadDirectory(S3Path source, File targetFile) throws IOException {
+    public void downloadDirectory(S3Path source, File targetFile, SkipDirOption skipDir) throws IOException {
         //
         // the download directory method provided by the TransferManager replicates
         // the source files directory structure in the target path
@@ -550,6 +551,10 @@ public class S3Client {
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 
             public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr) throws IOException {
+                if( skipDir != null && skipDir.matches(source, current) ) {
+                    log.trace("Skip DIR: " + current);
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
                 // get the *delta* path against the source path
                 final Path rel = source.relativize(current);
                 final String delta = rel != null ? rel.toString() : null;
@@ -584,6 +589,17 @@ public class S3Client {
                     return FileVisitResult.TERMINATE;
                 }
                 return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path current, IOException exc) throws IOException {
+                // the attributes of a skipped dir are read before `preVisitDirectory` is invoked,
+                // ignore the error when it is removed or cannot be accessed in the meanwhile
+                if( skipDir != null && skipDir.matches(source, current) ) {
+                    log.trace("Skip DIR: " + current + " - cause: " + exc);
+                    return FileVisitResult.CONTINUE;
+                }
+                throw exc;
             }
         };
 

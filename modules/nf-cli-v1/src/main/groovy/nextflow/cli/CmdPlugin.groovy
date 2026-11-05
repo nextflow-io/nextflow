@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.cli.PluginExecAware
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.PluginRef
 import nextflow.plugin.Plugins
@@ -224,13 +225,24 @@ class CmdPlugin extends CmdBase implements UsageAware {
             }
             args.addAll(mapped)
             // execute plugin command
-            final ret = plugin.exec(target, cmd, args)
+            final ret = plugin.exec(target, cmd, args, buildConfig())
             // use explicit exit to invoke the system shutdown hooks
             System.exit(ret)
         }
         else {
             throw new AbortOperationException("Invalid target plugin: $target")
         }
+    }
+
+    /**
+     * Create the plugin command config honouring the CLI options,
+     * e.g. `-c` and `-config-ignore-includes`
+     */
+    protected Map buildConfig() {
+        return new ConfigCmdAdapter()
+                .setOptions(launcher.options)
+                .setBaseDir(Path.of('.'))
+                .build()
     }
 
     static private void clonePluginTemplate(File targetDir, String templateVersion) {

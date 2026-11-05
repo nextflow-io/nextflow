@@ -27,6 +27,13 @@ import test.TestHelper
  */
 class AbstractTextSplitterTest extends Specification {
 
+    // concrete subclass used to exercise AbstractTextSplitter's non-abstract
+    // methods. Note: `[:] as AbstractTextSplitter` no longer works under
+    // Groovy 5 — the generated proxy does not delegate the concrete methods.
+    static class TestTextSplitter extends AbstractTextSplitter {
+        protected fetchRecord(BufferedReader reader) { null }
+    }
+
     def testGetCollectorBaseFile() {
 
         given:
@@ -37,7 +44,7 @@ class AbstractTextSplitterTest extends Specification {
         def splitter
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.options(file: folder, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
@@ -45,7 +52,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash != null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.options(file: folder, by: 2, elem:2)
         splitter.multiSplit = true
         result = splitter.getCollectorBaseFile()
@@ -54,7 +61,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash != null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.options(file: Paths.get('/some/file.txt'), by: 2)
         result = splitter.getCollectorBaseFile()
         then:
@@ -62,7 +69,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash != null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
@@ -71,7 +78,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash == null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.options(file: 'chunk_name', by:2)
         result = splitter.getCollectorBaseFile()
         then:
@@ -80,7 +87,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash == null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.options(file: 'chunk_name', by:2, elem:3)
         splitter.multiSplit = true
         result = splitter.getCollectorBaseFile()
@@ -90,7 +97,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash == null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.sourceFile = Paths.get('/some/file.txt')
         splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
@@ -100,7 +107,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash == null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.sourceFile = Paths.get('/some/file.fasta.gz')
         splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
@@ -110,7 +117,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash == null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.sourceFile = Paths.get('/some/file.fa.gz')
         splitter.options(file: 'my_file_name', by: 2)
         result = splitter.getCollectorBaseFile()
@@ -120,7 +127,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash == null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.sourceFile = Paths.get('/some/file.fa.gz')
         splitter.options(file: folder, by: 2)
         result = splitter.getCollectorBaseFile()
@@ -130,7 +137,7 @@ class AbstractTextSplitterTest extends Specification {
         result.hash != null
 
         when:
-        splitter = [:] as AbstractTextSplitter
+        splitter = new TestTextSplitter()
         splitter.sourceFile = Paths.get('/some/file.fasta.gz')
         splitter.options(file: true)
         result = splitter.createCollector()
@@ -143,7 +150,7 @@ class AbstractTextSplitterTest extends Specification {
         given:
         def folder = TestHelper.createInMemTempDir()
         def result
-        def splitter = [:] as AbstractTextSplitter
+        def splitter = new TestTextSplitter()
         splitter.options(file: folder, by: 2)
 
         when:

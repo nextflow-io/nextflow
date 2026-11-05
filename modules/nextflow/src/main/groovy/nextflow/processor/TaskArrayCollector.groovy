@@ -135,12 +135,11 @@ class TaskArrayCollector {
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
         // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
-        for( TaskHandler handler : handlers ) {
-            handler.prepareLauncher()
-        }
+        processor.session.getArrayLauncherPool().prepare(handlers)
 
         // create work directory
-        final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
+        // from the work dirs rather than the hashes, which every attempt of a task shares
+        final hash = CacheHelper.hasher( tasks.collect( t -> t.workDir.toUriString() ) ).hash()
         final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
         Files.createDirectories(workDir)
 

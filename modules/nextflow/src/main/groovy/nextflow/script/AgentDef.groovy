@@ -397,7 +397,7 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     /**
      * Task path (design §4.1/§4.5, M-Tools): lower ANY agent — free-text, structured,
-     * skills-only or tool — to a {@link ProcessConfigV2} + GROOVY ({@code exec}) {@link BodyDef}
+     * skills-only or tool — to a {@link ProcessConfigV2} + PROMPT ({@code prompt}) {@link BodyDef}
      * and drive it through the unmodified {@link TaskProcessor} pipeline, mirroring
      * {@link ProcessDef#runV2}. The LLM call is the task body and stays in-JVM behind the
      * {@link AgentRunner} SPI; a tool agent's shared {@link ModuleToolBridge} is invoked from
@@ -596,7 +596,7 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     /**
      * Build (but do NOT run) the agent {@link TaskProcessor}: synthesize the
-     * {@link ProcessConfigV2}, the canonical GROOVY {@link BodyDef}, create the tool bridge
+     * {@link ProcessConfigV2}, the canonical PROMPT {@link BodyDef}, create the tool bridge
      * (for a tool agent), wire the input/output channels and create the processor via
      * {@link ProcessDef#createTaskProcessorResolved}. Extracted from {@link #runAsTask} so resume tests
      * can inspect the built artifacts (canonical {@code BodyDef.source}, folded prompt
@@ -902,7 +902,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             canonicalAgentSource(settings.model, settings.maxIterations, outputPlan.schema, skillDescriptors, selected.name,
                 toolsFingerprint(resolvedTools.toolSpecs, resolvedTools.bridge?.toolSources(), nativeToolRefs, runnerIdentity),
                 settings.baseUrl, agentConfig.apiProvider),
-            launchSpec != null ? 'script' : 'exec',
+            launchSpec != null ? 'script' : 'prompt',
             promptDef.valRefs)
     }
 

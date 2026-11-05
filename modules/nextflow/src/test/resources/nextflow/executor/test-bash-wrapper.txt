@@ -2,7 +2,7 @@
 #BSUB -x 1
 #BSUB -y 2
 ### ---
-### name: 'Hello 1'
+### name: "Hello 1"
 ### ...
 set -e
 set -u

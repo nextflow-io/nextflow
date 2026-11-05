@@ -41,7 +41,7 @@ The `task` variable in the process definition has two new properties, `task.prev
 
 ## Breaking changes
 
-- The `all` release of Nextflow has been replaced with the `dist` release, which includes fewer core plugins by default and supports third-party plugins. See [Standalone distribution][install-standalone] for details.
+- The `all` release of Nextflow has been replaced with the `dist` release, which does not bundle any plugins and supports third-party plugins. See [Standalone distribution][install-standalone] for details.
 
 - The `nf-ga4gh` plugin has been moved into its own repository, [nextflow-io/nf-ga4gh](https://github.com/nextflow-io/nf-ga4gh). To continue using the TES executor, you must explicitly declare the `nf-ga4gh` plugin in your Nextflow configuration. Refer to the plugin repository for documentation and updates on GA4GH integrations.
 
@@ -69,7 +69,7 @@ The `task` variable in the process definition has two new properties, `task.prev
 - New config option: [`workflow.failOnIgnore`][config-workflow-failOnIgnore]
 - Rename `nextflow.publish.retryPolicy` config scope to [`workflow.output.retryPolicy`][config-workflow-output]
 
-[azure-managed-identities]: ../azure#managed-identities
+[azure-managed-identities]: ../azure-blob#managed-identities
 [config-aws-client-requesterPays]: ../reference/config/aws#awsclientrequesterpays
 [config-google-batch-autoRetryExitCodes]: ../reference/config/google#googlebatchautoretryexitcodes
 [config-google-batch-bootDiskImage]: ../reference/config/google#googlebatchbootdiskimage
@@ -79,7 +79,7 @@ The `task` variable in the process definition has two new properties, `task.prev
 [config-wave-scan-mode]: ../reference/config/wave#wavescanmode
 [config-workflow-failOnIgnore]: ../reference/config/workflow#workflowfailonignore
 [config-workflow-output]: ../reference/config/workflow
-[hyperqueue-executor]: ../executor/hyperqueue
+[hyperqueue-executor]: ../reference/executor/hyperqueue
 [install-standalone]: ../install#standalone-distribution
 [spot-retries-page]: ../guides/updating-spot-retries
 [strict-syntax-page]: ../strict-syntax

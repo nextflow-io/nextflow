@@ -27,10 +27,13 @@ import com.google.api.gax.rpc.ApiException
 import com.google.api.gax.rpc.Callables
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.InvalidArgumentException
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.StatusCode
 import com.google.api.gax.rpc.UnaryCallable
+import com.google.api.gax.rpc.UnavailableException
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.CreateJobRequest
+import com.google.cloud.batch.v1.DeleteJobRequest
 import com.google.cloud.batch.v1.GetJobRequest
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
@@ -42,6 +45,7 @@ import com.google.cloud.batch.v1.TaskName
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.stub.BatchServiceStub
 import com.google.cloud.batch.v1.stub.BatchServiceStubSettings
+import com.google.longrunning.Operation
 import io.grpc.Status
 import nextflow.cloud.google.GoogleOpts
 import spock.lang.Specification
@@ -137,6 +141,71 @@ class BatchClientTest extends Specification{
         then:
         thrown(AlreadyExistsException)
         getJobCalls == []
+    }
+
+    def 'should wait for the job deletion request to be accepted' () {
+        given:
+        def requests = []
+        def stub = new BatchServiceStub() {
+            @Override
+            UnaryCallable<DeleteJobRequest, Operation> deleteJobCallable() {
+                return new UnaryCallable<DeleteJobRequest, Operation>() {
+                    @Override
+                    ApiFuture<Operation> futureCall(DeleteJobRequest request, ApiCallContext context) {
+                        requests << request.getName()
+                        // fail the first request with a transient error
+                        return requests.size() == 1
+                            ? ApiFutures.<Operation>immediateFailedFuture(new UnavailableException('unavailable', null, GrpcStatusCode.of(Status.Code.UNAVAILABLE), true))
+                            : ApiFutures.immediateFuture(Operation.newBuilder().setName('op-1').build())
+                    }
+                }
+            }
+            @Override void close() {}
+            @Override void shutdown() {}
+            @Override boolean isShutdown() { false }
+            @Override boolean isTerminated() { false }
+            @Override void shutdownNow() {}
+            @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
+        }
+        def client = createClient(BatchServiceClient.create(stub))
+
+        when:
+        client.deleteJob('job-1')
+
+        then:
+        def name = JobName.of('project-id', 'location-id', 'job-1').toString()
+        requests == [name, name]
+    }
+
+    def 'should not retry the deletion of a job that does not exist' () {
+        given:
+        def requests = []
+        def stub = new BatchServiceStub() {
+            @Override
+            UnaryCallable<DeleteJobRequest, Operation> deleteJobCallable() {
+                return new UnaryCallable<DeleteJobRequest, Operation>() {
+                    @Override
+                    ApiFuture<Operation> futureCall(DeleteJobRequest request, ApiCallContext context) {
+                        requests << request.getName()
+                        return ApiFutures.<Operation>immediateFailedFuture(new NotFoundException('not found', null, GrpcStatusCode.of(Status.Code.NOT_FOUND), false))
+                    }
+                }
+            }
+            @Override void close() {}
+            @Override void shutdown() {}
+            @Override boolean isShutdown() { false }
+            @Override boolean isTerminated() { false }
+            @Override void shutdownNow() {}
+            @Override boolean awaitTermination(long duration, TimeUnit unit) { true }
+        }
+        def client = createClient(BatchServiceClient.create(stub))
+
+        when:
+        client.deleteJob('job-1')
+
+        then:
+        noExceptionThrown()
+        requests.size() == 1
     }
 
     def 'should return task status with getTaskInArray' () {

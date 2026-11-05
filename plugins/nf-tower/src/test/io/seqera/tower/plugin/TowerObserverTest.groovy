@@ -826,4 +826,13 @@ class TowerObserverTest extends Specification {
         public Integer chunks
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = newObserver(Mock(Session), [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'TowerObserver'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

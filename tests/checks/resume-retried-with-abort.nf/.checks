@@ -1,0 +1,62 @@
+set -e
+
+#
+# Run nextflow in the background and abort it (SIGINT) once its log matches
+# the given pattern, plus an optional grace delay (seconds), so the abort lands
+# at the intended point whatever the machine speed (a fixed timeout raced the
+# JVM startup on slower runners)
+#
+run_and_abort() {
+    local pattern=$1 delay=$2; shift 2
+    rm -f .nextflow.log
+    # job control: otherwise bash runs background jobs with SIGINT ignored
+    set -m
+    $NXF_RUN "$@" | tee stdout &
+    local pid=$!
+    set +m
+    local i=0
+    until grep -qE "$pattern" .nextflow.log 2>/dev/null; do
+        ((++i > 240)) && { echo "timed out waiting for: $pattern"; break; }
+        sleep 0.5
+    done
+    sleep "$delay"
+    # signal the whole pipeline process group
+    kill -INT -- -$pid
+    wait $pid || true
+}
+
+#
+# run with abort -- abort while the retried attempt is still sleeping
+#
+echo ''
+run_and_abort 'Re-submitted process > SMALL_SLEEP_RETRY' 0
+
+[[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+
+#
+# RESUME mode with fail and abort -- abort again mid retried attempt
+#
+echo ''
+run_and_abort 'Re-submitted process > SMALL_SLEEP_RETRY' 0 -resume
+
+[[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Re-submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+
+#
+# RESUME mode with completed and abort -- let the retried attempt complete and
+# be stored in the cache (hence the grace delay), then abort while LONG_SLEEP
+# is still running
+#
+echo ''
+run_and_abort 'Task completed > .*SMALL_SLEEP_RETRY.*exit: 0' 3 -resume
+
+[[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Re-submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+
+#
+# RESUME mode with cached and finish
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `< .nextflow.log grep -c 'Cached process > SMALL_SLEEP_RETRY'` == 1 ]] || false

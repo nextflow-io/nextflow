@@ -15,13 +15,13 @@ Use the given Google Cloud project ID as the billing project for storage access 
 
 <AddedInVersion version="23.10" />
 
-The HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+The HTTP connection timeout for Cloud Storage API requests (default: `60.s`).
 
 ##### `google.httpReadTimeout`
 
 <AddedInVersion version="23.10" />
 
-The HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+The HTTP read timeout for Cloud Storage API requests (default: `60.s`).
 
 ##### `google.location`
 
@@ -112,7 +112,7 @@ The Google service account email to use for the pipeline execution. If not speci
 
 The service account must have the IAM roles listed in the [Google Cloud Batch documentation for Nextflow](https://cloud.google.com/batch/docs/nextflow). Without these roles, Cloud Batch jobs stay in the `SCHEDULED` state and never run.
 
-This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Credentials][google-credentials] for more information on Google Cloud credentials.
+This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Authentication][google-credentials] for more information on Google Cloud credentials.
 
 ##### `google.batch.spot`
 
@@ -143,7 +143,7 @@ Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
 
 <AddedInVersion version="24.10" />
 
-Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
+Max delay when retrying failed API requests to Cloud Storage (default: `90.s`).
 
 ##### `google.storage.retryPolicy.multiplier`
 
@@ -151,4 +151,4 @@ Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
 
 Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
 
-[google-credentials]: ../../google#credentials
+[google-credentials]: ../../google-storage#authentication

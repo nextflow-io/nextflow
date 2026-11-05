@@ -152,6 +152,7 @@ class ConfigDiscovery {
             }
             catch (Exception e2) {
                 // if still fails, throws the first exception
+                e1.addSuppressed(e2)
                 throw e1
             }
         }
@@ -189,5 +190,9 @@ class ConfigDiscovery {
         }
         return null
     }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 
 }

@@ -671,16 +671,18 @@ class TaskPollingMonitor implements TaskMonitor {
         while( itr.hasNext() && session.canSubmitTasks() ) {
             final handler = itr.next()
             submitRateLimit?.acquire()
+            boolean forked = false
             try {
                 if( !canSubmit(handler) )
                     continue
 
                 count++
                 handler.incProcessForks()
+                forked = true
                 submit(handler)
             }
             catch ( Throwable e ) {
-                handleException(handler, e)
+                handleSubmitException(handler, e, forked)
                 notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
@@ -692,14 +694,51 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
 
+    /**
+     * Handle an error raised while submitting a task. Since the task
+     * never ran, it is finalized here unless it is retried.
+     *
+     * A task array is handled as the failure of each of its child tasks.
+     *
+     * @param forked Whether a fork slot was acquired for the task, i.e. the
+     *      error was raised after the task was accepted for submission
+     */
+    final protected void handleSubmitException( TaskHandler handler, Throwable error, boolean forked ) {
+        // release the fork slot even if the task never reached the running queue
+        if( forked ) {
+            evict(handler)
+            handler.decProcessForks()
+        }
+        final handlers = handler.task instanceof TaskArrayRun
+            ? (handler.task as TaskArrayRun).children
+            : List.of(handler)
+        for( TaskHandler it : handlers ) {
+            final fault = it.task.processor.finalizeFailedTask(it, error)
+            if( fault instanceof TaskFault )
+                session.fault(fault, it)
+        }
+    }
+
+    /**
+     * Handle an error raised while checking the status of a task.
+     *
+     * The task is finalized here only if it is still in the running queue,
+     * since {@link #checkTaskStatus} evicts a completed task before finalizing it.
+     * Otherwise the error was raised during or after finalization, and the
+     * task must not be finalized again.
+     */
     final protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
         try {
-            if (evict(handler)) {
+            if( evict(handler) ) {
                 handler.decProcessForks()
+                fault = handler.task.processor.finalizeFailedTask(handler, error)
+                session.notifyTaskComplete(handler)
             }
-            fault = handler.task.processor.resumeOrDie(handler?.task, error, handler.getTraceRecord())
-            log.trace "Task fault (1): $fault"
+            else {
+                fault = handler.task.processor.resumeOrDie(handler.task, error, handler.getTraceRecord())
+                log.trace "Task fault (1): $fault"
+            }
         }
         finally {
             // abort the session if a task task was returned
@@ -734,6 +773,7 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.decProcessForks()
 
             // since completed *remove* the task from the processing queue
+            // note: this must happen before finalizing the task, see handleException
             evict(handler)
 
             // check if submit timeout is reached

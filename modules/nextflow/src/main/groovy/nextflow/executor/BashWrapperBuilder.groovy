@@ -359,7 +359,7 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames), runWithContainer)
         if( runWithContainer ) {
             binding.task_env = null
             binding.container_env = env
@@ -425,6 +425,22 @@ class BashWrapperBuilder {
     protected String getTraceScript(Map binding) {
         def res = BashWrapperBuilder.class.getResource('command-trace.txt')
         engine.render(res.newReader(), binding)
+    }
+
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            final value = result.get(name)
+            // exported as `export NAME=""$'value'""`: ANSI-C quoting, with line breaks as `\n`/`\r` to keep it on one line
+            if( value )
+                result.put(name, '"$\'' + value.replace('\\','\\\\').replace("'","\\'").replace('\n','\\n').replace('\r','\\r') + '\'"')
+        }
+        return result
     }
 
     @PackageScope String buildNew0(BufferedReader template) {
@@ -500,10 +516,58 @@ class BashWrapperBuilder {
         return false
     }
 
+    /**
+     * Render a value as a YAML double-quoted string, escaping backslashes, double quotes
+     * and control characters so that the value is kept on a single comment line
+     * and can be decoded back to the original string
+     */
+    @PackageScope
+    static String yamlString(Object value) {
+        if( value == null )
+            return 'null'
+        final str = value.toString()
+        final result = new StringBuilder(str.length() + 2)
+        result.append('"')
+        for( int i=0; i<str.length(); i++ ) {
+            final char ch = str.charAt(i)
+            if( ch == '\\' as char )
+                result.append('\\\\')
+            else if( ch == '"' as char )
+                result.append('\\"')
+            else if( ch == '\n' as char )
+                result.append('\\n')
+            else if( ch == '\r' as char )
+                result.append('\\r')
+            else if( ch == '\t' as char )
+                result.append('\\t')
+            else if( isNonPrintable(str, i) )
+                result.append(String.format('\\u%04x', (int) ch))
+            else
+                result.append(ch)
+        }
+        result.append('"')
+        return result.toString()
+    }
+
+    /**
+     * Check if the char at the given index must be emitted as a `\\uXXXX` escape, i.e. control chars,
+     * line/paragraph separators, non-characters and unpaired surrogates (not allowed in a YAML stream)
+     */
+    private static boolean isNonPrintable(String str, int i) {
+        final char ch = str.charAt(i)
+        if( Character.isISOControl(ch) || ch == '\u2028' as char || ch == '\u2029' as char || ch == '\ufffe' as char || ch == '\uffff' as char )
+            return true
+        if( Character.isHighSurrogate(ch) )
+            return i+1 >= str.length() || !Character.isLowSurrogate(str.charAt(i+1))
+        if( Character.isLowSurrogate(ch) )
+            return i == 0 || !Character.isHighSurrogate(str.charAt(i-1))
+        return false
+    }
+
     protected String getTaskMetadata() {
         final lines = new StringBuilder()
         lines << '### ---\n'
-        lines << "### name: '${bean.name}'\n"
+        lines << "### name: ${yamlString(bean.name)}\n"
         if( bean.arrayIndexName ) {
             lines << '### array:\n'
             lines << "###   index-name: ${bean.arrayIndexName}\n"
@@ -514,12 +578,12 @@ class BashWrapperBuilder {
         }
 
         if( containerConfig?.isEnabled() )
-            lines << "### container: '${bean.containerImage}'\n"
+            lines << "### container: ${yamlString(bean.containerImage)}\n"
 
         if( outputFiles.size() > 0 ) {
             lines << '### outputs:\n'
             for( final output : bean.outputFiles )
-                lines << "### - '${output}'\n"
+                lines << "### - ${yamlString(output)}\n"
         }
 
         lines << '### ...\n'
@@ -617,7 +681,8 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            // the container env lines are inserted in the `bash -c` string and evaluated once in the container
+            String cmd = env ? '$(nxf_container_env); ' + launcher : launcher
             // wrap the command with an extra bash invocation either :
             // - to propagate the container environment or
             // - to change in the task work directory as required by singularity

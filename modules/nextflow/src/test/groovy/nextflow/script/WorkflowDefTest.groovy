@@ -160,6 +160,38 @@ class WorkflowDefTest extends Dsl2Spec {
         noExceptionThrown()
     }
 
+    def 'should allow workflow variables named after binding fields' () {
+        given:
+        def SCRIPT = '''
+        workflow STAGE1 {
+            main:
+            ch = channel.of(1)
+
+            emit:
+            published = ch
+        }
+
+        workflow STAGE2 {
+            main:
+            ch = channel.of(2)
+
+            emit:
+            owner = ch
+        }
+
+        workflow {
+            published = STAGE1().mix(STAGE2()).toSortedList()
+            published
+        }
+        '''
+
+        when:
+        def result = runScript(SCRIPT)
+
+        then:
+        result.val == [1, 2]
+    }
+
     def 'should validate collect output'() {
         given:
         def ch1 = new DataflowQueue(); ch1 << 'blah blah'

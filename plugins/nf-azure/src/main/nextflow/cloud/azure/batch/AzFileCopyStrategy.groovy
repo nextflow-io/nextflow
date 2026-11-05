@@ -102,9 +102,12 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
+        // escaped twice because `nxf_parallel` runs each command with `eval`
+        final source = Escape.doubleQuoted("'" + AzHelper.toHttpUrl(path).replace("'", "'\\''") + "'")
+        final target = Escape.doubleQuoted(Escape.dataPath(targetName))
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download ${source} ${target}\")"
+                : "downloads+=(\"nxf_az_download ${source} ${target}\")"
         return stage_cmd
     }
 
@@ -120,16 +123,21 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         if( !patterns )
             return null
 
+        // escaped twice because `eval "..."` parses the patterns twice
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.path(it) )
+            escape.add( Escape.doubleQuoted(escapePattern(it)) )
 
+        // names listed by `ls` are literal, so do not glob them again in the loop (`set -f`)
         return """\
             uploads=()
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(targetDir)}'")
+            set -f
+            for name in \$(set +f; eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                printf -v qname %q "\$name"
+                uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(targetDir)}'")
             done
+            set +f
             unset IFS
             nxf_parallel "\${uploads[@]}"
             """.stripIndent(true)

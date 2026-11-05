@@ -612,6 +612,10 @@ bonjour world!
 hola world!
 ```
 
+:::note
+The variable is set to the input value verbatim. Shell syntax in the value, such as `$VAR` or `$(command)`, is not evaluated.
+:::
+
 ### Standard input (`stdin`)
 
 The `stdin` qualifier allows you to forward the input value to the [standard input](http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29) of the process script. For example:
@@ -1319,14 +1323,12 @@ process hello {
 ```
 
 [cache-nondeterministic-inputs]: ./cache-and-resume#non-deterministic-process-inputs
-[channel-value]: ./reference/stdlib-namespaces/channel#value
 [config-process-when]: ./config#disabling-processes
 [executor-page]: ./executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html.mdx#glob
 [operator-combine]: ./reference/operator#combine
 [operator-filter]: ./reference/operator#filter
 [operator-flatten]: ./reference/operator#flatten
-[operator-cross]: ./reference/operator#cross
 [operator-merge]: ./reference/operator#merge
 [process-conda]: ./reference/process/directives/conda
 [process-container]: ./reference/process/directives/container
