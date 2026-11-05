@@ -253,7 +253,7 @@ class TaskArrayCollectorTest extends Specification {
         result == '''\
                 array=( /work/dir/1 /work/dir/2 /work/dir/3 )
                 export nxf_array_task_dir=$array[INDEX]
-                bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+                exec bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
                 '''.stripIndent(true)
     }
 }

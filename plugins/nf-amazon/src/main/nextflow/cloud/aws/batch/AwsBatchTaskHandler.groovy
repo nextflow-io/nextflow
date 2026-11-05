@@ -795,7 +795,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected List<String> classicSubmitCli() {
-        return executor.getLaunchCommand(task.getWorkDirStr())
+        return task instanceof TaskArrayRun
+            ? executor.getArraySubmitCommand(task.getWorkDirStr())
+            : executor.getLaunchCommand(task.getWorkDirStr())
     }
 
     protected List<String> getSubmitCommand() {

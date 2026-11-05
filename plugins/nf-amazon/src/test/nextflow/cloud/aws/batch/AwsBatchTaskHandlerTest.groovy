@@ -33,6 +33,7 @@ import nextflow.executor.Executor
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -1069,6 +1070,34 @@ class AwsBatchTaskHandlerTest extends Specification {
         }
         then:
         result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+    }
+
+    def 'should render job array submit command' () {
+        given:
+        def executor = Spy(AwsBatchExecutor)
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
+            fusionEnabled() >> false
+            getTask() >> Mock(TaskArrayRun) { getWorkDirStr()>> 's3://work'}
+        }
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) {
+            getAwsCli() >> 'aws'
+            getDebug() >> true
+            getStorageEncryption() >> 'aws:kms'
+        }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'aws s3 cp --only-show-errors --debug s3://work/.command.run .command.run && exec bash .command.run']
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) { getS5cmdPath() >> 's5cmd' }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 's5cmd cat s3://work/.command.run > .command.run && exec bash .command.run']
     }
 
     def 'should render submit command with s5cmd' () {

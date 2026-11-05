@@ -356,6 +356,22 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         return ['bash','-o','pipefail','-c', cmd.toString()]
     }
 
+    /**
+     * Get the command to launch a job array. Unlike {@link #getLaunchCommand(String)}
+     * it does not upload the .command.log file, because the array work directory
+     * is shared by all array elements and each of them saves its own log file.
+     *
+     * @param s3WorkDir The job array work directory
+     * @return The job array launch command
+     */
+    List<String> getArraySubmitCommand(String s3WorkDir) {
+        final opts = getAwsOptions()
+        final download = opts.s5cmdPath
+            ? "${opts.s5cmdPath} cat ${s3WorkDir}/${TaskRun.CMD_RUN} > ${TaskRun.CMD_RUN}"
+            : "${opts.getAwsCli()} s3 cp --only-show-errors${opts.debug ? ' --debug' : ''}${opts.requesterPays ? ' --request-payer requester' : ''} ${s3WorkDir}/${TaskRun.CMD_RUN} ${TaskRun.CMD_RUN}"
+        return ['bash','-o','pipefail','-c', "${download} && exec bash ${TaskRun.CMD_RUN}".toString()]
+    }
+
     static String s3Cmd(String workDir, AwsOptions opts) {
         final cli = opts.getAwsCli()
         final debug = opts.debug ? ' --debug' : ''

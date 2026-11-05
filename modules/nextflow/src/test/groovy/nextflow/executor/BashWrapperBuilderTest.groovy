@@ -382,6 +382,45 @@ class BashWrapperBuilderTest extends Specification {
         obj.outputs == ['foo.txt', '*.bar', '**/baz']
     }
 
+    def 'should create job array wrapper without control files' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo',
+            headerScript: '#SBATCH --array 0-1\nNXF_CHDIR=/work/dir',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02') ],
+            statsEnabled: true,
+            script: '''\
+                array=( /work/01 /work/02 )
+                export nxf_array_task_dir=${array[SLURM_ARRAY_TASK_ID]}
+                exec bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+                '''.stripIndent()
+        )
+
+        when:
+        def wrapper = builder.buildNew0()
+        then:
+        wrapper == '''\
+            #!/bin/bash
+            #SBATCH --array 0-1
+            NXF_CHDIR=/work/dir
+            ### ---
+            ### name: "foo"
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ### ...
+            set -eu
+            array=( /work/01 /work/02 )
+            export nxf_array_task_dir=${array[SLURM_ARRAY_TASK_ID]}
+            exec bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+            '''.stripIndent()
+    }
+
     def 'should add task metadata' () {
         when:
         def bash = newBashWrapperBuilder([name:'task1'])

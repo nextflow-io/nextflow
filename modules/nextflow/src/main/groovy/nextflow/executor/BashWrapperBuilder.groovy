@@ -445,7 +445,29 @@ class BashWrapperBuilder {
 
     @PackageScope String buildNew0(BufferedReader template) {
         final binding = makeBinding()
-        engine.render(template, binding)
+        return bean.arrayIndexName
+            ? getArrayWrapper(binding)
+            : engine.render(template, binding)
+    }
+
+    /**
+     * Render the wrapper for a job array. It only dispatches each array element
+     * to its child task wrapper, therefore it must not write any control file
+     * (.command.begin, .exitcode, etc) into the array work directory, which is
+     * shared by all array elements.
+     *
+     * @param binding The wrapper template binding
+     * @return The job array wrapper script
+     */
+    protected String getArrayWrapper(Map<String,String> binding) {
+        final result = new StringBuilder()
+        result << '#!/bin/bash\n'
+        if( binding.header_script )
+            result << binding.header_script << '\n'
+        result << binding.task_metadata
+        result << 'set -eu\n'
+        result << script.replaceFirst(/^#!.*\n/, '')
+        return result.toString()
     }
 
     /**
