@@ -21,17 +21,31 @@ The `config` command prints the project's resolved configuration, that is, the s
 
 ##### `-flat`
 
+<DeprecatedInVersion version="24.10">
+Use `-o flat` instead.
+</DeprecatedInVersion>
+
 Print config using flat notation.
 
 ##### `-h, -help`
 
 Print the command usage.
 
+##### `-o, -output`
+
+<AddedInVersion version="24.10" />
+
+Print the config using the specified format: `canonical` (default), `flat`, `json`, `properties` or `yaml`.
+
 ##### `-profile`
 
 Choose a configuration profile.
 
 ##### `-properties`
+
+<DeprecatedInVersion version="24.10">
+Use `-o properties` instead.
+</DeprecatedInVersion>
 
 Print config using Java properties notation.
 
@@ -74,7 +88,7 @@ process {
 Print the config using flat notation:
 
 ```console
-$ nextflow config -flat
+$ nextflow config -o flat
 
 docker.enabled = true
 process.executor = 'local'
@@ -83,7 +97,7 @@ process.executor = 'local'
 Print the config using Java properties notation:
 
 ```console
-$ nextflow config -properties
+$ nextflow config -o properties
 
 docker.enabled = true
 process.executor = local

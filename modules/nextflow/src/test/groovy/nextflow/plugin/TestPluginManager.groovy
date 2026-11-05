@@ -27,10 +27,10 @@ import org.pf4j.PluginRepository
 /**
  * Plugin manager specialised for unit testing.
  *
- * The plugin root must be defined the sub-project root directory
- * e.g. 'ROOT/modules/nf-commons'.
+ * The plugin root must be an existing directory, e.g. the
+ * sub-project root directory 'ROOT/modules/nextflow'.
  *
- * The plugin code must be defined in the 'testFixtures' source tree
+ * The plugin code must be defined in the 'testPlugin' source set
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

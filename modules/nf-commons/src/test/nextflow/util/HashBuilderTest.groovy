@@ -20,11 +20,12 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.google.common.hash.Hashing
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import nextflow.Global
-import nextflow.Session
+import nextflow.ISession
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -75,13 +76,13 @@ class HashBuilderTest extends Specification {
         def BASE = Paths.get("/some/pipeline/dir")
         def ROOT = new File("/some/pipeline/")
         and:
-        Global.session = Mock(Session) { getBaseDir() >> BASE }
+        Global.session = Mock(ISession) { getBaseDir() >> BASE }
         then:
         !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
 
 
         when:
-        Global.session = Mock(Session) {
+        Global.session = Mock(ISession) {
             getBaseDir() >> BASE
             getCommitId() >> '123456'
         }
@@ -93,7 +94,7 @@ class HashBuilderTest extends Specification {
 
     def 'should validate is asset file when not part of base directory'() {
         given:
-        Global.session = Mock(Session) {
+        Global.session = Mock(ISession) {
             getBaseDir() >> Paths.get(BASE)
             getCommitId() >> COMMIT_ID
         }
@@ -115,7 +116,7 @@ class HashBuilderTest extends Specification {
     def 'should hash file content'() {
         given:
         def EXPECTED = '64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c'
-        def file = TestHelper.createInMemTempFile('foo', 'Hello world')
+        def file = Files.writeString(Jimfs.newFileSystem(Configuration.unix()).getPath('/foo'), 'Hello world')
         expect:
         HashBuilder.hashFileSha256Impl0(file) == EXPECTED
         and:
@@ -124,7 +125,7 @@ class HashBuilderTest extends Specification {
 
     def 'should hash dir content with sha256'() {
         given:
-        def folder = TestHelper.createInMemTempDir()
+        def folder = Jimfs.newFileSystem(Configuration.unix()).getPath('/')
         folder.resolve('dir1').mkdir()
         folder.resolve('dir2').mkdir()
         and:
@@ -156,7 +157,7 @@ class HashBuilderTest extends Specification {
 
     def 'directories with same content but different structure should yield different hashes'() {
         given:
-        def folder = TestHelper.createInMemTempDir()
+        def folder = Jimfs.newFileSystem(Configuration.unix()).getPath('/')
         folder.resolve('dir1').mkdir()
         folder.resolve('dir2').mkdir()
         and:
