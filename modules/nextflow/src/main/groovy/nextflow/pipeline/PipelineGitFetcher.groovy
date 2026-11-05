@@ -19,6 +19,7 @@ package nextflow.pipeline
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import org.eclipse.jgit.api.Git
@@ -32,12 +33,15 @@ import org.eclipse.jgit.transport.RefSpec
  * Only public repositories are supported (no credentials). Switch to
  * AssetManager if private registries arrive.
  */
+@Slf4j
 @CompileStatic
 class PipelineGitFetcher {
 
     void fetch(String repositoryUrl, String revision, String commitId, Path target) {
         // a release may have no git revision: the pinned commit is then the only reference
         final byCommit = !revision || revision.equalsIgnoreCase(commitId)
+        if( byCommit && !commitId )
+            throw new AbortOperationException("Cannot fetch $repositoryUrl: the release has neither a git revision nor a commit id")
         Git git = null
         try {
             git = byCommit
@@ -60,14 +64,21 @@ class PipelineGitFetcher {
     private static Git fetchCommit(String repositoryUrl, String commitId, Path target) {
         Git git = Git.init().setDirectory(target.toFile()).call()
         try {
-            git.fetch().setRemote(repositoryUrl).setRefSpecs(new RefSpec(commitId)).setDepth(1).call()
+            try {
+                git.fetch().setRemote(repositoryUrl).setRefSpecs(new RefSpec(commitId)).setDepth(1).call()
+            }
+            catch( GitAPIException | JGitInternalException e ) {
+                log.debug "Cannot fetch commit ${commitId} of ${repositoryUrl}, falling back to a full clone: ${e.message}"
+                git.close()
+                FileHelper.deletePath(target)
+                git = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
+            }
+            git.checkout().setName(commitId).call()
+            return git
         }
-        catch( GitAPIException | JGitInternalException e ) {
+        catch( Throwable e ) {
             git.close()
-            FileHelper.deletePath(target)
-            git = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
+            throw e
         }
-        git.checkout().setName(commitId).call()
-        return git
     }
 }

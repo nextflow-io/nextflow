@@ -22,6 +22,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
+import nextflow.cli.RegistryUrls
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
@@ -41,7 +42,7 @@ class CmdPipelineView extends CmdBase {
 
     @Parameter(
         names = ['-o', '-output'],
-        description = 'Output mode: text, json',
+        description = PipelineCmdSupport.OUTPUT_MODE_HELP,
         validateWith = PipelineCmdSupport.OutputModeValidator
     )
     String output = 'text'
@@ -70,7 +71,7 @@ class CmdPipelineView extends CmdBase {
         if( !pipeline || !release )
             throw new AbortOperationException("No release information available for ${name}")
 
-        final url = PipelineCmdSupport.buildUrl(registryConfig.url, 'pipelines', name, release.version)
+        final url = RegistryUrls.build(registryConfig.url, 'pipelines', name, release.version)
         final params = schemaParams(release.schema)
 
         if( output == 'json' ) {

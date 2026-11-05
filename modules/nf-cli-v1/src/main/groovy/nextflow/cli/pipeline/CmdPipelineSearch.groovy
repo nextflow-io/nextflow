@@ -40,7 +40,7 @@ class CmdPipelineSearch extends CmdBase {
 
     @Parameter(
         names = ['-o', '-output'],
-        description = 'Output mode for reporting search results: simple, json',
+        description = PipelineCmdSupport.OUTPUT_MODE_HELP,
         validateWith = PipelineCmdSupport.OutputModeValidator
     )
     String output = 'simple'

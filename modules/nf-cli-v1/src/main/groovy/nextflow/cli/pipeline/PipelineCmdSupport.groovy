@@ -31,6 +31,8 @@ import nextflow.config.RegistryConfig
 @CompileStatic
 class PipelineCmdSupport {
 
+    static final String OUTPUT_MODE_HELP = 'Output mode: text, simple (search), json'
+
     /** Accepts the output modes of list/view (text) and search (simple), plus json */
     static class OutputModeValidator implements IParameterValidator {
 
@@ -51,10 +53,4 @@ class PipelineCmdSupport {
         return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
     }
 
-    /** Web URL of a registry entry; {@code kind} is the path segment, e.g. 'modules' or 'pipelines' */
-    static String buildUrl(String registryUrl, String kind, String fullName, String version) {
-        // Strip /api suffix to get the base UI URL
-        final baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
-        return "${baseUrl}/${kind}/${fullName}@${version}"
-    }
 }

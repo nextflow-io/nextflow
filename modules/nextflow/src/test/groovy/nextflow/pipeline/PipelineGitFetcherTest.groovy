@@ -79,6 +79,16 @@ class PipelineGitFetcherTest extends Specification {
         revision << [null, '']
     }
 
+    def 'fails clearly when there is neither a revision nor a commit id'() {
+        when:
+        new PipelineGitFetcher().fetch(url, null, commitId, dir.resolve('target'))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('neither a git revision nor a commit id')
+        where:
+        commitId << [null, '']
+    }
+
     def 'fails when the revision no longer points to the pinned commit'() {
         when:
         new PipelineGitFetcher().fetch(url, '1.0', sha2, dir.resolve('target'))
