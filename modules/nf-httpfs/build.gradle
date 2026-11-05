@@ -41,3 +41,9 @@ dependencies {
     testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
 }
 
+
+test {
+    // fail fast when an external FTP server is unreachable (JDK default is 300 s)
+    systemProperty 'sun.net.client.defaultConnectTimeout', '5000'
+    systemProperty 'sun.net.client.defaultReadTimeout', '5000'
+}
