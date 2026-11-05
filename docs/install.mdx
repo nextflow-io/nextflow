@@ -19,7 +19,7 @@ Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 26)](http://
 java -version
 ```
 
-If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. Alternatively, you can [install Nextflow without Java](#install-without-java).
+If you don't have a compatible version of Java, it is recommended that you install the latest Long-Term Support (LTS) version of Temurin through [SDKMAN!](https://sdkman.io/). Alternatively, [install Nextflow without Java](#install-without-java).
 
 To install Java with SDKMAN:
 
@@ -86,7 +86,7 @@ To install Nextflow with the self-installing package:
 
 <AddedInVersion version="27.04" />
 
-Nextflow can be installed with its own Java runtime. It is available for Linux (x86-64 and ARM64, glibc) and macOS (ARM64).
+You can install Nextflow with its own Java runtime for Linux and macOS.
 
 To install Nextflow without Java, follow the [self-install](#self-install) steps, but download Nextflow with:
 
@@ -94,9 +94,14 @@ To install Nextflow without Java, follow the [self-install](#self-install) steps
 curl -s https://get.nextflow.io | NXF_JAVA_BUNDLE=true bash
 ```
 
-Nextflow downloads the bundle of each version when it first runs, unless `NXF_OFFLINE=true` is set. The bundle contains the Java runtime and a startup cache. If it can't be downloaded, Nextflow uses the system Java and tries again at the next launch. `nextflow self-update` keeps this setting. Set `NXF_JAVA_BUNDLE=false` to use the system Java instead, or set `NXF_JAVA_HOME` to use another Java installation.
+Nextflow downloads a bundle for each version the first time that version runs, unless `NXF_OFFLINE=true` is set. The bundle contains the Java runtime and a startup cache. If the download fails, Nextflow uses the system Java and retries at the next launch. `nextflow self-update` keeps this setting. Set `NXF_JAVA_BUNDLE=false` to use the system Java instead, or set `NXF_JAVA_HOME` to use another Java installation.
 
-The bundled Java runtime trusts the certificates of the operating system on macOS and on Linux distributions with a Java trust store (e.g. RHEL and derivatives, or Debian and Ubuntu with `ca-certificates-java`), and its own certificates otherwise. Behind a proxy that inspects TLS traffic, set `NXF_JAVA_HOME` to a Java installation that trusts the proxy, or specify a trust store in `NXF_OPTS`, e.g. `-Djavax.net.ssl.trustStore=/path/to/cacerts`.
+The bundled Java runtime trusts the operating system's certificates on macOS and on Linux distributions with a Java trust store. On other systems, it uses its own certificates.
+
+Behind a proxy that inspects TLS traffic, do one of the following:
+
+- Set `NXF_JAVA_HOME` to a Java installation that trusts the proxy.
+- Specify a trust store in `NXF_OPTS`, for example `-Djavax.net.ssl.trustStore=/path/to/cacerts`.
 
 ### Conda
 
