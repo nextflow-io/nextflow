@@ -201,18 +201,23 @@ function launch_nextflow() {
         x="${x#\"}"
         cmdline+=("$x")
     done
+    cmdline+=("${args[@]}")
+
+    # report the process as 'nextflow' in ps/terminals; set NXF_ARGV0=false to keep the java path
+    local exec_opts=()
+    if [[ "${NXF_ARGV0:-true}" != false && "$(uname)" != AIX ]]; then
+      exec_opts=(-a nextflow)
+    fi
 
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      cmdline+=("${args[@]}")
-      exec "${cmdline[@]}" &
+      exec "${exec_opts[@]}" "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
-    cmdline+=("${args[@]}")
-    exec "${cmdline[@]}"
+    exec "${exec_opts[@]}" "${cmdline[@]}"
     exit 1
 }
 
@@ -281,7 +286,6 @@ while [[ $# != 0 ]]; do
 done
 
 NXF_PACK=one
-NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
