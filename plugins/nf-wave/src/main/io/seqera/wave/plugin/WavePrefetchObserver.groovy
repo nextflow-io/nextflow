@@ -1,0 +1,246 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.seqera.wave.plugin
+
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
+import nextflow.dag.DAG
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.event.TaskEvent
+import nextflow.util.Duration
+
+/**
+ * Request ahead the containers of the processes downstream of a running process, so that their
+ * Wave provisioning (e.g. the SOCI index of the image, or a container build) runs while the
+ * upstream tasks run, rather than when their own first task is submitted.
+ *
+ * When the first task of a process is pending, the processes up to {@code depth} levels
+ * downstream in the DAG are resolved with a task preview, the same way as {@code nextflow inspect}.
+ * Each process is requested at most once.
+ *
+ * The requests are sent one at a time by a single thread, the nearest processes first, at no more
+ * than half the Wave client rate limit, so that the requests of the tasks are not slowed down.
+ * The request thread never waits for a container build: Wave runs the build on its own, and the
+ * task awaits the container when submitted. This way a container already available, whose request
+ * only starts its SOCI index, is not queued behind a slow build. A queued process whose own task
+ * starts in the meantime is skipped.
+ *
+ * The Wave client caches the response, so the actual task reuses it. A process whose container
+ * depends on the task inputs cannot be resolved ahead, and it is requested by its task as usual.
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class WavePrefetchObserver implements TraceObserverV2 {
+
+    /** the name of the thread sending the requests ahead */
+    static final String THREAD_NAME = 'wave-prefetch'
+
+    private DAG dag
+
+    private int depth
+
+    /** sends the requests ahead, one at a time in the order they are submitted */
+    private ThreadPoolExecutor requester
+
+    /** the processes whose downstream was already looked up */
+    private Set<String> triggered = ConcurrentHashMap.newKeySet()
+
+    /** the processes whose container was already requested, ahead or by their own task */
+    private Set<String> requested = ConcurrentHashMap.newKeySet()
+
+    /** the processes having a task pending, therefore requesting the container on their own */
+    private Set<String> started = ConcurrentHashMap.newKeySet()
+
+    /** the process whose first task caused a process to be requested ahead, for debugging */
+    private Map<String,String> triggers = new ConcurrentHashMap<>()
+
+    @PackageScope AtomicInteger countRequested = new AtomicInteger()
+    @PackageScope AtomicInteger countBuilding = new AtomicInteger()
+    @PackageScope AtomicInteger countReady = new AtomicInteger()
+    @PackageScope AtomicInteger countFailed = new AtomicInteger()
+    @PackageScope AtomicInteger countSkipped = new AtomicInteger()
+
+    WavePrefetchObserver(DAG dag, int depth) {
+        this.dag = dag
+        this.depth = depth
+        this.requester = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), (Runnable r) -> {
+            final thread = new Thread(r, THREAD_NAME)
+            thread.setDaemon(true)
+            return thread
+        })
+    }
+
+    @Override
+    void onTaskPending(TaskEvent event) {
+        final process = event.handler.task.processor
+        // its own task requests the container of this process
+        started.add(process.name)
+        requested.add(process.name)
+        if( !triggered.add(process.name) )
+            return
+        final downstream = downstream(dag, process, depth)
+        final submitted = new ArrayList<String>()
+        for( TaskProcessor next : downstream ) {
+            if( requested.add(next.name) ) {
+                triggers.put(next.name, process.name)
+                submitted.add(next.name)
+                submit(next)
+            }
+        }
+        if( log.isDebugEnabled() ) {
+            log.debug "Wave prefetch triggered by process '${process.name}' - downstream (depth ${depth}): ${downstream*.name}; new to request: ${submitted}; ${slots()}"
+        }
+    }
+
+    protected void submit(TaskProcessor process) {
+        final queuedAt = System.currentTimeMillis()
+        requester.submit(() -> prefetch(process, queuedAt))
+    }
+
+    @Override
+    void onFlowComplete() {
+        log.debug "Wave prefetch completed - triggered by: ${triggered.size()} processes; requested ahead: ${countRequested}; building when requested: ${countBuilding}; ready: ${countReady}; failed: ${countFailed}; skipped: ${countSkipped}; ${slots()}"
+        // interrupt the thread still sending the requests
+        requester.shutdownNow()
+    }
+
+    protected void prefetch(TaskProcessor process) {
+        prefetch(process, System.currentTimeMillis())
+    }
+
+    protected void prefetch(TaskProcessor process, long queuedAt) {
+        final trigger = triggers.get(process.name)
+        final startedAt = System.currentTimeMillis()
+        if( started.contains(process.name) ) {
+            countSkipped.incrementAndGet()
+            log.debug "Skip requesting ahead the Wave container of process '${process.name}' - its task already started (trigger: '${trigger}'; queued: ${elapsed(queuedAt, startedAt)})"
+            return
+        }
+        try {
+            final task = process.createTaskPreview()
+            final container = task.getContainer()
+            final requestedAt = System.currentTimeMillis()
+            countRequested.incrementAndGet()
+            log.debug "Wave container requested ahead for process '${process.name}': ${container} (trigger: '${trigger}'; queued: ${elapsed(queuedAt, startedAt)}; request: ${elapsed(startedAt, requestedAt)}; ${describe(task, startedAt)}; ${slots()})"
+            if( task.isContainerReady() ) {
+                countReady.incrementAndGet()
+                log.debug "Wave container ready ahead for process '${process.name}': ${container}"
+            }
+            else {
+                // a container build: Wave runs it on its own, and the task awaits it when submitted
+                countBuilding.incrementAndGet()
+                log.debug "Wave container building ahead for process '${process.name}': ${container}"
+            }
+        }
+        catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
+        }
+        catch( Throwable e ) {
+            // e.g. a container depending on the task inputs, the task requests it as usual
+            countFailed.incrementAndGet()
+            log.debug "Unable to request ahead the Wave container of process '${process.name}' (trigger: '${trigger}'; elapsed: ${elapsed(startedAt, System.currentTimeMillis())}) - cause: ${e.message}"
+        }
+    }
+
+    /**
+     * The Wave metadata of the task container, to match it with the Wave service logs
+     */
+    @PackageScope
+    static String describe(TaskRun task, long startedAt) {
+        final meta = task.containerMeta()
+        if( !meta )
+            return 'meta: none'
+        // the Wave client caches the response by the request assets, so a container already requested is not sent again
+        final reused = meta.requestTime && meta.requestTime.toInstant().toEpochMilli() < startedAt
+        return "response: ${reused ? 'reused' : 'new'}; requestId: ${meta.requestId}; buildId: ${meta.buildId ?: meta.mirrorId}; cached: ${meta.cached}; scanId: ${meta.scanId}; source: ${meta.sourceImage}"
+    }
+
+    private String slots() {
+        return "requests queued: ${requester.getQueue().size()}"
+    }
+
+    /**
+     * @return {@code true} when the current thread is the one sending the requests ahead
+     */
+    static boolean isPrefetchThread() {
+        return Thread.currentThread().name == THREAD_NAME
+    }
+
+    static private String elapsed(long from, long to) {
+        return Duration.of(to-from).toString()
+    }
+
+    /**
+     * The processes up to {@code depth} levels downstream of the given process. Operators between
+     * two processes do not count as a level.
+     *
+     * @param dag The workflow DAG
+     * @param process The process from which the lookup starts
+     * @param depth The number of process levels to look up
+     * @return The downstream processes, nearest first
+     */
+    @PackageScope
+    static List<TaskProcessor> downstream(DAG dag, TaskProcessor process, int depth) {
+        final result = new LinkedHashSet<TaskProcessor>()
+        final successors = dag.edges.groupBy { DAG.Edge e -> e.from }
+        List<DAG.Vertex> frontier = dag.vertices.findAll { DAG.Vertex v -> v.process.is(process) }
+        for( int level=0; level<depth && frontier; level++ ) {
+            final next = new ArrayList<DAG.Vertex>()
+            for( DAG.Vertex v : frontier ) {
+                for( DAG.Vertex p : nextProcesses(successors, v) ) {
+                    if( !p.process.is(process) && result.add(p.process) )
+                        next.add(p)
+                }
+            }
+            frontier = next
+        }
+        return new ArrayList<TaskProcessor>(result)
+    }
+
+    /**
+     * The process vertices fed by the given vertex, through any number of non-process vertices
+     */
+    static private List<DAG.Vertex> nextProcesses(Map<DAG.Vertex,List<DAG.Edge>> successors, DAG.Vertex from) {
+        final result = new ArrayList<DAG.Vertex>()
+        final visited = new HashSet<DAG.Vertex>()
+        final queue = new LinkedList<DAG.Vertex>([from])
+        while( queue ) {
+            final v = queue.removeFirst()
+            for( DAG.Edge e : successors.getOrDefault(v, List.<DAG.Edge>of()) ) {
+                if( !e.to || !visited.add(e.to) )
+                    continue
+                // a process vertex holds its processor, see NodeMarker
+                if( e.to.process != null )
+                    result.add(e.to)
+                else
+                    queue.add(e.to)
+            }
+        }
+        return result
+    }
+}
