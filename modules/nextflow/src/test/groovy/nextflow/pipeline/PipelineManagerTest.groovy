@@ -77,7 +77,7 @@ class PipelineManagerTest extends Specification {
         def rel = release('2.0.0').artifact(new PipelineArtifact().url('https://a.io/b.tgz').checksum(sum))
 
         when:
-        def info = manager().install('nf-core/rnaseq', null, false)
+        def info = manager().install('nf-core/rnaseq', null, false).info()
         then:
         1 * client.getPipeline('nf-core/rnaseq') >> pipeline(rel)
         client.primaryUrl() >> 'https://reg.io'
