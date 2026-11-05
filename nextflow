@@ -274,18 +274,23 @@ function launch_nextflow() {
         x="${x#\"}"
         cmdline+=("$x")
     done
+    cmdline+=("${args[@]}")
+
+    # report the process as 'nextflow' in ps/terminals; set NXF_ARGV0=false to keep the java path
+    local exec_opts=()
+    if [[ "${NXF_ARGV0:-true}" != false && "$(uname)" != AIX ]]; then
+      exec_opts=(-a nextflow)
+    fi
 
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      cmdline+=("${args[@]}")
-      exec "${cmdline[@]}" &
+      exec "${exec_opts[@]}" "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
-    cmdline+=("${args[@]}")
-    exec "${cmdline[@]}"
+    exec "${exec_opts[@]}" "${cmdline[@]}"
     exit 1
 }
 
@@ -360,7 +365,6 @@ while [[ $# != 0 ]]; do
 done
 
 NXF_PACK=one
-NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 
 # the platform of the bundles, which contain the Java runtime, jar and AOT cache of a version
@@ -529,17 +533,17 @@ declare -a cmd_tail="(${BASH_REMATCH[2]})"
 launcher="${cmd_base[@]}"
 [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
 
-launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
 launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
 # versions before 26.11.0-edge use JDK internals that need extra opens
 if [[ $(cmp_ver "$NXF_VER" "26.11.0-edge") -lt 0 ]]; then
+    launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)

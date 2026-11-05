@@ -150,7 +150,7 @@ dockerImage:
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 $(gradle) publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
+	BUILD_PACK=1 $(gradle) dockerPack installPlugin
 
 release-plugins:
 	$(gradle) releasePluginToRegistryIfNotExists

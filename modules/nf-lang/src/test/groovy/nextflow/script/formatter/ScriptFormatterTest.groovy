@@ -20,7 +20,6 @@ import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
 import nextflow.script.control.TypeCheckingVisitor
 import nextflow.script.dsl.Types
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -30,15 +29,8 @@ import test.TestUtils
  */
 class ScriptFormatterTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
     String format(String contents, FormattingOptions options = new FormattingOptions(4, true), boolean typeCheck = false) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         if( typeCheck )
@@ -741,10 +733,10 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             """
-            blastp \
-                -in ${input} \
-                -out ${output} \
-                -db ${blast_db} \
+            blastp \\
+                -in ${input} \\
+                -out ${output} \\
+                -db ${blast_db} \\
                 -html
             """
             '''

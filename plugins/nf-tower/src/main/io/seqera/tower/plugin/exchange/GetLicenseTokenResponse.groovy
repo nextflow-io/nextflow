@@ -42,5 +42,5 @@ class GetLicenseTokenResponse {
     /**
      * The Exception returned while trying to access the token
      */
-    Throwable error
+    transient Throwable error
 }

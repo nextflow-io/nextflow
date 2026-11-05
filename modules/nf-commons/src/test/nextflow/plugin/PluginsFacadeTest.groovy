@@ -678,7 +678,7 @@ class PluginsFacadeTest extends Specification {
         CONFIG << [ [:], [registry: [:]], [registry: [url: []]] ]
     }
 
-    def 'should ignore registry config in dev mode' () {
+    def 'should apply registry config in dev mode' () {
         given:
         def updater = Mock(PluginUpdater)
         def facade = new PluginsFacade(Paths.get('plugins'), 'dev')
@@ -687,8 +687,8 @@ class PluginsFacadeTest extends Specification {
         when:
         facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
 
-        then: 'plugins are resolved from the dev classpath, so the registry scope is ignored'
-        0 * updater.addRegistryRepos(_)
+        then: 'plugins not built locally are downloaded from the configured registry'
+        1 * updater.addRegistryRepos(_)
     }
 
     def 'should not render the environment' () {

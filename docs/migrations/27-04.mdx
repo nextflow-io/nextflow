@@ -1,0 +1,66 @@
+---
+title: Migrating to 27.04
+description: Review new features, breaking changes, and deprecations introduced in Nextflow 27.04.
+unlisted: true
+---
+
+# Migrating to 27.04
+
+:::note
+Nextflow 27.04 has not been released yet. This page describes changes on the master branch and is updated as they are merged.
+:::
+
+## Enhancements
+
+### Lower memory usage
+
+The Nextflow JVM now uses the C1 compiler and the serial garbage collector by default. This reduces the CPU and memory usage for typical runs.
+
+If you set a garbage collector in `NXF_OPTS` or `NXF_JVM_ARGS`, Nextflow uses it instead of the serial collector. To restore the previous behavior:
+
+```bash
+export NXF_OPTS="-XX:TieredStopAtLevel=4 -XX:+UseG1GC"
+```
+
+### Remove old Nextflow versions
+
+Use `nextflow self-update -clean` to delete every installed Nextflow version except the current one. Plugins are not removed. See [`self-update`][cli-self-update-clean] for details.
+
+## Breaking changes
+
+- The `console` command and the `nf-console` plugin were removed.
+
+- The `kuberun` command was removed. Use the [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin (`nextflow plugin nf-kuberun:run`) or launch the pipeline in a pod with Fusion instead.
+
+- The Nextflow launcher can no longer run Nextflow versions older than 24.07.0-edge, e.g. with `NXF_VER`. To run an older version, use the launcher script from that version.
+
+- Process [`env` inputs][process-env-inputs] are exported verbatim. Shell syntax in the value, such as `$VAR`, `$(...)`, and backticks, is no longer expanded. To reference another environment variable, set it in the task script instead. Variables in the `env` config scope are still expanded.
+
+- Task wrapper scripts treat `$` in file names literally. Input file names that contain `${` or `$[` are rejected when they are referenced in the task script.
+
+- Nextflow no longer opens the internal packages of the Java standard library (`java.lang`, `java.util`, `java.io`, etc.) to deep reflection. Plugins and libraries that rely on it fail with an `InaccessibleObjectException`. As a workaround, open the package named in the error with [`NXF_OPTS`][env-vars-NXF_OPTS], for example:
+
+  ```bash
+  export NXF_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED"
+  ```
+
+### Cache-breaking changes
+
+- Java types that are not [standard types][stdlib-types], such as `Optional` or `AtomicInteger`, can no longer be stored in the task cache. A task whose inputs or outputs hold such a value is not cached and re-executes when you resume, with a warning.
+
+- Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
+
+## Miscellaneous
+
+- Upgrade to Groovy 5
+- New config option: [`mail.smtp.connectiontimeout`][config-mail-smtp-connectiontimeout]
+- New config option: [`mail.smtp.timeout`][config-mail-smtp-timeout]
+- New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
+
+[cli-self-update-clean]: ../reference/cli/self-update#-clean
+[config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout
+[config-mail-smtp-timeout]: ../reference/config/mail#mailsmtptimeout
+[config-mail-smtp-writetimeout]: ../reference/config/mail#mailsmtpwritetimeout
+[env-vars-NXF_OPTS]: ../reference/env-vars#nxf_opts
+[process-env-inputs]: ../process#input-environment-variables-env
+[stdlib-types]: ../reference/stdlib-types

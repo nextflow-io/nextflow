@@ -16,15 +16,9 @@
 
 package test
 
-import java.nio.file.FileSystem
-import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
 import nextflow.config.control.ConfigParser
 import nextflow.script.control.Compiler
 import nextflow.script.control.PhaseAware
@@ -125,29 +119,21 @@ class TestUtils {
             .toList()
     }
 
+    /**
+     * Get the line, column and message of each error, for
+     * asserting a complete error list.
+     *
+     * @param errors
+     */
+    static List<List> errorList(List<SyntaxException> errors) {
+        return errors.collect { e -> [e.getStartLine(), e.getStartColumn(), e.getOriginalMessage()] }
+    }
+
     static boolean hasSyntaxErrors(SourceUnit source) {
         return getErrors(source).stream()
             .filter(error -> error instanceof PhaseAware ? error.getPhase() == Phases.SYNTAX : true)
             .findFirst()
             .isPresent()
-    }
-
-    /**
-     * Create a temporary directory.
-     */
-    static Path tempDir() {
-        return Files.createTempDirectory('test')
-    }
-
-    private static FileSystem fs = Jimfs.newFileSystem(Configuration.unix())
-
-    /**
-     * Create an in-memory temporary directory.
-     */
-    static Path tempDirInMem() {
-        final tmp = fs.getPath('/tmp')
-        Files.createDirectories(tmp)
-        return Files.createTempDirectory(tmp, 'test')
     }
 
     /**
@@ -164,30 +150,6 @@ class TestUtils {
         if( contents )
             result.text = contents
         return result
-    }
-
-    static Path tempFile(String name, String contents = null) {
-        return tempFile(tempDir(), name, contents)
-    }
-
-    /**
-     * Delete a directory and its contents.
-     *
-     * @param root
-     */
-    static void deleteDir(Path root) {
-        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
-            @Override
-            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                Files.delete(file)
-                FileVisitResult.CONTINUE
-            }
-            @Override
-            FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                Files.delete(dir)
-                FileVisitResult.CONTINUE
-            }
-        })
     }
 
 }

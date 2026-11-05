@@ -228,7 +228,7 @@ Defines the path location of the Java VM installation used to run Nextflow. This
 
 ##### `NXF_JVM_ARGS`
 
-Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
+Extra options for the Java VM that runs Nextflow, as a space-separated list. Equivalent to `NXF_OPTS`.
 
 ##### `NXF_LOG_FILE`
 
@@ -248,7 +248,7 @@ This option also prevents plugins from being downloaded. Plugin versions must be
 
 ##### `NXF_OPTS`
 
-Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of `-Dkey[=value]` properties.
+Extra options for the Java VM that runs Nextflow, as a space-separated list, e.g. `-Xmx4g -Dkey=value`.
 
 ##### `NXF_ORG`
 

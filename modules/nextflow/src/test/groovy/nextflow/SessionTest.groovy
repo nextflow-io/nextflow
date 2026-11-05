@@ -1063,4 +1063,17 @@ class SessionTest extends Specification {
         work?.deleteDir()
         cacheHome?.deleteDir()
     }
+
+    def 'should create the array launcher pool lazily' () {
+        given:
+        def session = new Session()
+
+        expect:
+        session.@arrayLauncherPool == null
+        session.getArrayLauncherPool() != null
+        session.getArrayLauncherPool().is(session.getArrayLauncherPool())
+
+        cleanup:
+        session.getArrayLauncherPool().shutdown()
+    }
 }
