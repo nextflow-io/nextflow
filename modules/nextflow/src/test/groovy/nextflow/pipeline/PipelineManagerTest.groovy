@@ -135,7 +135,7 @@ class PipelineManagerTest extends Specification {
         def result = m.install('nf-core/rnaseq', null, false)
         then:
         0 * fetcher._
-        result.upToDate()
+        result.alreadyInstalled()
         result.info().version == '1.0.0'
     }
 
@@ -151,7 +151,7 @@ class PipelineManagerTest extends Specification {
         when:
         def result = m.install('nf-core/rnaseq', null, false)
         then:
-        !result.upToDate()
+        !result.alreadyInstalled()
         result.info().version == '2.0.0'
         base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'new'
         // no leftover temp dirs

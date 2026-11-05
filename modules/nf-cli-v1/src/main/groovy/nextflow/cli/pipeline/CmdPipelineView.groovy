@@ -22,7 +22,6 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
-import nextflow.cli.RegistryUrls
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
@@ -71,7 +70,7 @@ class CmdPipelineView extends CmdBase {
         if( !pipeline || !release )
             throw new AbortOperationException("No release information available for ${name}")
 
-        final url = RegistryUrls.build(registryConfig.url, 'pipelines', name, release.version)
+        final url = pipelineUrl(registryConfig.url, name, release.version)
         final params = schemaParams(release.schema)
 
         if( output == 'json' ) {
@@ -136,5 +135,11 @@ class CmdPipelineView extends CmdBase {
             }
         }
         return result
+    }
+
+    private static String pipelineUrl(String registryUrl, String name, String version) {
+        // Strip /api suffix to get the base UI URL
+        final baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
+        return "${baseUrl}/pipelines/${name}@${version}"
     }
 }

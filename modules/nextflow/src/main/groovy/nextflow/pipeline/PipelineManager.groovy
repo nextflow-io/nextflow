@@ -45,8 +45,8 @@ class PipelineManager {
     /** An installed pipeline directory with its {@code .pipeline-info} */
     static record InstalledPipeline(Path dir, PipelineInfo info) {}
 
-    /** Outcome of {@link #install}: {@code upToDate} means nothing was fetched */
-    static record InstallResult(PipelineInfo info, boolean upToDate) {}
+    /** Outcome of {@link #install}: {@code alreadyInstalled} means nothing was fetched */
+    static record InstallResult(PipelineInfo info, boolean alreadyInstalled) {}
 
     // ponytail: never evicted, fine for a CLI/run lifetime; add a TTL if a long-lived process needs it
     private static final Map<Path,Boolean> MODIFIED = new ConcurrentHashMap<>()

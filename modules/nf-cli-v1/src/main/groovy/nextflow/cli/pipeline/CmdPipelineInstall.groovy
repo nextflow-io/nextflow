@@ -69,7 +69,7 @@ class CmdPipelineInstall extends CmdBase {
         final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, baseDir))
         final manager = fetcher ? new PipelineManager(baseDir, client, fetcher) : new PipelineManager(baseDir, client)
         final result = manager.install(args[0], version, force)
-        if( result.upToDate() )
+        if( result.alreadyInstalled() )
             println "Pipeline ${result.info().name}@${result.info().version} is already installed and up to date"
     }
 }
