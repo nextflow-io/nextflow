@@ -21,8 +21,8 @@ import groovy.util.logging.Slf4j
 import org.pf4j.PluginClasspath
 
 /**
- * A plugin classloader that looks for plugins in the sub-project
- * 'testFixtures' classes and resources
+ * A plugin classpath that looks for the plugin in the
+ * 'testPlugin' source set classes and resources
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -33,13 +33,9 @@ class TestPluginClasspath extends PluginClasspath {
     private boolean logged
 
     TestPluginClasspath() {
-        // the path where classes are resources should be found in the dev environment
-        // for each plugin project directory
-        addClassesDirectories('build/classes/groovy/testFixtures', 'build/resources/testFixtures')
-        // the path where the plugin dependencies jar files are expected to be found
-        // note: this path is not created automatically by Gradle, it should be created by a custom task
-        // see `copyPluginLibs` task in the base plugins `build.gradle`
-        addJarsDirectories('build/target/libs')
+        // the output dirs of the 'testPlugin' source set, provided by the Gradle test task
+        addClassesDirectories(System.getProperty('nextflow.testPlugin.classesDirs').tokenize(File.pathSeparator))
+        addClassesDirectories(System.getProperty('nextflow.testPlugin.resourcesDir'))
     }
 
     @Override
