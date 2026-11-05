@@ -17,7 +17,6 @@
 package nextflow.file.http
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import org.junit.Rule
@@ -32,23 +31,19 @@ class XFileSystemProviderTest extends Specification {
 
     def "should return input stream from path"() {
         given:
-        def DATA = 'Hello world'
-        def fsp = Spy(new HttpFileSystemProvider())
-        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
-        def connection = Mock(URLConnection)
-        when:
-        def stream = fsp.newInputStream(path)
-        then:
-        fsp.toConnection(path) >> { Path it ->
-            assert it instanceof XPath
-            assert it.toUri() == new URI('http://host.com/index.html?query=123')
-            return connection
-        }
+        wireMockRule.stubFor(get(urlEqualTo('/index.html?query=123'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('Hello world')))
         and:
-        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
-        connection.getContentLengthLong() >> DATA.size()
-        and:
-        stream.text == 'Hello world'
+        def fsp = new HttpFileSystemProvider()
+        def uri = new URI("http://localhost:${wireMockRule.port()}/index.html?query=123")
+        def path = fsp.getPath(uri)
+
+        expect:
+        path instanceof XPath
+        path.toUri() == uri
+        fsp.newInputStream(path).text == 'Hello world'
     }
 
     def "should read file attributes from map"() {
@@ -237,7 +232,7 @@ class XFileSystemProviderTest extends Specification {
 
     def 'should normalize location' () {
         given:
-        def provider = Spy(XFileSystemProvider)
+        def provider = new HttpFileSystemProvider()
 
         expect:
         provider.absLocation(LOCATION, new URL(TARGET)) == EXPECTED
