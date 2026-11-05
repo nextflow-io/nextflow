@@ -123,8 +123,8 @@ class CmdPipelineView extends CmdBase {
             if( p instanceof Map )
                 props << (p as Map)
         }
-        if( schema['properties'] instanceof Map )
-            props << (schema['properties'] as Map)
+        if( schema.get('properties') instanceof Map )
+            props << (schema.get('properties') as Map)
         props.each { Map m ->
             m.each { k, v ->
                 final d = v instanceof Map ? (Map) v : [:]

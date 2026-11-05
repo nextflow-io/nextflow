@@ -391,7 +391,6 @@ class ResolveIncludeTest extends Specification {
                 throw new IllegalStateException("cannot install ${name}")
             }
         }
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             nextflow.enable.types = true
@@ -405,9 +404,6 @@ class ResolveIncludeTest extends Specification {
         calls == 1
         errors.size() == 1
         errors[0].getOriginalMessage() == 'cannot install nf-core/rnaseq'
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should retry a failed pipeline include on a new analysis of the same compiler' () {
@@ -420,7 +416,6 @@ class ResolveIncludeTest extends Specification {
                 throw new IllegalStateException("cannot install ${name}")
             }
         }
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             nextflow.enable.types = true
@@ -435,9 +430,6 @@ class ResolveIncludeTest extends Specification {
         parser.analyze()
         then:
         calls == 2
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should not resolve a module include from the pipelines directory' () {
@@ -457,7 +449,6 @@ class ResolveIncludeTest extends Specification {
 
     def 'should resolve a local and a module include by source string' () {
         given:
-        def root = tempDir()
         def main = tempFile(root, 'main.nf', 'println 1')
         def local = tempFile(root, 'hello.nf', 'println 2')
         def module = tempFile(root, 'modules/nf-core/fastqc/main.nf', 'println 3')
@@ -465,8 +456,5 @@ class ResolveIncludeTest extends Specification {
         expect:
         ModuleResolver.getIncludeUri(main.toUri(), './hello.nf', root) == local.toUri()
         ModuleResolver.getIncludeUri(main.toUri(), 'nf-core/fastqc', root) == module.toRealPath().toUri()
-
-        cleanup:
-        deleteDir(root)
     }
 }
