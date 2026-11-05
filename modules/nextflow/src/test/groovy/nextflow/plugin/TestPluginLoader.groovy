@@ -24,7 +24,7 @@ import org.pf4j.PluginManager
 
 /**
  * Plugin loader specialised for unit testing. The plugin must be defined
- * in the sub-project 'testFixtures' source tree
+ * in the 'testPlugin' source set
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

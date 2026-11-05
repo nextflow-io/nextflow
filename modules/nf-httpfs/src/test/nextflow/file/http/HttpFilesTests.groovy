@@ -32,7 +32,6 @@ import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
-import test.TestHelper
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
 
@@ -230,7 +229,7 @@ class HttpFilesTests extends Specification {
         def RESP = 'Hello world'
         and:
         // launch web server
-        int port = TestHelper.rndServerPort()
+        int port = new ServerSocket(0).withCloseable { it.localPort }
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         def hc1 = server.createContext("/", new BasicHandler(RESP, 200));
 

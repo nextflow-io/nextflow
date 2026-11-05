@@ -1340,6 +1340,7 @@ class WaveClientTest extends Specification {
 
         // container succeeded
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1354,6 +1355,7 @@ class WaveClientTest extends Specification {
 
         // container is pending
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1368,6 +1370,7 @@ class WaveClientTest extends Specification {
 
         // container failed
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1383,6 +1386,7 @@ class WaveClientTest extends Specification {
 
         // build is READY
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1397,6 +1401,7 @@ class WaveClientTest extends Specification {
 
         // build is not ready
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1412,6 +1417,7 @@ class WaveClientTest extends Specification {
 
         // build is cached
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1422,6 +1428,37 @@ class WaveClientTest extends Specification {
         and:
         0 * wave.checkContainerCompletion(_) >> null
         0 * wave.checkBuildCompletion(handle) >> null
+        and:
+        ready
+    }
+
+    def 'should not check again a container already ready' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [:]] }
+        def resp = new SubmitContainerTokenResponse(requestId: '12345', targetImage: 'wave.io/wt/12345/foo:latest')
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: [xyz: handle]))
+
+        when: 'the container is pending'
+        def ready = wave.isContainerReady('xyz')
+        then:
+        1 * wave.checkContainerCompletion(handle) >> false
+        and:
+        !ready
+        !handle.ready
+
+        when: 'the container completes'
+        ready = wave.isContainerReady('xyz')
+        then:
+        1 * wave.checkContainerCompletion(handle) >> true
+        and:
+        ready
+        handle.ready
+
+        when: 'the container is checked again'
+        ready = wave.isContainerReady('xyz')
+        then: 'its status is not requested anymore'
+        0 * wave.checkContainerCompletion(_)
         and:
         ready
     }
