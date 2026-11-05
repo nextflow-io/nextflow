@@ -376,6 +376,9 @@ class PluginUpdater extends UpdateManager {
      */
     @Override
     boolean installPlugin(String id, String version) {
+        // in dev mode, core plugins must be built locally rather than downloaded
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && defaultPlugins.hasPlugin(id) )
+            throw new UnsupportedOperationException("Core plugin $id is not available in dev mode -- make sure it is built locally (e.g. `make compile`)")
         if( !pluginsStore )
             throw new IllegalStateException("Missing pluginStore attribute")
 

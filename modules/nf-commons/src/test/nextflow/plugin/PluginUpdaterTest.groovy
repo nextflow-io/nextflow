@@ -211,6 +211,41 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should not download core plugins in dev mode' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def devRoot = Files.createDirectory(folder.resolve('dev'))
+        def store = Files.createDirectory(folder.resolve('plugins'))
+        and:
+        def core = createPlugin(repo, '1.0.0', PLUGIN_ID)
+        core.zip = zipDir(core.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "$PLUGIN_ID", "description": "Test plugin", "releases": [
+                 {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${core.zip}"} ]}]
+            """
+        and:
+        System.setProperty('pf4j.mode', 'development')
+        def manager = new DevPluginManager(devRoot)
+        manager.loadPlugins()
+        def updater = new PluginUpdater(manager, store, index.toUri().toURL(), false)
+        updater.@defaultPlugins = new DefaultPlugins(plugins: [(PLUGIN_ID): new PluginRef(PLUGIN_ID, '1.0.0')])
+
+        when:
+        updater.prepareAndStart(PLUGIN_ID, '1.0.0')
+
+        then:
+        def e = thrown(UnsupportedOperationException)
+        e.message.contains("Core plugin $PLUGIN_ID is not available in dev mode")
+        and:
+        !Files.exists(store.resolve("$PLUGIN_ID-1.0.0"))
+
+        cleanup:
+        System.clearProperty('pf4j.mode')
+        folder?.deleteDir()
+    }
+
     def 'should fetch metadata for a missing dependency of an installed plugin' () {
         given:
         def folder = Files.createTempDirectory('test')
