@@ -21,7 +21,6 @@ import java.nio.file.Path
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import org.junit.Rule
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -30,17 +29,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*
  * Created by emilio on 08/11/16.
  */
 class XFileSystemProviderTest extends Specification {
-
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def "should return input stream"() {
-        given:
-        def fsp = new HttpFileSystemProvider()
-        def path = fsp.getPath(new URI('http://www.google.com/index.html'))
-        when:
-        def stream = fsp.newInputStream(path)
-        then:
-        stream.text.startsWith("<!doctype html>")
-    }
 
     def "should return input stream from path"() {
         given:
@@ -100,24 +88,30 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
+        wireMockRule.stubFor(get(urlEqualTo('/index.html'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('Hello world')
+                .withHeader('Content-Length', '11')
+                .withHeader('Last-Modified', 'Fri, 04 Nov 2016 21:50:34 GMT')))
+        and:
         def fsp = new HttpFileSystemProvider()
-        def path = (XPath) fsp.getPath(new URI('http://www.nextflow.io/index.html'))
+        def path = (XPath) fsp.getPath(new URI("http://localhost:${wireMockRule.port()}/index.html"))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
         then:
-        attrs.lastModifiedTime()
-        attrs.size() > 0
+        attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
+        attrs.size() == 11
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
-        def path = (XPath) fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        // FTP attributes are not fetched, so no connection is made to this host
+        def path = (XPath) fsp.getPath(new URI('ftp://ftp.example.invalid/robots.txt'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
