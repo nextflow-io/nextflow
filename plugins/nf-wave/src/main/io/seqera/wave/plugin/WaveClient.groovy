@@ -62,12 +62,12 @@ import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.ProxyConfig
-import nextflow.util.StringUtils
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -584,7 +584,10 @@ class WaveClient {
     protected boolean isSingularityImageUrl(TaskRun task, Map<String,String> attrs) {
         if( !attrs.container || attrs.conda || attrs.dockerfile || attrs.singularityfile )
             return false
-        if( !StringUtils.getUrlProtocol(attrs.container) )
+        // Fusion needs Wave to add its layer to the image
+        if( fusion.enabled() )
+            return false
+        if( !FileHelper.getUrlProtocol(attrs.container) )
             return false
         return task.getContainerConfig()?.getEngine() in ['singularity', 'apptainer']
     }

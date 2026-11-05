@@ -519,6 +519,23 @@ class WaveClientTest extends Specification {
         'singularity'   | 'quay.io/foo:latest'                    | null          | null              | false
     }
 
+    def 'should reject singularity image url when fusion is enabled' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true]] }
+        def task = Mock(TaskRun) {
+            getConfig() >> [:]
+            getContainerConfig() >> Mock(nextflow.container.ContainerConfig) { getEngine() >> 'singularity' }
+        }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        client.resolveAssets(task, 'https://depot.galaxyproject.org/foo', false)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.startsWith('Wave container request image cannot start with URL like prefix')
+    }
+
     def 'should reject image url for docker' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
