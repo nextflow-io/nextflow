@@ -450,4 +450,20 @@ class BoltsTest extends Specification {
         cfg.properties == [c: 3]
     }
 
+    def 'should read the size property of a list' () {
+        given:
+        def array = ['a', 'b', 'c']
+        def linked = new LinkedList(['a', 'b'])
+
+        expect:
+        array.size == 3
+        linked.size == 2
+        [].size == 0
+        ['x', 'x'].unique().size == 1
+        ['a', 'b'].asImmutable().size == 2
+        and: 'spread and map lookups are unchanged'
+        ['ab', 'cde']*.size() == [2, 3]
+        [size: 'big'].size == 'big'
+    }
+
 }
