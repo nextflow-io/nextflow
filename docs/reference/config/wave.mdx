@@ -42,6 +42,18 @@ This option is only compatible with `wave.strategy = 'container'`. It cannot be 
 The container registry authentication must be managed by the underlying infrastructure.
 :::
 
+##### `wave.prefetchDepth`
+
+<AddedInVersion version="27.04" />
+
+The number of downstream process levels whose containers Nextflow prefetches (default: `0`, disabled). Operators between two processes do not count as a level.
+
+When Nextflow submits the first task of a process, it requests the Wave containers for processes up to this many levels downstream. Container provisioning, such as a SOCI index (`wave.soci`) or a container build, then runs while the upstream tasks run, instead of delaying the first task of each process.
+
+Nextflow sends these requests in the background, one at a time, nearest processes first, at no more than half the Wave client rate limit (`wave.httpClient.maxRate`), and requests each container once within the Wave tokens cache duration (`wave.tokensCacheMaxDuration`). Containers that depend on task inputs cannot be prefetched. Nextflow requests them when their task is submitted.
+
+Nextflow may prefetch containers for processes that never run, such as processes in a branch whose condition is false, or processes that are fully cached when resuming a run. This can trigger container builds that are never used, such as conda builds.
+
 ##### `wave.soci`
 
 <AddedInVersion version="27.04" />
