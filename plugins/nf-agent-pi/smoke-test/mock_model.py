@@ -93,12 +93,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["content-length"])))
         results = tool_results(body)
+        print(f"request with tool results: {sorted(results)}")
         if "read-1" not in results:
             out = tool_use("read-1", "read", {"path": IMAGE})
         elif "bash-1" not in results:
             out = tool_use("bash-1", "bash", {"command": f"echo {BASH_MARKER}"})
         else:
-            out = text(verdict(results))
+            answer = verdict(results)
+            print(f"verdict: {answer}")
+            out = text(answer)
         self.send_response(200)
         self.send_header("content-type", "text/event-stream")
         self.send_header("content-length", str(len(out)))
