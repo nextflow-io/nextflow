@@ -119,13 +119,13 @@ class HttpFilesTests extends Specification {
         and:
         // launch web server
         def attempt = 0
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
         server.createContext("/", new BasicHandler(RESP, { ++attempt < 3 ? 404 : 200 } ));
 
         server.start()
 
         when:
-        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
+        def path = Paths.get(new URI("http://admin:Secret1@localhost:${server.address.port}/foo/bar"))
         then:
         path.text == 'Hello world'
         and:
@@ -188,8 +188,7 @@ class HttpFilesTests extends Specification {
         def RESP = 'Hello world'
         and:
         // launch web server
-        int port = new ServerSocket(0).withCloseable { it.localPort }
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
         def hc1 = server.createContext("/", new BasicHandler(RESP, 200));
 
         hc1.setAuthenticator(new BasicAuthenticator("get") {
@@ -201,7 +200,7 @@ class HttpFilesTests extends Specification {
         server.start()
 
         when:
-        def path = Paths.get(new URI("http://admin:Secret1@localhost:${port}/foo/bar"))
+        def path = Paths.get(new URI("http://admin:Secret1@localhost:${server.address.port}/foo/bar"))
         then:
         path.text == 'Hello world'
 
