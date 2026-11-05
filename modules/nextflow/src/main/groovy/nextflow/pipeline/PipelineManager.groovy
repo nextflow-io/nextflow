@@ -139,7 +139,6 @@ class PipelineManager {
             name: name,
             version: release.version,
             workflowPath: workflowPath,
-            source: 'git',
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
             commitId: release.commitId,

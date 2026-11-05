@@ -38,7 +38,7 @@ class CmdPipelineListTest extends Specification {
         def dir = base.resolve('pipelines/nf-core/rnaseq')
         Files.createDirectories(dir)
         Files.writeString(dir.resolve('main.nf'), 'x')
-        new PipelineInfo(name: 'nf-core/rnaseq', version: '3.14.0', source: 'git', checksum: PipelineInfo.checksum(dir)).save(dir)
+        new PipelineInfo(name: 'nf-core/rnaseq', version: '3.14.0', checksum: PipelineInfo.checksum(dir)).save(dir)
         return dir
     }
 
@@ -52,9 +52,9 @@ class CmdPipelineListTest extends Specification {
 
         then:
         def lines = capture.toString().readLines()
-        lines[0] == 'Pipeline'.padRight(40) + 'Version'.padRight(15) + 'Source'.padRight(10) + 'Status'
-        lines[1] == '-' * 75
-        lines[2] == 'nf-core/rnaseq'.padRight(40) + '3.14.0'.padRight(15) + 'git'.padRight(10) + 'ok'
+        lines[0] == 'Pipeline'.padRight(40) + 'Version'.padRight(15) + 'Status'
+        lines[1] == '-' * 65
+        lines[2] == 'nf-core/rnaseq'.padRight(40) + '3.14.0'.padRight(15) + 'ok'
     }
 
     def 'should flag modified pipelines in json'() {
@@ -67,20 +67,20 @@ class CmdPipelineListTest extends Specification {
         def json = new JsonSlurper().parseText(capture.toString()) as Map
 
         then:
-        json.pipelines == [[name: 'nf-core/rnaseq', version: '3.14.0', source: 'git', status: 'modified']]
+        json.pipelines == [[name: 'nf-core/rnaseq', version: '3.14.0', status: 'modified']]
     }
 
     def 'should list a pipeline with a damaged .pipeline-info'() {
         given:
         def dir = base.resolve('pipelines/acme/bare')
         Files.createDirectories(dir)
-        Files.writeString(dir.resolve('.pipeline-info'), 'source=git\n')
+        Files.writeString(dir.resolve('.pipeline-info'), 'registryUrl=x\n')
         def cmd = new CmdPipelineList(root: base)
 
         when:
         cmd.run()
 
         then:
-        capture.toString().readLines()[2] == '-'.padRight(40) + '-'.padRight(15) + 'git'.padRight(10) + 'modified'
+        capture.toString().readLines()[2] == '-'.padRight(40) + '-'.padRight(15) + 'modified'
     }
 }

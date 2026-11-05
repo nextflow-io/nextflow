@@ -33,7 +33,7 @@ class CmdPipelineRemoveTest extends Specification {
         def dir = base.resolve('pipelines/nf-core/rnaseq')
         Files.createDirectories(dir)
         Files.writeString(dir.resolve('main.nf'), 'x')
-        new PipelineInfo(name: 'nf-core/rnaseq', version: '3.14.0', source: 'git', checksum: PipelineInfo.checksum(dir)).save(dir)
+        new PipelineInfo(name: 'nf-core/rnaseq', version: '3.14.0', checksum: PipelineInfo.checksum(dir)).save(dir)
         return dir
     }
 

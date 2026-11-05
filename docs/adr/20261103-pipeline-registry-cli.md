@@ -82,7 +82,7 @@ meta-pipeline/
 
 - The whole repository tree at the pinned commit is installed, without `.git`. This keeps `conf/` available for `includeConfig`, and keeps modules that nf-core commits in the repository.
 - Installed pipelines should be committed to the meta-pipeline repository, like vendored modules.
-- `.pipeline-info` records the version, the source (`git`, with repository URL, revision and commit) and a checksum of the installed files.
+- `.pipeline-info` records the version, the repository URL, revision and commit, and a checksum of the installed files.
 
 ### Pipeline root
 

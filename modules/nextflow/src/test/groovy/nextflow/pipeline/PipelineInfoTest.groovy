@@ -29,7 +29,7 @@ class PipelineInfoTest extends Specification {
 
     def 'save then load round-trips every field'() {
         given:
-        def info = new PipelineInfo(name: 'nf-core/rnaseq', version: '1.0.0', workflowPath: 'main.nf', source: 'registry',
+        def info = new PipelineInfo(name: 'nf-core/rnaseq', version: '1.0.0', workflowPath: 'main.nf', 
                 repositoryUrl: 'https://github.com/nf-core/rnaseq', revision: 'v1', commitId: 'abc', checksum: 'dead', registryUrl: 'https://r.io')
         when:
         info.save(dir)

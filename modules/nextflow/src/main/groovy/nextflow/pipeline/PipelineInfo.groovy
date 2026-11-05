@@ -33,12 +33,11 @@ import nextflow.module.spi.RemoteModuleResolver
 @CompileStatic
 class PipelineInfo {
 
-    private static final List<String> FIELDS = ['name', 'version', 'workflowPath', 'source', 'repositoryUrl', 'revision', 'commitId', 'checksum', 'registryUrl']
+    private static final List<String> FIELDS = ['name', 'version', 'workflowPath', 'repositoryUrl', 'revision', 'commitId', 'checksum', 'registryUrl']
 
     String name
     String version
     String workflowPath
-    String source
     String repositoryUrl
     String revision
     String commitId

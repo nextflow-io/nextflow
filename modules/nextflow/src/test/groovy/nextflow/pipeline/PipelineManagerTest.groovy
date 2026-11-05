@@ -59,7 +59,6 @@ class PipelineManagerTest extends Specification {
         def info = PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq'))
         info.version == '3.14.0'
         info.commitId == 'abc'
-        info.source == 'git'
         info.registryUrl == 'https://reg.io'
         info.checksum
     }
@@ -233,7 +232,7 @@ class PipelineManagerTest extends Specification {
         given:
         def bare = base.resolve('pipelines/acme/bare')
         Files.createDirectories(bare)
-        bare.resolve('.pipeline-info').text = 'source=git\n'
+        bare.resolve('.pipeline-info').text = 'registryUrl=x\n'
         def bad = base.resolve('pipelines/acme/bad')
         Files.createDirectories(bad)
         bad.resolve('.pipeline-info').text = 'name=../evil\n'
