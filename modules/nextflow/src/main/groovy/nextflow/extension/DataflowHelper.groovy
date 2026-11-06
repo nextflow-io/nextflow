@@ -87,6 +87,19 @@ class DataflowHelper {
         return method.invoke(actor)
     }
 
+    /**
+     * Unwrap the {@link InvocationTargetException} raised when a function
+     * is invoked via reflection, to report the original error
+     *
+     * @param t The exception raised by an operator
+     * @return The underlying cause if {@code t} is an {@link InvocationTargetException}, otherwise {@code t}
+     */
+    static Throwable unwrap(Throwable t) {
+        while( t instanceof InvocationTargetException && t.cause != null )
+            t = t.cause
+        return t
+    }
+
     /*
      * The default operators listener when no other else is specified
      */
@@ -94,7 +107,7 @@ class DataflowHelper {
     static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable t) {
-            final e = t instanceof InvocationTargetException ? t.cause : t
+            final e = unwrap(t)
             OperatorImpl.log.error("@unknown", e)
             session?.abort(e)
             return true;
@@ -115,7 +128,8 @@ class DataflowHelper {
             }
 
             @Override
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor processor, final Throwable t) {
+                final e = unwrap(t)
                 DataflowHelper.log.error("@unknown", e)
                 session.abort(e)
                 return true
@@ -256,15 +270,17 @@ class DataflowHelper {
                 try {
                     events.onComplete.call(processor)
                 }
-                catch( Exception e ) {
+                catch( Exception t ) {
+                    final e = unwrap(t)
                     OperatorImpl.log.error("@unknown", e)
                     session.abort(e)
                 }
             }
 
             @Override
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor processor, final Throwable t) {
                 error = true
+                final e = unwrap(t)
                 if( !events.onError ) {
                     log.error("@unknown", e)
                     session.abort(e)
@@ -342,7 +358,8 @@ class DataflowHelper {
                 result.bind(accum)
             }
 
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor processor, final Throwable t) {
+                final e = unwrap(t)
                 log.error("@unknown", e)
                 session.abort(e)
                 return true;
