@@ -32,6 +32,7 @@ import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
 import org.pf4j.PluginRuntimeException
+import org.pf4j.PluginState
 import org.pf4j.PluginWrapper
 import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
@@ -55,6 +56,33 @@ class PluginUpdaterTest extends Specification {
         String version
         Path path
         Path zip
+    }
+
+    /**
+     * Prefetch repository that only knows the metadata it was asked for,
+     * like {@link HttpPluginRepository}.
+     */
+    static class LazyRepository implements PrefetchUpdateRepository {
+        @Delegate(excludes = ['getPlugins', 'getPlugin', 'refresh'])
+        DefaultUpdateRepository index
+        Map<String, PluginInfo> plugins = [:]
+        List<String> fetched = []
+
+        void prefetch(List<PluginRef> refs) {
+            refs.each { getPlugin(it.id) }
+        }
+
+        Map<String, PluginInfo> getPlugins() { plugins }
+
+        PluginInfo getPlugin(String id) {
+            if( !plugins.containsKey(id) && index.getPlugin(id) ) {
+                fetched << id
+                plugins.put(id, index.getPlugin(id))
+            }
+            return plugins.get(id)
+        }
+
+        void refresh() {}
     }
 
     // ---------------------------
@@ -122,6 +150,189 @@ class PluginUpdaterTest extends Specification {
         and:
         manager.getPlugin('dep-plugin').descriptor.version == '0.7.1'
         manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should install registry plugins alongside locally built plugins in dev mode' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        and:
+        // a locally built plugin, using the dev build layout
+        def devRoot = folder.resolve('dev')
+        def devManifest = devRoot.resolve('dev-plugin/build/classes/groovy/main/META-INF/MANIFEST.MF')
+        devManifest.parent.mkdirs()
+        devManifest.text = """\
+                Manifest-Version: 1.0
+                Plugin-Class: ${FooPlugin.class.getName()}
+                Plugin-Id: dev-plugin
+                Plugin-Version: 1.0.0
+                """.stripIndent()
+        devManifest.parent.resolveSibling('dev-marker.txt').text = 'dev'
+        and:
+        // a registry plugin that depends on the locally built plugin
+        def main = createPlugin(repo, '1.0.0', PLUGIN_ID, 'dev-plugin@>=1.0.0')
+        Files.createDirectory(main.path.resolve('classes')).resolve('marker.txt').text = 'registry'
+        main.zip = zipDir(main.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "$PLUGIN_ID", "description": "Test plugin", "releases": [
+                 {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${main.zip}"} ]}]
+            """
+        and:
+        def store = Files.createDirectory(folder.resolve('plugins'))
+        System.setProperty('pf4j.mode', 'development')
+        def manager = new DevPluginManager(devRoot)
+        manager.loadPlugins()
+        def updater = new PluginUpdater(manager, store, index.toUri().toURL(), false)
+
+        expect:
+        // the locally built plugin is used regardless of the requested version
+        updater.isAlreadyInstalled(PluginRef.parse('dev-plugin@9.9.9'))
+        !updater.isAlreadyInstalled(PluginRef.parse("$PLUGIN_ID@1.0.0"))
+
+        when:
+        updater.prepareAndStart('dev-plugin', null)
+        updater.prepareAndStart(PLUGIN_ID, '1.0.0')
+
+        then:
+        manager.getPlugin('dev-plugin').pluginPath == devRoot.resolve('dev-plugin')
+        manager.getPlugin('dev-plugin').pluginState == PluginState.STARTED
+        manager.getPlugin('dev-plugin').pluginClassLoader.getResource('dev-marker.txt') != null
+        and:
+        manager.getPlugin(PLUGIN_ID).pluginPath == store.resolve("$PLUGIN_ID-1.0.0")
+        manager.getPlugin(PLUGIN_ID).pluginState == PluginState.STARTED
+        manager.getPlugin(PLUGIN_ID).pluginClassLoader.getResource('marker.txt') != null
+
+        cleanup:
+        System.clearProperty('pf4j.mode')
+        folder?.deleteDir()
+    }
+
+    def 'should not download core plugins in dev mode' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def devRoot = Files.createDirectory(folder.resolve('dev'))
+        def store = Files.createDirectory(folder.resolve('plugins'))
+        and:
+        def core = createPlugin(repo, '1.0.0', PLUGIN_ID)
+        core.zip = zipDir(core.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "$PLUGIN_ID", "description": "Test plugin", "releases": [
+                 {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${core.zip}"} ]}]
+            """
+        and:
+        System.setProperty('pf4j.mode', 'development')
+        def manager = new DevPluginManager(devRoot)
+        manager.loadPlugins()
+        def updater = new PluginUpdater(manager, store, index.toUri().toURL(), false)
+        updater.@defaultPlugins = new DefaultPlugins(plugins: [(PLUGIN_ID): new PluginRef(PLUGIN_ID, '1.0.0')])
+
+        when:
+        updater.prepareAndStart(PLUGIN_ID, '1.0.0')
+
+        then:
+        def e = thrown(UnsupportedOperationException)
+        e.message.contains("Core plugin $PLUGIN_ID is not available in dev mode")
+        and:
+        !Files.exists(store.resolve("$PLUGIN_ID-1.0.0"))
+
+        cleanup:
+        System.clearProperty('pf4j.mode')
+        folder?.deleteDir()
+    }
+
+    def 'should fetch metadata for a missing dependency of an installed plugin' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = folder.resolve('repo'); repo.mkdirs()
+        def dep = createPlugin(repo, '0.7.1', 'dep-plugin')
+        dep.zip = zipDir(dep.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "dep-plugin", "description": "Test dependency", "releases": [
+                 {"version": "0.7.1", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${dep.zip}"} ]}]
+            """
+        and:
+        // the main plugin is installed, its dependency is not
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        createPlugin(local, '1.0.0', PLUGIN_ID, "dep-plugin@${DEP_VERSION}")
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.setRepositories([lazy])
+
+        when:
+        // the prefetch is skipped because the requested plugin is already installed
+        updater.prefetchMetadata([PluginRef.parse("${PLUGIN_ID}@1.0.0")])
+        then:
+        lazy.fetched == []
+
+        when:
+        updater.prepareAndStart(PLUGIN_ID, '1.0.0')
+        then:
+        lazy.fetched == ['dep-plugin']
+        manager.getPlugin('dep-plugin').descriptor.version == '0.7.1'
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        DEP_VERSION << ['0.7.1', '>=0.7.0']
+    }
+
+    def 'should fetch metadata for a pinned plugin that was not prefetched' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = folder.resolve('repo'); repo.mkdirs()
+        def plugin = createPlugin(repo, '1.0.0')
+        plugin.zip = zipDir(plugin.path)
+        def index = createRepositoryIndex(repo, [plugin])
+        and:
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.setRepositories([lazy])
+
+        when:
+        // e.g. a core plugin dependency, which is pinned to the default version
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+        then:
+        lazy.fetched == [PLUGIN_ID]
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '1.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should fetch metadata when updating a plugin that was not prefetched' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = folder.resolve('repo'); repo.mkdirs()
+        def plugin = createPlugin(repo, '2.0.0')
+        plugin.zip = zipDir(plugin.path)
+        def index = createRepositoryIndex(repo, [plugin])
+        and:
+        // version 1.0.0 is installed and started
+        def local = Files.createDirectory(folder.resolve('plugins'))
+        createPlugin(local, '1.0.0')
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.setRepositories([lazy])
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        when:
+        updater.updatePlugin(PLUGIN_ID, '2.0.0')
+        then:
+        lazy.fetched == [PLUGIN_ID]
+        manager.getPlugin(PLUGIN_ID).descriptor.version == '2.0.0'
 
         cleanup:
         folder?.deleteDir()

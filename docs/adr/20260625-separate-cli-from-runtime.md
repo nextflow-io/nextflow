@@ -6,6 +6,12 @@
 - Date: 2026-06-25
 - Tags: cli, modularization, build, architecture
 
+## Updates
+
+### 2026-11-02
+- **Removed `kuberun`**: `CmdKubeRun` and `K8sDriverLauncher` moved to the external [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, which depends on `nf-k8s` as a plugin. `nf-cli-v1` no longer depends on `nf-k8s`, so `nf-k8s` is no longer bundled in the distribution, and the split package and `ConfigValidator` workaround it required are gone. The `kuberun` command remains as a stub that reports its removal. The non-goals, module structure, and plugin sections were updated in place.
+- **Removed `nf-console`**: the `nf-console` plugin was removed. The `console` command remains as a stub that reports its removal.
+
 ## Summary
 
 Move the CLI code into a new `nf-cli-v1` module, leaving `nextflow` as a pure runtime that knows nothing about the CLI. The split untangles circular dependencies, speeds up builds, lets library consumers depend on the runtime without dragging in the CLI, and makes room for a future CLI v2.
@@ -39,7 +45,6 @@ In addition, several plugins (`nf-console`, `nf-k8s`, `nf-tower`, `nf-wave`) con
 ## Non-goals
 
 - **Redesigning the CLI**: this is a structural move only; CLI v2 is explicitly future work. The module is named `nf-cli-v1` to leave that door open.
-- **Removing the `nf-cli-v1` → `nf-k8s` build-time dependency**: `K8sDriverLauncher` now lives in `nf-cli-v1` and pulls in `nf-k8s` at build time (see below). Loading `nf-k8s` on demand instead, so the CLI need not depend on it at build time, is left to CLI v2.
 - **Changing the packaging/distribution format**: the produced `nextflow` binary is unchanged from the user's perspective.
 
 ## Solution
@@ -53,7 +58,6 @@ Extract the CLI into a new `nf-cli-v1` module that depends on the `nextflow` run
 ```
 nf-cli-v1 ──► nextflow (runtime) ──► nf-commons, nf-httpfs, nf-lang
    │
-   ├──► nf-k8s (via CmdKubeRun) ──► nextflow
    └──► nf-lineage (via CmdLineage) ──► nextflow
 ```
 
@@ -78,13 +82,9 @@ Several deliberate moves were required so that the runtime never depends on the 
 
 `nf-console`, `nf-k8s`, `nf-tower`, and `nf-wave` add CLI commands. The goal was to keep them depending on the runtime rather than the CLI:
 
-- `nf-console` still depends on `:nf-cli-v1`.
+- `nf-console` depended on `:nf-cli-v1`, as its GUI console drove `CmdRun` directly. It was removed rather than decoupled. The `console` command remains as a stub that reports its removal.
 
-- `nf-k8s` compiles against `nextflow` only and references no CLI classes. To get there, `K8sDriverLauncher` (which uses `CmdRun`) was moved out of `nf-k8s` and into `nf-cli-v1`. As a result, `nf-cli-v1` now depends on `nf-k8s` at build-time. Because `CmdKubeRun` now instantiates `K8sDriverLauncher` directly (rather than resolving it through the plugin extension point), `nf-k8s` is bundled into the distribution fat jar *and* still shipped as a plugin, so `nextflow.k8s` becomes a split package loaded by both the application and plugin classloaders. This is accepted as a consequence of preserving `kuberun`; the CLI v2 will not need to do this if it does not preserve the `kuberun` command, as it can simply load `nf-k8s` at runtime when using the `k8s` executor.
-
-   Because the bundled copy lands in the distribution's `META-INF/extensions.idx`, `nextflow.k8s.K8sConfig` and `K8sExecutor` register as system extensions on *every* run. On a k8s run the plugin copy also loads (whether pulled in explicitly via `plugins { id 'nf-k8s' }` or auto-loaded by `process.executor = 'k8s'`), so the same `k8s` config scope is contributed from both class loaders. `ConfigValidator` now ignores a collision when both contributions are the same class, which suppresses the split-package noise while still warning when two *different* classes claim one scope name. Config resolution is unaffected either way, and `K8sDriverLauncher` stays within a single class loader, so no cross-classloader `ClassCastException` arises. For executors, pf4j enumerates classpath extensions before plugin extensions, so the plugin copy wins and version pinning holds.
-
-   With `NXF_PLUGINS_DEFAULT=false`, `process.executor = 'k8s'` still resolves from the bundled application-classloader copy, where previously it would not have loaded at all. This is benign but is a behavior change worth noting.
+- `nf-k8s` compiles against `nextflow` only and references no CLI classes. To get there, `K8sDriverLauncher` (which uses `CmdRun`), the driver behind the `kuberun` command, was moved out of `nf-k8s`. Keeping it in `nf-cli-v1` would have made the CLI depend on `nf-k8s` at build time and bundled `nf-k8s` into the distribution fat jar alongside the plugin, making `nextflow.k8s` a split package loaded by both the application and plugin classloaders. Instead, the deprecated `kuberun` command was removed, and `CmdKubeRun` and `K8sDriverLauncher` moved to the external [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, which depends on `nf-k8s` as a plugin and provides the command as `nextflow plugin nf-kuberun:run`. The `kuberun` command remains as a stub that reports its removal. `nf-k8s` remains a core plugin, loaded at runtime when using the `k8s` executor.
 
 - `nf-tower` and `nf-wave` were decoupled by moving the relevant command interfaces into the runtime; both now compile against `nextflow` only.
 

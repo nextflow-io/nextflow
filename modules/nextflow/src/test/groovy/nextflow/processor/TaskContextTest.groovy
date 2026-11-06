@@ -80,6 +80,19 @@ class TaskContextTest extends Specification {
 
     }
 
+    def 'should not serialize a context with a value that cannot be cached' () {
+        given:
+        def processor = Mock(TaskProcessor) {
+            getTaskBody() >> new BodyDef(null,'source')
+        }
+        def map = new TaskContext(processor, [:])
+        map.alpha = 1
+        map.counter = new java.util.concurrent.atomic.AtomicInteger(1)
+
+        expect:
+        map.serialize() == null
+    }
+
     def 'should dehydrate rehydrate'() {
 
         setup:

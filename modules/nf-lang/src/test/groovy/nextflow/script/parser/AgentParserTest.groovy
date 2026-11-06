@@ -21,7 +21,6 @@ import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptToGroovyHelper
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -30,30 +29,24 @@ import test.TestUtils
  */
 class AgentParserTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 
     ScriptNode parse(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
-        assert !TestUtils.hasSyntaxErrors(source)
+        assert TestUtils.getErrors(source) == []
         return source.getAST() as ScriptNode
     }
 
     SourceUnit parseSource(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
-        assert !TestUtils.hasSyntaxErrors(source)
+        assert TestUtils.getErrors(source) == []
         return source
     }
 
@@ -184,9 +177,7 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 14
-        errors[0].getOriginalMessage() == "Unexpected input: '}'"
+        TestUtils.errorList(errors) == [[14, 1, "Unexpected input: '}'"]]
     }
 
     def 'should resolve an agent reference from a workflow'() {
@@ -220,15 +211,47 @@ class AgentParserTest extends Specification {
             }
 
             workflow {
-                channel.of('hi') | eval_agent | view
+                answer = eval_agent(record(text: 'hi'))
+                answer.view()
             }
             ''')
 
         then:
         script.agents.size() == 1
         script.workflows.size() == 1
-        // The `parse` helper asserts no syntax errors. If `eval_agent` failed
-        // to resolve in the workflow body, that assertion would fail.
+    }
+
+    def 'should report an agent used as a variable'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'x'
+
+                input:
+                q: String
+
+                output:
+                stdout()
+
+                prompt:
+                """
+                ${q}
+                """
+            }
+
+            workflow {
+                channel.of('hi') | eval_agent
+            }
+            ''')
+
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 20
+        errors[0].getStartColumn() == 24
+        errors[0].getOriginalMessage() == 'Agent `eval_agent` cannot be used as a variable'
     }
 
     def 'should resolve directives and prompt variables in an agent body'() {
@@ -418,7 +441,7 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.any { it.getOriginalMessage() == 'Agent should have only one output -- combine outputs into a record' }
+        TestUtils.errorList(errors) == [[7, 5, 'Agent should have only one output -- combine outputs into a record']]
     }
 
     def 'should allow a named output when it is the only agent output'() {
@@ -532,6 +555,6 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        errors.any { it.getOriginalMessage().contains('eval') }
+        TestUtils.errorList(errors) == [[8, 5, '`eval` is not defined']]
     }
 }

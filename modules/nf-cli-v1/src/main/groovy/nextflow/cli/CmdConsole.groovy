@@ -16,41 +16,23 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.exception.AbortOperationException
 
 /**
- * Stub for the removed `console` command, kept to report a clear error.
- * Omitting the command description hides it from the command listing.
+ * Stub for the removed `console` command.
  */
 @CompileStatic
 @Parameters
-class CmdConsole extends CmdBase implements UsageAware {
+class CmdConsole extends CmdRemoved {
 
     static final public String NAME = 'console'
 
-    @Parameter
-    List<String> args
-
+    @Override
     String getName() { NAME }
 
-    void run() {
-        abort()
-    }
-
     @Override
-    void usage() {
-        abort()
-    }
-
-    @Override
-    void usage(List<String> args) {
-        abort()
-    }
-
-    private static void abort() {
-        throw new AbortOperationException("The `console` command has been removed")
+    String getMessage() {
+        "The `console` command has been removed"
     }
 }

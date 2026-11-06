@@ -144,22 +144,6 @@ Nextflow applies parameters defined in multiple places in the following order (l
 3. Parameter files (`-params-file`)
 4. Command line parameters (`--foo bar`)
 
-### Kubernetes execution
-
-:::warning
-The `kuberun` command is no longer maintained. Consider [launching with Fusion][k8s-fusion] instead.
-:::
-
-The `kuberun` command executes pipelines entirely within a Kubernetes cluster. It runs the Nextflow driver itself inside Kubernetes.
-
-Use this when you want both the Nextflow driver and tasks running in Kubernetes. This differs from using the Kubernetes executor with `run`, where only tasks run in Kubernetes while the driver runs externally:
-
-```bash
-nextflow kuberun nextflow-io/hello
-```
-
-See [kuberun][cli-kuberun] for more information.
-
 ## Project management
 
 Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects and maintains a local cache in `$HOME/.nextflow/assets/`.
@@ -560,7 +544,6 @@ http://nextflow.io
 [cli-drop]: ./reference/cli/drop
 [cli-fs]: ./reference/cli/fs
 [cli-inspect]: ./reference/cli/inspect
-[cli-kuberun]: ./reference/cli/kuberun
 [cli-launch]: ./reference/cli/launch
 [cli-lineage]: ./reference/cli/lineage
 [cli-lint]: ./reference/cli/lint
@@ -576,5 +559,4 @@ http://nextflow.io
 [config-params]: ./config#parameters
 [data-lineage-page]: ./tutorials/data-lineage
 [git-page]: ./git
-[k8s-fusion]: ./reference/executor/kubernetes#launch-with-fusion
 [using-modules-page]: ./modules/using-modules

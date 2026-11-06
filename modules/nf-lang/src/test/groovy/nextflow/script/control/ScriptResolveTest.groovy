@@ -19,12 +19,10 @@ package nextflow.script.control
 import java.nio.file.Path
 
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -34,14 +32,11 @@ import static test.TestUtils.tempFile
  */
 class ScriptResolveTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
+    @TempDir
+    Path root
 
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 
@@ -281,6 +276,7 @@ class ScriptResolveTest extends Specification {
             }
             '''
         when:
+        def scriptParser = new ScriptParser()
         def result = scriptParser.parse('main.nf', source.stripIndent())
         scriptParser.analyze()
         def errors = TestUtils.getErrors(result)
@@ -311,6 +307,7 @@ class ScriptResolveTest extends Specification {
             }
             '''
         when:
+        def scriptParser = new ScriptParser()
         def result = scriptParser.parse('main.nf', source.stripIndent())
         scriptParser.analyze()
         def errors = TestUtils.getErrors(result)
@@ -333,6 +330,7 @@ class ScriptResolveTest extends Specification {
             }
             '''
         when:
+        def scriptParser = new ScriptParser()
         def result = scriptParser.parse('main.nf', source.stripIndent())
         scriptParser.analyze()
         def errors = TestUtils.getErrors(result)
@@ -364,6 +362,7 @@ class ScriptResolveTest extends Specification {
             }
             '''
         when:
+        def scriptParser = new ScriptParser()
         def result = scriptParser.parse('main.nf', source.stripIndent())
         scriptParser.analyze()
         def errors = TestUtils.getErrors(result)
@@ -680,7 +679,6 @@ class ScriptResolveTest extends Specification {
 
     def 'should not resolve a callable as a variable outside a workflow' () {
         given:
-        def root = tempDir()
         def module = 'def basename(x) { \'hi\' }\n'
 
         // an included function cannot be referenced as a variable
@@ -697,11 +695,9 @@ class ScriptResolveTest extends Specification {
             workflow { FOO() }
             ''')
         tempFile(root, 'a/utils.nf', module)
-        errors = check(root.resolve('a'), [a, root.resolve('a/utils.nf')])
+        def errors = check(root.resolve('a'), [a, root.resolve('a/utils.nf')])
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getOriginalMessage() == '`basename` is not defined'
+        TestUtils.errorList(errors) == [[5, 25, '`basename` is not defined']]
 
         // an implicit declaration in a process shadows an included name
         when:
@@ -718,7 +714,7 @@ class ScriptResolveTest extends Specification {
             workflow { FOO() }
             ''')
         tempFile(root, 'b/utils.nf', module)
-        def errors = check(root.resolve('b'), [b, root.resolve('b/utils.nf')])
+        errors = check(root.resolve('b'), [b, root.resolve('b/utils.nf')])
         then:
         errors.size() == 0
 
@@ -740,14 +736,10 @@ class ScriptResolveTest extends Specification {
         errors = check(root.resolve('c'), [c, root.resolve('c/utils.nf')])
         then:
         errors.size() == 0
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should resolve a callable as a variable in a workflow' () {
         given:
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             include { BAR } from './modules/bar'
@@ -772,9 +764,6 @@ class ScriptResolveTest extends Specification {
         def errors = check(root, [main, module])
         then:
         errors.size() == 0
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should resolve every typed process output directive after the file/files extraction'() {

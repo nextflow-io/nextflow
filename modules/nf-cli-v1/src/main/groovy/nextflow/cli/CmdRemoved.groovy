@@ -14,30 +14,41 @@
  * limitations under the License.
  */
 
-package nextflow.plugin
+package nextflow.cli
 
+import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
+import nextflow.exception.AbortOperationException
 
 /**
- * Updater disabling plugin installation and update when
- * running the plugin manager in dev mode
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Base class for the stub of a removed command, which accepts any
+ * arguments and reports the removal. Subclasses should omit the command
+ * description, so that the command is hidden from the command listing.
  */
 @CompileStatic
-class DevPluginUpdater extends PluginUpdater {
+abstract class CmdRemoved extends CmdBase implements UsageAware {
 
-    DevPluginUpdater(CustomPluginManager pluginManager) {
-        super(pluginManager)
+    @Parameter
+    List<String> args
+
+    abstract String getMessage()
+
+    @Override
+    void run() {
+        abort()
     }
 
     @Override
-    boolean installPlugin(String id, String version) {
-        throw new UnsupportedOperationException("Install is not supported on dev mode - Missing plugin $id ${version?:''}")
+    void usage() {
+        abort()
     }
 
     @Override
-    boolean updatePlugin(String id, String version) {
-        throw new UnsupportedOperationException("Update is not supported on dev mode - Missing plugin $id ${version?:''}")
+    void usage(List<String> args) {
+        abort()
+    }
+
+    private void abort() {
+        throw new AbortOperationException(getMessage())
     }
 }

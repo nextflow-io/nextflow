@@ -166,8 +166,8 @@ class WaveConfigTest extends Specification {
         def opts = new WaveConfig([:])
         then:
         opts.retryOpts().delay == Duration.of('450ms')
-        opts.retryOpts().maxAttempts == 5
-        opts.retryOpts().maxDelay == Duration.of('90s')
+        opts.retryOpts().maxAttempts == 10
+        opts.retryOpts().maxDelay == Duration.of('15s')
 
         when:
         opts = new WaveConfig([retryPolicy:[ maxAttempts: 20, jitter: 1.0, delay: '1s', maxDelay: '10s' ]])
@@ -203,7 +203,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT1M30S), scan:WaveScanConfig(allowedLevels:null, mode:null), soci:false, strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
+        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:15s, maxAttempts:10, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT15S), scan:WaveScanConfig(allowedLevels:null, mode:null), soci:false, prefetchDepth:0, strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
     }
 
     def 'should not allow invalid setting' () {
@@ -249,6 +249,17 @@ class WaveConfigTest extends Specification {
         !new WaveConfig([:]).mirrorMode()
         and:
         new WaveConfig([mirror:true]).mirrorMode()
+    }
+
+    def 'should get the prefetch depth' () {
+        expect:
+        new WaveConfig([:]).prefetchDepth() == 0
+        new WaveConfig([prefetchDepth: 2]).prefetchDepth() == 2
+
+        when:
+        new WaveConfig([prefetchDepth: -1])
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'should enable soci mode' () {

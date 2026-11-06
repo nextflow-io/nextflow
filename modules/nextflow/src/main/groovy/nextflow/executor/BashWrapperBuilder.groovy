@@ -359,7 +359,7 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames), runWithContainer)
         if( runWithContainer ) {
             binding.task_env = null
             binding.container_env = env
@@ -425,6 +425,22 @@ class BashWrapperBuilder {
     protected String getTraceScript(Map binding) {
         def res = BashWrapperBuilder.class.getResource('command-trace.txt')
         engine.render(res.newReader(), binding)
+    }
+
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            final value = result.get(name)
+            // exported as `export NAME=""$'value'""`: ANSI-C quoting, with line breaks as `\n`/`\r` to keep it on one line
+            if( value )
+                result.put(name, '"$\'' + value.replace('\\','\\\\').replace("'","\\'").replace('\n','\\n').replace('\r','\\r') + '\'"')
+        }
+        return result
     }
 
     @PackageScope String buildNew0(BufferedReader template) {
@@ -665,7 +681,8 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            // the container env lines are inserted in the `bash -c` string and evaluated once in the container
+            String cmd = env ? '$(nxf_container_env); ' + launcher : launcher
             // wrap the command with an extra bash invocation either :
             // - to propagate the container environment or
             // - to change in the task work directory as required by singularity
