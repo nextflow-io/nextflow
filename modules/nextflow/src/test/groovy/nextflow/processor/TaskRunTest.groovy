@@ -27,6 +27,7 @@ import nextflow.container.PodmanConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -1006,6 +1007,63 @@ class TaskRunTest extends Specification {
         resolver.getContainerMeta(image) >> meta
         and:
         result2 == meta
+    }
+
+    def 'should wrap container resolution errors as unrecoverable process errors' () {
+        given:
+        def image = 'docker.io/nonexistent-org-4f2a91/definitely-not-real:1.0'
+        def cause = new RuntimeException('Wave invalid response: POST /v1alpha2/container [400]')
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config: config))
+        task.containerResolver() >> resolver
+
+        when:
+        task.containerInfo()
+
+        then:
+        resolver.resolveImage(task, image) >> { throw cause }
+        and:
+        def err = thrown(ProcessUnrecoverableException)
+        err.cause.is(cause)
+        err.message.contains(image)
+    }
+
+    def 'should not wrap container resolution errors that are already process errors' () {
+        given:
+        def image = 'my/container:latest'
+        def cause = new ProcessUnrecoverableException('already a process error')
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config: config))
+        task.containerResolver() >> resolver
+
+        when:
+        task.containerInfo()
+
+        then:
+        resolver.resolveImage(task, image) >> { throw cause }
+        and:
+        def err = thrown(ProcessUnrecoverableException)
+        err.is(cause)
+    }
+
+    def 'should not wrap errors that are not container resolution failures' () {
+        given:
+        def image = 'my/container:latest'
+        def cause = new OutOfMemoryError('boom')
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config: config))
+        task.containerResolver() >> resolver
+
+        when:
+        task.containerInfo()
+
+        then:
+        resolver.resolveImage(task, image) >> { throw cause }
+        and:
+        thrown(OutOfMemoryError)
     }
 
     def 'should resolve task stub from template' () {
