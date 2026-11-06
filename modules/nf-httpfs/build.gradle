@@ -38,9 +38,12 @@ dependencies {
     // provides the JUnit 4 @Rule support used by WireMockRule
     testImplementation ("org.spockframework:spock-junit4:${spockVersion}") { exclude group: 'org.apache.groovy' }
     testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock
-    // needed by Spock to mock classes
-    testRuntimeOnly "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
-    testRuntimeOnly "org.objenesis:objenesis:${objenesisVersion}"
     testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
 }
 
+
+test {
+    // fail fast when an external FTP server is unreachable (JDK default is 300 s)
+    systemProperty 'sun.net.client.defaultConnectTimeout', '5000'
+    systemProperty 'sun.net.client.defaultReadTimeout', '5000'
+}

@@ -17,11 +17,9 @@
 package nextflow.file.http
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import org.junit.Rule
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -31,36 +29,21 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*
  */
 class XFileSystemProviderTest extends Specification {
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def "should return input stream"() {
-        given:
-        def fsp = new HttpFileSystemProvider()
-        def path = fsp.getPath(new URI('http://www.google.com/index.html'))
-        when:
-        def stream = fsp.newInputStream(path)
-        then:
-        stream.text.startsWith("<!doctype html>")
-    }
-
     def "should return input stream from path"() {
         given:
-        def DATA = 'Hello world'
-        def fsp = Spy(new HttpFileSystemProvider())
-        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
-        def connection = Mock(URLConnection)
-        when:
-        def stream = fsp.newInputStream(path)
-        then:
-        fsp.toConnection(path) >> { Path it ->
-            assert it instanceof XPath
-            assert it.toUri() == new URI('http://host.com/index.html?query=123')
-            return connection
-        }
+        wireMockRule.stubFor(get(urlEqualTo('/index.html?query=123'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('Hello world')))
         and:
-        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
-        connection.getContentLengthLong() >> DATA.size()
-        and:
-        stream.text == 'Hello world'
+        def fsp = new HttpFileSystemProvider()
+        def uri = new URI("http://localhost:${wireMockRule.port()}/index.html?query=123")
+        def path = fsp.getPath(uri)
+
+        expect:
+        path instanceof XPath
+        path.toUri() == uri
+        fsp.newInputStream(path).text == 'Hello world'
     }
 
     def "should read file attributes from map"() {
@@ -100,24 +83,30 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
+        wireMockRule.stubFor(get(urlEqualTo('/index.html'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('Hello world')
+                .withHeader('Content-Length', '11')
+                .withHeader('Last-Modified', 'Fri, 04 Nov 2016 21:50:34 GMT')))
+        and:
         def fsp = new HttpFileSystemProvider()
-        def path = (XPath) fsp.getPath(new URI('http://www.nextflow.io/index.html'))
+        def path = (XPath) fsp.getPath(new URI("http://localhost:${wireMockRule.port()}/index.html"))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
         then:
-        attrs.lastModifiedTime()
-        attrs.size() > 0
+        attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
+        attrs.size() == 11
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
-        def path = (XPath) fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        // FTP attributes are not fetched, so no connection is made to this host
+        def path = (XPath) fsp.getPath(new URI('ftp://ftp.example.invalid/robots.txt'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
@@ -243,7 +232,7 @@ class XFileSystemProviderTest extends Specification {
 
     def 'should normalize location' () {
         given:
-        def provider = Spy(XFileSystemProvider)
+        def provider = new HttpFileSystemProvider()
 
         expect:
         provider.absLocation(LOCATION, new URL(TARGET)) == EXPECTED
