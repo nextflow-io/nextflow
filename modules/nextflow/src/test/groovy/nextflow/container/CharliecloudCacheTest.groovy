@@ -17,8 +17,13 @@
 package nextflow.container
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
 
+import nextflow.dataflow.DataflowThreads
+import nextflow.util.Duration
+import org.apache.commons.lang3.exception.ExceptionUtils
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
@@ -248,6 +253,57 @@ class CharliecloudCacheTest extends Specification {
         expect:
         obj.toString() == 'CharliecloudCache'
         !"$obj".contains('s3cr3t-canary')
+    }
+
+    // reads on dataflow threads
+    def 'should pull the image once for concurrent readers on dataflow threads' () {
+        given:
+        def count = new AtomicInteger()
+        def cache = new CharliecloudCache() {
+            @Override
+            Path downloadCharliecloudImage(String imageUrl) {
+                count.incrementAndGet()
+                Thread.sleep(100)
+                return Path.of('/cache', imageUrl)
+            }
+        }
+        def url = 'docker://foo/' + UUID.randomUUID()
+
+        when:
+        def paths = DataflowThreads.call(8) { cache.getCachePathFor(url) }
+
+        then:
+        paths.size() == 8
+        paths.every { it == Path.of('/cache', url) }
+        count.get() == 1
+    }
+
+    def 'should propagate the pull error on dataflow threads' () {
+        given:
+        def count = new AtomicInteger()
+        def cache = new CharliecloudCache() {
+            @Override
+            Path downloadCharliecloudImage(String imageUrl) {
+                count.incrementAndGet()
+                throw new IllegalArgumentException('charliecloud boom')
+            }
+        }
+        def url = 'docker://foo/' + UUID.randomUUID()
+
+        when:
+        DataflowThreads.call(1) { cache.getCachePathFor(url) }
+        then:
+        def e = thrown(IllegalStateException)
+        e.cause instanceof IllegalArgumentException
+        ExceptionUtils.getRootCause(e).message == 'charliecloud boom'
+
+        when:
+        DataflowThreads.call(1) { cache.getCachePathFor(url) }
+        then:
+        e = thrown(IllegalStateException)
+        e.cause instanceof IllegalArgumentException
+        ExceptionUtils.getRootCause(e).message == 'charliecloud boom'
+        count.get() == 1
     }
 
 }
