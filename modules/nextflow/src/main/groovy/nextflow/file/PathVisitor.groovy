@@ -33,6 +33,7 @@ import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.dataflow.engine.Backpressure
 import nextflow.extension.CH
 import nextflow.util.CustomThreadFactory
 import nextflow.util.Threads
@@ -55,6 +56,11 @@ class PathVisitor {
 
     def bindPayload
 
+    /**
+     * The source channel whose gate paces the visit, when it is not the target
+     */
+    DataflowWriteChannel source
+
     DataflowWriteChannel apply(Object filePattern) {
         if( opts == null )
             opts = [:]
@@ -75,7 +81,7 @@ class PathVisitor {
     }
 
     CompletableFuture applyAsync(final CompletableFuture future, final Object filePattern ) {
-        future.thenRunAsync({ apply(filePattern) } as Runnable, executor)
+        future.thenRunAsync({ Backpressure.runAsSource { apply(filePattern) } } as Runnable, executor)
     }
 
     private void applyRegexPattern0( Pattern filePattern ) {
@@ -87,6 +93,7 @@ class PathVisitor {
     }
 
     protected void emit0(Path file) {
+        Backpressure.awaitSource(source ?: target)
         if( bindPayload == null ) {
             target.bind(file)
         }

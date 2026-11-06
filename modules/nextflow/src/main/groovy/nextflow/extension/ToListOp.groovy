@@ -19,7 +19,6 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.expression.DataflowExpression
 
 /**
  * Implements {@link OperatorImpl#toList(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
@@ -48,7 +47,7 @@ class ToListOp {
         assert source != null
 
         final target = new DataflowVariable()
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             final result = new ArrayList(1)
             Map<String,Closure> events = [:]
             events.onNext = { result.add(it) }
@@ -59,8 +58,20 @@ class ToListOp {
 
         DataflowHelper.reduceImpl(source, target, []) { List list, item -> list << item }
         if( ordering ) {
-            final sort = { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
-            return (DataflowVariable)target.then(sort)
+            final result = new DataflowVariable()
+            target.whenBound { Object list ->
+                if( list instanceof Throwable ) {
+                    result.bindError(list)
+                    return
+                }
+                try {
+                    result.bind(ordering instanceof Closure ? ((List) list).sort((Closure) ordering) : ((List) list).sort())
+                }
+                catch( Throwable e ) {
+                    result.bindError(e)
+                }
+            }
+            return result
         }
         else {
             return target

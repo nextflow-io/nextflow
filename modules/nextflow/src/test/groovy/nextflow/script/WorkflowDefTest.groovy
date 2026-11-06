@@ -194,8 +194,8 @@ class WorkflowDefTest extends Dsl2Spec {
 
     def 'should validate collect output'() {
         given:
-        def ch1 = new DataflowQueue(); ch1 << 'blah blah'
-        def ch2 = new DataflowQueue(); ch2 << 'xxx'
+        def ch1 = new DataflowQueue(); ch1.bind('blah blah')
+        def ch2 = new DataflowQueue(); ch2.bind('xxx')
 
         def binding = new WorkflowBinding(foo: 'Hello', bar: 'world', ch1: ch1, ch2: new ChannelOut([ch2]), nil: null)
         def workflow = new WorkflowDef(binding: binding)

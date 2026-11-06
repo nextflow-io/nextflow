@@ -17,8 +17,13 @@
 package nextflow.container
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
 
+import nextflow.dataflow.DataflowThreads
+import nextflow.util.Duration
+import org.apache.commons.lang3.exception.ExceptionUtils
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
@@ -213,6 +218,57 @@ class SingularityCacheTest extends Specification {
         expect:
         obj.toString() == 'SingularityCache'
         !"$obj".contains('s3cr3t-canary')
+    }
+
+    // reads on dataflow threads, including the loop thread of NXF_DATAFLOW_POOL_SIZE=1
+    def 'should pull the image once for concurrent readers on dataflow threads' () {
+        given:
+        def count = new AtomicInteger()
+        def cache = new SingularityCache('/cache', null, false, Duration.of('1 min')) {
+            @Override
+            Path downloadContainerImage(String imageUrl) {
+                count.incrementAndGet()
+                Thread.sleep(100)
+                return Path.of('/cache', imageUrl)
+            }
+        }
+        def url = 'docker://foo/' + UUID.randomUUID()
+
+        when:
+        def paths = DataflowThreads.call(8) { cache.getCachePathFor(url) }
+
+        then:
+        paths.size() == 8
+        paths.every { it == Path.of('/cache', url) }
+        count.get() == 1
+    }
+
+    def 'should propagate the pull error on dataflow threads' () {
+        given:
+        def count = new AtomicInteger()
+        def cache = new SingularityCache('/cache', null, false, Duration.of('1 min')) {
+            @Override
+            Path downloadContainerImage(String imageUrl) {
+                count.incrementAndGet()
+                throw new IllegalArgumentException('singularity boom')
+            }
+        }
+        def url = 'docker://foo/' + UUID.randomUUID()
+
+        when:
+        DataflowThreads.call(1) { cache.getCachePathFor(url) }
+        then:
+        def e = thrown(IllegalStateException)
+        e.cause instanceof IllegalArgumentException
+        ExceptionUtils.getRootCause(e).message == 'singularity boom'
+
+        when:
+        DataflowThreads.call(1) { cache.getCachePathFor(url) }
+        then:
+        e = thrown(IllegalStateException)
+        e.cause instanceof IllegalArgumentException
+        ExceptionUtils.getRootCause(e).message == 'singularity boom'
+        count.get() == 1
     }
 
 }

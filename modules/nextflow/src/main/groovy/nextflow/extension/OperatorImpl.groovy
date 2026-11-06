@@ -26,10 +26,7 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.ControlMessage
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
@@ -105,9 +102,9 @@ class OperatorImpl {
         def discriminator = new BooleanReturningMethodInvoker("isCase");
 
         def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
+                def result = it instanceof PoisonPill ? false : discriminator.invoke(criteria, (Object)it)
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -123,9 +120,9 @@ class OperatorImpl {
 
     DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
         def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
+                def result = it instanceof PoisonPill ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -254,7 +251,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel reduce(final DataflowReadChannel source, final Closure closure) {
-        if( source instanceof DataflowExpression )
+        if( source instanceof DataflowVariable )
             throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
 
         final target = new DataflowVariable()
@@ -276,7 +273,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel reduce(final DataflowReadChannel<?> source, Object seed, final Closure closure) {
-        if( source instanceof DataflowExpression )
+        if( source instanceof DataflowVariable )
             throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
 
         final target = new DataflowVariable()
@@ -329,10 +326,10 @@ class OperatorImpl {
 
         final history = [:]
         final target = CH.createBy(source)
-        final stopOnFirst = source instanceof DataflowExpression
+        final stopOnFirst = source instanceof DataflowVariable
 
         // when the operator stop clear the history map
-        final events = new DataflowEventAdapter() {
+        final events = new DataflowEventListener() {
             void afterStop(final DataflowProcessor processor) {
                 history.clear()
             }
@@ -389,7 +386,7 @@ class OperatorImpl {
                 final result = transform != null ? transform.call(value) : value
                 session.printConsole(result?.toString(), newLine)
             }
-            target << value
+            target.bind(value)
         }
         final onComplete = {
             CH.close0(target)
@@ -457,7 +454,7 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel first( DataflowReadChannel source ) {
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             def msg = "The operator `first` is useless when applied to a value channel which returns a single value by definition"
             def name = NF.lookupVariable(source)
             if( name )
@@ -475,9 +472,9 @@ class OperatorImpl {
         def target = new DataflowVariable()
         def discriminator = new BooleanReturningMethodInvoker("isCase");
 
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, it)
+                def result = it instanceof PoisonPill ? false : discriminator.invoke(criteria, it)
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -494,7 +491,7 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel take( final DataflowReadChannel source, int n ) {
-        if( source instanceof DataflowExpression )
+        if( source instanceof DataflowVariable )
             throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
         return new TakeOp(source,n).apply()
@@ -540,7 +537,7 @@ class OperatorImpl {
         final target = new DataflowVariable()
         final discriminator = criteria != null ? new BooleanReturningMethodInvoker("isCase") : null
 
-        if( source instanceof DataflowExpression) {
+        if( source instanceof DataflowVariable) {
             source.whenBound { item ->
                 discriminator == null || discriminator.invoke(criteria, item) ? target.bind(1) : target.bind(0)
             }
@@ -724,9 +721,9 @@ class OperatorImpl {
 
         final listeners = []
         final target = CH.create()
-        final stopOnFirst = source instanceof DataflowExpression
+        final stopOnFirst = source instanceof DataflowVariable
 
-        listeners << new DataflowEventAdapter() {
+        listeners << new DataflowEventListener() {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( stopOnFirst )
@@ -827,7 +824,7 @@ class OperatorImpl {
         List<List<?>> allBuffers = []
 
         // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        def listener = new DataflowEventAdapter() {
+        def listener = new DataflowEventListener() {
 
             Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
                 if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
@@ -953,7 +950,7 @@ class OperatorImpl {
 
         boolean empty = true
         final result = CH.createBy(source)
-        final singleton = result instanceof DataflowExpression
+        final singleton = result instanceof DataflowVariable
         final next = { result.bind(it); empty=false }
         final complete = {
             if(empty)
@@ -989,7 +986,7 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel randomSample(DataflowReadChannel source, int n, Long seed = null) {
-        if( source instanceof DataflowExpression )
+        if( source instanceof DataflowVariable )
             throw new IllegalArgumentException("Operator `randomSample` cannot be applied to a value channel")
 
         final result = new RandomSampleOp(source,n, seed).apply()
