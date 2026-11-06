@@ -341,14 +341,15 @@ class ModuleStorage {
      *
      * @param tarGzFile The tar.gz file path
      * @param targetDir The target directory
+     * @param skipModuleDirs Skip the module-only {@code tests/} and {@code modules/} entries
      */
-    private void extractTarGz(Path tarGzFile, Path targetDir) {
+    static void extractTarGz(Path tarGzFile, Path targetDir, boolean skipModuleDirs = true) {
         Files.newInputStream(tarGzFile).withCloseable { fis ->
             new GzipCompressorInputStream(fis).withCloseable { gzis ->
                 new TarArchiveInputStream(gzis).withCloseable { tis ->
                     TarArchiveEntry entry
                     while ((entry = tis.nextTarEntry) != null) {
-                        if( isExcludedEntry(entry.name) )
+                        if( skipModuleDirs && isExcludedEntry(entry.name) )
                             continue
                         def targetPath = targetDir.resolve(entry.name)
 
@@ -367,6 +368,9 @@ class ModuleStorage {
 
                             // Write file
                             Files.copy(tis, targetPath)
+                            // keep the executable bit (e.g. bin/ scripts)
+                            if( (entry.mode & 0100) != 0 )
+                                targetPath.toFile().setExecutable(true, false)
                         }
                     }
                 }
