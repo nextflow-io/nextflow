@@ -24,6 +24,7 @@ import nextflow.exception.K8sOutOfMemoryException
 import javax.net.ssl.HttpsURLConnection
 
 import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import spock.lang.Specification
 /**
  *
@@ -894,6 +895,107 @@ class K8sClientTest extends Specification {
 
     }
 
+    def 'should throw node termination on DisruptionTarget condition' () {
+        given:
+        def JSON = '''
+             {
+              "kind": "Pod",
+              "apiVersion": "v1",
+              "metadata": {
+                  "name": "nf-disrupt",
+                  "namespace": "default"
+              },
+              "status": {
+                  "phase": "Running",
+                  "conditions": [
+                      { "type": "PodScheduled", "status": "True" },
+                      { "type": "DisruptionTarget", "status": "True", "reason": "TerminationByKubelet",
+                        "message": "Pod was terminated in response to imminent node shutdown" }
+                  ],
+                  "containerStatuses": [
+                      {
+                          "name": "nf-disrupt",
+                          "state": { "terminated": { "exitCode": 143, "reason": "Error" } }
+                      }
+                  ]
+              }
+            }
+'''
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-disrupt'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        and:
+        def e = thrown(NodeTerminationException)
+        e.message == "K8s pod 'nf-disrupt' was terminated due to a node disruption event"
+    }
+
+    def 'should not throw node termination when DisruptionTarget pod terminated successfully' () {
+        given:
+        def JSON = '''
+             {
+              "kind": "Pod",
+              "apiVersion": "v1",
+              "metadata": {
+                  "name": "nf-disrupt",
+                  "namespace": "default"
+              },
+              "status": {
+                  "phase": "Succeeded",
+                  "conditions": [
+                      { "type": "DisruptionTarget", "status": "True", "reason": "TerminationByKubelet" }
+                  ],
+                  "containerStatuses": [
+                      {
+                          "name": "nf-disrupt",
+                          "state": { "terminated": { "exitCode": 0, "reason": "Completed" } }
+                      }
+                  ]
+              }
+            }
+'''
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-disrupt'
+
+        when:
+        def result = client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        and:
+        result == [terminated: [exitCode: 0, reason: 'Completed']]
+    }
+
+    def 'should detect DisruptionTarget node disruption condition' () {
+        expect:
+        K8sClient.isNodeDisruption(status) == expected
+        where:
+        status                                                                                          | expected
+        [conditions: [[type: 'DisruptionTarget', status: 'True', reason: 'TerminationByKubelet']]]      | true
+        [conditions: [[type: 'Ready', status: 'True'], [type: 'DisruptionTarget', status: 'True']]]     | true
+        [conditions: [[type: 'DisruptionTarget', status: 'False']]]                                     | false
+        [conditions: [[type: 'PodScheduled', status: 'True']]]                                          | false
+        [conditions: []]                                                                                | false
+        [phase: 'Running']                                                                              | false
+        [:]                                                                                             | false
+        null                                                                                            | false
+    }
+
+    def 'should detect a successful container termination' () {
+        expect:
+        K8sClient.isSuccessfullyTerminated(containerStatuses) == expected
+        where:
+        containerStatuses                                       | expected
+        [[state: [terminated: [exitCode: 0]]]]                  | true
+        [[state: [terminated: [exitCode: 143]]]]                | false
+        [[state: [running: [:]]]]                               | false
+        [[state: [:]]]                                          | false
+        []                                                      | false
+        null                                                    | false
+    }
+
     def 'client should fail when config fail' () {
         given:
         def JSON = '''
@@ -1103,6 +1205,107 @@ class K8sClientTest extends Specification {
         // The key assertion: exitCode should not be present (null) so fallback to .exitcode file works
         result.terminated.exitCode == null
         result.terminated.exitcode == null
+    }
+
+    def 'should re-throw node termination when job failed and original exception is present' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "failed": 1,
+                "conditions": [
+                    {
+                        "type": "Failed",
+                        "status": "True",
+                        "reason": "BackoffLimitExceeded",
+                        "message": "Job has reached the specified backoff limit"
+                    }
+                ]
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+        final original = new NodeTerminationException('Pod terminated by node disruption')
+
+        when:
+        client.jobStateFallback0(JOB_NAME, original)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        def e = thrown(NodeTerminationException)
+        e.is(original)
+    }
+
+    def 'should throw process failed exception when job failed and no original exception is present' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "failed": 1,
+                "conditions": [
+                    {
+                        "type": "Failed",
+                        "status": "True",
+                        "reason": "BackoffLimitExceeded",
+                        "message": "Job has reached the specified backoff limit"
+                    }
+                ]
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+
+        when:
+        client.jobStateFallback0(JOB_NAME)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        def e = thrown(ProcessFailedException)
+        e.message == "K8s Job test-job execution failed: Job has reached the specified backoff limit"
+    }
+
+    def 'should return empty map when job has no pods scheduled yet' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "active": 0
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+
+        when:
+        def result = client.jobStateFallback0(JOB_NAME)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        result != null
+        result.isEmpty()
     }
 
     def 'should re-read token from disk and retry on 401 when tokenPath is set' () {
