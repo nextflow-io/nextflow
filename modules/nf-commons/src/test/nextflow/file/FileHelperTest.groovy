@@ -247,6 +247,30 @@ class FileHelperTest extends Specification {
 
     }
 
+    def 'should strip current-dir segments' () {
+        expect:
+        FileHelper.stripCurrentDirSegments(PATH) == EXPECTED
+
+        where:
+        PATH                         | EXPECTED
+        null                         | null
+        ''                           | ''
+        'results/x.vcf.gz'           | 'results/x.vcf.gz'
+        './results/x.vcf.gz'         | 'results/x.vcf.gz'
+        '././x.txt'                  | 'x.txt'
+        'a/./b/./c.txt'              | 'a/b/c.txt'
+        './/x.txt'                   | 'x.txt'
+        './/./x.txt'                 | 'x.txt'
+        'a//b/.//c.txt'              | 'a/b/c.txt'
+        './/'                        | './'
+        './*.vcf'                    | '*.vcf'
+        '.hidden'                    | '.hidden'
+        '../x.txt'                   | '../x.txt'
+        '.'                          | '.'
+        './'                         | './'
+        '/abs/./x.txt'               | '/abs/./x.txt'
+    }
+
     def 'test isEmpty file'() {
 
         setup:
