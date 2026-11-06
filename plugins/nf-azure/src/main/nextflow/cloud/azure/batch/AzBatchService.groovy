@@ -113,7 +113,12 @@ import reactor.core.publisher.Flux
 @CompileStatic
 class AzBatchService implements Closeable {
 
-    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy'
+    static private final String AZCOPY_VERSION = '10.34.1'
+
+    static private final String AZCOPY_URL = "https://github.com/Azure/azure-storage-azcopy/releases/download/v${AZCOPY_VERSION}/azcopy_linux_amd64_${AZCOPY_VERSION}.tar.gz"
+
+    // path of the azcopy binary inside the release tarball
+    static private final String AZCOPY_TAR_ENTRY = "azcopy_linux_amd64_${AZCOPY_VERSION}/azcopy"
 
     static private final long _1GB = 1 << 30
 
@@ -600,9 +605,12 @@ class AzBatchService implements Closeable {
                 .setContainerRunOptions(opts)
 
         // submit command line
+        final String installCmd = config.batch().copyToolInstallMode == CopyToolInstallMode.task
+                    ? "tar -xzf .nextflow-bin/azcopy.tar.gz -C .nextflow-bin --strip-components=1 ${AZCOPY_TAR_ENTRY} && "
+                    : ''
         final String cmd = fusionEnabled && fusionCmd
                     ? fusionCmd
-                    : "bash -o pipefail -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
+                    : "bash -o pipefail -c '${installCmd}bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
         // cpus and memory
         final slots = computeSlots(task, pool)
         // max wall time
@@ -665,7 +673,7 @@ class AzBatchService implements Closeable {
             log.trace "[AZURE BATCH] installing azcopy as task resource"
             resFiles << new ResourceFile()
                     .setHttpUrl(AZCOPY_URL)
-                    .setFilePath('.nextflow-bin/azcopy')
+                    .setFilePath('.nextflow-bin/azcopy.tar.gz')
         }
 
         resFiles << new ResourceFile()
@@ -997,10 +1005,10 @@ class AzBatchService implements Closeable {
 
         // If enabled, append azcopy installer to start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
-            startCmd << 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+            startCmd << "bash -c \"mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && tar -xzf azcopy.tar.gz -C \$AZ_BATCH_NODE_SHARED_DIR/bin/ --strip-components=1 ${AZCOPY_TAR_ENTRY}\"".toString()
             resourceFiles << new ResourceFile()
                 .setHttpUrl(AZCOPY_URL)
-                .setFilePath('azcopy')
+                .setFilePath('azcopy.tar.gz')
         }
 
         // Get any custom start task command
