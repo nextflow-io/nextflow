@@ -698,3 +698,5 @@ if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
 }
 
+apply from: 'gradle/bundle.gradle'
+
