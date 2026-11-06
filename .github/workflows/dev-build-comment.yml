@@ -45,9 +45,7 @@ jobs:
           fi
           body=$(cat <<EOF
           $MARKER
-          ## 📦 Nextflow dev build
-
-          A development build of this PR (commit \`${HEAD_SHA:0:7}\`) will be [published](https://github.com/$DEV_REPO/releases/tag/v${version}) within about 30 minutes (next scheduled build). Test it with:
+          📦 A dev build of this PR (\`${HEAD_SHA:0:7}\`) will be [published](https://github.com/$DEV_REPO/releases/tag/v${version}) within about 30 minutes. Test it with:
 
           \`\`\`bash
           NXF_DEV=pr-${PR_NUMBER} nextflow run <pipeline>
@@ -55,7 +53,9 @@ jobs:
 
           This runs the Nextflow runtime *and* the core plugins compiled from this PR; third-party plugins are resolved from the plugin registry as usual.
 
-          Or, with Nextflow versions that don't support \`NXF_DEV\` yet (note: this form uses the *released* core plugins, so changes to core plugins in this PR are not applied):
+          <details>
+
+          With Nextflow versions that don't support \`NXF_DEV\` yet:
 
           \`\`\`bash
           NXF_BASE=https://github.com/$DEV_REPO/releases/download \\
@@ -64,6 +64,8 @@ jobs:
           \`\`\`
 
           For testing purposes only. See [$DEV_REPO](https://github.com/$DEV_REPO) for details. This comment is updated on each push.
+
+          </details>
           EOF
           )
 
