@@ -14,40 +14,35 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.trace
+
+import java.util.concurrent.TimeUnit
 
 import spock.lang.Specification
+import spock.lang.Timeout
 
-/**
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-class SimpleAgentTest extends Specification {
+@Timeout(value = 10, unit = TimeUnit.SECONDS)
+class WorkflowStatsObserverTest extends Specification {
 
-    def 'should update agent' () {
+    def 'should return the quick stats and keep the interrupt when interrupted' () {
         given:
-        def state = []
-        def agent = new SimpleAgent(state)
+        def observer = new WorkflowStatsObserver(null)
+        def stats
+        def interrupted
 
         when:
-        agent.send { state<<1 }
-        agent.send { state<<2 }
-        agent.send { state<<3 }
-        and:
-        def result = agent.getValue()
+        Thread.currentThread().interrupt()
+        try {
+            stats = observer.getStats()
+            interrupted = Thread.currentThread().isInterrupted()
+        }
+        finally {
+            Thread.interrupted()
+        }
 
         then:
-        result == [1,2,3]
-        and:
-        agent.getValue() == agent.getQuickValue()
-
-        // changing the state object does not modify the
-        // result because it's a clone of the original one
-        when:
-        state << 4
-        then:
-        result == [1,2,3]
-
+        stats != null
+        interrupted
+        observer.getStats() != null
     }
-
 }
