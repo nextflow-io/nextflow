@@ -90,6 +90,8 @@ class KryoHelper {
      */
     static private Kryo newInstance() {
         def kryo = new Kryo()
+        // use reflection/ASM instead of sun.misc.Unsafe in FieldSerializer
+        kryo.setAsmEnabled(true)
         kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
         kryo.setDefaultSerializer( DefaultSerializerFactory.instance )
 
