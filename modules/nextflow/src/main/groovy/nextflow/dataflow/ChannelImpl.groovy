@@ -133,10 +133,10 @@ class ChannelImpl {
         final target = CH.create()
         final onNext = { value ->
             if( condition.call(value) )
-                target << value
+                target.bind(value)
         }
         final onComplete = {
-            target << CH.stop()
+            target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
         NodeMarker.addOperatorNode("filter", [source], [target])
@@ -151,10 +151,10 @@ class ChannelImpl {
             if( iterable instanceof Tuple )
                 throw new ScriptRuntimeException("Operator `flatMap` expected an Iterable but received a tuple: ${iterable}\n")
             for( final e : iterable )
-                target << e
+                target.bind(e)
         }
         final onComplete = {
-            target << CH.stop()
+            target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
         NodeMarker.addOperatorNode("flatMap", [source], [target])
@@ -182,10 +182,10 @@ class ChannelImpl {
         final source = this.getReadChannel()
         final target = CH.create()
         final onNext = { value ->
-            target << transform.call(value)
+            target.bind(transform.call(value))
         }
         final onComplete = {
-            target << CH.stop()
+            target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
         NodeMarker.addOperatorNode("map", [source], [target])
@@ -206,11 +206,11 @@ class ChannelImpl {
         final target = CH.create()
         final count = new AtomicInteger(sources.size())
         final onNext = { value ->
-            target << value
+            target.bind(value)
         }
         final onComplete = {
             if( count.decrementAndGet() == 0 )
-                target << CH.stop()
+                target.bind(CH.stop())
         }
         for( final ch : sources )
             DataflowHelper.subscribeImpl(ch, [onNext: onNext, onComplete: onComplete])
@@ -283,12 +283,12 @@ class ChannelImpl {
             final key = transform != null ? transform.call(value) : value
             if( !history.contains(key) ) {
                 history.add(key)
-                target << value
+                target.bind(value)
             }
         }
         final onComplete = {
             history.clear()
-            target << CH.stop()
+            target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
         NodeMarker.addOperatorNode("unique", [source], [target])
@@ -304,16 +304,16 @@ class ChannelImpl {
             if( done )
                 return
             if( condition.call(value) ) {
-                target << CH.stop()
+                target.bind(CH.stop())
                 done = true
             }
             else {
-                target << value
+                target.bind(value)
             }
         }
         final onComplete = {
             if( !done )
-                target << CH.stop()
+                target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
         NodeMarker.addOperatorNode("until", [source], [target])

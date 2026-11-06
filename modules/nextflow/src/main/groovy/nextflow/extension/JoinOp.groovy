@@ -121,7 +121,7 @@ class JoinOp {
                 }
                 catch (Exception e) {
                     failed = true
-                    target << Channel.STOP
+                    target.bind(Channel.STOP)
                     throw e
                 }
             }}
@@ -135,7 +135,7 @@ class JoinOp {
                         checkForMismatch(buffer)
                 }
                 finally {
-                    target << Channel.STOP
+                    target.bind(Channel.STOP)
                 }
             }}
 

@@ -28,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -108,7 +107,7 @@ class DataflowHelper {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( source instanceof DataflowExpression ) {
-                    if( !(target instanceof DataflowExpression) )
+                    if( !(target instanceof DataflowVariable) )
                         processor.bindOutput( Channel.STOP )
                     processor.terminate()
                 }
