@@ -598,6 +598,49 @@ class ScriptResolveTest extends Specification {
         errors[0].getOriginalMessage() == 'Return statement cannot be used in a workflow body -- use `exit()` instead'
     }
 
+    def 'should report an error when assigning a param with a params block' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                genome: String = 'GRCh38'
+                genome_version: String?
+            }
+
+            def setDefaults() {
+                params.genome_version = '38'
+                params.derived = 'x'
+            }
+
+            workflow {
+                params['genome'] = 'GRCh37'
+            }
+            '''
+        )
+        then:
+        errors.size() == 3
+        errors*.getStartLine() == [7, 8, 12]
+        errors.every { it.getOriginalMessage() == 'Params cannot be assigned when using a params block' }
+
+        when:
+        errors = check(
+            '''\
+            params {
+                x: Integer = 1
+            }
+
+            def f(Map params) {
+                params.y = 2
+            }
+
+            workflow {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should not report an error for a return statement in a closure' () {
         when:
         def errors = check(
