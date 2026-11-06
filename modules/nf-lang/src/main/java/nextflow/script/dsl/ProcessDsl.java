@@ -56,6 +56,7 @@ public interface ProcessDsl extends DslScope {
                 @NamedParam(value = "request", type = Integer.class),
                 @NamedParam(value = "limit", type = Integer.class),
                 @NamedParam(value = "type", type = String.class),
+                @NamedParam(value = "cuda", type = String.class),
             })
             Map<String,?> opts
         );
