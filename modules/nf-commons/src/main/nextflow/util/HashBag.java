@@ -162,6 +162,7 @@ public class HashBag<E> implements Bag<E> {
      * @param o
      */
     @Override
+    @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
         var count = counts.get(o);
         if( count == null )

@@ -88,10 +88,12 @@ allprojects {
     // the same javac task, hence the split across compile task types.
     tasks.withType(JavaCompile).configureEach {
         options.release = 17
+        options.compilerArgs << '-Xlint:unchecked'
     }
     tasks.withType(GroovyCompile).configureEach {
         sourceCompatibility = '17'
         targetCompatibility = '17'
+        options.compilerArgs << '-Xlint:unchecked'
     }
 
     idea {
