@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import io.seqera.npr.api.schema.v1.PipelineSummary
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
@@ -64,7 +65,7 @@ class CmdPipelineSearch extends CmdBase {
         final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize()))
         if( output != 'json' )
             println "Searching for '${args[0]}'..."
-        final pipelines = client.listPipelines(args[0], 1, limit)?.pipelines ?: []
+        final pipelines = fetch(client, args[0])
 
         if( output == 'json' ) {
             final rows = pipelines.collect { p ->
@@ -92,5 +93,22 @@ class CmdPipelineSearch extends CmdBase {
                 println "    Description: ${p.metadata.description}"
             println ""
         }
+    }
+
+    /**
+     * The server caps the page size (100), so read pages until {@code limit} results or the last page.
+     * The same size is sent on every page so the server's page offsets stay consistent.
+     */
+    private List<PipelineSummary> fetch(RegistryClient client, String query) {
+        final result = new ArrayList<PipelineSummary>()
+        for( int page = 1; result.size() < limit; page++ ) {
+            final response = client.listPipelines(query, page, limit)
+            if( !response?.pipelines )
+                break
+            result.addAll(response.pipelines)
+            if( response.last )
+                break
+        }
+        return result.take(limit)
     }
 }

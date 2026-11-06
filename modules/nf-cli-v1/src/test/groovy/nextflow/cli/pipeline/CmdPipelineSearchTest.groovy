@@ -37,7 +37,7 @@ class CmdPipelineSearchTest extends Specification {
         new ListPipelinesResponse().pipelines([
             new PipelineSummary().name('nf-core/rnaseq').latestVersion('3.14.0')
                 .metadata(new PipelineMetadata().description('RNA-seq analysis'))
-        ])
+        ]).last(true)
     }
 
     CmdPipelineSearch cmd(String output = 'simple') {
@@ -80,5 +80,27 @@ class CmdPipelineSearchTest extends Specification {
         then:
         1 * client.listPipelines('rnaseq', 1, 5) >> new ListPipelinesResponse()
         capture.toString().contains('No pipelines found')
+    }
+
+    def 'should read pages until the limit when the server caps the page size'() {
+        given:
+        def command = cmd()
+        command.limit = 150
+        def page = { int from, int count ->
+            new ListPipelinesResponse().last(false).pipelines((from..<from + count).collect {
+                new PipelineSummary().name("acme/p$it".toString()).latestVersion('1.0.0')
+            })
+        }
+
+        when:
+        command.run()
+
+        then:
+        1 * client.listPipelines('rnaseq', 1, 150) >> page(0, 100)
+        1 * client.listPipelines('rnaseq', 2, 150) >> page(100, 100)
+        0 * client.listPipelines(*_)
+        capture.toString().contains('Top 150 matching pipeline(s):')
+        capture.toString().contains('  acme/p149\n')
+        !capture.toString().contains('  acme/p150\n')
     }
 }
