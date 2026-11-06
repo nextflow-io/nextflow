@@ -533,9 +533,9 @@ declare -a cmd_tail="(${BASH_REMATCH[2]})"
 launcher="${cmd_base[@]}"
 [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
 
-launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
 # versions before 26.11.0-edge use JDK internals that need extra opens
 if [[ $(cmp_ver "$NXF_VER" "26.11.0-edge") -lt 0 ]]; then
+    launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
