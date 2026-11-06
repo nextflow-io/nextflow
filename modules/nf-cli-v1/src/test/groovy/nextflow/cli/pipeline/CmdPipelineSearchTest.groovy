@@ -55,7 +55,7 @@ class CmdPipelineSearchTest extends Specification {
         cmd().run()
 
         then:
-        1 * client.searchPipelines('rnaseq', 5) >> response()
+        1 * client.listPipelines('rnaseq', 1, 5) >> response()
         capture.toString().contains("Searching for 'rnaseq'...")
         capture.toString().contains('Top 1 matching pipeline(s):')
         capture.toString().contains('  nf-core/rnaseq\n    Version: 3.14.0\n    Description: RNA-seq analysis\n')
@@ -67,7 +67,7 @@ class CmdPipelineSearchTest extends Specification {
         def json = new JsonSlurper().parseText(capture.toString()) as List
 
         then:
-        1 * client.searchPipelines('rnaseq', 5) >> response()
+        1 * client.listPipelines('rnaseq', 1, 5) >> response()
         json[0].name == 'nf-core/rnaseq'
         json[0].latestVersion == '3.14.0'
         json[0].description == 'RNA-seq analysis'
@@ -78,7 +78,7 @@ class CmdPipelineSearchTest extends Specification {
         cmd().run()
 
         then:
-        1 * client.searchPipelines('rnaseq', 5) >> new ListPipelinesResponse()
+        1 * client.listPipelines('rnaseq', 1, 5) >> new ListPipelinesResponse()
         capture.toString().contains('No pipelines found')
     }
 }

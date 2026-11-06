@@ -64,7 +64,7 @@ class CmdPipelineSearch extends CmdBase {
         final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize()))
         if( output != 'json' )
             println "Searching for '${args[0]}'..."
-        final pipelines = client.searchPipelines(args[0], limit)?.pipelines ?: []
+        final pipelines = client.listPipelines(args[0], 1, limit)?.pipelines ?: []
 
         if( output == 'json' ) {
             final rows = pipelines.collect { p ->

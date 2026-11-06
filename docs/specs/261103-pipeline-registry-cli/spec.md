@@ -76,7 +76,7 @@ The output follows the matching `nextflow module` command.
 - **FR-004**: A pipeline include resolves to `<base>/pipelines/<scope>/<name>/<workflowPath>`, where `workflowPath` comes from the registry (default `main.nf`) and must stay inside the pipeline folder.
 - **FR-005**: `.pipeline-info` is a Java properties file with `name`, `version`, `workflowPath`, `repositoryUrl`, `revision`, `commitId`, `registryUrl` and `checksum`. The checksum is a SHA-256 over the installed files without `.pipeline-info`, `.git/`, and subfolders that hold their own `.module-info` or `.pipeline-info`, so modules installed later inside the pipeline don't mark it modified.
 - **FR-006**: Auto-install and `install` share one installer. The installer writes to a temporary directory and moves it into place only when it is complete, so that a failed fetch leaves no partial pipeline.
-- **FR-007**: The registry client uses `registry.url` and `registry.auth`, as for modules. It calls the `npr-client` methods `getPipeline`, `getPipelineRelease`, `listPipelineReleases` and `searchPipelines(query, limit)` from seqeralabs/nextflow-registry#439.
+- **FR-007**: The registry client uses `registry.url` and `registry.auth`, as for modules. It calls the `npr-client` methods `getPipeline`, `getPipelineRelease`, `listPipelineReleases` and `listPipelines(search, page, size)` (first page only) from seqeralabs/nextflow-registry#439.
 - **FR-008**: The language server must not install anything. It reports a missing pipeline like a missing module.
 
 ## Out of scope
