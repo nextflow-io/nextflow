@@ -110,7 +110,7 @@ The same rules as modules:
 | `pipeline install <scope/name> [-version] [-force]` | `GET /api/v1/pipelines/{name}[/{version}]` |
 | `pipeline list [-output json]` | none (reads `pipelines/`) |
 | `pipeline remove <scope/name> [-force]` | none |
-| `pipeline search <query> [-limit] [-output json]` | `GET /api/v1/pipelines?search=&size=` |
+| `pipeline search <query> [-limit] [-output json]` | `GET /api/v1/pipelines?search=&page=&size=` |
 | `pipeline view <scope/name> [-version] [-output json]` | `GET /api/v1/pipelines/{name}[/{version}]` |
 
 Each command follows its `nextflow module` counterpart in options and output. All of them use `registry.url` and `registry.auth`. `view` does not show a usage snippet yet; that waits until we decide between running a registry pipeline with `nextflow run` or with `nextflow pipeline run`.
