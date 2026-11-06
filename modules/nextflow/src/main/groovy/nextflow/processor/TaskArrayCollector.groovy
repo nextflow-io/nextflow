@@ -190,7 +190,7 @@ class TaskArrayCollector {
         """
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
         export nxf_array_task_dir=${getArrayIndexRef()}
-        ${executor.getArrayLaunchCommand('$nxf_array_task_dir')}
+        exec ${executor.getArrayLaunchCommand('$nxf_array_task_dir')}
         """.stripIndent().leftTrim()
     }
 

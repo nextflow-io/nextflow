@@ -366,9 +366,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
+  # The Java bundles of a release, which the release job uploads with the other release files
+  bundle:
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/STABLE-')) && contains(needs.build.outputs.commit_message, '[release]') }}
+    needs: build
+    uses: ./.github/workflows/bundle.yml
+    with:
+      # empty for the latest Temurin release, which can be overridden without a commit, e.g. if it is not available for every platform
+      jre-version: ${{ vars.NXF_BUNDLE_JRE_VERSION }}
+    permissions:
+      contents: read
+
   release:
-    if: ${{ always() && github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/STABLE-')) && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
-    needs: [build, test]
+    if: ${{ always() && github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/STABLE-')) && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') && needs.bundle.result == 'success' }}
+    needs: [build, test, bundle]
     runs-on: ubuntu-24.04
     # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
     # bootstrapping buildkit, pulling two base images and running an emulated arm64 `npm ci`
@@ -394,6 +405,14 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+
+      # uploaded by `deploy` (release.sh step 2), see NXF_RELEASE_BUNDLES below
+      - name: Download the Java bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # ratchet:actions/download-artifact@v8.0.2
+        with:
+          pattern: bundle-*
+          path: ${{ runner.temp }}/bundles
+          merge-multiple: true
 
       - name: Setup Java 17
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
@@ -479,6 +498,8 @@ jobs:
           # plugin registry
           NPR_API_URL: ${{ vars.NPR_API_URL }}
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
+          # Java bundles of each platform, built by the `bundle` job
+          NXF_RELEASE_BUNDLES: ${{ runner.temp }}/bundles
           # nf-agent-pi runner image (step 1). The push itself is authorized by the
           # `Docker Login to Seqera public CR` step above; these are passed so build-image.sh
           # can name them when a push is refused.
