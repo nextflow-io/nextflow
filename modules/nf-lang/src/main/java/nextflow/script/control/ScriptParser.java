@@ -85,7 +85,7 @@ public class ScriptParser {
 
         // include and name checking
         for( var source : compiler.getSources().values() ) {
-            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler, moduleResolver);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

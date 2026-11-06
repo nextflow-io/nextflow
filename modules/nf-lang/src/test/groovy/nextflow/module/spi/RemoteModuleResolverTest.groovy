@@ -81,4 +81,41 @@ class RemoteModuleResolverTest extends Specification {
         RemoteModuleResolver.resolveBaseDir(URI.create('untitled:Untitled-1'), projectDir) == projectDir
     }
 
+    def 'should resolve against the nearest pipeline root'() {
+        given:
+        def root = projectDir.resolve('pipelines/nf-core/rnaseq')
+        Files.createDirectories(root.resolve('subworkflows/local'))
+        Files.createFile(root.resolve('.pipeline-info'))
+        expect:
+        RemoteModuleResolver.resolveBaseDir(root.resolve('main.nf'), projectDir) == root
+        RemoteModuleResolver.resolveBaseDir(root.resolve('subworkflows/local/align.nf'), projectDir) == root
+    }
+
+    def 'should prefer a vendored module dir inside a pipeline root'() {
+        given:
+        def root = projectDir.resolve('pipelines/nf-core/rnaseq')
+        def wf = root.resolve('modules/nf-core/bam_sort')
+        Files.createDirectories(wf)
+        Files.createFile(root.resolve('.pipeline-info'))
+        expect:
+        RemoteModuleResolver.resolveBaseDir(wf.resolve('main.nf'), projectDir) == wf
+    }
+
+    def 'should resolve a nested pipeline against its own root'() {
+        given:
+        def outer = projectDir.resolve('pipelines/nf-core/a')
+        def inner = outer.resolve('pipelines/nf-core/b')
+        Files.createDirectories(inner)
+        Files.createFile(outer.resolve('.pipeline-info'))
+        Files.createFile(inner.resolve('.pipeline-info'))
+        expect:
+        RemoteModuleResolver.resolveBaseDir(inner.resolve('main.nf'), projectDir) == inner
+    }
+
+    def 'should detect a pipeline include by its entry names'() {
+        expect:
+        RemoteModuleResolver.isPipelineInclude(['workflow'])
+        RemoteModuleResolver.isPipelineInclude(['params'])
+        !RemoteModuleResolver.isPipelineInclude(['FASTQC'])
+    }
 }

@@ -22,6 +22,7 @@ import io.seqera.npr.client.RegistryClient
 
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
+import nextflow.module.spi.RemoteModuleResolver
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -38,8 +39,10 @@ class ModuleResolver {
 
     private final RegistryClient registryClient
     private final ModuleStorage storage
+    private final Path baseDir
 
     ModuleResolver(Path baseDir, RegistryClient registryClient) {
+        this.baseDir = baseDir
         this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
     }
@@ -74,7 +77,7 @@ class ModuleResolver {
 
             if( integrity == ModuleIntegrity.MODIFIED ) {
                 log.warn1 "Module ${reference} has local modifications (checksum mismatch)"
-            } else if( integrity == ModuleIntegrity.NO_REMOTE_MODULE ) {
+            } else if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !insidePipeline(installed.mainFile.parent) ) {
                 log.warn1 "Module ${reference} has no registry origin (.module-info missing)"
             }
 
@@ -105,6 +108,12 @@ class ModuleResolver {
                     "Run 'nextflow module install ${reference}' to install."
             )
         }
+    }
+
+    /** Modules vendored by a pipeline have no registry origin of their own */
+    private boolean insidePipeline(Path dir) {
+        final root = RemoteModuleResolver.findPipelineRoot(dir, baseDir)
+        return Files.exists(root.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))
     }
 
     String resolveVersion(ModuleReference reference) {

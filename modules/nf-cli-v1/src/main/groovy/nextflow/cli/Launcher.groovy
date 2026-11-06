@@ -114,7 +114,8 @@ class Launcher {
                 new CmdInspect(),
                 new CmdLint(),
                 new CmdLineage(),
-                new CmdModule()
+                new CmdModule(),
+                new CmdPipeline()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -135,6 +136,7 @@ class Launcher {
             if( cmd instanceof CmdRemoved )
                 jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
         }
+        jcommander.getCommands().get(CmdPipeline.NAME)?.setAcceptUnknownOptions(true)
     }
 
     private static final String[] EMPTY = new String[0]
