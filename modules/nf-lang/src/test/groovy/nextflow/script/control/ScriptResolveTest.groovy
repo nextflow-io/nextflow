@@ -620,7 +620,7 @@ class ScriptResolveTest extends Specification {
         then:
         errors.size() == 3
         errors*.getStartLine() == [7, 8, 12]
-        errors.every { it.getOriginalMessage() == 'Params cannot be assigned when using a params block -- use a default value in the params block instead' }
+        errors.every { it.getOriginalMessage() == 'Params cannot be assigned when using a params block' }
 
         when:
         errors = check(

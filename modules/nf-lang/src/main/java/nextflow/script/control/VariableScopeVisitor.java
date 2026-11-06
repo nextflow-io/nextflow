@@ -110,7 +110,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var moduleNode = sourceUnit.getAST();
         if( moduleNode instanceof ScriptNode sn ) {
             typingEnabled = sn.isTypingEnabled();
-            hasParamsBlock = sn.getParams() != null;
             for( var includeNode : sn.getIncludes() )
                 declareInclude(includeNode);
             declareParams(sn);
@@ -152,8 +151,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             vsc.include(name, entry.getTarget());
         }
     }
-
-    private boolean hasParamsBlock;
 
     private ClassNode paramsType;
 
@@ -706,8 +703,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             return;
         var variable = vsc.findVariableDeclaration(target.getName(), target);
         // `params` is not declared outside the entry workflow, but still refers to the pipeline params
-        if( hasParamsBlock && "params".equals(target.getName()) && (variable == null || isDslVariable(variable)) ) {
-            vsc.addError("Params cannot be assigned when using a params block -- use a default value in the params block instead", target);
+        if( paramsType != null && "params".equals(target.getName()) && (variable == null || isDslVariable(variable)) ) {
+            vsc.addError("Params cannot be assigned when using a params block", target);
             return;
         }
         if( isDslVariable(variable) ) {
