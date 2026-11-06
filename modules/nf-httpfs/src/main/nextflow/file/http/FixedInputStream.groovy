@@ -29,6 +29,7 @@ class FixedInputStream extends FilterInputStream {
 
     private final long length
     private long bytesRead
+    private long markedBytesRead
 
     FixedInputStream(InputStream inputStream, long len) {
         super(inputStream)
@@ -65,6 +66,18 @@ class FixedInputStream extends FilterInputStream {
     @Override
     int available() throws IOException {
         super.available()
+    }
+
+    @Override
+    void mark(int readlimit) {
+        super.mark(readlimit)
+        markedBytesRead = bytesRead
+    }
+
+    @Override
+    void reset() throws IOException {
+        super.reset()
+        bytesRead = markedBytesRead
     }
 
     private void checkLength() throws IOException {

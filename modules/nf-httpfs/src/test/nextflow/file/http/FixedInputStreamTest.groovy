@@ -99,4 +99,19 @@ class FixedInputStreamTest extends Specification {
         then:
         noExceptionThrown()
     }
+
+    def 'should not count bytes twice after reset' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length)
+
+        when:
+        stream.mark(bytes.length)
+        stream.read(new byte[5])
+        stream.reset()
+        def result = stream.readAllBytes()
+        then:
+        noExceptionThrown()
+        new String(result) == 'Hello world'
+    }
 }
