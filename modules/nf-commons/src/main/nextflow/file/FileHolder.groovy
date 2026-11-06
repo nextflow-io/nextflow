@@ -28,6 +28,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
+import nextflow.util.HashBuilder
 import nextflow.util.CacheHelper.HashMode
 /**
  * Implements a special {@code Path} used to stage files in the work area
@@ -77,6 +78,12 @@ class FileHolder implements CacheFunnel {
     @Override
     Hasher funnel(Hasher hasher, HashMode mode) {
         return CacheHelper.hasher(hasher, sourceObj, mode)
+    }
+
+    /** Hashes the source object through the builder, so its encoding rules reach the path. */
+    @Override
+    Hasher funnel(HashBuilder builder) {
+        return builder.with(sourceObj).getHasher()
     }
 
     @PackageScope

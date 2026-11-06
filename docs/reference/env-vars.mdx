@@ -372,6 +372,16 @@ The strict parser is enabled by default.
 
 Set to `'v2'` to use the [strict syntax parser][strict-syntax-page] for Nextflow code. Set to `'v1'` to fall back to the legacy parser.
 
+##### `NXF_TASK_HASH_VER`
+
+<AddedInVersion version="27.04" />
+
+:::note
+Experimental: may change in a future release.
+:::
+
+Compute task hashes with the given task hash version (e.g. `std/v1.7`), so that a run can resume a cache written by an older Nextflow version. When not set, the default task hash is used. An unknown version is an error.
+
 ##### `NXF_TEMP`
 
 Directory where temporary files are stored

@@ -234,12 +234,17 @@ $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
     "globalVars": {},
     "binEntries": [],
     "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
-    "moduleId": null
+    "moduleId": null,
+    "hashVersion": "std/v1.7",
+    "resourcesBundle": null,
+    "envModules": null
   }
 }
 ```
 
 Every successful task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
+
+`hashVersion` names the task hash version that produced the task hash, so two `TaskRun` records can be compared to see why a task was not cached. `resourcesBundle` and `envModules` record the module resources bundle and the environment modules, which are also part of the task hash.
 
 Tasks that failed or were aborted are not recorded. A task that did not complete never produced its outputs, so it has nothing to describe; when such a task is retried, the lineage store describes the attempt that succeeded.
 
@@ -374,13 +379,16 @@ diff --git 862df53160e07cd823c0c3960545e747 9433dda73f2193491f9a26e3e23cd8a1
      "eval": null,
      "input": [
        {
-@@ -40,7 +40,7 @@
+@@ -40,10 +40,10 @@
      "architecture": null,
      "globalVars": {},
      "binEntries": [],
 -    "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
 +    "workflowRun": "lid://65044872aad36f97e42336b9ba0dee57",
-     "moduleId": null
+     "moduleId": null,
+     "hashVersion": "std/v1.7",
+     "resourcesBundle": null,
+     "envModules": null
    }
  }
 ```
