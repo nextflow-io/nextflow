@@ -1060,8 +1060,6 @@ class AzBatchService implements Closeable {
                     final String accountName = config.storage().accountName
                     final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
                     final accountKey = config.storage().accountKey
-                    // the constructor argument order is (accountName, accountKey, azureFileUrl, relativeMountPath)
-                    // since azure-compute-batch 1.0.0-beta.6; all are strings, so a wrong order compiles silently
                     final shareConfig = new AzureFileShareConfiguration( accountName, accountKey, endpoint, it.key )
                             .setMountOptions(it.value.mountOptions)
 
