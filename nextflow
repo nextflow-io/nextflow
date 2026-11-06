@@ -34,6 +34,12 @@ if [[ $NXF_DEV ]]; then
             exit 1
         fi
     fi
+    # the dev build version is read from the network, so only allow safe
+    # characters before it is used in file paths, e.g. rm -rf "$NXF_DIST/$NXF_VER"
+    if [[ ! $NXF_VER =~ ^[0-9A-Za-z._-]+$ ]]; then
+        >&2 echo "ERROR: Invalid Nextflow dev build version '$NXF_VER' -- check $NXF_DEV_REPO"
+        exit 1
+    fi
 fi
 
 NXF_VER=${NXF_VER:-'26.10.3'}

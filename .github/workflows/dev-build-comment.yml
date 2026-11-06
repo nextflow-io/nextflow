@@ -4,13 +4,13 @@ name: Dev build comment
 # automated dev build of that PR, published by the nextflow-dev-builds repo.
 # The comment is created once and then updated in place on each push.
 #
-# Uses pull_request_target so the comment can also be posted on PRs from
-# forks. This is safe because the workflow never checks out or executes any
-# code from the PR: it only reads PR metadata and the VERSION file, whose
-# content is validated before use.
+# Uses the plain pull_request event: dev builds are only produced for
+# same-repo (branch, not fork) PRs, which receive repository secrets and a
+# writable token here, so pull_request_target is not needed. Fork PRs are not
+# built and intentionally get no comment.
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize]
 
 permissions: {}
