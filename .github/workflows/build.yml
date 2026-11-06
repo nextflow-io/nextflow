@@ -292,8 +292,8 @@ jobs:
       - name: Tar integration tests
         if: always()
         run: |
-          tar -cvf integration-tests.tar.gz tests/checks
-          tar -cvf validation-tests.tar.gz validation
+          tar -cf integration-tests.tar.gz tests/checks
+          tar -cf validation-tests.tar.gz validation
 
       - name: Scan integration tests for leaks
         id: leak_scan
