@@ -93,7 +93,8 @@ public class ProcessToGroovyVisitorV2 {
                     closureX(node.exec),
                     constX(sgh.getSourceText(node.exec)),
                     constX(node.type),
-                    sgh.getVariableRefs(node.exec)
+                    sgh.getVariableRefs(node.exec),
+                    sgh.getFunctionSources(node.exec)
                 )
             ))
         )));

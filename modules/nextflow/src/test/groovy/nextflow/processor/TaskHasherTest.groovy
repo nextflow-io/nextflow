@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
@@ -62,6 +63,43 @@ class TaskHasherTest extends Specification {
         ]
         and: 'global vars should not affect task hash'
         uuid1 == uuid2
+    }
+
+    def 'should include called function sources in the task hash' () {
+
+        given:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+        }
+        and:
+        def computeHash = { BodyDef body ->
+            def task = Mock(TaskRun) {
+                getSource() >> 'hello world'
+                getBody() >> body
+                isContainerEnabled() >> false
+                getConfig() >> Mock(TaskConfig)
+                getProcessor() >> processor
+            }
+            def hasher = Spy(new TaskHasher(task))
+            hasher.getTaskGlobalVars() >> [:]
+            return hasher.compute()
+        }
+
+        when:
+        def noBody = computeHash(null)
+        def noFunctions = computeHash(new BodyDef({->}, 'hello world', 'exec', [], ''))
+        def foo1 = computeHash(new BodyDef({->}, 'hello world', 'exec', [], 'def foo() { 1 }'))
+        def foo2 = computeHash(new BodyDef({->}, 'hello world', 'exec', [], 'def foo() { 2 }'))
+        then:
+        noFunctions == noBody
+        foo1 != noFunctions
+        foo1 != foo2
     }
 
     def 'should include referenced bin files in the task hash' () {
