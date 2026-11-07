@@ -132,7 +132,7 @@ class TowerObserverTest extends Specification {
                 start: startTs,
                 complete: nowTs ])
         trace.executorName= 'batch'
-        trace.machineInfo = new CloudMachineInfo('m4.large', 'eu-west-1b', PriceModel.spot)
+        trace.machineInfo = new CloudMachineInfo('m4.large', 'eu-west-1b', PriceModel.spot, 'i-0abc123')
         trace.containerMeta = new ContainerMeta(requestId: '12345', sourceImage: 'ubuntu:latest', targetImage: 'wave.io/12345/ubuntu:latest')
 
         when:
@@ -150,6 +150,7 @@ class TowerObserverTest extends Specification {
         req.tasks[0].machineType == 'm4.large'
         req.tasks[0].cloudZone == 'eu-west-1b'
         req.tasks[0].priceModel == 'spot'
+        req.tasks[0].instanceId == 'i-0abc123'
         and:
         req.progress.running == 1
         req.progress.succeeded == 2
