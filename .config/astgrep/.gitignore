@@ -1,0 +1,3 @@
+# ast-grep build artifacts (rebuilt locally by build.sh)
+.grammar-build/
+groovy.dylib
