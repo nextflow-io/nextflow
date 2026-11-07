@@ -106,14 +106,22 @@ nxf_fs_fcp() {
 on_exit() {
     ## This is invoked via `trap on_exit EXIT` at the end of nxf_main, therefore
     ## $? here is the exit status of the very last command run by nxf_main, i.e.
-    ## nxf_unstage_controls (or {{after_script}}, if the task defines one).
+    ## nxf_unstage_controls.
     ## It's kept as a last-resort fallback ONLY: nxf_main_ret and nxf_unstage_ret
     ## below already capture the two "expected" failure points (the task command
     ## and the output unstaging step), so last_err only wins when the failure
-    ## happened somewhere else, e.g. in nxf_unstage_controls, in the after script,
-    ## or the trap fired directly because of `set -e`/`set -u` without either
-    ## variable being set.
+    ## happened somewhere else, e.g. in nxf_unstage_controls, or the trap fired
+    ## directly because of `set -e`/`set -u` without either variable being set.
     local last_err=$?
+    ## The 'afterScript' directive runs here rather than at the end of nxf_main so
+    ## that it is executed however the task terminated, including when nxf_main was
+    ## aborted early by `set -e`/`set -u` (a failing beforeScript, module load, conda
+    ## activation or input staging) and never reached its last statement. Fast failure
+    ## is disabled for it so a failing after script cannot prevent the exit status from
+    ## being published below; its own exit status is discarded and does not mask the
+    ## task result.
+    set +e
+    {{after_script}}
     ## Exit status precedence (first non-zero wins):
     ##   1) nxf_main_ret    - exit status of the user task script, set by
     ##                        `wait $pid || nxf_main_ret=$?` once nxf_launch completes.
@@ -182,8 +190,7 @@ nxf_unstage() {
     ## even if the task or the outputs unstaging above failed, so the logs
     ## needed to diagnose the failure are always copied back. Its own exit
     ## status is intentionally NOT captured into nxf_unstage_ret: it becomes
-    ## the generic `last_err` fallback in on_exit instead (see there), unless
-    ## an after script runs later, whose exit status then takes its place.
+    ## the generic `last_err` fallback in on_exit instead (see there).
     nxf_unstage_controls
 }
 
@@ -214,7 +221,6 @@ nxf_main() {
     pid=$!
     wait $pid || nxf_main_ret=$?
     {{unstage_cmd}}
-    {{after_script}}
 }
 
 $NXF_ENTRY
