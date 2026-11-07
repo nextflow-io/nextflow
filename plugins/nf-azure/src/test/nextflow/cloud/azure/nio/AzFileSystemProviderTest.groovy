@@ -118,7 +118,7 @@ class AzFileSystemProviderTest extends Specification {
         when:
         def fs = provider.newFileSystem(uri, env)
         then:
-        1 * provider.createBlobServiceWithKey(NAME, KEY) >> storage
+        1 * provider.createBlobServiceWithKey(NAME, KEY, 'https://xyz.blob.core.windows.net') >> storage
         fs.containerName == 'bucket-example'
         fs.provider() == provider
         provider.getFileSystem(uri) == fs
@@ -144,7 +144,7 @@ class AzFileSystemProviderTest extends Specification {
         when:
         def fs = provider.newFileSystem(uri, env)
         then:
-        1 * provider.createBlobServiceWithToken(NAME, TOKEN) >> storage
+        1 * provider.createBlobServiceWithToken(NAME, TOKEN, 'https://xyz.blob.core.windows.net') >> storage
         fs.containerName == 'bucket-example'
         fs.provider() == provider
         provider.getFileSystem(uri) == fs
@@ -171,7 +171,7 @@ class AzFileSystemProviderTest extends Specification {
         when:
         def fs= provider.newFileSystem0(CONTAINER, config)
         then:
-        1 * provider.createBlobServiceWithKey(NAME, KEY) >> storage
+        1 * provider.createBlobServiceWithKey(NAME, KEY, 'https://xyz.blob.core.windows.net') >> storage
         1 * provider.createFileSystem(_, CONTAINER, config) >> FS
         and:
         fs == FS
@@ -186,6 +186,52 @@ class AzFileSystemProviderTest extends Specification {
         expect:
         obj.toString() == 'AzFileSystemProvider'
         !"$obj".contains('s3cr3t-canary')
+    }
+
+    def 'should create a new file system with custom endpoint'() {
+
+        given:
+        def storage = GroovyMock(BlobServiceClient)
+        def provider = Spy(AzFileSystemProvider)
+        and:
+        def ENDPOINT = 'https://onelake.blob.fabric.microsoft.com'
+        def env = [AZURE_STORAGE_ACCOUNT_NAME: 'onelake', AZURE_STORAGE_ENDPOINT: ENDPOINT, AZURE_CLIENT_ID: 'id', AZURE_CLIENT_SECRET: 'secret', AZURE_TENANT_ID: 'tenant']
+
+        when:
+        def fs = provider.newFileSystem0('workspace', env)
+        then:
+        1 * provider.createBlobServiceWithServicePrincipal('onelake', 'id', 'secret', 'tenant', ENDPOINT) >> storage
+        fs.containerName == 'workspace'
+    }
+
+    def 'should reject account key and sas token for OneLake'() {
+
+        given:
+        def provider = Spy(AzFileSystemProvider)
+        def env = [AZURE_STORAGE_ACCOUNT_NAME: 'onelake', AZURE_STORAGE_ENDPOINT: 'https://onelake.blob.fabric.microsoft.com'] + CREDS
+
+        when:
+        provider.newFileSystem0('workspace', env)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('OneLake requires Entra authentication')
+        0 * provider.createBlobServiceWithKey(_, _, _)
+        0 * provider.createBlobServiceWithToken(_, _, _)
+
+        where:
+        CREDS << [ [AZURE_STORAGE_ACCOUNT_KEY: '1234'], [AZURE_STORAGE_SAS_TOKEN: '1234'] ]
+    }
+
+    def 'should detect OneLake endpoint'() {
+        expect:
+        AzFileSystemProvider.isOneLake(ENDPOINT) == EXPECTED
+
+        where:
+        ENDPOINT                                            | EXPECTED
+        null                                                | false
+        'https://xyz.blob.core.windows.net'                 | false
+        'https://onelake.blob.fabric.microsoft.com'         | true
+        'https://westus2-onelake.blob.fabric.microsoft.com' | true
     }
 
 }
