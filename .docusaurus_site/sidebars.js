@@ -327,7 +327,8 @@ module.exports = {
                         "reference/executor/tcs"
                     ]
                 },
-                "reference/env-vars"
+                "reference/env-vars",
+                "reference/osc-7501"
             ]
         },
         {

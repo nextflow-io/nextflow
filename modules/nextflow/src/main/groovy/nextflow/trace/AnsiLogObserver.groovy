@@ -22,9 +22,11 @@ import static org.fusesource.jansi.Ansi.*
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import jline.TerminalFactory
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.AbortSignalException
 import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.SysHelper
@@ -97,6 +99,8 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
     private long lastWidthReset
 
     private Boolean enableSummary = SysEnv.get('NXF_ANSI_SUMMARY') as Boolean
+
+    private TerminalActivityTracker activity
 
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
@@ -348,6 +352,7 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
             AnsiConsole.err.print(ansi().eraseLine().newline())
         // at the end update the value of printed lines
         printedLines = count
+        publishActivity(stats)
     }
 
     protected int printAndCountLines(String str) {
@@ -557,14 +562,40 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
         this.statsObserver = session.statsObserver
         this.startTimestamp = System.currentTimeMillis()
         AnsiConsole.systemInstall()
+        this.activity = TerminalActivityTracker.start(session)
         this.renderer = Threads.start('AnsiLogObserver', this.&render0)
     }
 
     @Override
     void onFlowComplete() {
+        activity?.beginShutdown()
         stopped = true
         endTimestamp = System.currentTimeMillis()
         renderer.join()
+        finishActivity()
+    }
+
+    @Override
+    void onFlowError(TaskEvent event) {
+        if( activity && session )
+            activity.onFlowError(userInterrupt(session))
+    }
+
+    @PackageScope
+    void finishActivity() {
+        if( activity && session )
+            activity.onRunComplete(session.success, userInterrupt(session))
+    }
+
+    @PackageScope
+    static boolean userInterrupt(Session session) {
+        return session.cancelled || session.error instanceof AbortSignalException
+    }
+
+    @PackageScope
+    void publishActivity(WorkflowStats stats) {
+        if( activity && stats )
+            activity.onStats(stats.pendingCount + stats.submittedCount + stats.runningCount)
     }
 
     /**
