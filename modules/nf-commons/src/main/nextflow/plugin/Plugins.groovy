@@ -43,6 +43,15 @@ class Plugins {
     }
 
     /**
+     * Set the directory holding the {@code plugins.lock} file, ie. the pipeline project directory.
+     *
+     * @param projectDir The pipeline project directory
+     */
+    static void setLockFileDir(Path projectDir) {
+        INSTANCE.setLockFileDir(projectDir)
+    }
+
+    /**
      * @param config
      */
     static void load(Map config) {
