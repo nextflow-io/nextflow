@@ -658,6 +658,7 @@ class AzBatchService implements Closeable {
     protected List<ResourceFile> resourceFileUrls(TaskRun task, String sas) {
         final cmdRun = (AzPath) task.workDir.resolve(TaskRun.CMD_RUN)
         final cmdScript = (AzPath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
+        final cmdInfile = (AzPath) task.workDir.resolve(TaskRun.CMD_INFILE)
 
         final resFiles = new ArrayList(10)
 
@@ -678,7 +679,7 @@ class AzBatchService implements Closeable {
 
         if( task.stdin ) {
             resFiles << new ResourceFile()
-                    .setHttpUrl(AzHelper.toHttpUrl(cmdScript, sas))
+                    .setHttpUrl(AzHelper.toHttpUrl(cmdInfile, sas))
                     .setFilePath(TaskRun.CMD_INFILE)
         }
 
