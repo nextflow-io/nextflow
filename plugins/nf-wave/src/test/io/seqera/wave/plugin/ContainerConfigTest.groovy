@@ -161,6 +161,33 @@ class ContainerConfigTest extends Specification {
         config1.fingerprint() == config2.fingerprint()
     }
 
+    def 'should compute task fingerprint ignoring operational fusion env' () {
+        given:
+        def plain = new ContainerConfig(entrypoint: ['/usr/bin/fusion'], env: ['FUSION_CONFIG_PROFILE=nextflow', 'FUSION_COMPACT_SYMLINKS=true'])
+        def snap = new ContainerConfig(entrypoint: ['/usr/bin/fusion'], env: [
+                'FUSION_CONFIG_PROFILE=nextflow',
+                'FUSION_COMPACT_SYMLINKS=true',
+                'FUSION_SHOW_GLOBAL_INFO=true',
+                'FUSION_SNAPSHOT_ENABLED=true',
+                'FUSION_SNAPSHOT_INCREMENTAL_INTERVAL=5m',
+                'FUSION_TRACER_ENABLED=true',
+                'FUSION_LOG_LEVEL=debug' ])
+        def symlinks = new ContainerConfig(entrypoint: ['/usr/bin/fusion'], env: ['FUSION_CONFIG_PROFILE=nextflow', 'FUSION_COMPACT_SYMLINKS=false'])
+        def noEnv = new ContainerConfig(entrypoint: ['/usr/bin/fusion'])
+        def onlySkipped = new ContainerConfig(entrypoint: ['/usr/bin/fusion'], env: ['FUSION_TRACER_ENABLED=true'])
+
+        expect:
+        // the full fingerprint still accounts for every env entry
+        plain.fingerprint() != snap.fingerprint()
+        // the task fingerprint ignores the operational ones
+        plain.taskHashKey() == snap.taskHashKey()
+        // env affecting what the task sees is still hashed
+        plain.taskHashKey() != symlinks.taskHashKey()
+        // no skipped env, same value as the full fingerprint
+        plain.taskHashKey() == plain.fingerprint()
+        onlySkipped.taskHashKey() == noEnv.fingerprint()
+    }
+
     def 'should validate empty' () {
         expect:
         new ContainerConfig().empty()
