@@ -18,6 +18,7 @@ package io.seqera.tower.plugin
 
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.platform.PlatformHelper
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -29,7 +30,10 @@ class TowerFactoryTest extends Specification {
 
     def 'should create a tower observer' () {
         given:
-        def factory = new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123'])
+        // stub the Platform default-workspace lookup so no live API call is made when
+        // no workspace is configured locally
+        def factory = Spy(new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123']))
+        factory.defaultWorkspaceId(_ as Map) >> null
 
         when:
         def session = Mock(Session) { getConfig() >> [tower: [enabled: true]] }
@@ -42,6 +46,65 @@ class TowerFactoryTest extends Specification {
         observer = factory.create(session)[0] as TowerObserver
         then:
         observer.@client.endpoint == 'http://foo.com/api'
+    }
+
+    def 'should use the Platform default workspace when none is configured locally' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [TOWER_ACCESS_TOKEN: 'xyz']))
+        def config = [tower: [enabled: true, accessToken: 'xyz']]
+        def session = Mock(Session) { getConfig() >> config }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+
+        then: 'the Platform default workspace is resolved and used'
+        1 * factory.defaultWorkspaceId(_ as Map) >> '300'
+        observer.getWorkspaceId() == '300'
+
+        and: 'the workspace is named in the log line announcing it'
+        1 * factory.workspaceLabel(_ as Map, '300') >> '300 [acme / ws-300]'
+
+        and: 'the resolved value is published into the session config'
+        config.tower.workspaceId == '300'
+
+        // this is what keeps Wave (registry credentials), the Fusion licence and the Seqera
+        // executor scoped to the same workspace the run is reported into
+        and: 'a consumer resolving the workspace afterwards observes the same value'
+        PlatformHelper.getWorkspaceId(config.tower as Map, [:]) == '300'
+        new TowerConfig(config.tower as Map, [:]).workspaceId == '300'
+    }
+
+    def 'should not publish anything when resolving to the personal workspace' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [TOWER_ACCESS_TOKEN: 'xyz']))
+        def config = [tower: [enabled: true, accessToken: 'xyz']]
+        def session = Mock(Session) { getConfig() >> config }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+
+        then:
+        1 * factory.defaultWorkspaceId(_ as Map) >> null
+        observer.getWorkspaceId() == null
+        and: 'no workspace key is invented'
+        !(config.tower as Map).containsKey('workspaceId')
+    }
+
+    def 'should not publish over a workspace the user configured' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_ACCESS_TOKEN: 'xyz']))
+        def config = [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']]
+        def session = Mock(Session) { getConfig() >> config }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+
+        then: 'the local setting is used and the Platform default is not queried'
+        0 * factory.defaultWorkspaceId(_ as Map)
+        observer.getWorkspaceId() == '200'
+
+        and: 'the config the user wrote is left exactly as it was'
+        (config.tower as Map).workspaceId == '200'
     }
 
     @Unroll
@@ -76,59 +139,29 @@ class TowerFactoryTest extends Specification {
         result == []
     }
 
-    def 'should create with workspace id'() {
-        //
-        // the workspace id is taken from the env
-        //
+    @Unroll
+    def 'should create with workspace id from #SOURCE'() {
+        given:
+        def factory = Spy(new TowerFactory(env: ENV))
+        def session = Mock(Session) { getConfig() >> [tower: CONFIG] }
+
         when:
-        def session = Mock(Session) { getConfig() >> [tower: [enabled: true, accessToken: 'xyz']] }
-        def factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
         def observer = (TowerObserver) factory.create(session)[0]
-        then:
-        observer.getWorkspaceId() == '100'
 
-        //
-        // the workspace id is taken from the config
-        //
-        when:
-        session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
-        factory = new TowerFactory(env: [:])
-        observer = (TowerObserver) factory.create(session)[0]
-        then:
-        observer.getWorkspaceId() == '200'
+        then: 'a local setting is available, so the Platform default is never queried'
+        0 * factory.defaultWorkspaceId(_ as Map)
+        observer.getWorkspaceId() == EXPECTED
 
-        //
-        // the workspace id is set both in the config and the env
-        // the config has the priority
-        //
-        when:
-        session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
-        factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
-        observer = (TowerObserver) factory.create(session)[0]
-        then:
-        observer.getWorkspaceId() == '200'
-
-        //
-        // when TOWER_WORKFLOW_ID is set is a tower launch
-        // then the workspace id is only taken from the env
-        //
-        when:
-        session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
-        factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'])
-        observer = (TowerObserver) factory.create(session)[0]
-        then:
-        observer.getWorkspaceId() == '100'
-
-        //
-        // when enabled is false but `TOWER_WORKFLOW_ID` is provided
-        // then the observer should be created
-        //
-        when:
-        session = Mock(Session) { getConfig() >> [tower: [enabled: false]]}
-        factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'])
-        observer = (TowerObserver) factory.create(session)[0]
-        then:
-        observer.getWorkspaceId() == '100'
+        where:
+        SOURCE                     | ENV                                                                                    | CONFIG                                                  | EXPECTED
+        'the env'                  | [TOWER_WORKSPACE_ID: '100']                                                            | [enabled: true, accessToken: 'xyz']                     | '100'
+        'the config'               | [:]                                                                                    | [enabled: true, workspaceId: '200', accessToken: 'xyz'] | '200'
+        // the config has priority over the env
+        'the config over the env'  | [TOWER_WORKSPACE_ID: '100']                                                            | [enabled: true, workspaceId: '200', accessToken: 'xyz'] | '200'
+        // a Platform-driven run is authoritative: the workspace comes from the env only
+        'a Platform-driven run'    | [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'] | [enabled: true, workspaceId: '200', accessToken: 'xyz'] | '100'
+        // the observer is created even when `enabled` is false, because TOWER_WORKFLOW_ID is set
+        'a disabled Platform run'  | [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'] | [enabled: false]                                        | '100'
     }
 
     @Unroll

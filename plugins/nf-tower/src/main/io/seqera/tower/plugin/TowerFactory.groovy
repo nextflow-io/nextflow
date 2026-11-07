@@ -25,9 +25,9 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.file.http.XAuthProvider
 import nextflow.file.http.XAuthRegistry
+import nextflow.platform.PlatformHelper
 import nextflow.trace.TraceObserverFactoryV2
 import nextflow.trace.TraceObserverV2
-import nextflow.util.Duration
 /**
  * Create and register the Tower observer instance
  *
@@ -39,13 +39,17 @@ class TowerFactory implements TraceObserverFactoryV2 {
 
     private Map<String,String> env
 
+    /** bounded-retry client for the pre-run Platform lookups; created on demand and reused */
+    private TowerClient lookupClient
+
     TowerFactory(){
         env = SysEnv.get()
     }
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        final config = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), env)
+        final opts = session.config.tower as Map ?: Collections.emptyMap()
+        final config = new TowerConfig(opts, env)
         if( !isEnabled(session, config, env) )
             return Collections.emptyList()
         // make sure the access token is available before the client is created, otherwise the
@@ -53,12 +57,79 @@ class TowerFactory implements TraceObserverFactoryV2 {
         // during session init and gets swallowed silently by the launcher
         checkAccessToken(config)
         final result = new ArrayList<TraceObserverV2>(1)
+        final client = client(session, env)
+        // resolve the workspace: a local setting wins, otherwise fall back to the
+        // user's default workspace configured in Seqera Platform
+        final local = PlatformHelper.getWorkspaceId(opts, env)
+        final workspaceId = PlatformHelper.getEffectiveWorkspaceId(opts, env, () -> defaultWorkspaceId(opts))
+        // when -- and only when -- the workspace came from the Platform account default,
+        // publish it back into the session config. Other subsystems that scope themselves
+        // to the workspace -- Wave (registry credentials), the Fusion licence, the Seqera
+        // executor -- read it via PlatformHelper.getWorkspaceId(session.config.tower, env)
+        // and would otherwise resolve to the personal workspace while the run is reported
+        // into the Platform default one. Anything the user set is left exactly as it is.
+        if( !local && workspaceId )
+            publishDefaultWorkspaceId(session, workspaceId, opts)
         // create the tower observer
-        result.add( new TowerObserver(session, client(session, env), config.workspaceId, env))
+        result.add( new TowerObserver(session, client, workspaceId, env))
         // create the logs checkpoint
         if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
         return result
+    }
+
+    /**
+     * Query the user's server-side default workspace from Seqera Platform.
+     *
+     * This runs during session initialization, before the pipeline script is even parsed,
+     * so it uses a dedicated client with a bounded retry budget and short timeouts: the
+     * lookup is a best-effort convenience that falls back to the personal workspace, and
+     * it must never be able to stall the start of a run for minutes when Platform is slow
+     * or unreachable. The shared client's retry policy is sized for the telemetry stream,
+     * which is a different trade-off.
+     *
+     * Extracted as a seam so it can be stubbed in tests without hitting the network.
+     */
+    protected String defaultWorkspaceId(Map opts) {
+        return lookupClient(opts).getDefaultWorkspaceId()
+    }
+
+    /**
+     * Name the workspace for the log line in {@link #publishDefaultWorkspaceId}. Shares the
+     * lookup client with {@link #defaultWorkspaceId}, so the {@code /user-info} response it
+     * already fetched is reused and only the workspace list is requested.
+     *
+     * Extracted as a seam so it can be stubbed in tests without hitting the network.
+     */
+    protected String workspaceLabel(Map opts, String workspaceId) {
+        return lookupClient(opts).workspaceLabel(workspaceId)
+    }
+
+    private TowerClient lookupClient(Map opts) {
+        if( lookupClient == null )
+            lookupClient = new TowerClient(TowerConfig.forLookup(opts, env))
+        return lookupClient
+    }
+
+    /**
+     * Store the workspace resolved from the Seqera Platform account default in the session
+     * config, so that every subsystem scoping itself to the workspace observes it.
+     *
+     * Only ever called when the user set no workspace of their own, so this never
+     * overwrites a configured value.
+     *
+     * Note this relies on {@code session.config} being a plain map: it is normalized from
+     * the parsed {@code ConfigObject} by {@code ConfigCmdAdapter.normalize0} and converted
+     * in the {@link Session} constructor, so an absent key really does read as null here.
+     */
+    protected void publishDefaultWorkspaceId(Session session, String workspaceId, Map opts) {
+        final config = session.config
+        if( config.tower == null )
+            config.tower = new HashMap(1)
+        (config.tower as Map).workspaceId = workspaceId
+        // tell the user why their run is landing in a workspace they did not configure,
+        // naming it so the numeric ID alone does not have to be looked up
+        log.info "Using default workspace configured in your Seqera Platform account: ${workspaceLabel(opts, workspaceId)}"
     }
 
     @Memoized
