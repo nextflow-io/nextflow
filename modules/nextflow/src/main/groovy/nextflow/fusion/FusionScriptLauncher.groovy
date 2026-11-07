@@ -25,6 +25,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
@@ -51,9 +52,12 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
         // remap input files to container mounted paths; a local one was accepted by a ForeignFileFilter and is linked where it is
+        final localInputs = new HashSet<Path>()
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
             if( entry.value.fileSystem != FileSystems.default )
                 bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
+            else
+                localInputs.add(entry.value)
         }
 
         // make it change to the task work dir
@@ -62,7 +66,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         if( bean.scratch==null )
             bean.scratch = false
 
-        return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
+        final launcher = new FusionScriptLauncher(bean, scheme, remoteWorkDir)
+        // the work dir is now a container path, so the copy strategy can't tell these inputs apart
+        ((SimpleFileCopyStrategy) launcher.copyStrategy).localInputs = localInputs
+        return launcher
     }
 
     FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir) {
