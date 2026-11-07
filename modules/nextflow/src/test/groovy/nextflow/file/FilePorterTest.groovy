@@ -20,6 +20,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.Semaphore
 
 import groovy.util.logging.Slf4j
@@ -27,6 +28,7 @@ import nextflow.Session
 import nextflow.exception.ProcessStageException
 import spock.lang.Ignore
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TestHelper
 /**
  *
@@ -255,6 +257,26 @@ class FilePorterTest extends Specification {
         stage1 != newStage1
         stage1.target.exists()
         !newStage1.target.exists()
+
+        cleanup:
+        STAGE?.deleteDir()
+    }
+
+    @Timeout(60)
+    def 'should give up when no stage path can be determined' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def porter = new FilePorter(session)
+        and:
+        def STAGE = Files.createTempDirectory('test')
+        // a filesystem root has an empty file name, so the stage target resolves to the
+        // stage directory itself: it always exists and never matches the source
+        def ROOT = Paths.get('/')
+
+        when:
+        porter.getCachePathFor(ROOT, STAGE)
+        then:
+        thrown(ProcessStageException)
 
         cleanup:
         STAGE?.deleteDir()
