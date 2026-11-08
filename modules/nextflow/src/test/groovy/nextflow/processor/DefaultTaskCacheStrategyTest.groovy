@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 
+import com.esotericsoftware.kryo.KryoException
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.trace.TraceRecord
@@ -145,6 +146,16 @@ class DefaultTaskCacheStrategyTest extends Specification {
         then: 'it is a warning, and the task re-executes'
         1 * resolver.entry(attempt(hash, 1)) >> entryIn(first)
         1 * resolver.resume(task, attempt(hash, 1), first, _) >> { throw new IOException('transient 500') }
+        1 * resolver.workDirFor(attempt(hash, 1)) >> first
+        1 * resolver.launch(task, attempt(hash, 1), next)
+        noExceptionThrown()
+
+        when: 'the entry cannot be read, e.g. it holds a value that is no longer supported'
+        next.deleteDir()
+        new DefaultTaskCacheStrategy().resolve(task, hash, true, resolver)
+        then: 'it is a warning, and the task re-executes'
+        1 * resolver.entry(attempt(hash, 1)) >> { throw new KryoException('No serializer is defined for type: java.lang.Object') }
+        0 * resolver.resume(*_)
         1 * resolver.workDirFor(attempt(hash, 1)) >> first
         1 * resolver.launch(task, attempt(hash, 1), next)
         noExceptionThrown()

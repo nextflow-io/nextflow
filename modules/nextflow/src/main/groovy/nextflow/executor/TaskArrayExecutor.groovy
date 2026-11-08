@@ -79,7 +79,7 @@ trait TaskArrayExecutor {
             return "bash ${taskDir}/${TaskRun.CMD_RUN}"
         }
         else if( isWorkDirDefaultFS() ) {
-            return "bash ${taskDir}/${TaskRun.CMD_RUN} 2>&1 > ${taskDir}/${TaskRun.CMD_LOG}"
+            return "bash ${taskDir}/${TaskRun.CMD_RUN} > ${taskDir}/${TaskRun.CMD_LOG} 2>&1"
         }
         else {
             throw new IllegalStateException("Executor ${getName()} does not support array jobs")
