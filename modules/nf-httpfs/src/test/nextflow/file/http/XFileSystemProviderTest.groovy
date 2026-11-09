@@ -253,7 +253,7 @@ class XFileSystemProviderTest extends Specification {
         }
         and:
         def fsp = new HttpFileSystemProvider()
-        def path = fsp.getPath(new URI("http://localhost:${server.localPort}/data.txt"))
+        def path = fsp.getPath(new URI('http', null, server.inetAddress.hostAddress, server.localPort, '/data.txt', null, null))
 
         when:
         def stream = fsp.newInputStream(path)
@@ -266,6 +266,7 @@ class XFileSystemProviderTest extends Specification {
         thrown(IOException)
 
         cleanup:
+        stream?.close()
         server.close()
     }
 
