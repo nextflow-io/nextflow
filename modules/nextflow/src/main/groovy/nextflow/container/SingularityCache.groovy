@@ -319,22 +319,7 @@ class SingularityCache {
      */
     @PackageScope
     LazyValue<Path> getLazyImagePath(String imageUrl) {
-        if( imageUrl in localImageNames ) {
-            log.trace "${appName} found local cache for image `$imageUrl`"
-            return localImageNames[imageUrl]
-        }
-
-        synchronized (localImageNames) {
-            def result = localImageNames[imageUrl]
-            if( result == null ) {
-                result = new LazyValue<Path>({ downloadContainerImage(imageUrl) })
-                localImageNames[imageUrl] = result
-            }
-            else {
-                log.trace "${appName} found local cache for image `$imageUrl` (2)"
-            }
-            return result
-        }
+        return localImageNames.computeIfAbsent(imageUrl, (String key) -> new LazyValue<Path>({ downloadContainerImage(imageUrl) }))
     }
 
     /**

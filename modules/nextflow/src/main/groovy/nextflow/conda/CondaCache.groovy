@@ -392,22 +392,7 @@ class CondaCache {
     LazyValue<Path> getLazyImagePath(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         final condaEnvPath = prefixPath.toString()
-        if( condaEnvPath in condaPrefixPaths ) {
-            log.trace "${binaryName} found local environment `$condaEnv`"
-            return condaPrefixPaths[condaEnvPath]
-        }
-
-        synchronized (condaPrefixPaths) {
-            def result = condaPrefixPaths[condaEnvPath]
-            if( result == null ) {
-                result = new LazyValue<Path>({ createLocalCondaEnv(condaEnv, prefixPath) })
-                condaPrefixPaths[condaEnvPath] = result
-            }
-            else {
-                log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"
-            }
-            return result
-        }
+        return condaPrefixPaths.computeIfAbsent(condaEnvPath, (String key) -> new LazyValue<Path>({ createLocalCondaEnv(condaEnv, prefixPath) }))
     }
 
     /**

@@ -342,31 +342,8 @@ class SpackCache {
      */
     @PackageScope
     LazyValue<Path> getLazyImagePath(String spackEnv, String arch) {
-
-        def spackEnvArch
-
-        spackEnvArch = arch ? "${spackEnv}_${arch}".toString() : spackEnv
-
-        if( spackEnv in spackPrefixPaths ) {
-            def msg = "spack found local environment `$spackEnv`"
-            if( arch ) msg += " and arch `$arch`"
-            log.trace "$msg"
-            return spackPrefixPaths[spackEnvArch]
-        }
-
-        synchronized (spackPrefixPaths) {
-            def result = spackPrefixPaths[spackEnvArch]
-            if( result == null ) {
-                result = new LazyValue<Path>({ createLocalSpackEnv(spackEnv, arch) })
-                spackPrefixPaths[spackEnvArch] = result
-            }
-            else {
-                def msg = "spack found local cache for environment `$spackEnv` (2)"
-                if( arch ) msg += " and arch `$arch`"
-                log.trace "$msg"
-            }
-            return result
-        }
+        final spackEnvArch = arch ? "${spackEnv}_${arch}".toString() : spackEnv
+        return spackPrefixPaths.computeIfAbsent(spackEnvArch, (String key) -> new LazyValue<Path>({ createLocalSpackEnv(spackEnv, arch) }))
     }
 
     /**
