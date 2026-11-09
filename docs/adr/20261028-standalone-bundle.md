@@ -1,8 +1,7 @@
 # Standalone bundle with a Java runtime and AOT cache
 
 - Authors: Ben Sherman, Phil Ewels
-- Status: draft
-- Deciders: TBD
+- Status: accpeted
 - Date: 2026-10-28
 - Tags: launcher, install, java, distribution, performance
 
