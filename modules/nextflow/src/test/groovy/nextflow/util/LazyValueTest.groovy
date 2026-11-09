@@ -93,43 +93,41 @@ class LazyValueTest extends Specification {
         count.get() == 1
     }
 
-    def 'should recompute after an interrupted computation and restore the interrupt' () {
+    def 'should cache an interrupted exception thrown by the computation' () {
         given:
+        // e.g. a FileMutex lock timeout, which is not a real interrupt
         def count = new AtomicInteger()
         def value = new LazyValue<String>({
-            if( count.incrementAndGet() == 1 )
-                throw new InterruptedException('lazy interrupt')
-            return 'ok'
+            count.incrementAndGet()
+            throw new InterruptedException('lock timeout')
         })
 
         when:
-        value.get()
-        then:
-        def e = thrown(IllegalStateException)
-        e.cause instanceof InterruptedException
-        Thread.interrupted()
+        def errors = (1..3).collect {
+            try { value.get(); return null }
+            catch( IllegalStateException e ) { return e }
+        }
 
-        and:
-        value.get() == 'ok'
-        value.get() == 'ok'
-        count.get() == 2
+        then:
+        errors.every { it.cause instanceof InterruptedException }
+        !Thread.currentThread().isInterrupted()
+        count.get() == 1
     }
 
-    def 'should retry in a reader waiting for an interrupted computation' () {
+    def 'should fail a waiting reader that is interrupted without affecting the computation' () {
         given:
         def count = new AtomicInteger()
         def computing = new CountDownLatch(1)
-        def waiting = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
         def value = new LazyValue<String>({
-            if( count.incrementAndGet() == 1 ) {
-                computing.countDown()
-                // interrupted, e.g. while a conda build runs
-                new CountDownLatch(1).await()
-            }
+            count.incrementAndGet()
+            computing.countDown()
+            release.await()
             return 'ok'
         })
         def outcome = new AtomicReference<Object>()
-        def first = new Thread({
+        def readers = Executors.newSingleThreadExecutor()
+        def waiter = new Thread({
             try {
                 outcome.set(value.get())
             }
@@ -137,26 +135,23 @@ class LazyValueTest extends Specification {
                 outcome.set([e.cause, Thread.currentThread().isInterrupted()])
             }
         } as Runnable)
-        def readers = Executors.newSingleThreadExecutor()
 
         when:
-        first.start()
+        def first = readers.submit(callable { value.get() })
         computing.await()
-        def second = readers.submit(callable {
-            waiting.countDown()
-            return value.get()
-        })
-        waiting.await()
-        // let the second reader block on the first computation
+        waiter.start()
+        // let the waiter block on the computation
         Thread.sleep(100)
-        first.interrupt()
-        first.join(10_000)
+        waiter.interrupt()
+        waiter.join(10_000)
+        release.countDown()
 
         then:
         (outcome.get() as List).first() instanceof InterruptedException
         (outcome.get() as List).last() == true
-        second.get(10, TimeUnit.SECONDS) == 'ok'
-        count.get() == 2
+        first.get(10, TimeUnit.SECONDS) == 'ok'
+        value.get() == 'ok'
+        count.get() == 1
 
         cleanup:
         readers.shutdownNow()

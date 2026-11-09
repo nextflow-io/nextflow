@@ -23,72 +23,36 @@ import java.util.concurrent.FutureTask
 import groovy.transform.CompileStatic
 /**
  * A value computed once, in the thread of its first reader. Concurrent readers wait
- * for it, and every reader gets the error of a failed computation. A computation
- * interrupted with an {@link InterruptedException} is not cached: the next reader
- * computes the value again.
+ * for it, and every reader gets the error of a failed computation.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
 class LazyValue<T> {
 
-    private final Callable<T> initializer
-
-    private volatile Computation<T> computation
+    private final FutureTask<T> task
 
     LazyValue(Callable<T> initializer) {
-        this.initializer = initializer
-        this.computation = new Computation<T>(initializer)
+        this.task = new FutureTask<T>(initializer)
     }
 
     /**
      * @return the value, computing it on the first call
-     * @throws IllegalStateException wrapping the error of the computation
+     * @throws IllegalStateException wrapping the error of the computation, or the
+     *      {@link InterruptedException} of a reader interrupted while waiting for it
      */
     T get() {
-        while( true ) {
-            final current = computation
-            // a no-op once the computation has started
-            current.task.run()
-            try {
-                return current.task.get()
-            }
-            catch( ExecutionException e ) {
-                if( e.cause !instanceof InterruptedException )
-                    throw new IllegalStateException(e.cause)
-                synchronized (this) {
-                    if( computation.is(current) )
-                        computation = new Computation<T>(initializer)
-                }
-                // the interrupted reader fails, the readers waiting for it retry
-                if( current.runner.is(Thread.currentThread()) ) {
-                    Thread.currentThread().interrupt()
-                    throw new IllegalStateException(e.cause)
-                }
-            }
+        // a no-op once the computation has started
+        task.run()
+        try {
+            return task.get()
         }
-    }
-
-    /**
-     * One attempt at the computation, which records the reader that runs it
-     */
-    @CompileStatic
-    private static class Computation<T> implements Callable<T> {
-
-        private final Callable<T> initializer
-
-        final FutureTask<T> task = new FutureTask<T>(this)
-
-        volatile Thread runner
-
-        Computation(Callable<T> initializer) {
-            this.initializer = initializer
+        catch( ExecutionException e ) {
+            throw new IllegalStateException(e.cause)
         }
-
-        @Override
-        T call() {
-            runner = Thread.currentThread()
-            return initializer.call()
+        catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
+            throw new IllegalStateException(e)
         }
     }
 }

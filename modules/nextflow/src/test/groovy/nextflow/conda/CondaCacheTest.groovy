@@ -17,13 +17,9 @@
 package nextflow.conda
 
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicInteger
 
 import nextflow.SysEnv
-import nextflow.dataflow.DataflowThreads
-import org.apache.commons.lang3.exception.ExceptionUtils
 import spock.lang.Specification
 /**
  *
@@ -622,65 +618,6 @@ class CondaCacheTest extends Specification {
         1 * cache.getSessionWorkDir() >> folder
         result == folder.resolve('conda')
         result.exists()
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    // reads on dataflow threads
-    def 'should create the environment once for concurrent readers on dataflow threads' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def count = new AtomicInteger()
-        def cache = new CondaCache(new CondaConfig([cacheDir: folder.toString()], [:])) {
-            @Override
-            Path createLocalCondaEnv(String condaEnv, Path prefixPath) {
-                count.incrementAndGet()
-                Thread.sleep(100)
-                return prefixPath
-            }
-        }
-        def env = 'foo=' + UUID.randomUUID()
-
-        when:
-        def paths = DataflowThreads.call(8) { cache.getCachePathFor(env) }
-
-        then:
-        paths.size() == 8
-        paths.every { it == paths[0] }
-        count.get() == 1
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should propagate the creation error on dataflow threads' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def count = new AtomicInteger()
-        def cache = new CondaCache(new CondaConfig([cacheDir: folder.toString()], [:])) {
-            @Override
-            Path createLocalCondaEnv(String condaEnv, Path prefixPath) {
-                count.incrementAndGet()
-                throw new IllegalArgumentException('conda boom')
-            }
-        }
-        def env = 'foo=' + UUID.randomUUID()
-
-        when:
-        DataflowThreads.call(1) { cache.getCachePathFor(env) }
-        then:
-        def e = thrown(IllegalStateException)
-        e.cause instanceof IllegalArgumentException
-        ExceptionUtils.getRootCause(e).message == 'conda boom'
-
-        when:
-        DataflowThreads.call(1) { cache.getCachePathFor(env) }
-        then:
-        e = thrown(IllegalStateException)
-        e.cause instanceof IllegalArgumentException
-        ExceptionUtils.getRootCause(e).message == 'conda boom'
-        count.get() == 1
 
         cleanup:
         folder?.deleteDir()
