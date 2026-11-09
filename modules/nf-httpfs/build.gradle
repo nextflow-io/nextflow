@@ -43,7 +43,7 @@ dependencies {
 
 
 test {
-    // fail fast when an external FTP server is unreachable (JDK default is 300 s)
+    // fail fast when an external FTP/HTTP host is unreachable (JDK default is 300 s)
     systemProperty 'sun.net.client.defaultConnectTimeout', '5000'
     systemProperty 'sun.net.client.defaultReadTimeout', '5000'
 }
