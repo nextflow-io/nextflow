@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 
 /**
  * Implements a {@link FilterInputStream} that checks the expected length of bytes have been
- * read when closing the stream or throws an error otherwise
+ * read when reaching the end of the stream or throws an error otherwise
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -29,6 +29,7 @@ class FixedInputStream extends FilterInputStream {
 
     private final long length
     private long bytesRead
+    private long markedBytesRead
 
     FixedInputStream(InputStream inputStream, long len) {
         super(inputStream)
@@ -40,6 +41,8 @@ class FixedInputStream extends FilterInputStream {
         final result = super.read()
         if( result!=-1 )
             bytesRead++
+        else
+            checkLength()
         return result
     }
 
@@ -48,6 +51,8 @@ class FixedInputStream extends FilterInputStream {
         final result = super.read(b, off, len)
         if( result!=-1 )
             bytesRead += result
+        else
+            checkLength()
         return result
     }
 
@@ -64,9 +69,19 @@ class FixedInputStream extends FilterInputStream {
     }
 
     @Override
-    void close() throws IOException {
+    void mark(int readlimit) {
+        super.mark(readlimit)
+        markedBytesRead = bytesRead
+    }
+
+    @Override
+    void reset() throws IOException {
+        super.reset()
+        bytesRead = markedBytesRead
+    }
+
+    private void checkLength() throws IOException {
         if( bytesRead != length )
             throw new IOException("Read data length does not match expected size - bytes read: ${bytesRead}; expected: ${length}")
-        super.close()
     }
 }
