@@ -123,22 +123,60 @@ The possible reductions, which also apply to the jar of the other distributions:
 
 Beyond these, each dependency would need to be replaced, which would also shrink the AOT cache.
 
-### Static compilation of core classes (follow-up)
+### Trimming startup latency (follow-up)
 
-Most core classes are dynamic Groovy: in the `nextflow` module, 658 of 794 classes (excluding closures) contain dynamic call sites. Groovy links each one at runtime through its own `invokedynamic` bootstrap, which the AOT cache does not archive (it only covers JDK lambdas and string concatenation), so every launch relinks them and generates the classes behind them.
+The AOT cache removes most of the class loading and linking, but a short run still spends most of its time starting up. Here, startup is the time to the first task: from launching `nextflow` to the first task being submitted. Everything after it (the tasks, publishing, shutdown) depends on the pipeline, not on startup.
 
-Converting the classes that link the most call sites in a hello run (~35 classes, e.g. `TaskProcessor`, `TaskRun`, `ProcessConfig`, the script params, `DAG`, `HistoryFile`) to `@CompileStatic` gave, with the AOT cache:
+Breakdown on master with the linux-x64 bundle (16 CPUs, median of 9 runs, from `-Xlog:startuptime`, `-Xlog:gc` and the log timestamps). hello is a typed process that runs `echo`; train is the AOT training pipeline (`bundle/training`, 18 tasks):
 
-| | dynamic | `@CompileStatic` |
+| phase | hello | train |
+|---|---:|---:|
+| bash launcher | 27 ms | 27 ms |
+| JVM creation (map the AOT cache, preload ~6,800 classes) | 97 ms | 94 ms |
+| `main` to the first log line: Groovy runtime init, `Launcher` (creates all 25 commands), CLI parsing, logging | 299 ms | 284 ms |
+| plugin manager | 55 ms | 54 ms |
+| config load and parse, secrets | 24 ms | 174 ms |
+| `Session` construction, history, cache | 97 ms | 43 ms |
+| `Session` init: work dir, executors, observers | 55 ms | 57 ms |
+| script parse and compile | 110 ms | 152 ms |
+| script run to ignite: process and workflow setup | 80 ms | 193 ms |
+| first task: create, hash, build wrapper, submit | 60 ms | 70 ms |
+| **time to first task** | **931 ms** (of 1,081 ms) | **1,155 ms** (of 1,458 ms) |
+| of which GC pauses | 52 ms | 112 ms |
+
+The phases don't add up to the total because each is a median. The main thread runs strictly in series, so every phase is on the critical path while the other cores sit idle.
+
+A sampling profile of hello (async-profiler, main thread, with the `@CompileStatic` change below) shows that most of this time is the Groovy runtime rather than Nextflow logic: 379 of the 653 ms the main thread is running. That breaks down into:
+
+- metaclass creation, ~220 ms, about half of it `java.beans.Introspector`;
+- linking `invokedynamic` call sites, ~87 ms;
+- `GroovySystem` init, ~53 ms;
+- scanning the JDK module image for default imports, ~50 ms, done twice: by Groovy and by nf-lang.
+
+The AOT cache covers none of these. It doesn't archive classes generated at runtime (the script classes and Groovy's call-site classes), and it doesn't archive classes in an old class-file format (kryo 2.x, jcommander 1.35, Groovy's bundled ASM: ~270 classes). Training it on more paths would not help.
+
+Options in the code (JVM tuning is out of scope here), measured as full-run wall time on hello / train unless marked as estimates:
+
+| option | saves (hello / train) | effort / risk |
 |---|---|---|
-| hello | 1,127-1,158 ms | 1,024-1,041 ms (~10% faster) |
-| `nextflow info` | 454-457 ms | 437-446 ms (within noise) |
-| call sites linked (hello) | 2,548 | 1,235 |
-| hidden classes generated (hello) | 634 | 297 |
+| `@CompileStatic` on the ~30 core classes that link the most call sites (`TaskProcessor`, `TaskRun`, `ProcessConfig`, `DAG`, `HistoryFile`, ...) | -100 to -110 / -115 ms | medium; see below |
+| Create only the requested command in `Launcher`, instead of all 25 (also helps `info`, `lint`, ...) | est. -50 to -60 ms | medium; `help` needs all of them |
+| Avoid metaclass creation in the startup classes (Java, or Groovy's `@POJO`) | est. -60 to -120 ms | large |
+| Parse the script on another thread as soon as its path is known, and warm up the default imports, LevelDB and Kryo in the background | est. -40 to -70 / -80 to -130 ms | medium; class init order, thread safety of static caches |
+| A faster parser (see "Trimming the jar"): ANTLR prediction is 28 / 84 ms of script parsing, and the train config takes another ~140 ms | up to -28 / -100 ms | large |
+| Scan the default imports once, or precompute them at build time; make `Launcher.SPLASH` lazy | est. -10 to -50 ms | small |
+| Skip work that only feeds debug logs (`CmdInfo.status`, including a `getLocalHost` DNS lookup; `getPathFsType`, which runs `stat`) and the plugin scan of `ConfigValidator` when no plugins are loaded | est. -20 to -30 ms | small |
+| Fewer forks in the bash launcher (`tput`, `realpath`, `uname`, ...) before `exec java` | est. -10 to -15 ms | small |
+| Upgrade the libraries with old class files, so that the AOT cache can archive them | est. -5 to -20 ms | medium |
 
-- Size barely changes (the jar and the AOT cache within 1%): core classes are ~10 MB of the jar and ~18% of the classes loaded at startup, so neither static compilation nor Java would shrink the bundle much. The Groovy runtime stays in any case, for scripts and config.
-- Startup improves, and more is possible: almost all remaining call sites come from statically compiled code, where Groovy still emits dynamic calls for `as` coercions and implicit casts (to `String`, `boolean`, `Map`). Removing all of them would save an estimated ~200 ms on hello. Java avoids them by construction.
-- The conversion is not mechanical. `@CompileStatic` changes behaviour silently: property reads on map-like config classes bypass their getters (e.g. `config.cacheable` on `ProcessConfig`), overload resolution and `in` checks differ, and two Groovy compiler bugs (`clone()` on an interface, varargs wrapping) produced broken code. Unit tests caught most of these, but a wider conversion would need a review of the generated bytecode as well.
+Static compilation of core classes:
+
+- Groovy links each dynamic call site at runtime through its own `invokedynamic` bootstrap, which the AOT cache does not archive (it only covers JDK lambdas and string concatenation). `@CompileStatic` on the ~30 classes halves the call sites linked in a hello run (2,236 to 1,117) and the hidden classes generated (612 to 316).
+- Removing the dynamic casts that statically compiled code still emits (`as` coercions, implicit casts to `String`, `boolean`, `Map`) cut the call sites linked again, to 460, but saved only another 25-30 ms (hello) and 40-50 ms (train), for a 100-file diff that makes the code less idiomatic. Most of the remaining Groovy cost is metaclass creation, which static compilation does not remove.
+- Size barely changes (the jar and the AOT cache within 1%), so neither static compilation nor Java would shrink the bundle much. The Groovy runtime stays in any case, for scripts and config.
+- The conversion is not mechanical. `@CompileStatic` changes behaviour silently: property reads on map-like config classes bypass their getters (e.g. `config.cacheable` on `ProcessConfig`), overload resolution and `in` checks differ, and Groovy compiler bugs produced broken code. Unit tests caught most of these, but a wider conversion would need a review of the generated bytecode as well. Legacy code paths (e.g. DSL1 processes and `OperatorImpl`) don't run with static typing, so they can stay dynamic.
+
+These numbers were measured with typed pipelines, on Groovy 5, on a host shared with other jobs, so they don't compare directly with the Results above. Use the shares and the differences between options.
 
 ### Removing the `-dist` release
 
