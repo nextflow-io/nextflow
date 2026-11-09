@@ -356,6 +356,29 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         return ['bash','-o','pipefail','-c', cmd.toString()]
     }
 
+    /**
+     * Get the command to launch a job array, i.e. the command run by each array
+     * element to dispatch to its child task (see {@link #getArrayLaunchCommand(String)}
+     * for the child task launch command).
+     *
+     * Unlike {@link #getLaunchCommand(String)} it does not upload the .command.log
+     * file, because the array work directory is shared by all array elements and
+     * each of them saves its own log file. The wrapper is downloaded into a temp
+     * file so that it does not require a writable container working directory.
+     *
+     * @param s3WorkDir The job array work directory
+     * @return The job array launch command
+     */
+    List<String> getArrayJobLaunchCommand(String s3WorkDir) {
+        final opts = getAwsOptions()
+        final download = opts.s5cmdPath
+            ? "${opts.s5cmdPath} cat ${s3WorkDir}/${TaskRun.CMD_RUN} > \"\$f\""
+            : "${opts.getAwsCli()} s3 cp --only-show-errors${opts.debug ? ' --debug' : ''}${opts.requesterPays ? ' --request-payer requester' : ''} ${s3WorkDir}/${TaskRun.CMD_RUN} \"\$f\""
+        // the TERM trap only covers the download, the exec'd wrapper handles signals afterwards
+        final cmd = "trap 'exit 143' TERM; f=\$(mktemp) && ${download} && exec bash \"\$f\""
+        return ['bash','-o','pipefail','-c', cmd.toString()]
+    }
+
     static String s3Cmd(String workDir, AwsOptions opts) {
         final cli = opts.getAwsCli()
         final debug = opts.debug ? ' --debug' : ''

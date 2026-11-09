@@ -74,7 +74,6 @@ if [[ ! $JAVA_VER =~ $version_check ]]; then
 fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m"
 [[ "${NXF_OPTS:-}" =~ -XX:\+Use[A-Za-z0-9]+GC ]] || JVM_ARGS+=" -XX:+UseSerialGC"
-JVM_ARGS+=" --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
 [[ "$JAVA_VER" =~ ^(24|25|26) ]]&& JVM_ARGS+=" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow"
 [[ $NXF_ENABLE_VIRTUAL_THREADS == 'true' ]] && [[ "$JAVA_VER" =~ ^(19|20) ]] && JVM_ARGS+=" --enable-preview"
 [[ "$JAVA_VER" =~ ^(21) ]] && [[ ! "$NXF_ENABLE_VIRTUAL_THREADS" ]] && NXF_ENABLE_VIRTUAL_THREADS=true

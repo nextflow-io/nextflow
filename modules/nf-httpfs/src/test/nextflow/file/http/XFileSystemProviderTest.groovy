@@ -230,6 +230,35 @@ class XFileSystemProviderTest extends Specification {
         e.message.startsWith('Too many redirects')
     }
 
+    def 'should fail when http response is shorter than content length' () {
+        given:
+        def server = new ServerSocket(0, 0, InetAddress.getLoopbackAddress())
+        Thread.startDaemon {
+            server.accept().withCloseable { socket ->
+                def reader = new BufferedReader(new InputStreamReader(socket.inputStream))
+                while( reader.readLine() ) {}
+                socket.outputStream << 'HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nHello'
+            }
+        }
+        and:
+        def fsp = new HttpFileSystemProvider()
+        def path = fsp.getPath(new URI('http', null, server.inetAddress.hostAddress, server.localPort, '/data.txt', null, null))
+
+        when:
+        def stream = fsp.newInputStream(path)
+        then:
+        stream instanceof FixedInputStream
+
+        when:
+        stream.text
+        then:
+        thrown(IOException)
+
+        cleanup:
+        stream?.close()
+        server.close()
+    }
+
     def 'should normalize location' () {
         given:
         def provider = new HttpFileSystemProvider()

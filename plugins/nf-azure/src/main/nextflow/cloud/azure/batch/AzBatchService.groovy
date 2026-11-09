@@ -1060,7 +1060,7 @@ class AzBatchService implements Closeable {
                     final String accountName = config.storage().accountName
                     final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
                     final accountKey = config.storage().accountKey
-                    final shareConfig = new AzureFileShareConfiguration( accountName, endpoint, accountKey, it.key )
+                    final shareConfig = new AzureFileShareConfiguration( accountName, accountKey, endpoint, it.key )
                             .setMountOptions(it.value.mountOptions)
 
                     mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(shareConfig)

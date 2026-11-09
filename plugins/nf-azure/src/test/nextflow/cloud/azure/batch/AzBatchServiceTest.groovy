@@ -42,6 +42,7 @@ import com.azure.core.http.HttpResponse
 import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
+import groovy.json.JsonSlurper
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -1054,6 +1055,44 @@ class AzBatchServiceTest extends Specification {
         then: 'exception is not caught'
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
+    }
+
+    def 'should mount file shares with the account key and file url in the right fields' () {
+        given:
+        def CONFIG = new AzConfig([storage: [accountName: 'mystorage', accountKey: 'my-key', fileShares: [myshare: [mountOptions: '-o vers=3.0']]]])
+        def service = Spy(new AzBatchService(createExecutor(CONFIG)))
+        def spec = new AzVmPoolSpec(poolId: 'my-pool', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        and: 'capture the pool create request sent to Azure Batch'
+        String requestBody = null
+        def httpClient = { HttpRequest request ->
+            requestBody = request.bodyAsBinaryData.toString()
+            Mono.just(new HttpResponse(request) {
+                int getStatusCode() { 201 }
+                String getHeaderValue(String name) { null }
+                HttpHeaders getHeaders() { new HttpHeaders() }
+                Flux<ByteBuffer> getBody() { Flux.empty() }
+                Mono<byte[]> getBodyAsByteArray() { Mono.empty() }
+                Mono<String> getBodyAsString() { Mono.empty() }
+                Mono<String> getBodyAsString(Charset charset) { Mono.empty() }
+            } as HttpResponse)
+        } as HttpClient
+        service.getClient() >> new BatchClientBuilder()
+            .endpoint('https://acct.westeurope.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('acct', Base64.encoder.encodeToString('key'.bytes)))
+            .httpClient(httpClient)
+            .buildClient()
+        service.poolVmConfig(_) >> null
+
+        when:
+        service.createPool(spec)
+        def share = new JsonSlurper().parseText(requestBody).mountConfiguration[0].azureFileShareConfiguration
+
+        then:
+        share.accountName == 'mystorage'
+        share.accountKey == 'my-key'
+        share.azureFileUrl == 'https://mystorage.file.core.windows.net/myshare'
+        share.relativeMountPath == 'myshare'
+        share.mountOptions == '-o vers=3.0'
     }
 
     private static HttpClient stubHttpClient(int statusCode, String errorCode) {
