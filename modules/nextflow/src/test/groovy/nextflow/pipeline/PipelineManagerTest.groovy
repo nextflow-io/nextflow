@@ -23,6 +23,7 @@ import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -359,5 +360,84 @@ class PipelineManagerTest extends Specification {
         e.message.contains("Invalid workflow path '../../evil.nf'")
         0 * fetcher._
         !Files.exists(manager().pipelineDir('nf-core/rnaseq'))
+    }
+    def 'should look up the registry only for scope/name' () {
+        when:
+        def result = PipelineManager.lookupRelease(client, NAME, null)
+
+        then:
+        result == null
+        0 * client._
+
+        where:
+        NAME << ['hello', 'https://github.com/nf-core/rnaseq', 'nf-core/rnaseq/main.nf']
+    }
+
+    def 'should resolve a registry release' () {
+        given:
+        def latest = new PipelineRelease().version('3.14.0').gitRevision('3.14.0').commitId('abc123')
+        def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq').workflowPath('main.nf').latest(latest)
+
+        when:
+        def result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', null)
+
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
+        0 * client.getPipelineRelease(_, _)
+        result.name == 'nf-core/rnaseq'
+        result.version == '3.14.0'
+        result.repositoryUrl == 'https://github.com/nf-core/rnaseq'
+        result.commitId == 'abc123'
+        result.workflowPath == 'main.nf'
+
+        when:
+        result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', '3.13.0')
+
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
+        1 * client.getPipelineRelease('nf-core/rnaseq', '3.13.0') >> new PipelineRelease().version('3.13.0').commitId('def456')
+        result.commitId == 'def456'
+
+        when: 'the revision is the latest release'
+        result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', '3.14.0')
+
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
+        0 * client.getPipelineRelease(_, _)
+        result.commitId == 'abc123'
+    }
+
+    def 'should fall back to Git when the registry cannot resolve the release' () {
+        given:
+        def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq')
+            .latest(new PipelineRelease().version('3.14.0').commitId('abc123').status(STATUS))
+            .revoked(REVOKED)
+        client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline }
+
+        expect:
+        PipelineManager.lookupRelease(client, 'nf-core/rnaseq', null) == null
+
+        where:
+        PIPELINE_ERROR                                         | STATUS                          | REVOKED
+        new RegistryException('Not found', 404)                | null                            | false
+        new RegistryException('Revoked', 410)                  | null                            | false
+        new RegistryException('Unable', new IOException('x'))  | null                            | false
+        null                                                   | PipelineReleaseStatus.REVOKED   | false
+        null                                                   | null                            | true
+    }
+
+    def 'should use the registry repository for a revision that is not a release' () {
+        given:
+        client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl('https://github.com/someone/hello')
+            .latest(new PipelineRelease().version('1.0.0').commitId('abc123'))
+        client.getPipelineRelease('acme/hello', 'dev') >> { throw new RegistryException('Not found', 404) }
+
+        when:
+        def result = PipelineManager.lookupRelease(client, 'acme/hello', 'dev')
+
+        then:
+        result.repositoryUrl == 'https://github.com/someone/hello'
+        result.revision == 'dev'
+        result.version == null
     }
 }

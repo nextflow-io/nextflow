@@ -76,9 +76,9 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 
 **Acceptance scenarios**
 
-1. **Given** `nf-core/rnaseq` is in the registry, **when** the user runs `nextflow run nf-core/rnaseq`, **then** Nextflow runs the latest published release at its `commitId`, and the launch line shows `registry: <version> - revision: <commit>`.
+1. **Given** `nf-core/rnaseq` is in the registry, **when** the user runs `nextflow run nf-core/rnaseq`, **then** Nextflow runs the latest published release at its `commitId`, and logs `Using registry release nf-core/rnaseq@<version> (commit <commit>)` before the launch line.
 2. **Given** `-r 3.14.0` and that release exists, **then** Nextflow runs it at its `commitId`.
-3. **Given** `-r dev` (not a registry version), **then** Nextflow warns that `dev` is not a release in the registry, and runs the Git revision `dev`, as today.
+3. **Given** `-r dev` (not a registry version), **then** Nextflow warns that `dev` is not a release in the registry, and runs the Git revision `dev` of the pipeline's `repositoryUrl`. For nf-core this is the same as today.
 4. **Given** the release is revoked, **then** Nextflow warns and runs from Git, as today.
 5. **Given** the name is not in the registry, **then** Nextflow runs from Git, as today, with no warning.
 6. **Given** the registry is down or times out, **then** Nextflow warns and runs from Git, as today.

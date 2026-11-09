@@ -148,7 +148,7 @@ A single word (`hello`), a URL (`https://github.com/nf-core/rnaseq`) and `-hub g
 |---|---|
 | Release found | Run it from the Git cache, at the release's `repositoryUrl` and `commitId` |
 | Name not found (`404`) | Run from Git, as today. Logged at debug level only |
-| `-r` is not a registry version | Warn, and run that Git revision, as today |
+| `-r` is not a registry version | Warn, and run that Git revision of the release's `repositoryUrl` |
 | Release revoked | Warn, and run from Git, as today |
 | Registry down, timeout or `5xx` | Warn, and run from Git, as today |
 
@@ -166,7 +166,7 @@ The release runs at its pinned `commitId`, not at its tag, because a tag can be 
 
 **Registry config.** `registry.url` and `registry.auth` are read as for the `pipeline` commands: `~/.nextflow/config`, `nextflow.config` in the launch folder, and `-c` files. The pipeline's own config can't be used, because it is not downloaded yet.
 
-**Output.** The launch line names the registry release: `Launching 'nf-core/rnaseq' [<run name>] - registry: 3.14.0 - revision: 1a2b3c4d5e`.
+**Output.** Before the launch line, Nextflow logs `Using registry release nf-core/rnaseq@3.14.0 (commit 1a2b3c4d5e)`. The launch line does not change: it shows the Git repository and commit, as for any Git run.
 
 ## Future work
 

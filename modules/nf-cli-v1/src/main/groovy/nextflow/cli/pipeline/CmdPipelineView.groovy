@@ -72,6 +72,7 @@ class CmdPipelineView extends CmdBase {
 
         final url = pipelineUrl(registryConfig.url, name, release.version)
         final params = schemaParams(release.schema)
+        final usage = "nextflow run ${name} -r ${release.version}".toString()
 
         if( output == 'json' ) {
             final info = [
@@ -83,7 +84,8 @@ class CmdPipelineView extends CmdBase {
                 url          : url,
                 description  : pipeline.metadata?.description,
                 keywords     : pipeline.metadata?.keywords,
-                params       : params
+                params       : params,
+                usage        : usage
             ]
             println JsonOutput.prettyPrint(JsonOutput.toJson(info))
             return
@@ -108,6 +110,9 @@ class CmdPipelineView extends CmdBase {
                     println "      ${p.description}"
             }
         }
+        println ""
+        println "Usage:"
+        println "  ${usage}"
     }
 
     /** Lists params from `$defs`/`definitions` groups and top-level `properties`; types may be missing. */

@@ -24,9 +24,11 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.module.spi.RemoteModuleResolver
@@ -205,5 +207,68 @@ class PipelineManager {
             }
             throw e
         }
+    }
+
+    /**
+     * Release to run for {@code nextflow run scope/name}.
+     *
+     * @return the release, or {@code null} to run from Git as before
+     */
+    static PipelineInfo lookupRelease(RegistryClient client, String name, String revision) {
+        if( !isValidName(name) )
+            return null
+        final Pipeline pipeline
+        try {
+            pipeline = client.getPipeline(name)
+        }
+        catch( RegistryException e ) {
+            if( e.statusCode == 404 )
+                log.debug "Pipeline ${name} not found in the registry -- running from Git"
+            else
+                warnRegistryError(name, e)
+            return null
+        }
+        if( pipeline.revoked ) {
+            log.warn "Pipeline ${name} is revoked in the registry -- running from Git"
+            return null
+        }
+        final PipelineRelease release
+        try {
+            release = revision && revision != pipeline.latest?.version
+                ? client.getPipelineRelease(name, revision)
+                : pipeline.latest
+        }
+        catch( RegistryException e ) {
+            if( e.statusCode != 404 ) {
+                warnRegistryError(name, e)
+                return null
+            }
+            // the registry knows the repository even when the revision is not a release
+            log.warn "`${revision}` is not a release of ${name} in the registry -- using the Git revision"
+            return new PipelineInfo(repositoryUrl: pipeline.repositoryUrl, revision: revision, workflowPath: pipeline.workflowPath)
+        }
+        if( !release ) {
+            log.debug "Pipeline ${name} has no published release in the registry -- running from Git"
+            return null
+        }
+        if( release.status == PipelineReleaseStatus.REVOKED ) {
+            log.warn "Pipeline ${name}@${release.version} is revoked in the registry -- running from Git"
+            return null
+        }
+        log.info "Using registry release ${name}@${release.version} (commit ${release.commitId?.take(10)})"
+        return new PipelineInfo(
+            name: name,
+            version: release.version,
+            repositoryUrl: pipeline.repositoryUrl,
+            revision: release.gitRevision,
+            commitId: release.commitId,
+            workflowPath: pipeline.workflowPath )
+    }
+
+    private static void warnRegistryError(String name, RegistryException e) {
+        if( e.statusCode == 410 )
+            log.warn "Pipeline ${name} is revoked in the registry -- running from Git"
+        else
+            log.warn "Cannot reach the registry for ${name} -- running from Git (${e.message})"
     }
 }

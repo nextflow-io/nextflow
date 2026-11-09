@@ -45,9 +45,10 @@ class PipelineCmdSupport {
         }
     }
 
-    static RegistryConfig registryConfig(CmdBase cmd, Path baseDir) {
+    static RegistryConfig registryConfig(CmdBase cmd, Path baseDir, List<Path> configFiles = []) {
         final config = new ConfigCmdAdapter()
             .setOptions(cmd.launcher.options)
+            .setUserConfigFiles(configFiles)
             .setBaseDir(baseDir)
             .build()
         return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
