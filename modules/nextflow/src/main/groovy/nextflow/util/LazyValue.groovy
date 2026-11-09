@@ -25,6 +25,9 @@ import groovy.transform.CompileStatic
  * A value computed once, in the thread of its first reader. Concurrent readers wait
  * for it, and every reader gets the error of a failed computation.
  *
+ * Interrupting the thread that runs the computation (e.g. when the run is aborted)
+ * fails the value for good: the error is cached like any other.
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic

@@ -54,17 +54,20 @@ class LazyValueTest extends Specification {
         def readers = Executors.newFixedThreadPool(8)
 
         when:
-        List<Future<String>> results = []
-        results.add(readers.submit(callable { value.get() }))
+        // each reader returns its own thread name and the value
+        def read = callable { [Thread.currentThread().getName(), value.get()] }
+        List<Future<List<String>>> results = []
+        results.add(readers.submit(read))
         computing.await()
         for( int i = 1; i < 8; i++ )
-            results.add(readers.submit(callable { value.get() }))
+            results.add(readers.submit(read))
         release.countDown()
-        def first = results[0].get(10, TimeUnit.SECONDS)
+        def outcomes = results.collect { it.get(10, TimeUnit.SECONDS) }
+        def firstReader = outcomes[0][0]
 
         then:
-        results.every { it.get(10, TimeUnit.SECONDS) == first }
-        first.startsWith('pool-')
+        outcomes.every { it[1] == firstReader }
+        outcomes.count { it[0] == firstReader } == 1
         count.get() == 1
 
         cleanup:
@@ -140,8 +143,11 @@ class LazyValueTest extends Specification {
         def first = readers.submit(callable { value.get() })
         computing.await()
         waiter.start()
-        // let the waiter block on the computation
-        Thread.sleep(100)
+        // wait until the waiter is blocked on the computation
+        def deadline = System.currentTimeMillis() + 10_000
+        while( waiter.getState() != Thread.State.WAITING && System.currentTimeMillis() < deadline )
+            Thread.sleep(10)
+        assert waiter.getState() == Thread.State.WAITING
         waiter.interrupt()
         waiter.join(10_000)
         release.countDown()
