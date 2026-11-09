@@ -90,6 +90,9 @@ class HashBuilderTest extends Specification {
         HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
         and:
         !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+
+        cleanup:
+        Global.session = null
     }
 
     def 'should validate is asset file when not part of base directory'() {
@@ -101,6 +104,9 @@ class HashBuilderTest extends Specification {
 
         expect:
         HashBuilder.isAssetFile(Paths.get(PATH), new File(ROOT)) == EXPECTED
+
+        cleanup:
+        Global.session = null
 
         where:
         BASE                  | ROOT              | COMMIT_ID | PATH                       | EXPECTED
