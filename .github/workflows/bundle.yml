@@ -3,16 +3,12 @@ name: Bundle
 # runner, since the AOT cache can only be created by the target runtime, and tests it.
 # The release (build.yml) calls this workflow and uploads the bundles with the other release
 # files, from the artifacts `bundle-<platform>` (`.tar.gz` and `.tar.gz.sha256`).
+# bundle-pr.yml calls it for each pull request.
+# No Gradle cache: on a PR, it would be saved first, without the test dependencies, under the
+# key that the CI build (build.yml) of the PR restores.
 
 # Not run on pushes to master: the release builds the bundles of every release commit.
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths:
-      - 'nextflow'
-      - 'bundle/**'
-      - 'gradle/bundle.gradle'
-      - '.github/workflows/bundle.yml'
   workflow_dispatch:
     inputs:
       jre-version:
@@ -29,11 +25,6 @@ on:
 permissions:
   contents: read
 
-# runs called by the release are never cancelled, nor queued behind other runs
-concurrency:
-  group: bundle-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 defaults:
   run:
     shell: bash
@@ -48,16 +39,15 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Java
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           java-version: '25'
           distribution: 'corretto'
-          cache: gradle
 
       - name: Resolve the Temurin JRE
         id: resolve
@@ -89,16 +79,15 @@ jobs:
       JRE_VERSION: ${{ needs.jre.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Java
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           java-version: '25'
           distribution: 'corretto'
-          cache: gradle
 
       # the build info of the jar, as in the jar of the release (`make assemble`)
       - name: Build bundle
@@ -138,7 +127,7 @@ jobs:
           fi
           "$GITHUB_WORKSPACE/bundle/test-handoff.sh" "$(ls "$GITHUB_WORKSPACE"/build/bundle/*.tar.gz)" "$RUNNER_TEMP/handoff" "${tests[@]}"
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundle-${{ matrix.target }}
           path: build/bundle/*.tar.gz*
