@@ -52,6 +52,7 @@ class CmdPipelineList extends CmdBase {
             [
                 name   : p.info().name,
                 version: p.info().version,
+                source : p.info().source,
                 status : p.info().isModified(p.dir()) ? 'modified' : 'ok'
             ]
         }
@@ -63,10 +64,10 @@ class CmdPipelineList extends CmdBase {
             println "No pipelines installed"
             return
         }
-        println "Pipeline".padRight(40) + "Version".padRight(15) + "Status"
-        println "-" * 65
+        println "Pipeline".padRight(40) + "Version".padRight(15) + "Source".padRight(10) + "Status"
+        println "-" * 75
         rows.each { r ->
-            println "${cell(r.name).padRight(40)}${cell(r.version).padRight(15)}${r.status}"
+            println "${cell(r.name).padRight(40)}${cell(r.version).padRight(15)}${cell(r.source).padRight(10)}${r.status}"
         }
     }
 

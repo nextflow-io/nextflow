@@ -33,16 +33,19 @@ import nextflow.module.spi.RemoteModuleResolver
 @CompileStatic
 class PipelineInfo {
 
-    private static final List<String> FIELDS = ['name', 'version', 'workflowPath', 'repositoryUrl', 'revision', 'commitId', 'checksum', 'registryUrl']
+    private static final List<String> FIELDS = ['name', 'version', 'workflowPath', 'source', 'repositoryUrl', 'revision', 'commitId', 'checksum', 'registryUrl', 'artifactUrl', 'artifactChecksum']
 
     String name
     String version
     String workflowPath
+    String source
     String repositoryUrl
     String revision
     String commitId
     String checksum
     String registryUrl
+    String artifactUrl
+    String artifactChecksum
 
     static PipelineInfo load(Path dir) {
         final file = dir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)
@@ -70,6 +73,11 @@ class PipelineInfo {
         return checksum(dir) != this.checksum
     }
 
+    /** True when the dir is an installed module or pipeline (has its own info file) */
+    static boolean isNested(Path d) {
+        return Files.exists(d.resolve(ModuleInfo.MODULE_INFO_FILE)) || Files.exists(d.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))
+    }
+
     /**
      * Same digest as {@code ModuleChecksum.computeDirectory}, skipping {@code .git}
      * and nested modules/pipelines (they carry their own info file).
@@ -81,7 +89,7 @@ class PipelineInfo {
             FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs) {
                 if( d.fileName.toString() == '.git' )
                     return FileVisitResult.SKIP_SUBTREE
-                if( d != dir && (Files.exists(d.resolve(ModuleInfo.MODULE_INFO_FILE)) || Files.exists(d.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))) )
+                if( d != dir && isNested(d) )
                     return FileVisitResult.SKIP_SUBTREE
                 return FileVisitResult.CONTINUE
             }
