@@ -130,6 +130,11 @@ class Launcher {
 
         //Allow unknown options for module command
         jcommander.getCommands().get(CmdModule.NAME)?.setAcceptUnknownOptions(true)
+        // accept leftover options so removed commands can report their removal
+        for( CmdBase cmd : allCommands ) {
+            if( cmd instanceof CmdRemoved )
+                jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
+        }
     }
 
     private static final String[] EMPTY = new String[0]
@@ -637,6 +642,9 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
+        // preserve Groovy 4 file/path truthiness (non-null is truthy even if the file doesn't exist)
+        // must be set before any Groovy file truthiness check -- see GROOVY-11996
+        System.setProperty('groovy.truth.file.exists.enabled', 'false')
         LoggerHelper.bootstrapLogger()
         final status = new Launcher() .command(args) .run()
         if( status )

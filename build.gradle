@@ -165,23 +165,11 @@ allprojects {
     tasks.withType(Test) {
         jvmArgs ([
             '--enable-preview',
-            '--add-opens=java.base/java.lang=ALL-UNNAMED',
-            '--add-opens=java.base/java.io=ALL-UNNAMED',
-            '--add-opens=java.base/java.nio=ALL-UNNAMED',
-            '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
-            '--add-opens=java.base/java.net=ALL-UNNAMED',
-            '--add-opens=java.base/java.util=ALL-UNNAMED',
-            '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
-            '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-            '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
-            '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
-            '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
-            '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-            '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
+            // preserve Groovy 4 file/path truthiness (a non-null File/Path is truthy regardless of existence) -- see GROOVY-11996
+            '-Dgroovy.truth.file.exists.enabled=false',
         ])
+        // agent mode, auto-detected when tests run under an agent, changes console output
+        environment 'NXF_AGENT_MODE', 'false'
     }
 
     /**
@@ -189,7 +177,19 @@ allprojects {
      * See: https://www.jacoco.org/; https://docs.gradle.org/current/userguide/jacoco_plugin.html
      */
     // Code coverage report is always generated after tests run
-    test { finalizedBy jacocoTestReport }
+    test {
+        finalizedBy jacocoTestReport
+        // Only instrument project classes, since third-party classes are never in the report
+        jacoco {
+            includes = [
+                'nextflow.*',
+                'io.seqera.*',
+                'groovy.runtime.metaclass.*',
+                'com.esotericsoftware.minlog.*',
+                'de.javakaffee.kryoserializers.*'
+            ]
+        }
+    }
     jacocoTestReport {
         // Tests are required to run before generating the code coverage report
         dependsOn test
@@ -444,7 +444,7 @@ task validatePluginVersions {
         final coreVersion = rootProject.file('VERSION').text.trim()
         // ordered as one number rather than a list: Groovy will not compare two ArrayLists with `>`.
         // The multipliers leave room for a 2-digit month and a 4-digit patch, which is well beyond
-        // anything the calendar scheme in CLAUDE.md produces.
+        // anything the calendar scheme in .agents/docs/release.md produces.
         final calver = { String v ->
             final m = (v =~ /^(\d+)\.(\d+)\.(\d+)/)
             return m ? (m[0][1] as int) * 1000000 + (m[0][2] as int) * 10000 + (m[0][3] as int) : null
@@ -697,4 +697,6 @@ task upload {
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
 }
+
+apply from: 'gradle/bundle.gradle'
 

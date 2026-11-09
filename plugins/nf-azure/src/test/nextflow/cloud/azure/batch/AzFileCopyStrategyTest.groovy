@@ -81,6 +81,36 @@ class AzFileCopyStrategyTest extends Specification {
         new Session()
     }
 
+    def 'should preserve special characters in download and upload file names' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def name = 'a\'b $(c) `d` "e" $x;f.txt'
+        folder.resolve(name).text = 'x'
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def copy = new AzFileCopyStrategy(Mock(TaskBean), Mock(AzBatchExecutor) { getAzConfig() >> config })
+        // stub the transfer functions, and run the commands with `eval` as `nxf_parallel` does
+        def script = '''
+            nxf_az_download() { printf '%s\\n' "$1" "$2" >> downloads.log; }
+            nxf_az_upload() { printf '%s\\n' "$1" >> uploads.log; }
+            nxf_parallel() { for cmd in "$@"; do eval "$cmd"; done; }
+            downloads=()
+            '''.stripIndent()
+        script += copy.stageInputFile(mockAzPath('az://my-data/dir/' + name), name) + '\n'
+        script += 'nxf_parallel "${downloads[@]}"\n'
+        script += copy.getUnstageOutputFilesScript(['*.txt'], mockAzPath('az://my-data/out', true))
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('downloads.log').text == 'http://account.blob.core.windows.net/my-data/dir/' + name + '\n' + name + '\n'
+        folder.resolve('uploads.log').text == name + '\n'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'test bash wrapper with input'() {
         given:
         def workDir = mockAzPath( 'az://my-data/work/dir' )
@@ -399,9 +429,12 @@ class AzFileCopyStrategyTest extends Specification {
         binding.unstage_outputs == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
-                        uploads+=("nxf_az_upload '$name' 'http://account.blob.core.windows.net/my-data/work/dir'")
+                    set -f
+                    for name in $(set +f; eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_az_upload $qname 'http://account.blob.core.windows.net/my-data/work/dir'")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()
@@ -515,6 +548,33 @@ class AzFileCopyStrategyTest extends Specification {
 
                     '''.stripIndent(true)
 
+    }
+
+    def 'should link a local input and download the others'() {
+        given:
+        def workDir = mockAzPath( 'az://my-data/work/dir' )
+        def input1 = mockAzPath('az://my-data/work/dir/file1.txt')
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
+
+        when:
+        def binding = new AzBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: workDir,
+                targetDir: workDir,
+                inputFiles: ['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'file1.txt': input1],
+                script: 'echo Hello world!' ] as TaskBean, executor) .makeBinding()
+
+        then:
+        binding.stage_inputs == '''\
+                # stage input files
+                downloads=(true)
+                rm -f ref.fa
+                rm -f file1.txt
+                ln -sfn /mnt/shared/ref.fa ref.fa
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
     }
 
 }

@@ -418,26 +418,35 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     }
 
     private void visitWorkflowPublishers(List<Statement> publishers) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(publishers)
+        var alignmentWidth = options.harshilAlignment() && publishers.size() > 1
+            ? publishers.stream()
+                .map((stmt) -> publisherTarget(stmt).getName().length())
+                .max(Integer::compare).orElse(0)
             : 0;
 
         var aligner = fmt.commentAligner();
         for( var stmt : publishers ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = (AssignmentExpression)stmtX.getExpression();
-            var target = (VariableExpression)emit.getLeftExpression();
-            var source = emit.getRightExpression();
+            var target = publisherTarget(stmt);
+            var source = ((AssignmentExpression)((ExpressionStatement)stmt).getExpression()).getRightExpression();
 
             fmt.appendLeadingComments(stmt);
             aligner.begin();
             fmt.appendIndent();
-            visitOutputAssignment(target, source, alignmentWidth);
+            fmt.append(target.getName());
+            if( alignmentWidth > 0 )
+                fmt.append(" ".repeat(alignmentWidth - target.getName().length()));
+            fmt.append(" = ");
+            fmt.visit(source);
             aligner.end(stmt);
             fmt.appendTrailingComment(stmt);
             fmt.appendNewLine();
         }
         aligner.apply();
+    }
+
+    private static VariableExpression publisherTarget(Statement stmt) {
+        var emit = (AssignmentExpression)((ExpressionStatement)stmt).getExpression();
+        return (VariableExpression)emit.getLeftExpression();
     }
 
     private int maxParameterWidth(List<Statement> statements) {

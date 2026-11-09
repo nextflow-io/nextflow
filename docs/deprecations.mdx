@@ -17,7 +17,6 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 
 | Feature | Alternative |
 |---|---|
-| `kuberun` command | [Launch with Fusion][k8s-fusion] |
 | [Using params outside the entry workflow][strict-params-outside] | Explicit inputs |
 | [Legacy parameter declarations][strict-legacy-params] (`params.foo = ...`) | `params` block |
 | Workflow `\|` and `&` operators | Method calls and assignments |
@@ -84,6 +83,7 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `aws.client.uploadChunkSize`, `uploadMaxAttempts`, `uploadMaxThreads`, and `uploadRetrySleep` | | 25.10 | `aws.client.minimumPartSize` and `aws.client.multipartThreshold` |
 | `-with-weblog` option of `run` | 25.04 | 26.10 | [nf-weblog](https://github.com/nextflow-io/nf-weblog) plugin |
 | `echo` directive | 22.04 | 26.10 | `debug` |
+| `kuberun` command | | 27.04 | [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin or [launch with Fusion][k8s-fusion] |
 
 [config-manifest]: ./reference/config/manifest
 [config-process-when]: ./config#disabling-processes

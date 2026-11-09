@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Nextflow
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ForeignFileFilter
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
@@ -145,7 +146,9 @@ class TaskInputResolver {
 
             if( item instanceof Path || coerceToPath ) {
                 final path = normalizeToPath(item)
-                final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
+                // a filter can only veto an upload, so it is asked only for foreign files
+                final foreign = executor.isForeignFile(path) && !isTaskAccessible(path)
+                final target = foreign ? foreignFiles.addToForeign(path) : path
                 final holder = new FileHolder(path, target)
                 files << holder
             }
@@ -155,6 +158,14 @@ class TaskInputResolver {
         }
 
         return files
+    }
+
+    protected boolean isTaskAccessible(Path path) {
+        for( ForeignFileFilter it : executor.getForeignFileFilters() ) {
+            if( it.isTaskAccessible(path, executor) )
+                return true
+        }
+        return false
     }
 
     protected static Path normalizeToPath( obj ) {

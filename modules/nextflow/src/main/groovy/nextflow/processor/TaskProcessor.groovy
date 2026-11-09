@@ -100,7 +100,6 @@ import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
-import nextflow.util.Escape
 import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -1340,7 +1339,7 @@ class TaskProcessor {
             if( value instanceof Path ) {
                 files.add((Path)value)
             }
-            else if( value instanceof Collection<Path> ) {
+            else if( value instanceof Collection ) {
                 files.addAll(value)
             }
             else if( value != null ) {
@@ -1596,7 +1595,7 @@ class TaskProcessor {
      * Given a map holding variables key-value pairs, create a script fragment
      * exporting the required environment variables
      */
-    static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
+    static String bashEnvironmentScript( Map<String,String> environment ) {
         if( !environment )
             return null
 
@@ -1609,12 +1608,8 @@ class TaskProcessor {
                 log.warn "Environment variable `$name` evaluates to an empty value"
                 script << "export $name=''"
             }
-            else if( !escape ) {
-                script << /export $name="$value"/
-            }
             else {
-                // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${Escape.variable(value)}"/
+                script << /export $name="$value"/
             }
         }
         script << ''
@@ -1934,7 +1929,6 @@ class TaskProcessor {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
-        def fault = null
         try {
             // -- verify task exit status
             if( task.error )
@@ -1954,14 +1948,28 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error, handler.getTraceRecord())
-            log.trace "Task fault (3): $fault"
+            return finalizeFailedTask(handler, error)
         }
 
-        // -- finalize the task
+        finalizeTask0(task)
+        return null
+    }
+
+    /**
+     * Finalize a task that failed with the given error, unless
+     * the task is retried according to its error strategy
+     *
+     * @param handler The {@link TaskHandler} of the failed task
+     * @param error The error raised by the task
+     * @return The error strategy or {@link TaskFault} returned by {@link #resumeOrDie}
+     */
+    @PackageScope
+    final finalizeFailedTask( TaskHandler handler, Throwable error ) {
+        final task = handler.task
+        final fault = resumeOrDie(task, error, handler.getTraceRecord())
+        log.trace "Task fault (3): $fault"
         if( fault != ErrorStrategy.RETRY )
             finalizeTask0(task)
-
         return fault
     }
 

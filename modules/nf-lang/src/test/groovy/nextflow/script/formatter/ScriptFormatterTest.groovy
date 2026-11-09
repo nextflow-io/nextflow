@@ -18,8 +18,8 @@ package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
+import nextflow.script.control.TypeCheckingVisitor
 import nextflow.script.dsl.Types
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -29,17 +29,12 @@ import test.TestUtils
  */
 class ScriptFormatterTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
-    String format(String contents, FormattingOptions options = new FormattingOptions(4, true)) {
-        scriptParser.compiler().getSources().clear()
+    String format(String contents, FormattingOptions options = new FormattingOptions(4, true), boolean typeCheck = false) {
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
+        if( typeCheck )
+            new TypeCheckingVisitor(source).visit()
         assert !TestUtils.hasSyntaxErrors(source)
         def formatter = new ScriptFormattingVisitor(source, options)
         formatter.visit()
@@ -182,6 +177,35 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+    }
+
+    def 'should not copy the output type into a publish target' () {
+        when:
+        def input = '''\
+            nextflow.enable.types = true
+
+            workflow {
+                main:
+                ch = channel.of(1)
+
+                publish:
+                a = ch
+                b: Channel<String> = ch
+            }
+
+            output {
+                a: Channel<Integer> {
+                    path 'a'
+                }
+                b: Channel<Integer> {
+                    path 'b'
+                }
+            }
+            '''.stripIndent()
+        def result = format(input, new FormattingOptions(4, true), true)
+        then:
+        result.contains('    a = ch\n')
+        result.contains('    b = ch\n')
     }
 
     def 'should format a legacy process definition' () {
@@ -709,10 +733,10 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             """
-            blastp \
-                -in ${input} \
-                -out ${output} \
-                -db ${blast_db} \
+            blastp \\
+                -in ${input} \\
+                -out ${output} \\
+                -db ${blast_db} \\
                 -html
             """
             '''

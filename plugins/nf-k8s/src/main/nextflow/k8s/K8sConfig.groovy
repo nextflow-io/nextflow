@@ -18,7 +18,7 @@ package nextflow.k8s
 
 import nextflow.k8s.client.K8sRetryConfig
 
-import javax.annotation.Nullable
+import org.jspecify.annotations.Nullable
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope

@@ -16,8 +16,9 @@
   # directory, which is symlinked in as `.docusaurus_site/docs -> ../docs`.
   # git tracks the content under the `docs/` path, so a diff scoped only to
   # `.docusaurus_site/` cannot see through the symlink and would wrongly skip
-  # content-only commits. Watch both paths.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ../docs"
+  # content-only commits. Watch both paths, minus the design records that the
+  # site excludes.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ../docs ':!../docs/adr' ':!../docs/specs'"
 
 # Node.js version
 [build.environment]

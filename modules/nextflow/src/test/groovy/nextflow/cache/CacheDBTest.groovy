@@ -22,6 +22,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
+import com.esotericsoftware.kryo.KryoException
 import com.google.common.hash.HashCode
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
@@ -37,6 +38,7 @@ import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.KryoHelper
+import nextflow.util.KryoHelperCompatTest
 import java.nio.file.Paths
 import nextflow.util.HashBuilder
 import spock.lang.Specification
@@ -106,6 +108,29 @@ class CacheDBTest extends Specification {
         folder?.deleteDir()
     }
 
+
+    def 'should fail to read an entry whose context holds a type that is no longer supported' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def hash = CacheHelper.hasher('x').hash()
+        def store = new DefaultCacheStore(UUID.randomUUID(), 'test_1', folder)
+        def cache = new CacheDB(store).open()
+        def proc = Mock(TaskProcessor)
+        and: 'a context written by a previous version, holding an AtomicInteger'
+        def context = KryoHelperCompatTest.golden().get('ALL')
+        def trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0])
+        store.putEntry(hash, KryoHelper.serialize([trace.serialize(), context, 1]))
+
+        when:
+        cache.getTaskEntry(hash, proc)
+        then:
+        def e = thrown(KryoException)
+        e.message.contains('java.util.concurrent.atomic.AtomicInteger')
+
+        cleanup:
+        cache?.close()
+        folder?.deleteDir()
+    }
 
     private makeTaskHandler(HashCode hash, Map record, Map context=null) {
 

@@ -32,15 +32,38 @@ COPY agent-rpc/main.go ./
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags='-s -w' -o /agent-rpc .
 
-FROM node:24.4.1-bookworm-slim@sha256:36ae19f59c91f3303c7a648f07493fe14c4bd91320ac8d898416327bacf1bbfa
+# The harness is compiled into a single executable that embeds the Bun runtime, so the runtime
+# image needs neither Node nor node_modules. Bun cross-compiles for any target, so like the
+# proxy this stage runs on $BUILDPLATFORM. `bun install` reads package-lock.json directly.
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.4-debian@sha256:93d5032fe06d163427822dc1598f420363759bb18155c9cc90eb1be05a64a19e AS harness
+ARG TARGETARCH
 
-WORKDIR /opt/nf-agent-pi
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN bun install --frozen-lockfile --production --ignore-scripts
+COPY harness/runner.mjs harness/entry.mjs ./harness/
+RUN case "${TARGETARCH}" in \
+        amd64) target=bun-linux-x64 ;; \
+        arm64) target=bun-linux-arm64 ;; \
+        *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && bun build harness/entry.mjs --compile --minify --target=${target} --outfile=/harness/runner
+# Pi passes every image a `read` returns through photon, and a compiled binary cannot embed its
+# wasm, so ship it next to the binary, where pi looks for it (`getFallbackWasmPaths`). Without it,
+# every image is dropped, not only ones that need resizing.
+RUN wasm=$(find node_modules -name photon_rs_bg.wasm) \
+    && if [ "$(printf '%s\n' "$wasm" | grep -c .)" -ne 1 ]; then \
+        echo "expected exactly one photon_rs_bg.wasm, found: ${wasm:-none}" >&2; exit 1; \
+    fi \
+    && cp "$wasm" /harness/photon_rs_bg.wasm
+
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends procps \
     && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts --omit=dev && npm cache clean --force
-COPY harness/runner.mjs ./runner.mjs
+COPY --from=harness /harness/runner /opt/nf-agent-pi/runner
+COPY --from=harness /harness/photon_rs_bg.wasm /opt/nf-agent-pi/photon_rs_bg.wasm
 COPY --from=agent-rpc /agent-rpc /usr/local/bin/agent-rpc
 
 # Canonical Nextflow executors own the container command/entrypoint so they can

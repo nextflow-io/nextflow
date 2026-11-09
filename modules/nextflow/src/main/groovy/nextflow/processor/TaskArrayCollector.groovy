@@ -135,9 +135,7 @@ class TaskArrayCollector {
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
         // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
-        for( TaskHandler handler : handlers ) {
-            handler.prepareLauncher()
-        }
+        processor.session.getArrayLauncherPool().prepare(handlers)
 
         // create work directory
         // from the work dirs rather than the hashes, which every attempt of a task shares
@@ -192,7 +190,7 @@ class TaskArrayCollector {
         """
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
         export nxf_array_task_dir=${getArrayIndexRef()}
-        ${executor.getArrayLaunchCommand('$nxf_array_task_dir')}
+        exec ${executor.getArrayLaunchCommand('$nxf_array_task_dir')}
         """.stripIndent().leftTrim()
     }
 
