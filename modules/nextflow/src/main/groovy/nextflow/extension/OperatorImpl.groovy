@@ -28,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -107,7 +106,7 @@ class OperatorImpl {
         def target = CH.createBy(source)
         if( source instanceof DataflowExpression ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
+                def result = it instanceof PoisonPill ? false : discriminator.invoke(criteria, (Object)it)
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -125,7 +124,7 @@ class OperatorImpl {
         def target = CH.createBy(source)
         if( source instanceof DataflowExpression ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
+                def result = it instanceof PoisonPill ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -389,7 +388,7 @@ class OperatorImpl {
                 final result = transform != null ? transform.call(value) : value
                 session.printConsole(result?.toString(), newLine)
             }
-            target << value
+            target.bind(value)
         }
         final onComplete = {
             CH.close0(target)
@@ -477,7 +476,7 @@ class OperatorImpl {
 
         if( source instanceof DataflowExpression ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, it)
+                def result = it instanceof PoisonPill ? false : discriminator.invoke(criteria, it)
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -953,7 +952,7 @@ class OperatorImpl {
 
         boolean empty = true
         final result = CH.createBy(source)
-        final singleton = result instanceof DataflowExpression
+        final singleton = result instanceof DataflowVariable
         final next = { result.bind(it); empty=false }
         final complete = {
             if(empty)

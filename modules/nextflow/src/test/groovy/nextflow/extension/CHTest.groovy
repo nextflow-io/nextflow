@@ -16,8 +16,6 @@
 
 package nextflow.extension
 
-import java.util.concurrent.TimeUnit
-
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
@@ -99,7 +97,7 @@ class CHTest extends Specification {
         ch.val == 3
         and:
         // no stop is emitted
-        ch.getVal(500, TimeUnit.MILLISECONDS) == null
+        ch.length() == 0
     }
 
 
@@ -109,7 +107,7 @@ class CHTest extends Specification {
         then:
         ch instanceof DataflowQueue
         and:
-        ch.getVal(200, TimeUnit.MILLISECONDS) == null
+        ch.length() == 0
     }
 
     def 'should create dataflow queue w/o stop' () {
@@ -125,7 +123,7 @@ class CHTest extends Specification {
         ch.val == 2
         ch.val == 3
         and:
-        ch.getVal(200, TimeUnit.MILLISECONDS) == null
+        ch.length() == 0
     }
 
     def 'should create dataflow queue with stop' () {
