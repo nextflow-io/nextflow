@@ -65,7 +65,11 @@ jobs:
         run: |
           body=$(cat <<EOF
           $MARKER
-          📦 Standalone builds of this PR (\`${HEAD_SHA:0:7}\`) are attached to [this run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) as artifacts. To test them with the [GitHub CLI](https://cli.github.com), in an empty directory:
+          📦 Standalone builds of this PR (\`${HEAD_SHA:0:7}\`) are attached to actions run [$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) as artifacts.
+
+          <details><summary>Testing instructions</summary>
+
+          To test them with the [GitHub CLI](https://cli.github.com), in an empty directory:
 
           ~~~bash
           platform=macos-arm64    # or linux-x64, linux-arm64
@@ -75,6 +79,8 @@ jobs:
           ~~~
 
           The build includes its own Java runtime and the core plugins of this PR. Third-party plugins are downloaded from the plugin registry as usual. For testing only. This comment is updated on each push.
+
+          </details>
           EOF
           )
           comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" --paginate \
