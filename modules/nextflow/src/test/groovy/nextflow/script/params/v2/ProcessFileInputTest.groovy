@@ -62,4 +62,11 @@ class ProcessFileInputTest extends Specification {
         input.resolve([fastq: 'sample1.fastq']) == 'sample1.fastq'
     }
 
+    def 'should be implicit only when declared as implicit'() {
+        expect:
+        new ProcessFileInput(null, null, true).isImplicit()
+        !new ProcessFileInput(null, null).isImplicit()
+        !new ProcessFileInput('*.txt', null).isImplicit()
+    }
+
 }

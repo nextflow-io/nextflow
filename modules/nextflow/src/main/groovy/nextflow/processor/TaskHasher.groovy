@@ -75,6 +75,10 @@ class TaskHasher {
             keys.add( entry.value )
         }
 
+        // add the values resolved from the `stage:` block of a typed process
+        if( task.hasTypedInputsOutputs() )
+            addStageDirectives(keys)
+
         // add eval output commands
         //
         // note: the map is hashed as an unordered collection of entries, so the
@@ -150,6 +154,32 @@ class TaskHasher {
         }
 
         return hash
+    }
+
+    /**
+     * Add the environment variables, standard input and staged files
+     * declared in the `stage:` block of a typed process.
+     *
+     * Stage directives are arbitrary expressions, so they can introduce
+     * values that are not task inputs and are not part of the task script.
+     * Environment variables and standard input are hashed as the strings
+     * that the task receives.
+     */
+    protected void addStageDirectives(List<Object> keys) {
+        if( task.inputEnv ) {
+            keys.add('stage_env')
+            keys.add(task.inputEnv)
+        }
+
+        if( task.stdin != null ) {
+            keys.add('stage_stdin')
+            keys.add(task.stdin.toString())
+        }
+
+        if( task.stageAsFiles ) {
+            keys.add('stage_files')
+            keys.add(task.stageAsFiles)
+        }
     }
 
     /**

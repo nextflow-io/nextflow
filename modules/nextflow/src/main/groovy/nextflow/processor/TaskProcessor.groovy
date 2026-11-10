@@ -98,6 +98,7 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.script.types.Bag
 import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
@@ -1773,8 +1774,15 @@ class TaskProcessor {
             // user-defined file stagers take precedence over default file stagers
             if( resolvedValues.contains(value) )
                 continue
-            final resolved = resolver.resolve(fileInput, value)
+            final filePattern = fileInput.getFilePattern(ctx) ?: '*'
+            final resolved = resolver.resolve(filePattern, value)
             task.inputFiles.addAll(resolved)
+            // the default staging of a Path input is covered by the input in the task hash
+            if( !fileInput.isImplicit() ) {
+                if( task.stageAsFiles == null )
+                    task.stageAsFiles = new ArrayList<TaskStageAsFiles>()
+                task.stageAsFiles.add(new TaskStageAsFiles(filePattern, resolved, findPathInputName(task, value)))
+            }
             resolvedValues.add(value)
         }
 
@@ -1804,6 +1812,34 @@ class TaskProcessor {
         // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
+    }
+
+    /**
+     * Find the task input whose value is the given object, provided that
+     * the value is a path or a list of paths, which the task inputs hash as
+     * files in order. Sets and bags are hashed without order, which would
+     * lose the names given to files by a wildcard pattern.
+     */
+    @CompileStatic
+    private static String findPathInputName(TaskRun task, Object value) {
+        if( value !instanceof Path && !isPathList(value) )
+            return null
+        for( final entry : task.inputs.entrySet() ) {
+            if( entry.value.is(value) )
+                return entry.key.getName()
+        }
+        return null
+    }
+
+    @CompileStatic
+    private static boolean isPathList(Object value) {
+        if( value !instanceof List || value instanceof Bag )
+            return false
+        for( final el : (List)value ) {
+            if( el !instanceof Path )
+                return false
+        }
+        return true
     }
 
     @CompileStatic

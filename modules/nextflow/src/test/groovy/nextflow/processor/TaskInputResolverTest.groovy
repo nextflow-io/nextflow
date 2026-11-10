@@ -119,7 +119,7 @@ class TaskInputResolverTest extends Specification {
         fileInput = new ProcessFileInput('input.fastq', { -> fastq })
         value = Path.of('/some/sample1.fastq')
         task.setInput(param, value)
-        result = resolver.resolve(fileInput, value)
+        result = resolver.resolve(fileInput.getFilePattern([:]), value)
         task.context.put( param.name, resolver.normalizeValue(value, holdersMap(result)) )
         then:
         1 * executor.isForeignFile(_ as Path) >> false
@@ -138,7 +138,7 @@ class TaskInputResolverTest extends Specification {
         fileInput = new ProcessFileInput('sample_*.fastq', { -> samples })
         value = [ Path.of('/other/foo.fq'), Path.of('/other/bar.fq')]
         task.setInput(param, value)
-        result = resolver.resolve(fileInput, value)
+        result = resolver.resolve(fileInput.getFilePattern([:]), value)
         task.context.put( param.name, resolver.normalizeValue(value, holdersMap(result)) )
         then:
         1 * executor.isForeignFile(_ as Path) >> false
@@ -161,7 +161,7 @@ class TaskInputResolverTest extends Specification {
         value = Path.of('/some/sample1.bam')
         task.context.put('input', new RecordMap(bam: value))
         task.setInput(param, task.context.input)
-        result = resolver.resolve(fileInput, value)
+        result = resolver.resolve(fileInput.getFilePattern([:]), value)
         task.context.put( param.name, resolver.normalizeValue(task.context.input, holdersMap(result)) )
         then:
         1 * executor.isForeignFile(_ as Path) >> false

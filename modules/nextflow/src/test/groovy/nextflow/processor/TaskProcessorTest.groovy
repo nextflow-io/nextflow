@@ -47,7 +47,9 @@ import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
 import nextflow.script.params.v2.ProcessFileInput
 import nextflow.script.params.v2.ProcessInput
+import nextflow.script.types.Bag
 import nextflow.script.types.Tuple
+import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -919,5 +921,32 @@ class TaskProcessorTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should find the task input whose value is staged' () {
+        given:
+        def a = Path.of('/data/a.txt')
+        def reads = [Path.of('/data/r1.fq'), Path.of('/data/r2.fq')]
+        def readSet = [Path.of('/data/r1.fq'), Path.of('/data/r2.fq')] as Set
+        def readBag = new ArrayBag([Path.of('/data/r1.fq'), Path.of('/data/r2.fq')])
+        def id = 'sample1'
+        def task = new TaskRun()
+        task.setInput(new ProcessInput('fasta', Path, false), a)
+        task.setInput(new ProcessInput('reads', List, false), reads)
+        task.setInput(new ProcessInput('readSet', Set, false), readSet)
+        task.setInput(new ProcessInput('readBag', Bag, false), readBag)
+        task.setInput(new ProcessInput('id', String, false), id)
+
+        expect:
+        TaskProcessor.findPathInputName(task, a) == 'fasta'
+        TaskProcessor.findPathInputName(task, reads) == 'reads'
+        and: 'an equal value that is not the input object'
+        TaskProcessor.findPathInputName(task, Path.of('/data/a.txt')) == null
+        TaskProcessor.findPathInputName(task, reads.findAll { true }) == null
+        and: 'an unordered input, whose hash does not bind files to wildcard names'
+        TaskProcessor.findPathInputName(task, readSet) == null
+        TaskProcessor.findPathInputName(task, readBag) == null
+        and: 'an input that is not made of paths, whose file content is not hashed with the inputs'
+        TaskProcessor.findPathInputName(task, id) == null
     }
 }
