@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit
 
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.file.FileHelper
 import nextflow.file.http.XFileSystemConfig
 import nextflow.file.http.XFileSystemConfigHelper
@@ -1099,13 +1100,18 @@ class ChannelTest extends Specification {
         def id = 'SRR389222'
         def retryPolicy = [maxAttempts: 2]
 
-        when:
-        def result = runDataflow {
-            Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
-        }
-        then:
-        result != null
+        and:
+        // a mock session never runs the igniter, so no request is made
+        def session = Global.session = Mock(Session)
 
+        when:
+        def result = Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
+        then:
+        1 * session.addIgniter(_)
+        result instanceof DataflowQueue
+
+        cleanup:
+        Global.reset()
     }
 
     def 'should fail when SRA incorrect property' () {
