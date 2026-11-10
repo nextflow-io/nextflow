@@ -361,25 +361,13 @@ class PipelineManagerTest extends Specification {
         0 * fetcher._
         !Files.exists(manager().pipelineDir('nf-core/rnaseq'))
     }
-    def 'should look up the registry only for scope/name' () {
-        when:
-        def result = PipelineManager.lookupRelease(client, NAME, null)
-
-        then:
-        result == null
-        0 * client._
-
-        where:
-        NAME << ['hello', 'https://github.com/nf-core/rnaseq', 'nf-core/rnaseq/main.nf']
-    }
-
     def 'should resolve a registry release' () {
         given:
         def latest = new PipelineRelease().version('3.14.0').gitRevision('3.14.0').commitId('abc123')
         def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq').workflowPath('main.nf').latest(latest)
 
         when:
-        def result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', null)
+        def result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', null)
 
         then:
         1 * client.getPipeline('nf-core/rnaseq') >> pipeline
@@ -391,53 +379,47 @@ class PipelineManagerTest extends Specification {
         result.workflowPath == 'main.nf'
 
         when:
-        result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', '3.13.0')
+        result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', '3.13.0')
 
         then:
         1 * client.getPipeline('nf-core/rnaseq') >> pipeline
         1 * client.getPipelineRelease('nf-core/rnaseq', '3.13.0') >> new PipelineRelease().version('3.13.0').commitId('def456')
         result.commitId == 'def456'
-
-        when: 'the revision is the latest release'
-        result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', '3.14.0')
-
-        then:
-        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
-        0 * client.getPipelineRelease(_, _)
-        result.commitId == 'abc123'
     }
 
-    def 'should fall back to Git when the registry cannot resolve the release' () {
+    def 'should fail when the registry cannot resolve the release' () {
         given:
         def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq')
             .latest(new PipelineRelease().version('3.14.0').commitId('abc123').status(STATUS))
             .revoked(REVOKED)
         client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline }
-
-        expect:
-        PipelineManager.lookupRelease(client, 'nf-core/rnaseq', null) == null
-
-        where:
-        PIPELINE_ERROR                                         | STATUS                          | REVOKED
-        new RegistryException('Not found', 404)                | null                            | false
-        new RegistryException('Revoked', 410)                  | null                            | false
-        new RegistryException('Unable', new IOException('x'))  | null                            | false
-        null                                                   | PipelineReleaseStatus.REVOKED   | false
-        null                                                   | null                            | true
-    }
-
-    def 'should use the registry repository for a revision that is not a release' () {
-        given:
-        client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl('https://github.com/someone/hello')
-            .latest(new PipelineRelease().version('1.0.0').commitId('abc123'))
-        client.getPipelineRelease('acme/hello', 'dev') >> { throw new RegistryException('Not found', 404) }
+        client.getPipelineRelease('nf-core/rnaseq', 'dev') >> { throw new RegistryException('Not found', 404) }
 
         when:
-        def result = PipelineManager.lookupRelease(client, 'acme/hello', 'dev')
+        PipelineManager.resolveRelease(client, NAME, VERSION)
 
         then:
-        result.repositoryUrl == 'https://github.com/someone/hello'
-        result.revision == 'dev'
-        result.version == null
+        def e = thrown(AbortOperationException)
+        e.message.contains(MESSAGE)
+
+        where:
+        NAME              | VERSION | PIPELINE_ERROR                          | STATUS                        | REVOKED | MESSAGE
+        'hello'           | null    | null                                    | null                          | false   | 'Invalid pipeline name'
+        'nf-core/rnaseq'  | null    | new RegistryException('Not found', 404) | null                          | false   | 'nf-core/rnaseq not found in the registry'
+        'nf-core/rnaseq'  | 'dev'   | null                                    | null                          | false   | 'nf-core/rnaseq@dev not found in the registry'
+        'nf-core/rnaseq'  | null    | null                                    | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
+        'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
+    }
+
+    def 'should get the pipeline name of a registry URL' () {
+        expect:
+        PipelineManager.nameFromUrl(ADDRESS, ['https://registry.nextflow.io/api', 'https://registry-dev.nextflow.io/api/']) == NAME
+
+        where:
+        ADDRESS                                                      | NAME
+        'https://registry.nextflow.io/pipelines/nf-core/rnaseq'      | 'nf-core/rnaseq'
+        'https://registry-dev.nextflow.io/pipelines/acme/hello/'     | 'acme/hello'
+        'https://github.com/nf-core/rnaseq'                          | null
+        'https://registry.nextflow.io/modules/nf-core/fastqc'        | null
     }
 }

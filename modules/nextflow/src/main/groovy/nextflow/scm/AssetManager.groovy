@@ -76,6 +76,12 @@ class AssetManager implements Closeable {
      */
     private String project
 
+    /**
+     * The project on the Git host. It differs from {@link #project} when the local
+     * name is not the Git one, e.g. a registry pipeline cached under its registry name
+     */
+    private String remoteProject
+
     private Git _git
 
     private String mainScript
@@ -122,12 +128,12 @@ class AssetManager implements Closeable {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null ) {
+    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null, String localName = null ) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, hubOpts, revision, mainScript)
+        build(pipelineName, config, hubOpts, revision, mainScript, localName)
     }
 
     /**
@@ -139,12 +145,15 @@ class AssetManager implements Closeable {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null, String localName = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
         this.httpClientOpts = RepositoryProvider.httpClientOpts(config)
 
         this.project = resolveName(pipelineName)
+        this.remoteProject = project
+        if( localName )
+            this.project = localName
         if( mainScript )
             this.mainScript = mainScript
 
@@ -153,6 +162,7 @@ class AssetManager implements Closeable {
 
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
+        checkRemoteProject(remoteProject != project || isUrl(pipelineName))
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
@@ -373,6 +383,51 @@ class AssetManager implements Closeable {
     }
 
     /**
+     * Reconcile the Git project with the one of the local clone, when there is one.
+     * For a plain name the clone decides, so a project cached under a local name keeps
+     * using its own repository. For a URL or a local name, a clone of a different
+     * repository is an error.
+     *
+     * @param explicit Whether the Git project was given as a URL or with a local name
+     */
+    private void checkRemoteProject(boolean explicit) {
+        final cloned = getClonedProject()
+        // Git hosts match names ignoring the case, and the clone URL uses the host's spelling
+        if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
+            return
+        if( explicit )
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned`")
+        this.remoteProject = cloned
+    }
+
+    /** The Git project of the local multi-revision clone, read from its `origin` remote, or {@code null} */
+    private String getClonedProject() {
+        // legacy clones keep using their folder name; local names are only used with multi-revision clones
+        if( !(strategy instanceof MultiRevisionRepositoryStrategy) )
+            return null
+        final file = getLocalGitConfig()
+        if( !file?.exists() )
+            return null
+        final str = new IniFile().load(file).getString('remote "origin"', 'url')
+        if( !str )
+            return null
+        try {
+            final url = new GitUrl(str)
+            if( url.protocol == 'file' )
+                return null
+            return providerConfigs.find { it.domain == url.domain }?.resolveProjectName(url.path.stripStart('/'))
+        }
+        catch( Exception e ) {
+            log.debug "Cannot parse Git remote URL: ${redactUrlPassword(str)} -- cause: ${e.message}"
+            return null
+        }
+    }
+
+    private static boolean isUrl(String name) {
+        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:/')
+    }
+
+    /**
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
      *
@@ -526,7 +581,7 @@ class AssetManager implements Closeable {
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
         return RepositoryFactory
-            .newRepositoryProvider(config, project)
+            .newRepositoryProvider(config, remoteProject ?: project)
             .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 

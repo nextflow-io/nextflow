@@ -33,6 +33,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import io.seqera.npr.client.RegistryClient
 import nextflow.BuildInfo
+import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
@@ -42,6 +43,7 @@ import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.module.RegistryClientFactory
@@ -49,6 +51,7 @@ import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.EmptySecretProvider
@@ -275,6 +278,8 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
+
+    static final String REGISTRY_HUB = 'registry'
 
     @TestOnly
     protected RegistryClient registryClient
@@ -640,10 +645,13 @@ class CmdRun extends CmdBase implements HubAware {
          * try to look for a pipeline in the repository
          */
         final release = registryLookup(pipelineName)
-        final project = release?.repositoryUrl ?: pipelineName
-        final rev = release ? (release.commitId ?: release.revision) : revision
+        // a registry release is fetched from its Git repository and cached under its registry name
+        final resolved = release?.repositoryUrl != null
+        final project = resolved ? release.repositoryUrl : release?.name ?: pipelineName
+        final rev = resolved ? (release.commitId ?: release.revision) : revision
         final main = mainScript ?: release?.workflowPath
-        try( final manager = new AssetManager(project, rev, main, toHubOptions()) ) {
+        final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
+        try( final manager = new AssetManager(project, rev, main, hubOpts, resolved ? release.name : null) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 
@@ -682,14 +690,36 @@ class CmdRun extends CmdBase implements HubAware {
 
     }
 
-    /** Registry release to run for {@code scope/name}, or {@code null} to run from Git as before */
+    /**
+     * Registry release for a registry address: a registry page URL, or {@code scope/name}
+     * with {@code -hub registry} (or {@code NXF_HUB=registry}).
+     *
+     * @return the release, or {@code null} when the name is not a registry address
+     */
     protected PipelineInfo registryLookup(String name) {
-        if( offline || hubProvider )
+        final isUrl = name.startsWith('http://') || name.startsWith('https://')
+        if( !isUrl && !isRegistryHub() )
             return null
-        // the pipeline config is not fetched yet: read the launch folder config and the `-c` files
+        final config = registryConfig()
+        final registryName = isUrl ? PipelineManager.nameFromUrl(name, config.allUrls) : name
+        if( !registryName )
+            return null
+        // the release can't be resolved offline: use the copy cached under the registry name
+        if( offline )
+            return new PipelineInfo(name: registryName)
+        final release = PipelineManager.resolveRelease(registryClient ?: RegistryClientFactory.forConfig(config), registryName, revision)
+        log.info "Using registry release ${registryName}@${release.version} (commit ${release.commitId?.take(10)})"
+        return release
+    }
+
+    private boolean isRegistryHub() {
+        return hubProvider ? hubProvider == REGISTRY_HUB : Const.DEFAULT_HUB == REGISTRY_HUB
+    }
+
+    /** The `registry` scope from the launch folder config and the `-c` files, since the pipeline config is not fetched yet */
+    private RegistryConfig registryConfig() {
         final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
-        final client = registryClient ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, Path.of('.').toAbsolutePath().normalize(), configFiles))
-        return PipelineManager.lookupRelease(client, name, revision)
+        return PipelineCmdSupport.registryConfig(this, Path.of('.').toAbsolutePath().normalize(), configFiles)
     }
 
     static protected File tryReadFromStdin() {
