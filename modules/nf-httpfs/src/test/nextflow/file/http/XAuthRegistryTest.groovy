@@ -34,7 +34,7 @@ class XAuthRegistryTest extends Specification {
         def provider = Mock(XAuthProvider)
         authenticator.register(provider)
         and:
-        def conn1 = Mock(URLConnection)
+        def conn1 = new URL('http://localhost/').openConnection()
 
         when:
         def result = authenticator.authorize(conn1)
