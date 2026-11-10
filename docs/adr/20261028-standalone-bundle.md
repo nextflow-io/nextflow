@@ -143,7 +143,7 @@ Breakdown on master (d2b807a07, after the Groovy 5 upgrade) with the linux-x64 b
 | **time to first task** | **981 ms** (of 1,188 ms) | **1,218 ms** (of 1,519 ms) |
 | of which GC pauses | 47 ms | 114 ms |
 
-The phases don't add up to the total because each is a median. The phases run one after another on the main thread, so each one adds to the time to first task. These numbers don't compare directly with the Results above, which were measured with 26.10.3 (Groovy 4).
+The phases don't add up to the total because each is a median. The phases run one after another on the main thread, so each one adds to the time to first task.
 
 ### Removing the `-dist` release
 
