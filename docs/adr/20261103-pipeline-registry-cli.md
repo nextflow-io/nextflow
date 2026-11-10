@@ -140,7 +140,9 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 | Plain name | `nextflow run nf-core/rnaseq` | Git, default hub (`NXF_HUB` or `github`), as today |
 | Git URL or Git hub | `https://github.com/nf-core/rnaseq`, `-hub gitlab` | Git, as today |
 
-- A URL is a registry address when it starts with one of the configured `registry.url` values (without `/api`) followed by `/pipelines/`. This is the same rule as for Git URLs, where the host picks the provider.
+- A URL is a registry address when it starts with one of the configured `registry.url` values (without `/api`) followed by `/pipelines/`. This is the same rule as for Git URLs, where the host picks the provider. The default public registry (`https://registry.nextflow.io`) is always recognized, even when `registry.url` lists only other registries, because the user typed its address.
+- A URL is resolved only against the registry it names, not against the other configured registries. The API key is sent only when that registry is the primary one in `registry.url`, since the key belongs to the primary registry. `-hub registry` and `NXF_HUB=registry` use all the configured registries, in order.
+- A URL carries no version. A URL that ends with `@<version>` is an error: the version is given with `-r`.
 - `registry` is a reserved hub name. It goes through the existing `-hub` option and `NXF_HUB` variable, so a user or a site can make the registry the default for plain names.
 - A bare `github.com/nf-core/rnaseq` (without `https://`) is not added. It is not supported today, and it would be ambiguous with registry names, whose name part can have more than one segment (`nf-core/star/align`).
 
@@ -166,7 +168,7 @@ A registry release is fetched with `AssetManager` from its `repositoryUrl` at it
 - `AssetManager` keeps two names. The project name is the local name: the cache folder, `nextflow list`, and `workflow.projectName`. The remote project is the Git one, used only by the Git provider (API calls and clone URL), and so by `workflow.repository`.
 - When a cached multi-revision clone is used by its plain name, as in `pull`, `info`, `drop` or `run -offline`, the remote project is read from the clone's `origin` remote. So these commands work on a registry pipeline by its registry name, with no change in the commands.
 - For a URL or a registry address, a clone of a different repository under the same name is an error ("already downloaded from a different repository"). This extends today's check, which only compares the host.
-- For a plain name, the cached clone decides, as today: a plain `foo/bar` already uses a clone from another hub when one is cached under that name.
+- For a plain name, the cached clone decides, as today: a plain `foo/bar` already uses a clone from another hub when one is cached under that name. When the clone's Git project differs from the name, Nextflow logs `Using <name> cached from <Git project>`.
 
 **Considered cache options.**
 - **Cache under the Git name.** Simplest: no `AssetManager` change. Rejected: the registry name is lost (`nextflow list` shows the Git name), and offline runs by registry name can't find the copy.
@@ -189,17 +191,20 @@ A registry release is fetched with `AssetManager` from its `repositoryUrl` at it
 
 These points come from the prototype of explicit registry addresses and must be settled before merging.
 
-- **Shape of a registry URL.** The prototype requires the `/pipelines/` path: `https://registry.nextflow.io/pipelines/nf-core/rnaseq`, which is the address of the registry page, so it can be copied from the browser.
-  - Keep `/pipelines/`: the registry keeps modules and pipelines in separate namespaces (`nf-core/rnaseq` may be both), and the path says which one is meant. It also leaves room for other kinds of URLs later.
-  - Drop it (`https://registry.nextflow.io/nf-core/rnaseq`): shorter, and `nextflow run` only runs pipelines anyway. But it is not a page address, and it may clash with other registry paths.
-  - Also open: accept a version in the URL (`…/nf-core/rnaseq@3.14.0`), the form that `pipeline view` prints for the page link, or only `-r`.
-- **Which registry a URL resolves against.** The URL is matched against every entry of `registry.url`, but the client then tries the registries in order, primary first. A URL of a fallback registry can so be resolved from the primary one, which may hold a different release under the same name. Proposed: resolve a URL only against the registry it names, and send the API key only when that is the primary registry. `-hub registry` keeps the normal order.
-- **URL of a registry that is not configured.** Only the registries in `registry.url` are recognized, as only configured Git hosts are. Any other URL is treated as a Git URL and fails with "Unable to find a Git provider config". Proposed: a clearer error. Open: whether the default public registry should always be recognized, even when `registry.url` lists only a private one.
-- **API and page URLs.** The page address is the API URL without `/api`. This holds for registry.nextflow.io and registry-dev, and `pipeline view` builds its links the same way. A registry with another layout would need its page URL in config.
-- **A plain name once cached.** A plain `nextflow run jorge-test/nf-demo-fetchngs` uses a registry clone cached under that name, because for a plain name the cache decides. A clone from another hub behaves the same way today. Open: accept this, or make a plain name ignore clones that came from the registry.
-- **`-r` offline.** Offline, the release can't be resolved, so `-r` is a Git revision: a commit, or a tag equal to the version. A version works offline only when the tag has the same name (`jorge-test` uses `v1.0.0` for `1.0.0`). Open: record the version of the cached clone so that `-offline -r <version>` works.
-- **`NXF_HUB=registry` in other commands.** `pull` or `clone` with a plain name that is not cached fail with "Unknown repository provider: registry". Open: support registry addresses there, or reject `NXF_HUB=registry` with a clear message.
-- **Error messages of `pipeline install`.** Install and run now share the release lookup, so install of an unknown name says "not found in the registry" instead of the raw client error.
+- **Shape of a registry URL.** Recommended: keep the `/pipelines/` path and derive the page address from the API URL.
+  - The prototype requires `/pipelines/`: `https://registry.nextflow.io/pipelines/nf-core/rnaseq` is the address of the registry page, so it can be copied from the browser. The registry keeps modules and pipelines in separate namespaces (`nf-core/rnaseq` may be both), and the path says which one is meant, as `/modules/` does for modules.
+  - Without it (`https://registry.nextflow.io/nf-core/rnaseq`) the URL is shorter, but it is not a page address and it may clash with other registry paths.
+  - The page address is the API URL without `/api`. This holds for every npr deployment, which serves pages and API from one host, and `pipeline view` builds its links the same way. A registry with another layout can still be used with `-hub registry`, or a page URL option can be added to the `registry` scope later.
+- **`-r` offline.** Offline, the registry can't be asked, so the prototype uses `-r` as a Git revision: a commit, or a tag equal to the version (`jorge-test` uses `v1.0.0` for `1.0.0`). Options:
+  - A. A file next to the clone, `.repos/<scope>/<name>/.registry-releases`, with `version=commit` for each release run online. It sits beside `bare/` and `clones/`, outside any Git tree. The legacy layout would need multi-revision for registry runs.
+  - B. The same mapping in the bare repository's Git config (`[registry "1.0.0"] commit = …`), which is never versioned and is removed with the clone. Recommended if this design is kept.
+  - C. A local Git ref such as `refs/registry/1.0.0`. It needs extra code to resolve `-r`, and a local tag would look like a remote one in `nextflow info`.
+  - D. One central file for all registry pipelines. `drop` would leave stale entries.
+  - E. Keep `-r` as a Git revision offline, with a clear error when it does not resolve.
+- **`NXF_HUB=registry` in other commands.** Only `run` and `inspect` understand the `registry` hub. `pull`, `clone`, `config` or `info` of a plain name that is not cached fail with "Unknown repository provider: registry". Options:
+  - A. A clear error in `AssetManager.checkHubProvider`: the `registry` hub is only supported by `nextflow run`. Recommended for now.
+  - B. Support registry addresses in `pull` now, so that a release can be fetched before an offline run.
+  - C. Ignore `NXF_HUB=registry` in the other commands and use GitHub. Rejected: a silent switch.
 
 ## Links
 

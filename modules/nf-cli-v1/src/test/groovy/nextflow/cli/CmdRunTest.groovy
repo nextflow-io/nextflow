@@ -544,6 +544,16 @@ class CmdRunTest extends Specification {
         'https://github.com/nf-core/rnaseq'                     | null       | false
         'nf-core/rnaseq'                                        | 'registry' | true
         'https://registry.nextflow.io/pipelines/nf-core/rnaseq' | null       | true
+        'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq' | null   | false
+    }
+
+    def 'should reject a version in a registry URL' () {
+        when:
+        new CmdRun(launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('give the version with the `-r` option')
     }
 
     def 'should not fall back to Git for a registry address' () {

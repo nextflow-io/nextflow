@@ -701,13 +701,23 @@ class CmdRun extends CmdBase implements HubAware {
         if( !isUrl && !isRegistryHub() )
             return null
         final config = registryConfig()
-        final registryName = isUrl ? PipelineManager.nameFromUrl(name, config.allUrls) : name
-        if( !registryName )
-            return null
+        String registryName = name
+        RegistryClient client = registryClient
+        if( isUrl ) {
+            // the default public registry is always recognized, even when not configured
+            final match = PipelineManager.parseUrl(name, config.allUrls + [RegistryConfig.DEFAULT_REGISTRY_URL])
+            if( !match )
+                return null
+            registryName = match.v2
+            if( registryName.contains('@') )
+                throw new AbortOperationException("Not a valid registry pipeline URL: $name -- give the version with the `-r` option")
+            // a URL names one registry: resolve it only there, and send the API key only to the primary registry
+            client ?= RegistryClientFactory.forUrls([match.v1], match.v1 == config.url ? config.apiKey : null)
+        }
         // the release can't be resolved offline: use the copy cached under the registry name
         if( offline )
             return new PipelineInfo(name: registryName)
-        final release = PipelineManager.resolveRelease(registryClient ?: RegistryClientFactory.forConfig(config), registryName, revision)
+        final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forConfig(config), registryName, revision)
         log.info "Using registry release ${registryName}@${release.version} (commit ${release.commitId?.take(10)})"
         return release
     }

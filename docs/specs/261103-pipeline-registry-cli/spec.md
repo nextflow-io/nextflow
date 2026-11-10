@@ -77,15 +77,17 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 **Acceptance scenarios**
 
 1. **Given** `nf-core/rnaseq` is in the registry, **when** the user runs `nextflow run nf-core/rnaseq -hub registry`, **then** Nextflow runs the latest published release at its `commitId`, and logs `Using registry release nf-core/rnaseq@<version> (commit <commit>)` before the launch line.
-2. **Given** `https://registry.nextflow.io/pipelines/nf-core/rnaseq`, where the URL starts with a configured `registry.url` (without `/api`), **then** the same release runs.
+2. **Given** `https://registry.nextflow.io/pipelines/nf-core/rnaseq`, where the URL starts with a configured `registry.url` (without `/api`) or the default public registry, **then** the same release runs. It is resolved only against that registry, and the API key is sent only when it is the primary registry.
+   A URL that ends with `@<version>` is an error that points to `-r`.
 3. **Given** `NXF_HUB=registry`, **then** a plain `nextflow run nf-core/rnaseq` uses the registry, and `-hub github` uses Git.
 4. **Given** `-r 3.14.0` and that release exists, **then** Nextflow runs it at its `commitId`.
 5. **Given** a registry address and a name not in the registry, a `-r` that is not a release, a revoked release, or a registry that can't be reached, **then** the run fails with an error. There is no fallback to Git.
 6. **Given** a plain `scope/name`, a Git URL or `-hub gitlab`, **then** the registry is not called, as today.
 7. **Given** a registry name that points to a different Git repository (`jorge-test/nf-demo-fetchngs` → `github.com/jorgee/nf-demo-fetchngs`), **then** the release is cached under the registry name, `nextflow list` shows `jorge-test/nf-demo-fetchngs`, and `workflow.repository` is the Git URL.
-8. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry -r <commit>`, or `pull`, `info` or `drop` by the registry name, **then** the cached clone and its own Git repository are used.
-9. **Given** a clone cached under `acme/foo` from `github.com/other/foo`, **when** the user runs `https://github.com/acme/foo`, **then** the run fails because the name was downloaded from a different repository.
-10. **Given** `nextflow inspect`, **then** the same addresses apply.
+8. **Given** a plain name whose cached clone comes from another Git project, **then** the clone is used, and Nextflow logs `Using <name> cached from <Git project>`.
+9. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry -r <commit>`, or `pull`, `info` or `drop` by the registry name, **then** the cached clone and its own Git repository are used.
+10. **Given** a clone cached under `acme/foo` from `github.com/other/foo`, **when** the user runs `https://github.com/acme/foo`, **then** the run fails because the name was downloaded from a different repository.
+11. **Given** `nextflow inspect`, **then** the same addresses apply.
 
 ## Functional requirements
 

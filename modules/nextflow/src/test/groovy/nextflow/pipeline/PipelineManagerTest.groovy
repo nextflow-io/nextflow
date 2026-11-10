@@ -411,14 +411,14 @@ class PipelineManagerTest extends Specification {
         'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
     }
 
-    def 'should get the pipeline name of a registry URL' () {
+    def 'should parse a registry URL' () {
         expect:
-        PipelineManager.nameFromUrl(ADDRESS, ['https://registry.nextflow.io/api', 'https://registry-dev.nextflow.io/api/']) == NAME
+        PipelineManager.parseUrl(ADDRESS, ['https://registry.nextflow.io/api', 'https://registry-dev.nextflow.io/api']) == RESULT
 
         where:
-        ADDRESS                                                      | NAME
-        'https://registry.nextflow.io/pipelines/nf-core/rnaseq'      | 'nf-core/rnaseq'
-        'https://registry-dev.nextflow.io/pipelines/acme/hello/'     | 'acme/hello'
+        ADDRESS                                                      | RESULT
+        'https://registry.nextflow.io/pipelines/nf-core/rnaseq'      | new Tuple2('https://registry.nextflow.io/api', 'nf-core/rnaseq')
+        'https://registry-dev.nextflow.io/pipelines/acme/hello/'     | new Tuple2('https://registry-dev.nextflow.io/api', 'acme/hello')
         'https://github.com/nf-core/rnaseq'                          | null
         'https://registry.nextflow.io/modules/nf-core/fastqc'        | null
     }

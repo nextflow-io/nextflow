@@ -224,12 +224,17 @@ class PipelineManager {
             registryUrl: client.primaryUrl())
     }
 
-    /** Pipeline name of a registry page URL such as {@code https://registry.nextflow.io/pipelines/nf-core/rnaseq}, or {@code null} */
-    static String nameFromUrl(String url, Collection<String> registryUrls) {
+    /**
+     * Registry and pipeline name of a registry page URL such as {@code https://registry.nextflow.io/pipelines/nf-core/rnaseq}.
+     * The page URL is the registry API URL without {@code /api}.
+     *
+     * @return the matching API URL and the pipeline name, or {@code null} when the URL is not a page of these registries
+     */
+    static Tuple2<String,String> parseUrl(String url, Collection<String> registryUrls) {
         for( String api : registryUrls ) {
             final prefix = api.replaceFirst(/\/api\/?$/, '') + '/pipelines/'
             if( url.startsWith(prefix) )
-                return url.substring(prefix.length()).replaceFirst(/\/$/, '')
+                return new Tuple2<String,String>(api, url.substring(prefix.length()).replaceFirst(/\/$/, ''))
         }
         return null
     }

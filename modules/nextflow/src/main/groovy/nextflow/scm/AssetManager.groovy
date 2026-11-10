@@ -397,6 +397,7 @@ class AssetManager implements Closeable {
             return
         if( explicit )
             throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned`")
+        log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned
     }
 
