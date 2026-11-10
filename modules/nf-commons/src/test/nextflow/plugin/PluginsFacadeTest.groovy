@@ -33,14 +33,15 @@ class PluginsFacadeTest extends Specification {
 
     def 'should setup plugins' () {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
+        final port = server.address.port
+        server.createContext("/", new FakeIndexHandler(port))
         server.start()
         and:
         def folder = Files.createTempDirectory('test')
         def plugins = new PluginsFacade(folder)
         plugins.env = [:]
-        plugins.indexUrl = 'http://localhost:9900/plugins.json'
+        plugins.indexUrl = "http://localhost:${port}/plugins.json"
 
         when:
         plugins.init()

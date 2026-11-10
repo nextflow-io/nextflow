@@ -33,15 +33,16 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Session
@@ -364,7 +365,7 @@ class TaskProcessor {
     boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
 
     /**
-     * @return The {@code DataflowOperator} underlying this process
+     * @return The {@code DataflowProcessor} underlying this process
      */
     DataflowProcessor getOperator() { operator }
 
@@ -559,7 +560,7 @@ class TaskProcessor {
             // the iterator operator needs to executed just one time
             // thus add a dataflow queue binding a single value and then a stop signal
             def termination = new DataflowQueue<>()
-            termination << Boolean.TRUE
+            termination.bind(Boolean.TRUE)
             opInputs[size] = termination
 
             // the channel forwarding the data from the *iterator* process to the target task
@@ -1282,10 +1283,10 @@ class TaskProcessor {
             if( channel instanceof DataflowQueue ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowStreamWriteAdapter ) {
+            else if( channel instanceof DataflowBroadcast ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowExpression && !channel.isBound()) {
+            else if( channel instanceof DataflowVariable && !channel.isBound()) {
                 channel.bind( PoisonPill.instance )
             }
         }

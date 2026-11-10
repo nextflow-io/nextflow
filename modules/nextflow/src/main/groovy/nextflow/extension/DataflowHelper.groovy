@@ -108,7 +108,7 @@ class DataflowHelper {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( source instanceof DataflowExpression ) {
-                    if( !(target instanceof DataflowExpression) )
+                    if( !(target instanceof DataflowVariable) )
                         processor.bindOutput( Channel.STOP )
                     processor.terminate()
                 }

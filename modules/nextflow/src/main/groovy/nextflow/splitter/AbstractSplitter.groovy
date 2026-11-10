@@ -107,7 +107,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     protected Object getTargetObj() { targetObj }
 
     /**
-     * @return The target object that receives the splitted chunks. It can be a {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List}
+     * @return The target object that receives the splitted chunks. It can be a {@link groovyx.gpars.dataflow.DataflowWriteChannel} or a {@code List}
      */
     def getInto() { into }
 
@@ -136,7 +136,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * Apply the splitting operation on the given object
      *
      * @param index the current split count
-     * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
+     * @return Either {@link groovyx.gpars.dataflow.DataflowWriteChannel} or a {@code List} which holds the splitted chunks
      */
     final apply() {
 
@@ -259,7 +259,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      *
      * @param targetObject The actual object to be splitted
      * @param index the current split count
-     * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
+     * @return Either {@link groovyx.gpars.dataflow.DataflowWriteChannel} or a {@code List} which holds the splitted chunks
      */
     abstract protected process( T targetObject )
 
