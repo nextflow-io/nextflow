@@ -16,13 +16,13 @@
 
 package nextflow.processor
 
-import spock.lang.Ignore
 import spock.lang.Specification
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.ProviderMismatchException
 
 import nextflow.util.KryoHelper
 /**
@@ -151,8 +151,7 @@ class TaskPathTest extends Specification {
         new TaskPath(Paths.get('/foo')).size() == 0
     }
 
-    @Ignore
-    def 'should report error' () {
+    def 'should fail to read the target file through the default provider' () {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -161,11 +160,14 @@ class TaskPathTest extends Specification {
 
         when:
         def path = new TaskPath(hello, 'ciao.txt')
-
         then:
-        // -- PROBLEMS
-        path == hello  // it fails because Path implements Comparable https://stackoverflow.com/questions/28355773/in-groovy-why-does-the-behaviour-of-change-for-interfaces-extending-compar#comment45123447_28387391
-        path.text == 'Hello world'
+        path == hello
+
+        when:
+        path.text
+        then:
+        // TaskPath is not unwrapped by the default file system provider
+        thrown(ProviderMismatchException)
 
         cleanup:
         folder.deleteDir()
