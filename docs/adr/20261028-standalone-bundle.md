@@ -126,7 +126,7 @@ Beyond these, each dependency would need to be replaced, which would also shrink
 
 The AOT cache removes most of the class loading, but startup is still most of a short run. Here, startup is the time to the first task, i.e. from launching `nextflow` to the first task being submitted.
 
-Breakdown on master (d2b807a07, after the Groovy 5 upgrade) with the linux-x64 bundle, median of 20 runs on 16 CPUs. hello is a single process that runs `echo`, and train is the training pipeline of the AOT cache:
+Breakdown with the linux-x64 bundle, median of 20 runs on 16 CPUs. hello is a single process that runs `echo`, and train is the training pipeline of the AOT cache:
 
 | phase | hello | train |
 |---|---:|---:|
@@ -145,7 +145,7 @@ Breakdown on master (d2b807a07, after the Groovy 5 upgrade) with the linux-x64 b
 
 The phases don't add up to the total because each is a median. The phases run one after another on the main thread, so each one adds to the time to first task.
 
-Static compilation should help on the hot code paths of startup. Most core classes are dynamic Groovy, whose call sites are linked at runtime through Groovy's own `invokedynamic` bootstrap. The AOT cache doesn't archive these, so every launch links them again. In a prototype, `@CompileStatic` on the ~30 core classes that link the most call sites (e.g. `TaskProcessor`, `TaskRun`, `ProcessConfig`, `DAG`) halved the call sites linked in a hello run. It saved ~100-115 ms on hello and train, i.e. ~10% of the run (measured with typed pipelines, on master before d2b807a07).
+Static compilation should help on the hot code paths of startup. Most core classes are dynamic Groovy, whose call sites are linked at runtime through Groovy's own `invokedynamic` bootstrap. The AOT cache doesn't archive these, so every launch links them again. In a prototype, `@CompileStatic` on the ~30 core classes that link the most call sites (e.g. `TaskProcessor`, `TaskRun`, `ProcessConfig`, `DAG`) halved the call sites linked in a hello run. It saved ~100-115 ms on hello and train, i.e. ~10% of the run.
 
 ### Removing the `-dist` release
 
