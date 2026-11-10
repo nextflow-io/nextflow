@@ -15,7 +15,7 @@
  */
 package nextflow.plugin
 
-import org.pf4j.PluginManager
+import org.pf4j.DefaultPluginDescriptor
 import org.pf4j.PluginWrapper
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -29,11 +29,7 @@ class BasePluginTest extends Specification {
     @Unroll
     def 'should validate version match' () {
         given:
-        def wrapper = Mock(PluginWrapper) {
-            getPluginManager() >> Mock(PluginManager) {
-                getVersionManager() >> new CustomVersionManager()
-            }
-        }
+        def wrapper = new PluginWrapper(new CustomPluginManager(), new DefaultPluginDescriptor(), null, null)
 
         def plugin = new BasePlugin(wrapper) { }
 
