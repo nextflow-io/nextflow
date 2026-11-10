@@ -19,6 +19,7 @@ package nextflow.file.http
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.SysEnv
+import nextflow.util.TestOnly
 
 /**
  * Hold HTTP/FTP virtual file system configuration
@@ -81,6 +82,7 @@ class XFileSystemConfig {
      * Replace the global config used by all providers, or reload it
      * from the environment when no config is given. Intended for tests.
      */
+    @TestOnly
     @PackageScope
     static void reset(XFileSystemConfig config=null) {
         instance = config ?: new XFileSystemConfig()
