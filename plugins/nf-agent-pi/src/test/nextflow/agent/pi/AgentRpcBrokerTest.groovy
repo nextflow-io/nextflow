@@ -368,7 +368,7 @@ class AgentRpcBrokerTest extends Specification {
         def registration = broker.register(new AgentRunnerRequest(model: 'openai/test', requestTimeoutSeconds: 3600), false)
 
         when:
-        sleep(500)
+        awaitDrained()
         def frames = connect(registration.endpoint)
         frames.send([type: 'connect', invocationId: registration.invocationId, token: registration.token])
 

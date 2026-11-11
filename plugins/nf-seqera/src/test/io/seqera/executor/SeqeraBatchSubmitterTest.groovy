@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 import io.seqera.sched.api.schema.v1a1.CreateTasksResponse
 import io.seqera.sched.api.schema.v1a1.InputFilesMetrics
@@ -33,6 +34,7 @@ import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Timeout
+import spock.util.concurrent.PollingConditions
 
 /**
  * Tests for SeqeraBatchSubmitter
@@ -44,10 +46,12 @@ class SeqeraBatchSubmitterTest extends Specification {
 
     static final String TEST_RUN = 'run-test:local'
 
+    def conditions = new PollingConditions(timeout: 5, delay: 0.01)
+
     def 'should batch multiple tasks submitted within the interval'() {
         given:
         def taskIds = ['task-1', 'task-2', 'task-3']
-        def capturedTasks = []
+        def capturedTasks = [].asSynchronized()
         def client = Stub(SchedClient) {
             createTasks(_, _) >> { String runId, List<Task> tasks ->
                 capturedTasks.addAll(tasks)
@@ -56,7 +60,7 @@ class SeqeraBatchSubmitterTest extends Specification {
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('500ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('200ms'))
         def handlers = (1..3).collect { createMockHandler() }
         def tasks = (1..3).collect { new Task().image("image-$it") }
 
@@ -66,7 +70,7 @@ class SeqeraBatchSubmitterTest extends Specification {
             submitter.submit(handler, tasks[i])
         }
         // Wait for the batch interval to elapse and tasks to be submitted
-        sleep(800)
+        conditions.eventually { assert capturedTasks.size() == 3 }
         submitter.shutdown()
 
         then: 'all tasks should be submitted in a single batch'
@@ -93,19 +97,19 @@ class SeqeraBatchSubmitterTest extends Specification {
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('200ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
 
         when: 'enqueue first batch, wait for flush, then enqueue second batch'
         submitter.start()
         // First batch - tasks s1 and s2
         submitter.submit(createMockHandler(), new Task().image('s1'))
         submitter.submit(createMockHandler(), new Task().image('s2'))
-        // Wait for first batch to flush (interval + buffer)
-        sleep(400)
+        // Wait for first batch to flush
+        conditions.eventually { assert batches.size() == 1 }
         // Second batch - task s3
         submitter.submit(createMockHandler(), new Task().image('s3'))
         // Wait for second batch to flush
-        sleep(400)
+        conditions.eventually { assert batches.size() == 2 }
         submitter.shutdown()
 
         then: 'should have two separate batches with correct tasks'
@@ -136,8 +140,8 @@ class SeqeraBatchSubmitterTest extends Specification {
         (1..SeqeraBatchSubmitter.TASKS_PER_REQUEST).each {
             submitter.submit(createMockHandler(), new Task().image("img$it"))
         }
-        // Give a small delay for the batch to be processed
-        sleep(200)
+        // Wait for the full batch to be flushed, well before the interval
+        conditions.eventually { assert batchSizes.size() >= 1 }
         submitter.shutdown()
 
         then: 'should flush immediately due to batch size limit'
@@ -164,8 +168,8 @@ class SeqeraBatchSubmitterTest extends Specification {
         (1..totalTasks).each {
             submitter.submit(createMockHandler(), new Task().image("img$it"))
         }
-        // Wait for batches to be processed
-        sleep(500)
+        // Wait for the first batch to be flushed and the rest to be taken from the queue
+        conditions.eventually { assert batchSizes.size() == 1 && submitter.@pendingQueue.isEmpty() }
         submitter.shutdown()
 
         then: 'should create two batches: 100 + 20'
@@ -215,8 +219,9 @@ class SeqeraBatchSubmitterTest extends Specification {
     def 'should propagate failure to handlers on API error'() {
         given:
         def apiError = new RuntimeException('API error')
+        def calls = new AtomicInteger()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { throw apiError }
+            createTasks(_, _) >> { calls.incrementAndGet(); throw apiError }
         }
         def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
         def handler1 = Mock(SeqeraTaskHandler)
@@ -226,7 +231,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         submitter.start()
         submitter.submit(handler1, new Task().image('img1'))
         submitter.submit(handler2, new Task().image('img2'))
-        sleep(300)
+        conditions.eventually { assert calls.get() >= 1 }
         submitter.shutdown()
 
         then: 'all handlers should receive the failure'
@@ -236,8 +241,10 @@ class SeqeraBatchSubmitterTest extends Specification {
 
     def 'should propagate failure to handlers when API returns wrong number of task IDs'() {
         given:
+        def calls = new AtomicInteger()
         def client = Stub(SchedClient) {
             createTasks(_, _) >> { String runId, List<Task> tasks ->
+                calls.incrementAndGet()
                 Stub(CreateTasksResponse) {
                     // Return fewer IDs than tasks submitted
                     getTaskIds() >> ['task-1']
@@ -254,7 +261,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         submitter.submit(handler1, new Task().image('img1'))
         submitter.submit(handler2, new Task().image('img2'))
         submitter.submit(handler3, new Task().image('img3'))
-        sleep(300)
+        conditions.eventually { assert calls.get() >= 1 }
         submitter.shutdown()
 
         then: 'handlers should receive failure due to mismatched IDs'
@@ -274,24 +281,24 @@ class SeqeraBatchSubmitterTest extends Specification {
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('300ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('200ms'))
 
         when: 'start submitter, wait longer than interval, then enqueue tasks'
         submitter.start()
         // Wait longer than the batch interval before enqueueing
-        sleep(500)
+        sleep(300)
         def enqueueTime = System.currentTimeMillis()
         submitter.submit(createMockHandler(), new Task().image('img1'))
         submitter.submit(createMockHandler(), new Task().image('img2'))
         // Wait for batch to flush
-        sleep(500)
+        conditions.eventually { assert submitTimes.size() == 1 }
         submitter.shutdown()
 
-        then: 'batch should be submitted ~300ms after enqueue, not immediately'
+        then: 'batch should be submitted ~200ms after enqueue, not immediately'
         submitTimes.size() == 1
-        // The submit should happen ~300ms after enqueue
+        // The submit should happen ~200ms after enqueue
         def timeSinceEnqueue = submitTimes[0] - enqueueTime
-        timeSinceEnqueue >= 250 // Allow some tolerance
+        timeSinceEnqueue >= 150 // Allow some tolerance
         timeSinceEnqueue < 600  // But not too long
     }
 
@@ -318,13 +325,13 @@ class SeqeraBatchSubmitterTest extends Specification {
                 }
             }
         }
-        // Short keep-alive interval for testing
-        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('10s'), Duration.of('200ms'))
+        // Short keep-alive interval for testing, the request interval sets the sender poll period
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('500ms'), Duration.of('100ms'))
 
         when: 'start submitter and wait for keep-alive interval without enqueueing tasks'
         submitter.start()
-        // Wait for keep-alive to trigger (interval + buffer)
-        sleep(400)
+        // Wait for keep-alive to trigger
+        conditions.eventually { assert submissions.size() >= 1 }
         submitter.shutdown()
 
         then: 'should have sent at least one keep-alive (empty submission)'
@@ -353,7 +360,8 @@ class SeqeraBatchSubmitterTest extends Specification {
             submitter.submit(createMockHandler(), new Task().image("img$i"))
             sleep(80)
         }
-        sleep(200) // Wait for final batch to flush
+        // Wait for final batch to flush
+        conditions.eventually { assert submissions.sum { it.taskCount } == 5 }
         submitter.shutdown()
 
         then: 'all submissions should have tasks, no keep-alive (empty) submissions'
@@ -365,8 +373,8 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         // Use an Error to simulate a truly fatal condition that escapes flushBatch
         def fatalError = new OutOfMemoryError('Fatal thread error')
-        def errorReceived = null
-        def onError = { Throwable t -> errorReceived = t }
+        def errorReceived = new AtomicReference<Throwable>()
+        def onError = { Throwable t -> errorReceived.set(t) }
         def client = Stub(SchedClient) {
             createTasks(_, _) >> { String runId, List<Task> tasks ->
                 // Throw a fatal Error that will escape flushBatch
@@ -379,13 +387,13 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         submitter.submit(handler, new Task().image('img1'))
-        sleep(300)
+        conditions.eventually { assert errorReceived.get() != null }
         submitter.shutdown()
 
         then: 'handler should receive failure (wrapped in RuntimeException since it was an Error)'
         1 * handler.onBatchSubmitFailure({ it instanceof RuntimeException && it.cause == fatalError })
         and: 'error callback should be invoked with original error'
-        errorReceived == fatalError
+        errorReceived.get() == fatalError
     }
 
     def 'should drain and fail pending tasks on fatal error'() {
@@ -393,8 +401,10 @@ class SeqeraBatchSubmitterTest extends Specification {
         def fatalError = new RuntimeException('Fatal thread error')
         def failedHandlers = [].asSynchronized()
         def onError = { Throwable t -> /* no-op */ }
+        def calls = new AtomicInteger()
         def client = Stub(SchedClient) {
             createTasks(_, _) >> { String runId, List<Task> tasks ->
+                calls.incrementAndGet()
                 // Always throw to simulate fatal error
                 throw fatalError
             }
@@ -414,7 +424,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         handlers.each { h ->
             submitter.submit(h, new Task().image('img'))
         }
-        sleep(300)
+        conditions.eventually { assert calls.get() >= 1 }
         submitter.shutdown()
 
         then: 'all handlers should receive failure notification'
@@ -442,16 +452,16 @@ class SeqeraBatchSubmitterTest extends Specification {
             }
         }
         // Short keep-alive interval to trigger failures quickly
-        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('500ms'), Duration.of('100ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('200ms'), Duration.of('100ms'))
 
         when: 'start submitter, let keep-alive fail, then submit tasks'
         submitter.start()
-        // Wait for a few keep-alive failures
-        sleep(350)
+        // Wait for a keep-alive failure
+        conditions.eventually { assert keepAliveFailCount.get() >= 1 }
         // Now submit a task
         submitter.submit(createMockHandler(), new Task().image('img1'))
         // Wait for task to be submitted
-        sleep(700)
+        conditions.eventually { assert taskSubmissions.size() >= 1 }
         submitter.shutdown()
 
         then: 'keep-alive should have failed but thread should continue'
@@ -477,7 +487,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         submitter.submit(createMockHandler(), new Task().image('img1'))
-        sleep(300)
+        conditions.eventually { assert taskSubmissions.size() >= 1 }
         submitter.shutdown()
 
         then: 'should work normally'
@@ -515,7 +525,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         submitter.submit(handler, new Task().image('img1'))
-        sleep(300)
+        conditions.eventually { assert capturedTasks.size() == 1 }
         submitter.shutdown()
 
         then: 'metrics should be set on the submitted task'
@@ -550,7 +560,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         submitter.submit(handler, new Task().image('img1'))
-        sleep(300)
+        conditions.eventually { assert capturedTasks.size() == 1 }
         submitter.shutdown()
 
         then: 'task should be submitted without metrics'
@@ -580,7 +590,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         submitter.submit(handler, new Task().image('img1'))
-        sleep(300)
+        conditions.eventually { assert capturedTasks.size() == 1 }
         submitter.shutdown()
 
         then: 'task should still be submitted despite metrics failure'
@@ -630,7 +640,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         submitter.start()
         def start = System.currentTimeMillis()
         5.times { submitter.submit(createNamedHandler("t$it"), new Task().image("img$it")) }
-        sleep(1500)
+        conditions.eventually { assert capturedTasks.size() == 5 }
         submitter.shutdown()
 
         then: 'the batch waits one timeout in total (not one per task) and is sent without metrics'
@@ -665,7 +675,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         submitter.submit(createNamedHandler('slow'), new Task().image('slow'))
         submitter.submit(createNamedHandler('fast1'), new Task().image('fast1'))
         submitter.submit(createNamedHandler('fast2'), new Task().image('fast2'))
-        sleep(1000)
+        conditions.eventually { assert capturedTasks.size() == 3 }
         submitter.shutdown()
 
         then: 'only the slow task is sent without metrics'

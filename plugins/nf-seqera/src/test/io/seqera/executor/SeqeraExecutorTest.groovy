@@ -305,7 +305,7 @@ class SeqeraExecutorTest extends Specification {
             getWorkDir() >> java.nio.file.Paths.get('/work')
             getRunName() >> 'test-run'
         }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1')
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', batchFlushInterval: '100ms', provider: 'aws', region: 'us-east-1')
         def executor = new SeqeraExecutor()
         executor.session = session
         executor.@seqeraConfig = seqeraOpts
@@ -349,7 +349,7 @@ class SeqeraExecutorTest extends Specification {
         }
         def executor = new SeqeraExecutor()
         executor.session = session
-        executor.@seqeraConfig = new ExecutorOpts(endpoint: 'https://sched.example.com', autoLabels: 'projectName')
+        executor.@seqeraConfig = new ExecutorOpts(endpoint: 'https://sched.example.com', batchFlushInterval: '100ms', autoLabels: 'projectName')
         executor.@client = mockClient
 
         when:
@@ -383,7 +383,7 @@ class SeqeraExecutorTest extends Specification {
             getRunName() >> 'test-run'
         }
         def seqeraOpts = new ExecutorOpts(
-            endpoint: 'https://sched.example.com',
+            endpoint: 'https://sched.example.com', batchFlushInterval: '100ms',
             provider: 'aws',
             strategy: 'vm',
             region: 'eu-west-1',
@@ -428,7 +428,7 @@ class SeqeraExecutorTest extends Specification {
             getRunName() >> 'test-run'
         }
         def seqeraOpts = new ExecutorOpts(
-            endpoint: 'https://sched.example.com',
+            endpoint: 'https://sched.example.com', batchFlushInterval: '100ms',
             schedulingRequirement: [maxCpusPerUser: 16]
         )
         def executor = new SeqeraExecutor()
@@ -468,7 +468,7 @@ class SeqeraExecutorTest extends Specification {
             getRunName() >> 'test-run'
         }
         def seqeraOpts = new ExecutorOpts(
-            endpoint: 'https://sched.example.com'
+            endpoint: 'https://sched.example.com', batchFlushInterval: '100ms'
         )
         def executor = new SeqeraExecutor()
         executor.session = session
@@ -506,7 +506,7 @@ class SeqeraExecutorTest extends Specification {
             getRunName() >> 'test-run'
         }
         def seqeraOpts = new ExecutorOpts(
-            endpoint: 'https://sched.example.com',
+            endpoint: 'https://sched.example.com', batchFlushInterval: '100ms',
             providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
         )
         def executor = new SeqeraExecutor()
@@ -541,7 +541,7 @@ class SeqeraExecutorTest extends Specification {
             getWorkDir() >> java.nio.file.Paths.get('/work')
             getRunName() >> 'test-run'
         }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'eu-west-1')
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', batchFlushInterval: '100ms', provider: 'aws', region: 'eu-west-1')
         def executor = new SeqeraExecutor()
         executor.session = session
         executor.@seqeraConfig = seqeraOpts
