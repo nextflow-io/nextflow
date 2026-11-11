@@ -24,13 +24,11 @@ import spock.lang.Timeout
 
 class SimpleHttpClientTest extends Specification{
 
+
     def 'should raise a ConnectException' () {
 
         given:
-        // a bound socket that never listens holds the port, so connecting to it is refused
-        def socket = new Socket()
-        socket.bind(new InetSocketAddress(InetAddress.loopbackAddress, 0))
-        def url = "http://${InetAddress.loopbackAddress.hostAddress}:${socket.localPort}"
+        def url = "http://localhost:3100"
         def httpClient = new SimpleHttpClient()
 
         when:
@@ -41,8 +39,6 @@ class SimpleHttpClientTest extends Specification{
         httpClient.getResponse() == null
         httpClient.getResponseCode() == -1
 
-        cleanup:
-        socket?.close()
     }
 
     def 'should return a HTTP 404 error' () {
@@ -74,11 +70,11 @@ class SimpleHttpClientTest extends Specification{
     def 'raise exception when host not available'() {
 
         given:
+        def dummyUrl = "http://foo.bar"
         def httpClient = new SimpleHttpClient()
 
         when:
-        // the .invalid TLD is reserved by RFC 6761 and never resolves
-        httpClient.sendHttpMessage('http://nxf-test.invalid', '{"test_id": "2"}')
+        httpClient.sendHttpMessage(dummyUrl, '{"test_id": "2"}')
 
         then:
         thrown(UnknownHostException)

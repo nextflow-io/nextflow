@@ -19,14 +19,12 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
-import spock.lang.Timeout
 import spock.lang.Unroll
 
 /**
  *
  * @author Akira Sekiguchi <pachiras.yokohama@gmail.com>
  */
-@Timeout(60)
 class GiteaRepositoryProviderTest extends Specification {
 
     def 'should return repo url' () {

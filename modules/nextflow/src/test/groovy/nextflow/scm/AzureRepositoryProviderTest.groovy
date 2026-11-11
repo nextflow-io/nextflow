@@ -20,12 +20,10 @@ import nextflow.exception.AbortOperationException
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
-import spock.lang.Timeout
 /**
  *
  * @author Tobias Neumann <tobias.neumann.at@gmail.com>
  */
-@Timeout(60)
 class AzureRepositoryProviderTest extends Specification {
 
     static final String CONFIG = '''

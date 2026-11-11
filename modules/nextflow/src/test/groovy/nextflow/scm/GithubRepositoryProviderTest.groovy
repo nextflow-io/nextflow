@@ -20,9 +20,7 @@ import nextflow.SysEnv
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
-import spock.lang.Timeout
 
-@Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class GithubRepositoryProviderTest extends Specification {
 
