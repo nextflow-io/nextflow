@@ -702,8 +702,10 @@ class CmdRun extends CmdBase implements HubAware {
      * @return the release, or {@code null} when the name is not a registry address
      */
     protected PipelineInfo registryLookup(String name) {
+        // the pipeline config is not fetched yet: read the launch folder config and the `-c` files
         final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
-        final address = PipelineCmdSupport.registryAddress(this, name, hubProvider, configFiles)
+        final registryConfig = PipelineCmdSupport.registryConfig(this, Path.of('.').toAbsolutePath().normalize(), configFiles)
+        final address = PipelineCmdSupport.registryAddress(name, hubProvider, registryConfig)
         if( !address )
             return null
         if( address.name.contains('@') )

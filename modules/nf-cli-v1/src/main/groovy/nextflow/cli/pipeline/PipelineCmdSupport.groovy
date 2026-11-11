@@ -27,7 +27,6 @@ import nextflow.cli.CmdBase
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import nextflow.pipeline.PipelineManager
 import nextflow.scm.ProviderConfig
 
 /**
@@ -73,7 +72,7 @@ class PipelineCmdSupport {
      *
      * @return the registry address, or {@code null} when {@code name} and {@code hub} address Git
      */
-    static RegistryAddress registryAddress(CmdBase cmd, String name, String hub, List<Path> configFiles = []) {
+    static RegistryAddress registryAddress(String name, String hub, RegistryConfig config) {
         final isUrl = name.startsWith('http://') || name.startsWith('https://')
         hub = hub ?: SysEnv.get('NXF_HUB')
         // cheap checks first, so that Git addresses don't read the config
@@ -82,19 +81,32 @@ class PipelineCmdSupport {
         final providers = isUrl ? null : ProviderConfig.getDefaultProviderNames()
         if( !isUrl && hub in providers )
             return null
-        final config = registryConfig(cmd, Path.of('.').toAbsolutePath().normalize(), configFiles)
         // the default public registry is always recognized, even when not configured
         final registries = config.allUrls + [RegistryConfig.DEFAULT_REGISTRY_URL]
-        final match = isUrl
-            ? PipelineManager.parseUrl(name, registries)
-            : new Tuple2<String,String>(PipelineManager.registryOfHost(hub, registries), name)
-        if( !match?.v1 ) {
-            if( isUrl )
+        // a URL and a hub name a registry by its host
+        final api = registryOfHost(isUrl ? URI.create(name).host : hub, registries)
+        // an address names one registry, and the API key belongs to the primary one
+        final apiKey = api && api == config.url ? config.apiKey : null
+        if( isUrl ) {
+            // a registry URL must be a pipeline page
+            final prefix = api ? pageUrl(api) + '/pipelines/' : null
+            if( !prefix || !name.startsWith(prefix) )
                 return null
+            return new RegistryAddress(api, name.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey)
+        }
+        if( !api ) {
             final hosts = registries.collect { URI.create(it).host }.unique()
             throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
         }
-        // an address names one registry, and the API key belongs to the primary one
-        return new RegistryAddress(match.v1, match.v2, match.v1 == config.url ? config.apiKey : null)
+        return new RegistryAddress(api, name, apiKey)
+    }
+
+    /** Base URL of the registry web pages: the API URL without {@code /api} */
+    static String pageUrl(String apiUrl) {
+        return apiUrl.replaceFirst(/\/api\/?$/, '')
+    }
+
+    private static String registryOfHost(String host, Collection<String> registryUrls) {
+        return registryUrls.find { URI.create(it).host?.equalsIgnoreCase(host) }
     }
 }

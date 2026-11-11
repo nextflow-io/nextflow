@@ -15,6 +15,8 @@
  */
 
 package nextflow.cli
+import java.nio.file.Paths
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -95,7 +97,7 @@ class CmdPull extends CmdBase implements HubAware {
     }
 
     private pullProjectRevision(String project, String revision) {
-        if( PipelineCmdSupport.registryAddress(this, project, hubProvider) )
+        if( PipelineCmdSupport.registryAddress(project, hubProvider, PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize())) )
             throw new AbortOperationException("Registry pipelines are only supported by `nextflow run` -- use the Git URL of the pipeline")
         try (final manager = new AssetManager(project, toHubOptions())) {
             if( manager.isUsingLegacyStrategy() ) {

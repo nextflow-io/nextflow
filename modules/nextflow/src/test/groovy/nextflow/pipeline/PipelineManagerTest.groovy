@@ -410,27 +410,4 @@ class PipelineManagerTest extends Specification {
         'nf-core/rnaseq'  | null    | null                                    | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
         'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
     }
-
-    def 'should find the registry of a host' () {
-        expect:
-        PipelineManager.registryOfHost(HOST, ['https://registry.nextflow.io/api', 'https://registry-dev.nextflow.io/api']) == RESULT
-
-        where:
-        HOST                        | RESULT
-        'registry-dev.nextflow.io'  | 'https://registry-dev.nextflow.io/api'
-        'Registry.Nextflow.io'      | 'https://registry.nextflow.io/api'
-        'github.com'                | null
-    }
-
-    def 'should parse a registry URL' () {
-        expect:
-        PipelineManager.parseUrl(ADDRESS, ['https://registry.nextflow.io/api', 'https://registry-dev.nextflow.io/api']) == RESULT
-
-        where:
-        ADDRESS                                                      | RESULT
-        'https://registry.nextflow.io/pipelines/nf-core/rnaseq'      | new Tuple2('https://registry.nextflow.io/api', 'nf-core/rnaseq')
-        'https://registry-dev.nextflow.io/pipelines/acme/hello/'     | new Tuple2('https://registry-dev.nextflow.io/api', 'acme/hello')
-        'https://github.com/nf-core/rnaseq'                          | null
-        'https://registry.nextflow.io/modules/nf-core/fastqc'        | null
-    }
 }

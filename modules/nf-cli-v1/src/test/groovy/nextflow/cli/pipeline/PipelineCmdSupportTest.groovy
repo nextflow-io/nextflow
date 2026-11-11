@@ -16,32 +16,18 @@
 
 package nextflow.cli.pipeline
 
-import java.nio.file.Path
-
-import nextflow.cli.CmdBase
-import nextflow.cli.Launcher
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
-import spock.lang.TempDir
 
 class PipelineCmdSupportTest extends Specification {
 
-    @TempDir
-    Path folder
-
-    CmdBase cmd() {
-        def cmd = Mock(CmdBase)
-        cmd.getLauncher() >> Mock(Launcher) { getOptions() >> null }
-        return cmd
-    }
-
     def 'should find the registry address of a name and hub' () {
         given:
-        def config = folder.resolve('registry.config')
-        config.text = "registry { url = 'https://registry-dev.nextflow.io/api'; apiKey = 'secret' }"
+        def config = new RegistryConfig(url: 'https://registry-dev.nextflow.io/api', apiKey: 'secret')
 
         when:
-        def address = PipelineCmdSupport.registryAddress(cmd(), NAME, HUB, [config])
+        def address = PipelineCmdSupport.registryAddress(NAME, HUB, config)
 
         then:
         address?.url == API
@@ -57,15 +43,26 @@ class PipelineCmdSupportTest extends Specification {
         'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq'  | null                       | 'https://registry-dev.nextflow.io/api'  | 'nf-core/rnaseq' | 'secret'
         'https://registry.nextflow.io/pipelines/nf-core/rnaseq'      | null                       | 'https://registry.nextflow.io/api'      | 'nf-core/rnaseq' | null
         'nf-core/rnaseq'                                             | 'registry.nextflow.io'     | 'https://registry.nextflow.io/api'      | 'nf-core/rnaseq' | null
+        'nf-core/rnaseq'                                             | 'Registry-Dev.Nextflow.io' | 'https://registry-dev.nextflow.io/api'  | 'nf-core/rnaseq' | 'secret'
+        'https://registry-dev.nextflow.io/pipelines/acme/hello/'     | null                       | 'https://registry-dev.nextflow.io/api'  | 'acme/hello'     | 'secret'
+        'https://registry.nextflow.io/modules/nf-core/fastqc'        | null                       | null                                    | null             | null
+        'https://example.com/pipelines/nf-core/rnaseq'               | null                       | null                                    | null             | null
     }
 
     def 'should reject a hub that is neither a provider nor a registry' () {
         when:
-        PipelineCmdSupport.registryAddress(cmd(), 'nf-core/rnaseq', 'example.com')
+        PipelineCmdSupport.registryAddress('nf-core/rnaseq', 'example.com', new RegistryConfig())
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('Unknown repository provider or registry: `example.com`')
         e.message.contains('registries: registry.nextflow.io')
+    }
+
+    def 'should get the page URL of a registry' () {
+        expect:
+        PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'
+        PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api/') == 'https://registry.nextflow.io'
+        PipelineCmdSupport.pageUrl('https://example.com/registry') == 'https://example.com/registry'
     }
 }
