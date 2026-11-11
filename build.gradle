@@ -170,6 +170,8 @@ allprojects {
         ])
         // agent mode, auto-detected when tests run under an agent, changes console output
         environment 'NXF_AGENT_MODE', 'false'
+        // skip the EC2 metadata probe, which stalls each AWS client creation off EC2
+        environment 'AWS_EC2_METADATA_DISABLED', 'true'
         // keep the session cache and history out of the developer's ~/.nextflow,
         // and start each run from an empty one
         final cacheDir = project.layout.buildDirectory.dir('tmp/nxf-cache').get().asFile
