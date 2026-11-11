@@ -22,7 +22,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import nextflow.file.FileHelper
+import nextflow.file.http.XFileSystemConfig
+import nextflow.file.http.XFileSystemConfigHelper
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Timeout
@@ -681,8 +685,19 @@ class ChannelTest extends Specification {
         session.error.message == file2.toString()
 
         when:
+        // 404 is retried with a backoff, skip the delay
+        def prevHttpConfig = XFileSystemConfig.config()
+        XFileSystemConfigHelper.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0']))
+        def server = HttpServer.create(new InetSocketAddress(InetAddress.loopbackAddress, 0), 0)
+        server.createContext('/', { exchange ->
+            exchange.sendResponseHeaders(404, -1)
+            exchange.close()
+        } as HttpHandler)
+        server.start()
+        def url = "http://${server.address.hostString}:${server.address.port}/foo.txt"
+        and:
         runDataflow {
-            Channel.fromPath('http://google.com/foo.txt', checkIfExists: true)
+            Channel.fromPath(url, checkIfExists: true)
         }
         Channel.fromPath0Future.get()
         and:
@@ -690,7 +705,12 @@ class ChannelTest extends Specification {
         then:
         session.aborted
         session.error instanceof NoSuchFileException
-        session.error.message == 'http://google.com/foo.txt'
+        session.error.message == url
+
+        cleanup:
+        server?.stop(0)
+        if( prevHttpConfig )
+            XFileSystemConfigHelper.reset(prevHttpConfig)
     }
 
     def 'should check if pattern exists' () {
