@@ -170,6 +170,14 @@ allprojects {
         ])
         // agent mode, auto-detected when tests run under an agent, changes console output
         environment 'NXF_AGENT_MODE', 'false'
+        // keep the session cache and history out of the developer's ~/.nextflow,
+        // and start each run from an empty one
+        final cacheDir = project.layout.buildDirectory.dir('tmp/nxf-cache').get().asFile
+        environment 'NXF_CACHE_DIR', cacheDir.absolutePath
+        doFirst {
+            cacheDir.deleteDir()
+            cacheDir.mkdirs()
+        }
     }
 
     /**
