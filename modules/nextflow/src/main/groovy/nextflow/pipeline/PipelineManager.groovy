@@ -241,11 +241,10 @@ class PipelineManager {
      * @return the matching API URL and the pipeline name, or {@code null} when the URL is not a page of these registries
      */
     static Tuple2<String,String> parseUrl(String url, Collection<String> registryUrls) {
-        for( String api : registryUrls ) {
-            final prefix = pageUrl(api) + '/pipelines/'
-            if( url.startsWith(prefix) )
-                return new Tuple2<String,String>(api, url.substring(prefix.length()).replaceFirst(/\/$/, ''))
-        }
-        return null
+        final api = registryOfHost(URI.create(url).host, registryUrls)
+        final prefix = api ? pageUrl(api) + '/pipelines/' : null
+        return prefix && url.startsWith(prefix)
+            ? new Tuple2<String,String>(api, url.substring(prefix.length()).replaceFirst(/\/$/, ''))
+            : null
     }
 }

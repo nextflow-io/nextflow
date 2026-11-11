@@ -88,6 +88,7 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 9. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry-dev.nextflow.io -r <commit>`, or `pull`, `info` or `drop` by the registry name, **then** the cached clone and its own Git repository are used.
 10. **Given** a clone cached under `acme/foo` from `github.com/other/foo`, **when** the user runs `https://github.com/acme/foo`, **then** the run fails because the name was downloaded from a different repository.
 11. **Given** `nextflow inspect`, **then** the same addresses apply.
+12. **Given** `nextflow pull` or `nextflow clone` with a registry page URL or a registry host as `-hub` or `NXF_HUB`, **then** the command fails with an error saying that registry pipelines are only supported by `nextflow run`.
 
 ## Functional requirements
 
@@ -102,7 +103,7 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 - **FR-009**: `CmdRun` resolves a registry address with `PipelineManager.resolveRelease`, the same lookup as `pipeline install`, before it creates the `AssetManager`. The `AssetManager` gets the release's `repositoryUrl` as the Git address, its `commitId` as the revision, its `workflowPath` as the main script unless `-main-script` is given, and the registry name as the local name.
 - **FR-010**: `AssetManager` keeps the local name (cache folder, `nextflow list`, `workflow.projectName`) apart from the remote project (Git provider). For a plain name, the remote project of a multi-revision clone is read from its `origin` remote. For a URL or a local name, a clone of a different repository is an error.
 - **FR-011**: The lookup reads `registry.url` and `registry.auth` from `~/.nextflow/config`, the launch folder `nextflow.config` and `-c` files, as the `pipeline` commands do.
-- **FR-012**: A registry URL and a registry host as `-hub` share one match against the configured `registry.url` values plus the default public registry (`PipelineManager.parseUrl` and `registryOfHost`). A `-hub` value is checked as a Git provider name first. The lookup client holds only the matched registry, and gets the API key only when that registry is the primary one.
+- **FR-012**: `PipelineCmdSupport.registryAddress`, used by `run`, `pull` and `clone`, tells whether a name and hub address a registry. A registry URL and a registry host as `-hub` share one match against the configured `registry.url` values plus the default public registry (`PipelineManager.parseUrl` and `registryOfHost`). A `-hub` value is checked as a Git provider name first. The lookup client holds only the matched registry, and gets the API key only when that registry is the primary one.
 
 ## Out of scope
 

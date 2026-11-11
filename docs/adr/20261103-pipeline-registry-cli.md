@@ -147,6 +147,7 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
   1. a Git provider name (`github`, `gitlab`, a name from the SCM file): Git, as today. This is checked first, so existing setups behave the same.
   2. the host of a configured `registry.url`, or of the default public registry: that registry.
   3. anything else: an error that lists the known providers and registry hosts.
+- `pull` and `clone`, the other commands with `-hub`, recognize registry addresses with the same check (`PipelineCmdSupport.registryAddress`) and stop with a clear error: registry pipelines are only supported by `nextflow run`. `info`, `config`, `view` and `drop` have no `-hub`; with `NXF_HUB` set to a registry host they only fail for a name that is not cached, with the usual "Unknown repository provider" error.
 - A hostname can't be confused with Git, because `-hub` only takes provider names. Through `NXF_HUB`, a user or a site can make a registry the default for plain names.
 - A bare `github.com/nf-core/rnaseq` (without `https://`) is not added. It is not supported today, and it would be ambiguous with registry names, whose name part can have more than one segment (`nf-core/star/align`).
 
@@ -206,10 +207,6 @@ These points come from the prototype of explicit registry addresses and must be 
   - C. A local Git ref such as `refs/registry/1.0.0`. It needs extra code to resolve `-r`, and a local tag would look like a remote one in `nextflow info`.
   - D. One central file for all registry pipelines. `drop` would leave stale entries.
   - E. Keep `-r` as a Git revision offline, with a clear error when it does not resolve.
-- **A registry host as hub in other commands.** Only `run` and `inspect` understand a registry host as `-hub` or `NXF_HUB`. `pull`, `clone`, `config` or `info` of a plain name that is not cached fail with "Unknown repository provider: registry.nextflow.io". Options:
-  - A. A clear error in `AssetManager.checkHubProvider`: a registry host is only supported by `nextflow run`. Recommended for now.
-  - B. Support registry addresses in `pull` now, so that a release can be fetched before an offline run.
-  - C. Ignore a registry host in `NXF_HUB` in the other commands and use GitHub. Rejected: a silent switch.
 
 ## Links
 
