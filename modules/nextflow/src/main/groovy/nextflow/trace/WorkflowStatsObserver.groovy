@@ -22,6 +22,7 @@ import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.trace.event.TaskEvent
+import nextflow.util.Threads
 
 /**
  * Collect workflow execution progress and statistics
@@ -56,14 +57,15 @@ class WorkflowStatsObserver implements TraceObserverV2 {
             }
             catch( Throwable e ) {
                 log.debug "Unexpected error while updating the workflow stats | ${e.message ?: e}"
-                session.abort(e)
+                // abort on another thread, since the completion handlers wait for the agent
+                Threads.start { session.abort(e) }
             }
         }
     }
 
     @Override
     void onFlowComplete() {
-        log.debug "Workflow completed > $data"
+        log.debug "Workflow completed > ${getQuickStats()}"
     }
 
     @Override
@@ -110,7 +112,8 @@ class WorkflowStatsObserver implements TraceObserverV2 {
 
     /**
      * A copy of the stats, once the events notified before are applied,
-     * or without waiting for them when the caller is interrupted
+     * or without waiting for them when the caller is interrupted or
+     * runs on the agent thread
      */
     WorkflowStats getStats() {
         try {
@@ -119,6 +122,9 @@ class WorkflowStatsObserver implements TraceObserverV2 {
         catch( InterruptedException e ) {
             log.warn "Got an interrupted exception while waiting for the workflow stats | ${e}"
             Thread.currentThread().interrupt()
+        }
+        catch( IllegalStateException e ) {
+            log.debug "Unable to await the workflow stats from the agent thread | ${e.message}"
         }
         return getQuickStats()
     }
