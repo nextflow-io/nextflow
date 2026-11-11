@@ -202,6 +202,19 @@ class SeqeraBatchSubmitterTest extends Specification {
         capturedTasks.size() == 2
     }
 
+    def 'should not wait for the sender poll delay on shutdown'() {
+        given: 'an interval whose poll delay (interval/10) is 6 seconds'
+        def submitter = new SeqeraBatchSubmitter(Stub(SchedClient), TEST_RUN, Duration.of('1min'))
+        submitter.start()
+
+        when:
+        def start = System.currentTimeMillis()
+        submitter.shutdown()
+
+        then:
+        System.currentTimeMillis() - start < 3_000
+    }
+
     def 'should throw exception when enqueueing after shutdown'() {
         given:
         def client = Stub(SchedClient)
