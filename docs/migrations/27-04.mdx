@@ -50,7 +50,7 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
 
-- The [stage directives][process-typed-stage] (`env`, `stdin`, and `stageAs`) of typed processes are included in the task hash. A typed process that uses them in its `stage:` section re-executes once when you resume. Typed processes without stage directives and legacy processes are not affected.
+- The `env` and `stdin` [stage directives][process-typed-stage] of typed processes, and files staged with `stageAs` that are not task inputs, are included in the task hash. A typed process that uses them re-executes once when you resume. Staging a task input under a different name with `stageAs` does not affect the task hash. Typed processes without these stage directives and legacy processes are not affected.
 
 ## Miscellaneous
 

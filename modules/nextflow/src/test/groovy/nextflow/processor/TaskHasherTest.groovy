@@ -211,10 +211,21 @@ class TaskHasherTest extends Specification {
 
     def 'should hash stage directives to a stable value' () {
         given:
-        def staged = new TaskStageAsFiles('query.fa', [new FileHolder(Path.of('/data/a.fa')).withName('query.fa')], 'fasta')
+        def staged = new FileHolder(Path.of('/data/helper.sh')).withName('helper.sh')
 
         expect:
-        stageHash(env: [FOO: 'one'], stdin: 'two', staged: [staged]) == '5d722237e019c1bd176c8cf169bf1ece'
+        stageHash(env: [FOO: 'one'], stdin: 'two', staged: [staged]) == 'b23ba6625981cf30ff07663a0129befc'
+    }
+
+    def 'should hash staged files by source but not by stage name' () {
+        given:
+        def a = Path.of('/data/a.sh')
+        def b = Path.of('/data/b.sh')
+
+        expect:
+        stageHash(staged: [new FileHolder(a).withName('x.sh')]) == stageHash(staged: [new FileHolder(a).withName('y.sh')])
+        stageHash(staged: [new FileHolder(a)]) != stageHash(staged: [new FileHolder(b)])
+        stageHash(staged: [new FileHolder(a)]) != stageHash([:])
     }
 
     def 'should keep a stable hash for typed tasks without stage directives' () {

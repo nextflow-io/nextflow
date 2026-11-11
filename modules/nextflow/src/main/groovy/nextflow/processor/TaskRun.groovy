@@ -125,12 +125,12 @@ class TaskRun implements Cloneable {
     List<FileHolder> inputFiles = new ArrayBag()
 
     /**
-     * The files staged by each `stageAs` directive declared in the
-     * `stage:` block of a typed process
+     * The files staged by `stageAs` directives in the `stage:` block
+     * of a typed process that are not part of any task input
      *
-     * @see TaskProcessor#resolveTaskInputs()
+     * @see TaskProcessor#resolveTaskInputsV2()
      */
-    List<TaskStageAsFiles> stageAsFiles
+    List<FileHolder> stageAsFiles
 
     /**
      * The value to be piped to the process stdin

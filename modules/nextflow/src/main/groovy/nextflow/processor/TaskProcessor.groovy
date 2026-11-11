@@ -98,7 +98,6 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
-import nextflow.script.types.Bag
 import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
@@ -1765,6 +1764,7 @@ class TaskProcessor {
         // -- resolve input files
         final resolver = new TaskInputResolver(task, foreignFiles, executor)
         final resolvedValues = new HashSet<>()
+        Set<Path> inputPaths = null
 
         for( final fileInput : declaredInputs.getFiles() ) {
             final value = fileInput.resolve(ctx)
@@ -1777,11 +1777,17 @@ class TaskProcessor {
             final filePattern = fileInput.getFilePattern(ctx) ?: '*'
             final resolved = resolver.resolve(filePattern, value)
             task.inputFiles.addAll(resolved)
-            // the default staging of a Path input is covered by the input in the task hash
+            // files that come from task inputs are already covered by the task hash
             if( !fileInput.isImplicit() ) {
-                if( task.stageAsFiles == null )
-                    task.stageAsFiles = new ArrayList<TaskStageAsFiles>()
-                task.stageAsFiles.add(new TaskStageAsFiles(filePattern, resolved, findPathInputName(task, value)))
+                if( inputPaths == null )
+                    inputPaths = collectPaths(task.inputs.values(), new HashSet<Path>())
+                for( final holder : resolved ) {
+                    if( holder.sourcePath in inputPaths )
+                        continue
+                    if( task.stageAsFiles == null )
+                        task.stageAsFiles = new ArrayList<FileHolder>()
+                    task.stageAsFiles.add(holder)
+                }
             }
             resolvedValues.add(value)
         }
@@ -1815,31 +1821,18 @@ class TaskProcessor {
     }
 
     /**
-     * Find the task input whose value is the given object, provided that
-     * the value is a path or a list of paths, which the task inputs hash as
-     * files in order. Sets and bags are hashed without order, which would
-     * lose the names given to files by a wildcard pattern.
+     * Collect the paths contained in a value, including paths
+     * nested in collections, records and maps.
      */
     @CompileStatic
-    private static String findPathInputName(TaskRun task, Object value) {
-        if( value !instanceof Path && !isPathList(value) )
-            return null
-        for( final entry : task.inputs.entrySet() ) {
-            if( entry.value.is(value) )
-                return entry.key.getName()
-        }
-        return null
-    }
-
-    @CompileStatic
-    private static boolean isPathList(Object value) {
-        if( value !instanceof List || value instanceof Bag )
-            return false
-        for( final el : (List)value ) {
-            if( el !instanceof Path )
-                return false
-        }
-        return true
+    protected static Set<Path> collectPaths(Object value, Set<Path> result) {
+        if( value instanceof Path )
+            result.add(value)
+        else if( value instanceof Collection )
+            for( final el : value ) collectPaths(el, result)
+        else if( value instanceof Map )
+            for( final el : value.values() ) collectPaths(el, result)
+        return result
     }
 
     @CompileStatic

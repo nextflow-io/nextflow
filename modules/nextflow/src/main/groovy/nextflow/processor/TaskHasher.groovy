@@ -163,7 +163,9 @@ class TaskHasher {
      * Stage directives are arbitrary expressions, so they can introduce
      * values that are not task inputs and are not part of the task script.
      * Environment variables and standard input are hashed as the strings
-     * that the task receives.
+     * that the task receives. Staged files are hashed only if they are not
+     * part of a task input, since the stage name alone does not change
+     * the task result unless the task script also changes.
      */
     protected void addStageDirectives(List<Object> keys) {
         if( task.inputEnv ) {

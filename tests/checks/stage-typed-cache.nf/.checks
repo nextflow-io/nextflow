@@ -14,11 +14,10 @@ $RUN | tee .stdout
 $RUN -resume | tee .stdout
 [[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
 
-# rename the staged input
+# renaming a staged input does not invalidate the cache
 sed -i.bak "s/'query.fa'/'renamed.fa'/" main.nf
 $RUN -resume | tee .stdout
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
-[[ `< .stdout grep 'renamed.fa'` ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
 
 # change the env expression
 sed -i.bak 's/hello \${id}/goodbye \${id}/' main.nf
