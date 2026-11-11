@@ -162,7 +162,7 @@ class AssetManager implements Closeable {
 
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
-        checkRemoteProject(remoteProject != project || isUrl(pipelineName))
+        checkRemoteProject(isUrl(pipelineName))
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
@@ -327,6 +327,7 @@ class AssetManager implements Closeable {
     @PackageScope
     AssetManager setProject(String name) {
         this.project = name
+        this.remoteProject = name
         if( !strategy )
             initStrategy(getRevision())
         strategy.setProject(name)
@@ -388,14 +389,14 @@ class AssetManager implements Closeable {
      * using its own repository. For a URL or a local name, a clone of a different
      * repository is an error.
      *
-     * @param explicit Whether the Git project was given as a URL or with a local name
+     * @param fromUrl Whether the Git project was given as a URL
      */
-    private void checkRemoteProject(boolean explicit) {
+    private void checkRemoteProject(boolean fromUrl) {
         final cloned = getClonedProject()
         // Git hosts match names ignoring the case, and the clone URL uses the host's spelling
         if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
             return
-        if( explicit )
+        if( fromUrl || remoteProject != project )
             throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned`")
         log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned
@@ -416,7 +417,7 @@ class AssetManager implements Closeable {
             final url = new GitUrl(str)
             if( url.protocol == 'file' )
                 return null
-            return providerConfigs.find { it.domain == url.domain }?.resolveProjectName(url.path.stripStart('/'))
+            return RepositoryFactory.getProviderConfig(providerConfigs, url).resolveProjectName(url.path.stripStart('/'))
         }
         catch( Exception e ) {
             log.debug "Cannot parse Git remote URL: ${redactUrlPassword(str)} -- cause: ${e.message}"
@@ -528,8 +529,7 @@ class AssetManager implements Closeable {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
-        if( !isUrl )
+        if( !isUrl(repository) )
             return null
 
         if( repository.endsWith('.nf') )
@@ -582,7 +582,7 @@ class AssetManager implements Closeable {
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
         return RepositoryFactory
-            .newRepositoryProvider(config, remoteProject ?: project)
+            .newRepositoryProvider(config, remoteProject)
             .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 

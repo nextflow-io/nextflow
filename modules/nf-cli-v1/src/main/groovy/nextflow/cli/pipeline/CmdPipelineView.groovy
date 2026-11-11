@@ -25,6 +25,7 @@ import nextflow.cli.CmdBase
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
+import nextflow.pipeline.PipelineManager
 import nextflow.util.TestOnly
 
 import java.nio.file.Paths
@@ -143,8 +144,6 @@ class CmdPipelineView extends CmdBase {
     }
 
     private static String pipelineUrl(String registryUrl, String name, String version) {
-        // Strip /api suffix to get the base UI URL
-        final baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
-        return "${baseUrl}/pipelines/${name}@${version}"
+        return "${PipelineManager.pageUrl(registryUrl)}/pipelines/${name}@${version}"
     }
 }

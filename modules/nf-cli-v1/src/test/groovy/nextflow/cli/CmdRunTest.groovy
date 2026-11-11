@@ -507,7 +507,7 @@ class CmdRunTest extends Specification {
         client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl("file:${bareDir}".toString()).latest(release)
 
         when:
-        def cmd = new CmdRun(registryClient: client, hubProvider: 'registry.nextflow.io', launcher: Mock(Launcher) { getOptions() >> null })
+        def cmd = registryCmd(registryClient: client, hubProvider: 'registry.nextflow.io')
         def scriptFile = cmd.getScriptFile0('acme/hello')
 
         then: 'the release is cached under its registry name'
@@ -517,7 +517,7 @@ class CmdRunTest extends Specification {
         folder.resolve('assets/.repos/acme/hello/bare').exists()
 
         when: 'it runs offline by its registry name'
-        cmd = new CmdRun(hubProvider: 'registry.nextflow.io', offline: true, revision: v1, launcher: Mock(Launcher) { getOptions() >> null })
+        cmd = registryCmd(hubProvider: 'registry.nextflow.io', offline: true, revision: v1)
         scriptFile = cmd.getScriptFile0('acme/hello')
 
         then:
@@ -527,7 +527,7 @@ class CmdRunTest extends Specification {
     def 'should look up the registry only for a registry address' () {
         given:
         def client = Mock(RegistryClient)
-        def cmd = new CmdRun(registryClient: client, hubProvider: HUB, launcher: Mock(Launcher) { getOptions() >> null })
+        def cmd = registryCmd(registryClient: client, hubProvider: HUB)
 
         when:
         def result = cmd.registryLookup(NAME)
@@ -549,7 +549,7 @@ class CmdRunTest extends Specification {
 
     def 'should reject a hub that is neither a provider nor a registry' () {
         when:
-        new CmdRun(hubProvider: 'example.com', launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('nf-core/rnaseq')
+        registryCmd(hubProvider: 'example.com').registryLookup('nf-core/rnaseq')
 
         then:
         def e = thrown(AbortOperationException)
@@ -559,7 +559,7 @@ class CmdRunTest extends Specification {
 
     def 'should reject a version in a registry URL' () {
         when:
-        new CmdRun(launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0')
+        registryCmd().registryLookup('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0')
 
         then:
         def e = thrown(AbortOperationException)
@@ -572,11 +572,18 @@ class CmdRunTest extends Specification {
         client.getPipeline('nf-core/rnaseq') >> { throw new RegistryException('Not found', 404) }
 
         when:
-        new CmdRun(registryClient: client, hubProvider: 'registry.nextflow.io', launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('nf-core/rnaseq')
+        registryCmd(registryClient: client, hubProvider: 'registry.nextflow.io').registryLookup('nf-core/rnaseq')
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('not found in the registry')
+    }
+
+    /** A run command that reads the registry config without launcher options */
+    private CmdRun registryCmd(Map opts = [:]) {
+        final cmd = new CmdRun(opts)
+        cmd.launcher = Mock(Launcher) { getOptions() >> null }
+        return cmd
     }
 
     private static <T extends CmdRun> T withFakeEnv(T cmd) {

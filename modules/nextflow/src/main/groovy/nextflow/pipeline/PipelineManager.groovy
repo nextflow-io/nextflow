@@ -224,6 +224,11 @@ class PipelineManager {
             registryUrl: client.primaryUrl())
     }
 
+    /** Base URL of the registry web pages: the API URL without {@code /api} */
+    static String pageUrl(String apiUrl) {
+        return apiUrl.replaceFirst(/\/api\/?$/, '')
+    }
+
     /** The registry API URL, among {@code registryUrls}, served from {@code host}, or {@code null} */
     static String registryOfHost(String host, Collection<String> registryUrls) {
         return registryUrls.find { URI.create(it).host?.equalsIgnoreCase(host) }
@@ -237,7 +242,7 @@ class PipelineManager {
      */
     static Tuple2<String,String> parseUrl(String url, Collection<String> registryUrls) {
         for( String api : registryUrls ) {
-            final prefix = api.replaceFirst(/\/api\/?$/, '') + '/pipelines/'
+            final prefix = pageUrl(api) + '/pipelines/'
             if( url.startsWith(prefix) )
                 return new Tuple2<String,String>(api, url.substring(prefix.length()).replaceFirst(/\/$/, ''))
         }

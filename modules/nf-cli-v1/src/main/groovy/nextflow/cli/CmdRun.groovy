@@ -33,7 +33,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import io.seqera.npr.client.RegistryClient
 import nextflow.BuildInfo
-import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
@@ -644,13 +643,22 @@ class CmdRun extends CmdBase implements HubAware {
          * try to look for a pipeline in the repository
          */
         final release = registryLookup(pipelineName)
-        // a registry release is fetched from its Git repository and cached under its registry name
-        final resolved = release?.repositoryUrl != null
-        final project = resolved ? release.repositoryUrl : release?.name ?: pipelineName
-        final rev = resolved ? (release.commitId ?: release.revision) : revision
+        String project = pipelineName
+        String rev = revision
+        String localName = null
+        if( release?.repositoryUrl ) {
+            // fetched from its Git repository and cached under its registry name
+            project = release.repositoryUrl
+            rev = release.commitId ?: release.revision
+            localName = release.name
+        }
+        else if( release ) {
+            // offline: the copy cached under the registry name
+            project = release.name
+        }
         final main = mainScript ?: release?.workflowPath
         final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
-        try( final manager = new AssetManager(project, rev, main, hubOpts, resolved ? release.name : null) ) {
+        try( final manager = new AssetManager(project, rev, main, hubOpts, localName) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 
@@ -697,8 +705,11 @@ class CmdRun extends CmdBase implements HubAware {
      */
     protected PipelineInfo registryLookup(String name) {
         final isUrl = name.startsWith('http://') || name.startsWith('https://')
+        // without an explicit hub the default Git hub is used, as before
+        final hub = hubProvider ?: SysEnv.get('NXF_HUB')
+        if( isUrl ? !name.contains('/pipelines/') : !hub )
+            return null
         // a hub is a Git provider name first, as before; only otherwise it can be a registry host
-        final hub = isUrl ? null : hubProvider ?: Const.DEFAULT_HUB
         final providers = isUrl ? null : ProviderConfig.getDefaultProviderNames()
         if( !isUrl && hub in providers )
             return null
