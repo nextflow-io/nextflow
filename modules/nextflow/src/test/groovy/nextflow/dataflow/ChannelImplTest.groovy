@@ -122,20 +122,26 @@ class ChannelImplTest extends Specification {
         def value = new DataflowVariable()
 
         when:
-        def result = runDataflow {
-            def ch = channel.of( record(id: 1), record(id: 2), record(id: 3) )
-            ch.combine(b: new ValueImpl(value), c: 'bar')
+        def results = runDataflow {
+            (1..4).collect {
+                def ch = channel.of( record(id: 1), record(id: 2), record(id: 3) )
+                ch.combine(b: new ValueImpl(value), c: 'bar')
+            }
         }
         then:
-        result.getVal(100, TimeUnit.MILLISECONDS) == null
+        results.every { result -> result.getVal(100, TimeUnit.MILLISECONDS) == null }
+        // no thread is held waiting for the value
+        Thread.allStackTraces.values().every { stack -> !stack.any { it.className.contains('CombineOpV2') } }
 
         when:
         value.bind('foo')
         then:
-        result.val == record(id: 1, b: 'foo', c: 'bar')
-        result.val == record(id: 2, b: 'foo', c: 'bar')
-        result.val == record(id: 3, b: 'foo', c: 'bar')
-        result.val == CH.stop()
+        results.every { result ->
+            result.val == record(id: 1, b: 'foo', c: 'bar')
+                && result.val == record(id: 2, b: 'foo', c: 'bar')
+                && result.val == record(id: 3, b: 'foo', c: 'bar')
+                && result.val == CH.stop()
+        }
     }
 
     def testCombineError() {
