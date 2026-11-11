@@ -52,6 +52,7 @@ import nextflow.pipeline.PipelineManager
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.scm.HubOptions
+import nextflow.scm.ProviderConfig
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.EmptySecretProvider
@@ -278,8 +279,6 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
-
-    static final String REGISTRY_HUB = 'registry'
 
     @TestOnly
     protected RegistryClient registryClient
@@ -692,38 +691,46 @@ class CmdRun extends CmdBase implements HubAware {
 
     /**
      * Registry release for a registry address: a registry page URL, or {@code scope/name}
-     * with {@code -hub registry} (or {@code NXF_HUB=registry}).
+     * with a registry host as {@code -hub} (or {@code NXF_HUB}), e.g. {@code -hub registry.nextflow.io}.
      *
      * @return the release, or {@code null} when the name is not a registry address
      */
     protected PipelineInfo registryLookup(String name) {
         final isUrl = name.startsWith('http://') || name.startsWith('https://')
-        if( !isUrl && !isRegistryHub() )
+        // a hub is a Git provider name first, as before; only otherwise it can be a registry host
+        final hub = isUrl ? null : hubProvider ?: Const.DEFAULT_HUB
+        final providers = isUrl ? null : ProviderConfig.getDefaultProviderNames()
+        if( !isUrl && hub in providers )
             return null
         final config = registryConfig()
+        // the default public registry is always recognized, even when not configured
+        final registries = config.allUrls + [RegistryConfig.DEFAULT_REGISTRY_URL]
+        final String registryUrl
         String registryName = name
-        RegistryClient client = registryClient
         if( isUrl ) {
-            // the default public registry is always recognized, even when not configured
-            final match = PipelineManager.parseUrl(name, config.allUrls + [RegistryConfig.DEFAULT_REGISTRY_URL])
+            final match = PipelineManager.parseUrl(name, registries)
             if( !match )
                 return null
+            registryUrl = match.v1
             registryName = match.v2
             if( registryName.contains('@') )
                 throw new AbortOperationException("Not a valid registry pipeline URL: $name -- give the version with the `-r` option")
-            // a URL names one registry: resolve it only there, and send the API key only to the primary registry
-            client ?= RegistryClientFactory.forUrls([match.v1], match.v1 == config.url ? config.apiKey : null)
+        }
+        else {
+            registryUrl = PipelineManager.registryOfHost(hub, registries)
+            if( !registryUrl ) {
+                final hosts = registries.collect { URI.create(it).host }.unique()
+                throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
+            }
         }
         // the release can't be resolved offline: use the copy cached under the registry name
         if( offline )
             return new PipelineInfo(name: registryName)
-        final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forConfig(config), registryName, revision)
+        // an address names one registry: resolve it only there, and send the API key only to the primary registry
+        final client = registryClient ?: RegistryClientFactory.forUrls([registryUrl], registryUrl == config.url ? config.apiKey : null)
+        final release = PipelineManager.resolveRelease(client, registryName, revision)
         log.info "Using registry release ${registryName}@${release.version} (commit ${release.commitId?.take(10)})"
         return release
-    }
-
-    private boolean isRegistryHub() {
-        return hubProvider ? hubProvider == REGISTRY_HUB : Const.DEFAULT_HUB == REGISTRY_HUB
     }
 
     /** The `registry` scope from the launch folder config and the `-c` files, since the pipeline config is not fetched yet */

@@ -507,7 +507,7 @@ class CmdRunTest extends Specification {
         client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl("file:${bareDir}".toString()).latest(release)
 
         when:
-        def cmd = new CmdRun(registryClient: client, hubProvider: 'registry', launcher: Mock(Launcher) { getOptions() >> null })
+        def cmd = new CmdRun(registryClient: client, hubProvider: 'registry.nextflow.io', launcher: Mock(Launcher) { getOptions() >> null })
         def scriptFile = cmd.getScriptFile0('acme/hello')
 
         then: 'the release is cached under its registry name'
@@ -517,7 +517,7 @@ class CmdRunTest extends Specification {
         folder.resolve('assets/.repos/acme/hello/bare').exists()
 
         when: 'it runs offline by its registry name'
-        cmd = new CmdRun(hubProvider: 'registry', offline: true, revision: v1, launcher: Mock(Launcher) { getOptions() >> null })
+        cmd = new CmdRun(hubProvider: 'registry.nextflow.io', offline: true, revision: v1, launcher: Mock(Launcher) { getOptions() >> null })
         scriptFile = cmd.getScriptFile0('acme/hello')
 
         then:
@@ -542,9 +542,19 @@ class CmdRunTest extends Specification {
         'nf-core/rnaseq'                                        | null       | false
         'nf-core/rnaseq'                                        | 'gitlab'   | false
         'https://github.com/nf-core/rnaseq'                     | null       | false
-        'nf-core/rnaseq'                                        | 'registry' | true
+        'nf-core/rnaseq'                                        | 'registry.nextflow.io' | true
         'https://registry.nextflow.io/pipelines/nf-core/rnaseq' | null       | true
         'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq' | null   | false
+    }
+
+    def 'should reject a hub that is neither a provider nor a registry' () {
+        when:
+        new CmdRun(hubProvider: 'example.com', launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('nf-core/rnaseq')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Unknown repository provider or registry: `example.com`')
+        e.message.contains('registries: registry.nextflow.io')
     }
 
     def 'should reject a version in a registry URL' () {
@@ -562,7 +572,7 @@ class CmdRunTest extends Specification {
         client.getPipeline('nf-core/rnaseq') >> { throw new RegistryException('Not found', 404) }
 
         when:
-        new CmdRun(registryClient: client, hubProvider: 'registry', launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('nf-core/rnaseq')
+        new CmdRun(registryClient: client, hubProvider: 'registry.nextflow.io', launcher: Mock(Launcher) { getOptions() >> null }).registryLookup('nf-core/rnaseq')
 
         then:
         def e = thrown(AbortOperationException)

@@ -19,7 +19,7 @@ It uses only the registry API that exists today, so it needs no server change. T
 
 - **Pipeline include**: an include whose source is `scope/name` and whose entries name `workflow` or `params`.
 - **Installed pipeline**: a directory `pipelines/<scope>/<name>/` that holds a `.pipeline-info` file.
-- **Registry address**: a registry page URL, or `scope/name` with `-hub registry` or `NXF_HUB=registry`. `nextflow run` resolves it with the registry into a repository URL and a commit.
+- **Registry address**: a registry page URL, or `scope/name` with a registry host as `-hub` or `NXF_HUB` (`-hub registry.nextflow.io`). `nextflow run` resolves it with the registry into a repository URL and a commit.
 - **Pipeline root**: the nearest parent directory of a script that holds a `.pipeline-info` file. `scope/name` includes resolve against it.
 
 ## User Story 1: Include a registry pipeline (P1)
@@ -68,7 +68,7 @@ The output follows the matching `nextflow module` command.
 1. `pipeline list` prints a table of the installed pipelines under `pipelines/` (top level only), with the columns `Pipeline`, `Version` and `Status` (`ok` or `modified`) and no other text. `-output json` prints `{"pipelines": [ {name, version, status} ]}`.
 2. `pipeline remove nf-core/rnaseq` deletes `pipelines/nf-core/rnaseq/`. It refuses a locally modified copy, or one with no `.pipeline-info`, unless `-force` is given.
 3. `pipeline search <query>` calls `GET /api/v1/pipelines?search=<query>&page=<n>&size=<limit>`, reading pages until `-limit` results or the last page. It prints `Searching for '<query>'...`, then `Top <N> matching pipeline(s):`, then for each result the name, an indented `Version:` line and an indented `Description:` line. It supports `-limit` and `-output json`.
-4. `pipeline view nf-core/rnaseq [-version v]` prints name, version, description, keywords, repository, revision, commit, the registry page URL, and the params taken from the release `schema` when it has one. It supports `-output json`. It prints the usage snippet `nextflow run <scope/name> -hub registry -r <version>`.
+4. `pipeline view nf-core/rnaseq [-version v]` prints name, version, description, keywords, repository, revision, commit, the registry page URL, and the params taken from the release `schema` when it has one. It supports `-output json`. It prints the usage snippet `nextflow run <scope/name> -hub <registry host> -r <version>`, with the host of the primary registry.
 
 ## User Story 5: Run a registry pipeline (P1)
 
@@ -76,16 +76,16 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 
 **Acceptance scenarios**
 
-1. **Given** `nf-core/rnaseq` is in the registry, **when** the user runs `nextflow run nf-core/rnaseq -hub registry`, **then** Nextflow runs the latest published release at its `commitId`, and logs `Using registry release nf-core/rnaseq@<version> (commit <commit>)` before the launch line.
+1. **Given** `nf-core/rnaseq` is in the registry, **when** the user runs `nextflow run nf-core/rnaseq -hub registry.nextflow.io`, **then** Nextflow runs the latest published release at its `commitId`, and logs `Using registry release nf-core/rnaseq@<version> (commit <commit>)` before the launch line.
 2. **Given** `https://registry.nextflow.io/pipelines/nf-core/rnaseq`, where the URL starts with a configured `registry.url` (without `/api`) or the default public registry, **then** the same release runs. It is resolved only against that registry, and the API key is sent only when it is the primary registry.
    A URL that ends with `@<version>` is an error that points to `-r`.
-3. **Given** `NXF_HUB=registry`, **then** a plain `nextflow run nf-core/rnaseq` uses the registry, and `-hub github` uses Git.
+3. **Given** `NXF_HUB=registry-dev.nextflow.io` (in `registry.url`), **then** a plain `nextflow run jorge-test/nf-demo-fetchngs` uses that registry only, and `-hub github` uses Git. A `-hub` value that is neither a Git provider nor a registry host is an error that lists both.
 4. **Given** `-r 3.14.0` and that release exists, **then** Nextflow runs it at its `commitId`.
 5. **Given** a registry address and a name not in the registry, a `-r` that is not a release, a revoked release, or a registry that can't be reached, **then** the run fails with an error. There is no fallback to Git.
 6. **Given** a plain `scope/name`, a Git URL or `-hub gitlab`, **then** the registry is not called, as today.
 7. **Given** a registry name that points to a different Git repository (`jorge-test/nf-demo-fetchngs` → `github.com/jorgee/nf-demo-fetchngs`), **then** the release is cached under the registry name, `nextflow list` shows `jorge-test/nf-demo-fetchngs`, and `workflow.repository` is the Git URL.
 8. **Given** a plain name whose cached clone comes from another Git project, **then** the clone is used, and Nextflow logs `Using <name> cached from <Git project>`.
-9. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry -r <commit>`, or `pull`, `info` or `drop` by the registry name, **then** the cached clone and its own Git repository are used.
+9. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry-dev.nextflow.io -r <commit>`, or `pull`, `info` or `drop` by the registry name, **then** the cached clone and its own Git repository are used.
 10. **Given** a clone cached under `acme/foo` from `github.com/other/foo`, **when** the user runs `https://github.com/acme/foo`, **then** the run fails because the name was downloaded from a different repository.
 11. **Given** `nextflow inspect`, **then** the same addresses apply.
 
@@ -102,6 +102,7 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 - **FR-009**: `CmdRun` resolves a registry address with `PipelineManager.resolveRelease`, the same lookup as `pipeline install`, before it creates the `AssetManager`. The `AssetManager` gets the release's `repositoryUrl` as the Git address, its `commitId` as the revision, its `workflowPath` as the main script unless `-main-script` is given, and the registry name as the local name.
 - **FR-010**: `AssetManager` keeps the local name (cache folder, `nextflow list`, `workflow.projectName`) apart from the remote project (Git provider). For a plain name, the remote project of a multi-revision clone is read from its `origin` remote. For a URL or a local name, a clone of a different repository is an error.
 - **FR-011**: The lookup reads `registry.url` and `registry.auth` from `~/.nextflow/config`, the launch folder `nextflow.config` and `-c` files, as the `pipeline` commands do.
+- **FR-012**: A registry URL and a registry host as `-hub` share one match against the configured `registry.url` values plus the default public registry (`PipelineManager.parseUrl` and `registryOfHost`). A `-hub` value is checked as a Git provider name first. The lookup client holds only the matched registry, and gets the API key only when that registry is the primary one.
 
 ## Out of scope
 

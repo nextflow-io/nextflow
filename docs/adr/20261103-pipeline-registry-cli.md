@@ -19,7 +19,7 @@ The registry now has a read-only pipeline catalog (nextflow-registry #418). The 
 
 - **Remote pipeline inclusion**: `include { params as P ; workflow as X } from 'scope/name'` resolves a registry pipeline. Nextflow installs the pipeline if it is missing, as it does for modules.
 - **Same model as modules**: vendored into the project, the version read from the installed files, integrity checked against a local checksum, local edits never overwritten.
-- **Run a registry pipeline**: `nextflow run` runs a registry release when the registry is addressed explicitly, with a registry page URL or with `-hub registry`. A plain `scope/name` keeps going to Git, as today.
+- **Run a registry pipeline**: `nextflow run` runs a registry release when the registry is addressed explicitly, with a registry page URL or with a registry host as `-hub` (`-hub registry.nextflow.io`). A plain `scope/name` keeps going to Git, as today.
 - **Reproducibility**: an included pipeline behaves as it does when run directly. Its own module includes resolve inside its own tree.
 - **No server change**: use only the registry API that exists today. The client needs read methods in `npr-client` (nextflow-registry #439).
 
@@ -115,7 +115,7 @@ The same rules as modules:
 | `pipeline search <query> [-limit] [-output json]` | `GET /api/v1/pipelines?search=&page=&size=` |
 | `pipeline view <scope/name> [-version] [-output json]` | `GET /api/v1/pipelines/{name}[/{version}]` |
 
-Each command follows its `nextflow module` counterpart in options and output. All of them use `registry.url` and `registry.auth`. `view` shows the usage snippet `nextflow run <scope/name> -hub registry -r <version>`.
+Each command follows its `nextflow module` counterpart in options and output. All of them use `registry.url` and `registry.auth`. `view` shows the usage snippet `nextflow run <scope/name> -hub <registry host> -r <version>`.
 
 The `pipeline` commands and the existing project commands have similar names, but they manage different things:
 
@@ -134,16 +134,20 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 
 | Address | Example | Source |
 |---|---|---|
-| Registry page URL | `nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq` | registry |
-| Registry hub | `nextflow run nf-core/rnaseq -hub registry` | registry |
-| Registry as default hub | `NXF_HUB=registry nextflow run nf-core/rnaseq` | registry |
+| Registry page URL | `nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq` | that registry |
+| Registry host as hub | `nextflow run nf-core/rnaseq -hub registry.nextflow.io` | that registry |
+| Registry host as default hub | `NXF_HUB=registry-dev.nextflow.io nextflow run jorge-test/nf-demo-fetchngs` | that registry |
 | Plain name | `nextflow run nf-core/rnaseq` | Git, default hub (`NXF_HUB` or `github`), as today |
 | Git URL or Git hub | `https://github.com/nf-core/rnaseq`, `-hub gitlab` | Git, as today |
 
 - A URL is a registry address when it starts with one of the configured `registry.url` values (without `/api`) followed by `/pipelines/`. This is the same rule as for Git URLs, where the host picks the provider. The default public registry (`https://registry.nextflow.io`) is always recognized, even when `registry.url` lists only other registries, because the user typed its address.
-- A URL is resolved only against the registry it names, not against the other configured registries. The API key is sent only when that registry is the primary one in `registry.url`, since the key belongs to the primary registry. `-hub registry` and `NXF_HUB=registry` use all the configured registries, in order.
+- An address names exactly one registry, whether it is a URL or a host. It is resolved only against that registry, not against the other configured ones. The API key is sent only when that registry is the primary one in `registry.url`, since the key belongs to the primary registry.
 - A URL carries no version. A URL that ends with `@<version>` is an error: the version is given with `-r`.
-- `registry` is a reserved hub name. It goes through the existing `-hub` option and `NXF_HUB` variable, so a user or a site can make the registry the default for plain names.
+- A `-hub` (or `NXF_HUB`) value is read in this order:
+  1. a Git provider name (`github`, `gitlab`, a name from the SCM file): Git, as today. This is checked first, so existing setups behave the same.
+  2. the host of a configured `registry.url`, or of the default public registry: that registry.
+  3. anything else: an error that lists the known providers and registry hosts.
+- A hostname can't be confused with Git, because `-hub` only takes provider names. Through `NXF_HUB`, a user or a site can make a registry the default for plain names.
 - A bare `github.com/nf-core/rnaseq` (without `https://`) is not added. It is not supported today, and it would be ambiguous with registry names, whose name part can have more than one segment (`nf-core/star/align`).
 
 **Version.** Without `-r`, the latest published release runs. With `-r`, the value must be a registry version. The release runs at its pinned `commitId`, not at its tag, because a tag can be moved. The release's `workflowPath` is the main script unless `-main-script` is given.
@@ -158,8 +162,9 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 
 **Considered addressing options.**
 - **Registry first, Git fallback for a plain `scope/name`.** Rejected: the same name can resolve to different code depending on the registry answer, the network and the version, so a user can run an unintended pipeline without noticing.
-- **Explicit registry address (chosen).** A registry URL and `-hub registry`, as above.
-- **A short prefix**, such as a scheme or a leading character. Deferred: `NXF_HUB=registry` already gives a short form, and a prefix can be added later on top of the same lookup.
+- **Explicit registry address (chosen).** A registry URL and a registry host as `-hub`, as above.
+- **A reserved hub name, `-hub registry`.** Rejected: it may clash with an SCM provider already called `registry`, and it would use all configured registries in order, while a URL names one. A host keeps one rule for both: an address names exactly one registry.
+- **A short prefix**, such as a scheme or a leading character. Deferred: `NXF_HUB=<registry host>` already gives a short form, and a prefix can be added later on top of the same lookup.
 
 ### Run cache
 
@@ -177,7 +182,7 @@ A registry release is fetched with `AssetManager` from its `repositoryUrl` at it
 
 ## Future work
 
-- **Registry addresses in other commands**: `pull`, `clone`, `config` and `info` could accept a registry URL or `-hub registry`, so that a release can be fetched before an offline run.
+- **Registry addresses in other commands**: `pull`, `clone`, `config` and `info` could accept a registry URL or a registry host as `-hub`, so that a release can be fetched before an offline run.
 - **A short prefix** for registry addresses.
 - **Publish and install from a bundle**: `nextflow pipeline publish`, and installing a release from a bundle stored in the registry so that install does not depend on a Git host. This is decided in a separate ADR, `20261105-pipeline-registry-publish.md`, together with the server design in nextflow-registry #440.
 
@@ -194,17 +199,17 @@ These points come from the prototype of explicit registry addresses and must be 
 - **Shape of a registry URL.** Recommended: keep the `/pipelines/` path and derive the page address from the API URL.
   - The prototype requires `/pipelines/`: `https://registry.nextflow.io/pipelines/nf-core/rnaseq` is the address of the registry page, so it can be copied from the browser. The registry keeps modules and pipelines in separate namespaces (`nf-core/rnaseq` may be both), and the path says which one is meant, as `/modules/` does for modules.
   - Without it (`https://registry.nextflow.io/nf-core/rnaseq`) the URL is shorter, but it is not a page address and it may clash with other registry paths.
-  - The page address is the API URL without `/api`. This holds for every npr deployment, which serves pages and API from one host, and `pipeline view` builds its links the same way. A registry with another layout can still be used with `-hub registry`, or a page URL option can be added to the `registry` scope later.
+  - The page address is the API URL without `/api`. This holds for every npr deployment, which serves pages and API from one host, and `pipeline view` builds its links the same way. A registry with another layout can still be used with its host as `-hub`, or a page URL option can be added to the `registry` scope later.
 - **`-r` offline.** Offline, the registry can't be asked, so the prototype uses `-r` as a Git revision: a commit, or a tag equal to the version (`jorge-test` uses `v1.0.0` for `1.0.0`). Options:
   - A. A file next to the clone, `.repos/<scope>/<name>/.registry-releases`, with `version=commit` for each release run online. It sits beside `bare/` and `clones/`, outside any Git tree. The legacy layout would need multi-revision for registry runs.
   - B. The same mapping in the bare repository's Git config (`[registry "1.0.0"] commit = …`), which is never versioned and is removed with the clone. Recommended if this design is kept.
   - C. A local Git ref such as `refs/registry/1.0.0`. It needs extra code to resolve `-r`, and a local tag would look like a remote one in `nextflow info`.
   - D. One central file for all registry pipelines. `drop` would leave stale entries.
   - E. Keep `-r` as a Git revision offline, with a clear error when it does not resolve.
-- **`NXF_HUB=registry` in other commands.** Only `run` and `inspect` understand the `registry` hub. `pull`, `clone`, `config` or `info` of a plain name that is not cached fail with "Unknown repository provider: registry". Options:
-  - A. A clear error in `AssetManager.checkHubProvider`: the `registry` hub is only supported by `nextflow run`. Recommended for now.
+- **A registry host as hub in other commands.** Only `run` and `inspect` understand a registry host as `-hub` or `NXF_HUB`. `pull`, `clone`, `config` or `info` of a plain name that is not cached fail with "Unknown repository provider: registry.nextflow.io". Options:
+  - A. A clear error in `AssetManager.checkHubProvider`: a registry host is only supported by `nextflow run`. Recommended for now.
   - B. Support registry addresses in `pull` now, so that a release can be fetched before an offline run.
-  - C. Ignore `NXF_HUB=registry` in the other commands and use GitHub. Rejected: a silent switch.
+  - C. Ignore a registry host in `NXF_HUB` in the other commands and use GitHub. Rejected: a silent switch.
 
 ## Links
 

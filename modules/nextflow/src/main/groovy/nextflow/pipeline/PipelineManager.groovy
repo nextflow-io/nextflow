@@ -224,6 +224,11 @@ class PipelineManager {
             registryUrl: client.primaryUrl())
     }
 
+    /** The registry API URL, among {@code registryUrls}, served from {@code host}, or {@code null} */
+    static String registryOfHost(String host, Collection<String> registryUrls) {
+        return registryUrls.find { URI.create(it).host?.equalsIgnoreCase(host) }
+    }
+
     /**
      * Registry and pipeline name of a registry page URL such as {@code https://registry.nextflow.io/pipelines/nf-core/rnaseq}.
      * The page URL is the registry API URL without {@code /api}.

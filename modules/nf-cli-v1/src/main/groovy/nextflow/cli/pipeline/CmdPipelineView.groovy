@@ -72,7 +72,7 @@ class CmdPipelineView extends CmdBase {
 
         final url = pipelineUrl(registryConfig.url, name, release.version)
         final params = schemaParams(release.schema)
-        final usage = "nextflow run ${name} -hub registry -r ${release.version}".toString()
+        final usage = "nextflow run ${name} -hub ${URI.create(registryConfig.url).host} -r ${release.version}".toString()
 
         if( output == 'json' ) {
             final info = [
