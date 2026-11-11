@@ -23,6 +23,7 @@ import java.nio.file.Path
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
@@ -461,7 +462,7 @@ class CmdRunTest extends Specification {
         AssetManager.root = folder.resolve('assets').toFile()
 
         when: 'running in offline mode with a file: URL'
-        def cmd = new CmdRun(offline: true)
+        def cmd = runCmd(offline: true)
         def scriptFile = cmd.getScriptFile0("file:${bareDir}")
 
         then: 'the pipeline is cloned and returned successfully'
@@ -475,7 +476,7 @@ class CmdRunTest extends Specification {
         AssetManager.root = folder.resolve('assets').toFile()
 
         when: 'running in offline mode with a remote repo name'
-        def cmd = new CmdRun(offline: true)
+        def cmd = runCmd(offline: true)
         cmd.getScriptFile0('nextflow-io/hello')
 
         then: 'an AbortOperationException is thrown'
@@ -506,29 +507,83 @@ class CmdRunTest extends Specification {
         client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl("file:${bareDir}".toString()).latest(release)
 
         when:
-        def cmd = new CmdRun(registryClient: client)
+        def cmd = runCmd(registryClient: client, hubProvider: 'registry.nextflow.io')
         def scriptFile = cmd.getScriptFile0('acme/hello')
+
+        then: 'the release is cached under its registry name'
+        scriptFile.main.text.contains("println 'v1'")
+        scriptFile.revisionInfo.commitId == v1
+        scriptFile.projectName == 'acme/hello'
+        folder.resolve('assets/.repos/acme/hello/bare').exists()
+
+        when: 'it runs offline by its registry name'
+        cmd = runCmd(hubProvider: 'registry.nextflow.io', offline: true, revision: v1)
+        scriptFile = cmd.getScriptFile0('acme/hello')
 
         then:
         scriptFile.main.text.contains("println 'v1'")
-        scriptFile.revisionInfo.commitId == v1
     }
 
-    def 'should not look up the registry offline or with -hub' () {
+    def 'should look up the registry only for a registry address' () {
         given:
         def client = Mock(RegistryClient)
+        def cmd = runCmd(registryClient: client, hubProvider: HUB)
 
         when:
-        def result = new CmdRun(registryClient: client, offline: OFFLINE, hubProvider: HUB).registryLookup('nf-core/rnaseq')
+        def result = cmd.registryLookup(NAME)
 
         then:
-        result == null
-        0 * client._
+        (LOOKUP ? 1 : 0) * client.getPipeline('nf-core/rnaseq') >> new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq')
+            .latest(new PipelineRelease().version('3.14.0').commitId('abc123'))
+        (result != null) == LOOKUP
 
         where:
-        OFFLINE | HUB
-        true    | null
-        false   | 'gitlab'
+        NAME                                                    | HUB        | LOOKUP
+        'nf-core/rnaseq'                                        | null       | false
+        'nf-core/rnaseq'                                        | 'gitlab'   | false
+        'https://github.com/nf-core/rnaseq'                     | null       | false
+        'nf-core/rnaseq'                                        | 'registry.nextflow.io' | true
+        'https://registry.nextflow.io/pipelines/nf-core/rnaseq' | null       | true
+        'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq' | null   | false
+    }
+
+    def 'should reject a hub that is neither a provider nor a registry' () {
+        when:
+        runCmd(hubProvider: 'example.com').registryLookup('nf-core/rnaseq')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Unknown repository provider or registry: `example.com`')
+        e.message.contains('registries: registry.nextflow.io')
+    }
+
+    def 'should reject a version in a registry URL' () {
+        when:
+        runCmd().registryLookup('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('give the version with the `-r` option')
+    }
+
+    def 'should not fall back to Git for a registry address' () {
+        given:
+        def client = Mock(RegistryClient)
+        client.getPipeline('nf-core/rnaseq') >> { throw new RegistryException('Not found', 404) }
+
+        when:
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io').registryLookup('nf-core/rnaseq')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('not found in the registry')
+    }
+
+    /** A run command with a launcher, so that it can read the registry config */
+    private CmdRun runCmd(Map opts = [:]) {
+        final cmd = new CmdRun(opts)
+        cmd.launcher = Mock(Launcher) { getOptions() >> null }
+        return cmd
     }
 
     private static <T extends CmdRun> T withFakeEnv(T cmd) {

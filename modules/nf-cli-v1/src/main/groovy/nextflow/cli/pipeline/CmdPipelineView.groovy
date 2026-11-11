@@ -72,7 +72,7 @@ class CmdPipelineView extends CmdBase {
 
         final url = pipelineUrl(registryConfig.url, name, release.version)
         final params = schemaParams(release.schema)
-        final usage = "nextflow run ${name} -r ${release.version}".toString()
+        final usage = "nextflow run ${name} -hub ${URI.create(registryConfig.url).host} -r ${release.version}".toString()
 
         if( output == 'json' ) {
             final info = [
@@ -143,8 +143,6 @@ class CmdPipelineView extends CmdBase {
     }
 
     private static String pipelineUrl(String registryUrl, String name, String version) {
-        // Strip /api suffix to get the base UI URL
-        final baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
-        return "${baseUrl}/pipelines/${name}@${version}"
+        return "${PipelineCmdSupport.pageUrl(registryUrl)}/pipelines/${name}@${version}"
     }
 }
