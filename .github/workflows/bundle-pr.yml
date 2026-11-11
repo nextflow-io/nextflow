@@ -1,8 +1,10 @@
 name: Bundle (PR)
+# Opt-in: runs when a maintainer adds the `ci/pr-build` label, and on each push while it is there.
 # Nothing is published: the artifacts are only available to signed-in GitHub users, and expire.
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, labeled]
     paths-ignore:
       - 'docs/**'
       - '.docusaurus_site/**'
@@ -10,18 +12,21 @@ on:
 permissions:
   contents: read
 
+# adding another label must not cancel a running build
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'ci/pr-build' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
   bundle:
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'ci/pr-build' || github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'ci/pr-build') }}
     uses: ./.github/workflows/bundle.yml
     with:
       jre-version: ${{ vars.NXF_BUNDLE_JRE_VERSION }}
 
   plugins:
     name: Core plugins
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'ci/pr-build' || github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'ci/pr-build') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -45,6 +50,7 @@ jobs:
           name: plugins
           path: build/plugins
           if-no-files-found: error
+          retention-days: 30
 
   comment:
     name: Comment on the PR
@@ -78,7 +84,7 @@ jobs:
           NXF_PLUGINS_DIR=\$PWD/plugins ./nextflow-*-\$platform/bin/nextflow run <pipeline>
           ~~~
 
-          The build includes its own Java runtime and the core plugins of this PR. Third-party plugins are downloaded from the plugin registry as usual. For testing only. This comment is updated on each push.
+          The build includes its own Java runtime and the core plugins of this PR. Third-party plugins are downloaded from the plugin registry as usual. The artifacts expire after 30 days. For testing only. This comment is updated on each push while the PR has the \`ci/pr-build\` label.
 
           </details>
           EOF

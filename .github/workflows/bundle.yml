@@ -132,3 +132,4 @@ jobs:
           name: bundle-${{ matrix.target }}
           path: build/bundle/*.tar.gz*
           if-no-files-found: error
+          retention-days: 30
