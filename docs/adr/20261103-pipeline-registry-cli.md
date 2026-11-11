@@ -147,6 +147,7 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
   1. a Git provider name (`github`, `gitlab`, a name from the SCM file): Git, as today. This is checked first, so existing setups behave the same.
   2. the host of a configured `registry.url`, or of the default public registry: that registry.
   3. anything else: an error that lists the known providers and registry hosts.
+- The legacy project commands (`clone`, `drop`, `list`, `pull`, `view`, `info`, `config`) don't get registry support: `run` manages its own cache, and these commands may be deprecated once the pipeline CLI exists.
 - `pull` and `clone`, the other commands with `-hub`, recognize registry addresses with the same check (`PipelineCmdSupport.registryAddress`) and stop with a clear error: registry pipelines are only supported by `nextflow run`. `info`, `config`, `view` and `drop` have no `-hub`; with `NXF_HUB` set to a registry host they only fail for a name that is not cached, with the usual "Unknown repository provider" error.
 - A hostname can't be confused with Git, because `-hub` only takes provider names. Through `NXF_HUB`, a user or a site can make a registry the default for plain names.
 - A bare `github.com/nf-core/rnaseq` (without `https://`) is not added. It is not supported today, and it would be ambiguous with registry names, whose name part can have more than one segment (`nf-core/star/align`).
@@ -183,7 +184,6 @@ A registry release is fetched with `AssetManager` from its `repositoryUrl` at it
 
 ## Future work
 
-- **Registry addresses in other commands**: `pull`, `clone`, `config` and `info` could accept a registry URL or a registry host as `-hub`, so that a release can be fetched before an offline run.
 - **A short prefix** for registry addresses.
 - **Publish and install from a bundle**: `nextflow pipeline publish`, and installing a release from a bundle stored in the registry so that install does not depend on a Git host. This is decided in a separate ADR, `20261105-pipeline-registry-publish.md`, together with the server design in nextflow-registry #440.
 
