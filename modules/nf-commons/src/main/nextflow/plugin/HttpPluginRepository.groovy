@@ -177,7 +177,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
         // a registry without namespace support refuses any id with a `/`
         final namespaced = specs.findAll { it.id.contains('/') }*.id
-        if( resp.statusCode() >= 400 && resp.statusCode() < 500 && namespaced ) {
+        if( resp.statusCode() in [400, 404, 422] && namespaced ) {
             final msg = "The plugin registry at ${req.uri()} refused the namespaced plugin ID: ${namespaced.join(', ')}\nThe registry may not support namespaced plugins. See the registry response for the reason.\n- http status: ${resp.statusCode()}\n- response   : ${body}"
             throw new PluginRuntimeException(msg)
         }
