@@ -97,6 +97,17 @@ plugins {
 You can develop Nextflow plugins without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
 :::
 
+To publish the plugin under a namespace, set the `namespace` option in `build.gradle`:
+
+```groovy
+nextflowPlugin {
+    // ...
+    namespace = 'myorg'
+}
+```
+
+The plugin ID is then `myorg/<plugin-name>`. The namespace must be claimed in the plugin registry before you publish the plugin. See the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) for more information.
+
 ### Make commands
 
 The plugin template includes a Makefile which wraps the most important Gradle tasks provided by the Nextflow Gradle plugin.
