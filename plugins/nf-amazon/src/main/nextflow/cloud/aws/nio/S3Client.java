@@ -760,7 +760,7 @@ public class S3Client {
             Thread.currentThread().interrupt();
             throw new InterruptedIOException(String.format("S3 copy s3://%s/%s to s3://%s/%s interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey()));
         } catch (ExecutionException e) {
-            String msg = String.format("Exception thrown copying S3 object form s3://%s/%s to s3://%s/%s", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+            String msg = String.format("Exception thrown copying S3 object from s3://%s/%s to s3://%s/%s", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
             throw new IOException(msg, e.getCause());
         }
 
