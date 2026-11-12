@@ -83,3 +83,6 @@ yarn-error.log*
 examples/agents/.validate/
 # agent example validation output (validation/agent.sh)
 validation/agent-validation/
+
+# Google Batch validation output (validation/google.sh)
+validation/google-runs/
