@@ -51,6 +51,7 @@ class ParallelPollingMonitorTest extends Specification {
                         .retryOn(IllegalArgumentException)
                         .withRateLimit('10/sec')
                         .withErrorBurstDelay(Duration.of('5sec'))
+                        .withRetryDelay(Duration.of('50ms'))
                         .withAutoThrottle()
                         .onSuccess { success.incrementAndGet() }
                         .onRetry { retry.incrementAndGet() }
@@ -63,7 +64,7 @@ class ParallelPollingMonitorTest extends Specification {
         when:
         mon.submitter = exec
         mon.submit(handler)
-        sleep 3_000
+        // the retries run inside the submitted task, so termination waits for them
         exec.shutdown()
         exec.awaitTermination(1, TimeUnit.MINUTES)
 

@@ -39,6 +39,10 @@ import spock.lang.Specification
  */
 class TaskContextTest extends Specification {
 
+    def cleanup() {
+        Global.reset()
+    }
+
     def setupSpec() {
         NF.init()
     }

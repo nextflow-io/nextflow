@@ -333,8 +333,9 @@ class BatchClientTest extends Specification{
         def jobId = 'job-id'
         def stub = new FakeBatchServiceStub(TaskGroupName.of(project, location, jobId, 'group0'), 10)
         // longer than the time a cached task status is considered valid
-        stub.requestDelayMillis = 1_100
+        stub.requestDelayMillis = 150
         def client = new BatchClient(projectId: project, location: location, config: new GoogleOpts([:]), batchServiceClient: BatchServiceClient.create(stub))
+        client.taskStateInvalidTime = 100
 
         when:
         def states = ['0', '1'].collect { client.getTaskInArrayStatus(jobId, it)?.state }

@@ -34,6 +34,10 @@ class PublishDirTest extends Specification {
         Global.session = Mock(Session) { getConfig()>>[:] }
     }
 
+    def cleanup() {
+        Global.reset()
+    }
+
     def 'should create a publish dir obj'() {
         given:
         def publish

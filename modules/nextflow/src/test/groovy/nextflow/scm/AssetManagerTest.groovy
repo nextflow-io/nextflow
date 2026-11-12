@@ -32,12 +32,14 @@ import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class AssetManagerTest extends Specification {
 

@@ -15,8 +15,6 @@
  */
 package nextflow.agent
 
-import nextflow.Global
-import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
@@ -26,7 +24,6 @@ import nextflow.script.PromptDef
 import nextflow.script.ScriptBinding
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockSession
 import nextflow.agent.rpc.AgentRpcRegistration
 
 /**
@@ -170,15 +167,6 @@ class AgentToolPartitionTest extends Dsl2Spec {
             @Override
             String run(AgentRunnerRequest request) { throw new UnsupportedOperationException('canonical task path') }
         }
-    }
-
-    private Session newSession(Map config = null) {
-        def session = config ? new MockSession(config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-        session.init(null, null, null, null)
-        session.start()
-        Global.session = session
-        return session
     }
 
     /** Lower the agent and invoke the synthesized body against a stand-in task context. */
