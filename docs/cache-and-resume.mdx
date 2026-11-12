@@ -30,7 +30,6 @@ The task hash is computed from the following metadata:
 - Task [inputs][process-input]
 - *New in 25.10:* Task [eval commands][process-out-eval]
 - Task [script][process-script]
-- *New in 27.04:* Task [stage directives][process-typed-stage] of typed processes: `env` and `stdin` values, and files staged with `stageAs` that are not task inputs
 - Global variables referenced in the task script
 - *New in 23.10:* Task [`ext`][process-ext] properties referenced in the task script
 - Any [bundled scripts][bundling-executables] used in the task script
@@ -271,7 +270,6 @@ Nextflow now has a built-in way to compare two task runs. See the [Data lineage]
 [process-script]: ./process#script
 [process-spack]: ./reference/process/directives/spack
 [process-stub]: ./process#stub
-[process-typed-stage]: ./process-typed#stage-directives
 [stdlib-namespaces-workflow]: ./reference/stdlib-namespaces/workflow
 [strict-syntax-page]: ./strict-syntax
 [trace-report]: ./reports#trace-file
