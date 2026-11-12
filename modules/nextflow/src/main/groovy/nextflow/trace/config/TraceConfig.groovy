@@ -48,13 +48,19 @@ class TraceConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The directory where the trace file should be saved, relative to the workflow output directory.
+    """)
+    final String directory
+
+    @ConfigOption
+    @Description("""
         Create the execution trace file on workflow completion (default: `false`).
     """)
     final boolean enabled
 
     @ConfigOption(types=[String])
     @Description("""
-        Comma-separated list of [trace fields](https://nextflow.io/docs/latest/tracing.html#trace-report) to include in the report.
+        Comma-separated list of [trace fields](https://docs.seqera.io/nextflow/reports#trace-file) to include in the report.
     """)
     final List<String> fields
 
@@ -86,6 +92,7 @@ class TraceConfig implements ConfigScope {
     TraceConfig() {}
 
     TraceConfig(Map opts) {
+        directory = opts.directory
         enabled = opts.enabled as boolean
         fields = parseFields(opts.fields)
         file = opts.file ?: defaultFileName()

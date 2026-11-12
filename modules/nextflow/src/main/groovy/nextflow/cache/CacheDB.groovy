@@ -24,11 +24,14 @@ import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
+import nextflow.file.FileHelper
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
+import nextflow.util.HashBuilder
 import nextflow.util.KryoHelper
 /**
  * Manages nextflow cache DB
@@ -89,6 +92,47 @@ class CacheDB implements Closeable {
         return new TaskEntry(trace,ctx)
     }
 
+    /**
+     * Dispatch an asynchronous cache write on the {@link #writer} agent, logging any failure instead
+     * of letting the agent swallow it. Without this the run still succeeds while the cache is
+     * silently incomplete, with no trace of why.
+     *
+     * <p>What a dropped write costs depends on which one it was, so the message stays neutral:
+     * a failed {@code putTaskAsync} leaves the task non-resumable, so it re-executes on the next
+     * resume, and its index row is lost, which only affects {@code nextflow log} and {@code clean},
+     * since resume reads the entry through {@link #getTaskEntry}; a failed {@code cacheTaskAsync}
+     * leaves the reference count stale. Surfacing the error makes all three visible (and is the
+     * natural hook for a future retry at the store level).
+     *
+     * @param what   short description of the write for the log message (typically the task hash)
+     * @param action the store mutation to run on the writer thread
+     */
+    protected void dispatchWrite(String what, Closure action) {
+        writer.send {
+            try {
+                action.call()
+            }
+            catch( Throwable e ) {
+                log.warn("Unable to persist cache record for ${what}", e)
+            }
+        }
+    }
+
+    /**
+     * Bump the reference count of an entry that already exists, which also refreshes the stored
+     * object's last-modified stamp.
+     *
+     * <b>The count is advisory for a shared store.</b> This is a read-modify-write with no
+     * compare-and-set behind {@link CacheStore}, so two runs resuming the same task can read the same
+     * value and write the same increment, losing one. That is harmless today only because neither
+     * consumer of the count is reachable for a shared cache: {@link #removeTaskEntry} — the only
+     * decrement, and the only path that can delete on reaching zero — is called from
+     * {@code Session.cleanup}, which returns before opening the cache for a non-{@code file:} work
+     * dir, and from {@code CmdClean}, which a shared cache's {@code CacheDB} may refuse by
+     * overriding it; and a cross-run cache ages entries by the object's last-modified time, not by
+     * the count. Eviction tooling that reads the count instead would need a genuinely atomic update
+     * here.
+     */
     void incTaskEntry( HashCode hash ) {
         final payload = store.getEntry(hash)
         if( !payload ) {
@@ -99,11 +143,15 @@ class CacheDB implements Closeable {
         final record = (List)KryoHelper.deserialize(payload)
         // third record contains the reference count for this record
         record[2] = ((Integer)record[2]) +1
-        // save it again
-        store.putEntry(hash, KryoHelper.serialize(record))
+        // save it again -- an update of the record just read, not a new entry (see updateEntry)
+        store.updateEntry(hash, KryoHelper.serialize(record))
 
     }
 
+    /**
+     * Decrement the reference count, deleting the entry when it reaches zero. Callers must not invoke
+     * this on a shared cache — see the advisory-count note on {@link #incTaskEntry}.
+     */
     boolean removeTaskEntry( HashCode hash ) {
         final payload = store.getEntry(hash)
         if( !payload ) {
@@ -114,9 +162,9 @@ class CacheDB implements Closeable {
         final record = (List)KryoHelper.deserialize(payload)
         // third record contains the reference count for this record
         def count = record[2] = ((Integer)record[2]) -1
-        // save or delete
+        // save or delete -- as in incTaskEntry, saving is an update of the record just read
         if( count > 0 ) {
-            store.putEntry(hash, KryoHelper.serialize(record))
+            store.updateEntry(hash, KryoHelper.serialize(record))
             return false
         }
         else {
@@ -136,7 +184,7 @@ class CacheDB implements Closeable {
 
         final task = handler.task
         final proc = task.processor
-        final key = task.hash
+        final key = entryKey(task, trace)
 
         // save the context map for caching purpose
         // only the 'cache' is active and
@@ -145,26 +193,67 @@ class CacheDB implements Closeable {
         def record = new ArrayList(3)
         record[0] = trace.serialize()
         record[1] = ctx != null ? ctx.serialize() : null
-        record[2] = 1
+        // an entry is only replaced by a re-execution, which runs in an attempt dir since the first exists
+        record[2] = FileHelper.getAttemptFromPath(task.workDir) > 1 ? refCount(key) + 1 : 1
 
         // -- save in the db
         store.putEntry( key, KryoHelper.serialize(record) )
 
     }
 
+    /**
+     * The reference count of the entry a new one replaces, e.g. a completed task re-executed because
+     * its outputs could not be resumed: the runs that listed the previous entry now list this one.
+     */
+    private int refCount(HashCode key) {
+        final payload = store.getEntry(key)
+        return payload ? (Integer)((List)KryoHelper.deserialize(payload))[2] : 0
+    }
+
+    /**
+     * The key a task attempt is recorded under: the task hash, which is what resume looks up, unless
+     * the attempt failed or was aborted: then a key of its own, so that a later attempt of the same
+     * task does not replace it -- every attempt shares the task hash, see
+     * {@link nextflow.processor.DefaultTaskCacheStrategy}.
+     */
+    static HashCode entryKey(TaskRun task, TraceRecord trace) {
+        if( trace.get('status') !in ['FAILED', 'ABORTED'] )
+            return task.hash
+        return attemptKey(task.hash, FileHelper.getAttemptFromPath(task.workDir))
+    }
+
+    /**
+     * The key of a failed or aborted attempt of the task with the given hash.
+     */
+    static HashCode attemptKey(HashCode hash, int attempt) {
+        // negative, so it never matches a key of the per-attempt hash chain of previous versions
+        return HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(-attempt).hash()
+    }
+
+    /**
+     * Record a task attempt and its index row. The index row is written here rather than on submit,
+     * since its key depends on the outcome -- see {@link #entryKey}.
+     */
     void putTaskAsync( TaskHandler handler, TraceRecord trace ) {
-        writer.send { writeTaskEntry0(handler, trace) }
+        // the key is computed on the writer thread: a null trace must fail the write, not the run
+        dispatchWrite("task entry ${handler.task.hash}") {
+            writeTaskEntry0(handler, trace)
+            store.writeIndex(entryKey(handler.task, trace), false)
+        }
     }
 
     void cacheTaskAsync( TaskHandler handler ) {
-        writer.send {
+        dispatchWrite("cached task ${handler.task.hash}") {
             writeTaskIndex0(handler,true)
             incTaskEntry(handler.task.hash)
         }
     }
 
+    /**
+     * No-op: the index row of a task is written on completion by {@link #putTaskAsync}, once its key
+     * is known. A task that never completes has no entry, so it would not be listed anyway.
+     */
     void putIndexAsync(TaskHandler handler ) {
-        writer.send { writeTaskIndex0(handler) }
     }
 
     @PackageScope

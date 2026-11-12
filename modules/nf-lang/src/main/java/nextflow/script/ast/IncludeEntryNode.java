@@ -16,7 +16,7 @@
 package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
 
 /**
  * An included process, workflow, or function.
@@ -40,13 +40,13 @@ public class IncludeEntryNode extends ASTNode {
         return alias != null ? alias : name;
     }
 
-    private MethodNode target;
+    private AnnotatedNode target;
 
-    public void setTarget(MethodNode target) {
+    public void setTarget(AnnotatedNode target) {
         this.target = target;
     }
 
-    public MethodNode getTarget() {
+    public AnnotatedNode getTarget() {
         return target;
     }
 }

@@ -20,6 +20,7 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
@@ -42,9 +43,15 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private ScriptMeta meta
 
+    private boolean typingEnabled
+
+    private ParamsDef paramsDef
+
     private WorkflowDef entryFlow
 
-    private OutputDef publisher
+    private boolean moduleLoaded
+
+    private OutputDef outputDef
 
     BaseScript() {
         meta = ScriptMeta.register(this)
@@ -62,6 +69,36 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     Session getSession() {
         session
+    }
+
+    boolean isTypingEnabled() {
+        return typingEnabled
+    }
+
+    /**
+     * The declared params of this script, keyed by name.
+     */
+    Map<String,Param> getParamDeclarations() {
+        return paramsDef.getDeclarations()
+    }
+
+    /**
+     * The entry workflow of this script, or null if it doesn't have one.
+     */
+    WorkflowDef getEntryFlow() {
+        return entryFlow
+    }
+
+    /**
+     * Execute this script as an included module, only once
+     * no matter how many scripts include it.
+     */
+    @PackageScope
+    void runModule() {
+        if( moduleLoaded )
+            return
+        moduleLoaded = true
+        run()
     }
 
     /**
@@ -98,23 +135,47 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
+     * Enable static typing for the script.
+     */
+    protected void enableTyping() {
+        this.typingEnabled = true
+    }
+
+    /**
      * Define a params block.
      *
+     * @param clazz
      * @param body
      */
-    protected void params(Closure body) {
+    protected void params(Class clazz, Closure body) {
         if( entryFlow )
             throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
 
-        final dsl = new ParamsDsl()
-        final cl = (Closure)body.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
+        this.paramsDef = new ParamsDef(clazz, body)
+    }
 
-        dsl.apply(session)
+    /**
+     * Define an agent.
+     *
+     * Mirrors {@link #processV2(String, Closure)} — the lowered agent closure runs
+     * against an {@link AgentBuilder} delegate that captures directives, inputs,
+     * outputs and the prompt, then builds the populated {@link AgentDef}.
+     * The agent executes via {@link AgentDef#run} (see the nf-agent plugin runner).
+     *
+     * @param name
+     * @param body
+     */
+    protected void agent(String name, Closure<PromptDef> body) {
+        log.warn1 "Agents are a preview feature -- syntax and behavior may change in future releases"
+        final builder = new AgentBuilder(this, name)
+        final cl = (Closure<PromptDef>) body.clone()
+        cl.setDelegate(builder)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        final prompt = cl.call()
+        final agent = builder.withPrompt(prompt).build()
+        meta.addDefinition(agent)
     }
 
     /**
@@ -177,21 +238,35 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Define an output block.
      *
-     * @param closure
+     * @param body
      */
-    protected void output(Closure closure) {
+    protected void output(Closure body) {
         if( !entryFlow )
             throw new IllegalStateException("Workflow output definition must be defined after the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
-        publisher = new OutputDef(closure)
+        this.outputDef = new OutputDef(body)
     }
 
+    /**
+     * Include definitions from another script.
+     *
+     * @param include
+     */
     protected IncludeDef include( IncludeDef include ) {
-        if(ExecutionStack.withinWorkflow())
+        if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
-        include .setSession(session)
+        return include.setSession(session)
+    }
+
+    /**
+     * Define a custom type.
+     *
+     * @param type
+     */
+    protected void declareType(Class type) {
+        meta.addDefinition(new TypeDef(type))
     }
 
     /**
@@ -215,6 +290,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return result
         }
 
+        // a module defines a single process or named workflow, which is
+        // executed directly -- there is no entry workflow to select
+        if( binding.entryName && session.isModuleRun() )
+            throw new AbortOperationException("Option `-entry` is not supported when a script is executed as a module")
+
         // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
         if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
@@ -226,24 +306,46 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
 
         if( !entryFlow ) {
-            if( meta.getLocalWorkflowNames() )
-                throw new AbortOperationException("No entry workflow specified")
-            // Check if we have standalone processes that can be executed automatically
-            if( meta.hasExecutableProcesses() ) {
-                // Create a workflow to execute the process (single process or first of multiple)
+            // a process or named workflow can be executed directly only
+            // when the script was launched via `nextflow module run`
+            final moduleRun = session.isModuleRun()
+            if( moduleRun && meta.hasExecutableWorkflows() ) {
+                // Execute a single named workflow directly
+                final handler = new WorkflowEntryHandler(this, session, meta)
+                this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
+            }
+            else if( moduleRun && meta.hasExecutableAgents() ) {
+                // Execute a single agent directly
+                final handler = new AgentEntryHandler(this, session, meta)
+                this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
+            }
+            else if( moduleRun && meta.hasExecutableProcesses() ) {
+                // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
-                entryFlow = handler.createAutoProcessEntry()
+                this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
+            }
+            else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() || meta.getLocalAgentNames() ) {
+                throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process, agent, or named workflow, or be a code snippet")
             }
             else {
+                // NOTE: remove after v1 parser is removed
                 return result
             }
         }
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
-        if( publisher )
-            publisher.apply(session)
+        if( paramsDef )
+            paramsDef.apply(session)
+        final args = paramsDef
+            ? [ binding.getParams() ] as Object[]
+            : BaseScriptConsts.EMPTY_ARGS
+        final ret = entryFlow.run(args)
+        if( outputDef )
+            outputDef.apply(session, entryFlow.getBinding().getPublished())
         session.notifyAfterWorkflowExecution()
         return ret
     }

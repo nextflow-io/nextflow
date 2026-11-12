@@ -1,0 +1,562 @@
+---
+title: Agents
+description: Define and run AI agents in Nextflow pipelines.
+---
+
+# Agents
+
+<AddedInVersion version="26.10" />
+
+:::warning
+Agents are a preview feature. Their syntax and behavior may change in future releases.
+:::
+
+In Nextflow, an *agent* is a process-like primitive for executing agentic tasks in a Nextflow pipeline. It declares inputs and outputs, renders a prompt, calls a language model, and emits a result. Every agent run is an ordinary Nextflow task, so it receives work directory isolation, parallelism, retries, caching, and lineage.
+
+Where processes require an executor, agents require a *runner*. Nextflow provides two built-in runners: `langchain4j`, which runs agents directly in the JVM, and `pi`, which runs each agent in a container.
+
+## Quick start
+
+```groovy
+// nextflow.config
+agent.runner = 'langchain4j'
+```
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+```nextflow
+// main.nf
+agent qa {
+    model 'openai/gpt-5-mini'
+    instruction 'You are a concise scientific assistant.'
+
+    input:
+    question: String
+
+    output:
+    stdout()
+
+    prompt:
+    """
+    Answer briefly: ${question}
+    """
+}
+
+workflow {
+    qa('What is FASTQ format?').view()
+}
+```
+
+Each runner is implemented in a plugin, `nf-agent` and `nf-agent-pi`. Specifying a runner, or any other `agent` config option, automatically loads the appropriate plugin. Declare the plugin explicitly to pin a version:
+
+```groovy
+plugins {
+    id 'nf-agent-pi@0.5.0'
+}
+```
+
+## Directives
+
+##### `goal`
+
+High-level objective, appended to the system message as a `Goal:` section.
+
+##### `instruction`
+
+System prompt describing the agent's role.
+
+##### `label`
+
+Mnemonic identifier for `withLabel` selectors. Can be specified more than once.
+
+##### `maxIterations`
+
+Maximum number of iterations in the tool-calling loop (default: `20`).
+
+##### `model`
+
+The language model, specified as `<provider>/<model>`, e.g. `openai/gpt-5-mini`. The prefix selects the chat-model backend; for `openai/` it is the OpenAI wire protocol.
+
+##### `skills`
+
+Skills that the agent may use. See [Skills](#skills).
+
+##### `tools`
+
+Namespaced tool references, specified as `<family>[:<group>]:<name>`. See [Tools](#tools).
+
+## Inputs, outputs, and prompt
+
+Agent inputs are declared like a typed process, including destructured records and tuples.
+
+An agent has a single output, which can be declared in two ways:
+
+- A typed declaration, such as `verdict: Verdict`, which the agent answers as [structured output](#structured-output).
+- An output expression, which can use the `stdout()`, `file()`, and `files()` functions.
+
+Use a record to return multiple values.
+
+Each input is serialized as JSON and appended to the model message, so the agent sees it even if it isn't explicitly referenced in the prompt.
+
+The `prompt:` section uses the same syntax as the process `script:` section:
+
+```nextflow
+prompt:
+def findings = report.collect { v -> "- ${v.summary}" }.join('\n')
+"""
+Summarize these findings:
+${findings}
+"""
+```
+
+### File inputs
+
+File inputs are staged into the agent's work directory, just like a process:
+
+```nextflow
+agent inspector {
+    input:
+    contigs: Path
+
+    output:
+    stdout()
+
+    // the model receives "contigs.fa", a file it can open in its working directory
+    prompt:
+    """
+    Inspect ${contigs} and report the longest sequence.
+    """
+}
+```
+
+### Record inputs
+
+Record inputs can be destructured, just like a process:
+
+```nextflow
+agent reviewer {
+    input:
+    record(id: String, reads: Path)
+
+    output:
+    record(id: id, summary: stdout())
+
+    prompt:
+    """
+    Review the reads in ${reads} for sample ${id}.
+    """
+}
+```
+
+### Text output
+
+Use the `stdout()` output function to emit the agent's final answer as text:
+
+```nextflow
+agent summarizer {
+    input:
+    text: String
+
+    output:
+    stdout()
+
+    prompt:
+    "Summarize: ${text}"
+}
+```
+
+### File outputs
+
+Use the `file(...)`/`files(...)` output functions to collect output files written by the agent, just like a process:
+
+```nextflow
+agent reporter {
+    input:
+    findings: String
+
+    output:
+    file('report.md')
+
+    prompt:
+    "Summarize ${findings} and write the result to report.md"
+}
+```
+
+The agent must be explicitly prompted to write this file. If the agent doesn't write a required output file, a missing-output error is reported.
+
+### Structured output
+
+Use a typed output to declare a structured output. The type is provided to the agent as a JSON schema, and the agent's response is validated against the schema.
+
+```nextflow
+record Answer {
+    answer: String
+    confidence: Float
+}
+
+agent qa {
+    model 'openai/gpt-5-mini'
+
+    input:
+    question: String
+
+    output:
+    a: Answer
+
+    prompt:
+    "Answer briefly: ${question}"
+}
+```
+
+The type can be one of the following types: `Boolean`, `Float`, `Integer`, `List`, `Path`, `String`, or a record type.
+
+For a `Path` value, the agent responds with the path of an existing file, such as an output file returned by a tool call. A relative path is resolved against the agent's work directory. To collect files written by the agent, you can also use `file()`.
+
+## Tools
+
+Tools are declared as namespaced references, `<family>[:<group>]:<name>`. An agent only receives the tools it declares.
+
+Tool families:
+
+- `nf`: Nextflow tools. `nf:module_run` exposes every included or locally-defined process as a tool. For example: `nf:module_run:SAMTOOLS_SORT`, `nf:module_run:SAMTOOLS_*`.
+
+- `fs`: filesystem tools: `read`, `write`, `edit`, `ls`, `grep`, `find`. Use `fs:*` to select all of them. Can only access files in the agent runner's sandbox (see below).
+
+- `shell`: `shell:bash`, a shell inside the runner container. Only supported by the `pi` runner.
+
+Tool reference syntax:
+
+- Omitting the name selects the entire group. For example, `nf:module_run` is equivalent to `nf:module_run:*`.
+
+- Wildcards (`*`) can only be used in the name segment. Name patterns are case-sensitive.
+
+- Multiple entries are combined by their union.
+
+For example:
+
+```nextflow
+process uppercase {
+    input:
+    text: String
+
+    output:
+    result: String
+
+    exec:
+    result = text.toUpperCase()
+}
+
+agent shouty {
+    model 'openai/gpt-5-mini'
+    instruction 'To uppercase text call the `uppercase` tool, then reply with only the result.'
+    tools 'nf:module_run'
+
+    input:
+    request: String
+
+    output:
+    stdout()
+
+    prompt:
+    "${request}"
+}
+```
+
+When `shouty` calls `uppercase` as a tool, Nextflow runs an `uppercase` task and serializes the task outputs as the tool call result. If the `uppercase` task fails, the agent run also fails.
+
+Processes must either have a module spec or be typed in order to be called as tools.
+
+A file argument passed to a tool by its name in the agent's work directory is resolved to the corresponding staged input, or to the work directory for any other file. A file written by the agent can only be passed to a tool when the work directory is on a shared file system, because files in a remote work directory, such as S3, are uploaded only when the agent task completes.
+
+The `fs:` tools are limited to the agent runner's sandbox:
+
+- On `langchain4j` the tools run in the driver JVM. The agent can read its work directory, its staged `Path` inputs, and output files returned by module tool calls. It can only write to its work directory.
+
+- On `pi` the runner's own file tools are rooted at the work directory with the container as the outer bound.
+
+## Skills
+
+Skills are folders containing `SKILL.md` files that disclose instructions to the agent on demand.
+
+For example:
+
+```nextflow
+agent reporter {
+    model 'openai/gpt-5-mini'
+    skills 'sequence-report'
+
+    input:
+    request: String
+
+    output:
+    stdout()
+
+    prompt:
+    "${request}"
+}
+```
+
+- **Local**: a bare name resolves to `skills/<name>/` alongside the declaring file.
+- **Remote**: `github.com/<org>/<repo>[@rev]` (supports both `https://` and `git@` forms) is cloned and cached into `skills/.remote/<repo>[@<rev>]`.
+
+The model sees each skill's name and description up front, reads the body through `activate_skill`, and bundled files through `read_skill_resource`. Skills do not execute code.
+
+## Agent modules
+
+An agent can be included as a module:
+
+```nextflow
+include { reporter } from './agents/reporter'
+include { reporter as qc } from './agents/reporter/main.nf'
+```
+
+The module directory may carry its own skills and tools:
+
+```
+agents/reporter/
+├── main.nf
+├── skills/qa-report/SKILL.md
+└── tools/qc_verdict.nf
+```
+
+An agent's declared skills and tools are included in the task hash, so that editing them invalidates the cache.
+
+An agent module can be executed directly with `nextflow module run`. Each agent input is supplied as a command-line param, in the same manner as a typed process:
+
+```console
+$ nextflow module run ./agents/reporter --request 'Report on sample1'
+```
+
+Processes defined alongside the agent can be used as tools by the agent.
+
+See [`17_agent-module`](https://github.com/nextflow-io/nextflow/tree/master/examples/agents/17_agent-module) for a complete example.
+
+Registry-based agent modules are not currently supported.
+
+## Configuration
+
+The `agent` scope supports both *agent options* (next section) and *task directives* (process directives applied to the agent task).
+
+```groovy
+agent {
+    // agent options
+    runner = 'pi'
+    model = 'openai/gpt-5-mini'
+    apiKey = secrets.LLM_KEY
+
+    // task directives
+    executor = 'k8s'
+    container = '<nf-agent-pi runner image>'
+    cpus = 1
+    memory = 1.GB
+
+    rpc.remoteHost = 'nextflow-driver.default.svc'
+}
+```
+
+Notes:
+
+- Agents do not inherit any configuration from the `process` scope.
+- Directives declared in the agent definition take precedence over config options.
+- By default, agents are executed locally (`local` executor).
+
+### Agent options
+
+##### `apiKey`
+
+Provider credential, on either runner. See [Model provider](#model-provider).
+
+##### `apiProvider`
+
+Namespace the environment credential and endpoint are read from: `anthropic`, `azure`, `gemini`, `google`, `mistral`, `openai`, `openrouter`. Inferred when unset. Does not select the wire protocol. Any other value aborts the run.
+
+##### `baseUrl`
+
+Endpoint serving the model, e.g. `http://localhost:8000/v1`. Defaults to the provider's endpoint.
+
+##### `maxIterations`
+
+Default tool-loop cap (default: `20`).
+
+##### `maxToolOutputInlineSize`
+
+Largest tool-output file passed to the model inline; bigger ones become path handles (default: `32.KB`).
+
+##### `model`
+
+Default model for an agent that omits the directive.
+
+##### `requestTimeout`
+
+Timeout for a single model request (default: `120.s`).
+
+##### `runner`
+
+The agent harness. Can be `pi` or `langchain4j` (default: `langchain4j`). When an agent runner plugin is explicitly included, the runner is inferred from it.
+
+##### `trace`
+
+Log a readable trace of each agent's execution. Enabled by `-with-agent-trace`.
+
+##### `rpc.port`
+
+Broker port; `0` (default) picks an ephemeral port.
+
+##### `rpc.remoteHost`
+
+Host a containerized task uses to reach the driver. See [RPC configuration](#rpc-configuration).
+
+##### `rpc.capabilityTimeout`
+
+Queuing budget for an agent task's one-time connection capability (default: `1.h`).
+
+##### `rpc.tls`
+
+Enable TLS on the broker connection (default: `true`). Disable only for debugging.
+
+### Selectors
+
+The `agent` scope can use selectors just like the `process` scope:
+
+```groovy
+agent {
+    cpus = 1
+
+    withName: 'planner' {
+        cpus = 2
+        ext.args = '--fast'
+    }
+
+    withName: '!critic' { maxRetries = 3 }
+    withLabel: 'reasoning' { model = 'openai/gpt-5' }
+}
+```
+
+:::note
+The `agent.rpc.*` settings are global; they cannot be applied per-agent via config selector.
+:::
+
+## Model provider
+
+Nextflow resolves the model provider in the following order:
+
+1. The `agent.apiProvider` config option
+2. The host of `agent.baseUrl` when recognized
+3. The `model` directive (prefix)
+
+For example, the model `openai/gpt-5` with `agent.baseUrl = 'https://openrouter.ai/api/v1'` uses OpenRouter.
+
+Nextflow resolves the provider endpoint and credentials in the following order:
+
+1. Configuration: `agent.apiKey` and `agent.baseUrl`
+2. Nextflow variable: `NXF_AGENT_API_KEY` and `NXF_AGENT_BASE_URL`
+3. Provider variable: `<PROVIDER>_API_KEY` and `<PROVIDER>_BASE_URL`
+
+Provider-specific credentials (`<PROVIDER>_API_KEY`) are applied only to agents using that provider.
+
+| `apiProvider` | Credential | Endpoint | Recognized host |
+| --- | --- | --- | --- |
+| `anthropic` | `ANTHROPIC_API_KEY` | `ANTHROPIC_BASE_URL` | `api.anthropic.com` |
+| `azure` | `AZURE_OPENAI_API_KEY` | `AZURE_OPENAI_ENDPOINT` | -- |
+| `gemini` | `GEMINI_API_KEY`, `GOOGLE_API_KEY` | -- | -- |
+| `google` | `GOOGLE_API_KEY`, `GEMINI_API_KEY` | -- | -- |
+| `mistral` | `MISTRAL_API_KEY` | -- | `api.mistral.ai` |
+| `openai` | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `api.openai.com` |
+| `openrouter` | `OPENROUTER_API_KEY` | -- | `openrouter.ai` |
+
+## Execution model
+
+Every agent invocation runs as a task. It receives work directory isolation, caching, retries, and lineage just like a process.
+
+Tool calls are sent back from the agent and executed by Nextflow. Module tool calls are run as tasks alongside agent runs.
+
+### Caching
+
+An agent run can be replayed from the cache on a resumed run.
+
+An agent's task hash includes the following:
+
+- runner
+- model
+- provider endpoint
+- instruction
+- goal
+- max iterations
+- prompt
+- inputs
+- output schema
+- skills (capped at 64 files / 256 KB)
+- tools
+
+Because language models are non-deterministic, resuming an agent run only replays a stored run. It is reproducible only in the sense that the inputs (task hash components) are the same. Set `cache false` to opt out of caching.
+
+## Containerization
+
+The `pi` runner requires a container for agent runs. By default, it uses an image published alongside each Nextflow release. Set `agent.container` to override it.
+
+The default image is a minimal Debian image. It does not include Node.js, `npm`, or `npx`. If an agent's `shell:bash` commands need additional tools, use a custom image that adds them to the default image.
+
+Model requests from the container honor the `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` environment variables, if they are set in the agent task environment.
+
+The `langchain4j` runner does not support containerization.
+
+### RPC configuration
+
+Nextflow uses RPC to send provider credentials to containerized agents, and receive tool calls from them. The driver host is inferred where possible. Use `agent.rpc.remoteHost` or `NXF_AGENT_RPC_REMOTE_HOST` as needed to override it manually.
+
+### Provider credentials
+
+Provider credentials are delivered securely to agent tasks via RPC. Credentials never enter the task environment, the task script, or the runner's credential store.
+
+## Data lineage
+
+Agent runs are recorded as `AgentRun` lineage records instead of `TaskRun`.
+
+```console
+$ nextflow lineage find type=AgentRun
+lid://c47bf9183c56715c9bca1a67a4acdc68
+```
+
+```console
+$ nextflow lineage view lid://c47bf9183c56715c9bca1a67a4acdc68
+{
+  "version": "lineage/v1beta1",
+  "kind": "AgentRun",
+  "spec": {
+    "sessionId": "554fe81b-8034-4f5a-81c4-b07195258201",
+    "name": "analyst (1)",
+    "codeChecksum": {
+      "value": "f8acadb0cd9048eaf953b1b30836dffd",
+      "algorithm": "nextflow",
+      "mode": "standard"
+    },
+    "runner": "pi",
+    "model": "openai/gpt-5-mini",
+    "resolvedModel": null,
+    "instruction": "You are a precise scientific analyst. Be concise and honest about uncertainty.",
+    "goal": null,
+    "promptTemplate": "    \"\"\"\n    Analyze the following question and return a structured analysis.\n\n    Question: ${query.question}\n    \"\"\"\n",
+    "maxIterations": 20,
+    "outputSchema": "{\"additionalProperties\":false,\"properties\":{\"actionable\":{\"type\":\"boolean\"},\"confidence\":{\"type\":\"number\"},\"key_points\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"summary\":{\"type\":\"string\"}},\"required\":[\"summary\",\"confidence\",\"actionable\",\"key_points\"],\"type\":\"object\"}",
+    "tools": null,
+    "skills": null,
+    "input": [
+      {
+        "type": "val",
+        "name": "query",
+        "value": {
+          "question": "Is FASTQ a binary or a text format?",
+          "context": "bioinformatics file formats"
+        }
+      }
+    ],
+    "container": null,
+    "workflowRun": "lid://6334982d0dd5e6573989fa5640fc01d3",
+    "moduleId": null
+  }
+}
+```
+
+An agent's results are recorded as a `TaskOutput`, just like a process.

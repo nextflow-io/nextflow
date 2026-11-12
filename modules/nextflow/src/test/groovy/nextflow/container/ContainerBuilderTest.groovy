@@ -85,6 +85,8 @@ class ContainerBuilderTest extends Specification {
         new SarusConfig()           | SarusBuilder
         new ShifterConfig()         | ShifterBuilder
         new CharliecloudConfig()    | CharliecloudBuilder
+        new AppleContainerConfig()  | AppleContainerBuilder
+        new SmolVmConfig()          | SmolVmBuilder
 
     }
 

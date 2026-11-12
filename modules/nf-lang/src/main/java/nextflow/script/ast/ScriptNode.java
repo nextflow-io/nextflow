@@ -18,9 +18,13 @@ package nextflow.script.ast;
 import java.util.ArrayList;
 import java.util.List;
 
+import nextflow.script.dsl.PipelineParams;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
@@ -38,6 +42,7 @@ public class ScriptNode extends ModuleNode {
     private OutputBlockNode outputs;
     private List<WorkflowNode> workflows = new ArrayList<>();
     private List<ProcessNode> processes = new ArrayList<>();
+    private List<AgentNode> agents = new ArrayList<>();
     private List<FunctionNode> functions = new ArrayList<>();
 
     public ScriptNode(SourceUnit sourceUnit) {
@@ -67,6 +72,7 @@ public class ScriptNode extends ModuleNode {
                 declarations.add(wn);
         }
         declarations.addAll(processes);
+        declarations.addAll(agents);
         declarations.addAll(functions);
         declarations.addAll(getTypes());
         return declarations;
@@ -104,13 +110,17 @@ public class ScriptNode extends ModuleNode {
         return processes;
     }
 
+    public List<AgentNode> getAgents() {
+        return agents;
+    }
+
     public List<FunctionNode> getFunctions() {
         return functions;
     }
 
     public List<ClassNode> getTypes() {
         return getClasses().stream()
-            .filter(cn -> cn.isEnum())
+            .filter(cn -> cn instanceof RecordNode || cn.isEnum())
             .toList();
     }
 
@@ -136,6 +146,33 @@ public class ScriptNode extends ModuleNode {
 
     public void setEntry(WorkflowNode entry) {
         this.entry = entry;
+        entry.putNodeMetaData(ASTNodeMarker.PIPELINE_SCRIPT, this);
+    }
+
+    /**
+     * Get the script that declares an entry workflow, i.e. the pipeline that
+     * the workflow belongs to, or null if the workflow is not an entry.
+     *
+     * @param node
+     */
+    public static ScriptNode getPipeline(WorkflowNode node) {
+        return (ScriptNode) node.getNodeMetaData(ASTNodeMarker.PIPELINE_SCRIPT);
+    }
+
+    private static final ClassNode PIPELINE_PARAMS = ClassHelper.makeCached(PipelineParams.class);
+
+    /**
+     * Returns true if a record type was synthesized from the params
+     * block of an included pipeline.
+     *
+     * @param node
+     */
+    public static boolean isPipelineParams(ClassNode node) {
+        return !node.getAnnotations(PIPELINE_PARAMS).isEmpty();
+    }
+
+    public static void setPipelineParams(ClassNode node) {
+        node.addAnnotation(new AnnotationNode(PIPELINE_PARAMS));
     }
 
     public void setOutputs(OutputBlockNode outputs) {
@@ -150,7 +187,19 @@ public class ScriptNode extends ModuleNode {
         processes.add(processNode);
     }
 
+    public void addAgent(AgentNode agentNode) {
+        agents.add(agentNode);
+    }
+
     public void addFunction(FunctionNode functionNode) {
         functions.add(functionNode);
+    }
+
+    public boolean isTypingEnabled() {
+        return featureFlags.stream().anyMatch(ffn -> (
+            "nextflow.enable.types".equals(ffn.name)
+                && ffn.value instanceof ConstantExpression ce
+                && Boolean.TRUE.equals(ce.getValue())
+        ));
     }
 }

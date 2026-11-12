@@ -73,7 +73,7 @@ class NativeTaskHandler extends TaskHandler {
         // submit for execution by using session executor service
         // it returns an error when everything is OK
         // of the exception throw in case of error
-        result = session.getExecService().submit(new TaskSubmit(task))
+        result = executor.getExecService().submit(new TaskSubmit(task))
         status = TaskStatus.SUBMITTED
     }
 

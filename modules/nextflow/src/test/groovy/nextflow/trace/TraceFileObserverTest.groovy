@@ -17,6 +17,7 @@
 package nextflow.trace
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.executor.Executor
@@ -46,7 +47,7 @@ class TraceFileObserverTest extends Specification {
 
     def createObserver() {
         def config = new TraceConfig([:])
-        return new TraceFileObserver(config)
+        return new TraceFileObserver(config, Path.of(config.file))
     }
 
     def 'test set fields'() {
@@ -116,7 +117,7 @@ class TraceFileObserverTest extends Specification {
 
         // the observer class under test
         def config = new TraceConfig(file: file.toString())
-        def observer = new TraceFileObserver(config)
+        def observer = new TraceFileObserver(config, file)
 
         when:
         observer.onFlowCreate(null)
@@ -238,6 +239,49 @@ class TraceFileObserverTest extends Specification {
         result[3] == '10 MB'
         result[4] == '10485760'
 
+    }
+
+    def 'should degrade gracefully when trace file already exists'() {
+
+        given:
+        def testFolder = Files.createTempDirectory('trace-dir')
+        def file = testFolder.resolve('trace')
+        file.text = 'existing content'  // pre-create the file so newFileWriter fails
+
+        // the handler
+        def task = new TaskRun(id:TaskId.of(1), name:'test_task', hash: CacheHelper.hasher(1).hash(), config: new TaskConfig())
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'x'
+        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getProcessEnvironment() >> [:]
+
+        def handler = new NopeTaskHandler(task)
+        handler.status = TaskStatus.COMPLETED
+
+        // observer with overwrite=false (the default)
+        def config = new TraceConfig(file: file.toString())
+        def observer = new TraceFileObserver(config, file)
+
+        when: 'onFlowCreate fails to create the file'
+        observer.onFlowCreate(null)
+        then: 'writer and traceFile remain null'
+        observer.@writer == null
+        observer.@traceFile == null
+
+        when: 'task events and flow completion should not throw NPE'
+        observer.onTaskSubmit( new TaskEvent(handler, handler.getTraceRecord()) )
+        observer.onTaskComplete( new TaskEvent(handler, handler.getTraceRecord()) )
+        observer.onTaskCached( new TaskEvent(handler, handler.getTraceRecord()) )
+        observer.onFlowComplete()
+        then:
+        noExceptionThrown()
+
+        and: 'the original file content is unchanged'
+        file.text == 'existing content'
+
+        cleanup:
+        testFolder.deleteDir()
     }
 
     def 'should create a record in the trace file'() {

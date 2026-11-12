@@ -32,6 +32,7 @@ import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -39,6 +40,7 @@ import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.ResourceType
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -70,8 +72,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private ResourceType resourceType = ResourceType.Pod
 
-    private K8sClient client
-
     private String podName
 
     private BashWrapperBuilder builder
@@ -80,11 +80,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private Path errorFile
 
-    private Path exitFile
+    protected Path exitFile
 
     private Map state
 
     private long timestamp
+
+    private long terminatedTimestamp
 
     private K8sExecutor executor
 
@@ -93,7 +95,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
-        this.client = executor.client
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -115,6 +116,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
+
+    protected K8sClient getClient() { executor.getClient() }
 
     protected boolean useJobResource() { resourceType==ResourceType.Job }
 
@@ -296,7 +299,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( labels ) {
             result.putAll(labels)
         }
-        final resLabels = task.config.getResourceLabels()
+        // the auto-derived labels are normalised to comply with the pod label syntax,
+        // while the ones declared by the process are applied verbatim
+        final resLabels = task.config.getResourceLabels(ResourceLabelPolicy.K8S)
         if( resLabels )
             result.putAll(resLabels)
         result.'nextflow.io/app' = 'nextflow'
@@ -343,6 +348,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted pod state
      */
     protected Map getState() {
+        // the terminated state is final: once observed there's no need to query the API again.
+        // this matters when the task completion is deferred waiting for the exit file to become
+        // visible, because in the meanwhile the pod or job can be reaped by the cluster
+        // (e.g. when `ttlSecondsAfterFinished` is set) making the API reply with a 404 error
+        if( state?.terminated )
+            return state
+
         final now = System.currentTimeMillis()
         try {
             final delta =  now - timestamp;
@@ -440,6 +452,15 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
                 log.trace("[k8s] Container Terminated state ${state.terminated}")
                 final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
+                // the K8s API can report the pod as terminated before the writes made by the task
+                // are visible on the node running the driver. The `.exitcode` file is the last file
+                // written by the task wrapper, therefore waiting for it also guarantees the
+                // visibility of the task outputs, `.command.env` and `.command.out`.
+                // The wait is skipped when the API reports a failure, because a task killed by the
+                // system never writes the exit file and the API status is authoritative anyway
+                // See https://github.com/nextflow-io/nextflow/issues/7247
+                if( (k8sExitCode == null || k8sExitCode == 0) && !isExitFileVisible() )
+                    return false
                 task.exitStatus = k8sExitCode != null ? k8sExitCode : readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
@@ -488,6 +509,55 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             log.debug "[K8s] Cannot read exitstatus for task: `$task.name` | ${e.message}"
             return Integer.MAX_VALUE
         }
+    }
+
+    /**
+     * @return
+     *      {@code true} when the task work directory is hosted by a shared file system
+     *      that may expose a delayed view of the writes made by another node.
+     *      Fusion mounts are excluded because task outputs are uploaded to the object
+     *      storage before the task terminates.
+     */
+    protected boolean isWorkDirSharedFS() {
+        return !fusionEnabled() && FileHelper.workDirIsSharedFS
+    }
+
+    protected long getExitReadTimeoutMillis() {
+        return executor.config.getExitReadTimeout(executor.name).toMillis()
+    }
+
+    /**
+     * Check that the task `.exitcode` file is visible on the node running the driver.
+     *
+     * The file is written by the task wrapper only after all other task writes have been
+     * flushed, therefore it acts as a barrier for the whole task work directory. On a
+     * shared file system with delayed write-back the pod can be reported as terminated
+     * while the file is still missing or empty; in that case the task completion is
+     * deferred to a subsequent polling cycle, up to `executor.exitReadTimeout`.
+     *
+     * @return
+     *      {@code true} when the exit file is visible, or the wait timed out,
+     *      {@code false} to keep waiting
+     */
+    protected boolean isExitFileVisible() {
+        if( !isWorkDirSharedFS() )
+            return true
+
+        final attrs = FileHelper.readAttributes(exitFile)
+        if( attrs && attrs.size() > 0 )
+            return true
+
+        if( !terminatedTimestamp )
+            terminatedTimestamp = System.currentTimeMillis()
+
+        final delta = System.currentTimeMillis() - terminatedTimestamp
+        if( delta < getExitReadTimeoutMillis() ) {
+            log.trace "[K8s] Waiting for exit file to become visible for task: `$task.name` -- delta: $delta ms"
+            return false
+        }
+
+        log.warn "[K8s] Exit file is still not available after $delta ms for task: `$task.name` -- work dir: ${task.workDir?.toUriString()}"
+        return true
     }
 
     /**

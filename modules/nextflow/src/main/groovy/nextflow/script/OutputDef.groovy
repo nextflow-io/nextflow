@@ -35,14 +35,14 @@ class OutputDef {
         this.closure = closure
     }
 
-    void apply(Session session) {
+    void apply(Session session, Map<String,DataflowWriteChannel> outputs) {
         final dsl = new OutputDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.call()
 
-        dsl.apply(session)
+        dsl.apply(session, outputs)
     }
 
 }

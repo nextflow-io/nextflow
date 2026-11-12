@@ -16,17 +16,21 @@
 
 package nextflow.util
 
+import java.lang.reflect.Constructor
+import java.lang.reflect.Modifier
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.factories.SerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.FieldSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -35,6 +39,7 @@ import nextflow.io.SerializableMarker
 import nextflow.plugin.Plugins
 import org.codehaus.groovy.runtime.GStringImpl
 import org.objenesis.instantiator.ObjectInstantiator
+import org.objenesis.strategy.InstantiatorStrategy
 import org.pf4j.Extension
 /**
  * Helper class to get a {@code Kryo} object ready to be used
@@ -85,9 +90,14 @@ class KryoHelper {
      */
     static private Kryo newInstance() {
         def kryo = new Kryo()
+        // use reflection/ASM instead of sun.misc.Unsafe in FieldSerializer
+        kryo.setAsmEnabled(true)
         kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
+        kryo.setDefaultSerializer( DefaultSerializerFactory.instance )
 
         // special serializers
+        // NOTE: classes registered here and below are written by ID, which
+        // depends on the registration order -- changing it breaks existing caches
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)
 
         // users serializers
@@ -97,7 +107,7 @@ class KryoHelper {
             if( v instanceof Class )
                 kryo.register(k,(Serializer)v.newInstance())
 
-            else if( v instanceof Closure<Serializer> )
+            else if( v instanceof Closure )
                 kryo.register(k, v.call(kryo))
 
             else
@@ -112,6 +122,7 @@ class KryoHelper {
         kryo.addDefaultSerializer(GString, GStringSerializer)
         // map entry serializer
         kryo.addDefaultSerializer(Map.Entry, MapEntrySerializer)
+        kryo.addDefaultSerializer(URI, URISerializer)
 
         return kryo
     }
@@ -182,7 +193,7 @@ class KryoHelper {
         }
         finally {
             if( prev ) {
-                kryo.setClassLoader(loader)
+                kryo.setClassLoader(prev)
             }
         }
     }
@@ -214,38 +225,71 @@ class DefaultSerializers implements SerializerRegistrant {
         serializers.put( File, FileSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
+        serializers.put( RecordMap, RecordMapSerializer )
         serializers.put( SerializableMarker, null )
     }
 }
 
 /**
- * Kryo throws an IllegalAccessError when deserializing a {@link Matcher} object,
- * thus implements a custom instantiator object
+ * Creates objects through their no-arg constructor, without deep reflection into the JDK.
+ *
+ * A JDK collection or map without an accessible no-arg constructor (e.g. {@code List.of()},
+ * {@code Arrays.asList()}) is created as the standard implementation of its interface.
  */
 @Singleton
 @CompileStatic
-class MatcherInstantiator implements ObjectInstantiator {
+class InstantiationStrategy implements InstantiatorStrategy {
 
     @Override
-    Object newInstance() {
-        def c = Matcher.getDeclaredConstructor()
-        c.setAccessible(true)
-        c.newInstance()
+    ObjectInstantiator newInstantiatorOf(final Class type) {
+        final ctor = noArgConstructor(type)
+        if( ctor != null )
+            return new ObjectInstantiator() {
+                @Override
+                Object newInstance() {
+                    try {
+                        return ctor.newInstance()
+                    }
+                    catch( Exception e ) {
+                        throw new KryoException("Error constructing instance of class: ${type.name}", e)
+                    }
+                }
+            }
+        if( Set.isAssignableFrom(type) )
+            return { -> new LinkedHashSet() } as ObjectInstantiator
+        if( Collection.isAssignableFrom(type) )
+            return { -> new ArrayList() } as ObjectInstantiator
+        if( Map.isAssignableFrom(type) )
+            return { -> new LinkedHashMap() } as ObjectInstantiator
+        throw new KryoException("Class cannot be created (missing no-arg constructor): ${type.name}")
+    }
+
+    static private Constructor noArgConstructor(Class type) {
+        if( type.isMemberClass() && !Modifier.isStatic(type.getModifiers()) )
+            return null
+        try {
+            final result = type.getDeclaredConstructor()
+            return result.trySetAccessible() ? result : null
+        }
+        catch( NoSuchMethodException e ) {
+            return null
+        }
     }
 }
 
+/**
+ * Serializes the fields of classes outside the JDK. A JDK type needs an explicit
+ * serializer, since its fields are not accessible by reflection.
+ */
 @Singleton
 @CompileStatic
-class InstantiationStrategy extends Kryo.DefaultInstantiatorStrategy {
+class DefaultSerializerFactory implements SerializerFactory {
 
     @Override
-    ObjectInstantiator newInstantiatorOf (final Class type) {
-        if( type == Matcher ) {
-            MatcherInstantiator.instance
-        }
-        else {
-            super.newInstantiatorOf(type)
-        }
+    Serializer makeSerializer(Kryo kryo, Class<?> type) {
+        if( type.getModule().isNamed() )
+            throw new KryoException("No serializer is defined for type: ${type.name} -- only standard types can be cached")
+        return new FieldSerializer(kryo, type)
     }
 }
 
@@ -332,6 +376,24 @@ class URLSerializer extends Serializer<URL> {
     URL read(Kryo kryo, Input input, Class<URL> type) {
         log.trace "URL de-serialization"
         return new URL(input.readString())
+    }
+}
+
+/**
+ * Write a {@link URI} as its string, in the same format previously
+ * written by the {@link FieldSerializer} for its only non-transient field
+ */
+@CompileStatic
+class URISerializer extends Serializer<URI> {
+
+    @Override
+    void write(Kryo kryo, Output output, URI uri) {
+        kryo.writeObjectOrNull(output, uri.toString(), String)
+    }
+
+    @Override
+    URI read(Kryo kryo, Input input, Class<URI> type) {
+        return new URI(kryo.readObjectOrNull(input, String))
     }
 }
 
@@ -446,5 +508,31 @@ class MapEntrySerializer extends Serializer<Map.Entry> {
         def key = kryo.readClassAndObject(input)
         def val = kryo.readClassAndObject(input)
         new MapEntry(key,val)
+    }
+}
+
+@CompileStatic
+class RecordMapSerializer extends Serializer<RecordMap> {
+
+    @Override
+    void write(Kryo kryo, Output output, RecordMap record) {
+        final len = record.size()
+        output.writeInt(len)
+        for( Map.Entry<String,Object> entry : record.entrySet() ) {
+            output.writeString(entry.getKey())
+            kryo.writeClassAndObject(output, entry.getValue())
+        }
+    }
+
+    @Override
+    RecordMap read(Kryo kryo, Input input, Class<RecordMap> type) {
+        final len = input.readInt()
+        final props = new HashMap<String,Object>(len)
+        for( int i=0; i<len; i++ ) {
+            final key = input.readString()
+            final value = kryo.readClassAndObject(input)
+            props.put(key, value)
+        }
+        return new RecordMap(props)
     }
 }

@@ -16,7 +16,7 @@
 #
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'26.02.0-edge'}
+NXF_VER=${NXF_VER:-'26.10.3'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -26,9 +26,13 @@ NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
+# true for an install without Java (see `install`), which runs Nextflow with the Java bundle of each version
+NXF_JAVA_BUNDLE=${NXF_JAVA_BUNDLE:-false}
+# set on the hand-off to the launcher of a bundle, and not inherited by its child processes
+bundle_exec=${NXF_JAVA_BUNDLE_EXEC:-}
+unset NXF_JAVA_BUNDLE_EXEC
 
 function cmp_ver() {
-    local IFS=.
     local i ver1 ver2
     read -r -a ver1 <<< "${1//./ }"
     read -r -a ver2 <<< "${2//./ }"
@@ -56,13 +60,6 @@ function cmp_ver() {
     # Versions are equal
     echo 0
 }
-
-# if the nextflow version is greater or equals to "24.07.0-edge" the new shadow jar launcher
-# should be used, otherwise fallback on the legacy behavior setting the variable NXF_LEGACY_LAUNCHER
-NXF_LEGACY_LAUNCHER=1
-if [[ $(cmp_ver "$NXF_VER" "24.07.0-edge") -ge 0 ]]; then
-  unset NXF_LEGACY_LAUNCHER
-fi
 
 export NXF_CLI
 export NXF_ORG
@@ -135,6 +132,65 @@ function get_ver() {
     fi
 }
 
+# downloads the bundle of NXF_VER for this platform next to the jar and installs it as the symlink $1,
+# returns 1 if the download failed, which is retried at the next launch, or 2 if the bundle
+# can't be used: not on the server, a bad checksum or a runtime that doesn't run (e.g. noexec)
+function get_bundle() {
+    local name="nextflow-$NXF_VER-$NXF_PLATFORM"
+    local url="${NXF_JAVA_BUNDLE_BASE:-$NXF_BASE}/v$NXF_VER/$name.tar.gz"
+    local sum status
+    if command -v sha256sum &>/dev/null; then sum=sha256sum
+    elif command -v shasum &>/dev/null; then sum='shasum -a 256'
+    else return 2
+    fi
+    # a symlink to a deleted directory
+    [[ -L $1 && ! -e $1 ]] && rm -f "$1"
+    # mktemp creates a 0700 directory, which other users of a shared NXF_HOME could not use
+    mkdir -p "$(dirname "$1")" && bundle_tmp=$(mktemp -d "$(dirname "$1")/.bundle.XXXXXX") && chmod 755 "$bundle_tmp" || return 1
+    trap 'rm -rf "$bundle_tmp"' EXIT
+    trap 'rm -rf "$bundle_tmp"; exit 130' INT
+    trap 'rm -rf "$bundle_tmp"; exit 143' TERM
+    >&2 echo "Downloading nextflow dependencies. It may require a few seconds, please wait .."
+    # the checksums are compared explicitly: `sha256sum -c` of macOS accepts a malformed checksum file;
+    # the runtime may not run, e.g. on a noexec mount; the bundle is installed as a symlink,
+    # because `mv` would nest the directory into the one of a concurrent launch
+    get_file "$url" "$bundle_tmp/$name.tar.gz" && get_file "$url.sha256" "$bundle_tmp/sha256"
+    status=$?
+    if [[ $status == 0 ]]; then
+        if [[ $(cd "$bundle_tmp" && $sum "$name.tar.gz" | cut -d' ' -f1) != "$(cut -d' ' -f1 "$bundle_tmp/sha256")" ]]; then status=2
+        elif ! tar -xzf "$bundle_tmp/$name.tar.gz" -C "$bundle_tmp" || [[ ! -f $bundle_tmp/$name/lib/$NXF_JAR ]]; then status=2
+        elif ! "$bundle_tmp/$name/runtime/bin/java" -version &>/dev/null; then status=2
+        else
+            rm -f "$bundle_tmp/$name.tar.gz" "$bundle_tmp/sha256"
+            # a concurrent launch may have installed it first
+            if ln -sn "$(basename "$bundle_tmp")/$name" "$1" 2>/dev/null; then bundle_tmp=''
+            elif [[ ! -d $1 ]]; then status=2
+            fi
+        fi
+    fi
+    [[ $bundle_tmp ]] && rm -rf "$bundle_tmp"
+    trap - EXIT INT TERM
+    return $status
+}
+
+# returns 2 if the file doesn't exist (HTTP 404, or 403 from S3), 1 on any other failure
+function get_file() {
+    local out
+    if [[ $1 == file://* ]]; then
+        [[ -e ${1#file://} ]] || return 2
+        cp "${1#file://}" "$2" 2>/dev/null
+    elif command -v curl &>/dev/null; then
+        out=$(curl -sL --connect-timeout 10 -w '%{http_code}' "$1" -o "$2") || return 1
+        [[ $out == 40[34] ]] && return 2
+        [[ $out == 2?? ]]
+    elif command -v wget &>/dev/null; then
+        out=$(wget -q -S -T 10 -t 1 "$1" -O "$2" 2>&1) && return 0
+        [[ $out =~ HTTP/[0-9.]+\ 40[34] ]] && return 2
+        return 1
+    else return 1
+    fi
+}
+
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXXX" || exit $?
@@ -168,17 +224,36 @@ function install() {
     local tmpfile=$(make_temp)
     local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || current_ver)
     local action="a=${2:-default}"
+    local java_bundle=''
     get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
+    # an install without Java, which self-update keeps
+    if [[ $NXF_JAVA_BUNDLE == true ]]; then
+        sed 's/^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-false}$/NXF_JAVA_BUNDLE=${NXF_JAVA_BUNDLE:-true}/' "$tmpfile" > "$tmpfile.bundle" && mv "$tmpfile.bundle" "$tmpfile" || exit $?
+        grep -q '^NXF_JAVA_BUNDLE=\${NXF_JAVA_BUNDLE:-true}$' "$tmpfile" && java_bundle=1 || echo_yellow "NOTE: This Nextflow version can't run with its own Java runtime -- it will use the system Java"
+    fi
     mv "$tmpfile" "$1" || exit $?
     chmod +rx "$1" || exit $?
     bash "$1" -download || exit $?
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
     echo -e $'- the executable file `nextflow` has been created in the folder:' $(dirname $1)
+    if [[ $java_bundle ]]; then
+    echo -e $'- it runs Nextflow with its own Java runtime (set NXF_JAVA_BUNDLE=false to use the system Java)'
+    fi
     if [[ ! "$PATH" =~ (^|:)"$(dirname $1)"(:|$) ]]; then
     echo -e $'- you may complete the installation by moving it to a directory in your $PATH'
     fi
     echo ''
+}
+
+# remove the framework jars and launcher caches of every version except the one installed at $1
+function clean_unused_versions() {
+    local keep=$(sed -n "s/^NXF_VER=\${NXF_VER:-'\(.*\)'}$/\1/p" "$1")
+    [[ $keep ]] || { echo_yellow "Cannot determine the installed Nextflow version -- skipping clean"; return; }
+    local dir
+    for dir in "$NXF_DIST"/* "$NXF_HOME"/tmp/launcher/nextflow-*_* "$NXF_HOME"/tmp/aot/* "$NXF_HOME"/tmp/ver; do
+        [[ -e $dir && $dir != *[/_]"$keep" ]] && rm -rf "$dir" && echo "Removed $dir"
+    done
 }
 
 function check_latest() {
@@ -199,18 +274,23 @@ function launch_nextflow() {
         x="${x#\"}"
         cmdline+=("$x")
     done
+    cmdline+=("${args[@]}")
+
+    # report the process as 'nextflow' in ps/terminals; set NXF_ARGV0=false to keep the java path
+    local exec_opts=()
+    if [[ "${NXF_ARGV0:-true}" != false && "$(uname)" != AIX ]]; then
+      exec_opts=(-a nextflow)
+    fi
 
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      cmdline+=("${args[@]}")
-      exec "${cmdline[@]}" &
+      exec "${exec_opts[@]}" "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
-    cmdline+=("${args[@]}")
-    exec "${cmdline[@]}"
+    exec "${exec_opts[@]}" "${cmdline[@]}"
     exit 1
 }
 
@@ -231,10 +311,14 @@ fi
 # see https://github.com/nextflow-io/nextflow/issues/1716
 unset JAVA_TOOL_OPTIONS
 
+# the home of the bundle that contains this script, if any
+this_home="$(dirname "$(resolve_link "$0")")/.."
+
 # parse the command line
 bg=''
 declare -a jvmopts=()
 declare -a args=("$@")
+declare -a launcher_args=("$@")
 declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
 # $NXF_CLI_OPTS allow to pass arbitrary cli opts via the environment
 # note: do not wrap with quotes because the variable can be used to specify more than on option separate by blanks
@@ -264,9 +348,12 @@ while [[ $# != 0 ]]; do
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
+      # replacing the launcher of a bundle would leave its runtime and jar unused
+      [[ -x $this_home/runtime/bin/java ]] && die "ERROR: A Nextflow Java bundle can't be updated -- extract the bundle of the new version instead"
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
+      [[ " ${args[*]} " == *" -clean "* ]] && clean_unused_versions "$0"
       exit 0
       fi
       ;;
@@ -277,25 +364,64 @@ while [[ $# != 0 ]]; do
     shift
 done
 
-CAPSULE_LOG=${CAPSULE_LOG:=''}
-CAPSULE_RESET=${CAPSULE_RESET:=''}
-CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:="$NXF_HOME/capsule"}
-
 NXF_PACK=one
-NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
+
+# the platform of the bundles, which contain the Java runtime, jar and AOT cache of a version
+case "$OSTYPE/$HOSTTYPE" in
+  linux-gnu*/x86_64) NXF_PLATFORM=linux-x64 ;;
+  linux-gnu*/aarch64) NXF_PLATFORM=linux-arm64 ;;
+  darwin*/arm64|darwin*/aarch64) NXF_PLATFORM=macos-arm64 ;;
+  *) NXF_PLATFORM='' ;;
+esac
+
+# use the Java runtime and the jar of the bundle that contains this script, otherwise hand off
+# to the bundle of NXF_VER when enabled by NXF_JAVA_BUNDLE, or use the jar with the system Java
+bundle_home=''
+if [[ ! $NXF_BIN && $NXF_PACK != dist ]]; then
+    if [[ -x $this_home/runtime/bin/java && -f $this_home/lib/$NXF_JAR ]]; then
+        bundle_home="$(cd "$this_home" && pwd -P)"
+        NXF_BIN="$bundle_home/lib/$NXF_JAR"
+        # replaced by NXF_JAVA_HOME below, when set
+        JAVA_CMD="$bundle_home/runtime/bin/java"
+    elif [[ ! $bundle_exec ]]; then
+        if [[ $NXF_JAVA_BUNDLE == true && ! $NXF_JAVA_HOME ]]; then
+            bundle_dir="$NXF_DIST/$NXF_VER/nextflow-$NXF_VER-$NXF_PLATFORM"
+            bundle_marker="$NXF_DIST/$NXF_VER/.nextflow-$NXF_VER-$NXF_PLATFORM.unavailable"
+            if [[ ! $NXF_PLATFORM ]]; then
+                echo_yellow "NOTE: Nextflow Java bundles are not available for this platform ($OSTYPE/$HOSTTYPE) -- using the system Java"
+            elif [[ ! -e $bundle_dir && ! -e $bundle_marker ]]; then
+                if [[ $NXF_OFFLINE == true ]]; then
+                    echo_yellow "NOTE: The Nextflow $NXF_VER Java bundle is not installed and NXF_OFFLINE is set -- using the system Java"
+                else
+                    get_bundle "$bundle_dir"
+                    case $? in
+                    0) ;;
+                    2) touch "$bundle_marker" 2>/dev/null
+                       echo_yellow "NOTE: The Nextflow $NXF_VER Java bundle for $NXF_PLATFORM is not available -- using the system Java (delete $bundle_marker to retry)" ;;
+                    *) echo_yellow "NOTE: Can't download the Nextflow $NXF_VER Java bundle for $NXF_PLATFORM -- using the system Java" ;;
+                    esac
+                fi
+            fi
+            # get_bundle checked the content; the bundle launcher dies if it was damaged since
+            [[ -x $bundle_dir/bin/nextflow ]] && NXF_JAVA_BUNDLE_EXEC=1 exec "$bundle_dir/bin/nextflow" "${launcher_args[@]}"
+        fi
+        # the jar of an installed bundle, e.g. with NXF_JAVA_HOME after an install without Java
+        if [[ ! -f $NXF_DIST/$NXF_VER/$NXF_JAR ]]; then
+            for f in "$NXF_DIST/$NXF_VER/nextflow-$NXF_VER"-*/lib/"$NXF_JAR"; do
+                [[ -f $f ]] && NXF_BIN=$f && break
+            done
+        fi
+    fi
+fi
+[[ $bundle_exec && ! $bundle_home ]] && die "ERROR: $0 was launched as a Nextflow Java bundle, but its Java runtime or lib/$NXF_JAR is missing"
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
-NXF_HOST=${HOSTNAME:-localhost}
-[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
-# both NXF_GRAB and NXF_CLASSPATH are not supported any more as of version 24.04.7-edge
-NXF_GRAB=${NXF_GRAB:-''}
-NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # Determine the path to this file
 if [[ $NXF_PACK = dist ]]; then
-    NXF_BIN=$(which "$0" 2>/dev/null)
+    NXF_BIN=$(command -v "$0")
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
 
@@ -316,48 +442,49 @@ if [ ! -x "$JAVA_CMD" ] ; then
     elif [ -x /usr/libexec/java_home ]; then
         JAVA_CMD="$(/usr/libexec/java_home -v 17+ 2>/dev/null)/bin/java" || JAVA_CMD=java
     else
-        JAVA_CMD="$(which java)" || JAVA_CMD=java
+        JAVA_CMD="$(command -v java)" || JAVA_CMD=java
     fi
 fi
 
-# Retrieve the java version from a NF local file
-JAVA_KEY="$NXF_HOME/tmp/ver/$(resolve_link "$JAVA_CMD" | sed 's@/@.@g')"
-if [ -f "$JAVA_KEY" ]; then
-  JAVA_VER="$(cat "$JAVA_KEY")"
-else
+# Retrieve the java version from the JDK `release` file, falling back to `java -version`
+JAVA_VER=''
+JAVA_REAL="$(resolve_link "$JAVA_CMD")"
+if [[ $JAVA_REAL == */bin/java && -f ${JAVA_REAL%/bin/java}/release ]]; then
+  while IFS= read -r line || [[ $line ]]; do
+    [[ $line =~ ^JAVA_VERSION=\"?([^\"]+) ]] && JAVA_VER=${BASH_REMATCH[1]} && break
+  done < "${JAVA_REAL%/bin/java}/release"
+fi
+if [[ ! $JAVA_VER ]]; then
   JAVA_VER="$("$JAVA_CMD" $NXF_OPTS -version 2>&1)"
   if [ $? -ne 0 ]; then
-      getstarted_web="https://www.nextflow.io/docs/latest/getstarted.html"
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
-      echo_red "NOTE: Nextflow needs a Java virtual machine to run. To this end:
- - make sure a \`java\` command can be found; or
- - manually define the variables JAVA_HOME to point to an existing installation; or
- - install a Java virtual machine, for instance through https://sdkman.io (read the docs);
- - for more details please refer to the Nextflow Get Started page at http://docs.nextflow.io."
+      echo_red "NOTE: Nextflow needs Java 17 or later -- install it, set JAVA_HOME, or set NXF_JAVA_BUNDLE=true to run with its own Java runtime. See https://docs.seqera.io/nextflow/install"
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
       exit 1
   fi
   JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
-  # check NF version
-  if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
-    echo_red "Not a valid Nextflow version: $NXF_VER"
+fi
+# check NF version
+if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
+  echo_red "Not a valid Nextflow version: $NXF_VER"
+  exit 1
+fi
+if [[ $(cmp_ver "$NXF_VER" "24.07.0-edge") -lt 0 ]]; then
+  echo_red "Nextflow version $NXF_VER is not supported by this launcher -- use version 24.07.0-edge or later"
+  exit 1
+fi
+major=${BASH_REMATCH[1]}
+minor=${BASH_REMATCH[2]}
+version_check="^(17|18|19|20|21|22|23|24|25|26)"
+version_message="Java 17 or later (up to 26)"
+if [[ ! $JAVA_VER =~ $version_check ]]; then
+    echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
+    if [[ "$NXF_JAVA_HOME" ]]; then
+    echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_JAVA_HOME: $NXF_JAVA_HOME\n"
+    else
+    echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+    fi
     exit 1
-  fi
-  major=${BASH_REMATCH[1]}
-  minor=${BASH_REMATCH[2]}
-  version_check="^(17|18|19|20|21|22|23|24|25)"
-  version_message="Java 17 or later (up to 25)"
-  if [[ ! $JAVA_VER =~ $version_check ]]; then
-      echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
-      if [[ "$NXF_JAVA_HOME" ]]; then
-      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_JAVA_HOME: $NXF_JAVA_HOME\n"
-      else
-      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
-      fi
-      exit 1
-  fi
-  mkdir -p "$(dirname "$JAVA_KEY")"
-  [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
 fi
 
 # Verify nextflow jar is available
@@ -371,88 +498,44 @@ fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
-JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD" -Dcom.sun.security.enableAIAcaIssuers=true)
-if [[ $cmd == console ]]; then bg=1;
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcom.sun.security.enableAIAcaIssuers=true)
+# versions before 26.11.0-edge launch the GUI console in the background
+if [[ $cmd == console && $(cmp_ver "$NXF_VER" "26.11.0-edge") -lt 0 ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-if [[ $NXF_LEGACY_LAUNCHER ]]; then
-  [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
-  [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
-  [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
-fi
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
+JAVA_OPTS+=(-XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=240m)
+# use the serial GC unless another one is specified
+[[ "$NXF_OPTS $NXF_JVM_ARGS" =~ -XX:\+Use[A-Za-z0-9]+GC ]] || JAVA_OPTS+=(-XX:+UseSerialGC)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
-[[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
-[[ "$NXF_GRAB" ]] && export NXF_GRAB
+[[ "$NXF_JVM_ARGS" ]] && JAVA_OPTS+=($NXF_JVM_ARGS)
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
 export JAVA_CMD
-export CAPSULE_CACHE_DIR
 export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
 export NXF_PACK
 export NXF_ENABLE_VIRTUAL_THREADS
 
-# lookup the a `md5` command
-if hash md5sum 2>/dev/null; then MD5=md5sum;
-elif hash gmd5sum 2>/dev/null; then MD5=gmd5sum;
-elif hash md5 2>/dev/null; then MD5=md5;
-else MD5=''
-fi
+# parse the command and get the result classpath in the 'launcher'
+cli=("\"$JAVA_CMD\"" "${JAVA_OPTS[@]}" -jar "$NXF_BIN")
 
-# when no md5 command is available fallback on default execution
-if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
-    launcher=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-    launch_nextflow
-    exit 1
-fi
+# first string between double quotes is the full path to java, also blank spaces are included
+# remainder string are arguments
+# we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
+cmd_pattern='"([^"]*)"(.*)'
+[[ "${cli[@]}" =~ $cmd_pattern ]]
+declare -a cmd_base="(${BASH_REMATCH[1]})"
+declare -a cmd_tail="(${BASH_REMATCH[2]})"
 
-# creates a md5 unique for the given variables
-env_md5() {
-cat <<EOF | $MD5 | cut -f1 -d' '
-$JAVA_CMD
-$JAVA_VER
-${JAVA_OPTS[@]}
-$NXF_HOME
-$NXF_VER
-$NXF_OPTS
-$NXF_GRAB
-$NXF_CLASSPATH
-$NXF_JVM_ARGS
-$NXF_ENABLE_VIRTUAL_THREADS
-EOF
-}
+launcher="${cmd_base[@]}"
+[[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
 
-# checked if a cached classpath file exists and it newer that the nextflow boot jar file
-LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
-
-if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
-    declare -a launcher="($(cat "$LAUNCH_FILE"))"
-else
-    if [[ $NXF_LEGACY_LAUNCHER ]]; then
-      # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-      cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-      [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
-    else
-      # otherwise parse the command and get the result classpath in the 'launcher' and save it to a file
-      cli=("\"$JAVA_CMD\"" "${JAVA_OPTS[@]}" -jar "$NXF_BIN")
-    fi
-
-    # first string between double quotes is the full path to java, also blank spaces are included
-    # remainder string are arguments
-    # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
-    cmd_pattern='"([^"]*)"(.*)'
-    [[ "${cli[@]}" =~ $cmd_pattern ]]
-    declare -a cmd_base="(${BASH_REMATCH[1]})"
-    declare -a cmd_tail="(${BASH_REMATCH[2]})"
-
-    launcher="${cmd_base[@]}"
-    [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
-    [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
-
+# versions before 26.11.0-edge use JDK internals that need extra opens
+if [[ $(cmp_ver "$NXF_VER" "26.11.0-edge") -lt 0 ]]; then
+    launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -460,6 +543,7 @@ else
     launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
@@ -467,35 +551,33 @@ else
     launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
-    launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
-    if [[ "$JAVA_VER" =~ ^(24|25) ]]; then
-        launcher+=(--enable-native-access=ALL-UNNAMED)
-        launcher+=(--sun-misc-unsafe-memory-access=allow)
-    fi
-    if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
-      if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
-      elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
-      fi
-    fi
-    launcher+=("${cmd_tail[@]}")
-
-    # create the launch file only when using the legacy launcher (capsule)
-    if [[ $NXF_LEGACY_LAUNCHER ]]; then
-    # Don't show errors if the LAUNCH_FILE can't be created
-    if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
-        STR=''
-        for x in "${launcher[@]}"; do
-        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && [[ ! "$x" == *"-agentlib:jdwp"* ]] && STR+=$(printf '%q ' "$x")
-        done
-        printf "$STR">"$LAUNCH_FILE"
-    else
-        echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable?"
-    fi
-    fi
-
 fi
+if [[ "$JAVA_VER" =~ ^(24|25|26) ]]; then
+    launcher+=(--enable-native-access=ALL-UNNAMED)
+    launcher+=(--sun-misc-unsafe-memory-access=allow)
+fi
+if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
+  if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
+  elif [[ ! "$JAVA_VER" =~ ^(21|22|23|24|25|26) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
+  fi
+fi
+# the runtime of a bundle, unless NXF_JAVA_HOME is set
+if [[ $bundle_home && ! $NXF_JAVA_HOME ]]; then
+    # not inherited by tasks, e.g. a child `nextflow` of another version
+    export -n JAVA_CMD
+    # the startup cache, which the JVM ignores unless the runtime, jar, module options and heap
+    # layout match the training (e.g. compressed oops are disabled for a heap of 32 GB or more)
+    [[ -f $bundle_home/lib/nextflow.aot ]] && launcher+=(-XX:AOTCache="$bundle_home/lib/nextflow.aot" -Xlog:aot=off)
+    # its own CA certificates: trust those of the OS instead (e.g. of a corporate proxy),
+    # as the Java of the OS would, unless a trust store is specified
+    if [[ ! "$NXF_OPTS $NXF_JVM_ARGS" =~ javax\.net\.ssl\.trustStore ]]; then
+        if [[ $OSTYPE == darwin* ]]; then launcher+=(-Djavax.net.ssl.trustStoreType=KeychainStore-ROOT)
+        else for f in /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts; do [[ -r $f && -s $f ]] && launcher+=(-Djavax.net.ssl.trustStore="$f") && break; done
+        fi
+    fi
+fi
+launcher+=("${cmd_tail[@]}")
 
 # check for latest version
 check_latest

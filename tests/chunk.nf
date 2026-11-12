@@ -1,9 +1,7 @@
 #!/usr/bin/env nextflow
 
-params {
-    input: Path
-    chunkSize: Integer = 1
-}
+params.input = null
+params.chunkSize = 1
 
 process foo {
     debug true
@@ -16,7 +14,7 @@ process foo {
 }
 
 workflow {
-    channel.of(params.input)
-        | splitFasta(by: params.chunkSize)
+    channel.fromPath(params.input)
+        | splitFasta(by: params.chunkSize as Integer)
         | foo
 }

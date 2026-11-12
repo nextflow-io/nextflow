@@ -1,0 +1,206 @@
+---
+title: Collecting values with topic channels
+description: Use topic channels to collect values such as tool versions from many processes without connecting them explicitly.
+---
+
+# Collecting values with topic channels
+
+A *topic channel* is a channel that receives values from many processes *implicitly*, based on a matching *topic name*. Instead of connecting a process output to a channel in the workflow body, a process declares the topic that its output belongs to, and any workflow can read the entire topic with the [channel.topic][channel-topic] factory.
+
+Topics are useful for collecting the same kind of value from processes throughout a pipeline. The canonical example is tool versions: every process reports the version of the tool it ran, and the pipeline collates these versions into a single report.
+
+This tutorial demonstrates how to replace version-tracking boilerplate with a `versions` topic, using the [nf-core/rnaseq](https://github.com/nf-core/rnaseq) pipeline as an example (simplified for brevity).
+
+:::note
+Topic channels are stable in Nextflow 25.04. They were previewed in versions 24.04 and 24.10 with the `nextflow.preview.topic` feature flag.
+:::
+
+## Version plumbing
+
+Before introducing topics, it helps to see the pattern they replace. The following examples show how nf-core/rnaseq collects tool versions today, from the process that produces a version to the entry workflow that writes the report.
+
+By convention, each nf-core module writes a `versions.yml` file and emits it as a process output:
+
+```nextflow
+process STAR_ALIGN {
+    input:
+    tuple val(meta), path(reads)
+    path(index)
+
+    output:
+    tuple val(meta), path('*.bam'), emit: bam
+    path 'versions.yml', emit: versions
+
+    script:
+    """
+    STAR --genomeDir ${index} --readFilesIn ${reads}
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        star: \$(STAR --version | sed 's/STAR_//')
+    END_VERSIONS
+    """
+}
+```
+
+Because each `versions.yml` file is a regular process output, every workflow that invokes a process must collect it by hand:
+
+```nextflow
+workflow ALIGN_STAR {
+    take:
+    reads
+    index
+
+    main:
+    ch_versions = channel.empty()
+
+    STAR_ALIGN(reads, index)
+    ch_versions = ch_versions.mix(STAR_ALIGN.out.versions)
+
+    BAM_SORT_STATS_SAMTOOLS(STAR_ALIGN.out.bam)
+    ch_versions = ch_versions.mix(BAM_SORT_STATS_SAMTOOLS.out.versions)
+
+    // ... one mix for every process ...
+
+    emit:
+    bam      = BAM_SORT_STATS_SAMTOOLS.out.bam
+    versions = ch_versions
+}
+```
+
+Each subworkflow must then emit its `versions` channel so that its caller can mix it in turn, all the way up to the entry workflow. The result is a channel that appears in every process and workflow but has nothing to do with the dataflow of the pipeline.
+
+## Sending values to a topic
+
+Converting the pipeline to a topic takes three edits:
+
+- Declare the topic on the process output
+- Delete the plumbing from every workflow that passed it along
+- Read the topic once in the entry workflow
+
+Start with the process. Replace `emit: versions` with `topic: versions`. This sends the output to the `versions` topic instead of an output channel. The rest of the process is unchanged:
+
+```nextflow
+process STAR_ALIGN {
+    // ...
+
+    output:
+    tuple val(meta), path('*.bam'), emit: bam
+    path 'versions.yml', topic: versions
+
+    // ...
+}
+```
+
+Because nothing consumes `STAR_ALIGN.out.versions` now, the workflow no longer needs the accumulator channel, the `mix` calls, or the `versions` output. Delete all of it, and do the same in every subworkflow that passed `versions` along:
+
+```nextflow
+workflow ALIGN_STAR {
+    take:
+    reads
+    index
+
+    main:
+    STAR_ALIGN(reads, index)
+    BAM_SORT_STATS_SAMTOOLS(STAR_ALIGN.out.bam)
+
+    emit:
+    bam = BAM_SORT_STATS_SAMTOOLS.out.bam
+}
+```
+
+Finally, read the topic in the entry workflow. It emits the `versions.yml` files from every process in the run, no matter how deeply nested the invoking workflow is. The `collectFile` operator concatenates those files into the report:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    channel.topic('versions')
+        .unique()
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_rnaseq_software_mqc_versions.yml'
+        )
+}
+```
+
+## Using `eval` outputs
+
+The pipeline now works, but the process still writes a `versions.yml` file with a heredoc in its script block. This step is optional and independent of the topic itself, and it changes the shape of the report.
+
+Use an [eval output][process-eval-output] to capture the tool version as a value instead of a file. The heredoc disappears from the script block, and the version command moves into the output declaration:
+
+```nextflow
+process STAR_ALIGN {
+    input:
+    tuple val(meta), path(reads)
+    path(index)
+
+    output:
+    tuple val(meta), path('*.bam'), emit: bam
+    tuple val('star'), eval('STAR --version | sed "s/STAR_//"'), topic: versions
+
+    script:
+    """
+    STAR --genomeDir ${index} --readFilesIn ${reads}
+    """
+}
+```
+
+If the pipeline uses [static typing][static-typing-page], a [typed process][process-typed] declares its topic emissions in a dedicated `topic:` section rather than as an option on an output. This form requires `nextflow.enable.types`:
+
+```nextflow
+nextflow.enable.types = true
+
+process STAR_ALIGN {
+    input:
+    tuple(meta: Map, reads: List<Path>)
+    index: Path
+
+    output:
+    tuple(meta, file('*.bam'))
+
+    topic:
+    tuple('star', eval('STAR --version | sed "s/STAR_//"')) >> 'versions'
+
+    script:
+    """
+    STAR --genomeDir ${index} --readFilesIn ${reads}
+    """
+}
+```
+
+Because the topic now carries `(name, version)` tuples instead of files, the entry workflow formats each value into a line before collecting it. The many tasks of a single process emit equal tuples, and `unique` collapses them into one. Note that the resulting report is a flat list of `name: version` pairs, not the nested map keyed by `task.process` that the `versions.yml` convention produces:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    channel.topic('versions')
+        .unique()
+        .map { name, version -> "${name}: ${version}" }
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_rnaseq_software_mqc_versions.yml',
+            newLine: true,
+            sort: true
+        )
+}
+```
+
+## Guidelines
+
+Topic channels trade explicit wiring for convenience. Keep the following constraints in mind when applying the pattern beyond version reporting:
+
+- A process that consumes a topic channel, directly or indirectly, must not send any outputs to that topic. Otherwise, the pipeline hangs forever because the process waits on a channel that it feeds.
+
+- Emission order is not deterministic. Values arrive in the order that tasks complete. Sort the values with `Iterable::toSorted`, or pass `sort: true` to `collectFile`, when the collected output must be stable across runs.
+
+- Nothing in the workflow body shows where the values in a topic come from. Reserve topics for cross-cutting concerns such as versions and telemetry, and use explicit channels for the dataflow of the pipeline.
+
+[channel-topic]: ../reference/stdlib-namespaces/channel#topic
+[process-eval-output]: ../process#eval-output-eval
+[process-typed]: ../process-typed
+[static-typing-page]: ../static-typing

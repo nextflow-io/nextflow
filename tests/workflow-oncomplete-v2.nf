@@ -34,8 +34,8 @@ workflow {
   channel.of('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
 
   onComplete:
-  log.info('Workflow completed successfully!')
+  println "workflow onComplete: ${workflow.success}"
 
   onError:
-  log.error('Workflow failed.')
+  println "workflow onError: ${workflow.exitStatus}"
 }

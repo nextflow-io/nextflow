@@ -19,7 +19,6 @@ package nextflow.container
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -187,7 +186,6 @@ class ApptainerCacheTest extends Specification {
         dir.deleteDir()
     }
 
-    @Ignore
     @Timeout(1)
     def 'should pull a apptainer image' () {
 
@@ -202,8 +200,11 @@ class ApptainerCacheTest extends Specification {
         when:
         def file = cache.getCachePathFor(IMAGE)
         then:
-        1 * cache.downloadApptainerImage(IMAGE) >> container
+        1 * cache.downloadContainerImage(IMAGE) >> container
         file == container
+
+        cleanup:
+        SingularityCache.localImageNames.remove(IMAGE)
     }
 
 }

@@ -58,12 +58,7 @@ class SeqeraConfigTest extends Specification {
                 keyPairName: 'my-key',
                 batchFlushInterval: '2 sec',
                 machineRequirement: [
-                    arch: 'arm64',
                     provisioning: 'spot'
-                ],
-                labels: [
-                    project: 'genomics',
-                    team: 'research'
                 ]
             ]
         ])
@@ -74,9 +69,7 @@ class SeqeraConfigTest extends Specification {
         config.executor.region == 'eu-west-1'
         config.executor.keyPairName == 'my-key'
         config.executor.batchFlushInterval == Duration.of('2 sec')
-        config.executor.machineRequirement.arch == 'arm64'
         config.executor.machineRequirement.provisioning == 'spot'
-        config.executor.labels == [project: 'genomics', team: 'research']
     }
 
     def 'should throw error when executor endpoint is missing' () {

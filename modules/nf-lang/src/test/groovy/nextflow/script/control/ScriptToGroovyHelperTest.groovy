@@ -16,7 +16,6 @@
 
 package nextflow.script.control
 
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -26,18 +25,37 @@ import test.TestUtils
  */
 class ScriptToGroovyHelperTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
+    def parse(String contents) {
+        final scriptParser = new ScriptParser()
+        def source = scriptParser.parse('main.nf', contents.stripIndent())
+        assert TestUtils.getErrors(source) == []
+        return source
     }
 
-    def parse(String contents) {
-        scriptParser.compiler().getSources().clear()
-        def source = scriptParser.parse('main.nf', contents.stripIndent())
-        assert !TestUtils.hasSyntaxErrors(source)
-        return source
+    def 'should collect params.* and task.ext.* references from process script body' () {
+        given:
+        def source = parse('''\
+            process hello {
+                input:
+                val x
+
+                script:
+                """
+                echo ${params.x} ${task.ext.args} ${x}
+                """
+            }
+            ''')
+        def sgh = new ScriptToGroovyHelper(source)
+
+        when:
+        def process = source.getAST().getProcesses().first()
+        def refs = sgh.getVariableRefs(process.exec)
+        def names = refs.expressions
+            .collect { expr -> expr.arguments.expressions[0].value }
+            .sort()
+
+        then:
+        names == ['params.x', 'task.ext.args']
     }
 
     def 'should get source text of process body' () {

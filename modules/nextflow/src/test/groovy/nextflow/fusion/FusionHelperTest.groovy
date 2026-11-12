@@ -21,6 +21,7 @@ import java.nio.file.Path
 import nextflow.container.DockerConfig
 import nextflow.container.SingularityConfig
 import nextflow.file.http.XPath
+import nextflow.util.StringUtils
 import spock.lang.Specification
 
 /**
@@ -45,6 +46,41 @@ class FusionHelperTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
+    }
+
+    def 'should include container platform in fusion command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher)
+        def config = new DockerConfig([:])
+
+        when:
+        def result = FusionHelper.runWithContainer(launcher, config, 'image:1', null, ['echo', 'hello'], 'linux/amd64')
+        then:
+        1 * launcher.fusionEnv() >> [:]
+        and:
+        result == "docker run -i --platform linux/amd64 --rm --privileged image:1 echo 'hello'"
+    }
+
+    def 'should strip secrets from fusion container command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher)
+        def secrets = [
+            AWS_SECRET_ACCESS_KEY: 's3cr3t/key+val',
+            AWS_SESSION_TOKEN: 'session-tok',
+            AZURE_STORAGE_ACCOUNT_KEY: 'acc0untKey==',
+            AZURE_STORAGE_SAS_TOKEN: 'sv=2020&sig=abc',
+            FUSION_LICENSE_TOKEN: 'eyJ.abc-def' ]
+
+        when:
+        def result = StringUtils.stripSecrets(FusionHelper.runWithContainer(launcher, CONFIG, 'image:1', null, ['echo', 'hello']))
+        then:
+        1 * launcher.fusionEnv() >> (secrets + [FOO: 'one'])
+        and:
+        result.contains('one')
+        secrets.values().every { !result.contains(it) }
+
+        where:
+        CONFIG << [ new DockerConfig([:]), new SingularityConfig([:]) ]
     }
 
     def 'should return fusion container command' () {

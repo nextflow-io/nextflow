@@ -478,7 +478,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.cause.message.contains "Invalid workflow definition -- check for missing or out-of-order section labels"
+        err.cause.message.contains "Unexpected input: ':' @ line 9, column 16"
     }
 
 
@@ -603,6 +603,38 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         def e2 = thrown(MissingProcessException)
         e2.message == 'Missing process or function Channel.doesNotExist()'
+    }
+
+    def 'should allow typed process output to use external functions' () {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                ADD(2, 2)
+            }
+
+            process ADD {
+                input:
+                x: Integer
+                y: Integer
+
+                output:
+                add(x, y)
+
+                exec:
+                true
+            }
+
+            def add(x, y) {
+                return x + y
+            }
+            '''
+        )
+
+        then:
+        result.val == 4
     }
 
 }

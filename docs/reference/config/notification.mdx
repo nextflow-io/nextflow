@@ -1,0 +1,28 @@
+---
+title: notification
+description: Reference for the notification config scope, which controls the automatic sending of an email notification on workflow completion.
+---
+
+# `notification`
+
+The `notification` scope controls the automatic sending of an email notification on workflow completion.
+
+##### `notification.attributes`
+
+Map of variables that can be used in the template file.
+
+##### `notification.enabled`
+
+Send an email notification when the workflow execution completes (default: `false`).
+
+##### `notification.from`
+
+Sender address for the email notification.
+
+##### `notification.template`
+
+Path of a template file containing the contents of the email notification.
+
+##### `notification.to`
+
+Recipient address for the email notification. Multiple addresses can be specified as a comma-separated list.

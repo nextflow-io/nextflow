@@ -38,6 +38,7 @@ import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.control.ClassNodeResolver;
@@ -69,6 +70,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
         ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Record.class),
         ClassHelper.SET_TYPE,
         ClassHelper.STRING_TYPE,
         ClassHelper.makeCached(nextflow.script.types.Tuple.class)
@@ -160,8 +162,11 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
             return true;
         if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
-        if( resolveFromClassResolver(type.getName()) != null )
+        var redirect = resolveFromClassResolver(type.getName());
+        if( redirect != null ) {
+            type.setRedirect(redirect);
             return true;
+        }
         if( resolveAsInnerClass(type) )
             return true;
         return false;
@@ -171,7 +176,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var name = type.getName();
         var module = sourceUnit.getAST();
         for( var cn : module.getClasses() ) {
-            if( name.equals(cn.getName()) ) {
+            if( name.equals(cn.getNameWithoutPackage()) ) {
                 if( cn != type )
                     type.setRedirect(cn);
                 return true;
@@ -263,9 +268,16 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var lookupResult = classNodeResolver.resolveName(name, compilationUnit);
         if( lookupResult == null )
             return null;
-        if( !lookupResult.isClassNode() )
-            throw new GroovyBugError("class resolver lookup result is not a class node");
-        return lookupResult.getClassNode();
+        if( lookupResult.isClassNode() )
+            return lookupResult.getClassNode();
+        // When a Groovy class from the lib directory is used, the class
+        // loader returns the URI of the Groovy file. We only need to compile
+        // the Groovy file enough to resolve the class definition for the purpose
+        // of name checking.
+        var su = lookupResult.getSourceUnit();
+        return GroovyCompiler.compile(su).stream()
+            .filter(cn -> cn.getName().equals(name))
+            .findFirst().orElse(null);
     }
 
     /**
@@ -316,6 +328,11 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         else if( exp instanceof ConstructorCallExpression cce ) {
             result = transformConstructorCallExpression(cce);
         }
+        else if( exp instanceof TernaryExpression ) {
+            // the type of a ternary is inferred from its branches (since Groovy 5)
+            // and may contain wildcards, so it should not be resolved
+            result = exp.transformExpression(this);
+        }
         else {
             resolveOrFail(exp.getType(), exp);
             result = exp.transformExpression(this);
@@ -360,6 +377,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         property = transform(pe.getProperty());
         var result = new PropertyExpression(objectExpression, property, pe.isSafe());
         result.setSpreadSafe(pe.isSpreadSafe());
+        result.copyNodeMetaData(pe);
         // attempt to resolve property expression as a fully-qualified class name
         var className = lookupClassName(result);
         if( className != null ) {

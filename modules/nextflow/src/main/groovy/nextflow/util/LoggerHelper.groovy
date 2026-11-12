@@ -18,7 +18,6 @@ package nextflow.util
 
 import static nextflow.Const.*
 
-import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
@@ -57,8 +56,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.cli.CliOptions
-import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
@@ -100,7 +97,7 @@ class LoggerHelper {
 
     static private LoggerHelper INSTANCE
 
-    private CliOptions opts
+    private LoggerOptions opts
 
     private boolean rolling = false
 
@@ -149,7 +146,7 @@ class LoggerHelper {
         return this
     }
 
-    LoggerHelper(CliOptions opts) {
+    LoggerHelper(LoggerOptions opts) {
         this.opts = opts
         this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
     }
@@ -259,7 +256,7 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+        final Appender<ILoggingEvent> result = daemon && opts.background
                 ? (Appender<ILoggingEvent>) null
                 : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
@@ -268,8 +265,10 @@ class LoggerHelper {
             filter.start()
 
             result.setContext(loggerContext)
-            if( result instanceof ConsoleAppender )
+            if( result instanceof ConsoleAppender ) {
+                result.setTarget(opts.background ? 'System.out' : 'System.err')
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            }
             (result as FilterAttachable).addFilter(filter)
             (result as LifeCycle).start()
         }
@@ -358,11 +357,11 @@ class LoggerHelper {
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
-    static void configureLogger( Launcher launcher ) {
-        INSTANCE = new LoggerHelper(launcher.options)
-                .setDaemon(launcher.isDaemon())
+    static void configureLogger(LoggerOptions opts, boolean daemon) {
+        INSTANCE = new LoggerHelper(opts)
+                .setDaemon(daemon)
                 .setRolling(true)
-                .setSyslog(launcher.options.syslog)
+                .setSyslog(opts.syslog)
                 .setup()
     }
 
@@ -502,7 +501,7 @@ class LoggerHelper {
 
         // add the log message
         if( fail instanceof MissingPropertyException ) {
-            def name = fail.property ?: getDetailMessage(fail)
+            def name = fail.property ?: fail.messageWithoutLocationText
             buffer.append("No such variable: ${name}")
         }
         else if( fail instanceof MissingMethodException ) {
@@ -563,20 +562,6 @@ class LoggerHelper {
     @PackageScope
     static String formatStartupErrorMessage( String message ) {
         message.replace(STARTUP_ERROR,'').replaceFirst(/^_nf_script_[a-z0-9]+: *[0-9]+: */,'')
-    }
-
-    static String getDetailMessage(Throwable error) {
-        try {
-            def clazz = error.class
-            while(  clazz != Throwable && clazz )
-                clazz = clazz.getSuperclass()
-            Field field = clazz.getDeclaredField('detailMessage')
-            field.setAccessible(true)
-            return field.get(error)
-        }
-        catch( Throwable e ) {
-            return null
-        }
     }
 
     static String getMissingMethodMessage(MissingMethodException error) {
@@ -718,7 +703,7 @@ class LoggerHelper {
                 final observer = session?.logObserver
                 if( observer ) {
                     if( !observer.started || observer.stopped )
-                        System.out.println(message)
+                        System.err.println(message)
                     else if( event.marker == STICKY )
                         observer.appendSticky(message)
                     else if( event.level==Level.ERROR )
@@ -729,7 +714,7 @@ class LoggerHelper {
                         observer.appendInfo(message)
                 }
                 else {
-                    System.out.println(message)
+                    System.err.println(message)
                 }
             }
             catch (Throwable e) {

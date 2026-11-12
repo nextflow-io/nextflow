@@ -16,12 +16,15 @@
 package nextflow.script.control;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
+import nextflow.script.ast.ScriptNode;
+import nextflow.script.dsl.Types;
+import nextflow.script.parser.ScriptAstBuilder;
 import nextflow.script.parser.ScriptParserPluginFactory;
-import nextflow.script.types.Types;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.WarningMessage;
@@ -33,12 +36,20 @@ import org.codehaus.groovy.control.messages.WarningMessage;
  */
 public class ScriptParser {
 
+    private Path projectDir;
     private Compiler compiler;
 
+    public ScriptParser(Path projectDir, GroovyClassLoader classLoader) {
+        this.projectDir = projectDir;
+        this.compiler = new Compiler(getConfig(), classLoader);
+    }
+
+    public ScriptParser(Path projectDir) {
+        this(projectDir, new GroovyClassLoader());
+    }
+
     public ScriptParser() {
-        var config = getConfig();
-        var classLoader = new GroovyClassLoader();
-        compiler = new Compiler(config, classLoader);
+        this(null);
     }
 
     public Compiler compiler() {
@@ -66,20 +77,33 @@ public class ScriptParser {
     }
 
     public void analyze() {
+        var moduleResolver = new ModuleResolver(projectDir, compiler());
         var sources = new ArrayList<>(compiler.getSources().values());
         for( var source : sources ) {
-            new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
+            moduleResolver.resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 
+        // include and name checking
         for( var source : compiler.getSources().values() ) {
-            var includeResolver = new ResolveIncludeVisitor(source, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
             new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit();
+        }
+
+        // type checking -- included modules must be checked before the files
+        // that include them, so that cross-file inferred types (e.g. a
+        // process's record output) are resolved before a consumer reads them
+        for( var source : moduleResolver.orderByDependencies(compiler.getSources().values()) ) {
             if( source.getErrorCollector().hasErrors() )
                 continue;
-            new TypeCheckingVisitor(source).visit();
+            if( !(source.getAST() instanceof ScriptNode sn) )
+                continue;
+            if( sn.isTypingEnabled() )
+                new TypeCheckingVisitor(source).visit();
+            else
+                new CallArityVisitor(source).visit();
         }
     }
 
@@ -87,6 +111,7 @@ public class ScriptParser {
         var config = new CompilerConfiguration();
         config.setPluginFactory(new ScriptParserPluginFactory());
         config.setWarningLevel(WarningMessage.POSSIBLE_ERRORS);
+        config.getOptimizationOptions().put(ScriptAstBuilder.COMMENTS_OPTION, true);
         return config;
     }
 

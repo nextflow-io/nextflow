@@ -28,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -36,6 +35,8 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.dataflow.ops.GroupByOp
+import nextflow.dataflow.ops.JoinOpV2
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -46,14 +47,10 @@ import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
- * A set of operators inspired to RxJava extending the methods available on DataflowChannel
- * data structure
- *
- * See https://github.com/Netflix/RxJava/wiki/Observable
+ * Implementation of dataflow operators for channels and dataflow values.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-
 @Slf4j
 class OperatorImpl {
 
@@ -61,67 +58,84 @@ class OperatorImpl {
 
     private static Session getSession() { Global.getSession() as Session }
 
-    /**
-     * Subscribe *onNext* event
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
-        subscribeImpl( source, [onNext: closure] )
-        return source
+
+    // CORE OPERATORS
+
+    DataflowWriteChannel collect(final DataflowReadChannel source, Closure action=null) {
+        collect(source,Collections.emptyMap(),action)
     }
 
-    /**
-     * Subscribe *onNext*, *onError* and *onComplete*
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
-        subscribeImpl(source, events)
-        return source
+    DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
+        final target = new CollectOp(source,action,opts).apply()
+        return target
     }
 
-    /**
-     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
-        final target = CH.createBy(source)
-        newOperator(source, target, stopErrorListener(source,target), new ChainWithClosure(closure))
+    DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {
+        combine(left, null, right)
+    }
+
+    DataflowWriteChannel combine( DataflowReadChannel left, Map params, Object right ) {
+        checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
+
+        final op = new CombineOp(left,right)
+        OpCall.current.get().inputs.addAll(op.inputs)
+        if( params?.by != null ) op.pivot = params.by
+        final target = op.apply()
         return target
     }
 
     /**
-     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
+     * Iterates over the collection of items and returns each item that matches the given filter
+     * by calling the {@code Object#isCase}method used by switch statements.
      *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
-        final target = CH.createBy(source)
-        chainImpl(source, target, params, closure)
-        return target;
-    }
-
-    /**
-     * Transform the items emitted by a channel by applying a function to each of them
+     * This method can be used with different kinds of filters like regular expressions, classes, ranges etc. Example:
+     *
+     * def list = ['a', 'b', 'aa', 'bc', 3, 4.5]
+     * assert list.filter( ~/a+/ )  == ['a', 'aa']
+     * assert list.filter( ~/../ )  == ['aa', 'bc']
+     * assert list.filter( Number ) == [ 3, 4.5 ]
+     * assert list.filter{ it.toString().size() == 1 } == [ 'a', 'b', 3 ]
      *
      * @param channel
-     * @param closure
+     * @param criteria
      * @return
      */
-    DataflowWriteChannel map(final DataflowReadChannel source, final Closure closure) {
-        assert source != null
-        assert closure
-        return new MapOp(source, closure).apply()
+    DataflowWriteChannel filter(final DataflowReadChannel source, final Object criteria) {
+        def discriminator = new BooleanReturningMethodInvoker("isCase");
+
+        def target = CH.createBy(source)
+        if( source instanceof DataflowExpression ) {
+            source.whenBound {
+                def result = it instanceof PoisonPill ? false : discriminator.invoke(criteria, (Object)it)
+                target.bind( result ? it : Channel.STOP )
+            }
+        }
+        else {
+            newOperator(source, target, {
+                def result = discriminator.invoke(criteria, (Object)it)
+                if( result ) target.bind(it)
+            })
+        }
+
+        return target
+    }
+
+    DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
+        def target = CH.createBy(source)
+        if( source instanceof DataflowExpression ) {
+            source.whenBound {
+                def result = it instanceof PoisonPill ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
+                target.bind( result ? it : Channel.STOP )
+            }
+        }
+        else {
+            newOperator(source, target, {
+                def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
+                if( result ) target.bind(it)
+            })
+        }
+
+        return target
     }
 
     /**
@@ -171,8 +185,62 @@ class OperatorImpl {
         return target
     }
 
+    DataflowWriteChannel groupBy(DataflowReadChannel source) {
+        return new GroupByOp(source).apply()
+    }
+
+    DataflowWriteChannel join( DataflowReadChannel left, right ) {
+        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
+        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
+        // due to issue #582 the right channel cannot be provided in the join method signature
+        // therefore the channel need to be added `'manually` to the inputs list
+        // fixes #1346
+        OpCall.current.get().inputs.add(right)
+        final target = new JoinOp(left, right).apply()
+        return target
+    }
+
+    DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
+        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
+        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
+        // due to issue #582 the right channel cannot be provided in the join method signature
+        // therefore the channel need to be added `'manually` to the inputs list
+        // fixes #1346
+        OpCall.current.get().inputs.add(right)
+        final target = opts.by instanceof String
+            ? new JoinOpV2(left, right, opts).apply()
+            : new JoinOp(left, right, opts).apply()
+        return target
+    }
+
     /**
+     * Transform the items emitted by a channel by applying a function to each of them
      *
+     * @param channel
+     * @param closure
+     * @return
+     */
+    DataflowWriteChannel map(final DataflowReadChannel source, final Closure closure) {
+        assert source != null
+        assert closure
+        return new MapOp(source, closure).apply()
+    }
+
+    /**
+     * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
+     *
+     * @param source
+     * @param others
+     * @return
+     */
+    DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
+        if( others.size()==0 )
+            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
+
+        return new MixOp(source,others).apply()
+    }
+
+    /**
      * The reduce( ) operator applies a function of your choosing to the first item emitted by a source channel,
      * then feeds the result of that function along with the second item emitted by the source channel into the same
      * function, then feeds the result of that function along with the third item into the same function, and so on until
@@ -194,7 +262,6 @@ class OperatorImpl {
     }
 
     /**
-     *
      * The reduce( ) operator applies a function of your choosing to the first item emitted by a source channel,
      * then feeds the result of that function along with the second item emitted by the source channel into the same
      * function, then feeds the result of that function along with the third item into the same function, and so on until
@@ -216,79 +283,25 @@ class OperatorImpl {
         return target
     }
 
-    DataflowWriteChannel collectFile( final DataflowReadChannel source, final Closure closure = null ) {
-        final result = new CollectFileOp(source, null, closure).apply()
-        return result
-    }
-
-    DataflowWriteChannel collectFile( final DataflowReadChannel source, Map params, final Closure closure = null ) {
-        def result = new CollectFileOp(source, params, closure).apply()
-        return result
-    }
-
-    DataflowWriteChannel groupTuple( final DataflowReadChannel source, final Map params=null ) {
-        def result = new GroupTupleOp(params, source).apply()
-        return result
+    /**
+     * Subscribe *onNext* event
+     *
+     * @param source
+     * @param closure
+     */
+    void subscribe(final DataflowReadChannel source, final Closure closure) {
+        subscribeImpl( source, [onNext: closure] )
     }
 
     /**
-     * Iterates over the collection of items and returns each item that matches the given filter
-     * by calling the {@code Object#isCase}method used by switch statements.
+     * Subscribe *onNext*, *onError* and *onComplete*
      *
-     * This method can be used with different kinds of filters like regular expressions, classes, ranges etc. Example:
-     *
-     * def list = ['a', 'b', 'aa', 'bc', 3, 4.5]
-     * assert list.filter( ~/a+/ )  == ['a', 'aa']
-     * assert list.filter( ~/../ )  == ['aa', 'bc']
-     * assert list.filter( Number ) == [ 3, 4.5 ]
-     * assert list.filter{ it.toString().size() == 1 } == [ 'a', 'b', 3 ]
-     *
-     * @param channel
-     * @param criteria
-     * @return
+     * @param source
+     * @param closure
      */
-    DataflowWriteChannel filter(final DataflowReadChannel source, final Object criteria) {
-        def discriminator = new BooleanReturningMethodInvoker("isCase");
-
-        def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator(source, target, {
-                def result = discriminator.invoke(criteria, (Object)it)
-                if( result ) target.bind(it)
-            })
-        }
-
-        return target
+    void subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
+        subscribeImpl(source, events)
     }
-
-    DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator(source, target, {
-                def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-                if( result ) target.bind(it)
-            })
-        }
-
-        return target
-    }
-
-    DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
-        return new UntilOp(source,closure).apply()
-    }
-
 
     /**
      * Modifies this collection to remove all duplicated items, using the default comparator.
@@ -348,25 +361,81 @@ class OperatorImpl {
         return target
     }
 
+    DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
+        return new UntilOp(source,closure).apply()
+    }
+
+    static private final Map PARAMS_VIEW = [newLine: Boolean, tag: String]
+
     /**
-     * Suppress duplicate consecutive items emitted by the source Observable
+     * Print out the channel content returning a new channel emitting the identical content as the original one
      *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#suppress-duplicate-consecutive-items-emitted-by-the-source-observable
-     *
-     *
-     * @return
+     * @param source
+     * @param transform
      */
+    DataflowWriteChannel view(final DataflowReadChannel source, Map opts, Closure transform = null) {
+        checkParams('view', opts, PARAMS_VIEW)
+        final newLine = opts.newLine != false
+        final tag = opts.tag as String
+        final dumpNames = session.getDumpChannels() ?: []
+        final enabled = tag == null || (
+            dumpNames.collect { it.replace('*', '.*') }.any { (tag ?: '') ==~ /$it/ }
+        )
+
+        final target = CH.createBy(source)
+        final onNext = { value ->
+            if( enabled ) {
+                final result = transform != null ? transform.call(value) : value
+                session.printConsole(result?.toString(), newLine)
+            }
+            target.bind(value)
+        }
+        final onComplete = {
+            CH.close0(target)
+        }
+
+        subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        return target
+    }
+
+    DataflowWriteChannel view(final DataflowReadChannel source, Closure closure = null) {
+        view(source, Collections.emptyMap(), closure)
+    }
+
+
+    // LEGACY OPERATORS
+
+    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
+        final target = CH.createBy(source)
+        newOperator(source, target, stopErrorListener(source,target), new ChainWithClosure(closure))
+        return target
+    }
+
+    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
+        final target = CH.createBy(source)
+        chainImpl(source, target, params, closure)
+        return target;
+    }
+
+    DataflowWriteChannel collectFile( final DataflowReadChannel source, final Closure closure = null ) {
+        final result = new CollectFileOp(source, null, closure).apply()
+        return result
+    }
+
+    DataflowWriteChannel collectFile( final DataflowReadChannel source, Map params, final Closure closure = null ) {
+        def result = new CollectFileOp(source, params, closure).apply()
+        return result
+    }
+
+    DataflowWriteChannel groupTuple( final DataflowReadChannel source, final Map params=null ) {
+        def result = new GroupTupleOp(params, source).apply()
+        return result
+    }
+
     DataflowWriteChannel distinct( final DataflowReadChannel source ) {
         distinct(source) {it}
     }
 
-    /**
-     * suppress duplicate consecutive items emitted by the source Observable
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#suppress-duplicate-consecutive-items-emitted-by-the-source-observable
-     *
-     * @return
-     */
     DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
 
         def previous = null
@@ -386,15 +455,6 @@ class OperatorImpl {
         return target
     }
 
-    /**
-     *
-     * Emit only the first item emitted by a channel, or the first item that meets some condition
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#first
-     *
-     * @param source
-     * @return
-     */
     DataflowWriteChannel first( DataflowReadChannel source ) {
         if( source instanceof DataflowExpression ) {
             def msg = "The operator `first` is useless when applied to a value channel which returns a single value by definition"
@@ -409,15 +469,6 @@ class OperatorImpl {
         return target
     }
 
-    /**
-     *
-     * Emit only the first item emitted by a channel, or the first item that meets some condition
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#first
-     *
-     * @param source
-     * @return
-     */
     DataflowWriteChannel first( final DataflowReadChannel source, Object criteria ) {
 
         def target = new DataflowVariable()
@@ -425,7 +476,7 @@ class OperatorImpl {
 
         if( source instanceof DataflowExpression ) {
             source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, it)
+                def result = it instanceof PoisonPill ? false : discriminator.invoke(criteria, it)
                 target.bind( result ? it : Channel.STOP )
             }
         }
@@ -441,16 +492,6 @@ class OperatorImpl {
         return target
     }
 
-    /**
-     *
-     * emit only the first n items emitted by an Observable
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#take
-     *
-     * @param source
-     * @param n The number of items to be taken. The value {@code -1} has a special semantic for all
-     * @return The resulting channel emitting the taken values
-     */
     DataflowWriteChannel take( final DataflowReadChannel source, int n ) {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
@@ -458,12 +499,6 @@ class OperatorImpl {
         return new TakeOp(source,n).apply()
     }
 
-    /**
-     * The last operator creates a channel that only returns the last item emitted by the source channel
-     *
-     * @param source The source channel
-     * @return A {@code DataflowVariable} emitting the `last` item in the channel
-     */
     DataflowWriteChannel last( final DataflowReadChannel source ) {
 
         def target = new DataflowVariable()
@@ -472,33 +507,11 @@ class OperatorImpl {
         return target
     }
 
-    DataflowWriteChannel collect(final DataflowReadChannel source, Closure action=null) {
-        collect(source,Collections.emptyMap(),action)
-    }
-
-    DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
-        final target = new CollectOp(source,action,opts).apply()
-        return target
-    }
-
-
-    /**
-     * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}
-     *
-     * @param source The channel to be converted
-     * @return A list holding all the items send over the channel
-     */
     DataflowWriteChannel toList(final DataflowReadChannel source) {
         final target = ToListOp.apply(source)
         return target
     }
 
-    /**
-     * Convert a {@code DataflowReadChannel} alias *channel* to a Java {@code List} sorting its content
-     *
-     * @param source The channel to be converted
-     * @return A list holding all the items send over the channel
-     */
     DataflowWriteChannel toSortedList(final DataflowReadChannel source, Closure closure = null) {
         final target = new ToListOp(source, closure ?: true).apply()
         return target as DataflowVariable
@@ -516,13 +529,6 @@ class OperatorImpl {
         return target
     }
 
-    /**
-     * Counts the number of occurrences which satisfy the given closure from inside this collection
-     *
-     * @param source
-     * @param criteria
-     * @return
-     */
     DataflowWriteChannel count(final DataflowReadChannel source, final Object criteria ) {
         final target = count0(source, criteria)
         return target
@@ -665,7 +671,6 @@ class OperatorImpl {
         return target
     }
 
-
     DataflowWriteChannel mean(final DataflowReadChannel source, Closure closure = null) {
 
         def target = new DataflowVariable()
@@ -673,7 +678,6 @@ class OperatorImpl {
         subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
         return target
     }
-
 
     private static class Aggregate {
 
@@ -713,20 +717,6 @@ class OperatorImpl {
             else
                 return accum / count
         }
-    }
-
-    DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {
-        combine(left, null, right)
-    }
-
-    DataflowWriteChannel combine( DataflowReadChannel left, Map params, Object right ) {
-        checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
-
-        final op = new CombineOp(left,right)
-        OpCall.current.get().inputs.addAll(op.inputs)
-        if( params?.by != null ) op.pivot = params.by
-        final target = op.apply()
-        return target
     }
 
     DataflowWriteChannel flatten( final DataflowReadChannel source )  {
@@ -777,14 +767,6 @@ class OperatorImpl {
         return target
     }
 
-    /**
-     * The ``buffer( )`` operator gathers the items emitted by the source channel into bundles and
-     * and emits these bundles as its own emissions.
-     *
-     * @param source The dataflow channel from where the values are gathered
-     * @param closingCriteria A condition that has to be verified to close
-     * @return A newly created dataflow queue which emitted the gathered values as bundles
-     */
     DataflowWriteChannel buffer( final DataflowReadChannel source, Map params=null, Object closingCriteria ) {
 
         def target = new BufferOp(source)
@@ -815,7 +797,6 @@ class OperatorImpl {
 
         return target
     }
-
 
     DataflowWriteChannel collate( DataflowReadChannel source, int size, boolean keepRemainder = true ) {
         if( size <= 0 ) {
@@ -888,43 +869,6 @@ class OperatorImpl {
         return target
     }
 
-
-    /**
-     * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
-     *
-     * @param source
-     * @param others
-     * @return
-     */
-    DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
-        if( others.size()==0 )
-            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
-
-        return new MixOp(source,others).apply()
-    }
-
-    DataflowWriteChannel join( DataflowReadChannel left, right ) {
-        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
-        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
-        // due to issue #582 the right channel cannot be provided in the join method signature
-        // therefore the channel need to be added `'manually` to the inputs list
-        // fixes #1346
-        OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right) .apply()
-        return target
-    }
-
-    DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
-        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
-        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
-        // due to issue #582 the right channel cannot be provided in the join method signature
-        // therefore the channel need to be added `'manually` to the inputs list
-        // fixes #1346
-        OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right,opts) .apply()
-        return target
-    }
-
     /**
      * Implements the default mapping strategy, having the following strategy:
      * <pre>
@@ -937,7 +881,6 @@ class OperatorImpl {
      * @param obj
      * @return
      */
-
     @PackageScope
     static public Closure DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
 
@@ -972,11 +915,9 @@ class OperatorImpl {
             default:
                 return index==0 ? obj : null
         }
-
     }
 
     DataflowWriteChannel cross( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
-
         def target = new CrossOp(source, other)
                     .setMapper(mapper)
                     .apply()
@@ -984,16 +925,7 @@ class OperatorImpl {
         return target
     }
 
-
-    /**
-     * Creates a channel that emits the items in same order as they are emitted by two or more channel
-     *
-     * @param source
-     * @param others
-     * @return
-     */
     DataflowWriteChannel concat( DataflowReadChannel source, DataflowReadChannel... others ) {
-
         def target = new ConcatOp(source, others).apply()
 
         def allSources = [source]
@@ -1002,27 +934,11 @@ class OperatorImpl {
         return target
     }
 
-
-    /**
-     * Implements a tap that create implicitly a new dataflow variable in the global script context.
-     * For example:
-     *
-     * <pre>
-     *     Channel.of(...)
-     *            .tap { newChannelName }
-     *            .map { ... }
-     *  </pre>
-     *
-     * @param source The source dataflow variable
-     * @param holder The closure defining the new variable name
-     * @return The tap resulting dataflow channel
-     */
     DataflowWriteChannel tap( final DataflowReadChannel source, final Closure holder ) {
         def tap = new TapOp(source, holder).apply()
         OpCall.current.get().outputs.addAll( tap.outputs )
         return tap.result
     }
-
 
     /**
      * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
@@ -1036,7 +952,7 @@ class OperatorImpl {
 
         boolean empty = true
         final result = CH.createBy(source)
-        final singleton = result instanceof DataflowExpression
+        final singleton = result instanceof DataflowVariable
         final next = { result.bind(it); empty=false }
         final complete = {
             if(empty)
@@ -1048,39 +964,6 @@ class OperatorImpl {
         subscribeImpl(source, [onNext: next, onComplete: complete])
 
         return result
-    }
-
-    static private final Map PARAMS_VIEW = [newLine: Boolean]
-
-    /**
-     * Print out the channel content returning a new channel emitting the identical content as the original one
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel view(final DataflowReadChannel source, Map opts, Closure closure = null) {
-        assert source != null
-        checkParams('view', opts, PARAMS_VIEW)
-        final newLine = opts.newLine != false
-
-        final target = CH.createBy(source);
-        final apply = new HashMap<String,Closure>(2)
-
-        apply.onNext  = {
-            final obj = closure != null ? closure.call(it) : it
-            session.printConsole(obj?.toString(), newLine)
-            target.bind(it)
-        }
-
-        apply. onComplete = { CH.close0(target) }
-
-        subscribeImpl(source,apply)
-        return target
-    }
-
-    DataflowWriteChannel view(final DataflowReadChannel source, Closure closure = null) {
-        view(source, Collections.emptyMap(), closure)
     }
 
     // NO DAG
@@ -1191,16 +1074,6 @@ class OperatorImpl {
         return result
     }
 
-    /**
-     * Implement a `set` operator e.g.
-     * <pre>
-     *     SomeProcess.out | set { channelName }
-     * </pre>
-     *
-     * @param source The channel instance to be bound in the context
-     * @param holder A closure defining a variable identifier
-     */
-
     void set(DataflowReadChannel source, Closure holder) {
         set0(source, holder)
     }
@@ -1227,13 +1100,6 @@ class OperatorImpl {
         OpCall.current.get().ignoreDagNode = true
     }
 
-    /**
-     * Implements `branch` operator
-     *
-     * @param source
-     * @param action
-     * @return
-     */
     ChannelOut branch(DataflowReadChannel source, Closure<TokenBranchDef> action) {
         new BranchOp(source, action)
                 .apply()

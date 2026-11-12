@@ -19,12 +19,14 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import nextflow.config.scopes.Config;
+import nextflow.config.scopes.RetryPolicyConfig;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.DslScope;
 import nextflow.script.dsl.FeatureFlag;
@@ -43,10 +45,28 @@ public sealed interface SpecNode {
 
     private static Scope rootScope() {
         var result = Scope.of(Config.class, "");
-        // derive `nextflow` config options from feature flags.
+        // derive `nextflow` config options from feature flags and the retry policy.
         result.children().put("nextflow", nextflowScope());
-        // derive `process` config options from process directives.
-        result.children().put("process", processScope());
+        // derive `process` and `agent` config options from process directives: an agent
+        // task accepts the same task directives, in its own independent scope.
+        // NOTE: the descriptions are inlined because an interface cannot declare private fields.
+        var processScope = directiveScope("""
+            The `process` scope allows you to specify default directives for processes in your pipeline.
+
+            [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
+        """);
+        processScope.children().put("when", new Option("""
+            When `false`, the process is not executed. Can be a closure to evaluate the condition for each task.
+
+            [Read more](https://docs.seqera.io/nextflow/config#disabling-processes)
+        """, List.of(Boolean.class)));
+        result.children().put("process", processScope);
+        result.children().put("agent", directiveScope("""
+            The `agent` scope allows you to specify default directives for agents in your pipeline. An
+            agent task accepts the same task directives as a process, in its own independent scope.
+
+            [Read more](https://docs.seqera.io/nextflow/agent#configuration)
+        """));
         return result;
     }
 
@@ -69,38 +89,46 @@ public sealed interface SpecNode {
             "",
             Map.ofEntries(
                 Map.entry("enable", (SpecNode) new Scope("", enableOpts)),
-                Map.entry("preview", (SpecNode) new Scope("", previewOpts))
+                Map.entry("preview", (SpecNode) new Scope("", previewOpts)),
+                Map.entry("retryPolicy", (SpecNode) Scope.of(RetryPolicyConfig.class, ""))
             )
         );
     }
 
     /**
-     * Initialize the `process` config scope from the set of
-     * process directives.
+     * Initialize a task-directive config scope (`process`, `agent`) from the
+     * set of process directives.
      *
      * Directives with multiple method overloads are treated as
-     * options with multiple supported types. Method overloads with
-     * multiple parameters are ignored because they are not supported
-     * in the configuration.
+     * options with multiple supported types. Only one overload needs
+     * to provide a description. Method overloads with multiple parameters
+     * are ignored because they are not supported in the configuration.
+     *
+     * @param description
      */
-    private static SpecNode processScope() {
-        var description = """
-            The `process` scope allows you to specify default directives for processes in your pipeline.
-
-            [Read more](https://nextflow.io/docs/latest/config.html#process-configuration)
-        """;
+    private static Scope directiveScope(String description) {
         var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             if( method.getParameters().length != 1 )
                 continue;
-            if( !children.containsKey(method.getName()) ) {
-                var desc = annotatedDescription(method, "");
-                children.put(method.getName(), new Option(desc, new ArrayList<>()));
+            var name = method.getName();
+            var desc = annotatedDescription(method, "");
+            var option = (Option) children.get(name);
+            if( option == null ) {
+                option = new Option(desc, new ArrayList<>());
+                children.put(name, option);
             }
-            var option = (Option) children.get(method.getName());
+            else if( option.description().isEmpty() && !desc.isEmpty() ) {
+                option = new Option(desc, option.types());
+                children.put(name, option);
+            }
             var paramType = method.getParameterTypes()[0];
             option.types.add(paramType);
         }
+        // the `secret` directive is repeatable in a process definition,
+        // but must be a list in the configuration
+        var secret = children.get("secret");
+        children.put("secret", new Option(secret.description(), List.of(List.class)));
         return new Scope(description, children);
     }
 
@@ -109,10 +137,10 @@ public sealed interface SpecNode {
         return annot != null ? annot.value() : defaultValue;
     }
 
-    private static List<Class> optionTypes(Field field) {
-        var result = new ArrayList<Class>();
+    private static List<Type> optionTypes(Field field) {
+        var result = new ArrayList<Type>();
         // use the field type
-        result.add(field.getType());
+        result.add(field.getGenericType());
         // append types from ConfigOption annotation if specified
         var annot = field.getAnnotation(ConfigOption.class);
         if( annot != null ) {
@@ -120,6 +148,14 @@ public sealed interface SpecNode {
                 result.add(type);
         }
         return result;
+    }
+
+    private static Class rawType(Type type) {
+        if( type instanceof Class c )
+            return c;
+        if( type instanceof ParameterizedType pt )
+            return (Class) pt.getRawType();
+        throw new IllegalStateException();
     }
 
     /**
@@ -136,7 +172,7 @@ public sealed interface SpecNode {
      */
     public static record Option(
         String description,
-        List<Class> types
+        List<Type> types
     ) implements SpecNode {}
 
     /**
@@ -212,23 +248,23 @@ public sealed interface SpecNode {
             var children = new HashMap<String, SpecNode>();
             for( var field : scope.getDeclaredFields() ) {
                 var name = field.getName();
-                var type = field.getType();
+                var type = field.getGenericType();
+                var rawType = rawType(type);
                 var desc = annotatedDescription(field, description);
                 var placeholderName = field.getAnnotation(PlaceholderName.class);
                 // fields annotated with @ConfigOption are config options
                 if( field.getAnnotation(ConfigOption.class) != null ) {
-                    if( DslScope.class.isAssignableFrom(type) )
-                        children.put(name, new DslOption(desc, type));
+                    if( DslScope.class.isAssignableFrom(rawType) )
+                        children.put(name, new DslOption(desc, rawType));
                     else
                         children.put(name, new Option(desc, optionTypes(field)));
                 }
-                // fields of type ConfigScope are nested config scopes
-                else if( ConfigScope.class.isAssignableFrom(type) ) {
-                    children.put(name, Scope.of((Class<? extends ConfigScope>) type, desc));
+                // fields of rawType ConfigScope are nested config scopes
+                else if( ConfigScope.class.isAssignableFrom(rawType) ) {
+                    children.put(name, Scope.of((Class<? extends ConfigScope>) rawType, desc));
                 }
                 // fields of type Map<String, ConfigScope> are placeholder scopes
-                else if( Map.class.isAssignableFrom(type) && placeholderName != null ) {
-                    var pt = (ParameterizedType)field.getGenericType();
+                else if( Map.class.isAssignableFrom(rawType) && type instanceof ParameterizedType pt && placeholderName != null ) {
                     var valueType = (Class<? extends ConfigScope>)pt.getActualTypeArguments()[1];
                     children.put(name, new Placeholder(desc, placeholderName.value(), Scope.of(valueType, desc)));
                 }

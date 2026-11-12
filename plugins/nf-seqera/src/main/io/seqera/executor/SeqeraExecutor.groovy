@@ -17,11 +17,13 @@
 package io.seqera.executor
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
 import io.seqera.util.SchemaMapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.FusionMode
 import io.seqera.sched.api.schema.v1a1.PipelineSpec
 import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.client.SchedClient
@@ -56,17 +58,47 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     public static final String SEQERA = 'seqera'
 
+    private static final String DEFAULT_FUSION_VERSION = '2.6'
+
     private ExecutorOpts seqeraConfig
 
     private SchedClient client
 
     private volatile String runId
 
+    private volatile String workflowId
+
+    /**
+     * The complete set of resource labels attached to the run -- the labels derived from the
+     * workflow metadata plus the config-level {@code process.resourceLabels}. See
+     * {@link #computeRunResourceLabels()}.
+     */
+    private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
+
     private SeqeraBatchSubmitter batchSubmitter
 
     @Override
     protected void register() {
+        if( !isFusionEnabled() )
+            throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
+        applyFusionDefaults()
         createClient()
+    }
+
+    /**
+     * Force the default Fusion client version for the Seqera executor.
+     *
+     * @deprecated The default Fusion version is now {@code 2.6} (see
+     * {@link nextflow.fusion.FusionConfig}), so pinning it here is redundant. To target a
+     * specific Fusion version, set the {@code fusion.targetVersion} config option instead.
+     * This method will be removed in a future release.
+     */
+    @Deprecated
+    protected void applyFusionDefaults() {
+        final fusionConfig = session.config.fusion as Map
+        if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
+            fusionConfig.put('targetVersion', DEFAULT_FUSION_VERSION)
+        }
     }
 
     @Override
@@ -83,44 +115,69 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         if (!seqeraConfig)
             throw new IllegalArgumentException("Missing Seqera executor configuration - make sure to specify 'seqera.executor' settings")
         // Get access token and refresh token from tower config (shares authentication with Platform)
-        def towerConfig = session.config.tower as Map ?: Collections.emptyMap()
-        def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
-        def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
-        def platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
-        def clientConfig = SchedClientConfig.builder()
-                .endpoint(seqeraConfig.endpoint)
+        final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        this.client = new SchedClient(clientConfig(seqeraConfig, towerConfig))
+    }
+
+    /**
+     * Maps the executor config onto the scheduler client config. Kept separate from
+     * {@link #createClient()} so it can be exercised without a session — a test that rebuilds
+     * this chain instead would pass just as happily with the wiring deleted.
+     *
+     * @param opts the resolved {@code seqera.executor} settings
+     * @param towerConfig the {@code tower} config scope, which carries the shared credentials
+     * @return the client configuration
+     */
+    protected static SchedClientConfig clientConfig(ExecutorOpts opts, Map towerConfig) {
+        final accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
+        final refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
+        final platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
+        return SchedClientConfig.builder()
+                .endpoint(opts.endpoint)
                 .platformUrl(platformUrl)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .retryConfig(seqeraConfig.retryOpts())
+                .retryConfig(opts.retryOpts())
+                .requestTimeout(opts.httpOpts().requestTimeout())
+                .connectTimeout(opts.httpOpts().connectTimeout())
                 .build()
-        this.client = new SchedClient(clientConfig)
     }
 
     protected void createRun() {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         final workflowId = session.workflowMetadata?.platform?.workflowId
+        this.workflowId = workflowId
         final workflowUrl = session.workflowMetadata?.platform?.workflowUrl
-        final labels = new Labels()
-        if( seqeraConfig.autoLabels )
-            labels.withWorkflowMetadata(session.workflowMetadata)
-        labels.withUserLabels(seqeraConfig.labels)
+        final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
+        final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
+
+        computeRunResourceLabels()
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
+        final fusionMode = seqeraConfig.fusionMode ? FusionMode.fromValue(seqeraConfig.fusionMode) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
                 .workflowUrl(workflowUrl)
                 .workDir(session.workDir?.toUriString())
         final request = new CreateRunRequest()
+                .provider(seqeraConfig.provider)
+                .strategy(seqeraConfig.strategy)
                 .region(seqeraConfig.region)
+                .providerConfig(seqeraConfig.providerConfig)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
-                .labels(labels.entries)
-                .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
+                .labels(runResourceLabels)
+                .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
+                .schedulingRequirement(SchemaMapperUtil.toSchedulingRequirement(seqeraConfig.schedulingRequirement))
+                .computeEnvId(computeEnvId)
+                .shellEnabled(seqeraConfig.shellEnabled)
+                .fusionMode(fusionMode)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()
+        // publish the scheduler run id so the Tower observer can propagate it to Platform
+        session.workflowMetadata?.platform?.setSchedRunId(runId)
         log.debug "[SEQERA] Run created id: ${runId}; workflowId: '${workflowId}'; workflowUrl: '${workflowUrl}'"
         // Initialize and start batch submitter with error callback to abort on fatal errors
         this.batchSubmitter = new SeqeraBatchSubmitter(
@@ -162,10 +219,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     boolean isFusionEnabled() {
-        final enabled = FusionHelper.isFusionEnabled(session)
-        if (!enabled)
-            throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
-        return true
+        return FusionHelper.isFusionEnabled(session)
     }
 
     /**
@@ -186,6 +240,59 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     String getRunId() {
         return runId
+    }
+
+    /**
+     * The Platform workflow id for this run, used to build pipeline secret store references
+     * ({@code tower-<workflowId>/<name>}). {@code null} when running without a Platform workflow
+     * (bare scheduler), in which case secret references are not built.
+     */
+    String getWorkflowId() {
+        return workflowId
+    }
+
+    /**
+     * The Seqera executor is secret-native: pipeline secret values are resolved at the compute
+     * edge (the scheduler backend), so Nextflow must not emit the local-store {@code source}
+     * snippet. The task carries only the secret <em>reference</em>, never the value.
+     */
+    @Override
+    boolean isSecretNative() {
+        return true
+    }
+
+    Map<String,String> getRunResourceLabels() {
+        return Collections.unmodifiableMap(runResourceLabels)
+    }
+
+    /**
+     * Compute the run-level resource labels: the labels derived from the workflow metadata --
+     * see {@link nextflow.Session#getAutoResourceLabels()} -- overlaid by the config-level
+     * {@code process.resourceLabels}, which win on a key collision.
+     *
+     * This is the baseline {@link SeqeraTaskHandler} deltas the task labels against, therefore
+     * it must hold *every* label the runtime merges into a task config: the auto labels are
+     * injected into each {@link nextflow.processor.TaskConfig}, so a config-only baseline would
+     * re-send all of them with every single task.
+     */
+    @PackageScope
+    void computeRunResourceLabels() {
+        this.runResourceLabels = Labels.merge(session.getAutoResourceLabels(), configResourceLabels())
+    }
+
+    /**
+     * @return
+     *      The config-level {@code process.resourceLabels}, coerced to strings. A dynamic
+     *      (closure) value is skipped because it can only be resolved per-task
+     */
+    protected Map<String,String> configResourceLabels() {
+        final processMap = session.config.process as Map
+        final value = processMap?.get('resourceLabels')
+        if( value instanceof Closure ) {
+            log.debug "Skipping run-level process.resourceLabels: dynamic (closure) values are only resolved per-task"
+            return Collections.<String,String>emptyMap()
+        }
+        return Labels.toStringMap(value)
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {

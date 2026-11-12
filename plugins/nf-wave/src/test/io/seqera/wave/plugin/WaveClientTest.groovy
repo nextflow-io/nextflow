@@ -65,6 +65,18 @@ import test.OutputCapture
 @Slf4j
 class WaveClientTest extends Specification {
 
+    def 'should retry request timeouts' () {
+        // Retry a request timeout raised after the request was sent - which the httpx default
+        // excludes - so a single transient stall on the Wave/Tower API does not fail the request.
+        expect:
+        WaveClient.retryCondition(new java.net.http.HttpTimeoutException('request timeout'))
+        WaveClient.retryCondition(new java.net.http.HttpConnectTimeoutException('connect timeout'))
+        WaveClient.retryCondition(new SocketTimeoutException('socket timeout'))
+        WaveClient.retryCondition(new IOException('connection reset'))
+        and:
+        !WaveClient.retryCondition(new RuntimeException('not an I/O error'))
+    }
+
     @CompileStatic
     private static List<Path> untar(final InputStream is, final Path outputDir)  {
 
@@ -253,6 +265,24 @@ class WaveClientTest extends Specification {
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
+    }
+
+    def 'should create request object with soci mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[soci:true]]}
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage('foo:latest'))
+        then:
+        req.containerImage == 'foo:latest'
+        req.soci
+
+        when:
+        req = wave.makeRequest(new WaveAssets(null, null, null, null, 'From foo:latest', null, null, true))
+        then:
+        req.format == 'sif'
+        !req.soci
     }
 
     def 'should create request object with scan mode and levels' () {
@@ -954,6 +984,46 @@ class WaveClientTest extends Specification {
                                                     | CONFIG_RESP.get('combined')
     }
 
+    def 'should resolve container config from local file' () {
+        given:
+        def folder = Files.createTempDirectory('wave-local-manifest')
+        def manifest = folder.resolve('manifest.json')
+        manifest.text = JsonOutput.toJson([entrypoint: ['entry.sh']])
+        and:
+        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true, containerConfigUrl: manifest.toUri().toString()]] }
+        def client = new WaveClient(session)
+
+        expect:
+        client.resolveContainerConfig() == new ContainerConfig(entrypoint: ['entry.sh'])
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should reject unsupported scheme for container config' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def client = new WaveClient(session)
+
+        when:
+        client.fetchContainerConfig(new URI('ftp://example.com/manifest.json'))
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    @Unroll
+    def 'should replace fusion arch in URI' () {
+        expect:
+        WaveClient.replaceFusionArch(new URI(URI_VALUE), PLATFORM).toString() == EXPECTED
+
+        where:
+        URI_VALUE                                                  | PLATFORM      | EXPECTED
+        'https://fusionfs.seqera.io/releases/v2.5-amd64.json'      | 'linux/arm64' | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'https://fusionfs.seqera.io/releases/v2.5-arm64.json'      | 'linux/amd64' | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'file:///tmp/local-manifest.json'                          | 'linux/arm64' | 'file:///tmp/local-manifest.json'
+    }
+
     @Unroll
     def 'should get fusion default url' () {
         given:
@@ -966,14 +1036,33 @@ class WaveClientTest extends Specification {
 
         where:
         ARCH                | SNAP  | EXPECTED
-        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
         and:
-        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json'
-        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_arm64.json'
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
+    }
+
+    @Unroll
+    def 'should get fusion default url with version override' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [fusion:[snapshots:SNAP, targetVersion:'2.6']] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | SNAP  | EXPECTED
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        and:
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
     }
 
     @Unroll
@@ -1251,6 +1340,7 @@ class WaveClientTest extends Specification {
 
         // container succeeded
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1265,6 +1355,7 @@ class WaveClientTest extends Specification {
 
         // container is pending
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1279,6 +1370,7 @@ class WaveClientTest extends Specification {
 
         // container failed
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1294,6 +1386,7 @@ class WaveClientTest extends Specification {
 
         // build is READY
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1308,6 +1401,7 @@ class WaveClientTest extends Specification {
 
         // build is not ready
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1323,6 +1417,7 @@ class WaveClientTest extends Specification {
 
         // build is cached
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1333,6 +1428,37 @@ class WaveClientTest extends Specification {
         and:
         0 * wave.checkContainerCompletion(_) >> null
         0 * wave.checkBuildCompletion(handle) >> null
+        and:
+        ready
+    }
+
+    def 'should not check again a container already ready' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [:]] }
+        def resp = new SubmitContainerTokenResponse(requestId: '12345', targetImage: 'wave.io/wt/12345/foo:latest')
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: [xyz: handle]))
+
+        when: 'the container is pending'
+        def ready = wave.isContainerReady('xyz')
+        then:
+        1 * wave.checkContainerCompletion(handle) >> false
+        and:
+        !ready
+        !handle.ready
+
+        when: 'the container completes'
+        ready = wave.isContainerReady('xyz')
+        then:
+        1 * wave.checkContainerCompletion(handle) >> true
+        and:
+        ready
+        handle.ready
+
+        when: 'the container is checked again'
+        ready = wave.isContainerReady('xyz')
+        then: 'its status is not requested anymore'
+        0 * wave.checkContainerCompletion(_)
         and:
         ready
     }
@@ -1450,6 +1576,32 @@ class WaveClientTest extends Specification {
 
         cleanup:
         server?.stop(0)
+    }
+
+
+    def 'should report the cause when wave cannot be reached' () {
+        given:
+        def port = new ServerSocket(0).withCloseable { it.localPort }
+        def config = [wave:[endpoint: "http://localhost:$port".toString(), retryPolicy: [maxAttempts: 1]], tower:[accessToken:'foo', endpoint: 'http://foo.com']]
+        def wave = new WaveClient(Mock(Session) { getConfig() >> config })
+
+        when:
+        wave.sendRequest(new SubmitContainerTokenRequest())
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.startsWith("Unable to connect Wave service: http://localhost:$port - cause: java.net.ConnectException")
+        e.cause instanceof java.net.ConnectException
+    }
+
+    def 'should describe a failure with its type and cause chain' () {
+        expect:
+        WaveClient.describeFailure(ERROR) == EXPECTED
+
+        where:
+        ERROR                                                                                   | EXPECTED
+        new IOException('boom')                                                                 | 'java.io.IOException: boom'
+        new java.net.ConnectException()                                                         | 'java.net.ConnectException'
+        new java.net.ConnectException().initCause(new java.nio.channels.UnresolvedAddressException()) | 'java.net.ConnectException <- java.nio.channels.UnresolvedAddressException'
     }
 
 }

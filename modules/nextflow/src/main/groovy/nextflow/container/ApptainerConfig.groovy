@@ -79,7 +79,7 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
-        The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
+        The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20.m`).
     """)
     final Duration pullTimeout
 
@@ -88,6 +88,12 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
         The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
     """)
     final String registry
+
+    @ConfigOption
+    @Description("""
+        Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+    """)
+    final boolean resourceLimits
 
     @ConfigOption
     @Description("""
@@ -109,6 +115,7 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
         ociAutoPull = opts.ociAutoPull as boolean
         pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
         registry = opts.registry
+        resourceLimits = opts.resourceLimits as boolean
         runOptions = opts.runOptions
     }
 

@@ -1,0 +1,183 @@
+---
+title: Your first script
+description: Run, modify, and configure your first Nextflow pipeline.
+---
+
+# Your first script
+
+This guide details fundamental skills to run a basic Nextflow pipeline. It includes:
+
+- Running a pipeline
+- Modifying and resuming a pipeline
+- Configuring a pipeline parameter
+
+:::info[**Prerequisites**]
+
+You need the following:
+
+- Nextflow 26.10 or later. See [Installation][install-page] to install Nextflow, or [Updating Nextflow][updating-nextflow] to update an older version.
+
+:::
+
+## Run a pipeline
+
+You will run a basic Nextflow pipeline that splits a string of text into two files and then converts lowercase letters to uppercase letters.
+
+The pipeline is defined in the following script:
+
+```nextflow file=./snippets/your-first-script.nf
+```
+
+The script enables [static typing][static-typing-page] with the `nextflow.enable.types` feature flag.
+
+This script defines two processes:
+
+- `split`: takes a string input, splits it into 6-character chunks, and writes the chunks to files with the prefix `chunk_`.
+
+- `convert_to_upper`: takes an input file, transforms its contents to uppercase letters, and writes the uppercase text to a file with the prefix `upper_`.
+
+The script also defines a `params` block, a `workflow` block, and an `output` block:
+
+- The `params` block declares the pipeline parameters.
+
+- The `workflow` block defines how processes are connected via channels (`main:`) and which channels are published as outputs (`publish:`). In this example, the `split` process emits a collection of files, and the `flatMap` operator emits each file separately to the `convert_to_upper` process.
+
+- The `output` block defines where each output is published. In this example, the outputs from both processes are published to subdirectories (`lower` and `upper`) in the output directory (`results` by default).
+
+To run your pipeline:
+
+1. Create a new file named `main.nf` in your current directory.
+2. Copy and save the above pipeline to your new file.
+3. Run your pipeline using the following command:
+
+    ```bash
+    nextflow run main.nf
+    ```
+
+    You will see output similar to the following:
+
+    ```console
+    N E X T F L O W   ~  version 26.10.0
+
+    Launching `main.nf` [big_wegener] revision: 13a41a8946
+
+    executor >  local (3)
+    [82/457482] split (1)                   | 1 of 1 ✔
+    [2f/056a98] convert_to_upper (chunk_aa) | 2 of 2 ✔
+    ```
+
+Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a process is run as a separate task. The `split` process is run as one task and the `convert_to_upper` process is run as two tasks. The hexadecimal string, for example, `82/457482`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
+
+When the pipeline completes, you can view the output files in the `results` directory:
+
+```bash
+ls -R results/
+```
+
+You will see the published output files organized in the `lower` and `upper` subdirectories.
+
+:::tip
+Run your pipeline with `-ansi-log false` to see each task printed on a separate line:
+
+```bash
+nextflow run main.nf -ansi-log false
+```
+
+You will see output similar to the following:
+
+```console
+N E X T F L O W  ~  version 26.10.0
+Launching `main.nf` [peaceful_watson] - revision: 13a41a8946
+[43/f1f8b5] Submitted process > split (1)
+[a2/5aa4b1] Submitted process > convert_to_upper (chunk_ab)
+[30/ba7de0] Submitted process > convert_to_upper (chunk_aa)
+```
+
+:::
+
+## Modify and resume
+
+Nextflow tracks task executions in a task cache, a key-value store of previously executed tasks. The task cache is used in conjunction with the work directory to recover cached tasks. If you modify and resume your pipeline, only the processes that are changed will be re-executed. The cached results will be used for tasks that don't change.
+
+You can enable resumability using the `-resume` flag when running a pipeline. To modify and resume your pipeline:
+
+1. Open `main.nf`.
+2. Rewrite the `convert_to_upper` process as follows:
+
+    ```nextflow
+    process convert_to_upper {
+        tag "$y"
+
+        input:
+        y: Path
+
+        output:
+        file("upper_${y}")
+
+        script:
+        """
+        rev $y > upper_${y}
+        """
+    }
+    ```
+
+3. Save your changes.
+4. Run your updated pipeline using the following command:
+
+    ```bash
+    nextflow run main.nf -resume
+    ```
+
+    You will see output similar to the following:
+
+    ```console
+    N E X T F L O W   ~  version 26.10.0
+
+    Launching `main.nf` [furious_curie] revision: 5490f13c43
+
+    executor >  local (2)
+    [82/457482] split (1)                   | 1 of 1, cached: 1 ✔
+    [02/9db40b] convert_to_upper (chunk_aa) | 2 of 2 ✔
+    ```
+
+Nextflow skips the execution of the `split` process and retrieves the results from the cache. The `convert_to_upper` process is executed twice.
+
+See [Caching and resuming][cache-resume-page] for more information about Nextflow cache and resume functionality.
+
+## Pipeline parameters
+
+Parameters are the inputs of a pipeline. You declare them in the `params` block with a name, a type, and an optional default value. You can set parameters on the command line as `--<name>`. Command-line values override the default values in the main script.
+
+You can set the `str` parameter when you run the pipeline. To modify your `str` parameter:
+
+1. Run your pipeline using the following command:
+
+    ```bash
+    nextflow run main.nf --str 'Bonjour le monde'
+    ```
+
+    You will see output similar to the following:
+
+    ```console
+    N E X T F L O W   ~  version 26.10.0
+
+    Launching `main.nf` [distracted_kalam] revision: 082867d4d6
+
+    executor >  local (4)
+    [55/a3a700] split (1)                   | 1 of 1 ✔
+    [f4/af5ddd] convert_to_upper (chunk_ac) | 3 of 3 ✔
+    ```
+
+The input string is now longer and the `split` process splits it into three chunks. The `convert_to_upper` process is run three times.
+
+See [Pipeline parameters][cli-params] for more information about modifying pipeline parameters.
+
+## Next steps
+
+Your first script is a brief introduction to running pipelines, modifying and resuming pipelines, and pipeline parameters. See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
+
+[cache-resume-page]: ./cache-and-resume
+[cli-params]: ./cli#pipeline-parameters
+[install-page]: ./install
+[static-typing-page]: ./static-typing
+[updating-nextflow]: ./updating-nextflow

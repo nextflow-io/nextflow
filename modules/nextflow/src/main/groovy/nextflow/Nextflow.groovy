@@ -24,6 +24,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.exception.ExitException
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
@@ -37,6 +38,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
+import nextflow.util.RecordMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -150,6 +152,14 @@ class Nextflow {
         return result instanceof Collection ? result : [result]
     }
 
+    /**
+     * Creates a {@link RecordMap} from the given named arguments.
+     *
+     * @param props
+     */
+    static RecordMap record(Map<String,?> props) {
+        return new RecordMap(props)
+    }
 
     /**
      * Creates a {@link ArrayTuple} object with the given open array items
@@ -210,20 +220,17 @@ class Nextflow {
      * @param exitCode The exit code to be returned
      * @param message The message that will be reported in the log file (optional)
      */
-    @Deprecated
     static void exit(int exitCode, String message = null) {
-        if( session.aborted ) {
-            log.debug "Ignoring exit because execution is already aborted -- message=$message"
+        // nothing left to stop once the session is terminating (e.g. `onComplete` / `onError` handlers)
+        if( session.aborted || session.terminated ) {
+            log.warn "Ignoring `exit()` because the pipeline execution is already terminating -- exitCode=$exitCode; message=$message"
             return
         }
-
-        if ( exitCode && message ) {
+        if( exitCode && message )
             log.error message
-        }
-        else if ( message ) {
+        else if( message )
             log.info message
-        }
-        System.exit(exitCode)
+        throw new ExitException(exitCode, message)
     }
 
     /**
@@ -231,7 +238,6 @@ class Nextflow {
      *
      * @param message The message that will be reported in the log file
      */
-    @Deprecated
     static void exit( String message ) {
         exit(0, message)
     }

@@ -32,12 +32,6 @@ class MachineRequirementOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The CPU architecture for task execution (e.g., `x86_64`, `arm64`).
-    """)
-    final String arch
-
-    @ConfigOption
-    @Description("""
         The instance provisioning mode: `spot`, `ondemand`, or `spotFirst`.
     """)
     final String provisioning
@@ -48,6 +42,15 @@ class MachineRequirementOpts implements ConfigScope {
         Only used when provisioning is `spot` or `spotFirst`.
     """)
     final Integer maxSpotAttempts
+
+    @ConfigOption
+    @Description("""
+        Cost limit on the spot to on-demand fallback. With `spotFirst`, a task falls back to on-demand
+        only while on-demand costs at most this multiple of the spot price. When not set, the
+        scheduler's default for the cloud provider applies. Set to `0` to remove the limit, so tasks
+        always fall back whatever the price. Only used when provisioning is `spotFirst`.
+    """)
+    final Double onDemandCostRatio
 
     @ConfigOption
     @Description("""
@@ -116,9 +119,9 @@ class MachineRequirementOpts implements ConfigScope {
     MachineRequirementOpts() {}
 
     MachineRequirementOpts(Map opts) {
-        this.arch = opts.arch as String
         this.provisioning = opts.provisioning as String
         this.maxSpotAttempts = opts.maxSpotAttempts as Integer
+        this.onDemandCostRatio = opts.onDemandCostRatio as Double
         this.machineTypes = (opts.machineTypes ?: opts.machineFamilies) as List<String>
         this.diskType = opts.diskType as String
         this.diskThroughputMiBps = opts.diskThroughputMiBps as Integer
@@ -132,16 +135,16 @@ class MachineRequirementOpts implements ConfigScope {
         this.capacityMode = opts.capacityMode as String
     }
 
-    String getArch() {
-        return arch
-    }
-
     String getProvisioning() {
         return provisioning
     }
 
     Integer getMaxSpotAttempts() {
         return maxSpotAttempts
+    }
+
+    Double getOnDemandCostRatio() {
+        return onDemandCostRatio
     }
 
     List<String> getMachineTypes() {

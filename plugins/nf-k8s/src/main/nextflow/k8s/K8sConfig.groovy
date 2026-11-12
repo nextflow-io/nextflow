@@ -18,11 +18,8 @@ package nextflow.k8s
 
 import nextflow.k8s.client.K8sRetryConfig
 
-import java.util.concurrent.TimeUnit
-import javax.annotation.Nullable
+import org.jspecify.annotations.Nullable
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -57,8 +54,6 @@ class K8sConfig implements ConfigScope {
 
     static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
 
-    private Cache<String, ClientConfig> clientCache
-
     @ConfigOption
     @Description("""
         Automatically mount host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
@@ -67,7 +62,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Job`).
     """)
     final String computeResourceType
 
@@ -87,7 +82,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+        The interval after which the Kubernetes client configuration is refreshed (default: `50.m`).
     """)
     final Duration clientRefreshInterval
 
@@ -119,13 +114,13 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
+        The Kubernetes HTTP client request connection timeout e.g. `60.s`.
     """)
     final Duration httpConnectTimeout
 
     @ConfigOption
     @Description("""
-        The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
+        The Kubernetes HTTP client request connection read timeout e.g. `60.s`.
     """)
     final Duration httpReadTimeout
 
@@ -151,7 +146,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption(types=[List, Map])
     @Description("""
-        Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod](https://nextflow.io/docs/latest/process.html#pod) process directive.
+        Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod](https://docs.seqera.io/nextflow/reference/process#pod) process directive.
     """)
     final PodOptions pod
 
@@ -226,10 +221,7 @@ class K8sConfig implements ConfigScope {
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
         clientRefreshInterval = opts.clientRefreshInterval as Duration ?: Duration.of('50m')
-        clientCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(clientRefreshInterval.toMillis(), TimeUnit.MILLISECONDS)
-            .build()
-        computeResourceType = opts.computeResourceType
+        computeResourceType = opts.computeResourceType ?: ResourceType.Job.name()
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean
         debug = new K8sDebug(opts.debug as Map ?: Collections.emptyMap())
@@ -366,10 +358,6 @@ class K8sConfig implements ConfigScope {
     }
 
     ClientConfig getClient() {
-        return clientCache.get('client', this::getClient0)
-    }
-
-    private ClientConfig getClient0() {
         final result = client != null
                 ? clientFromNextflow(client, namespace, serviceAccount)
                 : clientDiscovery(context, namespace, serviceAccount)

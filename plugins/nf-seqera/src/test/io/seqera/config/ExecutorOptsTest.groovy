@@ -16,6 +16,7 @@
 
 package io.seqera.config
 
+import nextflow.platform.AutoLabels
 import nextflow.util.Duration
 import spock.lang.Specification
 
@@ -41,13 +42,40 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.endpoint == 'https://sched.example.com'
-        config.region == 'eu-central-1'  // default
+        config.region == null
+        config.provider == null
         config.keyPairName == null
-        config.batchFlushInterval == Duration.of('1 sec')
+        config.batchFlushInterval == Duration.of('5 sec')
+        config.httpOpts().requestTimeout() == java.time.Duration.ofSeconds(45)
+        config.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(10)
         config.machineRequirement != null
-        config.machineRequirement.arch == null
         config.machineRequirement.provisioning == null
         !config.autoLabels
+        !config.shellEnabled
+        config.fusionMode == null
+    }
+
+    def 'should validate the fusion mode' () {
+        expect:
+        new ExecutorOpts([endpoint: 'https://sched.example.com', fusionMode: 'native']).fusionMode == 'native'
+        new ExecutorOpts([endpoint: 'https://sched.example.com', fusionMode: 'wave']).fusionMode == 'wave'
+
+        when:
+        new ExecutorOpts([endpoint: 'https://sched.example.com', fusionMode: 'host'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid 'seqera.executor.fusionMode' value: 'host' - valid values: wave, native"
+    }
+
+    def 'should enable on-demand shell access when set' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            shellEnabled: true
+        ])
+
+        then:
+        config.shellEnabled
     }
 
     def 'should create config with custom region' () {
@@ -78,7 +106,6 @@ class ExecutorOptsTest extends Specification {
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
             machineRequirement: [
-                arch: 'arm64',
                 provisioning: 'spotFirst',
                 maxSpotAttempts: 3,
                 machineTypes: ['m6g', 'c6g']
@@ -87,7 +114,6 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.machineRequirement != null
-        config.machineRequirement.arch == 'arm64'
         config.machineRequirement.provisioning == 'spotFirst'
         config.machineRequirement.maxSpotAttempts == 3
         config.machineRequirement.machineTypes == ['m6g', 'c6g']
@@ -105,6 +131,55 @@ class ExecutorOptsTest extends Specification {
         config.retryOpts().delay == Duration.of('2s')
     }
 
+    def 'should bound a single attempt with the configured request timeout' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [requestTimeout: TIMEOUT]
+        ])
+
+        then:
+        config.httpOpts().requestTimeout() == EXPECTED
+
+        where:
+        TIMEOUT                 | EXPECTED
+        '5 sec'                 | java.time.Duration.ofSeconds(5)
+        Duration.of('5 sec')    | java.time.Duration.ofSeconds(5)
+        // zero means "wait indefinitely"; the Duration form is the one Groovy truthiness
+        // would silently swallow, since Duration.asBoolean() is false at zero
+        '0 sec'                 | null
+        Duration.of('0 sec')    | null
+    }
+
+    def 'should reject a connect timeout that bounds nothing' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [connectTimeout: TIMEOUT]
+        ])
+
+        then: 'the failure names the option, instead of surfacing from the client builder'
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'seqera.executor.httpClient.connectTimeout' must be greater than zero")
+
+        where:
+        // zero is unbounded for requestTimeout but meaningless here, so it must not be
+        // silently accepted and handed to a client that rejects it
+        TIMEOUT << ['0 sec', Duration.of('0 sec')]
+    }
+
+    def 'should bound the connect phase separately from the response' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [connectTimeout: '3 sec', requestTimeout: '5 sec']
+        ])
+
+        then: 'the two bound different phases and neither displaces the other'
+        config.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(3)
+        config.httpOpts().requestTimeout() == java.time.Duration.ofSeconds(5)
+    }
+
     def 'should create config with all settings' () {
         when:
         def config = new ExecutorOpts([
@@ -112,8 +187,8 @@ class ExecutorOptsTest extends Specification {
             region: 'eu-west-1',
             keyPairName: 'my-key',
             batchFlushInterval: '2 sec',
+            httpClient: [requestTimeout: '5 sec'],
             machineRequirement: [
-                arch: 'x86_64',
                 provisioning: 'spot'
             ]
         ])
@@ -123,47 +198,11 @@ class ExecutorOptsTest extends Specification {
         config.region == 'eu-west-1'
         config.keyPairName == 'my-key'
         config.batchFlushInterval == Duration.of('2 sec')
-        config.machineRequirement.arch == 'x86_64'
+        config.httpOpts().requestTimeout() == java.time.Duration.ofSeconds(5)
         config.machineRequirement.provisioning == 'spot'
     }
 
-    def 'should create config with labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            labels: [
-                project: 'genomics',
-                team: 'research',
-                costCenter: 'CC-1234'
-            ]
-        ])
-
-        then:
-        config.labels == [project: 'genomics', team: 'research', costCenter: 'CC-1234']
-    }
-
-    def 'should handle null labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com'
-        ])
-
-        then:
-        config.labels == null
-    }
-
-    def 'should handle empty labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            labels: [:]
-        ])
-
-        then:
-        config.labels == [:]
-    }
-
-    def 'should enable auto labels' () {
+    def 'should parse the auto labels with the runtime helper' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
@@ -171,7 +210,21 @@ class ExecutorOptsTest extends Specification {
         ])
 
         then:
-        config.autoLabels
+        config.autoLabels == AutoLabels.VALID_NAMES
+    }
+
+    def 'should reject unknown auto labels name' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ['runName', 'foo']
+        ])
+
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains("'seqera.executor.autoLabels'")
+        err.message.contains('foo')
+        err.message.contains('valid names')
     }
 
     def 'should create config with prediction model' () {
@@ -193,6 +246,28 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.predictionModel == null
+    }
+
+    def 'should create config with schedulingRequirement.maxCpusPerUser' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            schedulingRequirement: [maxCpusPerUser: 16]
+        ])
+
+        then:
+        config.schedulingRequirement.maxCpusPerUser == 16
+    }
+
+    def 'should default schedulingRequirement.maxCpusPerUser to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.schedulingRequirement != null
+        config.schedulingRequirement.maxCpusPerUser == null
     }
 
     def 'should create config with taskEnvironment' () {
@@ -227,17 +302,104 @@ class ExecutorOptsTest extends Specification {
         config.taskEnvironment == [:]
     }
 
-    def 'should reject invalid prediction model' () {
+    def 'should create config with providerConfig' () {
         when:
-        new ExecutorOpts([
+        def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
-            predictionModel: 'invalid'
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
         ])
 
         then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("Invalid prediction model 'invalid'")
-        e.message.contains('qr/v1')
+        config.providerConfig == [subnetId: 'subnet-1', securityGroup: 'sg-2']
     }
+
+    def 'should handle null providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.providerConfig == null
+    }
+
+    def 'should create config with computeEnvId' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            computeEnvId: 'ce-12345'
+        ])
+
+        then:
+        config.computeEnvId == 'ce-12345'
+    }
+
+    def 'should default computeEnvId to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.computeEnvId == null
+    }
+
+    def 'should create config with provider' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws'
+        ])
+
+        then:
+        config.provider == 'aws'
+    }
+
+    def 'should default provider to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.provider == null
+    }
+
+    def 'should create config with provider and region' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            region: 'us-west-2'
+        ])
+
+        then:
+        config.provider == 'aws'
+        config.region == 'us-west-2'
+    }
+
+    def 'should create config with strategy' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            strategy: 'vm'
+        ])
+
+        then:
+        config.provider == 'aws'
+        config.strategy == 'vm'
+    }
+
+    def 'should default strategy to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.strategy == null
+    }
+
 
 }

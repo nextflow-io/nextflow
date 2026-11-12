@@ -14,9 +14,9 @@ $NXF_RUN | tee stdout
 < stdout grep 'memory: 1 GB'
 < stdout grep 'proc: printVars'
 < stdout grep 'exec: local'
-< stdout grep 'indx: 1'
-< stdout grep 'indx: 2'
-< stdout grep 'indx: 3'
+< stdout grep 'index: 1'
+< stdout grep 'index: 2'
+< stdout grep 'index: 3'
 
 
 #
@@ -33,6 +33,6 @@ $NXF_RUN -resume | tee stdout
 < stdout grep 'memory: 1 GB'
 < stdout grep 'proc: printVars'
 < stdout grep 'exec: local'
-< stdout grep 'indx: 1'
-< stdout grep 'indx: 2'
-< stdout grep 'indx: 3'
+< stdout grep 'index: 1'
+< stdout grep 'index: 2'
+< stdout grep 'index: 3'

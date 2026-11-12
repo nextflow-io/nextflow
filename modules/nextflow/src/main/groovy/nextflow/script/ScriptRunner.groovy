@@ -28,6 +28,7 @@ import nextflow.Session
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.exception.ExitException
 import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
@@ -135,8 +136,17 @@ class ScriptRunner {
             // shutdown session
             shutdown()
         }
+        catch( ExitException e ) {
+            // the script requested to stop the execution via `exit()`
+            log.debug "Exit requested by the pipeline script -- exitCode=${e.exitCode}; message=${e.message ?: '-'}"
+            if( e.exitCode )
+                abort(e)
+            else
+                shutdown()
+            throw e
+        }
         catch (Throwable e) {
-            session.abort(e)
+            abort(e)
             throw e
         }
 
@@ -238,6 +248,13 @@ class ScriptRunner {
         }
         log.debug "> Awaiting termination "
         session.await()
+    }
+
+    protected void abort(Throwable e) {
+        session.abort(e)
+        // the session may have been aborted already by another thread, which may still be
+        // running the observers completion handlers - wait for it before the JVM exits
+        session.awaitShutdown()
     }
 
     protected shutdown() {

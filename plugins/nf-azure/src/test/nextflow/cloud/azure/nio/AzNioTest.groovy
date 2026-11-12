@@ -634,8 +634,6 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucketName)
     }
 
-    // test fails on GHA, likely due to concurrent execution
-    @IgnoreIf({ System.getenv('GITHUB_ACTIONS') })
     def 'should list root directory' () {
         given:
         def bucketName1 = createBucket()
@@ -659,7 +657,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         when:
         Set<String> dirs = []
         Set<String> files = []
-        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+        def visitor = new SimpleFileVisitor<Path>() {
 
             @Override
             FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
@@ -676,11 +674,15 @@ class AzNioTest extends Specification implements AzBaseSpec {
                 return FileVisitResult.CONTINUE;
             }
 
-        })
+        }
+        // walk each container created by this test rather than the whole account from the root:
+        // walking the root reads the attributes of every container, which fails when a concurrent
+        // test run deletes its own containers meanwhile, and it's slow when the account holds other data
+        for( String bucket : [bucketName1, bucketName2, bucketName3] )
+            Files.walkFileTree(Paths.get(new URI("az://$bucket/")), visitor)
         then:
         println dirs
         println files
-        dirs.contains('/')
         dirs.contains("/$bucketName1" as String)
         dirs.contains("/$bucketName2" as String)
         dirs.contains("/$bucketName2/foo" as String)
@@ -942,6 +944,29 @@ class AzNioTest extends Specification implements AzBaseSpec {
 
         cleanup:
         deleteBucket(bucket1)
+    }
+
+    def 'should detect a virtual directory without a trailing slash' () {
+        given:
+        def bucketName = createBucket()
+
+        when: 'a blob exists under a prefix, without any explicit directory marker'
+        def containerClient = storageClient.getBlobContainerClient(bucketName)
+        containerClient.getBlobClient("output/file.txt").upload(new ByteArrayInputStream("hello".bytes), "hello".length())
+
+        and: 'the prefix is referenced without a trailing slash'
+        def path = "az://$bucketName/output"
+        def azPath = Path.of(new URI(path))
+        def nioPath = Path.of(new URI(path))
+        def file = Path.of(new URI("az://$bucketName/output/file.txt"))
+
+        then: 'it is recognised as a directory (via both entry points) while the blob is a file'
+        azPath.isDirectory()        // the Groovy call nf-schema makes, via the FilesEx extension
+        Files.isDirectory(nioPath)  // the plain NIO call
+        !Files.isDirectory(file)
+
+        cleanup:
+        deleteBucket(bucketName)
     }
 
 }

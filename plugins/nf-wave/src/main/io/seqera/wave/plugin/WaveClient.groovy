@@ -21,7 +21,9 @@ import static nextflow.util.SysHelper.*
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -29,6 +31,7 @@ import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -42,6 +45,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
@@ -62,6 +66,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.ProxyConfig
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -79,6 +84,8 @@ class WaveClient {
         final SubmitContainerTokenResponse response
         final Instant createdAt
         int iteration
+        /** the container was found ready, therefore its status is not checked anymore */
+        volatile boolean ready
     }
 
     final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
@@ -116,6 +123,9 @@ class WaveClient {
 
     final private RateLimiter limiter
 
+    /** limits the requests ahead to half the rate, so that they do not slow down the task requests */
+    final private RateLimiter prefetchLimiter
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
@@ -129,6 +139,7 @@ class WaveClient {
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         this.limiter = RateLimiter.create( config.httpOpts().maxRate().rate  )
+        this.prefetchLimiter = RateLimiter.create( limiter.rate / 2 )
         // create cache
         this.cache = CacheBuilder<String, Handle>
             .newBuilder()
@@ -149,8 +160,7 @@ class WaveClient {
      */
     protected HxClient newHttpClient() {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
-        return HxClient.newBuilder()
-                .httpClient(newHttpClient0())
+        return newHttpClientBuilder()
                 .bearerToken(tower.accessToken)
                 .refreshToken(tower.refreshToken)
                 .refreshTokenUrl(refreshUrl)
@@ -160,20 +170,27 @@ class WaveClient {
     }
 
     /**
-     * Creates the underlying Java HTTP client with common configuration.
+     * Creates an {@link HxClient} builder with the common HTTP client configuration, including
+     * the forward proxy settings which are also inherited by the internal token-refresh client.
      *
-     * @return A configured {@link HttpClient} instance
+     * @return A pre-configured {@link HxClient.Builder}
      */
-    protected HttpClient newHttpClient0() {
-        final builder = HttpClient.newBuilder()
+    protected HxClient.Builder newHttpClientBuilder() {
+        final builder = HxClient.newBuilder()
+                // seed the retry condition first: config() replaces the config builder (and its
+                // proxy/auth), so it must precede withProxyConfig() and the auth settings below
+                .config( HxConfig.newBuilder()
+                        .retryCondition({ Object t -> retryCondition((Throwable) t) } as Predicate)
+                        .build() )
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(config.httpOpts().connectTimeout())
+                // route through the forward proxy when configured
+                .withProxyConfig(ProxyConfig.proxyConfig())
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
-        // build and return the new client
-        return builder.build()
+        return builder
     }
 
     /**
@@ -188,10 +205,19 @@ class WaveClient {
      */
     @Memoized
     protected HxClient plainHttpClient() {
-        return HxClient.newBuilder()
-                .httpClient(newHttpClient0())
+        return newHttpClientBuilder()
                 .retryConfig(config.retryOpts())
                 .build()
+    }
+
+    /**
+     * Retry-on-exception rule for the Wave/Tower HTTP clients. Retries the httpx default network
+     * conditions, plus a request timeout raised after the request was sent - which the httpx
+     * default deliberately excludes (see {@link HxConfig#defaultRetryCondition}) - so a single
+     * transient stall does not fail an otherwise recoverable request.
+     */
+    protected static boolean retryCondition(Throwable t) {
+        return HxConfig.defaultRetryCondition(t) || t instanceof HttpTimeoutException
     }
 
     WaveConfig config() { return config }
@@ -252,6 +278,7 @@ class WaveClient {
                 format: assets.singularity ? 'sif' : null,
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
+                soci: config.sociMode() && !assets.singularity,
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
                 buildCompression: config.buildCompression(),
@@ -281,6 +308,7 @@ class WaveClient {
                 freeze: config.freezeMode(),
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
+                soci: config.sociMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
                 buildCompression: config.buildCompression(),
@@ -292,6 +320,8 @@ class WaveClient {
     private void checkLimiter() {
         final ts = System.currentTimeMillis()
         try {
+            if( WavePrefetchObserver.isPrefetchThread() )
+                prefetchLimiter.acquire()
             limiter.acquire()
         } finally {
             final delta = System.currentTimeMillis()-ts
@@ -333,8 +363,23 @@ class WaveClient {
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
         }
         catch (IOException e) {
-            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint - cause: ${describeFailure(e)}", e)
         }
+    }
+
+    /**
+     * Describe an I/O failure including its exception type and cause chain. The JDK HTTP client
+     * raises connection and DNS failures as a {@link java.net.ConnectException} with a null message,
+     * so the message alone does not tell what went wrong.
+     */
+    static protected String describeFailure(Throwable error) {
+        final result = new ArrayList<String>()
+        for( Throwable t=error; t!=null && result.size()<3; t=t.cause ) {
+            result.add(t.message ? "${t.class.name}: ${t.message}".toString() : t.class.name)
+            if( t.cause==t )
+                break
+        }
+        return result.join(' <- ')
     }
 
     protected ContainerStatusResponse jsonToContainerStatusResponse(String body) {
@@ -383,15 +428,17 @@ class WaveClient {
     }
 
     protected URL fusionAmd64(boolean snapshots) {
-        return snapshots
-                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
-                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+        final url = snapshots
+                ? FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL
+                : FusionConfig.DEFAULT_FUSION_AMD64_URL
+        return URI.create(fusion.targetFusionUrl(url)).toURL()
     }
 
     protected URL fusionArm64(boolean snapshots) {
-        return snapshots
-            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
-            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
+        final url = snapshots
+            ? FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL
+            : FusionConfig.DEFAULT_FUSION_ARM64_URL
+        return URI.create(fusion.targetFusionUrl(url)).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
@@ -401,20 +448,34 @@ class WaveClient {
             : new URL(DEFAULT_S5CMD_AMD64_URL)
     }
 
+    protected static URI replaceFusionArch(URI uri, String platform) {
+        if( uri.scheme == 'file' )
+            return uri
+        final isArm = platform.tokenize('/')?.contains('arm64')
+        final targetArch = isArm ? 'arm64' : 'amd64'
+        final original = uri.toString()
+        final replaced = original.replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
+        return replaced != original ? new URI(replaced) : uri
+    }
+
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
-        final urls = new ArrayList<URL>(config.containerConfigUrl())
+        final uris = new ArrayList<URI>(config.containerConfigUrl().collect { it.toURI() })
+        final platforms = platform ? platform.tokenize(',') : List.of(DEFAULT_DOCKER_PLATFORM)
         if( fusion.enabled() ) {
-            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
-            urls.add(fusionUrl)
+            final customUri = fusion.containerConfigURI()
+            for( String p : platforms ) {
+                final fusionUri = customUri ? replaceFusionArch(customUri, p.trim()) : defaultFusionUrl(p.trim()).toURI()
+                uris.add(fusionUri)
+            }
         }
         if( awsFargate ) {
             final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
-            urls.add(s5cmdUrl)
+            uris.add(s5cmdUrl.toURI())
         }
-        if( !urls )
+        if( !uris )
             return null
         def result = new ContainerConfig()
-        for( URL it : urls ) {
+        for( URI it : uris ) {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
@@ -422,7 +483,27 @@ class WaveClient {
     }
 
     @Memoized
-    synchronized protected ContainerConfig fetchContainerConfig(URL configUrl) {
+    synchronized protected ContainerConfig fetchContainerConfig(URI configURI) {
+        log.debug "Wave fetch container config: $configURI"
+        final scheme = configURI.scheme
+        if( scheme == 'http' || scheme == 'https' )
+            return fetchContainerConfig(configURI.toURL())
+        if( scheme == 'file' )
+            return fetchContainerConfig(Paths.get(configURI))
+        throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
+    }
+
+    protected ContainerConfig fetchContainerConfig(Path configPath) {
+        log.debug "Wave read local container config: $configPath"
+        try {
+            return jsonToContainerConfig(configPath.text)
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot read Fusion container config from $configPath", e)
+        }
+    }
+
+    protected ContainerConfig fetchContainerConfig(URL configUrl) {
         log.debug "Wave request container config: $configUrl"
         final req = HttpRequest.newBuilder()
                 .uri(configUrl.toURI())
@@ -520,7 +601,7 @@ class WaveClient {
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -580,11 +661,6 @@ class WaveClient {
         final projectRes = config.bundleProjectResources() && session.binDir
                     ? projectResources(session.binDir)
                     : null
-
-        /*
-         * the container platform to be used
-         */
-        final platform = dockerArch
 
         // check is a valid container image
         WaveAssets.validateContainerName(containerImage)
@@ -685,6 +761,12 @@ class WaveClient {
         final handle = responses.get(key)
         if( !handle )
             throw new IllegalStateException("Unable to find any container with key: $key")
+        if( handle.ready )
+            return true
+        return handle.ready = checkContainerReady(handle)
+    }
+
+    protected boolean checkContainerReady(Handle handle) {
         final resp = handle.response
         if( resp.requestId ) {
             return resp.succeeded

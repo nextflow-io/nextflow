@@ -1,0 +1,73 @@
+---
+title: Nextflow
+description: Create scalable, portable, and reproducible workflows using Nextflow's dataflow programming model.
+---
+
+# Nextflow
+
+*"Dataflow variables are spectacularly expressive in concurrent programming"*
+<br />[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
+
+<div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+    <a href="https://github.com/nextflow-io/nextflow/actions/workflows/build.yml?query=branch%3Amaster+event%3Apush" style={{ display: "block", lineHeight: 0 }}>
+        <img src="https://img.shields.io/github/actions/workflow/status/nextflow-io/nextflow/build.yml?branch=master&label=Nextflow%20CI&colorB=58bd9f&style=popout" alt="Nextflow CI" style={{ display: "block", margin: 0, padding: 0, height: "20px" }} />
+    </a>
+    <a href="https://twitter.com/nextflowio" style={{ display: "block", lineHeight: 0 }}>
+        <img src="https://img.shields.io/twitter/url/https/nextflowio.svg?colorB=58bd9f&&label=%40nextflow&style=popout" alt="Nextflow Twitter" style={{ display: "block", margin: 0, padding: 0, height: "20px" }} />
+    </a>
+    <a href="https://www.nature.com/articles/nbt.3820" style={{ display: "block", lineHeight: 0 }}>
+        <img src="https://img.shields.io/badge/Published-Nature%20Biotechnology-26af64.svg?colorB=58bd9f&style=popout" alt="Nextflow publication" style={{ display: "block", margin: 0, padding: 0, height: "20px" }} />
+    </a>
+    <a href="http://bioconda.github.io/recipes/nextflow/README.html" style={{ display: "block", lineHeight: 0 }}>
+        <img src="https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=58bd9f&style=popout" alt="Install with Bioconda" style={{ display: "block", margin: 0, padding: 0, height: "20px" }} />
+    </a>
+    <a href="https://github.com/nextflow-io/nextflow/blob/master/COPYING" style={{ display: "block", lineHeight: 0 }}>
+        <img src="https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout" alt="Nextflow license" style={{ display: "block", margin: 0, padding: 0, height: "20px" }} />
+    </a>
+</div>
+
+<br />
+
+Many scientific and data-intensive analyses are a chain of command-line tools that pass data to each other as files, rather than through databases or APIs. These pipelines run over thousands of inputs, each step can take hours, and each tool needs specific software versions. Running that reliably means moving files to where the work runs, splitting the work into parallel jobs, submitting them to a cluster or cloud, retrying failures, and keeping track of what has already finished. Nextflow handles this for you. You write each step in any language, and Nextflow stages each task's input files into its own working directory, whether they are stored locally or in cloud object storage. It runs every file through the pipeline in parallel, can give each task its own container, and runs the same pipeline on a laptop, an HPC cluster, or the cloud with only a configuration change. There is no server to deploy, and if a run fails, `-resume` picks up where it stopped.
+
+Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. Its dataflow programming model lets you describe how data moves between steps, and Nextflow works out what can run in parallel. As well as containers, it supports package managers such as Conda and Spack for managing software.
+
+## Get started
+
+To get started with Nextflow:
+
+1. See the Nextflow [overview][overview-page] to learn key concepts
+2. Download and [install][install-page] Nextflow
+3. Set up an [environment][devenv-page] with the [Nextflow VS Code extension][devenv-nextflow]
+4. Run [your first script][your-first-script]
+
+To continue learning about Nextflow, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you. Seqera, the company that develops Nextflow, also runs a variety of training events. See [Seqera Events](https://seqera.io/events/) for more information.
+
+## Community
+
+You can post questions in the [Nextflow community forum](https://community.seqera.io) or the [Nextflow Slack](https://www.nextflow.io/slack-invite.html). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
+
+The Nextflow community is highly active with regular community meetings, events, a podcast, and more. You can view this material on the [Nextflow](https://www.youtube.com/@Nextflow) YouTube channel.
+
+The [nf-core](https://nf-co.re/) project is a community effort aggregating high-quality Nextflow workflows that can be used by everyone.
+
+## Contributing
+
+Contributions to Nextflow are welcome. See [Contributing][contributing-page] for details.
+
+## License
+
+Nextflow is released under the Apache 2.0 license. Nextflow is a [registered trademark](https://github.com/nextflow-io/trademark).
+
+## Citations
+
+If you use Nextflow in your work, please cite:
+
+- P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319 (2017) doi:[10.1038/nbt.3820](http://www.nature.com/nbt/journal/v35/n4/full/nbt.3820.html)
+
+[contributing-page]: ./developer
+[overview-page]: ./overview
+[install-page]: ./install
+[devenv-page]: ./developer-env
+[devenv-nextflow]: ./developer-env#nextflow
+[your-first-script]: ./your-first-script

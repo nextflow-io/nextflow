@@ -24,12 +24,18 @@ import nextflow.trace.TraceHelper
 
 @ScopeName("report")
 @Description("""
-    The `report` scope allows you to configure the workflow [execution report](https://nextflow.io/docs/latest/tracing.html#execution-report).
+    The `report` scope allows you to configure the workflow [execution report](https://docs.seqera.io/nextflow/reports#execution-report).
 """)
 @CompileStatic
 class ReportConfig implements ConfigScope {
 
     static final int DEF_MAX_TASKS = 10_000
+
+    @ConfigOption
+    @Description("""
+        The directory where the report file should be saved, relative to the workflow output directory.
+    """)
+    final String directory
 
     @ConfigOption
     @Description("""
@@ -58,6 +64,7 @@ class ReportConfig implements ConfigScope {
     ReportConfig() {}
 
     ReportConfig(Map opts) {
+        directory = opts.directory
         enabled = opts.enabled as boolean
         file = opts.file ?: defaultFileName()
         maxTasks = opts.maxTasks != null ? opts.maxTasks as int : DEF_MAX_TASKS

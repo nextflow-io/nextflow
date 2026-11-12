@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.script.types.Record
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -70,7 +71,7 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
             args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
@@ -210,10 +211,13 @@ class ScriptBinding extends WorkflowBinding {
     /**
      * Implements immutable params map
      */
+    @Slf4j
     @CompileStatic
-    static class ParamsMap implements Map<String,Object> {
+    static class ParamsMap implements Record, Map<String,Object> {
 
         private List<String> scriptAssignment = []
+
+        private Map<String,Object> plainValues
 
         @Delegate
         private Map<String,Object> target
@@ -236,6 +240,26 @@ class ScriptBinding extends WorkflowBinding {
 
         ParamsMap copyWith(Map<String,?> overrides) {
             return new ParamsMap(this, overrides)
+        }
+
+        /**
+         * Set the plain values of the params declared in the params
+         * block (see {@link ParamsHelper#resolvePlainParams}).
+         *
+         * @param values
+         */
+        void setPlainValues(Map<String,Object> values) {
+            plainValues = values
+        }
+
+        /**
+         * Get the params with each dataflow value of a declared param
+         * (e.g. a {@code Channel<E>} param, or a field of a record param)
+         * replaced by the plain value it was resolved from, so that the
+         * params can be serialized before the dataflow network has started.
+         */
+        Map<String,Object> toPlainMap() {
+            return plainValues ? target + plainValues : this
         }
 
         @Override

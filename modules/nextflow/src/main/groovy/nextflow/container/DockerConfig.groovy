@@ -34,6 +34,12 @@ class DockerConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
+        Use the `--cpus` flag to limit CPU usage instead of `--cpu-shares` (default: `false`).
+    """)
+    final boolean cpuLimits
+
+    @ConfigOption
+    @Description("""
         Enable Docker execution (default: `false`).
     """)
     boolean enabled
@@ -125,6 +131,7 @@ class DockerConfig implements ConfigScope, ContainerConfig {
     DockerConfig() {}
 
     DockerConfig(Map opts) {
+        cpuLimits = opts.cpuLimits as boolean
         enabled = opts.enabled as boolean
         engineOptions = opts.engineOptions
         envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)

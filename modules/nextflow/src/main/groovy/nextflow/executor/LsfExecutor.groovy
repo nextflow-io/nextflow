@@ -175,11 +175,11 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             }
         }
 
-        new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n");
+        throw new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n")
     }
 
     @Override
-    protected List<String> getKillCommand() { ['bkill'] }
+    protected List<String> getKillCommand() { ['bkill', '-d'] }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {

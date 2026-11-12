@@ -108,7 +108,7 @@ docker {
 ## Resources
 
 - [Wave Documentation](https://docs.seqera.io/wave)
-- [Wave Integration Guide](https://nextflow.io/docs/latest/wave.html)
+- [Wave Integration Guide](https://docs.seqera.io/nextflow/wave)
 
 ## License
 

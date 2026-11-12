@@ -63,7 +63,7 @@ class CondaConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The amount of time to wait for the Conda environment to be created before failing (default: `20 min`).
+        The amount of time to wait for the Conda environment to be created before failing (default: `20.m`).
     """)
     final Duration createTimeout
 

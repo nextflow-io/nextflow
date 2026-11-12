@@ -20,7 +20,11 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
+import nextflow.Session
+import nextflow.plugin.extension.Function
+import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
 
@@ -61,5 +65,18 @@ class PluginExtensionProviderTest extends Specification {
         result.val == 1
         result.val == 4
         result.val == 9
+    }
+
+    static class ChannelFunctions extends PluginExtensionPoint {
+        @Override protected void init(Session session) {}
+        @Function DataflowWriteChannel fromFoo(String value) { null }
+        @Function DataflowWriteChannel mapFoo(DataflowWriteChannel source) { null }
+    }
+
+    def 'should not detect channel functions as factories or operators' () {
+        expect:
+        PluginExtensionProvider.getDeclaredFactoryExtensionMethods0(ChannelFunctions).isEmpty()
+        PluginExtensionProvider.getDeclaredOperatorExtensionMethods0(ChannelFunctions).isEmpty()
+        PluginExtensionProvider.getDeclaredFunctionsExtensionMethods0(ChannelFunctions) == ['fromFoo', 'mapFoo'] as Set
     }
 }

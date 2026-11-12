@@ -199,14 +199,16 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return KryoHelper.serialize(map)
         }
         catch( Exception e ) {
-            log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
+            log.warn "Cannot serialize context map. Cause: ${e} -- Resume will not work on this process"
             log.debug "Failed to serialize delegate map items: ${dumpMap(holder)}", e
             return null
         }
     }
 
     static TaskContext deserialize(TaskProcessor processor, byte[] buffer) {
-        def map = (Map)KryoHelper.deserialize(buffer)
+        // use the script class loader so that Kryo can resolve user-defined types
+        final loader = processor.ownerScript?.getClass()?.getClassLoader()
+        final map = (Map)KryoHelper.deserialize(buffer, loader)
         new TaskContext(processor, map)
     }
 

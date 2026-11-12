@@ -17,6 +17,7 @@
 package nextflow.lineage
 
 import groovy.transform.CompileStatic
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.DataPath
 import nextflow.lineage.model.v1beta1.FileOutput
@@ -36,6 +37,7 @@ import nextflow.lineage.model.v1beta1.WorkflowRun
 class LinPropertyValidator {
 
     private static final List<Class> LIN_MODEL_CLASSES = [
+        AgentRun,
         Checksum,
         DataPath,
         FileOutput,

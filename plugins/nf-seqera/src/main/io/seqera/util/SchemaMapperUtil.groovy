@@ -18,14 +18,15 @@ package io.seqera.util
 
 import groovy.transform.CompileStatic
 import io.seqera.config.MachineRequirementOpts
+import io.seqera.config.SchedulingRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.DiskRequirement
 import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.MachineRequirement
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
+import io.seqera.sched.api.schema.v1a1.SchedulingRequirement
 import nextflow.cloud.types.PriceModel
-import nextflow.fusion.FusionConfig
 import nextflow.util.MemoryUnit
 
 /**
@@ -63,60 +64,88 @@ class SchemaMapperUtil {
             return null
         final diskReq = toDiskRequirement(opts.diskSize, opts)
         final capacityMode = toEcsCapacityMode(opts.capacityMode)
-        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode)
+        final costRatio = toOnDemandCostRatio(opts)
+        if (!opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode && costRatio == null)
             return null
         new MachineRequirement()
-            .arch(opts.arch)
             .provisioning(toProvisioningModel(opts.provisioning))
             .maxSpotAttempts(opts.maxSpotAttempts)
+            .onDemandCostRatio(costRatio)
             .machineTypes(opts.machineTypes)
             .disk(diskReq)
             .capacityMode(capacityMode)
     }
 
     /**
+     * Maps SchedulingRequirementOpts to SchedulingRequirement API object.
+     *
+     * @param opts the config options (can be null)
+     * @return the SchedulingRequirement API object, or null if opts is null or has no settings
+     */
+    static SchedulingRequirement toSchedulingRequirement(SchedulingRequirementOpts opts) {
+        if (!opts || opts.maxCpusPerUser == null)
+            return null
+        new SchedulingRequirement()
+            .maxCpusPerUser(opts.maxCpusPerUser)
+    }
+
+    /**
      * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch.
-     * Task arch overrides config arch if specified.
      *
      * @param opts the config options (can be null)
      * @param taskArch the task container platform/arch (can be null)
      * @return the MachineRequirement API object, or null if no settings
      */
     static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch) {
-        return toMachineRequirement(opts, taskArch, null, false)
+        return toMachineRequirement(opts, taskArch, null, false, opts?.maxSpotAttempts ?: 0)
     }
 
     /**
      * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch, disk, and snapshots.
-     * Task arch overrides config arch if specified.
      *
      * @param opts the config options (can be null)
      * @param taskArch the task container platform/arch (can be null)
      * @param diskSize the disk size from task config (can be null)
      * @param snapshotEnabled whether Fusion snapshots are enabled
+     * @param spotAttempts the number of spot retry attempts, {@code 0} when not applicable
      * @return the MachineRequirement API object, or null if no settings
      */
-    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize, boolean snapshotEnabled) {
-        final arch = taskArch ?: opts?.arch
+    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize, boolean snapshotEnabled, int spotAttempts) {
+        final arch = taskArch
         final provisioning = opts?.provisioning
-        final maxSpotAttempts = opts?.maxSpotAttempts
-            ?: (snapshotEnabled ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : null)
+        final maxSpotAttempts = spotAttempts > 0 ? spotAttempts : null
         final machineTypes = opts?.machineTypes
         // task disk overrides config disk
         final effectiveDiskSize = diskSize ?: opts?.diskSize
         final diskReq = toDiskRequirement(effectiveDiskSize, opts)
         final capacityMode = toEcsCapacityMode(opts?.capacityMode)
+        final costRatio = toOnDemandCostRatio(opts)
         // return null if no settings
-        if (!arch && !provisioning && !maxSpotAttempts && !machineTypes && !diskReq && !snapshotEnabled && !capacityMode)
+        if (!arch && !provisioning && !maxSpotAttempts && !machineTypes && !diskReq && !snapshotEnabled && !capacityMode && costRatio == null)
             return null
         new MachineRequirement()
             .arch(arch)
             .provisioning(toProvisioningModel(provisioning))
             .maxSpotAttempts(maxSpotAttempts)
+            .onDemandCostRatio(costRatio)
             .machineTypes(machineTypes)
             .disk(diskReq)
             .snapshotEnabled(snapshotEnabled ? Boolean.TRUE : null)
             .capacityMode(capacityMode)
+    }
+
+    /**
+     * Validates the spot to on-demand fallback cost ratio. Compared against null rather than by
+     * truthiness, because an explicit {@code 0} (no limit) is a real value that must be sent.
+     *
+     * @param opts the config options (can be null)
+     * @return the ratio, or null when not set
+     */
+    static Double toOnDemandCostRatio(MachineRequirementOpts opts) {
+        final ratio = opts?.onDemandCostRatio
+        if (ratio != null && ratio < 0)
+            throw new IllegalArgumentException("Invalid onDemandCostRatio value: ${ratio} -- the value must be zero or a positive number")
+        return ratio
     }
 
     /**

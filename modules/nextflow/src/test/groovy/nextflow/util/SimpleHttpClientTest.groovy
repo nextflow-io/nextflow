@@ -24,11 +24,13 @@ import spock.lang.Timeout
 
 class SimpleHttpClientTest extends Specification{
 
-
     def 'should raise a ConnectException' () {
 
         given:
-        def url = "http://localhost:3100"
+        // a bound socket that never listens holds the port, so connecting to it is refused
+        def socket = new Socket()
+        socket.bind(new InetSocketAddress(InetAddress.loopbackAddress, 0))
+        def url = "http://${InetAddress.loopbackAddress.hostAddress}:${socket.localPort}"
         def httpClient = new SimpleHttpClient()
 
         when:
@@ -39,6 +41,8 @@ class SimpleHttpClientTest extends Specification{
         httpClient.getResponse() == null
         httpClient.getResponseCode() == -1
 
+        cleanup:
+        socket?.close()
     }
 
     def 'should return a HTTP 404 error' () {
@@ -70,11 +74,11 @@ class SimpleHttpClientTest extends Specification{
     def 'raise exception when host not available'() {
 
         given:
-        def dummyUrl = "http://foo.bar"
         def httpClient = new SimpleHttpClient()
 
         when:
-        httpClient.sendHttpMessage(dummyUrl, '{"test_id": "2"}')
+        // the .invalid TLD is reserved by RFC 6761 and never resolves
+        httpClient.sendHttpMessage('http://nxf-test.invalid', '{"test_id": "2"}')
 
         then:
         thrown(UnknownHostException)
@@ -113,8 +117,9 @@ class SimpleHttpClientTest extends Specification{
         def PAYLOAD = '{"hello":"world!"}'
         def RESULT = '{"status":"OK"}'
         def TOKEN = 'my:secret'
-        def PORT = 9900
-        def ENDPOINT = "http://localhost:$PORT/foo"
+        // ephemeral port - see the note in ConfigParserV1Test: a fixed port races the other
+        // HTTP-serving tests, including ones in modules whose test tasks run concurrently
+        def PORT = 0
         def AGENT = 'NEXTFLOW/1.0'
 
         def expectedPayload
@@ -138,6 +143,8 @@ class SimpleHttpClientTest extends Specification{
             }
         });
         server.start()
+        // resolved AFTER start: with PORT=0 the real port is only known once bound
+        def ENDPOINT = "http://localhost:${server.address.port}/foo".toString()
 
         when:
         def client = new SimpleHttpClient()

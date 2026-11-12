@@ -18,14 +18,17 @@ package nextflow.file
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Semaphore
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
-import spock.lang.Ignore
 import spock.lang.Specification
+import spock.lang.Timeout
+import spock.util.environment.RestoreSystemProperties
 import test.TestHelper
 /**
  *
@@ -88,46 +91,56 @@ class FilePorterTest extends Specification {
         folder?.deleteDir()
     }
 
-    @Ignore
-    def 'should not hang' () {
+    @Timeout(30)
+    @RestoreSystemProperties
+    def 'should not hang when concurrent batches share files and exceed the transfer pool' () {
         given:
         def RANGE = (0..19)
-        System.setProperty('filePorter.debugDelay', '5000')
+        System.setProperty('filePorter.debugDelay', '100')
         def folder = Files.createTempDirectory('test')
         def session = new Session(workDir: folder, threadPool: [FileTransfer: [maxThreads: 2]])
 
-        List<Path> foreign1 = RANGE.collect { TestHelper.createInMemTempFile("hola-${it}.txt", "hola mundo ${it}") }
-        List<Path> foreign2 = RANGE.collect { TestHelper.createInMemTempFile("ciao-${it}.txt", "ciao mondo ${it}") }
-        List<Path> foreign3 = RANGE.collect { TestHelper.createInMemTempFile("helo-${it}.txt", "helo mondo ${it}") }
+        // every batch also stages the shared files, last, so their transfers are still
+        // queued behind the first batch when the other batches submit them
+        List<Path> shared = (0..4).collect { TestHelper.createInMemTempFile("shared-${it}.txt", "shared ${it}") }
+        List<Path> foreign1 = RANGE.collect { TestHelper.createInMemTempFile("hola-${it}.txt", "hola mundo ${it}") } + shared
+        List<Path> foreign2 = RANGE.collect { TestHelper.createInMemTempFile("ciao-${it}.txt", "ciao mondo ${it}") } + shared
+        List<Path> foreign3 = RANGE.collect { TestHelper.createInMemTempFile("helo-${it}.txt", "helo mondo ${it}") } + shared
 
         and:
-        def porter = new FilePorter(session)
-        def batch1 = porter.newBatch(folder)
-        foreign1.each { batch1.addToForeign(it) }
-
-        and:
-        def batch2 = porter.newBatch(folder)
-        foreign2.each { batch2.addToForeign(it) }
-
-        and:
-        def batch3 = porter.newBatch(folder)
-        foreign3.each { batch3.addToForeign(it) }
+        def porter = Spy(FilePorter, constructorArgs: [session])
+        def staged = [:]
+        def batches = [foreign1, foreign2, foreign3].collect { foreign ->
+            def batch = porter.newBatch(folder)
+            foreign.each { staged.computeIfAbsent(it, k -> new HashSet()).add(batch.addToForeign(it)) }
+            return batch
+        }
+        def errors = new CopyOnWriteArrayList<Throwable>()
 
         when:
-        def t1= Thread.start { porter.transfer(batch1) }
-        and: sleep(2000)
-        def t2= Thread.start { porter.transfer(batch2) }
-        and: sleep(2000)
-        def t3= Thread.start { porter.transfer(batch3) }
+        def threads = batches.collect { batch ->
+            def t = Thread.start {
+                try { porter.transfer(batch) }
+                catch( Throwable e ) { errors << e }
+            }
+            sleep(100)
+            return t
+        }
+        threads*.join()
 
         then:
-        noExceptionThrown()
-        and:
-        t1.join()
-        t2.join()
-        t3.join()
+        errors.isEmpty()
+        staged.size() == 65
+        // each shared file is staged to the same target by every batch
+        staged.values().every { it.size() == 1 }
+        // and the batches reuse its in-flight transfer instead of submitting another
+        65 * porter.createFileTransfer(_, _)
+        staged.every { source, targets -> targets.every { Files.exists(it) && it.text == source.text } }
 
         cleanup:
+        // the transfer pool is shut down by Global.cleanUp(), not by the session
+        porter?.threadPool?.shutdownNow()
+        session?.destroy()
         folder?.deleteDir()
     }
 
@@ -302,6 +315,46 @@ class FilePorterTest extends Specification {
         then:
         // file was not touched, since it was in the cache
         ts == Files.getLastModifiedTime(local1)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should check recoverable stage errors' () {
+        given:
+        def transfer = new FilePorter.FileTransfer(Path.of('/foo'), Path.of('/bar'), 3, Mock(Semaphore))
+
+        expect:
+        transfer.recoverableError(ERROR) == EXPECTED
+
+        where:
+        ERROR                                                               | EXPECTED
+        new IOException('Read data length does not match expected size')    | true
+        new SocketException('Connection reset')                             | true
+        new SocketTimeoutException('Read timed out')                        | true
+        new NoSuchFileException('/foo')                                     | false
+        new InterruptedIOException('interrupted')                           | false
+    }
+
+    def 'should retry stage on connection reset' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('hola.txt')
+        def source = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
+        and:
+        def attempts = 0
+        def transfer = Spy(new FilePorter.FileTransfer(source, target, 3, Mock(Semaphore)))
+
+        when:
+        def result = transfer.stageForeignFile(source, target)
+        then:
+        2 * transfer.copyForeignFile(source, target) >> {
+            if( attempts++ == 0 ) throw new SocketException('Connection reset')
+            Files.copy(source, target)
+        }
+        and:
+        result == target
+        target.text == 'hola mundo!'
 
         cleanup:
         folder?.deleteDir()
