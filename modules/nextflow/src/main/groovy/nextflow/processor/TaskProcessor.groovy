@@ -1764,6 +1764,7 @@ class TaskProcessor {
         // -- resolve input files
         final resolver = new TaskInputResolver(task, foreignFiles, executor)
         final resolvedValues = new HashSet<>()
+        final inputPaths = collectPaths(task.inputs.values(), new HashSet<Path>())
 
         for( final fileInput : declaredInputs.getFiles() ) {
             final value = fileInput.resolve(ctx)
@@ -1775,6 +1776,14 @@ class TaskProcessor {
                 continue
             final resolved = resolver.resolve(fileInput, value)
             task.inputFiles.addAll(resolved)
+            // files that come from task inputs are already covered by the task hash
+            for( final holder : resolved ) {
+                if( holder.sourcePath in inputPaths )
+                    continue
+                if( task.stageAsFiles == null )
+                    task.stageAsFiles = new ArrayList<FileHolder>()
+                task.stageAsFiles.add(holder)
+            }
             resolvedValues.add(value)
         }
 
@@ -1804,6 +1813,21 @@ class TaskProcessor {
         // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
+    }
+
+    /**
+     * Collect the paths contained in a value, including paths
+     * nested in collections, records and maps.
+     */
+    @CompileStatic
+    protected static Set<Path> collectPaths(Object value, Set<Path> result) {
+        if( value instanceof Path )
+            result.add(value)
+        else if( value instanceof Collection )
+            for( final el : value ) collectPaths(el, result)
+        else if( value instanceof Map )
+            for( final el : value.values() ) collectPaths(el, result)
+        return result
     }
 
     @CompileStatic
