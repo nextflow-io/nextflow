@@ -36,13 +36,20 @@ import org.pf4j.PluginState
 import org.pf4j.PluginWrapper
 import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PluginUpdaterTest extends Specification {
+
+    @Rule
+    WireMockRule wiremock = new WireMockRule(0)
 
     private static final String PLUGIN_ID = 'my-plugin'
 
@@ -163,6 +170,51 @@ class PluginUpdaterTest extends Specification {
         ID              | EXPECTED
         'myorg/nf-foo'  | 'nextflow-plugin-myorg~nf-foo-1.0.0.lock'
         'nf-foo'        | 'nextflow-plugin-nf-foo-1.0.0.lock'
+    }
+
+    def 'should show the registry error when a namespaced plugin cannot be resolved' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def bar = createPlugin(repo, '1.0.0'); bar.zip = zipDir(bar.path)
+        def query = { String ids -> "/v1/plugins/dependencies?plugins=${URLEncoder.encode(ids, 'UTF-8')}&nextflowVersion=${URLEncoder.encode(BuildInfo.version, 'UTF-8')}".toString() }
+        wiremock.stubFor(get(urlEqualTo(query("${PLUGIN_ID}@1.0.0,myorg/nf-foo@1.0.0"))).willReturn(aResponse().withStatus(400)))
+        wiremock.stubFor(get(urlEqualTo(query('myorg/nf-foo'))).willReturn(aResponse().withStatus(400).withBody("Plugin id 'myorg/nf-foo' is invalid")))
+        wiremock.stubFor(get(urlEqualTo(query(PLUGIN_ID))).willReturn(aResponse().withStatus(200).withBody("""
+            { "plugins": [ { "id": "${PLUGIN_ID}", "releases": [ { "version": "1.0.0", "url": "file:${bar.zip}", "date": "2025-03-21T10:40:36Z" } ] } ] }
+            """)))
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, new URL("http://localhost:${wiremock.port()}/"), false)
+        updater.prefetchMetadata([new PluginRef(PLUGIN_ID, '1.0.0'), new PluginRef('myorg/nf-foo', '1.0.0')])
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+        then:
+        manager.getPlugin(PLUGIN_ID) != null
+
+        when: 'a pinned version fails in the download'
+        updater.installPlugin('myorg/nf-foo', '1.0.0')
+        then:
+        def e1 = thrown(IllegalStateException)
+        e1.message.startsWith('Plugin with id myorg/nf-foo not found in any repository -- cause: The plugin registry at')
+        e1.message.contains("Plugin id 'myorg/nf-foo' is invalid")
+
+        when: 'a version range fails in the release lookup'
+        updater.installPlugin('myorg/nf-foo', '>=1.0.0')
+        then:
+        def e2 = thrown(IllegalStateException)
+        e2.message.startsWith('Unknown plugin id: myorg/nf-foo -- cause: The plugin registry at')
+
+        when: 'no version fails in the latest version lookup'
+        updater.installPlugin('myorg/nf-foo', null)
+        then:
+        def e3 = thrown(IllegalStateException)
+        e3.message.startsWith('Cannot find latest version of myorg/nf-foo plugin -- cause: The plugin registry at')
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should install a plugin depending on a non-core plugin' () {
