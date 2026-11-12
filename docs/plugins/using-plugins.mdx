@@ -15,6 +15,18 @@ A plugin identifier consists of the plugin name and version, separated by an `@`
 nf-hello@0.5.0
 ```
 
+The plugin name can be prefixed with a namespace, separated by a `/` symbol. The full format is `[<namespace>/]<name>[@<version>]`:
+
+```
+myorg/nf-foo@1.0.0
+```
+
+The namespace is optional. Plugins with the same name in different namespaces, such as `myorg/nf-foo` and `otherorg/nf-foo`, are different plugins and can be used in the same run.
+
+:::note
+Namespaced plugin IDs require Nextflow X.Y.Z or later.
+:::
+
 The plugin version is optional. If it is not specified, Nextflow will download the latest version of the plugin that meets the minimum Nextflow version requirements specified by the plugin.
 
 :::note
@@ -42,6 +54,18 @@ plugins {
 }
 ```
 
+Use the full plugin ID to declare a namespaced plugin and to include its functions:
+
+```nextflow
+plugins {
+    id 'myorg/nf-foo@1.0.0'
+}
+```
+
+```nextflow
+include { foo } from 'plugin/myorg/nf-foo'
+```
+
 To configure plugins at runtime, use the `-plugins` option. For example:
 
 ```bash
@@ -55,6 +79,8 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 ## Caching
 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
+
+Each plugin is stored in a directory named `<name>-<version>`. A namespaced plugin is stored in a directory for its namespace, i.e., `$NXF_HOME/plugins/<namespace>/<name>-<version>`.
 
 ## Offline usage
 
