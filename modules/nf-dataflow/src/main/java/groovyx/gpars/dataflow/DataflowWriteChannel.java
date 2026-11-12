@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): removed leftShift.
 
 package groovyx.gpars.dataflow;
 
@@ -28,23 +30,6 @@ public interface DataflowWriteChannel<T> {
      * Assigns a value to the variable. Can only be invoked once on each instance of DataflowVariable
      *
      * @param value The value to assign
-     * @return The current channel instance
-     */
-    DataflowWriteChannel<T> leftShift(final T value);
-
-    /**
-     * Assigns a value to the variable. Can only be invoked once on each instance of DataflowVariable
-     *
-     * @param value The value to assign
      */
     void bind(final T value);
-
-    /**
-     * Assigns a value from one DataflowVariable instance to this variable.
-     * Can only be invoked once on each instance of DataflowVariable
-     *
-     * @param ref The DataflowVariable instance the value of which to bind
-     * @return The current channel instance
-     */
-    DataflowWriteChannel<T> leftShift(final DataflowReadChannel<T> ref);
 }

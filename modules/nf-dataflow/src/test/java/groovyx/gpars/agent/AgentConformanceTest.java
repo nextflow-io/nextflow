@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.Closures.action;
 import static groovyx.gpars.TestThreads.awaitBlocked;
 import static groovyx.gpars.TestThreads.start;
@@ -111,7 +112,7 @@ class AgentConformanceTest {
         agent.send(action(it -> { release.await(); list(it).add("slow"); }));
         agent.send(action(it -> list(it).add("fast")));
         agent.await();
-        assertThat(agent.getInstantVal()).containsExactly("slow", "fast");
+        assertThat(agent.getVal()).containsExactly("slow", "fast");
     }
 
     @Test
@@ -133,7 +134,7 @@ class AgentConformanceTest {
         agent.addListener(action((self, old, value) -> seen.bind(List.of(self, old, value))));
 
         agent.send(updateValue((String it) -> "b"));
-        var result = seen.getVal(5, TimeUnit.SECONDS);
+        var result = poll(seen, 5, TimeUnit.SECONDS);
         assertThat(result.get(0)).isSameAs(agent);
         assertThat(result.get(1)).isEqualTo("a");
         assertThat(result.get(2)).isEqualTo("b");
@@ -146,7 +147,7 @@ class AgentConformanceTest {
         agent.addListener(action((old, value) -> changes.add(List.of(old, value))));
 
         agent.send("b");
-        agent.leftShift("c");
+        agent.send("c");
         assertThat(agent.getVal()).isEqualTo("c");
         assertThat(changes).containsExactly(List.of("a", "b"), List.of("b", "c"));
     }
@@ -160,7 +161,7 @@ class AgentConformanceTest {
 
         agent.send(action(it -> list(it).add(1)));
         agent.await();
-        assertThat(agent.getInstantVal()).containsExactly(1);
+        assertThat(agent.getVal()).containsExactly(1);
         assertThat(calls.get()).isZero();
     }
 
@@ -185,7 +186,7 @@ class AgentConformanceTest {
 
         agent.send(action(it -> done.bind(it == null)));
         agent.await();
-        assertThat(done.getVal(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(poll(done, 5, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
@@ -203,7 +204,7 @@ class AgentConformanceTest {
                 error.bind(e);
             }
         }));
-        assertThat(error.getVal(5, TimeUnit.SECONDS)).isInstanceOf(IllegalStateException.class);
+        assertThat(poll(error, 5, TimeUnit.SECONDS)).isInstanceOf(IllegalStateException.class);
     }
 
 }

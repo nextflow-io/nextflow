@@ -28,11 +28,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PoisonPillConformanceTest {
 
     @Test
-    void shouldBeAControlMessageSingleton() {
+    void shouldBeASingleton() {
         var pill = PoisonPill.getInstance();
         assertThat(pill).isSameAs(PoisonPill.getInstance());
-        assertThat(pill).isInstanceOf(ControlMessage.class);
-        assertThat(pill.isImmediate()).isFalse();
         assertThat(pill).isEqualTo(PoisonPill.getInstance());
     }
 
@@ -41,7 +39,6 @@ class PoisonPillConformanceTest {
         var pill = PoisonPill.getInstance();
         assertThat(pill).isNotEqualTo(null);
         assertThat(pill).isNotEqualTo("STOP");
-        assertThat(pill).isNotSameAs(PoisonPill.getImmediateInstance());
         assertThat(List.of(1, 2, pill).indexOf(pill)).isEqualTo(2);
     }
 

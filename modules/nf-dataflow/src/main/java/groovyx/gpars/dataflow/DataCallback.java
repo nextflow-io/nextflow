@@ -14,56 +14,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): a channel read callback instead of an actor message stream.
+// Modified by Seqera Labs for Nextflow (2026): a channel read callback instead of an actor message stream; runs on the dataflow pool instead of a parallel group.
 
 package groovyx.gpars.dataflow;
 
 import groovy.lang.Closure;
 import groovyx.gpars.dataflow.impl.ReadCallback;
-import groovyx.gpars.group.PGroup;
+import groovyx.gpars.scheduler.Scheduler;
 
 /**
- * A helper class enabling the 'whenBound()' functionality of a DataflowVariable and DataflowQueue.
+ * A helper class enabling the 'whenBound()' functionality of the read channels: variables, queues and broadcast readers.
  * Once the channel hands over a value, it runs the supplied closure with the value as a parameter
- * on the thread pool of the parallel group.
+ * on the dataflow pool.
  *
  * @author Vaclav Pech, Alex Tkachman
  *         Date: Sep 13, 2009
  */
 public final class DataCallback implements ReadCallback {
     private final Closure code;
-    private final PGroup parallelGroup;
 
     /**
-     * @param code   The closure to run
-     * @param pGroup pGroup The parallel group to join
+     * @param code The closure to run
      */
-    public DataCallback(final Closure code, final PGroup pGroup) {
-        if (pGroup == null)
-            throw new IllegalArgumentException("Cannot create a DataCallback without a parallelGroup parameter");
+    public DataCallback(final Closure code) {
         if (code.getMaximumNumberOfParameters() > 1)
             throw new IllegalArgumentException("The supplied closure expects more than one argument.");
-        this.parallelGroup = pGroup;
         this.code = code;
     }
 
     /**
-     * Schedules the closure with the thread pool.
-     * Registers its parallel group with DataflowExpressions for nested 'whenBound' handlers to use the same group.
+     * Schedules the closure with the dataflow pool
      */
     @Override
     public void onItem(final Object item) {
-        parallelGroup.getThreadPool().execute(new Runnable() {
-            @Override
-            public void run() {
-                Dataflow.activeParallelGroup.set(parallelGroup);
-                try {
-                    if (code.getMaximumNumberOfParameters() == 1) code.call(item);
-                    else code.call();
-                } finally {
-                    Dataflow.activeParallelGroup.remove();
-                }
-            }
+        Scheduler.pool().execute(() -> {
+            if (code.getMaximumNumberOfParameters() == 1) code.call(item);
+            else code.call();
         });
     }
 }

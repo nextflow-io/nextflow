@@ -13,52 +13,30 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): a single shared instance; removed the immediate poison pill,
+// the countdown hook and the ControlMessage interface.
 
 package groovyx.gpars.dataflow.operator;
 
 /**
  * Represents the poison for dataflow operators.
- * After receiving the poison a dataflow operator will send the poisson to all its output channels and terminate.
- *
- * Non=immediate poison will allow selectors to keep processing all remaining inputs until these get also poisoned.
- * There§s no difference in behavior between immediate and non=immediate poison pills when obtained bz an operator.
+ * After receiving the poison a dataflow operator will send the poison to all its output channels and terminate.
  *
  * @author Vaclav Pech
  *         Date: Oct 6, 2010
  */
-public class PoisonPill implements ControlMessage {
+public final class PoisonPill {
     private static final PoisonPill ourInstance = new PoisonPill();
-    private static final PoisonPill immediateInstance = new PoisonPill(true);
-    private final boolean immediate;
 
     /**
-     * Retrieves a non-immediate poison pill instance
-     * @return The shared singleton non-immediate poison pill instance
+     * Retrieves the poison pill instance
+     * @return The shared singleton poison pill instance
      */
     public static PoisonPill getInstance() {
         return ourInstance;
     }
 
-    /**
-     * Retrieves an immediate poison pill instance
-     * @return The shared singleton immediate poison pill instance
-     */
-    public static PoisonPill getImmediateInstance() {
-        return immediateInstance;
-    }
-
-    PoisonPill() {
-        this(false);
-    }
-
-    PoisonPill(final boolean immediate) {
-        this.immediate = immediate;
-    }
-
-    public final boolean isImmediate() {
-        return immediate;
-    }
-
-    void countDown() {
+    private PoisonPill() {
     }
 }

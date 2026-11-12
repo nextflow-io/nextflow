@@ -13,29 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package groovyx.gpars.dataflow.stream;
+package groovyx.gpars.dataflow;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import groovyx.gpars.dataflow.Dataflow;
-import groovyx.gpars.dataflow.DataflowReadChannel;
-import groovyx.gpars.dataflow.DataflowWriteChannel;
 import groovyx.gpars.dataflow.impl.ReadCallback;
 import groovyx.gpars.dataflow.impl.Waiter;
-import groovyx.gpars.dataflow.operator.ChainWithClosure;
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure;
 
 /**
  * A reader of a stream: it reads every value bound to the stream after its creation, independently
  * of the other readers.
  * <p>
  * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2011 the original author or authors).
- * Unlike GPars, the blocking and the asynchronous reads share a single cursor.
+ * Unlike GPars, the blocking and the asynchronous reads share a single cursor, and there is no timed read and no into.
  *
  * @param <T> The type of messages to pass through the stream
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -43,10 +37,10 @@ import groovyx.gpars.dataflow.operator.CopyChannelsClosure;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
 
-    private final DataflowStreamWriteAdapter<T> stream;
+    private final DataflowBroadcast<T> stream;
 
     // the last node read, written under this
-    private volatile DataflowStreamWriteAdapter.Node head;
+    private volatile DataflowBroadcast.Node headNode;
 
     // the reads waiting for a value, in arrival order, guarded by this
     private ArrayDeque<ReadCallback> pending;
@@ -54,29 +48,29 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
     // whether the reader is registered with the stream for the next bind, guarded by this
     private boolean waiting;
 
-    public DataflowStreamReadAdapter(final DataflowStreamWriteAdapter<T> stream) {
+    public DataflowStreamReadAdapter(final DataflowBroadcast<T> stream) {
         this.stream = stream;
-        this.head = stream.tail();
+        this.headNode = stream.tail();
     }
 
     @Override
     public final Object takeOrSubscribe(final ReadCallback callback) {
         synchronized (this) {
             if (pending == null || pending.isEmpty()) {
-                final DataflowStreamWriteAdapter.Node next = head.next;
+                final DataflowBroadcast.Node next = headNode.next;
                 if (next != null) {
-                    head = next;
+                    headNode = next;
                     return next.item;
                 }
             }
             if (pending == null)
                 pending = new ArrayDeque<>(2);
             pending.add(callback);
-            if (waiting || (waiting = stream.await(this, head)))
+            if (waiting || (waiting = stream.await(this, headNode)))
                 return ReadCallback.NONE;
         }
         // a value was bound meanwhile
-        wake();
+        deliver();
         return ReadCallback.NONE;
     }
 
@@ -86,24 +80,34 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
     }
 
     /**
-     * Hands the available values to the waiting reads, then registers with the stream again if some are left
+     * Called by the stream on the bind the reader registered for
      */
     final void wake() {
+        synchronized (this) {
+            waiting = false;
+        }
+        deliver();
+    }
+
+    /**
+     * Hands the available values to the waiting reads, then registers with the stream again if some are left.
+     * A read added by a callback may have registered already, so the reader registers at most once per bind.
+     */
+    private void deliver() {
         Throwable failure = null;
         for (;;) {
             final ReadCallback callback;
             final Object item;
             synchronized (this) {
-                waiting = false;
                 if (pending == null || pending.isEmpty())
                     break;
-                final DataflowStreamWriteAdapter.Node next = head.next;
+                final DataflowBroadcast.Node next = headNode.next;
                 if (next == null) {
-                    if (waiting = stream.await(this, head))
+                    if (waiting || (waiting = stream.await(this, headNode)))
                         break;
                     continue;
                 }
-                head = next;
+                headNode = next;
                 item = next.item;
                 callback = pending.poll();
             }
@@ -114,24 +118,7 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
 
     @Override
     public final T getVal() throws InterruptedException {
-        return (T) Waiter.read(this, -1);
-    }
-
-    /**
-     * Takes the next value, blocking until there is one or the timeout expires. Returns null on timeout.
-     */
-    @Override
-    public final T getVal(final long timeout, final TimeUnit units) throws InterruptedException {
-        final Object result = Waiter.read(this, Math.max(0, units.toNanos(timeout)));
-        return result != ReadCallback.NONE ? (T) result : null;
-    }
-
-    /**
-     * Copies all the values into the target channel, with an operator on the current parallel group
-     */
-    @Override
-    public void into(final DataflowWriteChannel<T> target) {
-        Dataflow.retrieveCurrentDFPGroup().operator(this, target, new ChainWithClosure(new CopyChannelsClosure()));
+        return (T) Waiter.read(this);
     }
 
     @Override
@@ -145,15 +132,8 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
     @Override
     public final int length() {
         // the head first, so that it cannot be past the tail
-        final int read = head.seq;
+        final int read = headNode.seq;
         return stream.tail().seq - read;
-    }
-
-    /**
-     * The number of values not read yet, counting at most {@code max} of them. Safe to call from any thread.
-     */
-    public final int length(final int max) {
-        return Math.min(length(), max);
     }
 
     /**
@@ -162,8 +142,8 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
     public Iterator<T> iterator() {
         final List<T> result = new ArrayList<>();
         // the head first, so that it cannot be past the tail
-        DataflowStreamWriteAdapter.Node node = head;
-        final DataflowStreamWriteAdapter.Node last = stream.tail();
+        DataflowBroadcast.Node node = headNode;
+        final DataflowBroadcast.Node last = stream.tail();
         // the tail is published before it is linked, so the last link may not be set yet
         while (node != last && node.next != null) {
             node = node.next;

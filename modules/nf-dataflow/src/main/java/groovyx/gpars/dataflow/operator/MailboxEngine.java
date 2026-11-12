@@ -20,15 +20,15 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import groovy.lang.Closure;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
 import groovyx.gpars.dataflow.impl.ReadCallback;
-import groovyx.gpars.group.PGroup;
-import groovyx.gpars.scheduler.Pool;
 
 import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
 
@@ -61,7 +61,6 @@ final class MailboxEngine implements Runnable {
     private static final Object START = new Object();
     private static final Object RESUME = new Object();
     private static final Object TERMINATE = new Object();
-    private static final Object STOP_GENTLY = new Object();
 
     private final DataflowProcessor owner;
 
@@ -71,7 +70,7 @@ final class MailboxEngine implements Runnable {
 
     private final Port[] ports;
 
-    private volatile Pool pool;
+    private final Executor pool;
 
     private final Queue<Object> mailbox = new ConcurrentLinkedQueue<>();
 
@@ -104,8 +103,6 @@ final class MailboxEngine implements Runnable {
 
     private PoisonPill pendingPill;
 
-    private boolean stoppingGently;
-
     // the backpressure gate
 
     private volatile boolean paused;
@@ -120,7 +117,10 @@ final class MailboxEngine implements Runnable {
 
     private boolean interrupted;
 
-    MailboxEngine(final DataflowProcessor owner, final Pool pool, final List<DataflowReadChannel<?>> inputs, final Closure<?> code, final int maxForks) {
+    // the reschedule in progress at the end of a drain
+    private final AtomicReference<Reschedule> rescheduling = new AtomicReference<>();
+
+    MailboxEngine(final DataflowProcessor owner, final Executor pool, final List<DataflowReadChannel<?>> inputs, final Closure<?> code, final int maxForks) {
         this.owner = owner;
         this.pool = pool;
         this.code = code;
@@ -131,9 +131,7 @@ final class MailboxEngine implements Runnable {
             ports[i] = new Port(i, inputs.get(i));
     }
 
-    void start(final PGroup group) {
-        if (group != null)
-            pool = group.getThreadPool();
+    void start() {
         if (!state.compareAndSet(NEW, RUNNING))
             throw new IllegalStateException("The operator has already been started");
         post(START);
@@ -157,10 +155,6 @@ final class MailboxEngine implements Runnable {
             }
         }
         post(TERMINATE);
-    }
-
-    void terminateAfterNextRun() {
-        post(STOP_GENTLY);
     }
 
     void join() throws InterruptedException {
@@ -208,17 +202,52 @@ final class MailboxEngine implements Runnable {
         try {
             pool.execute(this);
         }
-        catch (RuntimeException | Error e) {
-            scheduled.set(false);
-            throw e;
+        catch (Throwable e) {
+            onRejected(e);
         }
     }
 
     /**
-     * Drains a batch of work
+     * Stops the operator in place when the pool fails to run its drain, e.g. it rejects it or cannot
+     * create a thread, instead of failing the caller, e.g. a producer whose value was handed over
+     * already. No drain runs while this holds the flag.
+     */
+    private void onRejected(final Throwable e) {
+        try {
+            owner.reportError(e);
+        }
+        finally {
+            state.compareAndSet(RUNNING, STOPPING);
+            try {
+                finishStop();
+            }
+            finally {
+                scheduled.set(false);
+            }
+        }
+    }
+
+    /**
+     * Drains batches of work until there is none left or the pool runs the next drain elsewhere
      */
     @Override
     public void run() {
+        final Reschedule r = rescheduling.get();
+        if (r != null && r.thread == Thread.currentThread()) {
+            // a caller-runs pool ran the reschedule in place: let the outer drain loop instead of nesting
+            r.rerun = true;
+            return;
+        }
+        while (drain())
+            ;
+    }
+
+    /**
+     * Drains a batch of work, then reschedules if work remains
+     *
+     * @return true if the drain must run again on this thread
+     */
+    private boolean drain() {
         synchronized (threadLock) {
             drainThread = Thread.currentThread();
         }
@@ -257,11 +286,22 @@ final class MailboxEngine implements Runnable {
             // so that an interrupt meant for a body does not leak to the next pool task
             clearInterrupt();
             scheduled.set(false);
-            if (state.get() == STOPPED)
-                mailbox.clear();
-            else if (budget <= 0 || !mailbox.isEmpty() || forksDone.get() > 0 || delivered)
-                schedule();
         }
+        if (state.get() == STOPPED) {
+            mailbox.clear();
+            return false;
+        }
+        if (budget > 0 && mailbox.isEmpty() && forksDone.get() == 0 && !delivered)
+            return false;
+        final Reschedule r = new Reschedule();
+        rescheduling.set(r);
+        try {
+            schedule();
+        }
+        finally {
+            rescheduling.compareAndSet(r, null);
+        }
+        return r.rerun;
     }
 
     /**
@@ -308,15 +348,8 @@ final class MailboxEngine implements Runnable {
         if (message == RESUME)
             onResume();
         else if (message == START)
-            onStart();
-        else if (message == STOP_GENTLY)
-            stoppingGently = true;
+            started = true;
         // TERMINATE only wakes the drain, which stops on the state
-    }
-
-    private void onStart() {
-        owner.fireAfterStart();
-        started = true;
     }
 
     /**
@@ -370,11 +403,10 @@ final class MailboxEngine implements Runnable {
         // another input handed over in the same batch
         if (pendingPill != null || state.get() != RUNNING)
             return;
-        if (item instanceof ControlMessage) {
+        if (item instanceof PoisonPill) {
             item = owner.fireControlMessageArrived(port.channel, port.index, item);
-            if (item instanceof PoisonPill)
+            if (item instanceof PoisonPill) {
                 onPoison((PoisonPill) item);
-            if (item instanceof ControlMessage) {
                 // like GPars, the input is not read again
                 port.requested = true;
                 return;
@@ -425,10 +457,6 @@ final class MailboxEngine implements Runnable {
     }
 
     private void afterFiring() {
-        if (stoppingGently) {
-            owner.terminate();
-            return;
-        }
         if (state.get() == RUNNING)
             pauseIfGateClosed();
     }
@@ -458,8 +486,10 @@ final class MailboxEngine implements Runnable {
                 }
             });
         }
-        catch (RuntimeException | Error e) {
+        catch (Throwable e) {
             inFlight--;
+            // the body never runs: pair the beforeRun fired already
+            owner.fireAfterRun(messages);
             throw e;
         }
     }
@@ -493,7 +523,6 @@ final class MailboxEngine implements Runnable {
         pendingPill = null;
         owner.bindAllOutputsAtomically(pill);
         owner.terminate();
-        pill.countDown();
     }
 
     private void onResume() {
@@ -533,13 +562,18 @@ final class MailboxEngine implements Runnable {
         final PoisonPill pill = pendingPill;
         pendingPill = null;
         try {
-            if (pill != null)
-                owner.bindAllOutputsAtomically(pill);
-            owner.fireAfterStop();
+            try {
+                if (pill != null)
+                    owner.bindAllOutputsAtomically(pill);
+            }
+            catch (Throwable e) {
+                owner.reportError(e);
+            }
+            finally {
+                owner.fireAfterStop();
+            }
         }
         finally {
-            if (pill != null)
-                pill.countDown();
             stopped.countDown();
         }
     }
@@ -579,5 +613,15 @@ final class MailboxEngine implements Runnable {
             delivered = true;
             signal();
         }
+    }
+
+    /**
+     * A reschedule from the end of a drain, marked by a nested drain on the same thread
+     */
+    private static final class Reschedule {
+
+        final Thread thread = Thread.currentThread();
+
+        boolean rerun;
     }
 }

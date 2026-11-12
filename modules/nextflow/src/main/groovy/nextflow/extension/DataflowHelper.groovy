@@ -21,15 +21,10 @@ import java.lang.reflect.InvocationTargetException
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.Dataflow
-import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
@@ -54,10 +49,10 @@ class DataflowHelper {
      * @return
      */
     @Deprecated
-    static <V> DataflowChannel<V> newChannelBy(DataflowReadChannel<?> source) {
+    static <V> DataflowWriteChannel<V> newChannelBy(DataflowReadChannel<?> source) {
 
         switch( source ) {
-            case DataflowExpression:
+            case DataflowVariable:
                 return new DataflowVariable<V>()
 
             case DataflowQueue:
@@ -84,7 +79,7 @@ class DataflowHelper {
      * The default operators listener when no other else is specified
      */
     @PackageScope
-    static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
+    static DEF_ERROR_LISTENER = new DataflowEventListener() {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable t) {
             final e = t instanceof InvocationTargetException ? t.cause : t
@@ -94,12 +89,12 @@ class DataflowHelper {
         }
     }
 
-    static DataflowEventAdapter stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
+    static DataflowEventListener stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
 
-        new DataflowEventAdapter() {
+        new DataflowEventListener() {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                if( source instanceof DataflowExpression ) {
+                if( source instanceof DataflowVariable ) {
                     if( !(target instanceof DataflowVariable) )
                         processor.bindOutput( Channel.STOP )
                     processor.terminate()
@@ -126,7 +121,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -141,7 +136,8 @@ class DataflowHelper {
             params.listeners = [ DEF_ERROR_LISTENER ]
         }
 
-        final op = Dataflow.operator(params, code)
+        final maxForks = params.maxForks != null ? params.maxForks as int : 1
+        final op = new DataflowProcessor(params.inputs as List, params.outputs as List, params.listeners as List, maxForks, code).start()
         NodeMarker.appendOperator(op)
         if( session && session.allOperators != null ) {
             session.allOperators.add(op)
@@ -151,7 +147,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -164,7 +160,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -177,7 +173,7 @@ class DataflowHelper {
     }
 
     /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
+     * Creates a new {@code DataflowProcessor} adding the created instance to the current session list
      *
      * @see nextflow.Session#allOperators
      *
@@ -191,12 +187,7 @@ class DataflowHelper {
         if( !listener )
             listener = DEF_ERROR_LISTENER
 
-        def params = [:]
-        params.inputs = [input]
-        params.outputs = [output]
-        params.listeners = [listener]
-
-        final op = Dataflow.operator(params, code)
+        final op = new DataflowProcessor([input], [output], [listener], 1, code).start()
         NodeMarker.appendOperator(op)
         if( session && session.allOperators != null ) {
             session.allOperators << op
@@ -239,8 +230,8 @@ class DataflowHelper {
         checkSubscribeHandlers(events)
 
         def error = false
-        def stopOnFirst = source instanceof DataflowExpression
-        def listener = new DataflowEventAdapter() {
+        def stopOnFirst = source instanceof DataflowVariable
+        def listener = new DataflowEventListener() {
 
             @Override
             void afterStop(final DataflowProcessor processor) {
@@ -308,7 +299,7 @@ class DataflowHelper {
         def accum = seed
 
         // intercepts operator events
-        def listener = new DataflowEventAdapter() {
+        def listener = new DataflowEventListener() {
             /*
              * call the passed closure each time
              */

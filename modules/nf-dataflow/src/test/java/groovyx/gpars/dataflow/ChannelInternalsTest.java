@@ -25,28 +25,29 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.MissingMethodException;
+import groovy.lang.MissingPropertyException;
 import groovyx.gpars.dataflow.impl.ReadCallback;
 import groovyx.gpars.dataflow.impl.Waiter;
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter;
-import org.codehaus.groovy.runtime.InvokerHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static groovyx.gpars.TestThreads.await;
 import static groovyx.gpars.TestThreads.awaitBlocked;
+import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.TestThreads.start;
 import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The lightweight channel internals: non-blocking reads, null values, lost-value safety of timed-out
- * and interrupted reads, failing callbacks, garbage collection of broadcast nodes and readers, and
- * derived expressions.
+ * The lightweight channel internals: non-blocking reads, null values, lost-value safety of interrupted
+ * reads, failing callbacks, garbage collection of broadcast nodes and readers, and the dynamic API of
+ * value channels.
  */
 @Timeout(value = 20, unit = TimeUnit.SECONDS)
 class ChannelInternalsTest {
@@ -83,18 +84,7 @@ class ChannelInternalsTest {
 
         @Override
         public Object getVal() throws InterruptedException {
-            return Waiter.read(this, -1);
-        }
-
-        @Override
-        public Object getVal(long timeout, TimeUnit units) throws InterruptedException {
-            final Object result = Waiter.read(this, units.toNanos(timeout));
-            return result != NONE ? result : null;
-        }
-
-        @Override
-        public void into(DataflowWriteChannel<Object> target) {
-            throw new UnsupportedOperationException();
+            return Waiter.read(this);
         }
 
         @Override
@@ -126,6 +116,43 @@ class ChannelInternalsTest {
         assertThat(first.items).containsExactly("b");
         assertThat(second.items).containsExactly("c");
         assertThat(q.length()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReleaseTheBufferOfAQueueOnceALargeBurstIsTaken() throws Exception {
+        var q = new DataflowQueue<Object>();
+        var reader = new Recorder();
+
+        // a short burst keeps the buffer
+        var small = queued(q);
+        for( int i = 0; i < 100; i++ )
+            q.bind(i);
+        while( q.takeOrSubscribe(reader) != NONE )
+            ;
+        assertThat(queued(q)).isSameAs(small);
+        q.unsubscribe(reader);
+
+        // a large burst replaces it once taken, not before
+        for( int i = 0; i < 10_000; i++ )
+            q.bind(i);
+        var large = queued(q);
+        for( int i = 0; i < 9_999; i++ )
+            assertThat(q.takeOrSubscribe(reader)).isEqualTo(i);
+        assertThat(queued(q)).isSameAs(large);
+        assertThat(q.takeOrSubscribe(reader)).isEqualTo(9_999);
+        assertThat(queued(q)).isNotSameAs(large);
+        assertThat(q.length()).isZero();
+
+        q.bind("next");
+        assertThat(q.takeOrSubscribe(reader)).isEqualTo("next");
+    }
+
+    private static Object queued(DataflowQueue<?> q) throws Exception {
+        var field = DataflowQueue.class.getDeclaredField("queued");
+        field.setAccessible(true);
+        synchronized( q ) {
+            return field.get(q);
+        }
     }
 
     @Test
@@ -167,22 +194,7 @@ class ChannelInternalsTest {
         b.bind(null);
         assertThat(r.isBound()).isTrue();
         assertThat(r.getVal()).isNull();
-        assertThat(r.getVal(10, TimeUnit.MILLISECONDS)).isNull();
         assertThat(r.isBound()).isFalse();
-    }
-
-    @Test
-    void shouldNotLoseAValueWhenAReadTimesOut() throws Exception {
-        var q = new DataflowQueue<Object>();
-        var b = new DataflowBroadcast<Object>();
-        var r = b.createReadChannel();
-
-        assertThat(q.getVal(10, TimeUnit.MILLISECONDS)).isNull();
-        assertThat(r.getVal(10, TimeUnit.MILLISECONDS)).isNull();
-        q.bind("a");
-        b.bind("a");
-        assertThat(q.getVal()).isEqualTo("a");
-        assertThat(r.getVal()).isEqualTo("a");
     }
 
     @Test
@@ -199,17 +211,10 @@ class ChannelInternalsTest {
         });
         awaitBlocked(thread);
         thread.interrupt();
-        assertThat(error.getVal(WAIT, TimeUnit.SECONDS)).isInstanceOf(InterruptedException.class);
+        assertThat(poll(error, WAIT, TimeUnit.SECONDS)).isInstanceOf(InterruptedException.class);
 
         q.bind("a");
-        assertThat(q.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("a");
-    }
-
-    @Test
-    void shouldReturnAtOnceOnANegativeTimeout() throws Exception {
-        var b = new DataflowBroadcast<Object>();
-        for( var channel : List.<DataflowReadChannel<Object>>of(new DataflowVariable<>(), new DataflowQueue<>(), b.createReadChannel()) )
-            assertThat(channel.getVal(-1, TimeUnit.MILLISECONDS)).isNull();
+        assertThat(poll(q, WAIT, TimeUnit.SECONDS)).isEqualTo("a");
     }
 
     @Test
@@ -227,16 +232,15 @@ class ChannelInternalsTest {
     }
 
     @Test
-    void shouldWakeATimedReadWhenAnEarlierCallbackFails() throws Exception {
+    void shouldWakeABlockedReadWhenAnEarlierCallbackFails() throws Exception {
         var v = new DataflowVariable<Object>();
         v.takeOrSubscribe(item -> { throw new IllegalStateException("boom"); });
         var result = new DataflowVariable<Object>();
-        // the read outlasts the test, so only the bind can complete it
-        var reader = start(() -> result.bind(v.getVal(60, TimeUnit.SECONDS)));
+        var reader = start(() -> result.bind(v.getVal()));
         awaitBlocked(reader);
 
         assertThatThrownBy(() -> v.bind("x")).hasMessage("boom");
-        assertThat(result.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("x");
+        assertThat(poll(result, WAIT, TimeUnit.SECONDS)).isEqualTo("x");
     }
 
     @Test
@@ -258,18 +262,6 @@ class ChannelInternalsTest {
     }
 
     @Test
-    void shouldParkUntilTheValueIsHandedOverWhenATimedReadExpires() throws Exception {
-        var channel = new HandingOverChannel();
-        var result = new DataflowVariable<Object>();
-        var reader = start(() -> result.bind(channel.getVal(1, TimeUnit.MILLISECONDS)));
-
-        // past the timeout the reader waits for the value, parked rather than spinning
-        await(() -> channel.unsubscribes.get() == 1 && reader.getState() == Thread.State.WAITING);
-        channel.callback.onItem("x");
-        assertThat(result.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("x");
-    }
-
-    @Test
     void shouldParkUntilTheValueIsHandedOverWhenAReadIsInterrupted() throws Exception {
         var channel = new HandingOverChannel();
         var result = new DataflowVariable<Object>();
@@ -280,7 +272,7 @@ class ChannelInternalsTest {
         await(() -> channel.unsubscribes.get() == 1 && reader.getState() == Thread.State.WAITING);
         channel.callback.onItem("x");
         // the value is not lost and the interrupt is kept
-        assertThat(result.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(List.of("x", true));
+        assertThat(poll(result, WAIT, TimeUnit.SECONDS)).isEqualTo(List.of("x", true));
     }
 
     @Test
@@ -410,8 +402,8 @@ class ChannelInternalsTest {
                 Arrays.fill(last, Integer.MIN_VALUE);
                 int ended = 0;
                 while( ended < writers ) {
-                    final int length = reader.length(5);
-                    if( length < 0 || length > 5 )
+                    final int length = reader.length();
+                    if( length < 0 )
                         errors.add("length " + length);
                     Object item;
                     if( async ) {
@@ -421,7 +413,7 @@ class ChannelInternalsTest {
                             item = future.get(WAIT, TimeUnit.SECONDS);
                     }
                     else
-                        item = reader.getVal(WAIT, TimeUnit.SECONDS);
+                        item = poll(reader, WAIT, TimeUnit.SECONDS);
                     if( item == null ) {
                         errors.add("timeout");
                         return;
@@ -446,6 +438,44 @@ class ChannelInternalsTest {
 
         assertThat(threads).noneMatch(Thread::isAlive);
         assertThat(errors).isEmpty();
+    }
+
+    @Test
+    void shouldRegisterAReaderOnceWhenItsCallbackReadsAgainDuringAWake() throws Exception {
+        var b = new DataflowBroadcast<Object>();
+        var readers = List.of(b.createReadChannel(), b.createReadChannel());
+        var received = new ArrayList<List<Object>>();
+        for( var reader : readers ) {
+            var items = new CopyOnWriteArrayList<Object>();
+            received.add(items);
+            // like an operator input, read again from the callback
+            reader.takeOrSubscribe(new ReadCallback() {
+                @Override
+                public void onItem(Object item) {
+                    items.add(item);
+                    final Object next = reader.takeOrSubscribe(this);
+                    if( next != NONE )
+                        onItem(next);
+                }
+            });
+        }
+
+        for( int i = 0; i < 100; i++ ) {
+            b.bind(i);
+            assertThat(waiters(b)).isLessThanOrEqualTo(readers.size());
+        }
+        var expected = IntStream.range(0, 100).boxed().toList();
+        assertThat(received).allSatisfy(items -> assertThat(items).isEqualTo(expected));
+        assertThat(waiters(b)).isEqualTo(readers.size());
+    }
+
+    private static int waiters(DataflowBroadcast<?> b) throws Exception {
+        var field = DataflowBroadcast.class.getDeclaredField("waiters");
+        field.setAccessible(true);
+        synchronized( b ) {
+            var waiters = field.get(b);
+            return waiters == null ? 0 : waiters instanceof List ? ((List<?>) waiters).size() : 1;
+        }
     }
 
     @Test
@@ -498,53 +528,22 @@ class ChannelInternalsTest {
     }
 
     @Test
-    void shouldDeriveAValueChannelFromAnUnknownPropertyOrMethod() throws Exception {
+    void shouldFailOnAnUnknownPropertyOrMethodOfAValueChannel() throws Exception {
         var v = new DataflowVariable<Object>();
-        var arg = new DataflowVariable<Object>();
         var binding = new Binding();
         binding.setVariable("v", v);
-        binding.setVariable("arg", arg);
-        var derived = (List<?>) new GroovyShell(binding).evaluate("[v.bound, v.bytes, v.toUpperCase(), v.plus(arg)]");
+        var shell = new GroovyShell(binding);
 
-        // the known properties are read at once, the derived ones are bound with the value and the arguments
-        assertThat(derived.get(0)).isEqualTo(false);
+        assertThat(shell.evaluate("v.bound")).isEqualTo(false);
         v.bind("hello");
-        assertThat(((DataflowVariable<?>) derived.get(1)).getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("hello".getBytes());
-        assertThat(((DataflowVariable<?>) derived.get(2)).getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("HELLO");
-        assertThat(((DataflowVariable<?>) derived.get(3)).isBound()).isFalse();
-        arg.bind(" world");
-        assertThat(((DataflowVariable<?>) derived.get(3)).getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("hello world");
-        assertThat(InvokerHelper.getProperty(v, "val")).isEqualTo("hello");
-        assertThat(InvokerHelper.invokeMethod(v, "getVal", null)).isEqualTo("hello");
-    }
-
-    @Test
-    void shouldBindTheErrorOfADerivedValueChannel() throws Exception {
-        var v = new DataflowVariable<Object>();
-        var failed = new DataflowVariable<Object>();
-        var missing = (DataflowVariable<?>) InvokerHelper.invokeMethod(v, "noSuchMethod", null);
-        var propagated = (DataflowVariable<?>) InvokerHelper.getProperty(failed, "size");
-        v.bind("hello");
-        failed.bindError(new IllegalStateException("boom"));
-
-        missing.getVal(WAIT, TimeUnit.SECONDS);
-        assertThat(missing.getError()).isInstanceOf(MissingMethodException.class);
-        propagated.getVal(WAIT, TimeUnit.SECONDS);
-        assertThat(propagated.getError()).hasMessage("boom");
-    }
-
-    @Test
-    void shouldCopyAValueAndTheValuesOfAQueueWithInto() throws Exception {
-        var v = new DataflowVariable<Object>();
-        var target = new DataflowQueue<Object>();
-        v.into(target);
-        v.bind("x");
-        assertThat(target.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("x");
-
-        var copy = new DataflowVariable<Object>();
-        copy.leftShift(target);
-        target.bind("y");
-        assertThat(copy.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("y");
+        assertThat(shell.evaluate("v.val")).isEqualTo("hello");
+        assertThat(shell.evaluate("v.getVal()")).isEqualTo("hello");
+        assertThatThrownBy(() -> shell.evaluate("v.toUpperCase()"))
+            .isInstanceOf(MissingMethodException.class)
+            .hasMessageContaining("toUpperCase");
+        assertThatThrownBy(() -> shell.evaluate("v.bytes"))
+            .isInstanceOf(MissingPropertyException.class)
+            .hasMessageContaining("bytes");
     }
 
     private static Supplier<Object> bindWeak(DataflowWriteChannel<Object> channel) {

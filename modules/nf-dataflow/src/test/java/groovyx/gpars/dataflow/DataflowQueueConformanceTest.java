@@ -26,6 +26,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static groovyx.gpars.TestThreads.poll;
 import static groovyx.gpars.Closures.action;
 import static groovyx.gpars.TestThreads.awaitBlocked;
 import static groovyx.gpars.TestThreads.start;
@@ -43,7 +44,7 @@ class DataflowQueueConformanceTest {
     static List<Object> read(DataflowReadChannel<Object> ch, int n) throws InterruptedException {
         var result = new ArrayList<Object>(n);
         for( int i = 0; i < n; i++ )
-            result.add(ch.getVal(WAIT, TimeUnit.SECONDS));
+            result.add(poll(ch, WAIT, TimeUnit.SECONDS));
         return result;
     }
 
@@ -71,23 +72,14 @@ class DataflowQueueConformanceTest {
     }
 
     @Test
-    void shouldChainLeftShift() throws Exception {
-        var q = new DataflowQueue<Object>();
-
-        var result = q.leftShift(1).leftShift(2).leftShift(3);
-        assertThat(result).isSameAs(q);
-        assertThat(q.getVal()).isEqualTo(1);
-        assertThat(q.getVal()).isEqualTo(2);
-        assertThat(q.getVal()).isEqualTo(3);
-    }
-
-    @Test
     void shouldReportTheNumberOfBufferedItemsWithLength() throws Exception {
         var q = new DataflowQueue<Object>();
         assertThat(q.length()).isZero();
         assertThat(q.isBound()).isFalse();
 
-        q.leftShift("a").leftShift("b").leftShift("c");
+        q.bind("a");
+        q.bind("b");
+        q.bind("c");
         assertThat(q.length()).isEqualTo(3);
         assertThat(q.isBound()).isTrue();
 
@@ -101,17 +93,14 @@ class DataflowQueueConformanceTest {
     }
 
     @Test
-    void shouldReturnNullWhenGetValTimesOutOnAnEmptyQueue() throws Exception {
+    void shouldUnsubscribeAnExpiredReadWithoutConsumingALaterValue() throws Exception {
         var q = new DataflowQueue<Object>();
 
-        var t0 = System.nanoTime();
-        var result = q.getVal(100, TimeUnit.MILLISECONDS);
-        var elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
-        assertThat(result).isNull();
-        assertThat(elapsed).isGreaterThanOrEqualTo(90);
+        assertThat(poll(q, 50, TimeUnit.MILLISECONDS)).isNull();
 
         q.bind("late");
-        assertThat(q.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("late");
+        assertThat(q.length()).isEqualTo(1);
+        assertThat(poll(q, WAIT, TimeUnit.SECONDS)).isEqualTo("late");
         assertThat(q.length()).isZero();
     }
 
@@ -125,7 +114,7 @@ class DataflowQueueConformanceTest {
         assertThat(reader.isBound()).isFalse();
 
         q.bind("x");
-        assertThat(reader.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("x");
+        assertThat(poll(reader, WAIT, TimeUnit.SECONDS)).isEqualTo("x");
     }
 
     @Test
@@ -134,21 +123,23 @@ class DataflowQueueConformanceTest {
         var received = new DataflowVariable<Object>();
 
         q.whenBound(action(x -> received.bind(x)));
-        q.leftShift("a").leftShift("b");
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("a");
-        assertThat(q.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("b");
+        q.bind("a");
+        q.bind("b");
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isEqualTo("a");
+        assertThat(poll(q, WAIT, TimeUnit.SECONDS)).isEqualTo("b");
         assertThat(q.length()).isZero();
     }
 
     @Test
     void shouldConsumeAnAlreadyBufferedItemWithWhenBound() throws Exception {
         var q = new DataflowQueue<Object>();
-        q.leftShift("a").leftShift("b");
+        q.bind("a");
+        q.bind("b");
         var received = new DataflowVariable<Object>();
 
         q.whenBound(action(x -> received.bind(x)));
-        assertThat(received.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("a");
-        assertThat(q.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo("b");
+        assertThat(poll(received, WAIT, TimeUnit.SECONDS)).isEqualTo("a");
+        assertThat(poll(q, WAIT, TimeUnit.SECONDS)).isEqualTo("b");
     }
 
     @Test
@@ -159,32 +150,26 @@ class DataflowQueueConformanceTest {
         for( int i = 0; i < 3; i++ )
             q.whenBound(action(x -> { received.add(x); done.countDown(); }));
 
-        q.leftShift(1).leftShift(2).leftShift(3).leftShift(4);
+        q.bind(1);
+        q.bind(2);
+        q.bind(3);
+        q.bind(4);
         assertThat(done.await(WAIT, TimeUnit.SECONDS)).isTrue();
         assertThat(received).containsExactlyInAnyOrder(1, 2, 3);
-        assertThat(q.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(4);
+        assertThat(poll(q, WAIT, TimeUnit.SECONDS)).isEqualTo(4);
     }
 
     @Test
     void shouldPassAPoisonPillAsAnOrdinaryItem() throws Exception {
         var q = new DataflowQueue<Object>();
 
-        q.leftShift(1).leftShift(PoisonPill.getInstance()).leftShift(2);
+        q.bind(1);
+        q.bind(PoisonPill.getInstance());
+        q.bind(2);
         assertThat(q.length()).isEqualTo(3);
         assertThat(q.getVal()).isEqualTo(1);
         assertThat(q.getVal()).isSameAs(PoisonPill.getInstance());
         assertThat(q.getVal()).isEqualTo(2);
-    }
-
-    @Test
-    void shouldCopyEveryItemAndThePoisonPillWithInto() throws Exception {
-        var q = new DataflowQueue<Object>();
-        var target = new DataflowBroadcast<Object>();
-        var reader = target.createReadChannel();
-
-        q.into(target);
-        q.leftShift(1).leftShift(2).leftShift(3).leftShift(PoisonPill.getInstance());
-        assertThat(read(reader, 4)).containsExactly(1, 2, 3, PoisonPill.getInstance());
     }
 
 }

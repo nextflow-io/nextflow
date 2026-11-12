@@ -15,20 +15,71 @@
  */
 package groovyx.gpars.dataflow;
 
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter;
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter;
+import java.util.ArrayList;
+import java.util.List;
+
+import groovyx.gpars.dataflow.impl.ReadCallback;
 
 /**
  * A broadcast channel: each read channel receives every value bound after its creation.
  * <p>
- * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2011 the original author or authors).
+ * The values form a singly linked list of nodes, one per value. The broadcast holds the tail and each
+ * {@link DataflowStreamReadAdapter} holds a cursor, so a node is garbage once every reader has read it,
+ * and an unreferenced reader is garbage too.
+ * <p>
+ * Rewrites the GPars 1.2.1 classes {@code DataflowBroadcast} and {@code DataflowStreamWriteAdapter}
+ * (Copyright 2008-2011 the original author or authors), which wrapped a stream of dataflow variables.
  *
  * @param <T> The type of messages to pass through the stream
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public final class DataflowBroadcast<T> extends DataflowStreamWriteAdapter<T> {
+@SuppressWarnings("unchecked")
+public final class DataflowBroadcast<T> implements DataflowWriteChannel<T> {
 
-    public DataflowBroadcast() {
+    /**
+     * A stream node: a value and its position in the stream
+     */
+    static final class Node {
+
+        final Object item;
+
+        final int seq;
+
+        volatile Node next;
+
+        Node(final Object item, final int seq) {
+            this.item = item;
+            this.seq = seq;
+        }
+    }
+
+    // the last node, written under this
+    private volatile Node tailNode = new Node(null, 0);
+
+    // the readers waiting for the next value, guarded by this: a reader or a list of them
+    private Object waiters;
+
+    @Override
+    public void bind(final T value) {
+        final Object readers;
+        synchronized (this) {
+            final Node last = tailNode;
+            final Node node = new Node(value, last.seq + 1);
+            // the tail first, so that a reader cannot reach a node past the tail
+            tailNode = node;
+            last.next = node;
+            readers = waiters;
+            waiters = null;
+        }
+        if (readers instanceof DataflowStreamReadAdapter)
+            ((DataflowStreamReadAdapter<T>) readers).wake();
+        else if (readers != null) {
+            // a failing callback of a reader must not keep the next readers from being woken
+            Throwable failure = null;
+            for (final DataflowStreamReadAdapter<T> reader : (List<DataflowStreamReadAdapter<T>>) readers)
+                failure = ReadCallback.deliver(it -> reader.wake(), null, failure);
+            ReadCallback.rethrow(failure);
+        }
     }
 
     /**
@@ -36,5 +87,35 @@ public final class DataflowBroadcast<T> extends DataflowStreamWriteAdapter<T> {
      */
     public DataflowReadChannel<T> createReadChannel() {
         return new DataflowStreamReadAdapter<T>(this);
+    }
+
+    Node tail() {
+        return tailNode;
+    }
+
+    /**
+     * Registers a reader to be woken by the next bind, unless a value follows its cursor already
+     *
+     * @return false if a value follows the cursor
+     */
+    synchronized boolean await(final DataflowStreamReadAdapter<T> reader, final Node cursor) {
+        if (cursor.next != null)
+            return false;
+        if (waiters == null)
+            waiters = reader;
+        else if (waiters instanceof DataflowStreamReadAdapter) {
+            final List<Object> list = new ArrayList<>(4);
+            list.add(waiters);
+            list.add(reader);
+            waiters = list;
+        }
+        else
+            ((List<Object>) waiters).add(reader);
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "DataflowBroadcast(written=" + tailNode.seq + ')';
     }
 }

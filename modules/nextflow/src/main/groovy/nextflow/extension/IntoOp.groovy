@@ -22,10 +22,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
@@ -105,8 +102,8 @@ class IntoOp {
 
     private createListener() {
 
-        final stopOnFirst = source instanceof DataflowExpression
-        final listener = new DataflowEventAdapter() {
+        final stopOnFirst = source instanceof DataflowVariable
+        final listener = new DataflowEventListener() {
             @Override
             void afterRun(DataflowProcessor processor, List<Object> messages) {
                 if( !stopOnFirst ) return

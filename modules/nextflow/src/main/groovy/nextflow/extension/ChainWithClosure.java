@@ -13,14 +13,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): updated the class description; moved from groovyx.gpars.dataflow.operator to Nextflow, its only user.
 
-package groovyx.gpars.dataflow.operator;
+package nextflow.extension;
 
 import groovy.lang.Closure;
+import groovyx.gpars.dataflow.operator.DataflowProcessor;
 import org.codehaus.groovy.runtime.NullObject;
 
 /**
- * Used by the chainWith() method to wrap the supplied closure inside the operator's body.
+ * Wraps the supplied closure inside the body of an operator.
  * This wrapper closure is responsible for writing the calculated result into the operator's output through its bind() methods.
  *
  * @author Vaclav Pech

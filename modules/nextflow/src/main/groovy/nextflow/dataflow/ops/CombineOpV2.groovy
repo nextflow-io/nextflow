@@ -150,13 +150,13 @@ class CombineOpV2 {
         if( index == 0 ) {
             final leftValue = value
             for( final rightValue : rightValues )
-                target << combine0(leftValue, rightValue)
+                target.bind(combine0(leftValue, rightValue))
             leftValues.add(leftValue)
         }
         else if( index == 1 ) {
             final rightValue = value
             for( final leftValue : leftValues )
-                target << combine0(leftValue, rightValue)
+                target.bind(combine0(leftValue, rightValue))
             rightValues.add(rightValue)
         }
     }
@@ -181,7 +181,7 @@ class CombineOpV2 {
             return
 
         if( !CH.isValue(target) )
-            target << CH.stop()
+            target.bind(CH.stop())
     }
 
 }

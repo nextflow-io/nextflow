@@ -28,7 +28,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
@@ -181,7 +181,7 @@ class Backpressure {
         if( source instanceof Collection ) {
             for( Object it : source ) markSource(name, it)
         }
-        else if( source != null && source !instanceof DataflowExpression && !CH.isTopic(source) )
+        else if( source != null && source !instanceof DataflowVariable && !CH.isTopic(source) )
             gates.putIfAbsent(source, new Gate(name))
     }
 
