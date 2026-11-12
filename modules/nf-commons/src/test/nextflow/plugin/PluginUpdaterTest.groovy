@@ -146,11 +146,14 @@ class PluginUpdaterTest extends Specification {
         def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
 
         when:
-        updater.installPlugin('org1/nf-foo', '1.0.0')
-        updater.installPlugin('org2/nf-foo', '1.0.0')
-        updater.installPlugin(PLUGIN_ID, '1.0.0')
+        def ok1 = updater.installPlugin('org1/nf-foo', '1.0.0')
+        def ok2 = updater.installPlugin('org2/nf-foo', '1.0.0')
+        def ok3 = updater.installPlugin(PLUGIN_ID, '1.0.0')
 
         then:
+        ok1 && ok2 && ok3
+        manager.getPlugin('org1/nf-foo').pluginState == PluginState.STARTED
+        manager.getPlugin('org2/nf-foo').pluginState == PluginState.STARTED
         local.resolve('org1/nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
         local.resolve('org2/nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
         local.resolve("${PLUGIN_ID}-1.0.0").isDirectory()
