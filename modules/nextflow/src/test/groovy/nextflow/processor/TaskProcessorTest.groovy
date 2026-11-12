@@ -935,4 +935,41 @@ class TaskProcessorTest extends Specification {
         TaskProcessor.collectPaths(inputs, new HashSet<Path>()) == [a, r1, r2, bam] as Set
         TaskProcessor.collectPaths('sample1', new HashSet<Path>()).isEmpty()
     }
+
+    def 'should resolve the stage directives of a typed process' () {
+        given:
+        def x = Path.of('/data/x.fa')
+        def y = Path.of('/data/y.fq')
+        def helper = Path.of('/data/helper.sh')
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('id', String, false)
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Path, false)
+        config.getInputs().addEnv('GREETING', { -> "hello ${id}" })
+        config.getInputs().setStdin({ -> "${id}: one" })
+        and: 'user-defined stagers'
+        config.getInputs().addFile(new ProcessFileInput('q.fa', { -> x }))
+        config.getInputs().addFile(new ProcessFileInput('h.sh', { -> helper }))
+        and: 'default stagers'
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, ['s1', x, y, true], Mock(FilePorter.Batch))
+        then:
+        task.inputFilesMap == ['q.fa': x, 'y.fq': y, 'h.sh': helper]
+        task.inputEnv == [GREETING: 'hello s1']
+        task.stdin.toString() == 's1: one'
+        and: 'only the staged files that are not task inputs are hashed'
+        task.stageAsFiles*.sourcePath == [helper]
+    }
 }
