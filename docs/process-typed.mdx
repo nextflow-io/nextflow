@@ -377,6 +377,8 @@ For more information about the available output functions, see [Inputs and outpu
 
 You can use the `file()` and `files()` functions in the `output:` section to get a single file or collection of files from the task directory.
 
+File names and glob patterns are relative to the task directory and cannot refer to files outside of it, such as `../output.txt`.
+
 By default, the `file()` function fails if the specified file is not present in the task directory. You can specify `optional: true` to allow missing files. The `file()` function returns `null` for missing files. For example:
 
 ```nextflow
