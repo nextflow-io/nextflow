@@ -42,4 +42,23 @@ class EmbeddedPluginManagerTest extends Specification {
         cleanup:
         store?.deleteDir()
     }
+
+    def 'should unpack and load a plugin zip in the store root' () {
+        given:
+        def store = Files.createTempDirectory('test')
+        def dir = createPlugin(store, 'nf-bar', '1.0.0')
+        PluginUpdaterTest.zipDir(dir)
+        dir.deleteDir()
+        def manager = new EmbeddedPluginManager(store)
+
+        when:
+        manager.loadPlugins()
+
+        then:
+        store.resolve('nf-bar-1.0.0/MANIFEST.MF').exists()
+        manager.getPlugins()*.pluginId == ['nf-bar']
+
+        cleanup:
+        store?.deleteDir()
+    }
 }
