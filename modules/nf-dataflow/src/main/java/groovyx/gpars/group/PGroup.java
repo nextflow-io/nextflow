@@ -14,30 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed the actor, select and selector factory methods; no pool shutdown on finalization, since groups share the scheduler pool.
+// Modified by Seqera Labs for Nextflow (2026): removed the actor, select and selector factory methods, tasks, splitters and whenAllBound; no pool shutdown on finalization, since groups share the scheduler pool.
 
 package groovyx.gpars.group;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
-import groovyx.gpars.MessagingRunnable;
 import groovyx.gpars.agent.Agent;
-import groovyx.gpars.dataflow.Dataflow;
 import groovyx.gpars.dataflow.DataflowReadChannel;
-import groovyx.gpars.dataflow.DataflowVariable;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
-import groovyx.gpars.dataflow.LazyDataflowVariable;
-import groovyx.gpars.dataflow.Promise;
 import groovyx.gpars.dataflow.operator.DataflowOperator;
 import groovyx.gpars.dataflow.operator.DataflowProcessor;
-import groovyx.gpars.dataflow.operator.DataflowProcessorAtomicBoundAllClosure;
 import groovyx.gpars.scheduler.Pool;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 import static java.util.Arrays.asList;
 
@@ -49,8 +41,6 @@ import static java.util.Arrays.asList;
  */
 @SuppressWarnings({"RawUseOfParameterizedType"})
 public abstract class PGroup {
-
-    protected static final String A_SPLITTER_NEEDS_AN_INPUT_CHANNEL_AND_AT_LEAST_ONE_OUTPUT_CHANNEL_TO_BE_CREATED = "A splitter needs an input channel and at least one output channel to be created.";
 
     /**
      * Stores the group actors' thread pool
@@ -118,129 +108,6 @@ public abstract class PGroup {
         final Agent<T> safe = agent(state, copy);
         safe.makeFair();
         return safe;
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param code The task body to run
-     * @return A DataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public final <T> Promise<T> task(final Closure<T> code) {
-        final Closure<T> clonedCode = (Closure<T>) code.clone();
-        return task(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return clonedCode.call();
-            }
-        });
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param callable The task body to run
-     * @return A DataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public final <T> Promise<T> task(final Callable<T> callable) {
-        final DataflowVariable result = new DataflowVariable();
-        threadPool.execute(new Runnable() {
-            @SuppressWarnings("OverlyBroadCatchBlock")
-            @Override
-            public void run() {
-                Dataflow.activeParallelGroup.set(PGroup.this);
-                try {
-                    //noinspection OverlyBroadCatchBlock
-                    try {
-                        result.bind(callable.call());
-                    } catch (Throwable e) {
-                        result.bind(e);
-                    }
-                } finally {
-                    Dataflow.activeParallelGroup.remove();
-                }
-            }
-        });
-        return result;
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param code The task body to run
-     * @return A DataflowVariable, which gets bound to null once the supplied code finishes
-     */
-    public final Promise<Object> task(final Runnable code) {
-        if (code instanceof Closure) return task((Closure) code);
-        final DataflowVariable result = new DataflowVariable();
-        threadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                Dataflow.activeParallelGroup.set(PGroup.this);
-                try {
-                    try {
-                        code.run();
-                        result.bind(null);
-                    } catch (Throwable e) {
-                        result.bind(e);
-                    }
-                } finally {
-                    Dataflow.activeParallelGroup.remove();
-                }
-            }
-        });
-        return result;
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * The task is lazy, since it only gets executed if the returned Promise instance is read or a then-callback is registered on it.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param code The task body to run
-     * @return A LazyDataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public final <T> Promise<T> lazyTask(final Closure<T> code) {
-        final Closure<T> clonedCode = (Closure<T>) code.clone();
-        return new LazyDataflowVariable<T>(this, clonedCode);
-    }
-
-    /**
-     * Creates a new task assigned to a thread from the current parallel group.
-     * The task is lazy, since it only gets executed if the returned Promise instance is read or a then-callback is registered on it.
-     * Tasks are a lightweight version of dataflow operators, which do not define their communication channels explicitly,
-     * but can only exchange data using explicit DataflowVariables and Streams.
-     * Registers itself with Dataflow for nested 'whenBound' handlers to use the same group.
-     *
-     * @param callable The task body to run
-     * @return A LazyDataflowVariable, which gets assigned the value returned from the supplied code
-     */
-    public final <T> Promise<T> lazyTask(final Callable<T> callable) {
-        if (callable instanceof Closure) return lazyTask((Closure<T>) callable);
-        return new LazyDataflowVariable<T>(this, new Closure<T>(this) {
-            @Override public int getMaximumNumberOfParameters() {
-                return 0;
-            }
-
-            @Override public T call() {
-                try {
-                    return callable.call();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
     }
 
     /**
@@ -316,240 +183,6 @@ public abstract class PGroup {
         params.put(DataflowProcessor.OUTPUTS, asList(output));
         params.put(DataflowProcessor.MAX_FORKS, maxForks);
         return new DataflowOperator(this, params, code).start();
-    }
-
-    /**
-     * Creates a splitter copying its single input channel into all of its output channels. The created splitter will be part of this parallel group
-     *
-     * @param inputChannel   The channel to  read values from
-     * @param outputChannels A list of channels to output to
-     * @return A new started splitter instance with all the channels set
-     */
-    public final DataflowProcessor splitter(final DataflowReadChannel inputChannel, final List<DataflowWriteChannel> outputChannels) {
-        if (inputChannel == null || outputChannels == null || outputChannels.isEmpty())
-            throw new IllegalArgumentException(A_SPLITTER_NEEDS_AN_INPUT_CHANNEL_AND_AT_LEAST_ONE_OUTPUT_CHANNEL_TO_BE_CREATED);
-        final HashMap<String, List> params = new HashMap<String, List>(5);
-        params.put(DataflowProcessor.INPUTS, asList(inputChannel));
-        params.put(DataflowProcessor.OUTPUTS, outputChannels);
-        return new DataflowOperator(this, params, new DataflowProcessorAtomicBoundAllClosure()).start();
-    }
-
-    /**
-     * Creates a splitter copying its single input channel into all of its output channels. The created splitter will be part of this parallel group
-     *
-     * @param inputChannel   The channel to  read values from
-     * @param outputChannels A list of channels to output to
-     * @param maxForks       Number of threads running the splitter's body, defaults to 1
-     * @return A new started splitter instance with all the channels set
-     */
-    public final DataflowProcessor splitter(final DataflowReadChannel inputChannel, final List<DataflowWriteChannel> outputChannels, final int maxForks) {
-        if (inputChannel == null || outputChannels == null || outputChannels.isEmpty())
-            throw new IllegalArgumentException(A_SPLITTER_NEEDS_AN_INPUT_CHANNEL_AND_AT_LEAST_ONE_OUTPUT_CHANNEL_TO_BE_CREATED);
-        final HashMap<String, Object> params = new HashMap<String, Object>(5);
-        params.put(DataflowProcessor.INPUTS, asList(inputChannel));
-        params.put(DataflowProcessor.OUTPUTS, outputChannels);
-        params.put(DataflowProcessor.MAX_FORKS, maxForks);
-        return new DataflowOperator(this, params, new DataflowProcessorAtomicBoundAllClosure()).start();
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promises The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final List<Promise> promises, final Closure<T> code) {
-        return whenAllBound(promises, code, null);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Closure<T> code) {
-        return whenAllBound(asList(promise1), code, null);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param promise2 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Closure<T> code) {
-        return whenAllBound(asList(promise1, promise2), code, null);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param promise2 The promises to wait for
-     * @param promise3 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Closure<T> code) {
-        return whenAllBound(asList(promise1, promise2, promise3), code, null);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1 The promises to wait for
-     * @param promise2 The promises to wait for
-     * @param promise3 The promises to wait for
-     * @param promise4 The promises to wait for
-     * @param code     A closure to execute with concrete values for each of the supplied promises
-     * @param <T>      The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Promise promise4, final Closure<T> code) {
-        return whenAllBound(asList(promise1, promise2, promise3, promise4), code, null);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promises     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final List<Promise> promises, final Closure<T> code, final Closure<T> errorHandler) {
-        if (promises.size() != code.getMaximumNumberOfParameters() && !isListAccepting(code)) {
-            throw new IllegalArgumentException("Cannot run whenAllBound(), since the number of promises does not match the number of arguments to the supplied closure.");
-        }
-        for (final Promise promise : promises) {
-            promise.touch();
-        }
-        final DataflowVariable result = new DataflowVariable();
-        whenAllBound(promises, 0, new ArrayList<Object>(promises.size()), result, code, errorHandler);
-        return result;
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Closure<T> code, final Closure<T> errorHandler) {
-        return whenAllBound(asList(promise1), code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param promise2     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Closure<T> code, final Closure<T> errorHandler) {
-        return whenAllBound(asList(promise1, promise2), code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param promise2     The promises to wait for
-     * @param promise3     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Closure<T> code, final Closure<T> errorHandler) {
-        return whenAllBound(asList(promise1, promise2, promise3), code, errorHandler);
-    }
-
-    /**
-     * Without blocking the thread waits for all the promises to get bound and then passes them to the supplied closure.
-     *
-     * @param promise1     The promises to wait for
-     * @param promise2     The promises to wait for
-     * @param promise3     The promises to wait for
-     * @param promise4     The promises to wait for
-     * @param code         A closure to execute with concrete values for each of the supplied promises
-     * @param errorHandler A closure handling an exception (an instance of Throwable), if if it gets bound
-     * @param <T>          The type of the final result
-     * @return A promise for the final result
-     */
-    public final <T> Promise<T> whenAllBound(final Promise promise1, final Promise promise2, final Promise promise3, final Promise promise4, final Closure<T> code, final Closure<T> errorHandler) {
-        return whenAllBound(asList(promise1, promise2, promise3, promise4), code, errorHandler);
-    }
-
-    /**
-     * Waits for the promise identified by the index to be bound and then passes on to the next promise in the list
-     *
-     * @param promises A list of all promises that need to be waited for
-     * @param index    The index of the current promise to wait for
-     * @param values   A list of values the so-far processed promises were bound tpo
-     * @param result   The promise for the final result of the calculation
-     * @param code     The calculation to execute on the values once they are all bound
-     * @param <T>      The type of the final result
-     */
-    private <T> void whenAllBound(final List<Promise> promises, final int index, final List<Object> values, final DataflowVariable<T> result, final Closure<T> code, final Closure<T> errorHandler) {
-        if (index == promises.size()) {
-            try {
-                if (isListAccepting(code)) {
-                    result.leftShift(code.call(values));
-                } else {
-                    result.leftShift(code.call(values.toArray()));
-                }
-            } catch (Throwable e) {
-                result.bindError(e);
-            }
-        } else promises.get(index).then(this, new MessagingRunnable<Object>() {
-                    @Override
-                    protected void doRun(final Object argument) {
-                        values.add(argument);
-                        whenAllBound(promises, index + 1, values, result, code, errorHandler);
-                    }
-                }, new MessagingRunnable() {
-                    @Override
-                    protected void doRun(final Object argument) {
-                        if (errorHandler != null && shallHandle(errorHandler, (Throwable) argument)) {
-                            try {
-                                result.leftShift(errorHandler.getMaximumNumberOfParameters() == 1 ? errorHandler.call(argument) : errorHandler.call());
-                            } catch (Throwable e) {
-                                result.bindError(e);
-                            }
-                        } else {
-                            result.bindError((Throwable) argument);
-                        }
-
-                    }
-                }
-        );
-    }
-
-    private <T> boolean shallHandle(final Closure<T> errorHandler, final Throwable e) {
-        final Class[] types = errorHandler.getParameterTypes();
-        if (types.length == 0) return true;
-        return types[0].isAssignableFrom(e.getClass());
-    }
-
-    private static <T> boolean isListAccepting(final Closure<T> code) {
-        return code.getMaximumNumberOfParameters() == 1 && List.class.isAssignableFrom(code.getParameterTypes()[0]);
     }
 
     /**

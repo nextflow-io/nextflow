@@ -16,7 +16,6 @@
 package groovyx.gpars.dataflow.operator;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -25,24 +24,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import groovy.lang.Closure;
-import groovyx.gpars.actor.impl.MessageStream;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
+import groovyx.gpars.dataflow.impl.ReadCallback;
 import groovyx.gpars.group.PGroup;
 import groovyx.gpars.scheduler.Pool;
+
+import static groovyx.gpars.dataflow.impl.ReadCallback.NONE;
 
 /**
  * Runs an operator as a mailbox drained serially on a shared pool.
  * <p>
- * Input arrivals and control events are posted to the mailbox. A post schedules a drain on the
- * pool unless one is already scheduled, so at most one thread handles the operator at a time,
- * like a GPars actor. The drain handles a bounded batch of messages, then yields the thread.
+ * Control events are posted to the mailbox, input values and completed forks are signalled with
+ * flags. Either schedules a drain on the pool unless one is already scheduled, so at most one thread
+ * handles the operator at a time, like a GPars actor. The drain handles a bounded batch of work, then
+ * yields the thread.
  * <p>
- * Like the GPars operator actor, the engine requests one value from each input, fires the body
- * once all have arrived, then requests the next ones. Value inputs ({@link DataflowVariable})
- * are re-read on every firing instead of being requested. With {@code maxForks > 1}, the body runs
- * on the pool and up to {@code maxForks} bodies run at once: when all are in flight, a complete
- * input set is parked, and no further input is requested until a body completes.
+ * Like the GPars operator actor, the engine reads one value from each input, fires the body once all
+ * have arrived, then reads the next ones. A read takes a buffered value at once, otherwise it
+ * subscribes to the input, which hands over its next value. Value inputs ({@link DataflowVariable})
+ * are re-read on every firing instead. With {@code maxForks > 1}, the body runs on the pool and up to
+ * {@code maxForks} bodies run at once: when all are in flight, a complete input set is parked, and no
+ * further input is read until a body completes.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -57,13 +60,10 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
 
     private static final Object START = new Object();
     private static final Object RESUME = new Object();
-    private static final Object FORK_DONE = new Object();
     private static final Object TERMINATE = new Object();
     private static final Object STOP_GENTLY = new Object();
 
     private final DataflowProcessor owner;
-
-    private final List<DataflowReadChannel<?>> inputs;
 
     private final Closure<?> code;
 
@@ -74,6 +74,12 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     private volatile Pool pool;
 
     private final Queue<Object> mailbox = new ConcurrentLinkedQueue<>();
+
+    // the number of forked bodies that completed since the last drain
+    private final AtomicInteger forksDone = new AtomicInteger();
+
+    // whether an input handed over a value since the last drain
+    private volatile boolean delivered;
 
     private final AtomicBoolean scheduled = new AtomicBoolean();
 
@@ -86,6 +92,11 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     private final Object[] values;
 
     private int arrived;
+
+    // like GPars, a firing needs a value that arrived: re-reading the value inputs alone does not fire
+    private boolean fresh;
+
+    private boolean started;
 
     private int inFlight;
 
@@ -112,13 +123,12 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     MailboxEngine(final DataflowProcessor owner, final Pool pool, final List<DataflowReadChannel<?>> inputs, final Closure<?> code, final int maxForks) {
         this.owner = owner;
         this.pool = pool;
-        this.inputs = inputs;
         this.code = code;
         this.maxForks = maxForks;
         this.values = new Object[inputs.size()];
         this.ports = new Port[inputs.size()];
         for (int i = 0; i < ports.length; i++)
-            ports[i] = new Port(i, inputs.get(i) instanceof DataflowVariable);
+            ports[i] = new Port(i, inputs.get(i));
     }
 
     @Override
@@ -192,6 +202,14 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
             schedule();
     }
 
+    /**
+     * Signals work that bypasses the mailbox: inputs and forks exist only once started
+     */
+    private void signal() {
+        if (state.get() != STOPPED)
+            schedule();
+    }
+
     private void schedule() {
         if (!scheduled.compareAndSet(false, true))
             return;
@@ -205,15 +223,16 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     }
 
     /**
-     * Drains a batch of messages
+     * Drains a batch of work
      */
     @Override
     public void run() {
         synchronized (threadLock) {
             drainThread = Thread.currentThread();
         }
+        int budget = BATCH;
         try {
-            for (int n = 0; n < BATCH; n++) {
+            while (budget > 0) {
                 final int s = state.get();
                 if (s == STOPPING) {
                     // afterStop must not see the interrupt meant for a body
@@ -223,11 +242,11 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
                 }
                 if (s != RUNNING)
                     break;
-                final Object message = mailbox.poll();
-                if (message == null)
-                    break;
                 try {
-                    handle(message);
+                    final int work = step(budget);
+                    if (work == 0)
+                        break;
+                    budget -= work;
                 }
                 catch (Throwable e) {
                     try {
@@ -248,9 +267,36 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
             scheduled.set(false);
             if (state.get() == STOPPED)
                 mailbox.clear();
-            else if (!mailbox.isEmpty())
+            else if (budget <= 0 || !mailbox.isEmpty() || forksDone.get() > 0 || delivered)
                 schedule();
         }
+    }
+
+    /**
+     * Handles a control message, the completed forks or the delivered values, then fires on the
+     * available input sets
+     *
+     * @return the work done, 0 if there was nothing to do
+     */
+    private int step(final int budget) {
+        final Object message = mailbox.poll();
+        if (message != null) {
+            handle(message);
+            return 1;
+        }
+        if (forksDone.get() > 0) {
+            onForksDone(forksDone.getAndSet(0));
+            return 1;
+        }
+        int work = 0;
+        if (delivered) {
+            delivered = false;
+            collect();
+            work++;
+        }
+        if (started)
+            work += pull(budget);
+        return work;
     }
 
     /**
@@ -267,11 +313,7 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     }
 
     private void handle(final Object message) {
-        if (message instanceof Port)
-            onArrival((Port) message);
-        else if (message == FORK_DONE)
-            onForkDone();
-        else if (message == RESUME)
+        if (message == RESUME)
             onResume();
         else if (message == START)
             onStart();
@@ -282,33 +324,100 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
 
     private void onStart() {
         owner.fireAfterStart();
-        requestInputs(true);
+        started = true;
     }
 
-    private void onArrival(final Port port) {
-        final int index = port.index;
-        Object result = port.take();
-        // the operator stops once the bodies in flight complete
-        if (pendingPill != null)
-            return;
-        final DataflowReadChannel channel = inputs.get(index);
-        if (result instanceof ControlMessage) {
-            result = owner.fireControlMessageArrived(channel, index, result);
-            if (result instanceof PoisonPill)
-                onPoison((PoisonPill) result);
-            if (result instanceof ControlMessage)
-                return;
+    /**
+     * Takes the values handed over by the inputs
+     */
+    private void collect() {
+        for (final Port port : ports) {
+            final Object item = port.item;
+            if (item == NONE)
+                continue;
+            port.item = NONE;
+            port.requested = false;
+            arrive(port, item);
         }
-        values[index] = owner.fireMessageArrived(channel, index, result);
-        if (++arrived < values.length)
-            return;
-        final List<Object> messages = new ArrayList<>(Arrays.asList(values));
-        Arrays.fill(values, null);
-        arrived = 0;
-        fire(messages);
     }
 
-    private void fire(final List<Object> messages) {
+    /**
+     * Reads the inputs and fires as long as complete input sets are available, up to the budget
+     *
+     * @return the number of firings
+     */
+    private int pull(final int budget) {
+        int fired = 0;
+        while (fired < budget && state.get() == RUNNING && !paused && parked == null && pendingPill == null) {
+            for (final Port port : ports) {
+                if (port.has || port.requested)
+                    continue;
+                if (port.value && port.read) {
+                    reread(port);
+                    continue;
+                }
+                port.requested = true;
+                final Object item = port.channel.takeOrSubscribe(port);
+                if (item == NONE)
+                    continue;
+                port.requested = false;
+                arrive(port, item);
+                if (pendingPill != null || state.get() != RUNNING)
+                    return fired;
+            }
+            if (arrived < values.length || !fresh)
+                break;
+            fire();
+            fired++;
+        }
+        return fired;
+    }
+
+    private void arrive(final Port port, Object item) {
+        // the operator stops once the bodies in flight complete, or has stopped already on
+        // another input handed over in the same batch
+        if (pendingPill != null || state.get() != RUNNING)
+            return;
+        if (item instanceof ControlMessage) {
+            item = owner.fireControlMessageArrived(port.channel, port.index, item);
+            if (item instanceof PoisonPill)
+                onPoison((PoisonPill) item);
+            if (item instanceof ControlMessage) {
+                // like GPars, the input is not read again
+                port.requested = true;
+                return;
+            }
+        }
+        values[port.index] = owner.fireMessageArrived(port.channel, port.index, item);
+        port.has = true;
+        port.read = true;
+        arrived++;
+        fresh = true;
+    }
+
+    /**
+     * Reads a value input again, without firing the arrival listeners
+     */
+    private void reread(final Port port) {
+        try {
+            values[port.index] = port.channel.getVal();
+            port.has = true;
+            arrived++;
+        }
+        catch (InterruptedException e) {
+            throw new IllegalStateException("couldn't read the value of a DataflowVariable inside an operator.", e);
+        }
+    }
+
+    private void fire() {
+        final List<Object> messages = new ArrayList<>(values.length);
+        for (int i = 0; i < values.length; i++) {
+            messages.add(values[i]);
+            values[i] = null;
+            ports[i].has = false;
+        }
+        arrived = 0;
+        fresh = false;
         if (maxForks > 1 && inFlight >= maxForks) {
             // wait for a body to complete before taking more inputs. Unlike GPars, beforeRun fires
             // only once the body is about to run, so that a set dropped on stop has no afterRun pending
@@ -329,7 +438,7 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
             return;
         }
         if (state.get() == RUNNING)
-            requestInputsUnlessPaused();
+            pauseIfGateClosed();
     }
 
     private void runBody(final List<Object> messages) {
@@ -352,7 +461,8 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
                     runBody(messages);
                 }
                 finally {
-                    post(FORK_DONE);
+                    forksDone.incrementAndGet();
+                    signal();
                 }
             });
         }
@@ -362,8 +472,8 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
         }
     }
 
-    private void onForkDone() {
-        inFlight--;
+    private void onForksDone(final int count) {
+        inFlight -= count;
         if (pendingPill != null) {
             if (inFlight == 0)
                 forwardPoisonPill();
@@ -397,34 +507,23 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     private void onResume() {
         if (paused && state.get() == RUNNING) {
             paused = false;
-            requestInputsUnlessPaused();
+            pauseIfGateClosed();
         }
     }
 
     /**
-     * Requests the next input set, unless the gate is closed: then the operator is paused until resumed
+     * Pauses the operator while the gate is closed: it reads no further inputs until resumed
      */
-    private void requestInputsUnlessPaused() {
-        if (owner.isGateClosed()) {
-            // count the pause before publishing it, so that a paused operator is always counted.
-            // It counts the pause attempts, including one undone below because the gate reopened
-            pauseCount++;
-            paused = true;
-            // check again after publishing the flag, so that a concurrent resume() is not lost
-            if (owner.isGateClosed())
-                return;
+    private void pauseIfGateClosed() {
+        if (!owner.isGateClosed())
+            return;
+        // count the pause before publishing it, so that a paused operator is always counted.
+        // It counts the pause attempts, including one undone below because the gate reopened
+        pauseCount++;
+        paused = true;
+        // check again after publishing the flag, so that a concurrent resume() is not lost
+        if (!owner.isGateClosed())
             paused = false;
-        }
-        requestInputs(false);
-    }
-
-    private void requestInputs(final boolean initial) {
-        for (final Port port : ports) {
-            if (initial || !port.value)
-                port.request();
-            else
-                port.reread();
-        }
     }
 
     private void finishStop() {
@@ -432,6 +531,12 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
             return;
         mailbox.clear();
         parked = null;
+        // so that a queue input hands no further value over to a stopped operator. A value handed
+        // over already is dropped, as GPars does when the operator is terminated externally
+        for (final Port port : ports) {
+            if (port.requested)
+                port.channel.unsubscribe(port);
+        }
         // like the legacy engine, forward a poison pill that waits for the bodies in flight
         final PoisonPill pill = pendingPill;
         pendingPill = null;
@@ -448,52 +553,39 @@ final class MailboxEngine extends OperatorEngine implements Runnable {
     }
 
     /**
-     * An operator input: receives one requested value at a time and posts itself to the mailbox
+     * An operator input: subscribed to its channel while waiting for a value, which the channel hands over
      */
-    private final class Port extends MessageStream {
-
-        private static final long serialVersionUID = 1L;
+    private final class Port implements ReadCallback {
 
         final int index;
 
+        final DataflowReadChannel channel;
+
         final boolean value;
 
-        // published to the drain by the mailbox
-        private Object message;
+        // the value handed over by the channel, published by `delivered`
+        volatile Object item = NONE;
 
-        Port(final int index, final boolean value) {
+        // waiting for a value, or closed by a control message
+        boolean requested;
+
+        // holds a value of the current input set
+        boolean has;
+
+        // a value was read once
+        boolean read;
+
+        Port(final int index, final DataflowReadChannel channel) {
             this.index = index;
-            this.value = value;
-        }
-
-        void request() {
-            inputs.get(index).getValAsync(this);
-        }
-
-        /**
-         * Reads a value input again, without firing the arrival listeners
-         */
-        void reread() {
-            try {
-                values[index] = inputs.get(index).getVal();
-                arrived++;
-            }
-            catch (InterruptedException e) {
-                throw new IllegalStateException("couldn't read the value of a DataflowVariable inside an operator.", e);
-            }
-        }
-
-        Object take() {
-            final Object result = message;
-            message = null;
-            return result;
+            this.channel = channel;
+            this.value = channel instanceof DataflowVariable;
         }
 
         @Override
-        public MessageStream send(final Object message) {
-            this.message = message;
-            post(this);
-            return this;
+        public void onItem(final Object item) {
+            this.item = item;
+            delivered = true;
+            signal();
         }
     }
 }

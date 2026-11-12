@@ -25,7 +25,9 @@ import java.util.stream.IntStream;
 
 import groovyx.gpars.Closures;
 import groovyx.gpars.agent.Agent;
+import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowQueue;
+import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowVariable;
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter;
 import groovyx.gpars.dataflow.operator.DataflowProcessor;
@@ -106,6 +108,28 @@ class SchedulerTest {
                 return e;
             }
         })).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void shouldFailInsteadOfBlockingTheLoopThreadOnAnEmptyQueueOrStreamWithoutTakingTheNextValue() throws Exception {
+        var queue = new DataflowQueue<Object>();
+        var broadcast = new DataflowBroadcast<Object>();
+        var reader = broadcast.createReadChannel();
+
+        for( var channel : List.<DataflowReadChannel<Object>>of(queue, reader) ) {
+            assertThat(onPool(loop.getThreadPool(), () -> {
+                try {
+                    return channel.getVal();
+                }
+                catch( IllegalStateException e ) {
+                    return e;
+                }
+            })).isInstanceOf(IllegalStateException.class);
+        }
+        queue.bind("x");
+        broadcast.bind("y");
+        assertThat(queue.getVal(5, TimeUnit.SECONDS)).isEqualTo("x");
+        assertThat(reader.getVal(5, TimeUnit.SECONDS)).isEqualTo("y");
     }
 
     @Test
