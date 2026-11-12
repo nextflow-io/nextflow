@@ -16,6 +16,9 @@
 
 package nextflow.dataflow
 
+import java.util.concurrent.TimeUnit
+
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.dataflow.ChannelNamespace as channel
 import nextflow.exception.ScriptRuntimeException
 import nextflow.exception.WorkflowScriptErrorException
@@ -111,6 +114,34 @@ class ChannelImplTest extends Specification {
         result.val == record(id: 2, a: 'y', b: 'foo', c: 'bar')
         result.val == record(id: 3, a: 'z', b: 'foo', c: 'bar')
         result.val == CH.stop()
+    }
+
+    def testCombineNamedArgsWithLateValue() {
+
+        given:
+        def value = new DataflowVariable()
+
+        when:
+        def results = runDataflow {
+            (1..4).collect {
+                def ch = channel.of( record(id: 1), record(id: 2), record(id: 3) )
+                ch.combine(b: new ValueImpl(value), c: 'bar')
+            }
+        }
+        then:
+        results.every { result -> result.getVal(100, TimeUnit.MILLISECONDS) == null }
+        // no thread is held waiting for the value
+        Thread.allStackTraces.values().every { stack -> !stack.any { it.className.contains('CombineOpV2') } }
+
+        when:
+        value.bind('foo')
+        then:
+        results.every { result ->
+            result.val == record(id: 1, b: 'foo', c: 'bar')
+                && result.val == record(id: 2, b: 'foo', c: 'bar')
+                && result.val == record(id: 3, b: 'foo', c: 'bar')
+                && result.val == CH.stop()
+        }
     }
 
     def testCombineError() {
