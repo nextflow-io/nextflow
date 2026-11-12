@@ -26,6 +26,7 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse
 import software.amazon.awssdk.services.s3.model.UploadPartResponse
 import spock.lang.IgnoreIf
 import spock.lang.Requires
+import spock.lang.Shared
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -38,9 +39,15 @@ import java.nio.file.attribute.BasicFileAttributes
  */
 class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
 
+    @Shared
     private S3Client s3Client0
 
+    @Shared
+    private List<String> sharedBuckets0 = []
+
     S3Client getS3Client() { s3Client0 }
+
+    List<String> getSharedBuckets() { sharedBuckets0 }
 
     static private Map config0() {
         // no static keys: the default provider chain also reads the session token of the CI role credentials
@@ -56,11 +63,15 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         Global.session = Mock(Session) { getConfig() >> cfg }
     }
 
+    def cleanupSpec() {
+        deleteSharedBuckets()
+    }
+
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should ensure multipart is used'() {
         given:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         and:
         def chunksize = 6 * 1024 * 1024
         def bytes = new byte[chunksize]
@@ -83,14 +94,14 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         Files.readAttributes(path, BasicFileAttributes).size() == 10 * chunksize
 
         cleanup:
-        if( bucket ) deleteBucket(bucket)
+        if( bucket ) deleteTestDir(bucket)
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should upload empty stream'() {
         given:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         and:
         final path = s3path("s3://$bucket/file.txt")
         def multipart = new S3MultipartOptions()
@@ -104,13 +115,13 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         Files.readAttributes(path, BasicFileAttributes).size() == 0
 
         cleanup:
-        if( bucket ) deleteBucket(bucket)
+        if( bucket ) deleteTestDir(bucket)
     }
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should upload without multipart'() {
         given:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         and:
         def TEXT = randomText(50 * 1024)
         final path = s3path("s3://$bucket/file.txt")
@@ -126,7 +137,7 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         readObject(path) == TEXT
 
         cleanup:
-        if( bucket ) deleteBucket(bucket)
+        if( bucket ) deleteTestDir(bucket)
     }
 
     def 'should send sorted parts to completeMultipartUpload'() {

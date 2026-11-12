@@ -167,17 +167,19 @@ allprojects {
             '--enable-preview',
             // preserve Groovy 4 file/path truthiness (a non-null File/Path is truthy regardless of existence) -- see GROOVY-11996
             '-Dgroovy.truth.file.exists.enabled=false',
-            '--add-opens=java.base/java.lang=ALL-UNNAMED',
-            '--add-opens=java.base/java.io=ALL-UNNAMED',
-            '--add-opens=java.base/java.nio=ALL-UNNAMED',
-            '--add-opens=java.base/java.net=ALL-UNNAMED',
-            '--add-opens=java.base/java.util=ALL-UNNAMED',
-            '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
-            '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-            '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
         ])
         // agent mode, auto-detected when tests run under an agent, changes console output
         environment 'NXF_AGENT_MODE', 'false'
+        // skip the EC2 metadata probe, which stalls each AWS client creation off EC2
+        environment 'AWS_EC2_METADATA_DISABLED', 'true'
+        // keep the session cache and history out of the developer's ~/.nextflow,
+        // and start each run from an empty one
+        final cacheDir = project.layout.buildDirectory.dir('tmp/nxf-cache').get().asFile
+        environment 'NXF_CACHE_DIR', cacheDir.absolutePath
+        doFirst {
+            cacheDir.deleteDir()
+            cacheDir.mkdirs()
+        }
     }
 
     /**
@@ -705,4 +707,6 @@ task upload {
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
 }
+
+apply from: 'gradle/bundle.gradle'
 

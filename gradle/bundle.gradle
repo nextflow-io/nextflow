@@ -1,0 +1,383 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Standalone bundle for each target platform:
+//
+//   build/bundle/nextflow-<version>-<os>-<arch>/
+//     bin/nextflow                  launcher
+//     runtime/                      Temurin JRE
+//     lib/nextflow-<version>-one.jar
+//     lib/nextflow.aot              AOT cache (see bundle/train.sh)
+//
+//   build/bundle/nextflow-<version>-<os>-<arch>.tar.gz
+//   build/bundle/nextflow-<version>-<os>-<arch>.tar.gz.sha256
+//
+// The runtime is the latest Temurin 25 JRE, resolved at build time from the Adoptium API.
+// The AOT cache can only be created by running the target runtime, so only the bundle of the
+// host platform is built. CI builds each bundle on its platform (.github/workflows/bundle.yml).
+//
+//   ./gradlew bundle                        current OS/arch
+//   -PjreVersion=<version>                  override the Temurin release, e.g. 25.0.5+8 (default: latest)
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+import javax.inject.Inject
+
+class Checksums {
+    static String sha256(File file) {
+        final digest = MessageDigest.getInstance('SHA-256')
+        file.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+}
+
+/**
+ * Resolves the Temurin JRE release of the bundled runtime (the given version, or the latest
+ * one of every target), and the download link and SHA-256 checksum of each target.
+ */
+abstract class TemurinRelease extends DefaultTask {
+
+    static final String API = 'https://api.adoptium.net/v3'
+
+    @Input
+    abstract Property<Integer> getFeatureVersion()
+
+    /** e.g. 25.0.5+8 */
+    @Input
+    @Optional
+    abstract Property<String> getVersion()
+
+    /** Adoptium os/architecture of each target, e.g. linux-arm64 -> linux/aarch64. */
+    @Input
+    abstract MapProperty<String,String> getPlatforms()
+
+    @Internal
+    abstract Property<Boolean> getOffline()
+
+    @OutputFile
+    abstract RegularFileProperty getOutputFile()
+
+    TemurinRelease() {
+        // the latest release can change at any time
+        outputs.upToDateWhen { version.present }
+    }
+
+    @TaskAction
+    void run() {
+        final output = outputFile.get().asFile
+        if( offline.get() && output.exists() ) {
+            logger.warn("Offline: using the previously resolved Temurin JRE")
+            return
+        }
+        final name = version.present ? 'jdk-' + (version.get() - ~/^jdk-/) : latestReleaseName()
+        final release = fetch("$API/assets/release_name/eclipse/${URLEncoder.encode(name, 'UTF-8')}?image_type=jre&jvm_impl=hotspot&heap_size=normal")
+        if( release == null )
+            throw new GradleException("No Temurin release named ${name} -- see ${API}/info/release_names?version=%5B${featureVersion.get()},${featureVersion.get() + 1}%29&release_type=ga")
+        final archives = platforms.get().collectEntries { target, platform ->
+            final binary = findBinary(release.binaries as List, platform)
+            final pkg = binary?.package as Map
+            if( !(pkg?.link as String)?.endsWith('.tar.gz') || !((pkg.checksum ?: '') ==~ /[0-9a-f]{64}/) )
+                throw new GradleException("No Temurin JRE ${name} for ${target} (${platform})")
+            [target, [url: pkg.link, sha256: pkg.checksum]]
+        }
+        final result = name - ~/^jdk-/
+        logger.lifecycle("Temurin JRE: ${result}")
+        output.text = JsonOutput.prettyPrint(JsonOutput.toJson([version: result, archives: archives])) + '\n'
+    }
+
+    /**
+     * Gets the latest release available for every target. The latest release of each target can
+     * differ, e.g. while a release is published one platform at a time, or after a respin for one
+     * platform: then the newest of them that has all targets is used.
+     */
+    private String latestReleaseName() {
+        final latest = fetch("$API/assets/latest/${featureVersion.get()}/hotspot?image_type=jre&vendor=eclipse") as List
+        final names = platforms.get().collect { target, platform ->
+            final entry = latest.find { findBinary([it.binary], platform) }
+            if( !entry )
+                throw new GradleException("No Temurin ${featureVersion.get()} JRE for ${target} (${platform})")
+            entry.release_name as String
+        }.unique()
+        if( names.size() == 1 )
+            return names.first()
+        final complete = names.findAll { name ->
+            final release = fetch("$API/assets/release_name/eclipse/${URLEncoder.encode(name, 'UTF-8')}?image_type=jre&jvm_impl=hotspot&heap_size=normal")
+            release && platforms.get().values().every { platform -> findBinary(release.binaries as List, platform) }
+        }
+        if( !complete )
+            throw new GradleException("No Temurin ${featureVersion.get()} JRE release has all targets: ${names.join(', ')} -- select one with -PjreVersion")
+        final result = complete.max { a, b -> compareReleaseNames(a, b) }
+        logger.lifecycle("The latest Temurin JRE differs between targets (${names.join(', ')}) -- using ${result}")
+        return result
+    }
+
+    /** Compares release names such as jdk-25+36, jdk-25.0.1+8 and jdk-25.0.1+8.1: the version, then the build. */
+    static int compareReleaseNames(String a, String b) {
+        final parse = { String name ->
+            final parts = (name - ~/^jdk-/).tokenize('+')
+            final version = parts[0].tokenize('.')*.toInteger()
+            (version + [0] * (4 - version.size())) + (parts.size() > 1 ? parts[1].findAll(/\d+/)*.toInteger() : [])
+        }
+        final x = parse(a)
+        final y = parse(b)
+        for( int i = 0; i < Math.min(x.size(), y.size()); i++ ) {
+            if( x[i] != y[i] )
+                return x[i] <=> y[i]
+        }
+        return x.size() <=> y.size()
+    }
+
+    static Map findBinary(List binaries, String platform) {
+        final parts = platform.tokenize('/')
+        return binaries.find { it.os == parts[0] && it.architecture == parts[1] && it.image_type == 'jre' && it.jvm_impl == 'hotspot' && it.heap_size == 'normal' } as Map
+    }
+
+    /** Returns the parsed JSON, or null if not found. */
+    static Object fetch(String url) {
+        final conn = (HttpURLConnection) URI.create(url).toURL().openConnection()
+        conn.connectTimeout = 30_000
+        conn.readTimeout = 60_000
+        if( conn.responseCode == 404 )
+            return null
+        if( conn.responseCode != 200 )
+            throw new GradleException("Can't fetch ${url} (HTTP ${conn.responseCode})")
+        return conn.inputStream.withCloseable { new JsonSlurper().parse(it, 'UTF-8') }
+    }
+}
+
+/**
+ * Downloads the JRE archive of a target into a shared cache, verifies its
+ * SHA-256 checksum, and extracts the Java home directory.
+ */
+abstract class JreDownload extends DefaultTask {
+
+    /** Output of {@link TemurinRelease}. */
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getRelease()
+
+    @Input
+    abstract Property<String> getTarget()
+
+    /** Download cache, shared across builds. */
+    @Internal
+    abstract DirectoryProperty getCacheDirectory()
+
+    @OutputDirectory
+    abstract DirectoryProperty getJavaHome()
+
+    @Inject
+    protected abstract ExecOperations getExec()
+
+    @Inject
+    protected abstract FileSystemOperations getFs()
+
+    @TaskAction
+    void run() {
+        final json = new JsonSlurper().parse(release.get().asFile) as Map
+        final config = (json.archives as Map)[target.get()] as Map
+        final url = config.url as String
+        final expected = config.sha256 as String
+        final archive = new File(cacheDirectory.get().asFile, url.tokenize('/').last())
+        if( !archive.exists() || Checksums.sha256(archive) != expected ) {
+            logger.lifecycle("Downloading ${url}")
+            archive.parentFile.mkdirs()
+            final tmp = new File(archive.path + '.part')
+            URI.create(url).toURL().withInputStream { input -> Files.copy(input, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+            final actual = Checksums.sha256(tmp)
+            if( actual != expected ) {
+                tmp.delete()
+                throw new GradleException("Checksum mismatch for ${url}: expected ${expected}, got ${actual}")
+            }
+            Files.move(tmp.toPath(), archive.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+
+        // the archive contains a single directory, which is the Java home on Linux, and contains it as Contents/Home on macOS
+        final extracted = temporaryDir
+        fs.delete { delete(extracted) }
+        extracted.mkdirs()
+        exec.exec { commandLine 'tar', '-xzf', archive.absolutePath, '-C', extracted.absolutePath }
+        final dirs = extracted.listFiles().findAll { it.isDirectory() }
+        final source = dirs.size() == 1 ? [dirs[0], new File(dirs[0], 'Contents/Home')].find { new File(it, 'release').isFile() } : null
+        if( !source || !new File(source, 'bin/java').canExecute() )
+            throw new GradleException("No Java runtime found in ${archive}")
+        final home = javaHome.get().asFile
+        fs.delete { delete(home) }
+        Files.move(source.toPath(), home.toPath())
+        fs.delete { delete(extracted) }
+    }
+}
+
+// Java feature version of the bundled runtime, and the Adoptium os/architecture of each target
+final javaVersion = 25
+final targets = [
+    'linux-x64'  : 'linux/x64',
+    'linux-arm64': 'linux/aarch64',
+    'macos-arm64': 'mac/aarch64',
+]
+
+final hostTarget = providers.systemProperty('os.name').zip(providers.systemProperty('os.arch')) { name, arch ->
+    final o = name.startsWith('Linux') ? 'linux' : name.startsWith('Mac') ? 'macos' : name
+    final a = arch in ['amd64', 'x86_64'] ? 'x64' : arch in ['aarch64', 'arm64'] ? 'arm64' : arch
+    "$o-$a".toString()
+}.get()
+
+evaluationDependsOn(':nf-cli-v1')
+final shadowJar = project(':nf-cli-v1').tasks.named('shadowJar', Jar)
+final bundleVersion = version.toString()
+final jarName = "nextflow-${bundleVersion}-one.jar".toString()
+
+final bundleNames = targets.keySet().collectEntries { target -> [target, "nextflow-$bundleVersion-$target".toString()] }
+
+final temurinRelease = tasks.register('jreRelease', TemurinRelease) {
+    description = "Resolves the Temurin $javaVersion JRE release of the bundled runtime."
+    featureVersion = javaVersion
+    version = providers.gradleProperty('jreVersion')
+    platforms = targets
+    offline = gradle.startParameter.offline
+    outputFile = layout.buildDirectory.file('jre/release.json')
+}
+
+if( targets.containsKey(hostTarget) ) {
+    final name = bundleNames[hostTarget]
+
+    final runtime = tasks.register('jre', JreDownload) {
+        description = "Downloads the Java runtime for $hostTarget."
+        release = temurinRelease.flatMap { it.outputFile }
+        target = hostTarget
+        cacheDirectory = new File(gradle.gradleUserHomeDir, 'caches/temurin')
+        javaHome = layout.buildDirectory.dir("jre/$hostTarget")
+    }
+
+    final image = tasks.register('bundleImage', Sync) {
+        description = "Assembles the standalone bundle for $hostTarget."
+        final jar = shadowJar.flatMap { it.archiveFile }
+        final version = bundleVersion
+        inputs.property('version', version)
+        into(layout.buildDirectory.dir("bundle/$name"))
+        from(rootProject.file('nextflow')) {
+            into 'bin'
+            filePermissions { unix('rwxr-xr-x') }
+            // the launcher of the last release, which must select the bundled version by default
+            filter { it.replaceFirst(/^NXF_VER=\$\{NXF_VER:-'.*'\}$/, "NXF_VER=\\\${NXF_VER:-'$version'}") }
+            // other versions also run with their bundle, e.g. with NXF_VER or after self-update
+            filter { it.replaceFirst(/^NXF_JAVA_BUNDLE=\$\{NXF_JAVA_BUNDLE:-false\}$/, 'NXF_JAVA_BUNDLE=\\\${NXF_JAVA_BUNDLE:-true}') }
+        }
+        from(runtime) {
+            into 'runtime'
+            // the JRE has read-only files, which prevents overwriting them
+            eachFile { details ->
+                final mode = details.permissions.toUnixNumeric() | 0200
+                details.permissions { it.unix(mode) }
+            }
+        }
+        from(jar) {
+            into 'lib'
+            rename { jarName }
+        }
+        // the AOT cache checks the jar mtime, so it must not change when the image is synced again
+        doLast {
+            new File(destinationDir, "lib/$jarName").setLastModified(jar.get().asFile.lastModified())
+        }
+    }
+
+    // trains the AOT cache by running the training pipeline with the bundle launcher
+    final train = tasks.register('bundleTrain', Exec) {
+        description = 'Creates the AOT cache of the bundle.'
+        final dir = image.map { it.destinationDir }
+        final cache = layout.buildDirectory.file('bundle-aot/nextflow.aot')
+        final workDir = layout.buildDirectory.dir('bundle-aot/work')
+        final script = rootProject.file('bundle/train.sh')
+        inputs.files(image).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.dir('bundle/training').withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file(script)
+        outputs.file(cache)
+        executable script
+        argumentProviders.add({ [dir.get().absolutePath, cache.get().asFile.absolutePath, workDir.get().asFile.absolutePath] } as CommandLineArgumentProvider)
+    }
+
+    final checksum = layout.buildDirectory.file("bundle/${name}.tar.gz.sha256")
+    final tar = tasks.register('bundleTar', Tar) {
+        description = "Packages the standalone bundle for $hostTarget."
+        from(image) { into name }
+        from(train) { into "$name/lib" }
+        destinationDirectory = layout.buildDirectory.dir('bundle')
+        archiveFileName = "${name}.tar.gz"
+        compression = Compression.GZIP
+        // keep executable bits
+        useFileSystemPermissions()
+        // the AOT cache is only valid for the jar mtime at training, which reproducible archives would reset
+        preserveFileTimestamps = true
+        // in the format of `sha256sum`, which the launcher checks when it downloads the bundle
+        outputs.file(checksum)
+        doLast {
+            final archive = archiveFile.get().asFile
+            checksum.get().asFile.text = "${Checksums.sha256(archive)}  ${archive.name}\n"
+        }
+    }
+
+    tasks.register('bundle') {
+        group = 'distribution'
+        description = 'Builds the standalone bundle for the current OS/arch.'
+        dependsOn tar
+    }
+}
+else {
+    tasks.register('bundle') {
+        group = 'distribution'
+        description = 'Builds the standalone bundle for the current OS/arch.'
+        doFirst { throw new GradleException("Unsupported host platform for the bundle: $hostTarget (supported: ${targets.keySet().join(', ')})") }
+    }
+}
+
+// The bundles of a release, which `deploy` uploads next to the jar (see packing.gradle).
+// They are built for every target by the Bundle workflow, and NXF_RELEASE_BUNDLES is the
+// directory that contains them, or `none` to deploy a release without bundles.
+// Returns the archives and checksum files to upload, after checking them.
+ext.releaseBundles = { ->
+    if( bundleVersion.endsWith('-SNAPSHOT') )
+        return []
+    final dir = System.getenv('NXF_RELEASE_BUNDLES')
+    if( !dir )
+        throw new GradleException("Missing the Java bundles of release $bundleVersion -- set NXF_RELEASE_BUNDLES to the directory that contains them (built by the Bundle workflow), or to 'none' to deploy without bundles")
+    if( dir == 'none' ) {
+        logger.warn("NXF_RELEASE_BUNDLES=none: deploying release $bundleVersion without the Java bundles")
+        return []
+    }
+    final result = []
+    bundleNames.each { target, name ->
+        final archive = new File(dir, "${name}.tar.gz")
+        final checksum = new File(dir, "${name}.tar.gz.sha256")
+        if( !archive.isFile() || !checksum.isFile() )
+            throw new GradleException("Missing the Java bundle of release $bundleVersion for $target -- expected ${archive} and ${checksum}")
+        final expected = "${Checksums.sha256(archive)}  ${archive.name}".toString()
+        if( checksum.text.trim() != expected )
+            throw new GradleException("Invalid checksum file for the Java bundle ${archive} -- expected '${expected}', found '${checksum.text.trim()}'")
+        result << archive << checksum
+    }
+    return result
+}
+
+tasks.register('checkReleaseBundles') {
+    description = 'Checks the Java bundles of a release before it is deployed (see NXF_RELEASE_BUNDLES).'
+    doLast {
+        final files = releaseBundles()
+        files.each { logger.lifecycle("- $it") }
+    }
+}

@@ -23,6 +23,7 @@ import nextflow.file.FileHelper
 import software.amazon.awssdk.services.s3.S3Client
 import spock.lang.IgnoreIf
 import spock.lang.Requires
+import spock.lang.Shared
 import spock.lang.Specification
 
 /**
@@ -35,9 +36,15 @@ import spock.lang.Specification
 @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec {
 
+    @Shared
     private S3Client s3Client0
 
+    @Shared
+    private List<String> sharedBuckets0 = []
+
     S3Client getS3Client() { s3Client0 }
+
+    List<String> getSharedBuckets() { sharedBuckets0 }
 
     static private Map config0() {
         // no static keys: the default provider chain also reads the session token of the CI role credentials
@@ -53,9 +60,13 @@ class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec
         Global.session = Mock(Session) { getConfig() >> cfg }
     }
 
+    def cleanupSpec() {
+        deleteSharedBuckets()
+    }
+
     def 'tryCreate is atomic: the first caller wins, the second conflicts'() {
         given:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         def lock = s3path("s3://$bucket/.nf-lock-${UUID.randomUUID()}")
         def provider = new S3AtomicLockProvider()
 
@@ -69,7 +80,7 @@ class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec
         // the SPI has no release: in production the marker is never removed, so a test that
         // needs the object gone deletes it directly (what the dropped impls did anyway)
         Files.deleteIfExists(lock)
-        tryDeleteBucket(bucket)
+        deleteTestDir(bucket)
     }
 
 }

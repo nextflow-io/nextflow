@@ -243,7 +243,7 @@ class AgentDefTest extends Specification {
 
         then:
         schema.type == 'object'
-        schema.get('properties').assembly_path.type == 'string'
+        schema.properties.assembly_path.type == 'string'
         schema.required == ['assembly_path']
         schema.additionalProperties == false
     }
@@ -256,9 +256,9 @@ class AgentDefTest extends Specification {
     def 'scalarOutputSchema represents a List as an array of its element type'() {
         expect:
         AgentDef.scalarOutputSchema(new AgentBuilder.AgentOutput('scores', ListHolder.getField('scores').getGenericType()))
-            .get('properties').scores == [type: 'array', items: [type: 'integer']]
+            .properties.scores == [type: 'array', items: [type: 'integer']]
         AgentDef.scalarOutputSchema(new AgentBuilder.AgentOutput('recs', ListHolder.getField('recs').getGenericType()))
-            .get('properties').recs.items.type == 'object'
+            .properties.recs.items.type == 'object'
     }
 
     def 'decodeCanonicalOutput unwraps a scalar final answer contract'() {

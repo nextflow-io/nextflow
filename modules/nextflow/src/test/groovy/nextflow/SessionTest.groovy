@@ -66,6 +66,8 @@ import static test.ScriptHelper.*
  */
 class SessionTest extends Specification {
 
+    // how long the slow observers run: a destroy that does not wait returns well before this
+    static final long OBSERVER_DELAY = 250
 
     def 'test baseDir and binDir'() {
 
@@ -732,7 +734,7 @@ class SessionTest extends Specification {
         def finished = new AtomicBoolean(false)
         def observer = new TraceObserverV2() {
             @Override
-            void onFlowComplete() { started.countDown(); sleep 2_000; finished.set(true) }
+            void onFlowComplete() { started.countDown(); sleep OBSERVER_DELAY; finished.set(true) }
         }
         def session = new Session()
         session.@observersV2 = [observer]
@@ -760,7 +762,7 @@ class SessionTest extends Specification {
             @Override
             void onFlowComplete() { started.countDown() }
             @Override
-            void onFlowError(TaskEvent event) { sleep 2_000; finished.set(true) }
+            void onFlowError(TaskEvent event) { sleep OBSERVER_DELAY; finished.set(true) }
         }
         def session = new Session()
         session.@observersV2 = [observer]
@@ -784,7 +786,7 @@ class SessionTest extends Specification {
         def finished = new AtomicBoolean(false)
         def observer = new TraceObserverV2() {
             @Override
-            void onFlowComplete() { started.countDown(); sleep 2_000; finished.set(true) }
+            void onFlowComplete() { started.countDown(); sleep OBSERVER_DELAY; finished.set(true) }
         }
         def session = new Session()
         session.@observersV2 = [observer]
@@ -815,7 +817,7 @@ class SessionTest extends Specification {
             void onFlowComplete() {
                 started.countDown()
                 // Thread.sleep, unlike Groovy sleep, is interrupted when the pool is shut down hard
-                try { Thread.sleep(2_000); finished.set(true) }
+                try { Thread.sleep(OBSERVER_DELAY); finished.set(true) }
                 catch( InterruptedException e ) { interrupted.set(true) }
             }
         }
