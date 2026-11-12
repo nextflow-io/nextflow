@@ -698,7 +698,7 @@ class WaveClient {
                 responses.put(key,new Handle(ret,Instant.now()));
                 return ret
             })
-            return new ContainerInfo(assets.containerImage, resp.targetImage, key)
+            return new ContainerInfo(assets.containerImage, resp.targetImage, assets.taskHashKey(), key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause
