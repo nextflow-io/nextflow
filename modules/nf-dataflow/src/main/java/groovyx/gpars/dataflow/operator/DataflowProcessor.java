@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by a mailbox or legacy actor engine; added isActive(); removed registerChannelListenersToAllInputs.
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by the mailbox engine instead of a GPars actor; added isActive(); removed registerChannelListenersToAllInputs.
 
 package groovyx.gpars.dataflow.operator;
 
@@ -39,8 +39,8 @@ import java.util.function.BooleanSupplier;
  * <p>
  * Dataflow selectors and operators enable creation of highly concurrent applications yet the abstraction hides the low-level concurrency primitives
  * and exposes much friendlier API.
- * Since selectors and operators internally leverage the actor implementation, they reuse a pool of threads and so the actual number of threads
- * used by the calculation can be kept much lower than the actual number of processors used in the network.
+ * Operators run on a shared pool of threads, so the actual number of threads used by the calculation can be kept much lower
+ * than the actual number of processors used in the network.
  * </p>
  *
  * @author Vaclav Pech
@@ -56,9 +56,9 @@ public abstract class DataflowProcessor {
     private static final String LISTENERS = "listeners";
 
     /**
-     * The engine running the processor: a mailbox, or a GPars actor with the legacy engine
+     * The engine running the processor
      */
-    OperatorEngine engine;
+    MailboxEngine engine;
 
     final List<DataflowReadChannel<?>> inputs;
 
@@ -327,7 +327,7 @@ public abstract class DataflowProcessor {
     }
 
     /**
-     * Is invoked in case the actor throws an exception.
+     * Is invoked in case the body throws an exception.
      *
      * @param e The reported exception
      */

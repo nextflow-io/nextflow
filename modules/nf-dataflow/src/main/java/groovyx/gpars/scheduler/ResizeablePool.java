@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): documentation updated for the removal of actors.
 
 package groovyx.gpars.scheduler;
 
@@ -25,9 +27,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Represents the actors' thread pool, which performs tasks on behalf of the actors.
- * The actors' thread pool size defaults to the n + 1, where n is the number of processors/cores available on the machine.
- * The VM parameter -Dgpars.poolsize can be used the configure the default size of the actors' thread pool.
+ * Represents the thread pool of the dataflow operators and agents.
+ * The pool size defaults to the n + 1, where n is the number of processors/cores available on the machine.
+ * The VM parameter -Dgpars.poolsize can be used the configure the default size of the pool.
  * The resize() and resetDefaultSize() methods can be used to configure size of the thread pool at runtime.
  *
  * @author Vaclav Pech

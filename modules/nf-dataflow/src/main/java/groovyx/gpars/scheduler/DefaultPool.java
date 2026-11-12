@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): dataflow thread names, and documentation updated for the removal of actors.
 
 package groovyx.gpars.scheduler;
 
@@ -26,9 +28,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Represents the actors' thread pool, which performs tasks on behalf of the actors.
- * The actors' thread pool size defaults to the n + 1, where n is the number of processors/cores available on the machine.
- * The VM parameter -Dgpars.poolsize can be used the configure the default size of the actors' thread pool.
+ * Represents the thread pool of the dataflow operators and agents.
+ * The pool size defaults to the n + 1, where n is the number of processors/cores available on the machine.
+ * The VM parameter -Dgpars.poolsize can be used the configure the default size of the pool.
  * The resize() and resetDefaultSize() methods can be used to configure size of the thread pool at runtime.
  *
  * @author Vaclav Pech
@@ -103,16 +105,16 @@ public class DefaultPool implements Pool {
     }
 
     /**
-     * Created a JVM-unique name for Actors' threads.
+     * Created a JVM-unique name for dataflow threads.
      *
      * @return The name prefix
      */
     protected static String createThreadName() {
-        return "Actor Thread " + DefaultPool.threadCount.incrementAndGet();
+        return "Dataflow Thread " + DefaultPool.threadCount.incrementAndGet();
     }
 
     /**
-     * Unique counter for Actors' threads
+     * Unique counter for dataflow threads
      */
     private static final AtomicLong threadCount = new AtomicLong(0L);
 

@@ -86,16 +86,17 @@ class BackpressureTest extends Specification {
 
     def 'should get the high-water mark' () {
         expect:
-        // disabled by default
-        withEnv([:]) { Backpressure.highWater() } == 0
+        withEnv([:]) { Backpressure.highWater(4) } == 64
+        withEnv([:]) { Backpressure.highWater(16) } == 64
+        withEnv([:]) { Backpressure.highWater(50) } == 100
 
         and:
-        withEnv(NXF_DATAFLOW_HIGH_WATER: '16') { Backpressure.highWater() } == 16
+        withEnv(NXF_DATAFLOW_HIGH_WATER: '16') { Backpressure.highWater(50) } == 16
         withEnv(NXF_DATAFLOW_HIGH_WATER: '16') { new Backpressure(null, 16).getLowWater() } == 8
 
         and:
         // zero disables backpressure
-        withEnv(NXF_DATAFLOW_HIGH_WATER: '0') { Backpressure.highWater() } == 0
+        withEnv(NXF_DATAFLOW_HIGH_WATER: '0') { Backpressure.highWater(4) } == 0
     }
 
     def 'should reject an invalid high-water mark' () {
@@ -103,7 +104,7 @@ class BackpressureTest extends Specification {
         SysEnv.push(NXF_DATAFLOW_HIGH_WATER: value)
 
         when:
-        Backpressure.highWater()
+        Backpressure.highWater(4)
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains("Invalid NXF_DATAFLOW_HIGH_WATER value: '" + value + "'")

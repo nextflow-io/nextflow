@@ -40,7 +40,7 @@ import org.codehaus.groovy.runtime.InvokerHelper;
  * A write-once dataflow value: it is bound once, to a value or an error, and read any number of times.
  * <p>
  * Rewrites the GPars 1.2.1 class of the same name (Copyright 2008-2013 the original author or authors)
- * with its public API and semantics, minus remote binding and bind error listeners.
+ * with its public API and semantics, minus remote binding, bind error listeners, bindUnique and getValAsync.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -151,15 +151,6 @@ public abstract class DataflowExpression<T> implements DataflowReadChannel<T>, G
             }
             throw new IllegalStateException(ALREADY_BOUND);
         }
-        doBind(value, value instanceof Throwable ? (Throwable) value : null);
-    }
-
-    /**
-     * Binds the value, failing if the expression is bound already
-     */
-    public final void bindUnique(final T value) {
-        if (!STATE.compareAndSet(this, UNBOUND, BINDING))
-            throw new IllegalStateException("A DataflowVariable can only be assigned once. Use bind() to allow for equal values to be passed into already-bound variables.");
         doBind(value, value instanceof Throwable ? (Throwable) value : null);
     }
 

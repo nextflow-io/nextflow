@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): documentation updated for the removal of actors.
 
 package groovyx.gpars.agent;
 
@@ -149,7 +151,7 @@ abstract class AgentBase<T> extends AgentCore {
      * A shorthand method for safe message-based retrieval of the internal state.
      * Retrieves the internal state immediately by-passing the queue of tasks waiting to be processed.
      *
-     * @return The current value of the actor's state
+     * @return The current value of the agent's state
      */
     @SuppressWarnings({"unchecked"})
     public final T getInstantVal() {
@@ -165,7 +167,7 @@ abstract class AgentBase<T> extends AgentCore {
      * A shorthand method for safe message-based retrieval of the internal state.
      * The request to retrieve a value is put into the message queue, so will wait for all messages delivered earlier to complete.
      *
-     * @return The value of the actor's state once all previously sent messages in the queue get processed
+     * @return The value of the agent's state once all previously sent messages in the queue get processed
      * @throws InterruptedException If the thread gets interrupted while waiting for a value to be bound
      */
     public final T getVal() throws InterruptedException {

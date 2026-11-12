@@ -55,12 +55,14 @@ class Backpressure {
     static final String HIGH_WATER_ENV = 'NXF_DATAFLOW_HIGH_WATER'
 
     /**
-     * The high-water mark, zero by default. Zero disables backpressure
+     * The high-water mark, by default twice the executor pool size (the most input sets a process
+     * prepares at once) and at least 64, so that task preparation alone never pauses a process.
+     * Zero disables backpressure
      */
-    static int highWater() {
+    static int highWater(int poolSize) {
         final value = SysEnv.get(HIGH_WATER_ENV)?.trim()
         if( !value )
-            return 0
+            return Math.max(64, 2 * poolSize)
         try {
             final result = Integer.parseInt(value)
             if( result >= 0 )

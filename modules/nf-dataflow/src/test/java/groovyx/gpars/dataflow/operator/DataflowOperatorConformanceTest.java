@@ -35,6 +35,7 @@ import groovyx.gpars.dataflow.DataflowVariable;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import static groovyx.gpars.Closures.function;
 import static groovyx.gpars.TestThreads.start;
@@ -296,6 +297,7 @@ class DataflowOperatorConformanceTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
     void shouldRunUpToMaxForksBodiesConcurrentlyAndNoMore() throws Exception {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
@@ -314,10 +316,17 @@ class DataflowOperatorConformanceTest {
             running.decrementAndGet();
             self.bindOutput(together);
         }));
-        for( int i = 0; i < n; i++ )
-            input.bind(i);
-        assertThat(read(output, n)).containsOnly(true);
-        assertThat(maxRunning.get()).isEqualTo(3);
+        try {
+            for( int i = 0; i < n; i++ )
+                input.bind(i);
+            assertThat(read(output, n)).containsOnly(true);
+            assertThat(maxRunning.get()).isEqualTo(3);
+        }
+        finally {
+            // so that the remaining bodies do not wait
+            while( allIn.getCount() > 0 )
+                allIn.countDown();
+        }
     }
 
     @Test
@@ -490,6 +499,7 @@ class DataflowOperatorConformanceTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "NXF_DATAFLOW_POOL_SIZE", matches = "\\s*1\\s*", disabledReason = "needs more than one dataflow thread")
     void shouldWaitForInFlightBodiesBeforeForwardingThePoisonPillWithMaxForks() throws Exception {
         var input = new DataflowQueue<Object>();
         var output = new DataflowQueue<Object>();
@@ -503,11 +513,14 @@ class DataflowOperatorConformanceTest {
             self.bindOutput(x);
         }));
         send(input, 1, 2, 3, 4, STOP);
-        assertThat(started.await(WAIT, TimeUnit.SECONDS)).isTrue();
-        assertThat(isEmpty(output)).isTrue();
-        assertThat(rec.stopped.getVal(50, TimeUnit.MILLISECONDS)).isNull();
-
-        release.countDown();
+        try {
+            assertThat(started.await(WAIT, TimeUnit.SECONDS)).isTrue();
+            assertThat(isEmpty(output)).isTrue();
+            assertThat(rec.stopped.getVal(50, TimeUnit.MILLISECONDS)).isNull();
+        }
+        finally {
+            release.countDown();
+        }
         var result = read(output, 5);
         assertThat(result.subList(0, 4)).containsExactlyInAnyOrder(1, 2, 3, 4);
         assertThat(result.get(4)).isSameAs(STOP);
@@ -644,9 +657,12 @@ class DataflowOperatorConformanceTest {
             }
         }));
         input.bind(1);
-        assertThat(started.await(WAIT, TimeUnit.SECONDS)).isTrue();
-
-        op.terminate();
+        try {
+            assertThat(started.await(WAIT, TimeUnit.SECONDS)).isTrue();
+        }
+        finally {
+            op.terminate();
+        }
         assertThat(interrupted.getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(true);
         assertThat(rec.stopped.getVal(WAIT, TimeUnit.SECONDS)).isSameAs(op);
         assertThat(joinAsync(op).getVal(WAIT, TimeUnit.SECONDS)).isEqualTo(true);

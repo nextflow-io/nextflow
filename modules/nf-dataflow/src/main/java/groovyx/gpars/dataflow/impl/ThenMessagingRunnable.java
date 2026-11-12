@@ -13,18 +13,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): extends Closure directly instead of the removed MessagingRunnable.
 
 package groovyx.gpars.dataflow.impl;
 
 import groovy.lang.Closure;
-import groovyx.gpars.MessagingRunnable;
 import groovyx.gpars.dataflow.DataflowVariable;
 
 /**
+ * The single-argument callback of {@code then()}, which binds the result of the closure
+ * or the error handler to the result variable.
+ *
  * @author Vaclav Pech
  */
-
-public class ThenMessagingRunnable<T, V> extends MessagingRunnable<T> {
+@SuppressWarnings({"rawtypes", "unchecked"})
+public class ThenMessagingRunnable<T, V> extends Closure<Object> {
     private final DataflowVariable<V> result;
     private final Closure<V> closure;
     private final Closure<V> errorHandler;
@@ -34,6 +38,7 @@ public class ThenMessagingRunnable<T, V> extends MessagingRunnable<T> {
     }
 
     public ThenMessagingRunnable(final DataflowVariable<V> result, final Closure<V> closure, final Closure<V> errorHandler) {
+        super(null);
         if (closure.getMaximumNumberOfParameters() > 1)
             throw new IllegalArgumentException("The supplied closure expects more than one argument.");
         if (errorHandler != null && errorHandler.getMaximumNumberOfParameters() > 1)
@@ -44,7 +49,17 @@ public class ThenMessagingRunnable<T, V> extends MessagingRunnable<T> {
     }
 
     @Override
-    protected void doRun(final T argument) {
+    public int getMaximumNumberOfParameters() {
+        return 1;
+    }
+
+    @Override
+    public Object call(final Object argument) {
+        doRun((T) argument);
+        return null;
+    }
+
+    private void doRun(final T argument) {
         if (argument instanceof Throwable) {
             if (errorHandler != null && shallHandle(errorHandler, (Throwable) argument)) {
                 try {

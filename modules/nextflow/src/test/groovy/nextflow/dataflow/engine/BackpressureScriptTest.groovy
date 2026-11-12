@@ -19,6 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Global
@@ -72,7 +73,13 @@ class BackpressureScriptTest extends Specification {
     @TempDir
     Path workDir
 
+    /**
+     * Runs at the start of each task submission
+     */
+    static volatile Runnable beforeSubmit = {} as Runnable
+
     def setup() {
+        beforeSubmit = {} as Runnable
         reset()
         SysEnv.push(NXF_DATAFLOW_HIGH_WATER: String.valueOf(HW))
     }
@@ -97,7 +104,13 @@ class BackpressureScriptTest extends Specification {
         @Override
         TaskHandler createTaskHandler(TaskRun task) {
             // an anonymous subclass, since the constructor is protected
-            return new NativeTaskHandler(task, this) {}
+            return new NativeTaskHandler(task, this) {
+                @Override
+                void submit() {
+                    BackpressureScriptTest.beforeSubmit.run()
+                    super.submit()
+                }
+            }
         }
     }
 
@@ -257,10 +270,10 @@ class BackpressureScriptTest extends Specification {
             sampler.done = true
             sampler.join()
             session.destroy()
-            // like with GPars, an aborted run does not wait for its operators to stop nor for the
-            // process bodies in flight, which may still create task work dirs: wait for both before
-            // checking the backlogs and deleting the work dir
-            if( session.isAborted() )
+            // like with GPars, an aborted or cancelled run does not wait for its operators to stop nor
+            // for the process bodies in flight, which may still create task work dirs: wait for both
+            // before checking the backlogs and deleting the work dir
+            if( session.isAborted() || session.isCancelled() )
                 BackpressureInternals.await { session.getBackpressure().processes().isEmpty()
                     && sampler.backlogs.values().every { ProcessBacklog backlog -> backlog.getPreparing() == 0 } }
         }
@@ -272,8 +285,8 @@ class BackpressureScriptTest extends Specification {
 
     /**
      * Check that no gate is left closed and, for a successful run, that every process backlog
-     * is back to zero. An aborted run drops the pending tasks and the unconsumed inputs, and
-     * relies on releasing every gate instead.
+     * is back to zero. An aborted or cancelled run drops the pending tasks and the unconsumed
+     * inputs, and relies on releasing every gate instead.
      */
     static void assertBalanced(Run run) {
         final bp = run.backpressure()
@@ -281,7 +294,7 @@ class BackpressureScriptTest extends Specification {
         assert bp.processes().isEmpty()
         for( Backpressure.Gate gate : bp.gates() )
             assert gate.getWaiters() == 0 : "${gate.getName()} waiters"
-        if( run.session.getError() != null ) {
+        if( run.session.getError() != null || run.session.isCancelled() ) {
             assert bp.isReleased()
             return
         }
@@ -688,6 +701,62 @@ class BackpressureScriptTest extends Specification {
         last.backpressure().isReleased()
     }
 
+    def 'should not hang when a process fails with the finish strategy while a source is blocked' () {
+        when:
+        def run = runScript(script('''
+            process SLOW {
+              errorStrategy 'finish'
+
+              input: val x
+              output: val x
+              exec:
+                sleep 1
+                if( x == 20 ) throw new IllegalStateException('boom')
+            }
+
+            workflow {
+              channel.of(1..$N) | SLOW | count
+            }
+            '''))
+        then:
+        // the run finishes the tasks submitted already, then ends without an error
+        run.session.isCancelled()
+        run.stats().getFailedCount() == 1
+        run.blockCount('channel.of') > 0
+        run.backpressure().isReleased()
+    }
+
+    def 'should not hang when the run is aborted while a source is blocked' () {
+        given:
+        // the first submission waits for the source to block, then aborts the run
+        def first = new AtomicBoolean(true)
+        beforeSubmit = {
+            if( !first.getAndSet(false) )
+                return
+            final gate = last.gate('channel.of')
+            BackpressureInternals.await { gate.isWaiting() }
+            last.session.abort(new IllegalStateException('abort'))
+        } as Runnable
+
+        when:
+        runScript(script('''
+            process SLOW {
+              input: val x
+              output: val x
+              exec: true
+            }
+
+            workflow {
+              channel.of(1..$N) | SLOW | count
+            }
+            '''))
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == 'abort'
+        last.blockCount('channel.of') > 0
+        last.backpressure().isReleased()
+    }
+
     def 'should bound retried tasks' () {
         when:
         def run = runScript(script('''
@@ -831,8 +900,32 @@ class BackpressureScriptTest extends Specification {
         given:
         SysEnv.push(NXF_DATAFLOW_HIGH_WATER: '0')
 
-        expect:
-        newSession([:]).getBackpressure() == null
+        when:
+        def session = newSession([:])
+        session.setBinding(new ScriptBinding())
+        session.init(null, null, null, null)
+        session.start()
+        final loader = ScriptLoaderFactory.create(session)
+        loader.parse(script('''
+            process SLOW {
+              input: val x
+              output: val x
+              exec: sleep 1
+            }
+
+            workflow {
+              channel.of(1..$N) | SLOW | count
+            }
+            '''))
+        loader.runScript()
+        final result = ScriptHelper.normalizeResult(loader.getResult())
+        session.fireDataflowNetwork(false)
+        session.await()
+        session.destroy()
+        then:
+        session.getBackpressure() == null
+        session.getError() == null
+        intValue(((DataflowReadChannel) result).getVal()) == N
 
         cleanup:
         SysEnv.pop()
