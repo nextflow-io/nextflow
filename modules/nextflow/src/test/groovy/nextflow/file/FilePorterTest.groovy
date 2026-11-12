@@ -100,14 +100,15 @@ class FilePorterTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def session = new Session(workDir: folder, threadPool: [FileTransfer: [maxThreads: 2]])
 
-        // every batch also stages the shared files, so their transfers are shared across batches
+        // every batch also stages the shared files, last, so their transfers are still
+        // queued behind the first batch when the other batches submit them
         List<Path> shared = (0..4).collect { TestHelper.createInMemTempFile("shared-${it}.txt", "shared ${it}") }
-        List<Path> foreign1 = shared + RANGE.collect { TestHelper.createInMemTempFile("hola-${it}.txt", "hola mundo ${it}") }
-        List<Path> foreign2 = shared + RANGE.collect { TestHelper.createInMemTempFile("ciao-${it}.txt", "ciao mondo ${it}") }
-        List<Path> foreign3 = shared + RANGE.collect { TestHelper.createInMemTempFile("helo-${it}.txt", "helo mondo ${it}") }
+        List<Path> foreign1 = RANGE.collect { TestHelper.createInMemTempFile("hola-${it}.txt", "hola mundo ${it}") } + shared
+        List<Path> foreign2 = RANGE.collect { TestHelper.createInMemTempFile("ciao-${it}.txt", "ciao mondo ${it}") } + shared
+        List<Path> foreign3 = RANGE.collect { TestHelper.createInMemTempFile("helo-${it}.txt", "helo mondo ${it}") } + shared
 
         and:
-        def porter = new FilePorter(session)
+        def porter = Spy(FilePorter, constructorArgs: [session])
         def staged = [:]
         def batches = [foreign1, foreign2, foreign3].collect { foreign ->
             def batch = porter.newBatch(folder)
@@ -132,6 +133,8 @@ class FilePorterTest extends Specification {
         staged.size() == 65
         // each shared file is staged to the same target by every batch
         staged.values().every { it.size() == 1 }
+        // and the batches reuse its in-flight transfer instead of submitting another
+        65 * porter.createFileTransfer(_, _)
         staged.every { source, targets -> targets.every { Files.exists(it) && it.text == source.text } }
 
         cleanup:

@@ -16,13 +16,13 @@
 
 package nextflow.processor
 
+import spock.lang.PendingFeature
 import spock.lang.Specification
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.ProviderMismatchException
 
 import nextflow.util.KryoHelper
 /**
@@ -151,23 +151,30 @@ class TaskPathTest extends Specification {
         new TaskPath(Paths.get('/foo')).size() == 0
     }
 
-    def 'should fail to read the target file through the default provider' () {
+    def 'should be equal to the target path' () {
 
         given:
         def folder = Files.createTempDirectory('test')
         def hello = folder.resolve('hello.txt')
         hello.text = 'Hello world'
 
-        when:
-        def path = new TaskPath(hello, 'ciao.txt')
-        then:
-        path == hello
+        expect:
+        new TaskPath(hello, 'ciao.txt') == hello
 
-        when:
-        path.text
-        then:
-        // TaskPath is not unwrapped by the default file system provider
-        thrown(ProviderMismatchException)
+        cleanup:
+        folder.deleteDir()
+    }
+
+    @PendingFeature(reason = 'TaskPath is not unwrapped by the default file system provider, so reading it throws ProviderMismatchException')
+    def 'should read the target file' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def hello = folder.resolve('hello.txt')
+        hello.text = 'Hello world'
+
+        expect:
+        new TaskPath(hello, 'ciao.txt').text == 'Hello world'
 
         cleanup:
         folder.deleteDir()
