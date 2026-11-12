@@ -77,14 +77,7 @@ class DataflowHelper {
      * @return {@code true} when the operator is still active or {@code false} otherwise eg. it received a poison pill
      */
     static boolean isProcessorActive( DataflowProcessor operator ) {
-        def clazz = operator.class
-        while( clazz != DataflowProcessor )
-            clazz = operator.class.superclass
-        def field = clazz.getDeclaredField('actor')
-        field.setAccessible(true)
-        def actor = field.get(operator)
-        def method = actor.getClass().getMethod('isActive')
-        return method.invoke(actor)
+        return operator.isActive()
     }
 
     /*

@@ -257,10 +257,12 @@ class BackpressureScriptTest extends Specification {
             sampler.done = true
             sampler.join()
             session.destroy()
-            // like with GPars, an aborted run does not wait for its operators to stop: wait for
-            // the process backlogs to close before checking them
+            // like with GPars, an aborted run does not wait for its operators to stop nor for the
+            // process bodies in flight, which may still create task work dirs: wait for both before
+            // checking the backlogs and deleting the work dir
             if( session.isAborted() )
-                BackpressureInternals.await { session.getBackpressure().processes().isEmpty() }
+                BackpressureInternals.await { session.getBackpressure().processes().isEmpty()
+                    && sampler.backlogs.values().every { ProcessBacklog backlog -> backlog.getPreparing() == 0 } }
         }
         assertBalanced(last)
         if( session.getError() != null )

@@ -13,11 +13,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): run by the mailbox engine, or by the GPars actors with NXF_DATAFLOW_ENGINE=legacy.
 
 package groovyx.gpars.dataflow.operator;
 
 import groovy.lang.Closure;
 import groovyx.gpars.group.PGroup;
+import groovyx.gpars.scheduler.Scheduler;
 
 import java.util.Collection;
 import java.util.Map;
@@ -55,11 +58,17 @@ public final class DataflowOperator extends DataflowProcessor {
         final int parameters = code.getMaximumNumberOfParameters();
         if (verifyChannelParameters(channels, parameters))
             throw new IllegalArgumentException("The operator's body accepts " + parameters + " parameters while it is given " + countInputChannels(channels) + " input streams. The numbers must match.");
-        if (shouldBeMultiThreaded(channels)) {
+        final boolean forking = shouldBeMultiThreaded(channels);
+        if (forking)
             checkMaxForks(channels);
-            this.actor = new ForkingDataflowOperatorActor(this, group, extractOutputs(channels), extractInputs(channels), (Closure) code.clone(), (Integer) channels.get(MAX_FORKS));
+        final int maxForks = forking ? (Integer) channels.get(MAX_FORKS) : 1;
+        if (Scheduler.isLegacyEngine()) {
+            final DataflowOperatorActor actor = forking
+                ? new ForkingDataflowOperatorActor(this, group, outputs, inputs, (Closure) code.clone(), maxForks)
+                : new DataflowOperatorActor(this, group, outputs, inputs, (Closure) code.clone());
+            this.engine = new ActorEngine(actor);
         } else {
-            this.actor = new DataflowOperatorActor(this, group, extractOutputs(channels), extractInputs(channels), (Closure) code.clone());
+            this.engine = new MailboxEngine(this, group != null ? group.getThreadPool() : Scheduler.pool(), inputs, (Closure) code.clone(), maxForks);
         }
         for (final DataflowEventListener listener : listeners) {
             listener.registered(this);

@@ -13,11 +13,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Seqera Labs for Nextflow (2026): the factory methods create agents on the dataflow scheduler pool.
 
 package groovyx.gpars.agent;
 
 import groovy.lang.Closure;
-import groovyx.gpars.actor.Actors;
 import org.codehaus.groovy.runtime.NullObject;
 
 /**
@@ -95,7 +96,7 @@ public class Agent<T> extends AgentBase<T> {
      */
     @SuppressWarnings({"unchecked"})
     public static <T> Agent<T> agent(final T state) {
-        return Actors.defaultActorPGroup.agent(state);
+        return new Agent<T>(state);
     }
 
     /**
@@ -108,7 +109,7 @@ public class Agent<T> extends AgentBase<T> {
      */
     @SuppressWarnings({"unchecked"})
     public static <T> Agent<T> agent(final T state, final Closure copy) {
-        return Actors.defaultActorPGroup.agent(state, copy);
+        return new Agent<T>(state, copy);
     }
 
     /**
@@ -121,7 +122,9 @@ public class Agent<T> extends AgentBase<T> {
      */
     @SuppressWarnings({"unchecked"})
     public static <T> Agent<T> fairAgent(final T state) {
-        return Actors.defaultActorPGroup.fairAgent(state);
+        final Agent<T> result = new Agent<T>(state);
+        result.makeFair();
+        return result;
     }
 
     /**
@@ -134,6 +137,8 @@ public class Agent<T> extends AgentBase<T> {
      */
     @SuppressWarnings({"unchecked"})
     public static <T> Agent<T> fairAgent(final T state, final Closure copy) {
-        return Actors.defaultActorPGroup.fairAgent(state, copy);
+        final Agent<T> result = new Agent<T>(state, copy);
+        result.makeFair();
+        return result;
     }
 }

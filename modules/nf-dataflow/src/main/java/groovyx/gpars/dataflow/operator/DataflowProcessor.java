@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount).
+// Modified by Seqera Labs for Nextflow (2026): added the backpressure gate (setGate, resume, isPaused, getPauseCount); run by a mailbox or legacy actor engine; added isActive().
 
 package groovyx.gpars.dataflow.operator;
 
@@ -57,9 +57,13 @@ public abstract class DataflowProcessor {
     private static final String LISTENERS = "listeners";
 
     /**
-     * The internal actor performing on behalf of the processor
+     * The engine running the processor: a mailbox, or a GPars actor with the legacy engine
      */
-    protected DataflowProcessorActor actor;
+    OperatorEngine engine;
+
+    final List<DataflowReadChannel<?>> inputs;
+
+    final List<DataflowWriteChannel<?>> outputs;
 
     /**
      * May hold custom state provided at construction time and read within the body
@@ -83,9 +87,11 @@ public abstract class DataflowProcessor {
 
         stateObject = extractState(channels);
         listeners.addAll(extractListeners(channels));
+        inputs = channels != null ? extractInputs(channels) : Collections.<DataflowReadChannel<?>>emptyList();
+        outputs = channels != null ? extractOutputs(channels) : Collections.<DataflowWriteChannel<?>>emptyList();
         if (channels == null) return;
-        final Collection<?> inputs = (Collection<?>) channels.get(INPUTS);
-        if (inputs == null || inputs.isEmpty()) {
+        final Collection<?> declaredInputs = (Collection<?>) channels.get(INPUTS);
+        if (declaredInputs == null || declaredInputs.isEmpty()) {
             throw new IllegalArgumentException("The processor body must take some inputs. The provided list of input channels is empty.");
         }
     }
@@ -130,8 +136,7 @@ public abstract class DataflowProcessor {
      * @return This operator instance
      */
     public final DataflowProcessor start(final PGroup group) {
-        actor.setParallelGroup(group);
-        actor.start();
+        engine.start(group);
         return this;
     }
 
@@ -141,7 +146,7 @@ public abstract class DataflowProcessor {
      * @return This operator instance
      */
     public final DataflowProcessor start() {
-        actor.start();
+        engine.start(null);
         return this;
     }
 
@@ -149,7 +154,7 @@ public abstract class DataflowProcessor {
      * Stops the processor immediately, potentially losing unhandled messages
      */
     public final void terminate() {
-        actor.terminate();
+        engine.terminate();
     }
 
     /**
@@ -157,7 +162,7 @@ public abstract class DataflowProcessor {
      * If the operator never gets triggered after calling the terminateAfterNextRun() method, the operator never really stops.
      */
     public final void terminateAfterNextRun() {
-        actor.send(StopGently.getInstance());
+        engine.terminateAfterNextRun();
     }
 
     /**
@@ -177,18 +182,18 @@ public abstract class DataflowProcessor {
      * Wakes the operator if it is paused by its gate
      */
     public final void resume() {
-        actor.resume();
+        engine.resume();
     }
 
     public final boolean isPaused() {
-        return actor.isPaused();
+        return engine.isPaused();
     }
 
     /**
      * The number of times the operator was paused by its gate
      */
     public final long getPauseCount() {
-        return actor.getPauseCount();
+        return engine.getPauseCount();
     }
 
     /**
@@ -197,7 +202,14 @@ public abstract class DataflowProcessor {
      * @throws InterruptedException If the thread gets interrupted
      */
     public final void join() throws InterruptedException {
-        actor.join();
+        engine.join();
+    }
+
+    /**
+     * Whether the processor was started and has not stopped yet
+     */
+    public final boolean isActive() {
+        return engine.isActive();
     }
 
     /**
@@ -207,7 +219,7 @@ public abstract class DataflowProcessor {
      * @param value The value to bind
      */
     public final void bindOutput(final int idx, final Object value) {
-        final DataflowWriteChannel<Object> channel = (DataflowWriteChannel<Object>) actor.outputs.get(idx);
+        final DataflowWriteChannel<Object> channel = (DataflowWriteChannel<Object>) outputs.get(idx);
         channel.bind(fireMessageSentOut(channel, idx, value));
     }
 
@@ -283,8 +295,8 @@ public abstract class DataflowProcessor {
      * @return The particular DataflowWriteChannel instance
      */
     public final DataflowWriteChannel<?> getOutputs(final int idx) {
-        if (actor.outputs.isEmpty()) return null;
-        return (DataflowWriteChannel<?>) actor.outputs.get(idx);
+        if (outputs.isEmpty()) return null;
+        return outputs.get(idx);
     }
 
     /**
@@ -293,7 +305,7 @@ public abstract class DataflowProcessor {
      * @return A List holding all output channels
      */
     public final List<DataflowWriteChannel<?>> getOutputs() {
-        return actor.outputs;
+        return outputs;
     }
 
     /**
@@ -302,8 +314,8 @@ public abstract class DataflowProcessor {
      * @return The particular DataflowWriteChannel instance
      */
     public final DataflowWriteChannel<?> getOutput() {
-        if (actor.outputs.isEmpty()) return null;
-        return (DataflowWriteChannel<?>) actor.outputs.get(0);
+        if (outputs.isEmpty()) return null;
+        return outputs.get(0);
     }
 
     /**
@@ -346,7 +358,9 @@ public abstract class DataflowProcessor {
      * @param handler The closure to invoke whenever a value gets bound to any of the input channels
      */
     public final void registerChannelListenersToAllInputs(final DataflowChannelListener<Object> handler) {
-        actor.registerChannelListenersToAllInputs(handler);
+        for (final DataflowReadChannel<?> input : inputs) {
+            ((DataflowReadChannel<Object>) input).getEventManager().addDataflowChannelListener(handler);
+        }
     }
 
     protected final void fireAfterStart() {
