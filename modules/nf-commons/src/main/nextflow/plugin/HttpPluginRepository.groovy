@@ -117,6 +117,20 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     PluginInfo getPlugin(String id) {
+        try {
+            return fetchPlugin(id)
+        }
+        catch( PluginRuntimeException e ) {
+            // pf4j asks each repository in turn: report "not found" so the next repository is still asked
+            log.debug "Failed to fetch metadata for plugin ${id} from ${url} - cause: ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Like {@link #getPlugin(String)}, but throws the registry error instead of returning null.
+     */
+    PluginInfo fetchPlugin(String id) {
         return plugins.computeIfAbsent(id) { key -> fetchMetadataByIds([key]).get(key) }
     }
 

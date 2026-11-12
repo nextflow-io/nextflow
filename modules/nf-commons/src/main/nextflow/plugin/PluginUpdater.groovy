@@ -291,7 +291,7 @@ class PluginUpdater extends UpdateManager {
         for( def repo : this.@repositories ) {
             try {
                 // HttpPluginRepository fetches and caches the metadata when missing
-                repo.getPlugin(id)
+                repo instanceof HttpPluginRepository ? repo.fetchPlugin(id) : repo.getPlugin(id)
             }
             catch( PluginRuntimeException e ) {
                 // not a warning: the error is reported as the cause when the plugin cannot be found

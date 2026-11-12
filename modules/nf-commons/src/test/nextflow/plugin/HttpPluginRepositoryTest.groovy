@@ -212,7 +212,7 @@ class HttpPluginRepositoryTest extends Specification {
             .willReturn(aResponse().withStatus(400).withBody(body)))
 
         when:
-        unit.getPlugin('myorg/nf-foo')
+        unit.fetchPlugin('myorg/nf-foo')
 
         then:
         def e = thrown(PluginRuntimeException)
@@ -221,13 +221,22 @@ class HttpPluginRepositoryTest extends Specification {
         e.message.contains(body)
     }
 
+    def 'report a plugin as not found when the registry refuses it'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody('Bad request')))
+
+        expect:
+        unit.getPlugin('myorg/nf-foo') == null
+    }
+
     def 'keep the generic message when the registry rate limits a namespaced plugin id'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
             .willReturn(aResponse().withStatus(429).withBody('Too Many Requests')))
 
         when:
-        unit.getPlugin('myorg/nf-foo')
+        unit.fetchPlugin('myorg/nf-foo')
 
         then:
         def e = thrown(PluginRuntimeException)
@@ -240,7 +249,7 @@ class HttpPluginRepositoryTest extends Specification {
             .willReturn(aResponse().withStatus(400).withBody('Bad request')))
 
         when:
-        unit.getPlugin('nf-fake')
+        unit.fetchPlugin('nf-fake')
 
         then:
         def e = thrown(PluginRuntimeException)
