@@ -95,7 +95,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             // Don't abort Nextflow startup if the registry is unreachable or rate-limited:
             // downstream code will either resolve the plugins from the local store or fail
             // with a more specific error when the metadata is actually needed.
-            log.warn "Failed to prefetch plugin metadata from ${url} - cause: ${e.message}"
+            log.debug "Failed to prefetch plugin metadata from ${url} - cause: ${e.message}"
             this.plugins = new HashMap<>()
         }
     }

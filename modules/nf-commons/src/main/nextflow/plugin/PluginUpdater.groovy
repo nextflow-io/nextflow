@@ -294,7 +294,8 @@ class PluginUpdater extends UpdateManager {
                 repo.getPlugin(id)
             }
             catch( PluginRuntimeException e ) {
-                log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
+                // not a warning: the error is reported as the cause when the plugin cannot be found
+                log.debug "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
                 metadataErrors.put(id, e)
             }
         }
