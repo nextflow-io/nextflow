@@ -1,0 +1,43 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:${AWS_REGION}:${ACCOUNT_ID}:instance/*",
+      "Condition": {
+        "ForAllValues:StringEquals": { "aws:TagKeys": ["fis-target"] },
+        "StringEquals": { "aws:RequestTag/fis-target": "nf-snapshot-e2e" }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:DeleteTags",
+      "Resource": "arn:aws:ec2:${AWS_REGION}:${ACCOUNT_ID}:instance/*",
+      "Condition": { "ForAllValues:StringEquals": { "aws:TagKeys": ["fis-target"] } }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "fis:StartExperiment",
+      "Resource": [
+        "arn:aws:fis:${AWS_REGION}:${ACCOUNT_ID}:experiment-template/${TEMPLATE_ID}",
+        "arn:aws:fis:${AWS_REGION}:${ACCOUNT_ID}:experiment/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::${BUCKET}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:*Object", "s3:PutObjectTagging", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+      "Resource": "arn:aws:s3:::${BUCKET}/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "fis:GetExperiment",
+      "Resource": "arn:aws:fis:${AWS_REGION}:${ACCOUNT_ID}:experiment/*"
+    }
+  ]
+}
