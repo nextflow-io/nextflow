@@ -15,6 +15,8 @@ A plugin identifier consists of the plugin name and version, separated by an `@`
 nf-hello@0.5.0
 ```
 
+<AddedInVersion version="27.04" />
+
 The plugin name can be prefixed with a namespace, separated by a `/` symbol. The full format is `[<namespace>/]<name>[@<version>]`:
 
 ```
@@ -22,10 +24,6 @@ myorg/nf-foo@1.0.0
 ```
 
 The namespace is optional. Plugins with the same name in different namespaces, such as `myorg/nf-foo` and `otherorg/nf-foo`, are different plugins and can be used in the same run.
-
-:::note
-Namespaced plugin IDs require Nextflow X.Y.Z or later.
-:::
 
 The plugin version is optional. If it is not specified, Nextflow will download the latest version of the plugin that meets the minimum Nextflow version requirements specified by the plugin.
 
