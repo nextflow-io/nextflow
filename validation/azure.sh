@@ -46,6 +46,24 @@ $NXF_CMD -C ./azure.config run ./test-complexpaths.nf -resume
 ## run test-subdirs inputs/outputs
 $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
+NXF_CLOUDCACHE_PATH=az://my-data/cache \
+$NXF_CMD -c ./azure.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS \
+    -plugins nf-cloudcache
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
+
+NXF_CLOUDCACHE_PATH=az://my-data/cache \
+$NXF_CMD -c ./azure.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS \
+    -plugins nf-cloudcache \
+    -resume
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
+[[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
+
 ## pool creation: the pool must not exist before the run
 ## first remove pools and jobs left by runs interrupted before deleting their pool
 if command -v az >/dev/null && [[ -n "${AZURE_BATCH_ACCOUNT_KEY:+set}" ]]; then (
@@ -68,21 +86,3 @@ if command -v az >/dev/null && [[ -n "${AZURE_BATCH_ACCOUNT_KEY:+set}" ]]; then 
 export POOL_ID="nextflow-ci-$(date +%s)-$RANDOM"
 $NXF_CMD -C ./pool-create.config run ./test-subdirs.nf
 grep -q "pool with id: $POOL_ID" .nextflow.log || { echo "Pool $POOL_ID was not created"; exit 1; }
-
-NXF_CLOUDCACHE_PATH=az://my-data/cache \
-$NXF_CMD -c ./azure.config \
-    run nextflow-io/rnaseq-nf \
-    -with-report \
-    -with-trace $OPTS \
-    -plugins nf-cloudcache
-[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
-
-NXF_CLOUDCACHE_PATH=az://my-data/cache \
-$NXF_CMD -c ./azure.config \
-    run nextflow-io/rnaseq-nf \
-    -with-report \
-    -with-trace $OPTS \
-    -plugins nf-cloudcache \
-    -resume
-[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
-[[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
