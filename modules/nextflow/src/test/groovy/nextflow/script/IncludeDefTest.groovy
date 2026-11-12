@@ -55,6 +55,16 @@ class IncludeDefTest extends Specification {
 
     }
 
+    def 'should load a namespaced plugin include' () {
+        given:
+        def include = Spy(new IncludeDef([new IncludeDef.Module('foo')]).from('plugin/myorg/nf-foo'))
+
+        when:
+        include.load0(null)
+        then:
+        1 * include.loadPlugin0('myorg/nf-foo') >> {}
+    }
+
     def 'should resolve real module path' () {
 
         given:
