@@ -72,6 +72,21 @@ class CsvParserTest extends Specification {
     }
 
 
+    def 'should parse escaped quotes' () {
+        given:
+        def parser = new CsvParser()
+                    .setSeparator(',')
+                    .setQuote('"')
+
+        expect:
+        parser.parse(LINE) == EXPECTED
+
+        where:
+        LINE        | EXPECTED
+        '"a""b",c'  | ['a"b', 'c']
+        '"a""b""c"' | ['a"b"c']
+    }
+
     def 'should strip blanks'( ) {
 
         when:
