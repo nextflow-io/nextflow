@@ -1201,7 +1201,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should create job successfully on first try'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1221,7 +1221,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should retry on ActiveJobAndScheduleQuotaReached and then succeed'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1247,7 +1247,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should throw after exceeding max job quota retries'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1274,7 +1274,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should fail immediately when maxJobQuotaRetries is 0'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1300,7 +1300,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should not retry on non-quota 409 error'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1325,7 +1325,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should not retry on non-HttpResponseException'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
