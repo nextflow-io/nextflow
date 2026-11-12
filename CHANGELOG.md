@@ -1,5 +1,16 @@
 # Nextflow change-log
 
+## [Version 26.10.6](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.6) - 12 Nov 2026
+
+- Bump nf-azure@1.24.4 [8a27bfe0d]
+- Bump nf-wave@1.22.6 [3f23c8fb8]
+- Don't block a dataflow thread on value inputs in combine (#8046) [2a1b5cb9b]
+- Fix Azure file share mount argument order in pool creation (#8042) [474f2f6c7]
+- Fix resume for enums declared in script modules (#8049) [6c50376fa]
+- Include stage directives of typed processes in the task hash (#8071) [ee6e88cd2]
+- Retry Wave connection failures longer and report their cause (#8005) [d89dc120e]
+- Strip ./ from relative output patterns to fix S3 lookup (#8029) [fbe8451af]
+
 ## [Version 26.10.5](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.5) - 2 Nov 2026
 
 - Add wave.soci option for SOCI lazy loading (#7991) [d08aee9e1]
