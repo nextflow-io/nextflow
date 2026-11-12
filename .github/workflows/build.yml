@@ -163,6 +163,25 @@ jobs:
           AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
+      # Install the launcher jar and plugins into ~/.nextflow and share them with the
+      # `test` jobs, so that they don't have to compile everything again.
+      - name: Install
+        if: steps.docs_only.outputs.skip != 'true' && !contains(steps.get_commit_message.outputs.commit_message, '[ci fast]')
+        run: make install
+
+      - name: Upload build output
+        if: steps.docs_only.outputs.skip != 'true' && !contains(steps.get_commit_message.outputs.commit_message, '[ci fast]')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # ratchet:actions/upload-artifact@v7.0.2
+        with:
+          name: build-output-jdk-${{ matrix.java_version }}
+          path: |
+            ~/.nextflow/framework
+            ~/.nextflow/plugins
+          if-no-files-found: error
+          retention-days: 1
+          # mostly jar files, which are already compressed
+          compression-level: 0
+
       - name: Scan tests report for leaks
         id: leak_scan
         if: always() && steps.docs_only.outputs.skip != 'true'
@@ -235,6 +254,13 @@ jobs:
           architecture: x64
           cache: gradle
 
+      # launcher jar and plugins installed by the build job
+      - name: Download build output
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # ratchet:actions/download-artifact@v8.0.2
+        with:
+          name: build-output-jdk-${{ matrix.java_version }}
+          path: ~/.nextflow
+
       # test_agent publishes the nf-agent-pi runner image built from this tree to the staging
       # registry (see validation/agent.sh). Docker Hub because the image build pulls its base
       # images from there, and an anonymous pull from a shared runner IP hits `toomanyrequests`.
@@ -270,7 +296,10 @@ jobs:
             printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
             export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
           fi
-          make clean assemble install
+          # the agent examples run the development launcher, which needs the build dirs
+          if [ "$TEST_MODE" = test_agent ]; then
+            make assemble
+          fi
           bash test-ci.sh
         env:
           TEST_JDK: ${{ matrix.java_version }}
