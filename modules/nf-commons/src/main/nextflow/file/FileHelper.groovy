@@ -116,6 +116,35 @@ class FileHelper {
         return path
     }
 
+    /**
+     * Remove current-directory segments from a relative path or glob pattern,
+     * e.g. {@code ./results/x.vcf} becomes {@code results/x.vcf} and
+     * {@code a/./b} becomes {@code a/b}.
+     *
+     * A task output declared as {@code ./results/x.vcf} must name the same object
+     * whether the task uploads it itself or a filesystem mount (e.g. Fusion) writes it.
+     * A filesystem resolves {@code .} before the file is stored, so the object key never
+     * contains {@code /./}; object stores such as S3 treat {@code a/./b} and {@code a/b}
+     * as different keys.
+     *
+     * Repeated slashes are collapsed first, so {@code .//x} becomes {@code x}, not the
+     * absolute {@code /x}. Absolute paths, {@code ..} segments, and a bare {@code .} or
+     * {@code ./} are left unchanged.
+     *
+     * @param path A relative path or glob pattern
+     * @return The same path without {@code .} segments and repeated slashes
+     */
+    static String stripCurrentDirSegments( String path ) {
+        if( !path || path.startsWith('/') )
+            return path
+        String result = path.replaceAll('/{2,}', '/')
+        while( result.startsWith('./') && result.length() > 2 )
+            result = result.substring(2)
+        while( result.contains('/./') )
+            result = result.replace('/./', '/')
+        return result
+    }
+
 
     /**
      * Creates a random string with the number of character specified
