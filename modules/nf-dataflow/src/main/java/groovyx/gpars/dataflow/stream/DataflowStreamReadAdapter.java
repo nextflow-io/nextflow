@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by Seqera Labs for Nextflow (2026): removed SyncDataflowVariable support.
+// Modified by Seqera Labs for Nextflow (2026): removed SyncDataflowVariable support; added length(int).
 
 package groovyx.gpars.dataflow.stream;
 
@@ -63,7 +63,7 @@ import static java.util.Arrays.asList;
 @SuppressWarnings({"unchecked"})
 public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
 
-    private StreamCore<T> head;
+    private volatile StreamCore<T> head;
     private StreamCore<T> asyncHead;
 
     /**
@@ -646,6 +646,20 @@ public class DataflowStreamReadAdapter<T> implements DataflowReadChannel<T> {
         StreamCore<T> current = head;
         int length = 0;
         while (current.getFirstDFV().isBound()) {
+            length += 1;
+            current = (StreamCore<T>) current.getRest();
+        }
+        return length;
+    }
+
+    /**
+     * Returns the number of items buffered for this reader, counting at most {@code max} of them.
+     * Safe to call from any thread.
+     */
+    public int length(final int max) {
+        StreamCore<T> current = head;
+        int length = 0;
+        while (length < max && current.getFirstDFV().isBound()) {
             length += 1;
             current = (StreamCore<T>) current.getRest();
         }

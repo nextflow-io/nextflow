@@ -31,6 +31,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.dataflow.engine.Backpressure
 /**
  * Helper class to handle channel internal api ops
  *
@@ -158,6 +159,16 @@ class CH {
         }
     }
 
+    static boolean isTopic(Object channel) {
+        synchronized (allTopics) {
+            for( Topic topic : allTopics.values() ) {
+                if( topic.broadcaster.is(channel) )
+                    return true
+            }
+            return false
+        }
+    }
+
     static DataflowWriteChannel createTopicSource(String name) {
         synchronized (allTopics) {
             def topic = allTopics.get(name)
@@ -216,15 +227,24 @@ class CH {
 
     static <T extends DataflowWriteChannel> T emitValues(T ch, Iterable items) {
         session().addIgniter {->
-            for( final it : items ) ch.bind(it)
+            final backpressure = session().getBackpressure()
+            if( backpressure )
+                backpressure.emit(ch, items, false)
+            else
+                for( final it : items ) ch.bind(it)
         }
         return ch
     }
 
     static <T extends DataflowWriteChannel> T emitAndClose(T ch, Iterable items) {
         session().addIgniter {->
-            for( final it : items ) ch.bind(it)
-            ch.bind(stop())
+            final backpressure = session().getBackpressure()
+            if( backpressure )
+                backpressure.emit(ch, items, true)
+            else {
+                for( final it : items ) ch.bind(it)
+                ch.bind(stop())
+            }
         }
         return ch
     }
