@@ -120,6 +120,51 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should install namespaced plugins next to unscoped ones' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def foo1 = createPlugin(repo, '1.0.0', 'org1/nf-foo'); foo1.zip = zipDir(foo1.path)
+        def foo2 = createPlugin(repo, '1.0.0', 'org2/nf-foo'); foo2.zip = zipDir(foo2.path)
+        def bar = createPlugin(repo, '1.0.0'); bar.zip = zipDir(bar.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "org1/nf-foo", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${foo1.zip}"} ]},
+             { "id": "org2/nf-foo", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${foo2.zip}"} ]},
+             { "id": "${PLUGIN_ID}", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${bar.zip}"} ]}]
+            """
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+
+        when:
+        updater.installPlugin('org1/nf-foo', '1.0.0')
+        updater.installPlugin('org2/nf-foo', '1.0.0')
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        local.resolve('org1/nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        local.resolve('org2/nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        local.resolve("${PLUGIN_ID}-1.0.0").isDirectory()
+        manager.getPlugin('org1/nf-foo').descriptor.pluginId == 'org1/nf-foo'
+        manager.getPlugin('org2/nf-foo').descriptor.pluginId == 'org2/nf-foo'
+        manager.localRoot.resolve("${PLUGIN_ID}-1.0.0").isLink()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should use a flat lock file name' () {
+        expect:
+        new PluginUpdater(new CustomPluginManager()).lockFile(ID, '1.0.0').name == EXPECTED
+        where:
+        ID              | EXPECTED
+        'myorg/nf-foo'  | 'nextflow-plugin-myorg~nf-foo-1.0.0.lock'
+        'nf-foo'        | 'nextflow-plugin-nf-foo-1.0.0.lock'
+    }
+
     def 'should install a plugin depending on a non-core plugin' () {
         given:
         def folder = Files.createTempDirectory('test')

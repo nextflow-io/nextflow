@@ -407,6 +407,8 @@ class PluginUpdater extends UpdateManager {
         // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
         try {
+            // a namespaced plugin goes in a namespace folder that may not exist yet
+            Files.createDirectories(pluginPath.parent)
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
@@ -496,7 +498,7 @@ class PluginUpdater extends UpdateManager {
      */
     private File lockFile(String id, String version) {
         def tmp = System.getProperty('java.io.tmpdir')
-        new File(tmp, "nextflow-plugin-${id}-${version}.lock")
+        new File(tmp, "nextflow-plugin-${id.replace('/', '~')}-${version}.lock")
     }
 
     private boolean load0(String id, String requestedVersion) {
