@@ -82,7 +82,7 @@ class ExecutorConfigTest extends Specification {
 
     def 'test get array timeout'() {
         expect:
-        new ExecutorConfig([:]).getArrayTimeout('slurm') == null
+        new ExecutorConfig([:]).getExecConfigProp('slurm', 'arrayTimeout', null, [:]) == null
         and:
         def config = new ExecutorConfig([arrayTimeout: '10m', '$slurm': [arrayTimeout: '1h']])
         config.getArrayTimeout('slurm') == Duration.of('1h')

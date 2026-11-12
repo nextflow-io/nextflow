@@ -43,7 +43,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         *Used only by executors that support job arrays.*
 
-        The maximum amount of time to wait for a job array to fill up before submitting it as a partial job array. By default, a job array is submitted only when it is full or when the process has no more tasks.
+        The maximum amount of time to wait for a job array to fill up before submitting it as a partial job array. The timeout starts when the first task of each job array is collected. By default, a job array is submitted only when it is full or when the process has no more tasks.
     """)
     final Duration arrayTimeout
 

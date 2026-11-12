@@ -82,7 +82,6 @@ class TaskArrayCollector {
         this.executor = executor
         this.arraySize = arraySize
         this.timeout = timeout
-        this.timer = timeout ? new Timer("TaskArrayCollector-${processor?.name}".toString(), true) : null
         this.array = new ArrayList<>(arraySize)
     }
 
@@ -103,7 +102,7 @@ class TaskArrayCollector {
             }
 
             // start the timeout when a new array is started
-            if( timer && array.isEmpty() )
+            if( timeout && array.isEmpty() )
                 scheduleSubmit()
 
             // add task to the array
@@ -119,6 +118,8 @@ class TaskArrayCollector {
     }
 
     private void scheduleSubmit() {
+        if( !timer )
+            timer = new Timer("TaskArrayCollector-${processor?.name}".toString(), true)
         pendingSubmit = new TimerTask() {
             @Override
             void run() { submitOnTimeout(this) }
@@ -146,21 +147,32 @@ class TaskArrayCollector {
      * @param source
      */
     private void submitOnTimeout(TimerTask source) {
+        final session = processor.session
+        Throwable error = null
         sync.lock()
         try {
             // ignore timeouts for arrays that were already submitted
-            if( closed || source !== pendingSubmit || processor.session.isAborted() )
+            if( closed || source !== pendingSubmit || session.isAborted() )
                 return
             log.debug "Submitting partial job array after timeout of ${timeout} (${array.size()} tasks) -- process: ${processor.name}"
             flush()
         }
         catch( Throwable e ) {
-            log.error("Unable to submit job array for process '${processor.name}'", e)
-            processor.session.abort(e)
+            error = e
         }
         finally {
             sync.unlock()
         }
+
+        if( !error )
+            return
+        // the submission may be interrupted by the session shutting down
+        if( session.isAborted() || session.isTerminated() ) {
+            log.debug "Unable to submit job array for process '${processor.name}' -- cause: ${error.message ?: error}"
+            return
+        }
+        log.error "Unable to submit job array for process '${processor.name}' -- cause: ${error.message ?: error}"
+        session.abort(error)
     }
 
     /**
@@ -170,10 +182,10 @@ class TaskArrayCollector {
         sync.lock()
         try {
             flush()
-            timer?.cancel()
-            closed = true
         }
         finally {
+            timer?.cancel()
+            closed = true
             sync.unlock()
         }
     }
