@@ -549,7 +549,8 @@ class PluginUpdater extends UpdateManager {
                 pluginPath = safeDownload(id, version)
             }
             catch( PluginRuntimeException e ) {
-                if( !metadataErrors.containsKey(id) )
+                // only a missing metadata explains a failed download
+                if( !metadataErrors.containsKey(id) || getPluginsMap().containsKey(id) )
                     throw e
                 throw notFound(id, e.message)
             }
@@ -614,6 +615,8 @@ class PluginUpdater extends UpdateManager {
 
         fetchMissingMetadata(id)
         PluginInfo pluginInfo = getPluginsMap().get(id)
+        if (pluginInfo == null && metadataErrors.containsKey(id))
+            throw notFound(id, "Plugin $id does not exist in any repository")
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")
         }

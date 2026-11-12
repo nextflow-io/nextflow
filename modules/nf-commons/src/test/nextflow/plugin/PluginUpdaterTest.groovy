@@ -217,6 +217,30 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should keep the download error when the plugin metadata is available' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "${PLUGIN_ID}", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${repo.resolve('missing.zip')}"} ]}]
+            """
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def updater = new PluginUpdater(new LocalPluginManager(local), local, index.toUri().toURL(), false)
+        updater.@metadataErrors.put(PLUGIN_ID, new PluginRuntimeException('stale metadata error'))
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        !e.message.contains('stale metadata error')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should install a plugin depending on a non-core plugin' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -459,6 +483,29 @@ class PluginUpdaterTest extends Specification {
         and:
         // unpinned spec always needs remote metadata to resolve the latest release
         !updater.isAlreadyInstalled(PluginRef.parse('my-plugin'))
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should show the metadata error when a plugin to update is not in any repository' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def index = repo.resolve('plugins.json')
+        index.text = '[]'
+        def local = localCache(folder.resolve('plugins'), ['1.0.0'])
+        def manager = new LocalPluginManager(local)
+        manager.loadPluginFromPath(local.resolve("${PLUGIN_ID}-1.0.0"))
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        updater.@metadataErrors.put(PLUGIN_ID, new PluginRuntimeException('registry refused'))
+
+        when:
+        updater.updatePlugin(PLUGIN_ID, '2.0.0')
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Plugin ${PLUGIN_ID} does not exist in any repository -- cause: registry refused"
 
         cleanup:
         folder?.deleteDir()
