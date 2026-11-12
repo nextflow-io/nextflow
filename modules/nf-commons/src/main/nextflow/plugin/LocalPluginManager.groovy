@@ -113,9 +113,8 @@ class LocalPluginManager extends CustomPluginManager {
 
     // flat name, so plugins with the same name in different namespaces do not share a link
     private String linkName(Path pluginPath) {
-        final descriptor = getPluginDescriptorFinder().find(pluginPath)
-        return descriptor.pluginId.contains('/')
-            ? "${descriptor.pluginId.replace('/', '~')}-${descriptor.version}".toString()
+        return pluginPath.parent != repository
+            ? "${pluginPath.parent.getFileName()}~${pluginPath.getFileName()}".toString()
             : pluginPath.getFileName().toString()
     }
 
