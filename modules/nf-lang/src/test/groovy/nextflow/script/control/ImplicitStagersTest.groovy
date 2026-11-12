@@ -102,7 +102,7 @@ class ImplicitStagersTest extends Specification {
         final stagers = (BlockStatement) body.getStatements().get(1)
         return stagers.getStatements().collect { st ->
             final call = (MethodCallExpression) ((ExpressionStatement) st).getExpression()
-            assert call.getMethodAsString() == '_stage_files'
+            assert call.getMethodAsString() == 'stageAs'
             final closure = (ClosureExpression) call.getArguments().getExpression(0)
             return closureBody(closure).getText()
         }

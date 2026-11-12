@@ -32,6 +32,7 @@ import nextflow.file.FilePorter
 import nextflow.file.LogicalDataPath
 import nextflow.script.ScriptType
 import nextflow.script.params.FileInParam
+import nextflow.script.params.v2.ProcessFileInput
 import nextflow.script.types.Bag
 import nextflow.util.ArrayBag
 import nextflow.util.HashBag
@@ -84,12 +85,13 @@ class TaskInputResolver {
     /**
      * Resolve a file input for a typed process.
      *
-     * @param filePattern The resolved file pattern of the file input
+     * @param fileInput
      * @param value
      */
-    List<FileHolder> resolve(String filePattern, Object value) {
+    List<FileHolder> resolve(ProcessFileInput fileInput, Object value) {
+        final ctx = task.context
         final normalized = normalizeInputToFiles(value, count, true)
-        final resolved = expandWildcards( filePattern, normalized )
+        final resolved = expandWildcards( fileInput.getFilePattern(ctx), normalized )
 
         count += resolved.size()
 

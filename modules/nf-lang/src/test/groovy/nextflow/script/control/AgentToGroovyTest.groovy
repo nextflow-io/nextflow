@@ -347,11 +347,11 @@ class AgentToGroovyTest extends Specification {
         return (BlockStatement) ((BlockStatement) closure.getCode()).getStatements().get(index)
     }
 
-    /** The `_stage_files({ <target> })` targets, rendered as source-like text. */
+    /** The `stageAs({ <target> })` targets, rendered as source-like text. */
     private static List<String> stagerTargets(BlockStatement block) {
         return block.getStatements().collect { st ->
             final call = (MethodCallExpression) ((ExpressionStatement) st).getExpression()
-            assert call.getMethodAsString() == '_stage_files'
+            assert call.getMethodAsString() == 'stageAs'
             final closure = (ClosureExpression) call.getArguments().getExpression(0)
             return render(closureBody(closure))
         }

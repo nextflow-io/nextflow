@@ -58,22 +58,6 @@ class ProcessDslV2Test extends Specification {
 
     }
 
-    def 'should mark only the compiler-generated file stagers as implicit' () {
-
-        given:
-        def dsl = createDsl()
-        def config = dsl.getConfig()
-
-        when:
-        dsl._stage_files({ infile })
-        dsl.stageAs({ infile })
-        dsl.stageAs({ infile }, 'filename.fa')
-        dsl.stageAs({ infile }, null)
-
-        then:
-        config.getInputs().getFiles()*.isImplicit() == [true, false, false, false]
-    }
-
     def 'should declare process outputs' () {
 
         given:

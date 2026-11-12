@@ -64,7 +64,7 @@ class ImplicitStagers {
                 !spread ? target :
                 isCollection(cn) ? flattenOneLevel(target) :
                 filterNonNull(target);
-            var stager = stmt(callThisX("_stage_files", args(closureX(stmt(value)))));
+            var stager = stmt(callThisX("stageAs", args(closureX(stmt(value)))));
             stagers.addStatement(stager);
         }
         else if( isRecordType(cn) ) {

@@ -1764,7 +1764,7 @@ class TaskProcessor {
         // -- resolve input files
         final resolver = new TaskInputResolver(task, foreignFiles, executor)
         final resolvedValues = new HashSet<>()
-        Set<Path> inputPaths = null
+        final inputPaths = collectPaths(task.inputs.values(), new HashSet<Path>())
 
         for( final fileInput : declaredInputs.getFiles() ) {
             final value = fileInput.resolve(ctx)
@@ -1774,20 +1774,15 @@ class TaskProcessor {
             // user-defined file stagers take precedence over default file stagers
             if( resolvedValues.contains(value) )
                 continue
-            final filePattern = fileInput.getFilePattern(ctx) ?: '*'
-            final resolved = resolver.resolve(filePattern, value)
+            final resolved = resolver.resolve(fileInput, value)
             task.inputFiles.addAll(resolved)
             // files that come from task inputs are already covered by the task hash
-            if( !fileInput.isImplicit() ) {
-                if( inputPaths == null )
-                    inputPaths = collectPaths(task.inputs.values(), new HashSet<Path>())
-                for( final holder : resolved ) {
-                    if( holder.sourcePath in inputPaths )
-                        continue
-                    if( task.stageAsFiles == null )
-                        task.stageAsFiles = new ArrayList<FileHolder>()
-                    task.stageAsFiles.add(holder)
-                }
+            for( final holder : resolved ) {
+                if( holder.sourcePath in inputPaths )
+                    continue
+                if( task.stageAsFiles == null )
+                    task.stageAsFiles = new ArrayList<FileHolder>()
+                task.stageAsFiles.add(holder)
             }
             resolvedValues.add(value)
         }

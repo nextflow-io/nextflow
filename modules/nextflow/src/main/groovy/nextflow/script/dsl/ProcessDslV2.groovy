@@ -88,6 +88,8 @@ class ProcessDslV2 extends ProcessBuilder {
      * Declare a file or collection of files to be staged into
      * the task directory.
      *
+     * This method is automatically generated for Path inputs.
+     *
      * @param value [Path | Collection<Path> | Closure]
      */
     void stageAs(Object value) {
@@ -112,18 +114,6 @@ class ProcessDslV2 extends ProcessBuilder {
      */
     void stdin(Object value) {
         inputs.setStdin(value)
-    }
-
-    /**
-     * Declare the default staging of a Path input, which is covered
-     * by the input itself in the task hash.
-     *
-     * This method is automatically generated for Path inputs.
-     *
-     * @param value [Closure]
-     */
-    void _stage_files(Object value) {
-        inputs.addFile(new ProcessFileInput(null, value, true))
     }
 
     /// OUTPUTS
