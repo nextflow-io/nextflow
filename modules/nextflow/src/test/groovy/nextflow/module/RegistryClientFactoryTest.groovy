@@ -19,6 +19,7 @@ package nextflow.module
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import groovy.json.JsonOutput
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.config.RegistryConfig
 import io.seqera.npr.client.RegistryException
@@ -46,8 +47,12 @@ class RegistryClientFactoryTest extends Specification {
 
     WireMockServer wireMock
     String url
+    Map prevConfig
     static final String MODULES_API_PATH = "/api/v1/modules"
     def setup() {
+        // use config, not NXF_RETRY_POLICY_* env vars, because RetryConfig.config() is memoized
+        prevConfig = Global.config
+        Global.config = [nextflow: [retryPolicy: [delay: '10ms', maxDelay: '50ms', maxAttempts: 3]]]
         // isolate from the host environment, otherwise `NXF_REGISTRY_TOKEN`
         // leaks into the client via `RegistryConfig.getApiKey()`
         SysEnv.push([:])
@@ -60,6 +65,7 @@ class RegistryClientFactoryTest extends Specification {
     def cleanup() {
         wireMock?.stop()
         SysEnv.pop()
+        Global.config = prevConfig
     }
 
     def 'should fetch module metadata from registry'() {
@@ -311,6 +317,9 @@ class RegistryClientFactoryTest extends Specification {
 
         then:
         thrown(RegistryException)
+        and:
+        // 3 requests = maxAttempts
+        verify(3, getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should send user agent header'() {
@@ -433,8 +442,7 @@ class RegistryClientFactoryTest extends Specification {
 
     def 'should handle network errors gracefully'() {
         given:
-        // Stub will not be set up, causing connection refused
-        def config = new RegistryConfig([url: "http://localhost:9999"]) // Invalid port
+        def config = new RegistryConfig([url: 'http://localhost:0'])
         def client = RegistryClientFactory.forConfig(config)
 
         when:

@@ -15,7 +15,6 @@
  */
 package nextflow.agent
 
-import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.ConfigParseException
@@ -31,7 +30,6 @@ import nextflow.script.ScriptBinding
 import org.junit.Rule
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockSession
 import test.OutputCapture
 
 /**
@@ -67,7 +65,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
      * <p>An `agent.container` already present in the PLAIN scope is preserved, and a selector-provided
      * one still wins over the injected plain value by the normal precedence ladder.
      */
-    private Session newSession(Map config = null) {
+    private Session containerizedSession(Map config = null) {
         final Map merged = new LinkedHashMap(config ?: [:])
         merged.docker = [enabled: true]
         final Map agentScope = new LinkedHashMap((Map) (merged.agent ?: [:]))
@@ -78,12 +76,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
 
     /** Spin a MockSession with EXACTLY the given config (no containerization defaults). */
     private Session bareSession(Map config = null) {
-        def session = config ? new MockSession(config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-        session.init(null, null, null, null)
-        session.start()
-        Global.session = session
-        return session
+        return newSession(config)
     }
 
     private AgentDef newAgent(Map directives = [model: 'openai/gpt-4o']) {
@@ -114,12 +107,12 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when:
-        newSession([agent: [cpus: 1, 'withName:qa': [cpus: 2]]])
+        containerizedSession([agent: [cpus: 1, 'withName:qa': [cpus: 2]]])
         then:
         newAgent().buildAgentTask(['hello']).config.cpus == 2
 
         when: 'the selector names a different agent'
-        newSession([agent: [cpus: 1, 'withName:other': [cpus: 2]]])
+        containerizedSession([agent: [cpus: 1, 'withName:other': [cpus: 2]]])
         then:
         newAgent().buildAgentTask(['hello']).config.cpus == 1
     }
@@ -129,17 +122,17 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when: 'the agent declares the label'
-        newSession([agent: [cpus: 1, 'withLabel:reasoning': [cpus: 4]]])
+        containerizedSession([agent: [cpus: 1, 'withLabel:reasoning': [cpus: 4]]])
         then:
         newAgent([model: 'openai/gpt-4o', label: ['reasoning']]).buildAgentTask(['hello']).config.cpus == 4
 
         when: 'the agent declares no label'
-        newSession([agent: [cpus: 1, 'withLabel:reasoning': [cpus: 4]]])
+        containerizedSession([agent: [cpus: 1, 'withLabel:reasoning': [cpus: 4]]])
         then:
         newAgent().buildAgentTask(['hello']).config.cpus == 1
 
         when: 'a negated label selector faces a label-less agent'
-        newSession([agent: [cpus: 1, 'withLabel:!reasoning': [cpus: 4]]])
+        containerizedSession([agent: [cpus: 1, 'withLabel:!reasoning': [cpus: 4]]])
         then:
         newAgent().buildAgentTask(['hello']).config.cpus == 4
     }
@@ -156,22 +149,22 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         def agent = { -> (AgentDef) newAgent([model: 'openai/gpt-4o', label: ['reasoning']]).cloneWithName('WF:qa') }
 
         when:
-        newSession([agent: scope])
+        containerizedSession([agent: scope])
         then: 'the fully-qualified rule wins'
         agent().buildAgentTask(['hello']).config.cpus == 4
 
         when: 'the fully-qualified rule is removed'
-        newSession([agent: scope.findAll { it.key != 'withName:WF:qa' }])
+        containerizedSession([agent: scope.findAll { it.key != 'withName:WF:qa' }])
         then: 'the base-name rule wins'
         agent().buildAgentTask(['hello']).config.cpus == 3
 
         when: 'the name rules are removed'
-        newSession([agent: [cpus: 1, 'withLabel:reasoning': [cpus: 2]]])
+        containerizedSession([agent: [cpus: 1, 'withLabel:reasoning': [cpus: 2]]])
         then: 'the label rule wins'
         agent().buildAgentTask(['hello']).config.cpus == 2
 
         when: 'no selector is left'
-        newSession([agent: [cpus: 1]])
+        containerizedSession([agent: [cpus: 1]])
         then: 'the plain scope applies'
         agent().buildAgentTask(['hello']).config.cpus == 1
     }
@@ -181,12 +174,12 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when: 'the selector names the DECLARED agent (baseName is preserved by cloneWithName)'
-        newSession([agent: ['withName:qa': [cpus: 3]]])
+        containerizedSession([agent: ['withName:qa': [cpus: 3]]])
         then:
         newAgent().cloneWithName('reviewer').buildAgentTask(['hello']).config.cpus == 3
 
         when: 'the selector names the alias'
-        newSession([agent: ['withName:reviewer': [cpus: 5]]])
+        containerizedSession([agent: ['withName:reviewer': [cpus: 5]]])
         then:
         newAgent().cloneWithName('reviewer').buildAgentTask(['hello']).config.cpus == 5
     }
@@ -196,13 +189,13 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when: 'plain ext and a selector ext declare different keys'
-        newSession([agent: [ext: [args: '--verbose'], 'withName:qa': [ext: [opts: '--fast']]]])
+        containerizedSession([agent: [ext: [args: '--verbose'], 'withName:qa': [ext: [opts: '--fast']]]])
         def config = newAgent().buildAgentTask(['hello']).config
         then: 'both survive'
         config.ext == [args: '--verbose', opts: '--fast']
 
         when: 'the selector overwrites the same key'
-        newSession([agent: [ext: [args: '--verbose'], 'withName:qa': [ext: [args: '--fast']]]])
+        containerizedSession([agent: [ext: [args: '--verbose'], 'withName:qa': [ext: [args: '--fast']]]])
         then: 'the selector wins and the plain value does not come back'
         newAgent().buildAgentTask(['hello']).config.ext == [args: '--fast']
     }
@@ -212,26 +205,26 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when: 'only a selector sets the label'
-        newSession([agent: ['withName:qa': [label: 'x']]])
+        containerizedSession([agent: ['withName:qa': [label: 'x']]])
         def config = newAgent().buildAgentTask(['hello']).config
         then: 'the value is a validated ConfigList, as for a process'
         config.label instanceof ConfigList
         config.getLabels() == ['x']
 
         when: 'the body declares a label and a matching withLabel selector sets another'
-        newSession([agent: ['withLabel:reasoning': [label: 'fast']]])
+        containerizedSession([agent: ['withLabel:reasoning': [label: 'fast']]])
         def config2 = newAgent([model: 'openai/gpt-4o', label: ['reasoning']]).buildAgentTask(['hello']).config
         then: 'exact `process` parity: ProcessConfigBuilder.putWithRepeat REPLACES the declared list,'
         // and the selector still matched, because applyConfig reads the DECLARED labels on entry
         config2.getLabels() == ['fast']
 
         when: 'a body label is declared and no selector touches `label`'
-        newSession([agent: [cpus: 1]])
+        containerizedSession([agent: [cpus: 1]])
         then: 'the declared labels reach the config'
         newAgent([model: 'openai/gpt-4o', label: ['reasoning', 'fast']]).buildAgentTask(['hello']).config.getLabels() == ['reasoning', 'fast']
 
         when: 'the declared label is not a valid label'
-        newSession([agent: [cpus: 1]])
+        containerizedSession([agent: [cpus: 1]])
         newAgent([model: 'openai/gpt-4o', label: ['a-b']]).buildAgentTask(['hello'])
         then: 'the diagnostic names the AGENT: `label` is the one directive method agents share'
         def error = thrown(IllegalConfigException)
@@ -248,7 +241,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
                          'maxToolOutputInlineSize', 'trace', 'rpc']
 
         when: 'the agent-only options are set in the plain scope'
-        newSession([agent: [runner: 'test', model: 'm', apiProvider: 'openai', apiKey: 'sk-x', baseUrl: 'http://x/v1', maxIterations: 7, rpc: [port: 1234], cpus: 1]])
+        containerizedSession([agent: [runner: 'test', model: 'm', apiProvider: 'openai', apiKey: 'sk-x', baseUrl: 'http://x/v1', maxIterations: 7, rpc: [port: 1234], cpus: 1]])
         def config = newAgent().buildAgentTask(['hello']).config
         then:
         agentOnly.every { !config.containsKey(it) }
@@ -256,7 +249,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         !capture.toString().contains('Unknown directive')
 
         when: 'the same options are set inside a selector'
-        newSession([agent: ['withName:qa': [runner: 'test', model: 'm', apiProvider: 'openai', apiKey: 'sk-x', baseUrl: 'http://x/v1', maxIterations: 7, rpc: [port: 1234], cpus: 2]]])
+        containerizedSession([agent: ['withName:qa': [runner: 'test', model: 'm', apiProvider: 'openai', apiKey: 'sk-x', baseUrl: 'http://x/v1', maxIterations: 7, rpc: [port: 1234], cpus: 2]]])
         def config2 = newAgent().buildAgentTask(['hello']).config
         then:
         agentOnly.every { !config2.containsKey(it) }
@@ -267,7 +260,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
     def 'an unknown directive is reported with the agent noun'() {
         given:
         AgentRunnerProvider.testRunner = canonicalRunner()
-        newSession([agent: ['withName:qa': [fooBar: 1]]])
+        containerizedSession([agent: ['withName:qa': [fooBar: 1]]])
 
         when:
         newAgent().buildAgentTask(['hello'])
@@ -281,14 +274,14 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when: 'no executor is configured'
-        newSession([agent: [cpus: 1]])
+        containerizedSession([agent: [cpus: 1]])
         then:
         newAgent().buildAgentTask(['hello']).config.executor == AgentConfig.DEFAULT_EXECUTOR
 
         // an offloaded agent must also declare a container, and -- because its container is
         // launched off the driver host -- an address the container can reach the driver on
         when: 'a selector sets the executor'
-        newSession([agent: [
+        containerizedSession([agent: [
             rpc: [remoteHost: 'driver.internal'],
             'withName:qa': [executor: 'k8s', container: 'agent-image:1'] ]])
         then:
@@ -437,7 +430,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
     def 'a process selector never configures an agent'() {
         given:
         AgentRunnerProvider.testRunner = canonicalRunner()
-        newSession([process: ['withName:qa': [cpus: 9]], agent: [cpus: 1]])
+        containerizedSession([process: ['withName:qa': [cpus: 9]], agent: [cpus: 1]])
 
         expect:
         newAgent().buildAgentTask(['hello']).config.cpus == 1
@@ -448,7 +441,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         // current value still EQUALS ProcessConfig.DEFAULT_CONFIG (ProcessConfigBuilder.applyConfigDefaults),
         // and DEFAULT_CONFIG.maxRetries == 1. This is exact `process` parity, deliberately not fixed.
         AgentRunnerProvider.testRunner = canonicalRunner()
-        newSession([agent: [maxRetries: 5, 'withName:qa': [maxRetries: 1]]])
+        containerizedSession([agent: [maxRetries: 5, 'withName:qa': [maxRetries: 1]]])
 
         expect:
         newAgent().buildAgentTask(['hello']).config.maxRetries == 5
@@ -459,7 +452,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = canonicalRunner()
 
         when:
-        newSession([agent: [model: 'm0', 'withName:qa': [model: 'openai/gpt-5', maxIterations: 40]]])
+        containerizedSession([agent: [model: 'm0', 'withName:qa': [model: 'openai/gpt-5', maxIterations: 40]]])
         def config = newAgent([:]).agentConfig()
         then:
         config.model == 'openai/gpt-5'
@@ -490,28 +483,28 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         SysEnv.push([:])
 
         when: 'the selector overrides only the credential'
-        newSession([agent: [apiKey: 'sk-outer', baseUrl: 'http://outer/v1', 'withName:qa': [apiKey: 'sk-inner']]])
+        containerizedSession([agent: [apiKey: 'sk-outer', baseUrl: 'http://outer/v1', 'withName:qa': [apiKey: 'sk-inner']]])
         def merged = newAgent([:]).agentConfig()
         then: 'the selector wins for `apiKey` and the outer `baseUrl` SURVIVES'
         merged.apiKey == 'sk-inner'
         merged.baseUrl == 'http://outer/v1'
 
         when: 'the selector overrides only the endpoint'
-        newSession([agent: [apiKey: 'sk-outer', baseUrl: 'http://outer/v1', 'withName:qa': [baseUrl: 'http://inner/v1']]])
+        containerizedSession([agent: [apiKey: 'sk-outer', baseUrl: 'http://outer/v1', 'withName:qa': [baseUrl: 'http://inner/v1']]])
         def swapped = newAgent([:]).agentConfig()
         then: 'symmetrically, the outer credential survives'
         swapped.apiKey == 'sk-outer'
         swapped.baseUrl == 'http://inner/v1'
 
         when: 'the selector names a DIFFERENT agent'
-        newSession([agent: [apiKey: 'sk-outer', baseUrl: 'http://outer/v1', 'withName:other': [apiKey: 'sk-inner']]])
+        containerizedSession([agent: [apiKey: 'sk-outer', baseUrl: 'http://outer/v1', 'withName:other': [apiKey: 'sk-inner']]])
         def untouched = newAgent([:]).agentConfig()
         then: 'the plain scope applies to both keys'
         untouched.apiKey == 'sk-outer'
         untouched.baseUrl == 'http://outer/v1'
 
         when: 'only a selector declares them (nothing in the plain scope)'
-        newSession([agent: ['withName:qa': [apiKey: 'sk-inner', baseUrl: 'http://inner/v1']]])
+        containerizedSession([agent: ['withName:qa': [apiKey: 'sk-inner', baseUrl: 'http://inner/v1']]])
         def selectorOnly = newAgent([:]).agentConfig()
         then:
         selectorOnly.apiKey == 'sk-inner'
@@ -529,7 +522,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         SysEnv.push([OPENAI_API_KEY: 'sk-openai', OPENROUTER_API_KEY: 'sk-openrouter'])
 
         when: 'only the selector names the namespace, over a plain-scope endpoint'
-        newSession([agent: [baseUrl: 'https://gw.corp/v1', 'withName:qa': [apiProvider: 'openrouter']]])
+        containerizedSession([agent: [baseUrl: 'https://gw.corp/v1', 'withName:qa': [apiProvider: 'openrouter']]])
         def selected = newAgent([:]).agentConfig()
         then: 'the sibling endpoint survives the per-key merge, and the namespace redirects the credential'
         selected.apiProvider == 'openrouter'
@@ -537,7 +530,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         selected.apiKeyFor('openai/gpt-4o') == 'sk-openrouter'
 
         when: 'the selector names a DIFFERENT agent'
-        newSession([agent: [baseUrl: 'https://gw.corp/v1', 'withName:other': [apiProvider: 'openrouter']]])
+        containerizedSession([agent: [baseUrl: 'https://gw.corp/v1', 'withName:other': [apiProvider: 'openrouter']]])
         def untouched = newAgent([:]).agentConfig()
         then: 'nothing vouches for the gateway, so the ambient provider key is withheld from it'
         untouched.apiProvider == null
@@ -552,7 +545,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
         // this pins that the closure survives applyConfig into the agent's ProcessConfigV2
         // and is evaluated per task, not stored as a literal
         AgentRunnerProvider.testRunner = canonicalRunner()
-        newSession([agent: ['withName:qa': [cpus: { task.attempt * 2 }]]])
+        containerizedSession([agent: ['withName:qa': [cpus: { task.attempt * 2 }]]])
 
         when:
         def taskConfig = newAgent().buildAgentTask(['hello']).config.createTaskConfig()
@@ -564,7 +557,7 @@ class AgentConfigSelectorTest extends Dsl2Spec {
     def 'a malformed selector body is reported as a config parse error'() {
         given:
         AgentRunnerProvider.testRunner = canonicalRunner()
-        newSession([agent: ['withName:qa': 'oops']])
+        containerizedSession([agent: ['withName:qa': 'oops']])
 
         when:
         newAgent().buildAgentTask(['hello'])
