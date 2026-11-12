@@ -19,14 +19,17 @@ package nextflow.scm
 import org.eclipse.jgit.transport.CredentialItem
 import org.eclipse.jgit.transport.URIish
 import spock.lang.Ignore
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import spock.lang.Unroll
 
 /**
  *
  * @author Piotr Faba <piotr.faba@ardigen.com>
  */
+@Timeout(60)
 class BitbucketServerRepositoryProviderTest extends Specification {
 
     static final String CONFIG = '''
@@ -226,6 +229,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         new String(pass.value) == 'bar'
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
     def 'should list root directory contents'() {
         given:
