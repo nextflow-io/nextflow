@@ -15,6 +15,14 @@ The `executor` scope controls various executor behaviors. To apply these setting
 
 The project or organization account that should be charged for running the pipeline jobs.
 
+##### `executor.arrayTimeout`
+
+<AddedInVersion version="27.04" />
+
+*Used only by executors that support [job arrays][array-directive].*
+
+The maximum amount of time to wait for a job array to fill up before submitting it as a partial job array. The timeout starts when the first task of each job array is collected. By default, a job array is submitted only when it is full or when the process has no more tasks.
+
 ##### `executor.cpus`
 
 <ChangedInVersion version="26.10">
@@ -166,6 +174,7 @@ Some executor settings have different default values depending on the executor.
 | Kubernetes     | `100`       | `5s`           |
 | Local          | N/A         | `100ms`        |
 
+[array-directive]: ../process/directives/array
 [executor-page]: ../../executor#configuring-executors
 [lsf-executor]: ../executor/lsf
 [pbs-executor]: ../executor/pbs
