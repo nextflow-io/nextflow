@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.22.6 - 12 Nov 2026
+- Retry Wave connection failures longer and report their cause (#8005) [d89dc120e]
+
 1.22.5 - 2 Nov 2026
 - Add wave.soci option for SOCI lazy loading (#7991) [d08aee9e1]
 - Fix and simplify Wave build templates docs (#7951) [2a34f3929]
