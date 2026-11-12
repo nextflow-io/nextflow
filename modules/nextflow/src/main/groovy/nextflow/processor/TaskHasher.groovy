@@ -65,6 +65,14 @@ class TaskHasher {
         //   are included separately
         keys << task.source
 
+        // add source code of functions called by the task script
+        //
+        // - only when present, so that the hash of tasks that
+        //   don't call any functions is unchanged
+        final functionSources = task.body?.functionSources
+        if( functionSources )
+            keys << functionSources
+
         // add container fingerprint if present
         if( task.isContainerEnabled() )
             keys << task.getContainerFingerprint()
