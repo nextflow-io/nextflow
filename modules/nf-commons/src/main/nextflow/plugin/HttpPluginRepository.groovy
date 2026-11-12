@@ -160,7 +160,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             .GET()
             .build()
         try {
-            return sendAndParse(req)
+            return sendAndParse(req, specs)
         }
         catch (PluginRuntimeException e) {
             throw e
@@ -170,11 +170,17 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
     }
 
-    private Map<String, PluginInfo> sendAndParse(HttpRequest req) {
+    private Map<String, PluginInfo> sendAndParse(HttpRequest req, List<PluginRef> specs) {
         final encoder = new GsonEncoder<ListDependenciesResponse>() {}
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         final body = resp.body()
         log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
+        // a registry without namespace support refuses any id with a `/`
+        final namespaced = specs.findAll { it.id.contains('/') }*.id
+        if( resp.statusCode() >= 400 && resp.statusCode() < 500 && namespaced ) {
+            final msg = "The plugin registry at ${req.uri()} refused the namespaced plugin ID: ${namespaced.join(', ')}\nThe registry may not support namespaced plugins. See the registry response for the reason.\n- http status: ${resp.statusCode()}\n- response   : ${body}"
+            throw new PluginRuntimeException(msg)
+        }
         if( resp.statusCode() != 200 ) {
             final msg = "Invalid response while fetching plugin metadata from: ${req.uri()}\n- http status: ${resp.statusCode()}\n- response   : ${body}"
             throw new PluginRuntimeException(msg)
