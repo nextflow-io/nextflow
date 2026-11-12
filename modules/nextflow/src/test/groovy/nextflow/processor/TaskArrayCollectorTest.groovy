@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import java.nio.file.Paths
+import java.util.concurrent.CopyOnWriteArrayList
 
 import com.google.common.hash.HashCode
 import nextflow.Session
@@ -27,7 +28,9 @@ import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
+import nextflow.util.Duration
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 import test.TestHelper
 /**
  *
@@ -93,6 +96,87 @@ class TaskArrayCollectorTest extends Specification {
         collector.collect(task)
         then:
         1 * executor.submit(task)
+    }
+
+    def 'should submit partial job arrays after timeout' () {
+        given:
+        def submitted = new CopyOnWriteArrayList()
+        def executor = Mock(DummyExecutor) {
+            submit(_) >> { args -> submitted.add(args[0]) }
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PROC'
+            getSession() >> Mock(Session)
+        }
+        def taskArray = [:] as TaskArrayRun
+        def collector = Spy(new TaskArrayCollector(processor, executor, 3, Duration.of('200ms'))) {
+            createTaskArray(_) >> taskArray
+        }
+        def conditions = new PollingConditions(timeout: 5)
+        and:
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getAttempt() >> 1
+            }
+        }
+
+        // submit partial job array after timeout
+        when:
+        collector.collect(task)
+        collector.collect(task)
+        then:
+        submitted.isEmpty()
+        conditions.eventually {
+            assert submitted == [taskArray]
+        }
+
+        // submit a single task directly after timeout
+        when:
+        submitted.clear()
+        collector.collect(task)
+        then:
+        conditions.eventually {
+            assert submitted == [task]
+        }
+
+        // cancel timeout when job array is full
+        when:
+        submitted.clear()
+        collector.collect(task)
+        collector.collect(task)
+        collector.collect(task)
+        sleep 500
+        then:
+        submitted == [taskArray]
+
+        cleanup:
+        collector.close()
+    }
+
+    def 'should abort the run when a job array cannot be submitted after timeout' () {
+        given:
+        def session = Mock(Session)
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PROC'
+            getSession() >> session
+        }
+        def executor = Mock(DummyExecutor)
+        def error = new RuntimeException('Oops')
+        def collector = Spy(new TaskArrayCollector(processor, executor, 3, Duration.of('100ms'))) {
+            createTaskArray(_) >> { throw error }
+        }
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getAttempt() >> 1
+            }
+        }
+
+        when:
+        collector.collect(task)
+        collector.collect(task)
+        sleep 500
+        then:
+        1 * session.abort(error)
     }
 
     def 'should create task array' () {
