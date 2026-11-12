@@ -1,0 +1,27 @@
+name: 'Clean up leaked Azure CI pools'
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    # GitHub-hosted image, which includes the Azure CLI
+    runs-on: ubuntu-24.04
+    if: github.repository == 'nextflow-io/nextflow'
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Delete stale nextflow-ci-* pools
+        run: bash validation/azure-cleanup.sh
+        env:
+          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
+          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
