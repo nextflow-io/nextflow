@@ -221,6 +221,19 @@ class HttpPluginRepositoryTest extends Specification {
         e.message.contains(body)
     }
 
+    def 'keep the generic message when the registry rate limits a namespaced plugin id'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(429).withBody('Too Many Requests')))
+
+        when:
+        unit.getPlugin('myorg/nf-foo')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.startsWith('Invalid response while fetching plugin metadata from:')
+    }
+
     def 'keep the generic message when the registry refuses an unscoped plugin id'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
