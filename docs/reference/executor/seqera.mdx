@@ -148,6 +148,21 @@ The `type` option accepts:
 
 Names are case-insensitive. The scheduler ignores any memory size in the name. For example, `nvidia-a100-80gb` selects any A100. The `h100` name also selects H100 NVL instances. If you omit `type`, the scheduler selects any GPU instance type.
 
+Use the `cuda` option to declare the CUDA release the task container image was built with. The scheduler only selects GPU models that support that CUDA release, and that the instance GPU driver can run. For example:
+
+```nextflow
+process train {
+    accelerator 1, cuda: '12.2'
+
+    script:
+    """
+    your_gpu_enabled --command --line
+    """
+}
+```
+
+The `cuda` option can be combined with `type`, in which case both constraints apply. A task whose CUDA release is newer than the instance GPU driver supports cannot be scheduled. See [accelerator][process-accelerator] for details.
+
 Only NVIDIA GPUs are supported. A task fails at submission if it requests an unknown GPU or a GPU from another vendor, such as `amd.com/gpu`. A task that requests a GPU the compute environment's region does not offer cannot be scheduled. Tasks that request different GPU models run on separate instances.
 
 ### Available GPUs

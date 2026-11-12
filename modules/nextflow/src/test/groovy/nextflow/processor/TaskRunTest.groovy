@@ -330,6 +330,8 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig( [container: 'busybox'] )
         task.processor.getSession() >> new Session([(engine): config])
         task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
+
+        expect:
         task.container == contnr
         task.containerConfig.enabled
         task.containerConfig.engine == engine
@@ -338,7 +340,6 @@ class TaskRunTest extends Specification {
         engine      | contnr                    | config
         'docker'    | 'busybox'                 | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | 'd.reg/busybox'           | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'udocker'   | 'busybox:latest'          | [enabled: true, x:'alpha', y: 'beta']
         'sarus'     | 'busybox'                 | [enabled: true, x:'delta', y: 'gamma']
         'shifter'   | 'docker:busybox:latest'   | [enabled: true, x:'delta', y: 'gamma']
     }

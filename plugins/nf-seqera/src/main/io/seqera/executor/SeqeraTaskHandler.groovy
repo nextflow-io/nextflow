@@ -123,6 +123,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             // specific accelerator model name e.g. "nvidia-tesla-v100", "nvidia-a10g"
             if( accelerator.type )
                 resourceReq.acceleratorName(accelerator.type)
+            // CUDA release the task image was built with e.g. "12.2"; the scheduler only picks
+            // GPU models and drivers supporting it
+            if( accelerator.cuda )
+                resourceReq.acceleratorCuda(accelerator.cuda)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
         // overlay any seqera/machineRequirement.* hints on top of config-scope values (hints win)
@@ -549,6 +553,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             result.put('acceleratorType', resources.getAcceleratorType().toString())
         if (resources.getAcceleratorName() != null)
             result.put('acceleratorName', resources.getAcceleratorName())
+        if (resources.getAcceleratorCuda() != null)
+            result.put('acceleratorCuda', resources.getAcceleratorCuda())
         if (resources.getTime() != null)
             result.put('time', resources.getTime())
         return result.isEmpty() ? null : result

@@ -34,12 +34,14 @@ import spock.lang.IgnoreIf
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 
 /**
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
+@Timeout(60)
 class MultiRevisionRepositoryStrategyTest extends Specification {
 
     @Rule

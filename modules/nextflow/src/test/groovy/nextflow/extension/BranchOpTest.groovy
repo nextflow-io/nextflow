@@ -17,7 +17,6 @@
 package nextflow.extension
 
 import groovyx.gpars.dataflow.DataflowVariable
-import spock.lang.Ignore
 import org.junit.Rule
 
 import nextflow.Channel
@@ -187,27 +186,6 @@ class BranchOpTest extends Dsl2Spec  {
         result.val == 'great than zero'
         result.val == Channel.STOP
     }
-
-    @Ignore // this is not supported and require explicit use of `return`
-    def 'should handle complex expression statement' () {
-        when:
-        def result = runScript('''
-            channel.of(-1,0,1)
-                .branch {
-                        foo: true
-                        if( it == 0 ) { 'zero' }
-                        else if( it<0 ) 'less than zero'
-                        else { 'great than zero' }
-                    }
-        ''')
-        then:
-        result.val == 'less than zero'
-        result.val == 'zero'
-        result.val == 'great than zero'
-        result.val == Channel.STOP
-    }
-
-
 
     def 'should branch and return last expression' () {
 

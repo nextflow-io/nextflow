@@ -91,22 +91,23 @@ class ThrottleTest extends Specification {
         int p=0
         int q=0
 
+        // long eviction so a slow runner can't expire the entry between calls
         when:
-        p = Throttle.cache('X', 100) { ++i }
-        p = Throttle.cache('X', 100) { ++i }
-        p = Throttle.cache('X', 100) { ++i }
+        p = Throttle.cache('X', 10_000) { ++i }
+        p = Throttle.cache('X', 10_000) { ++i }
+        p = Throttle.cache('X', 10_000) { ++i }
         then:
         p==1
 
         when:
-        q = Throttle.cache('Y', 100) { ++i }
-        q = Throttle.cache('Y', 100) { ++i }
+        q = Throttle.cache('Y', 10_000) { ++i }
+        q = Throttle.cache('Y', 10_000) { ++i }
         then:
         q == 2
 
         when:
         sleep 200
-        q = Throttle.cache('Y', 100) { ++i }
+        q = Throttle.cache('Y', 50) { ++i }
         then:
         q == 3
 
