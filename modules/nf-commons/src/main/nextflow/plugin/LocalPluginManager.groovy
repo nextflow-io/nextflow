@@ -106,9 +106,17 @@ class LocalPluginManager extends CustomPluginManager {
             throw new IllegalArgumentException("Plugin path must be a directory: $pluginPath")
 
         // create a symlink relative to the current root
-        final symlink = localRoot.resolve(pluginPath.getFileName())
+        final symlink = localRoot.resolve(linkName(pluginPath))
         createLink0(symlink, pluginPath)
         return symlink
+    }
+
+    // flat name, so plugins with the same name in different namespaces do not share a link
+    private String linkName(Path pluginPath) {
+        final descriptor = getPluginDescriptorFinder().find(pluginPath)
+        return descriptor.pluginId.contains('/')
+            ? "${descriptor.pluginId.replace('/', '~')}-${descriptor.version}".toString()
+            : pluginPath.getFileName().toString()
     }
 
     private void createLink0(Path symlink, Path pluginPath) {
