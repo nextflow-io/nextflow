@@ -442,23 +442,56 @@ class CsvSplitterTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'should handle inline comments' () {
+    def 'should only skip comments at the start of a line' () {
         given:
         def LINES = '''
-                alpha,beta,delta
-                gamma,zeta # inline comment
-                eta,theta,iota
+                alpha,beta#1,http://host/x#frag
+                  # indented comment
+                "gamma","#delta"
                 '''
                 .stripIndent().trim()
 
         when:
-        def items = new CsvSplitter().target(LINES).options(comment: '#').list()
+        def items = new CsvSplitter().target(LINES).options(comment: '#', quote: '"').list()
 
         then:
-        items.size() == 3
-        items[0] == ['alpha', 'beta', 'delta']
-        items[1] == ['gamma', 'zeta ']
-        items[2] == ['eta', 'theta', 'iota']
+        items.size() == 2
+        items[0] == ['alpha', 'beta#1', 'http://host/x#frag']
+        items[1] == ['gamma', '#delta']
+    }
+
+    def 'should not count comment lines when chunking' () {
+        given:
+        def LINES = '# a\nalpha\n# b\nbeta\ngamma'
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(comment: '#', by: 2).list()
+
+        then:
+        items == [ [['alpha'], ['beta']], [['gamma']] ]
+    }
+
+    def 'should reject comment equal to separator or quote' () {
+        when:
+        new CsvSplitter().options(OPTS)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        OPTS << [
+            [comment: ','],
+            [comment: '\t', sep: '\t'],
+            [comment: '"', quote: '"'],
+        ]
+    }
+
+    def 'should skip empty lines before header' () {
+        when:
+        def items = new CsvSplitter().target('\n\nx,y\n1,2').options(header: true).list()
+
+        then:
+        items == [ [x: '1', y: '2'] ]
     }
 
 }

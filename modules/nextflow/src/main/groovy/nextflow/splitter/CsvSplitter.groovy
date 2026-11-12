@@ -52,6 +52,11 @@ class CsvSplitter extends AbstractTextSplitter {
     protected int skipLines = 0
 
     /**
+     * Lines starting with this character are skipped
+     */
+    protected String comment
+
+    /**
      * Set the splitter options by specifying a map of named parameters.
      * Valid parameters are:
      * <li>{@code sep}
@@ -59,6 +64,7 @@ class CsvSplitter extends AbstractTextSplitter {
      * <li>{@code header}
      * <li>{@code quote}
      * <li>{@code skip}
+     * <li>{@code comment}
      *
      * @param options
      * @return The splitter instance itself
@@ -91,11 +97,18 @@ class CsvSplitter extends AbstractTextSplitter {
         if( options.skip )
             skipLines = options.skip as int
 
-        // the comment character if used
         if( options.comment )
-            parser.setComment(options.comment as String)
+            comment = validateComment(options.comment as String, options.sep as String ?: ',', options.quote as String)
 
         return this
+    }
+
+    static private String validateComment(String comment, String sep, String quote) {
+        if( comment.size() != 1 )
+            throw new IllegalArgumentException("Not a valid CSV comment character: $comment")
+        if( comment == sep || comment == quote )
+            throw new IllegalArgumentException("CSV comment character cannot be the same as the separator or quote character: $comment")
+        return comment
     }
 
     /**
@@ -160,7 +173,7 @@ class CsvSplitter extends AbstractTextSplitter {
         while( (line = reader.readLine()) != null ) {
             if( !line )
                 continue
-            if( parser.comment && line.charAt(0) == parser.comment )
+            if( comment && line.stripLeading().startsWith(comment) )
                 continue
             return line
         }
