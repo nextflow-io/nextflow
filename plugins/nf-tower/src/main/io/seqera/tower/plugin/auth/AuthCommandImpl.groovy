@@ -281,8 +281,7 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
         final authConfig = readAuthFile()
         final existingToken = authConfig['tower.accessToken']
         // Extract tower config for PlatformHelper (strip 'tower.' prefix)
-        final towerConfig = authConfig.findAll { it.key.toString().startsWith('tower.') }
-            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+        final towerConfig = PlatformHelper.towerOpts(authConfig)
         final apiUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
 
         if( !existingToken ) {
@@ -501,9 +500,8 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
      * @return Map containing 'changed' (boolean) and 'metadata' (workspace info)
      */
     private Map configureWorkspace(TowerClient client, Map config, String userId) {
-        // Check if TOWER_WORKFLOW_ID environment variable is set
-        final envWorkspaceId = SysEnv.get('TOWER_WORKFLOW_ID')
-        if( envWorkspaceId ) {
+        // a Platform-driven run already has its workspace decided for it
+        if( PlatformHelper.isPlatformRun(SysEnv.get()) ) {
             println "\nDefault workspace: ${colorize('TOWER_WORKFLOW_ID environment variable is set', 'yellow')}"
             printColored("  Not prompting for default workspace configuration as environment variable takes precedence", "dim")
             return [changed: false, metadata: null]
@@ -519,8 +517,11 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
 
         // Show current workspace setting
         final currentWorkspaceId = config.get('tower.workspaceId')
+        // when no workspace is set locally the run falls back to the workspace configured
+        // as default in the Seqera Platform account, so label the options accordingly
+        final platformDefaultId = client.getDefaultWorkspaceId()
 
-        String currentSetting = getCurrentWorkspaceName(workspaces, config.get('tower.workspaceId'))
+        String currentSetting = getCurrentWorkspaceName(workspaces, currentWorkspaceId, platformDefaultId)
 
         println "\nDefault workspace. Current setting: ${colorize(currentSetting, 'cyan', true)}"
         printColored("  Workflow runs use this workspace by default", "dim")
@@ -529,23 +530,45 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
 
         // If threshold or fewer total options, show all at once
         if( workspaces.size() <= WORKSPACE_SELECTION_THRESHOLD ) {
-            return selectWorkspaceFromAll(config, workspaces, currentWorkspaceId)
+            return selectWorkspaceFromAll(config, workspaces, currentWorkspaceId, platformDefaultId)
         } else {
             // Two-stage selection: org first, then workspace
-            return selectWorkspaceByOrg(config, orgWorkspaces, currentWorkspaceId)
+            return selectWorkspaceByOrg(config, orgWorkspaces, currentWorkspaceId, platformDefaultId)
         }
     }
 
-    private String getCurrentWorkspaceName(List<Map> workspaces, currentWorkspaceId) {
-        final currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() } as Map
-        return currentWorkspace ? "${currentWorkspace.orgName} / ${currentWorkspace.workspaceName}" : "None (Personal workspace)"
+    /**
+     * Describe the workspace runs currently use: the one selected locally if any,
+     * otherwise the Seqera Platform account default, otherwise the personal workspace.
+     */
+    private String getCurrentWorkspaceName(List<Map> workspaces, currentWorkspaceId, String platformDefaultId = null) {
+        final effectiveId = currentWorkspaceId ?: platformDefaultId
+        final currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == effectiveId?.toString() } as Map
+        if( !currentWorkspace )
+            return "None (Personal workspace)"
+        final suffix = currentWorkspaceId ? '' : ' [Seqera Platform default]'
+        return "${currentWorkspace.orgName} / ${currentWorkspace.workspaceName}${suffix}"
     }
 
-    private Map selectWorkspaceFromAll(Map config, List<Map> workspaces, final currentWorkspaceId) {
+    /**
+     * Label for the "no workspace selected locally" option. Removing the local setting no
+     * longer implies the personal workspace: when the account has a default workspace in
+     * Seqera Platform, that is what runs will use.
+     */
+    private String noSelectionLabel(List<Map> workspaces, String platformDefaultId) {
+        if( !platformDefaultId )
+            return 'None (Personal workspace)'
+        final ws = workspaces.find { ((Map) it).workspaceId.toString() == platformDefaultId } as Map
+        final name = ws ? "${ws.orgName} / ${ws.workspaceName}" : platformDefaultId
+        return "None (use Seqera Platform default: ${name})"
+    }
+
+    private Map selectWorkspaceFromAll(Map config, List<Map> workspaces, final currentWorkspaceId, String platformDefaultId = null) {
         println "\nAvailable workspaces:"
-        final isPersonalWorkspace = !currentWorkspaceId
-        final currentIndicator = isPersonalWorkspace ? colorize(' (current)', 'bold') : ''
-        println "  0. ${colorize('None (Personal workspace)', 'cyan', true)} ${colorize('[no organization]', 'dim', true)}${currentIndicator}"
+        final noSelection = !currentWorkspaceId
+        final currentIndicator = noSelection ? colorize(' (current)', 'bold') : ''
+        final noSelectionSuffix = platformDefaultId ? '' : " ${colorize('[no organization]', 'dim', true)}"
+        println "  0. ${colorize(noSelectionLabel(workspaces, platformDefaultId), 'cyan', true)}${noSelectionSuffix}${currentIndicator}"
 
         // Sort workspaces by org name, then workspace name
         final sortedWorkspaces = workspaces.sort { Map a, Map b ->
@@ -562,7 +585,7 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
         }
 
         // Show current workspace and prepare prompt
-        final currentWorkspaceName = getCurrentWorkspaceName(sortedWorkspaces, currentWorkspaceId)
+        final currentWorkspaceName = getCurrentWorkspaceName(sortedWorkspaces, currentWorkspaceId, platformDefaultId)
 
         println("\n${colorize('Leave blank to keep current setting', 'bold')} (${colorize(currentWorkspaceName, 'cyan')}),")
         final selection = promptForNumber(colorize("or select workspace (0-${sortedWorkspaces.size()}): ", 'bold', true), 0, sortedWorkspaces.size(), true)
@@ -589,13 +612,13 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
         }
     }
 
-    private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, final currentWorkspaceId) {
+    private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, final currentWorkspaceId, String platformDefaultId = null) {
         // Get current workspace info for prompts
         final allWorkspaces = [] as List<Map>
         orgWorkspaces.values().each { workspaceList ->
             allWorkspaces.addAll(workspaceList as List<Map>)
         }
-        final currentWorkspaceDisplay = getCurrentWorkspaceName(allWorkspaces, currentWorkspaceId)
+        final currentWorkspaceDisplay = getCurrentWorkspaceName(allWorkspaces, currentWorkspaceId, platformDefaultId)
 
         // First, select organization
         final orgs = orgWorkspaces.keySet().toList().sort { (it as String).toLowerCase() }
@@ -605,7 +628,9 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
 
         println "\nAvailable organizations:"
         orgs.eachWithIndex { orgName, index ->
-            final displayName = orgName == 'Personal' ? 'None [Personal workspace]' : orgName
+            final displayName = orgName == 'Personal'
+                ? noSelectionLabel(allWorkspaces, platformDefaultId)
+                : orgName
             println "  ${index + 1}. ${colorize(displayName as String, 'cyan', true)}"
         }
         println("\n${colorize('Leave blank to keep current setting', 'bold')} (${colorize(currentWorkspaceDisplay, 'cyan')}),")
@@ -800,8 +825,7 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
         final status = new ConfigStatus([], null, null, null)
 
         // Extract tower config and strip prefix for PlatformHelper
-        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
-            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+        final towerConfig = PlatformHelper.towerOpts(config)
 
         // API endpoint - use PlatformHelper
         final String endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
@@ -820,9 +844,11 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
         final tokenInfo = getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
         final String tokenSource = tokenInfo.source ?: 'not set'
 
-        if( accessToken ) {
+        final httpClient = accessToken ? createTowerClient(endpoint, accessToken) : null
+
+        if( httpClient ) {
             try {
-                final userInfo = createTowerClient(endpoint, accessToken).getUserInfo()
+                final userInfo = httpClient.getUserInfo()
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -837,44 +863,39 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
         final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
         status.table.add(['Workflow monitoring', enabledValue, (enabledInfo.source ?: 'default') as String])
 
-        // Default workspace - use PlatformHelper
-        final String workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
+        // Default workspace: the local setting if any, otherwise the Seqera Platform
+        // default workspace -- i.e. the workspace a run would actually use
         final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
-        if( workspaceId ) {
-            // Try to get workspace name and roles from API if we have a token
-            def workspaceDetails = null
-            if( accessToken ) {
-                final httpClient = createTowerClient(endpoint, accessToken)
-                final userInfo = httpClient.getUserInfo()
-                workspaceDetails = httpClient.getUserWorkspaceDetails(userInfo.id as String, workspaceId)
-            }
+        final String effectiveWorkspaceId = PlatformHelper.getEffectiveWorkspaceId(
+            towerConfig, SysEnv.get(), () -> httpClient?.getDefaultWorkspaceId() )
 
-            if( workspaceDetails ) {
-                // Add workspace ID row and remember its index
-                status.workspaceRowIndex = status.table.size()
-                status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
-                // Store workspace details for display after this row (outside table structure)
-                // roles are included in workspaceDetails
-                status.workspaceInfo = workspaceDetails
-                status.workspaceRoles = workspaceDetails.roles as List<String>
-            } else {
-                status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
-            }
-        } else {
-            if( accessToken ) {
-                status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
-            }
+        if( effectiveWorkspaceId ) {
+            // when neither the config nor the env var is set there is no local source to
+            // report, so the value can only have come from the Platform account default
+            final source = (workspaceInfo.source ?: 'platform') as String
+            // Try to get workspace name and roles from API if we have a token
+            final userId = httpClient?.getUserInfo()?.id as String
+            final workspaceDetails = httpClient?.getUserWorkspaceDetails(userId, effectiveWorkspaceId)
+            // Add workspace ID row and remember its index
+            status.workspaceRowIndex = status.table.size()
+            status.table.add(['Default workspace', effectiveWorkspaceId, source])
+            // Store workspace details for display after this row (outside table structure);
+            // printStatus() already treats a null workspaceInfo as "no details to show"
+            status.workspaceInfo = workspaceDetails
+            status.workspaceRoles = workspaceDetails?.roles as List<String>
+        }
+        else if( accessToken ) {
+            status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
         }
 
         // Compute environment and work directory
         def computeEnv = null
-        if( accessToken ) {
-            final httpClient = createTowerClient(endpoint, accessToken)
+        if( httpClient ) {
             try {
                 if( config['tower.computeEnvId'] ) {
-                    computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, workspaceId)
+                    computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, effectiveWorkspaceId)
                 } else {
-                    final computeEnvs = listComputeEnvironments(httpClient, workspaceId)
+                    final computeEnvs = listComputeEnvironments(httpClient, effectiveWorkspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
                 }
             } catch( Exception e ) {
@@ -1055,18 +1076,15 @@ class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
             Files.createDirectories(configFile.parent)
         }
 
-        // Write tower config to seqera-auth.config file
-        final towerConfig = config.findAll { key, value ->
-            key.toString().startsWith('tower.')
-        }
+        // Write tower config to seqera-auth.config file, keyed without the `tower.` prefix
+        final towerConfig = PlatformHelper.towerOpts(config)
 
         final authConfigText = new StringBuilder()
         authConfigText.append("// Seqera Platform configuration\n")
         authConfigText.append("tower {\n")
         for (entry in towerConfig) {
-            final key = entry.key
             final value = entry.value
-            final configKey = key.toString().substring(6) // Remove "tower." prefix
+            final configKey = entry.key.toString()
 
             if (value instanceof String) {
                 def line = "    ${configKey} = '${value}'"
