@@ -264,4 +264,27 @@ class AzFusionEnvTest extends Specification {
         env.size() == 1  // Only account name
     }
 
+    def 'should use fusion identity from storage config'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [storage: [accountName: 'myaccount', fusionIdentityClientId: STORAGE_ID], batch: [poolIdentityClientId: POOL_ID]]]
+        }
+
+        when:
+        def env = new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
+
+        then:
+        env.AZURE_STORAGE_ACCOUNT == 'myaccount'
+        env.FUSION_AZ_MSI_CLIENT_ID == EXPECTED
+        !env.AZURE_STORAGE_SAS_TOKEN
+        env.size() == (EXPECTED ? 2 : 1)
+
+        where:
+        STORAGE_ID      | POOL_ID       | EXPECTED
+        'storage-id'    | null          | 'storage-id'
+        'auto'          | null          | null
+        'storage-id'    | 'pool-id'     | 'storage-id'
+        'auto'          | 'pool-id'     | null
+    }
+
 }
