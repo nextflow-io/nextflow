@@ -97,29 +97,45 @@ fi
 showcase_repo=seqeralabs/showcase-automation
 workflow_file=seqera-showcase-${ENVIRONMENT}.yml
 echo "Launching ${workflow_file}"
-dispatch_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gh workflow run \
+# `gh workflow run` prints the dispatched run URL; fall back to the workflow runs page
+if ! dispatch_out=$(gh workflow run \
   "${workflow_file}" \
   --repo "${showcase_repo}" \
   -f launch_container=${launcher} \
-  -f launch_container_dind=${launcher_dind}
-
-# `gh workflow run` does not return the dispatched run, so look for the newest
-# run created since the dispatch, falling back to the workflow runs page
-run_url=""
-for _ in $(seq 1 12); do
-  sleep 5
-  run_url=$(gh run list --repo "${showcase_repo}" --workflow "${workflow_file}" --event workflow_dispatch --limit 10 \
-    --json url,createdAt --jq "[.[] | select(.createdAt >= \"${dispatch_time}\")] | sort_by(.createdAt) | last | .url // empty" 2>/dev/null || true)
-  [ -n "$run_url" ] && break
-done
+  -f launch_container_dind=${launcher_dind} 2>&1); then
+  echo "$dispatch_out"
+  echo "Error: failed to launch ${workflow_file}"; exit 1
+fi
+run_url=$(echo "$dispatch_out" | grep -o 'https://github.com/[^ ]*/actions/runs/[0-9]*' | tail -1)
 [ -z "$run_url" ] && run_url="https://github.com/${showcase_repo}/actions/workflows/${workflow_file}"
 echo "Showcase run: $run_url"
+
+# wait for the showcase launch job, which saves the Platform runs as an artifact,
+# and link them with a search on the run name suffix (<date>_<uuid>)
+platform_url=""
+run_id=${run_url##*/runs/}
+if [[ "$run_id" =~ ^[0-9]+$ ]]; then
+  echo "Waiting for the showcase launch job..."
+  for _ in $(seq 1 30); do
+    status=$(gh run view "$run_id" --repo "$showcase_repo" --json status,jobs \
+      --jq '[.status, (.jobs[] | select(.name == "launch") | .status)] | if index("completed") then "done" else "wait" end' 2>/dev/null) || break
+    [ "$status" = done ] && break
+    sleep 30
+  done
+  artifact_dir=$(mktemp -d)
+  if gh run download "$run_id" --repo "$showcase_repo" --pattern '*_launch_json' --dir "$artifact_dir" >/dev/null 2>&1; then
+    platform_url=$(jq -r '[.[] | select(.workflowUrl != null)][0] // empty
+      | (.workflowUrl | sub("/watch/.*"; "/watch")) + "?search=" + (.workflowName | capture("(?<s>[0-9]{8}_[0-9a-f]+)$").s)' \
+      "$artifact_dir"/*/*.json 2>/dev/null)
+  fi
+fi
+echo "Platform runs: ${platform_url:-not found}"
 
 if [ -n "$GITHUB_STEP_SUMMARY" ]; then
   {
     echo "### e2e showcase launched against \`${ENVIRONMENT}\`"
     echo "- Run: ${run_url}"
+    echo "- Platform runs: ${platform_url:-not found, see the showcase run}"
     echo "- Launcher: \`${launcher}\`"
     echo "- Launcher (dind): \`${launcher_dind}\`"
     echo ""
