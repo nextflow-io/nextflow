@@ -111,7 +111,7 @@ Max number of attempts for each download from Azure Blob Storage (default: `1`).
 
 <AddedInVersion version="25.10" />
 
-The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity.
+The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity. Alias of `azure.storage.fusionIdentityClientId`, which takes precedence when both are set.
 
 ##### `azure.batch.pools.<name>.allowUnverifiedImages`
 
@@ -264,6 +264,12 @@ The file share mount options.
 ##### `azure.storage.fileShares.<name>.mountPath`
 
 The file share mount path.
+
+##### `azure.storage.fusionIdentityClientId`
+
+<AddedInVersion version="27.04" />
+
+The client ID of the Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that Fusion uses to authenticate to Azure Storage. The identity must be attached to the VMs that run the tasks. If set to `'auto'`, Fusion uses the first available managed identity. When set, Nextflow does not pass a SAS token to tasks. This is separate from `azure.managedIdentity`, which authenticates Nextflow itself.
 
 ##### `azure.storage.sasToken`
 

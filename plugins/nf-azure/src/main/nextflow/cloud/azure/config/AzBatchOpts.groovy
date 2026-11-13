@@ -130,7 +130,7 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     @ConfigOption
     @Description("""
-        The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity.
+        The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity. Alias of `azure.storage.fusionIdentityClientId`, which takes precedence when both are set.
     """)
     final String poolIdentityClientId
 

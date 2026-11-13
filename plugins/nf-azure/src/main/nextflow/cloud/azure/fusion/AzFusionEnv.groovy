@@ -41,7 +41,6 @@ class AzFusionEnv implements FusionEnv {
      *
      * @param scheme The storage scheme ('az' for Azure)
      * @param config The Fusion configuration
-     * @param managedIdentityId Optional managed identity client ID from pool options
      * @return Map of environment variables
      */
     @Override
@@ -51,7 +50,7 @@ class AzFusionEnv implements FusionEnv {
         }
 
         final cfg = AzConfig.config
-        final managedIdentityId = cfg.batch().poolIdentityClientId
+        final managedIdentityId = cfg.storage().fusionIdentityClientId ?: cfg.batch().poolIdentityClientId
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {
@@ -60,13 +59,13 @@ class AzFusionEnv implements FusionEnv {
 
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
 
-        // If pool has a managed identity, ONLY add the MSI client ID
+        // If a managed identity is configured, ONLY add the MSI client ID
         // DO NOT add any SAS token or reference cfg.storage().sasToken
         if (managedIdentityId) {
             // Fusion will try and pick up a managed identity that is available.
             // We recommend explicitly setting the config item to the managed ID so you know which one is being used.
-            // However if set to 'true' it will use whichever is available.
-            // This can be helpful if the pools have different managed identities.
+            // However if set to 'auto' it will use whichever is available.
+            // This can be helpful if the VMs have different managed identities.
             if (managedIdentityId != 'auto') {
                 result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
             }

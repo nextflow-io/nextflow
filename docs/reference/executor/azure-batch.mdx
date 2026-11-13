@@ -285,17 +285,21 @@ To do this:
 
 1. Create a user-assigned managed identity with the Azure Storage Blob Data Contributor role for your storage account.
 2. Attach the user-assigned managed identity to the node pool manually.
-3. Set `azure.batch.poolIdentityClientId` to this identity in your configuration.
+3. Set `azure.storage.fusionIdentityClientId` to this identity in your configuration.
 
 ```groovy
 azure {
-    batch {
-        poolIdentityClientId = '<managed-identity-client-id>'
+    storage {
+        fusionIdentityClientId = '<managed-identity-client-id>'
     }
 }
 ```
 
-Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. You can attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.batch.poolIdentityClientId`.
+Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. You can attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.storage.fusionIdentityClientId`.
+
+:::note
+`azure.batch.poolIdentityClientId` is still supported as an alias. If both are set, `azure.storage.fusionIdentityClientId` takes precedence.
+:::
 
 ## Task packing
 
