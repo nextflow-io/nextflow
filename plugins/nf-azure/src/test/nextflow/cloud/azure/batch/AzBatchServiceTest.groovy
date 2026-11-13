@@ -834,6 +834,34 @@ class AzBatchServiceTest extends Specification {
     }
 
     @Unroll
+    def 'should create task resource files' () {
+        given:
+        def SAS = 'sas-token'
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account'], batch: [copyToolInstallMode: 'node']]
+        Global.session = Mock(Session) { getConfig()>>[azure: AZURE] }
+        def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
+        def svc = new AzBatchService(createExecutor(new AzConfig(AZURE)))
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> WORKDIR
+            getStdin() >> STDIN
+        }
+
+        when:
+        def result = svc.resourceFileUrls(TASK, SAS)
+        then:
+        result.collect { [it.filePath, it.httpUrl] } == EXPECTED
+
+        where:
+        STDIN       | EXPECTED
+        null        | [ ['.command.run', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.run?sas-token'],
+                        ['.command.sh', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.sh?sas-token'] ]
+        'some input'| [ ['.command.run', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.run?sas-token'],
+                        ['.command.sh', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.sh?sas-token'],
+                        ['.command.in', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.in?sas-token'] ]
+    }
+
+    @Unroll
     def 'should create user-assigned managed identity credentials token' () {
         given:
         def config = Mock(AzConfig)
