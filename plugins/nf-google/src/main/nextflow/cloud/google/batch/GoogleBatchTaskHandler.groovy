@@ -19,6 +19,7 @@ package nextflow.cloud.google.batch
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import com.google.api.gax.rpc.ResourceExhaustedException
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
@@ -855,7 +856,21 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected void deleteJob() {
         log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
         if( executor.shouldDeleteJob(jobId) )
-            executor.reaper.submit({ client.deleteJob(jobId) })
+            executor.reaper.submit({ deleteJob0(jobId) })
+    }
+
+    private void deleteJob0(String jobId) {
+        try {
+            client.deleteJob(jobId)
+        }
+        catch( ResourceExhaustedException e ) {
+            // let the reaper throttle and retry the deletion
+            throw e
+        }
+        catch( Exception e ) {
+            // a failed deletion must not abort the run, but the job may still be running
+            log.warn "[GOOGLE BATCH] Unable to delete job $jobId -- ${e.message}"
+        }
     }
 
     /**

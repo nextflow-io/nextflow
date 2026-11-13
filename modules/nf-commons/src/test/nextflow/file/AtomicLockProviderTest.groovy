@@ -16,9 +16,7 @@
 
 package nextflow.file
 
-import java.nio.file.FileSystem
 import java.nio.file.Path
-import java.nio.file.spi.FileSystemProvider
 
 import spock.lang.Specification
 
@@ -28,21 +26,19 @@ class AtomicLockProviderTest extends Specification {
         AtomicLockProvider.setProviders(null)
     }
 
-    private Path schemePath(String scheme) {
-        Stub(Path) {
-            getFileSystem() >> Stub(FileSystem) {
-                provider() >> Stub(FileSystemProvider) { getScheme() >> scheme }
-            }
-        }
+    static class FakeLockProvider extends AtomicLockProvider {
+        String scheme = 'file'
+        boolean canHandle(String scheme) { scheme == this.scheme }
+        boolean tryCreate(Path lockPath) { false }
     }
 
     def 'lookup resolves the provider by scheme'() {
         given:
-        def provider = Stub(AtomicLockProvider) { canHandle('s3') >> true }
-        AtomicLockProvider.setProviders([provider])
+        def provider = new FakeLockProvider()
+        AtomicLockProvider.setProviders([new FakeLockProvider(scheme: 's3'), provider])
 
         expect:
-        AtomicLockProvider.lookup(schemePath('s3')).is(provider)
+        AtomicLockProvider.lookup(Path.of('/tmp/x')).is(provider)   // 'file' scheme
     }
 
     def 'discovery is not memoized, so a provider registered later is seen'() {
@@ -57,7 +53,7 @@ class AtomicLockProviderTest extends Specification {
         cachedProviders() == null
 
         when: 'the provider becomes available'
-        def provider = Stub(AtomicLockProvider) { canHandle('s3') >> true }
+        def provider = new FakeLockProvider()
         AtomicLockProvider.setProviders([provider])
 
         then: 'it resolves; the earlier empty answer did not latch'
@@ -76,7 +72,7 @@ class AtomicLockProviderTest extends Specification {
         AtomicLockProvider.setProviders([])
 
         when:
-        AtomicLockProvider.lookup(schemePath('zz'))
+        AtomicLockProvider.lookup(Path.of('/tmp/x'))
         then:
         thrown(IllegalStateException)
     }

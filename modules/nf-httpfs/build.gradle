@@ -34,10 +34,16 @@ dependencies {
     api "org.apache.groovy:groovy-nio:${groovyVersion}"
     api("com.esotericsoftware.kryo:kryo:${kryoVersion}") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
 
-    /* testImplementation inherited from top gradle build file */
+    testImplementation ("org.spockframework:spock-core:${spockVersion}") { exclude group: 'org.apache.groovy' }
+    // provides the JUnit 4 @Rule support used by WireMockRule
+    testImplementation ("org.spockframework:spock-junit4:${spockVersion}") { exclude group: 'org.apache.groovy' }
     testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock
     testImplementation ("org.wiremock:wiremock-standalone:${wiremockVersion}") { exclude module: 'groovy-all' }
-
-    testImplementation(testFixtures(project(":nextflow")))
 }
 
+
+test {
+    // fail fast when an external FTP/HTTP host is unreachable (JDK default is 300 s)
+    systemProperty 'sun.net.client.defaultConnectTimeout', '5000'
+    systemProperty 'sun.net.client.defaultReadTimeout', '5000'
+}

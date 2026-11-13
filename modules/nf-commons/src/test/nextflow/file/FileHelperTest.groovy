@@ -18,15 +18,24 @@ package nextflow.file
 
 import static java.nio.file.LinkOption.*
 
+import java.nio.channels.SeekableByteChannel
+import java.nio.file.AccessMode
+import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemLoopException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
+import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
@@ -236,6 +245,30 @@ class FileHelperTest extends Specification {
         FileHelper.normalizePath( '~' ) == System.properties['user.home']
         FileHelper.normalizePath( '~/path/file.name' ) == System.properties['user.home'] + '/path/file.name'
 
+    }
+
+    def 'should strip current-dir segments' () {
+        expect:
+        FileHelper.stripCurrentDirSegments(PATH) == EXPECTED
+
+        where:
+        PATH                         | EXPECTED
+        null                         | null
+        ''                           | ''
+        'results/x.vcf.gz'           | 'results/x.vcf.gz'
+        './results/x.vcf.gz'         | 'results/x.vcf.gz'
+        '././x.txt'                  | 'x.txt'
+        'a/./b/./c.txt'              | 'a/b/c.txt'
+        './/x.txt'                   | 'x.txt'
+        './/./x.txt'                 | 'x.txt'
+        'a//b/.//c.txt'              | 'a/b/c.txt'
+        './/'                        | './'
+        './*.vcf'                    | '*.vcf'
+        '.hidden'                    | '.hidden'
+        '../x.txt'                   | '../x.txt'
+        '.'                          | '.'
+        './'                         | './'
+        '/abs/./x.txt'               | '/abs/./x.txt'
     }
 
     def 'test isEmpty file'() {
@@ -1047,17 +1080,12 @@ class FileHelperTest extends Specification {
     def 'should check if glob is allowed' () {
 
         given:
-        def FS = Mock(FileSystem)
-        def PROVIDER = Mock(FileSystemProvider)
-        def PATH = Mock(Path)
+        def provider = new FakeFileSystemProvider(SCHEME)
+        def fs = [provider: { provider }] as FileSystem
+        def path = [getFileSystem: { fs }] as Path
 
-        when:
-        def result = FileHelper.isGlobAllowed(PATH)
-        then:
-        PATH.getFileSystem() >> FS
-        FS.provider() >> PROVIDER
-        PROVIDER.getScheme() >> SCHEME
-        result == EXPECTED
+        expect:
+        FileHelper.isGlobAllowed(path) == EXPECTED
 
         where:
         SCHEME      | EXPECTED
@@ -1274,6 +1302,18 @@ class FileHelperTest extends Specification {
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
 
+    def 'getAttemptFromPath parses the attempt from the suffix of a work dir'() {
+        expect:
+        FileHelper.getAttemptFromPath(PATH == null ? null : Paths.get(PATH)) == ATTEMPT
+
+        where:
+        PATH                                            | ATTEMPT
+        null                                            | 1
+        '/work/ab/cdef0123456789abcdef0123456789'       | 1
+        '/work/ab/cdef0123456789abcdef0123456789-2'     | 2
+        '/work/ab/cdef0123456789abcdef0123456789-12'    | 12
+    }
+
     def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {
         given:
         def work = Paths.get('/work')
@@ -1337,6 +1377,43 @@ class FileHelperTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should register a provider without installing it in the JDK' () {
+        when:
+        def provider = FileHelper.getOrInstallProvider(FakeFileSystemProvider)
+        then:
+        provider instanceof FakeFileSystemProvider
+        FileHelper.getProviderFor('fake').is(provider)
+        FileHelper.getOrInstallProvider(FakeFileSystemProvider).is(provider)
+        !FileSystemProvider.installedProviders().any { it.scheme == 'fake' }
+        FileHelper.getProviderSchemes().containsAll(['file', 'fake'])
+
+        cleanup:
+        FileHelper.providersMap.remove('fake')
+    }
+
+    static class FakeFileSystemProvider extends FileSystemProvider {
+        final String scheme
+        FakeFileSystemProvider(String scheme='fake') { this.scheme = scheme }
+        String getScheme() { scheme }
+        FileSystem newFileSystem(URI uri, Map<String,?> env) { throw new UnsupportedOperationException() }
+        FileSystem getFileSystem(URI uri) { throw new UnsupportedOperationException() }
+        Path getPath(URI uri) { throw new UnsupportedOperationException() }
+        SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) { throw new UnsupportedOperationException() }
+        void createDirectory(Path dir, FileAttribute<?>... attrs) { throw new UnsupportedOperationException() }
+        void delete(Path path) { throw new UnsupportedOperationException() }
+        void copy(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        void move(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException() }
+        boolean isSameFile(Path path, Path path2) { throw new UnsupportedOperationException() }
+        boolean isHidden(Path path) { throw new UnsupportedOperationException() }
+        FileStore getFileStore(Path path) { throw new UnsupportedOperationException() }
+        void checkAccess(Path path, AccessMode... modes) { throw new UnsupportedOperationException() }
+        <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) { throw new UnsupportedOperationException() }
+        Map<String,Object> readAttributes(Path path, String attributes, LinkOption... options) { throw new UnsupportedOperationException() }
+        void setAttribute(Path path, String attribute, Object value, LinkOption... options) { throw new UnsupportedOperationException() }
     }
 
 }

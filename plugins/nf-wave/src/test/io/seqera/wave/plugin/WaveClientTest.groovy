@@ -267,6 +267,24 @@ class WaveClientTest extends Specification {
         req.timestamp instanceof String
     }
 
+    def 'should create request object with soci mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[soci:true]]}
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage('foo:latest'))
+        then:
+        req.containerImage == 'foo:latest'
+        req.soci
+
+        when:
+        req = wave.makeRequest(new WaveAssets(null, null, null, null, 'From foo:latest', null, null, true))
+        then:
+        req.format == 'sif'
+        !req.soci
+    }
+
     def 'should create request object with scan mode and levels' () {
         given:
         def session = Mock(Session) { getConfig() >> [wave:[scan:[mode: 'required', allowedLevels: 'low,medium']]]}
@@ -494,6 +512,63 @@ class WaveClientTest extends Specification {
         !assets.containerConfig
         !assets.packagesSpec
         !assets.projectResources
+    }
+
+    @Unroll
+    def 'should not create asset for singularity image url' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave: STRATEGY ? [strategy: STRATEGY] : [:]] }
+        def task = Mock(TaskRun) {
+            getConfig() >> [conda: CONDA]
+            getContainerConfig() >> Mock(nextflow.container.ContainerConfig) { getEngine() >> ENGINE }
+        }
+        and:
+        def client = new WaveClient(session)
+
+        expect:
+        (client.resolveAssets(task, IMAGE, false) == null) == EXPECTED
+
+        where:
+        ENGINE          | IMAGE                                   | CONDA         | STRATEGY          | EXPECTED
+        'singularity'   | 'https://depot.galaxyproject.org/foo'   | null          | null              | true
+        'apptainer'     | 'oras://community.wave.seqera.io/foo'   | null          | null              | true
+        'singularity'   | 'https://depot.galaxyproject.org/foo'   | 'bioconda::foo' | 'container,conda' | true
+        'singularity'   | 'https://depot.galaxyproject.org/foo'   | 'bioconda::foo' | 'conda,container' | false
+        'singularity'   | 'quay.io/foo:latest'                    | null          | null              | false
+    }
+
+    def 'should reject singularity image url when fusion is enabled' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true]] }
+        def task = Mock(TaskRun) {
+            getConfig() >> [:]
+            getContainerConfig() >> Mock(nextflow.container.ContainerConfig) { getEngine() >> 'singularity' }
+        }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        client.resolveAssets(task, 'https://depot.galaxyproject.org/foo', false)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.startsWith('Wave container request image cannot start with URL like prefix')
+    }
+
+    def 'should reject image url for docker' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {
+            getConfig() >> [:]
+            getContainerConfig() >> Mock(nextflow.container.ContainerConfig) { getEngine() >> 'docker' }
+        }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        client.resolveAssets(task, 'https://depot.galaxyproject.org/foo', false)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.startsWith('Wave container request image cannot start with URL like prefix')
     }
 
     def 'should create asset with image and bundle' () {
@@ -1322,6 +1397,7 @@ class WaveClientTest extends Specification {
 
         // container succeeded
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1336,6 +1412,7 @@ class WaveClientTest extends Specification {
 
         // container is pending
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1350,6 +1427,7 @@ class WaveClientTest extends Specification {
 
         // container failed
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1365,6 +1443,7 @@ class WaveClientTest extends Specification {
 
         // build is READY
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1379,6 +1458,7 @@ class WaveClientTest extends Specification {
 
         // build is not ready
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1394,6 +1474,7 @@ class WaveClientTest extends Specification {
 
         // build is cached
         when:
+        handle.ready = false
         ready = wave.isContainerReady('xyz')
         then:
         cache.get('xyz') >> handle
@@ -1404,6 +1485,48 @@ class WaveClientTest extends Specification {
         and:
         0 * wave.checkContainerCompletion(_) >> null
         0 * wave.checkBuildCompletion(handle) >> null
+        and:
+        ready
+
+        // image not handled by wave
+        when:
+        ready = wave.isContainerReady('/cache/image.img')
+        then:
+        cache.get('/cache/image.img') >> null
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        ready
+    }
+
+    def 'should not check again a container already ready' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [:]] }
+        def resp = new SubmitContainerTokenResponse(requestId: '12345', targetImage: 'wave.io/wt/12345/foo:latest')
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: [xyz: handle]))
+
+        when: 'the container is pending'
+        def ready = wave.isContainerReady('xyz')
+        then:
+        1 * wave.checkContainerCompletion(handle) >> false
+        and:
+        !ready
+        !handle.ready
+
+        when: 'the container completes'
+        ready = wave.isContainerReady('xyz')
+        then:
+        1 * wave.checkContainerCompletion(handle) >> true
+        and:
+        ready
+        handle.ready
+
+        when: 'the container is checked again'
+        ready = wave.isContainerReady('xyz')
+        then: 'its status is not requested anymore'
+        0 * wave.checkContainerCompletion(_)
         and:
         ready
     }
@@ -1521,6 +1644,32 @@ class WaveClientTest extends Specification {
 
         cleanup:
         server?.stop(0)
+    }
+
+
+    def 'should report the cause when wave cannot be reached' () {
+        given:
+        def port = new ServerSocket(0).withCloseable { it.localPort }
+        def config = [wave:[endpoint: "http://localhost:$port".toString(), retryPolicy: [maxAttempts: 1]], tower:[accessToken:'foo', endpoint: 'http://foo.com']]
+        def wave = new WaveClient(Mock(Session) { getConfig() >> config })
+
+        when:
+        wave.sendRequest(new SubmitContainerTokenRequest())
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.startsWith("Unable to connect Wave service: http://localhost:$port - cause: java.net.ConnectException")
+        e.cause instanceof java.net.ConnectException
+    }
+
+    def 'should describe a failure with its type and cause chain' () {
+        expect:
+        WaveClient.describeFailure(ERROR) == EXPECTED
+
+        where:
+        ERROR                                                                                   | EXPECTED
+        new IOException('boom')                                                                 | 'java.io.IOException: boom'
+        new java.net.ConnectException()                                                         | 'java.net.ConnectException'
+        new java.net.ConnectException().initCause(new java.nio.channels.UnresolvedAddressException()) | 'java.net.ConnectException <- java.nio.channels.UnresolvedAddressException'
     }
 
 }

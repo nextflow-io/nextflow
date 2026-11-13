@@ -34,7 +34,7 @@ class FunctionSpec {
     static Map<String,?> of(Method method, String type) {
         final name = method.getName()
         final description = method.getAnnotation(Description)?.value()
-        final returnType = fromType(method.getReturnType())
+        final returnType = fromType(method.getGenericReturnType())
         final parameters = method.getParameters().collect { param ->
             [
                 name: param.getName(),

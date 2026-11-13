@@ -50,6 +50,9 @@ import test.Dsl2Spec
 @Timeout(90)
 class AgentRegistryToolTest extends Dsl2Spec {
 
+    // keep the registry retries short when the fetch fails
+    static final Map FAST_RETRY = [delay: '10ms', maxDelay: '50ms', maxAttempts: 2]
+
     def cleanup() {
         AgentRunnerProvider.testRunner = null
     }
@@ -177,7 +180,8 @@ class AgentRegistryToolTest extends Dsl2Spec {
         final runner = new ScriptRunner([
             process: [executor: 'local'],
             workDir: work.toString(),
-            registry: [url: 'http://localhost:0'] ])
+            registry: [url: 'http://localhost:0'],
+            nextflow: [retryPolicy: FAST_RETRY] ])
         runner.setScript(new ScriptFile(main))
         runner.execute()
 

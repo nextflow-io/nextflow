@@ -70,13 +70,13 @@ class GoogleOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+        The HTTP connection timeout for Cloud Storage API requests (default: `60.s`).
     """)
     final Duration httpConnectTimeout
 
     @ConfigOption
     @Description("""
-        The HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+        The HTTP read timeout for Cloud Storage API requests (default: `60.s`).
     """)
     final Duration httpReadTimeout
 

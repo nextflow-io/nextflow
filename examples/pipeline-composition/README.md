@@ -170,5 +170,5 @@ If two included pipelines both have a process called `STAR_ALIGN`, their unquali
 
 ## See also
 
-- [Pipeline composition](../../adr/20260608-pipeline-composition.md): the design decision behind this example.
+- [Pipeline composition](../../docs/adr/20260608-pipeline-composition.md): the design decision behind this example.
 - [Typed workflows](../../docs/workflow-typed.mdx): the syntax used here.

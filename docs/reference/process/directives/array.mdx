@@ -29,6 +29,8 @@ process hello {
 
 A process using job arrays collects tasks and submits each batch as a job array when it is ready. Any "leftover" tasks are submitted as a partial job array.
 
+By default, a partial job array is submitted only when the process has no more tasks. If tasks arrive slowly or indefinitely (for example, from `channel.watchPath`), use the [`executor.arrayTimeout`][executor-array-timeout] setting to submit a partial job array when it doesn't fill up within the given amount of time.
+
 After a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) are retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, to allow the use of [dynamic resources][dynamic-task-resources].
 
 The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
@@ -67,6 +69,7 @@ Nextflow supports job arrays for the following executors:
 
 [awsbatch-executor]: ../../executor/aws-batch
 [dynamic-task-resources]: ../../../process#dynamic-task-resources
+[executor-array-timeout]: ../../config/executor#executorarraytimeout
 [google-batch-executor]: ../../executor/google-batch
 [lsf-executor]: ../../executor/lsf
 [pbs-executor]: ../../executor/pbs

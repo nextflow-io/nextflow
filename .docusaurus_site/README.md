@@ -103,6 +103,8 @@ Use custom version tags for tracking feature changes:
 <DeprecatedInVersion version="25.04" />
 ```
 
+Version tags name a stable release: `YY.04` or `YY.10`. For a change on master, use the next stable release after the root `VERSION` file (e.g. `26.10.3` → `27.04`), never an edge version such as `26.11`.
+
 ### Code blocks
 
 Code blocks support syntax highlighting:

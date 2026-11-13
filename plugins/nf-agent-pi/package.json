@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "1.0.2"
+  },
+  "overrides": {
+    "undici": "8.12.3"
   }
 }
