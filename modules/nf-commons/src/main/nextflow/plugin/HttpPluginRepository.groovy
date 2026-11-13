@@ -192,7 +192,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         // a registry without namespace support refuses any id with a `/`
         final namespaced = specs.findAll { it.id.contains('/') }*.id
         if( resp.statusCode() in [400, 404, 422] && namespaced ) {
-            final msg = "The plugin registry at ${req.uri()} refused the namespaced plugin ID: ${namespaced.join(', ')}\nThe registry may not support namespaced plugins. See the registry response for the reason.\n- http status: ${resp.statusCode()}\n- response   : ${body}"
+            final msg = "The plugin registry at ${url} refused the namespaced plugin ID: ${namespaced.join(', ')}\nThe registry may not support namespaced plugins. See the registry response for the reason.\n- http status: ${resp.statusCode()}\n- response   : ${body}"
             throw new PluginRuntimeException(msg)
         }
         if( resp.statusCode() != 200 ) {
