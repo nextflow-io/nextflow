@@ -97,16 +97,17 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local target=$2
                 local basedir=$(dirname "$2")
                 local ret
+                local out
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || {
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ret=$?
-                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
-                    if (( ret > 128 )); then
+                    ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
+                    ## or a transient error fails (and can be retried) instead of being staged as a directory
+                    if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
                         >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                         return $ret
                     fi
-                    ## if fails check if it was trying to download a directory
                     mkdir -p "$target"
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         ret=$?
@@ -248,16 +249,17 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local target=$2
                 local basedir=$(dirname "$2")
                 local ret
+                local out
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || {
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ret=$?
-                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
-                    if (( ret > 128 )); then
+                    ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
+                    ## or a transient error fails (and can be retried) instead of being staged as a directory
+                    if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
                         >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
                         return $ret
                     fi
-                    ## if fails check if it was trying to download a directory
                     mkdir -p "$target"
                     azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         ret=$?
