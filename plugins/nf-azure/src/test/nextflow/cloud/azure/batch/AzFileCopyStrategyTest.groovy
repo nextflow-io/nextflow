@@ -28,6 +28,7 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzFileSystem
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -79,6 +80,39 @@ class AzFileCopyStrategyTest extends Specification {
 
     def setup() {
         new Session()
+    }
+
+    def 'should size azcopy buffer from task memory' () {
+        expect:
+        AzFileCopyStrategy.azcopyBufferGb(MEM ? MemoryUnit.of(MEM) : null, PARALLEL) == EXPECTED
+
+        where:
+        MEM      | PARALLEL | EXPECTED
+        null     | 4        | null
+        '256 MB' | 4        | '0.1'
+        '512 MB' | 4        | '0.1'
+        '512 MB' | 1        | '0.4'
+        '1 GB'   | 1        | '0.8'
+        '8 GB'   | 4        | '1.6'
+        '16 GB'  | 4        | '3.2'
+        '6 GB'   | 7        | '0.68'
+        '1 GB'   | 0        | '0.8'
+    }
+
+    def 'should export azcopy buffer only when task memory is set' () {
+        given:
+        def config = new AzConfig([storage:[sasToken: '12345'], batch:[maxParallelTransfers: 4]])
+        def bean = Mock(TaskBean) { getContainerMemory() >> (MEM ? MemoryUnit.of(MEM) : null) }
+        def copy = new AzFileCopyStrategy(bean, Mock(AzBatchExecutor) { getAzConfig() >> config })
+
+        expect:
+        copy.getEnvScript(ENV, false).readLines().find { it.contains('AZCOPY_BUFFER_GB') } == EXPECTED
+
+        where:
+        MEM     | ENV                        | EXPECTED
+        null    | [:]                        | null
+        '8 GB'  | [:]                        | 'export AZCOPY_BUFFER_GB="1.6"'
+        '8 GB'  | [AZCOPY_BUFFER_GB: '0.5']  | 'export AZCOPY_BUFFER_GB="0.5"'
     }
 
     def 'should preserve special characters in download and upload file names' () {

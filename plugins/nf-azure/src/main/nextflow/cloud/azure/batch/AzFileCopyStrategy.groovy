@@ -15,6 +15,7 @@
  */
 package nextflow.cloud.azure.batch
 
+import java.math.RoundingMode
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -26,6 +27,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.MemoryUnit
 /**
  * Implements file copy strategy for Azure Batch
  *
@@ -41,6 +43,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private Duration delayBetweenAttempts
     private String sasToken
     private Path remoteBinDir
+    private MemoryUnit taskMemory
 
     protected AzFileCopyStrategy() {}
 
@@ -48,6 +51,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         super(bean)
         this.config = executor.azConfig
         this.remoteBinDir = executor.remoteBinDir
+        this.taskMemory = bean.containerMemory
         this.sasToken = config.storage().sasToken
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
@@ -64,6 +68,9 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
+        final bufferGb = azcopyBufferGb(taskMemory, maxParallelTransfers)
+        if( bufferGb && !copy.containsKey('AZCOPY_BUFFER_GB') )
+            copy.put('AZCOPY_BUFFER_GB', bufferGb)
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
@@ -72,6 +79,19 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             result << envSnippet
         return result.toString()
 
+    }
+
+    /**
+     * Size the azcopy buffer so that all parallel transfers together use at most
+     * 80% of the task memory, otherwise azcopy can exceed the container memory
+     * and get OOM-killed. Returns null when the task has no memory set.
+     */
+    static String azcopyBufferGb(MemoryUnit memory, int maxParallelTransfers) {
+        if( !memory )
+            return null
+        final perTransfer = memory.toBytes() * 0.8d / Math.max(1, maxParallelTransfers) / (1024L * 1024 * 1024)
+        final gb = Math.max(0.1d, perTransfer)
+        return BigDecimal.valueOf(gb).setScale(2, RoundingMode.DOWN).stripTrailingZeros().toPlainString()
     }
 
     static String uploadCmd(String source, Path targetDir) {
