@@ -56,15 +56,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
     protected String azLib() {
         '''
-        nxf_az_cp() {
-            ## pools created by older Nextflow versions may have an AzCopy without `--output-level`
-            if azcopy --output-level essential env >/dev/null 2>&1; then
-                azcopy --output-level essential cp "$@"
-            else
-                azcopy cp "$@"
-            fi
-        }
-
         nxf_az_upload() {
             local name=$1
             local target=${2%/} ## remove ending slash
@@ -73,12 +64,12 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
             if [[ -d $name ]]; then
               if [[ "$base_name" == "$name" ]]; then
-                nxf_az_cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
               else
-                nxf_az_cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
               fi
             else
-              nxf_az_cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
             fi
         }
 
@@ -89,10 +80,10 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             local ret
             mkdir -p "$basedir"
 
-            ret=$(nxf_az_cp "$source?$AZ_SAS" "$target" 2>&1) || {
+            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir -p $target
-                nxf_az_cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                     rm -rf $target
                     >&2 echo "Unable to download path: $source"
                     return 1
