@@ -104,6 +104,20 @@ Enable the use of Conda recipes defined by using the [conda][process-conda] dire
 
 When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
 
+##### `NXF_DATAFLOW_HIGH_WATER`
+
+<AddedInVersion version="27.04" />
+
+The number of tasks a process can have pending or in preparation before dataflow backpressure pauses it (default: `64`, or twice the executor pool size if greater, which is the number of CPUs unless set with `-ps`). At this mark, the process stops taking new inputs, and the built-in channel factories that feed it, such as `channel.fromPath`, pause (for them, the inputs queued at the process also count). Both resume when the process drops to half the mark. This bounds the memory used by a run when tasks are produced faster than they can be executed. As a result, the "N of M" task counts in the console and the pending task counts in Seqera Platform grow as the run progresses, instead of jumping to the total at the start. Task hashes are unchanged.
+
+Set to `0` to disable backpressure and restore the unbounded behavior. Negative or non-integer values are rejected at startup.
+
+##### `NXF_DATAFLOW_POOL_SIZE`
+
+<AddedInVersion version="27.04" />
+
+The number of threads that run channel operators and process inputs (default: grows with demand). Mainly useful for testing: with `1`, the dataflow network runs on a single thread in a deterministic order.
+
 ##### `NXF_DATE_FORMAT`
 
 <AddedInVersion version="25.10" />

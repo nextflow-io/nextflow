@@ -19,7 +19,6 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.expression.DataflowExpression
 
 /**
  * Implements {@link OperatorImpl#toList(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
@@ -48,7 +47,7 @@ class ToListOp {
         assert source != null
 
         final target = new DataflowVariable()
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             final result = new ArrayList(1)
             Map<String,Closure> events = [:]
             events.onNext = { result.add(it) }

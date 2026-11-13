@@ -25,6 +25,8 @@ import java.util.concurrent.TimeUnit
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.http.XFileSystemConfig
 import nextflow.file.http.XFileSystemConfigHelper
@@ -1121,6 +1123,12 @@ class ChannelTest extends Specification {
         }
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def 'should use the dataflow poison pill as stop' () {
+        expect:
+        Channel.STOP.is(PoisonPill.getInstance())
+        CH.stop().is(PoisonPill.getInstance())
     }
 
 }

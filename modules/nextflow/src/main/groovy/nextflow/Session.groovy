@@ -33,8 +33,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import groovyx.gpars.scheduler.Scheduler
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
@@ -50,6 +50,7 @@ import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
 import nextflow.container.SmolVmConfig
 import nextflow.dag.DAG
+import nextflow.dataflow.engine.Backpressure
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.AbortSignalException
@@ -269,6 +270,8 @@ class Session implements ISession {
 
     private DAG dag
 
+    private Backpressure backpressure
+
     private CacheDB cache
 
     private Barrier processesBarrier = new Barrier()
@@ -397,6 +400,11 @@ class Session implements ISession {
      */
     int getPoolSize() { poolSize }
 
+    /**
+     * @return The dataflow backpressure, or {@code null} when not enabled
+     */
+    Backpressure getBackpressure() { backpressure }
+
     CacheDB getCache() { cache }
 
     /**
@@ -461,9 +469,19 @@ class Session implements ISession {
         // -- set the thread pool size
         this.poolSize = config.poolSize as int
         log.debug "Executor pool size: ${poolSize}"
+        log.debug "Dataflow pool size: ${Scheduler.getPoolSize() ?: 'default'}"
 
         // -- DAG object
         this.dag = new DAG()
+
+        // -- dataflow backpressure
+        final highWater = Backpressure.highWater(poolSize)
+        if( highWater > 0 ) {
+            this.backpressure = new Backpressure(this, highWater)
+            onShutdown { backpressure.shutdown() }
+        }
+        else
+            log.debug "Dataflow backpressure disabled"
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
@@ -642,6 +660,9 @@ class Session implements ISession {
 
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
+
+        // compute the processes fed by each source
+        backpressure?.connect(dag)
 
         if( preview ) {
             terminated = true
@@ -1025,6 +1046,7 @@ class Session implements ISession {
     void cancel(TaskHandler handler) {
         log.info "Execution cancelled -- Finishing pending tasks before exit"
         cancelled = true
+        backpressure?.release()
         notifyError(handler)
         executorFactory.signalExecutors()
         processesBarrier.forceTermination()
@@ -1043,6 +1065,7 @@ class Session implements ISession {
         aborted = true
         error = cause
         LoggerHelper.aborted = true
+        backpressure?.release()
         try {
             // log the dataflow network status and dump the threads status. These are only
             // diagnostics: an error must not skip the shutdown, which awaitShutdown() waits for
@@ -1086,6 +1109,7 @@ class Session implements ISession {
 
     protected void forceTermination() {
         terminated = true
+        backpressure?.release()
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
         allOperators *. terminate()
@@ -1093,7 +1117,6 @@ class Session implements ISession {
         execService?.shutdownNow()
         agentExecService?.shutdownNow()
         arrayLauncherPool?.shutdown()
-        GParsConfig.shutdown()
     }
 
     boolean isTerminated() { terminated }

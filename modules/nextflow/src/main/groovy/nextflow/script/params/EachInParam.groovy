@@ -21,7 +21,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.extension.CH
 import nextflow.extension.ToListOp
 import nextflow.script.TokenFileCall
@@ -87,7 +86,7 @@ class EachInParam extends BaseInParam {
     @PackageScope
     DataflowReadChannel normalizeToVariable( value ) {
         def result
-        if( value instanceof DataflowExpression ) {
+        if( value instanceof DataflowVariable ) {
             result = value
         }
         else if( CH.isChannel(value) ) {

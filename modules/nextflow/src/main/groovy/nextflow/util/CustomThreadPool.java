@@ -16,113 +16,109 @@
 
 package nextflow.util;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import groovyx.gpars.scheduler.DefaultPool;
-import groovyx.gpars.scheduler.Pool;
+import groovyx.gpars.scheduler.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implements a resizeable unbounded Thread pool executor
+ * Factories of the dataflow thread pools
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class CustomThreadPool extends DefaultPool {
+public final class CustomThreadPool {
 
     private static final Logger log = LoggerFactory.getLogger(CustomThreadPool.class);
 
     private static final long KEEP_ALIVE_TIME = 60L;
 
-    static Pool boundedPool(int maxThreads, int queueSize) {
+    private CustomThreadPool() {}
+
+    static ExecutorService boundedPool(int maxThreads, int queueSize) {
         log.debug(String.format("Creating bounded thread pool > maxThread: %s - queueSize: %s", maxThreads, queueSize));
 
-        return new CustomThreadPool(
-
-            new ThreadPoolExecutor(
-                    1,
-                    maxThreads,
-                    KEEP_ALIVE_TIME,
-                    TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<Runnable>(queueSize),
-                    newDaemonThreadFactory(),
-                    new ThreadPoolExecutor.CallerRunsPolicy())
-
-        );
-
+        return new ThreadPoolExecutor(
+                1,
+                maxThreads,
+                KEEP_ALIVE_TIME,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<Runnable>(queueSize),
+                newDaemonThreadFactory(),
+                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
-    static Pool unboundedPool(int maxThreads) {
+    static ExecutorService unboundedPool(int maxThreads) {
         log.debug(String.format("Creating unbounded thread pool > maxThread: %s", maxThreads));
 
-        return new CustomThreadPool(
-
-                new ThreadPoolExecutor(
-                        1,
-                        maxThreads,
-                        KEEP_ALIVE_TIME,
-                        TimeUnit.SECONDS,
-                        new LinkedBlockingQueue<Runnable>(),
-                        newDaemonThreadFactory(),
-                        new ThreadPoolExecutor.CallerRunsPolicy())
-
-        );
-
+        return new ThreadPoolExecutor(
+                1,
+                maxThreads,
+                KEEP_ALIVE_TIME,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<Runnable>(),
+                newDaemonThreadFactory(),
+                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
-    static Pool defaultPool(int poolSize, int maxThreads) {
+    static ExecutorService defaultPool(int poolSize, int maxThreads) {
         log.debug(String.format("Creating default thread pool > poolSize: %s; maxThreads: %s", poolSize, maxThreads));
 
-        return new CustomThreadPool(
-                new ThreadPoolExecutor(
-                        poolSize,
-                        maxThreads,
-                        KEEP_ALIVE_TIME,
-                        TimeUnit.SECONDS,
-                        new SynchronousQueue<Runnable>(),
-                        newDaemonThreadFactory(),
-                        new ThreadPoolExecutor.CallerRunsPolicy()) );
+        return new ThreadPoolExecutor(
+                poolSize,
+                maxThreads,
+                KEEP_ALIVE_TIME,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(),
+                newDaemonThreadFactory(),
+                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
-    static Pool synchronousPool(int maxThreads) {
+    static ExecutorService synchronousPool(int maxThreads) {
         log.debug(String.format("Creating synchronous thread pool > maxThread: %s", maxThreads));
 
-        return new CustomThreadPool(
-
-                new ThreadPoolExecutor(
-                        1,
-                        maxThreads,
-                        KEEP_ALIVE_TIME,
-                        TimeUnit.SECONDS,
-                        new SynchronousQueue<Runnable>(),
-                        newDaemonThreadFactory(),
-                        new ThreadPoolExecutor.CallerRunsPolicy())
-
-        );
-    }
-
-    static Pool virtualPool() {
-        return new VirtualThreadPool( newDaemonThreadFactory() );
+        return new ThreadPoolExecutor(
+                1,
+                maxThreads,
+                KEEP_ALIVE_TIME,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(),
+                newDaemonThreadFactory(),
+                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     /**
-     * Creates the pool with specified executor.
+     * The pool of GPars when no pool factory is set: one core thread, up to 1000 threads
      */
-    private CustomThreadPool(ThreadPoolExecutor executor) {
-        super(executor);
+    static ExecutorService legacyPool() {
+        log.debug("Creating legacy thread pool");
+
+        return new ThreadPoolExecutor(
+                1,
+                1000,
+                10L,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(),
+                newDaemonThreadFactory());
     }
 
+    // a platform thread per task, not virtual threads, with the daemon factory as since #3871 (5c429046f)
+    static ExecutorService virtualPool() {
+        return Executors.newThreadPerTaskExecutor(newDaemonThreadFactory());
+    }
 
     private static ThreadFactory newDaemonThreadFactory() {
 
         return new ThreadFactory() {
             @Override
             public Thread newThread(final Runnable task) {
-                final Thread thread = new Thread(task, DefaultPool.createThreadName());
+                final Thread thread = new Thread(task, Scheduler.newThreadName());
                 thread.setDaemon(true);
                 thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                     @Override
