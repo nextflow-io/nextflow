@@ -92,6 +92,8 @@ $NXF_CMD pull nextflow-io/hello
 
 # Each Batch job spends most of its time waiting for a VM, so run independent tests concurrently
 rm -rf $RUNS_DIR
+# background jobs ignore SIGINT, so stop them explicitly when the script is interrupted
+trap 'trap - INT TERM; kill 0' INT TERM
 declare -A PIDS
 for t in "${TESTS[@]}"; do
   mkdir -p $RUNS_DIR/$t
