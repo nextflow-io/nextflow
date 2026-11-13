@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.executor.TaskArrayExecutor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
+import nextflow.util.Duration
 import nextflow.util.Escape
 /**
  * Task monitor that batches tasks and submits them as job arrays
@@ -64,22 +65,29 @@ class TaskArrayCollector {
 
     private int arraySize
 
+    private Duration timeout
+
+    private Timer timer
+
+    private TimerTask pendingSubmit
+
     private Lock sync = new ReentrantLock()
 
     private List<TaskRun> array
 
     private boolean closed = false
 
-    TaskArrayCollector(TaskProcessor processor, TaskArrayExecutor executor, int arraySize) {
+    TaskArrayCollector(TaskProcessor processor, TaskArrayExecutor executor, int arraySize, Duration timeout=null) {
         this.processor = processor
         this.executor = executor
         this.arraySize = arraySize
+        this.timeout = timeout
         this.array = new ArrayList<>(arraySize)
     }
 
     /**
      * Add a task to the current array, and submit the array when it
-     * reaches the desired size.
+     * reaches the desired size or when the timeout elapses.
      *
      * @param task
      */
@@ -93,18 +101,78 @@ class TaskArrayCollector {
                 return
             }
 
+            // start the timeout when a new array is started
+            if( timeout && array.isEmpty() )
+                scheduleSubmit()
+
             // add task to the array
             array.add(task)
 
             // submit job array when it is ready
-            if( array.size() == arraySize ) {
-                executor.submit(createTaskArray(array))
-                array = new ArrayList<>(arraySize)
-            }
+            if( array.size() == arraySize )
+                flush()
         }
         finally {
             sync.unlock()
         }
+    }
+
+    private void scheduleSubmit() {
+        if( !timer )
+            timer = new Timer("TaskArrayCollector-${processor?.name}".toString(), true)
+        pendingSubmit = new TimerTask() {
+            @Override
+            void run() { submitOnTimeout(this) }
+        }
+        timer.schedule(pendingSubmit, timeout.toMillis())
+    }
+
+    /**
+     * Submit the current array, or the task itself if there is only one.
+     */
+    private void flush() {
+        pendingSubmit?.cancel()
+        pendingSubmit = null
+        if( array.size() == 1 )
+            executor.submit(array.first())
+        else if( array.size() > 1 )
+            executor.submit(createTaskArray(array))
+        array = new ArrayList<>(arraySize)
+    }
+
+    /**
+     * Submit the current array as a partial job array when the
+     * timeout elapses before the array is full.
+     *
+     * @param source
+     */
+    private void submitOnTimeout(TimerTask source) {
+        final session = processor.session
+        Throwable error = null
+        sync.lock()
+        try {
+            // ignore timeouts for arrays that were already submitted
+            if( closed || source !== pendingSubmit || session.isAborted() )
+                return
+            log.debug "Submitting partial job array after timeout of ${timeout} (${array.size()} tasks) -- process: ${processor.name}"
+            flush()
+        }
+        catch( Throwable e ) {
+            error = e
+        }
+        finally {
+            sync.unlock()
+        }
+
+        if( !error )
+            return
+        // the submission may be interrupted by the session shutting down
+        if( session.isAborted() || session.isTerminated() ) {
+            log.debug "Unable to submit job array for process '${processor.name}' -- cause: ${error.message ?: error}"
+            return
+        }
+        log.error "Unable to submit job array for process '${processor.name}' -- cause: ${error.message ?: error}"
+        session.abort(error)
     }
 
     /**
@@ -113,16 +181,11 @@ class TaskArrayCollector {
     void close() {
         sync.lock()
         try {
-            if( array.size() == 1 ) {
-                executor.submit(array.first())
-            }
-            else if( array.size() > 0 ) {
-                executor.submit(createTaskArray(array))
-                array = null
-            }
-            closed = true
+            flush()
         }
         finally {
+            timer?.cancel()
+            closed = true
             sync.unlock()
         }
     }
