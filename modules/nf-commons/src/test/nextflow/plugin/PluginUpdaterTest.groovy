@@ -245,6 +245,40 @@ class PluginUpdaterTest extends Specification {
         manager.getPlugin('myorg/nf-foo').pluginState == PluginState.STARTED
         local.resolve('myorg/nf-foo-1.0.0').isDirectory()
 
+        when: 'the other repository has the plugin but not the version'
+        updater.installPlugin('myorg/nf-foo', '>=2.0.0')
+        then: 'the registry refusal is not given as the reason'
+        def e = thrown(IllegalStateException)
+        e.message == 'Cannot find version of myorg/nf-foo plugin matching >=2.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should install a namespaced plugin from the second registry when the first refuses it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def plugin = createPlugin(repo, '1.0.0', 'myorg/nf-foo'); plugin.zip = zipDir(plugin.path)
+        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).willReturn(aResponse().withStatus(400).withBody("Plugin id 'myorg/nf-foo' is invalid")))
+        wiremock.stubFor(get(urlPathEqualTo('/new/v1/plugins/dependencies')).willReturn(aResponse().withStatus(200).withBody("""
+            { "plugins": [ { "id": "myorg/nf-foo", "releases": [ { "version": "1.0.0", "url": "file:${plugin.zip}", "date": "2025-03-21T10:40:36Z" } ] } ] }
+            """)))
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, new URL("http://localhost:${wiremock.port()}/"), false)
+        updater.addRepository(new HttpPluginRepository('new', URI.create("http://localhost:${wiremock.port()}/new/")))
+        updater.prefetchMetadata([new PluginRef('myorg/nf-foo', '1.0.0')])
+
+        when:
+        def installed = updater.installPlugin('myorg/nf-foo', '1.0.0')
+
+        then:
+        installed
+        manager.getPlugin('myorg/nf-foo').pluginState == PluginState.STARTED
+        local.resolve('myorg/nf-foo-1.0.0').isDirectory()
+
         cleanup:
         folder?.deleteDir()
     }

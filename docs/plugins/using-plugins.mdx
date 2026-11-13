@@ -78,7 +78,7 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
 
-Each plugin is stored in a directory named `<name>-<version>`. A namespaced plugin is stored in a directory for its namespace, i.e., `$NXF_HOME/plugins/<namespace>/<name>-<version>`.
+Each plugin is stored in a directory named `<name>-<version>`. A namespaced plugin is stored in a subdirectory for its namespace, i.e., `<namespace>/<name>-<version>`.
 
 ## Offline usage
 
