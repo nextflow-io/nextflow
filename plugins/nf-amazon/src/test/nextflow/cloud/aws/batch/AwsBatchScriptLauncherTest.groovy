@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
+import nextflow.container.DockerConfig
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -65,6 +66,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=5
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -75,16 +77,17 @@ class AwsBatchScriptLauncherTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
-                
+
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -102,7 +105,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
-                
+
                         if ((${#pid[@]}>=$max)); then
                           nxf_sleep 0.2
                         else
@@ -117,7 +120,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     )
                     unset IFS
                 }
-                
+
                 # aws helper
                 nxf_s3_upload() {
                     local name=$1
@@ -130,7 +133,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                       /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                     fi
                 }
-                
+
                 nxf_s3_download() {
                     local source=$1
                     local target=$2
@@ -138,11 +141,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
+                    else
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
                     fi
                 }
-                
+
                 '''.stripIndent(true)
     }
 
@@ -228,15 +231,18 @@ class AwsBatchScriptLauncherTest extends Specification {
         binding.unstage_outputs == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://bucket/work")
+                    set -f
+                    for name in $(set +f; eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://bucket/work")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()
 
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
-        
+
         binding.task_env == ''
 
         binding.helpers_script == '''\
@@ -244,6 +250,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=5
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -254,16 +261,17 @@ class AwsBatchScriptLauncherTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -281,7 +289,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -296,7 +304,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
@@ -309,7 +317,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -317,11 +325,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
+
                     '''.stripIndent(true)
 
     }
@@ -416,6 +424,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=3
                         local timeout=9
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -426,16 +435,17 @@ class AwsBatchScriptLauncherTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -453,7 +463,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -468,7 +478,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
@@ -481,7 +491,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -489,11 +499,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
+
                     '''.stripIndent(true)
 
     }
@@ -529,6 +539,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=3
                         local timeout=9
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -539,16 +550,17 @@ class AwsBatchScriptLauncherTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -566,7 +578,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -581,9 +593,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws cli retry config
-                    export AWS_RETRY_MODE=adaptive 
+                    export AWS_RETRY_MODE=adaptive
                     export AWS_MAX_ATTEMPTS=3
                     # aws helper
                     nxf_s3_upload() {
@@ -597,7 +609,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -605,11 +617,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
+
                     '''.stripIndent(true)
 
     }
@@ -623,13 +635,12 @@ class AwsBatchScriptLauncherTest extends Specification {
                 name: 'Hello 1',
                 workDir: Paths.get('/work/dir'),
                 script: 'echo Hello world!',
-                containerConfig: [fixOwnership: true],
+                containerConfig: new DockerConfig(fixOwnership: true),
                 input: 'Ciao ciao' ] as TaskBean, opts)
 
         when:
         def binding = builder.makeBinding()
         then:
-        builder.fixOwnership() >> true
         binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && (shopt -s extglob; GLOBIGNORE=\'..\'; chown -fR --from root $NXF_OWNER /work/dir/{*,.*}) || true'
 
     }
@@ -641,8 +652,8 @@ class AwsBatchScriptLauncherTest extends Specification {
         def workDir = S3PathFactory.parse('s3://my-bucket/work')
         and:
         def inputFiles = [
-                'sample_1.fq': Paths.get('/my-bucket/data/sample_1.fq'),
-                'sample_2.fq': Paths.get('/my-bucket/data/sample_2.fq'),
+                'sample_1.fq': S3PathFactory.parse('s3://my-bucket/data/sample_1.fq'),
+                'sample_2.fq': S3PathFactory.parse('s3://my-bucket/data/sample_2.fq'),
         ]
         def stageScript = '''\
                 # stage input files

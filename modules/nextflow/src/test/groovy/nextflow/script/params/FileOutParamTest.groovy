@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ class FileOutParamTest extends Specification {
         param.relativize( Paths.get('x'), workDir ) == 'x'
         param.relativize( Paths.get('hello.txt'), workDir ) == 'hello.txt'
         param.relativize( Paths.get('sub/dir/hello.txt'), workDir ) == 'sub/dir/hello.txt'
+        param.relativize( Paths.get('./sub/dir/hello.txt'), workDir ) == 'sub/dir/hello.txt'
         param.relativize( Paths.get('/a/b/c/x'), workDir ) == 'x'
         param.relativize( Paths.get('/a/b/c/hello.txt'), workDir ) == 'hello.txt'
         param.relativize( Paths.get('/a/b/c/some/path/hello.txt'), workDir ) == 'some/path/hello.txt'
@@ -83,6 +84,7 @@ class FileOutParamTest extends Specification {
         param.relativize( 'x', workDir ) == 'x'
         param.relativize( 'hello.txt', workDir ) == 'hello.txt'
         param.relativize( 'sub/dir/hello.txt', workDir ) == 'sub/dir/hello.txt'
+        param.relativize( './sub/dir/hello.txt', workDir ) == 'sub/dir/hello.txt'
         param.relativize( '/a/b/c/x', workDir ) == 'x'
         param.relativize( '/a/b/c/hello.txt', workDir ) == 'hello.txt'
         param.relativize( '/a/b/c/some/path/hello.txt', workDir ) == 'some/path/hello.txt'

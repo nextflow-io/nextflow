@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
@@ -86,6 +86,26 @@ class Bolts {
 
     static String format(OffsetDateTime self, String format) {
         return self.format(DateTimeFormatter.ofPattern(format).withLocale(Locale.ENGLISH))
+    }
+
+    /**
+     * Resolve `map.properties` to the map entry rather than the
+     * object's bean properties, preserving Groovy 4 semantics.
+     *
+     * This also applies to an explicit `map.getProperties()` call.
+     * Use `DefaultGroovyMethods.getProperties(map)` to get the
+     * bean properties of a map.
+     */
+    static Object getProperties(Map self) {
+        return self.get('properties')
+    }
+
+    /**
+     * Assign `map.properties` to the map entry, preserving
+     * Groovy 4 semantics.
+     */
+    static void setProperties(Map self, Object value) {
+        self.put('properties', value)
     }
 
     /**
@@ -726,6 +746,21 @@ class Bolts {
         new GStringImpl(values, self.strings)
     }
 
+    /**
+     * Read {@code list.size} as {@code list.size()}.
+     *
+     * Groovy used to resolve {@code list.size} by reading the private {@code size} field
+     * of {@link ArrayList} and {@link LinkedList}, which needs {@code java.util} to be open to
+     * deep reflection. Without the {@code --add-opens} flag it falls back to reading
+     * {@code size} on each element and fails. This getter keeps existing pipelines working.
+     *
+     * @param self The list
+     * @return The number of elements in the list
+     */
+    static int getSize(List self) {
+        self.size()
+    }
+
 
 
     /**
@@ -960,5 +995,22 @@ class Bolts {
         else
             return new HashMap<>(map)
     }
-    
+
+    /**
+     * Resolve a lazy expression (e.g. closure, gstring) against
+     * a delegate (i.e. binding).
+     *
+     * @param binding
+     * @param value
+     */
+    static Object resolveLazy(Object binding, Object value) {
+        if( value instanceof Closure )
+            return cloneWith(value, binding).call()
+
+        if( value instanceof GString )
+            return cloneAsLazy(value, binding).toString()
+
+        return value
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -160,7 +160,7 @@ class CrgExecutorTest extends Specification {
         def config = task.config = new TaskConfig()
         config.container = 'busybox'
         and:
-        
+
         def result = executor.getDirectives(task, [])
         then:
         result == [
@@ -220,7 +220,7 @@ class CrgExecutorTest extends Specification {
     def 'should get headers/2' () {
         given:
         def sess = Mock(Session)  {
-            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled: false])
+            getContainerConfig() >> new DockerConfig(enabled: false)
         }
         and:
         def executor = Spy(new CrgExecutor()) { isContainerNative()>>false }
@@ -482,7 +482,9 @@ class CrgExecutorTest extends Specification {
         task.workDir = Paths.get('/some/dir')
         task.script = 'echo hello'
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> Mock(Session) { getContainerConfig() >> [:] }
+        task.processor.getSession() >> Mock(Session) {
+            getContainerConfig() >> new DockerConfig([:])
+        }
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> [:]
         task.processor.getExecutor() >> Mock(Executor)
@@ -508,7 +510,7 @@ class CrgExecutorTest extends Specification {
     def 'should add cpuset option to docker command /2' () {
         given:
         def sess = Mock(Session) {
-            getContainerConfig(null) >> new ContainerConfig(enabled: true, engine:'docker')
+            getContainerConfig(null) >> new DockerConfig(enabled: true)
         }
         and:
         def executor = Spy(new CrgExecutor(session: sess)) { isContainerNative()>>false }
@@ -537,7 +539,7 @@ class CrgExecutorTest extends Specification {
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
             NXF_CHDIR=/some/dir
-            
+
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset-cpus $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''
@@ -547,7 +549,7 @@ class CrgExecutorTest extends Specification {
     def 'should add cpuset option to docker command /3' () {
         given:
         def sess = Mock(Session) {
-            getContainerConfig(null) >> new ContainerConfig(enabled: true, engine:'docker', legacy:true)
+            getContainerConfig(null) >> new DockerConfig(enabled: true, legacy:true)
         }
         and:
         def executor = Spy(new CrgExecutor(session: sess)) { isContainerNative()>>false }
@@ -575,7 +577,7 @@ class CrgExecutorTest extends Specification {
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
             NXF_CHDIR=/some/dir
-            
+
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''

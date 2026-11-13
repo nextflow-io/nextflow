@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin.extension
@@ -40,7 +39,7 @@ import nextflow.util.TestOnly
 /**
  * Manage channel extensions and dispatch method invocations
  * to target class implementing the extension logic
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -179,6 +178,9 @@ class PluginExtensionProvider implements ExtensionProvider {
                 continue
             }
 
+            // skip functions that take a channel
+            if( handle.isAnnotationPresent(Function) )
+                continue
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) )
                 continue
@@ -214,6 +216,8 @@ class PluginExtensionProvider implements ExtensionProvider {
                 result.add(handle.name)
                 continue
             }
+            // skip functions that return a channel
+            if( handle.isAnnotationPresent(Function) ) continue
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
             // skip static methods
@@ -239,6 +243,8 @@ class PluginExtensionProvider implements ExtensionProvider {
             // custom functions must to be annotated with @Function
             if( !handle.isAnnotationPresent(Function))
                 continue
+            if( handle.isAnnotationPresent(Factory) || handle.isAnnotationPresent(Operator) )
+                throw new IllegalStateException("Function extension '$handle.name' in `$clazz.name` cannot also be declared as a factory or operator")
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) )
                 throw new IllegalStateException("Function extension '$handle.name' in `$clazz.name` should be declared public")

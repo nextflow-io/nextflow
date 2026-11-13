@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,13 @@ class ClientConfig {
     String serviceAccount
 
     String token
+
+    /**
+     * Filesystem path of the token, when the token was loaded from a file.
+     * Used to re-read the token after expiry — kubelet rotates projected
+     * service-account tokens in place by overwriting the mounted file.
+     */
+    Path tokenPath
 
     byte[] sslCert
 
@@ -108,8 +115,10 @@ class ClientConfig {
 
         if( opts.token )
             result.token = opts.token
-        else if( opts.tokenFile )
-            result.token = Paths.get(opts.tokenFile.toString()).getText('UTF-8')
+        else if( opts.tokenFile ) {
+            result.tokenPath = Paths.get(opts.tokenFile.toString())
+            result.token = result.tokenPath.getText('UTF-8')
+        }
 
         result.namespace = namespace ?: opts.namespace ?: 'default'
 
@@ -132,10 +141,6 @@ class ClientConfig {
             result.clientKey = opts.clientKey.toString().decodeBase64()
         else if( opts.clientKeyFile )
             result.clientKey = Paths.get(opts.clientKeyFile.toString()).bytes
-        if( opts.retryPolicy )
-            result.retryConfig = new K8sRetryConfig(opts.retryPolicy as Map)
-        if( opts.maxErrorRetry )
-            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated - change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }
@@ -147,7 +152,8 @@ class ClientConfig {
             result.token = user.token
 
         else if( user.tokenFile ) {
-            result.token = Paths.get(user.tokenFile.toString()).getText('UTF-8')
+            result.tokenPath = Paths.get(user.tokenFile.toString())
+            result.token = result.tokenPath.getText('UTF-8')
         }
 
         if( user."client-certificate" )

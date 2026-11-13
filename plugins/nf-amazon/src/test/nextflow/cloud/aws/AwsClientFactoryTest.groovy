@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws
 
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration
+import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration
+import software.amazon.awssdk.transfer.s3.S3TransferManager
 import spock.lang.Specification
 /**
  *
@@ -55,4 +57,38 @@ class AwsClientFactoryTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should create all clients without netty' () {
+        given:
+        SysEnv.push([:])
+        def factory = new AwsClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region: 'eu-west-1'))
+        def props = new Properties()
+
+        when:
+        def clients = [
+            factory.getEc2Client(),
+            factory.getBatchClient(),
+            factory.getEcsClient(),
+            factory.getLogsClient(),
+            factory.getS3Client(S3SyncClientConfiguration.create(props)),
+        ]
+        def asyncClient = factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props))
+        def transferManager = S3TransferManager.builder().s3Client(asyncClient).build()
+        then:
+        clients.every { it != null }
+        asyncClient.getClass().simpleName.contains('Crt')
+        transferManager != null
+
+        when:
+        Class.forName('io.netty.channel.Channel')
+        then:
+        thrown(ClassNotFoundException)
+
+        cleanup:
+        transferManager?.close()
+        asyncClient?.close()
+        clients?.each { it.close() }
+        SysEnv.pop()
+    }
+
 }

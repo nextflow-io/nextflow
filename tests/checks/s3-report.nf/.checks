@@ -11,7 +11,6 @@ fi
 # run normal mode
 #
 $NXF_CMD -trace com.upplication.s3fs run nextflow-io/hello \
-  -with-trace s3://nextflow-ci/test/trace.txt \
-  -with-report s3://nextflow-ci/test/report.html \
+  -with-trace s3://nextflow-ci-oss/test/trace.txt \
+  -with-report s3://nextflow-ci-oss/test/report.html \
   | tee stdout
-

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.azure.config
@@ -56,6 +55,32 @@ class AzManagedIdentityOptsTest extends Specification {
         then:
         opts.clientId == null
         opts.system
+    }
+
+    def 'should fall back to env variables' () {
+        when:
+        def opts = new AzManagedIdentityOpts([:], [AZURE_MANAGED_IDENTITY_USER: 'from-env'])
+        then:
+        opts.clientId == 'from-env'
+        !opts.system
+
+        when:
+        opts = new AzManagedIdentityOpts([:], [AZURE_MANAGED_IDENTITY_SYSTEM: 'true'])
+        then:
+        opts.clientId == null
+        opts.system
+    }
+
+    def 'should give config precedence over env variables' () {
+        when: 'config clientId wins over env'
+        def opts = new AzManagedIdentityOpts([clientId: 'from-config'], [AZURE_MANAGED_IDENTITY_USER: 'from-env'])
+        then:
+        opts.clientId == 'from-config'
+
+        when: 'config system=false wins over env system=true'
+        opts = new AzManagedIdentityOpts([system: false], [AZURE_MANAGED_IDENTITY_SYSTEM: 'true'])
+        then:
+        !opts.system
     }
 
     @Unroll

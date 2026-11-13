@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,6 @@ class AmazonPlugin extends BasePlugin {
     @Override
     void start() {
         super.start()
-        // disable aws sdk v1 warning
-        System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true")
         FileHelper.getOrInstallProvider(S3FileSystemProvider)
     }
 

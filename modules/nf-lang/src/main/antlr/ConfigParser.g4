@@ -147,7 +147,7 @@ configBlockStatement
     ;
 
 configSelector
-    :   kind=Identifier COLON target=configPrimary nls LBRACE nls (configAssign (sep configAssign)* sep?)? RBRACE
+    :   kind=Identifier COLON target=configPrimary nls LBRACE nls (configBlockStatement (sep configBlockStatement)* sep?)? RBRACE
     ;
 
 // -- config "apply" block (e.g. plugins)
@@ -388,6 +388,7 @@ identifier
     :   Identifier
     |   CapitalizedIdentifier
     |   IN
+    |   INCLUDE_CONFIG
     ;
 
 // -- primitive literals

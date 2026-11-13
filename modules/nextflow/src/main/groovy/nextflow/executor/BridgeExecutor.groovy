@@ -1,6 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
- * Copyright 2022, CEA-CNRGH
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +24,7 @@ import nextflow.processor.TaskRun
 /**
  * Processor for BRIDGE resource manager (DRAFT)
  *
- * See https://github.com/cea-hpc/bridge 
+ * See https://github.com/cea-hpc/bridge
  *
  *
  * @author Eric Bonnet <eric.d.bonnet@gmail.com>
@@ -52,22 +51,22 @@ class BridgeExecutor extends AbstractGridExecutor {
         job_name = job_name.replace("(", "")
         job_name = job_name.replace(")", "")
 
-        result << '-r' << job_name 
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG)) 
+        result << '-r' << job_name
+        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
 
-        // number of cores per parallel task to allocate 
+        // number of cores per parallel task to allocate
         if( task.config.getCpus() > 1 ) {
             result << '-c' << task.config.getCpus().toString()
         }
 
         // maximum walltime of the batch job in seconds
         if( task.config.getTime() ) {
-            result << '-T' << task.config.getTime().toSeconds().toString() 
+            result << '-T' << task.config.getTime().toSeconds().toString()
         }
 
         // maximum memory amount required per allocated core in Mo (default is chosen by the underlying system)
         if( task.config.getMemory() ) {
-            result << '-M' << task.config.getMemory().toMega().toString() 
+            result << '-M' << task.config.getMemory().toMega().toString()
         }
 
         // the requested partition (a.k.a queue) name
@@ -75,7 +74,7 @@ class BridgeExecutor extends AbstractGridExecutor {
             result << '-q' << (task.config.queue.toString())
         }
 
-        // other cluster options 
+        // other cluster options
         addClusterOptionsDirective(task.config, result)
 
         return result
@@ -145,10 +144,10 @@ class BridgeExecutor extends AbstractGridExecutor {
      *  Maps job status to nextflow status
      */
     static private Map<String,QueueStatus> STATUS_MAP = [
-            'pending': QueueStatus.PENDING, 
+            'pending': QueueStatus.PENDING,
             'running': QueueStatus.RUNNING,
-            'done': QueueStatus.DONE, 
-            'failed': QueueStatus.ERROR, 
+            'done': QueueStatus.DONE,
+            'failed': QueueStatus.ERROR,
             'unknown': QueueStatus.ERROR,
             'suspended': QueueStatus.HOLD,
     ]
@@ -158,10 +157,10 @@ class BridgeExecutor extends AbstractGridExecutor {
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
         final result = new LinkedHashMap<String, QueueStatus>()
-        if( !text) 
+        if( !text)
             return result
 
-        for( String line : text.readLines() ) { 
+        for( String line : text.readLines() ) {
 
             def cols = line.split(/\s+/)
             if( cols.size() == 2 ) {

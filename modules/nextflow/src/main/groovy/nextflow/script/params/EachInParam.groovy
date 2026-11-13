@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,9 @@ class EachInParam extends BaseInParam {
         final copy = (EachInParam)super.clone()
         copy.@inner = new ArrayList<>(inner.size())
         for( BaseInParam p : inner ) {
-            copy.@inner.add((BaseInParam)p.clone())
+            p = (BaseInParam)p.clone()
+            p.owner = copy
+            copy.@inner.add(p)
         }
         return copy
     }
@@ -63,7 +65,7 @@ class EachInParam extends BaseInParam {
             return new FileInParam(binding, inner, index)
                     .bind(obj.target)
         }
-        
+
         if( obj instanceof TokenPathCall ) {
             return new FileInParam(binding, inner, index)
                     .setPathQualifier(true)
@@ -97,7 +99,9 @@ class EachInParam extends BaseInParam {
             result.bind(value)
         }
 
-        return result.chainWith { it instanceof Collection || it == null ? it : [it] }
+        final normalized = new DataflowVariable()
+        result.whenBound { it instanceof Throwable ? normalized.bindError(it) : normalized.bind(it instanceof Collection || it == null ? it : [it]) }
+        return normalized
     }
 
 }

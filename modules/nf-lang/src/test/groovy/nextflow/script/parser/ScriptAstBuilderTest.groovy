@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,15 @@
 
 package nextflow.script.parser
 
+import java.nio.file.Path
+
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
+
+import static test.TestUtils.tempFile
 
 /**
  * @see nextflow.script.parser.ScriptAstBuilder
@@ -29,14 +33,11 @@ import test.TestUtils
  */
 class ScriptAstBuilderTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
+    @TempDir
+    Path root
 
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 
@@ -53,6 +54,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 14
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 15
         errors[0].getOriginalMessage() == "Unexpected input: '3'"
 
         when:
@@ -72,6 +75,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 16
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 17
         errors[0].getOriginalMessage() == "Unexpected input: '\\n'"
 
         when:
@@ -92,6 +97,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 24
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 27
         errors[0].getOriginalMessage() == "Unexpected input: 'val'"
 
         when:
@@ -112,6 +119,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 40
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 44
         errors[0].getOriginalMessage() == "Unexpected input: 'emit'"
 
         when:
@@ -132,7 +141,96 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 4
         errors[0].getStartColumn() == 6
+        errors[0].getEndLine() == 4
+        errors[0].getEndColumn() == 7
         errors[0].getOriginalMessage() == "Unexpected input: ','"
+    }
+
+    def 'should report an error for unexpected end of file' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                if( true ) {
+                    println 'hello'
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[5, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                println 'hello'
+            }
+            x = [1, 2
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[5, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                println """hello
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[4, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
+    }
+
+    def 'should report the syntax error in an invalid definition' () {
+        when:
+        def errors = check(
+            '''\
+            process 'MY-PROC' {
+                script:
+                "echo hello"
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 9
+        errors[0].getOriginalMessage() == "Unexpected input: ''MY-PROC''"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                x = 1
+                y: Integer = 2
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected input: ':'"
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                output:
+                stdout
+
+                input:
+                val x
+
+                script:
+                "echo $x"
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[5, 11, "Unexpected input: '\\n'"]]
     }
 
     def 'should report an error for mixing script declarations with statements' () {
@@ -150,6 +248,64 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 1
         errors[0].getOriginalMessage().contains "Statements cannot be mixed with script declarations"
+    }
+
+    def 'should report an error for params block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Params block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+
+            workflow {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for output block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Output block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+            }
+
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
     def 'should report an error for implicit process script section' () {
@@ -246,6 +402,482 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
+    }
+
+    def 'should report an error for invalid workflow publish statements' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                a = channel.of(1)
+
+                publish:
+                a
+            }
+
+            output {
+                a {
+                    path 'a'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 6
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow publish statement -- must be an assignment"
+    }
+
+    def 'should report an error for an invalid output assignment' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                target <<= 'world'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid output declaration in typed process -- must be a name, assignment, or expression"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                target.name = 'world'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid output declaration in typed process -- must be a name, assignment, or expression"
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+                emit:
+                target <<= 'world'
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
+    }
+
+    def 'should report error for defining a typed process without preview flag' () {
+        when:
+        def errors = check(
+            '''\
+            process hello {
+                input:
+                message: String
+
+                output:
+                result: String
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [
+            [3, 5, 'Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script'],
+            [6, 5, 'Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script'],
+            [9, 14, '`message` is not defined']
+        ]
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                message: String
+
+                output:
+                result: String
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for defining a legacy process with preview flag enabled' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                val message
+
+                output:
+                val result
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [
+            [5, 5, 'Invalid input declaration in typed process'],
+            [8, 5, '`val` is not defined'],
+            [11, 14, '`message` is not defined']
+        ]
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                input:
+                val message
+
+                output:
+                val result
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for invalid process tuple input' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String)
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Process tuple input must have more than one component"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String, fastq: Path)
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should parse a multiline record input with a trailing comma' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    fastq: Path,
+                )
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for invalid topic statement' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                topic:
+                versions = stdout()
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid process topic statement"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                topic:
+                stdout() >> 'versions'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for invalid record definition' () {
+        when:
+        def errors = check(
+            '''\
+            record Sample {}
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Missing record body"
+
+        when:
+        errors = check(
+            '''\
+            record Sample {
+                id
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Missing field type"
+    }
+
+    def 'should report an error for an unexpected character in a gstring' () {
+        when:
+        // bare `$` not followed by an identifier or `{` in a triple-quoted gstring
+        def errors = check(
+            '''\
+            """
+            echo "$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // bare `$` in a double-quoted gstring
+        errors = check(
+            '''\
+            "abc $/ def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // invalid escape sequence in a gstring
+        errors = check(
+            '''\
+            "abc \\q def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+    }
+
+    def 'should report an invalid escape sequence at the exact position' () {
+        when:
+        // an invalid escape should not be reported at the start of the string
+        def errors = check(
+            '''\
+            x = \'\'\'
+                gsub(/\\./, "0")
+            \'\'\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 11
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        errors = check(
+            '''\
+            x = \'a\\.b\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        // a unicode escape must be a single `u` followed by four hex digits
+        errors = check(
+            '''\
+            x = \'\\uZZZZ\'
+            y = \'\\uu00e9\'
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [
+            [1, 6, "Invalid escape sequence: '\\u'"],
+            [2, 6, "Invalid escape sequence: '\\u'"]
+        ]
+
+        when:
+        // an invalid escape in a gstring fragment that starts with a slash
+        errors = check(
+            '''\
+            x = "/opt\\q ${params.foo}"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 10
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // an invalid escape in a gstring fragment after an interpolation
+        errors = check(
+            '''\
+            x = "out ${params.foo}/res\\q.txt"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 27
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // every invalid escape in a file should be reported
+        errors = check(
+            '''\
+            x = \'a\\.b\'
+            y = \'c\\,d\'
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [
+            [1, 7, "Invalid escape sequence: '\\.'"],
+            [2, 7, "Invalid escape sequence: '\\,'"]
+        ]
+
+        when:
+        // valid escapes and slashy strings should not be flagged
+        errors = check(
+            '''\
+            x = \'a\\n\\t\\\\\\u00e9\\101b\'
+            y = /a\\.b/
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an invalid escape sequence after a line continuation' () {
+        given:
+        // a line continuation followed by CRLF spans only one line
+        def main = tempFile(root, 'main.nf', "x = \'\'\'a\\" + "\r\n" + "b\\.c\'\'\'" + "\r\n")
+
+        when:
+        def errors = TestUtils.check(new ScriptParser(), [main])
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 2
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+    }
+
+    def 'should allow escaped and interpolated gstring characters' () {
+        when:
+        // escaped `\\$` renders as a literal `$`
+        def errors = check(
+            '''\
+            """
+            echo "\\$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        // normal `${...}` interpolation
+        errors = check(
+            '''\
+            """
+            echo "${'hello'}"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }

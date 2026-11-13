@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package nextflow.util
 
 import static nextflow.Const.*
 
-import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
@@ -56,8 +55,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
-import nextflow.cli.CliOptions
-import nextflow.cli.Launcher
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
@@ -72,7 +70,7 @@ import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
@@ -99,7 +97,7 @@ class LoggerHelper {
 
     static private LoggerHelper INSTANCE
 
-    private CliOptions opts
+    private LoggerOptions opts
 
     private boolean rolling = false
 
@@ -148,7 +146,7 @@ class LoggerHelper {
         return this
     }
 
-    LoggerHelper(CliOptions opts) {
+    LoggerHelper(LoggerOptions opts) {
         this.opts = opts
         this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
     }
@@ -217,7 +215,7 @@ class LoggerHelper {
         final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
-        final AWS = 'com.amazonaws'
+        final AWS = 'software.amazon'
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
         }
@@ -258,17 +256,19 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+        final Appender<ILoggingEvent> result = daemon && opts.background
                 ? (Appender<ILoggingEvent>) null
-                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
+                : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
             filter.start()
 
             result.setContext(loggerContext)
-            if( result instanceof ConsoleAppender )
+            if( result instanceof ConsoleAppender ) {
+                result.setTarget(opts.background ? 'System.out' : 'System.err')
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            }
             (result as FilterAttachable).addFilter(filter)
             (result as LifeCycle).start()
         }
@@ -357,11 +357,11 @@ class LoggerHelper {
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
-    static void configureLogger( Launcher launcher ) {
-        INSTANCE = new LoggerHelper(launcher.options)
-                .setDaemon(launcher.isDaemon())
+    static void configureLogger(LoggerOptions opts, boolean daemon) {
+        INSTANCE = new LoggerHelper(opts)
+                .setDaemon(daemon)
                 .setRolling(true)
-                .setSyslog(launcher.options.syslog)
+                .setSyslog(opts.syslog)
                 .setup()
     }
 
@@ -501,7 +501,7 @@ class LoggerHelper {
 
         // add the log message
         if( fail instanceof MissingPropertyException ) {
-            def name = fail.property ?: getDetailMessage(fail)
+            def name = fail.property ?: fail.messageWithoutLocationText
             buffer.append("No such variable: ${name}")
         }
         else if( fail instanceof MissingMethodException ) {
@@ -564,20 +564,6 @@ class LoggerHelper {
         message.replace(STARTUP_ERROR,'').replaceFirst(/^_nf_script_[a-z0-9]+: *[0-9]+: */,'')
     }
 
-    static String getDetailMessage(Throwable error) {
-        try {
-            def clazz = error.class
-            while(  clazz != Throwable && clazz )
-                clazz = clazz.getSuperclass()
-            Field field = clazz.getDeclaredField('detailMessage')
-            field.setAccessible(true)
-            return field.get(error)
-        }
-        catch( Throwable e ) {
-            return null
-        }
-    }
-
     static String getMissingMethodMessage(MissingMethodException error) {
         try {
             return error.class==MissingMethodException ? getMissingMethodMessage0(error) : error.message
@@ -633,17 +619,17 @@ class LoggerHelper {
     }
 
     static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
-        def lines = getErrorLines(e)
-        List error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,allNames))) {
-                break
-            }
+        final lines = getErrorLines(e)
+        for( final line : lines ) {
+            final error = getErrorLine(line, allNames)
+            if( error )
+                return error
         }
-        return error
+        return null
     }
 
-    static @PackageScope String[] getErrorLines(Throwable e) {
+    @PackageScope
+    static String[] getErrorLines(Throwable e) {
         try {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
@@ -653,7 +639,7 @@ class LoggerHelper {
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Main|_nf_script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {
@@ -703,7 +689,7 @@ class LoggerHelper {
 
     /**
      * Capture logging events and forward them to. This is only used when
-     * ANSI interactive logging is enabled
+     * ANSI interactive logging or agent logging is enabled
      */
     static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
 
@@ -713,21 +699,23 @@ class LoggerHelper {
 
             try {
                 final message = fmtEvent(event, session, false)
-                final renderer = session?.ansiLogObserver
-                if( !renderer || !renderer.started || renderer.stopped )
-                    System.out.println(message)
 
-                else if( event.marker == STICKY )
-                    renderer.appendSticky(message)
-
-                else if( event.level==Level.ERROR )
-                    renderer.appendError(message)
-
-                else if( event.level==Level.WARN )
-                    renderer.appendWarning(message)
-
-                else
-                    renderer.appendInfo(message)
+                final observer = session?.logObserver
+                if( observer ) {
+                    if( !observer.started || observer.stopped )
+                        System.err.println(message)
+                    else if( event.marker == STICKY )
+                        observer.appendSticky(message)
+                    else if( event.level==Level.ERROR )
+                        observer.appendError(message)
+                    else if( event.level==Level.WARN )
+                        observer.appendWarning(message)
+                    else
+                        observer.appendInfo(message)
+                }
+                else {
+                    System.err.println(message)
+                }
             }
             catch (Throwable e) {
                 e.printStackTrace()

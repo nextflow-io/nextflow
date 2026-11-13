@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,14 +101,13 @@ class DataflowHelper {
         }
     }
 
-    @PackageScope
     static DataflowEventAdapter stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
 
         new DataflowEventAdapter() {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( source instanceof DataflowExpression ) {
-                    if( !(target instanceof DataflowExpression) )
+                    if( !(target instanceof DataflowVariable) )
                         processor.bindOutput( Channel.STOP )
                     processor.terminate()
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,9 @@ class GridExecutorTest extends Specification {
         def work = Files.createTempDirectory('test')
         def task = new TaskRun(workDir: work, name: 'hello', config: new TaskConfig(queue: 'gamma'))
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
 
         when:
         def handler = new GridTaskHandler(task, executor)
@@ -55,7 +57,9 @@ class GridExecutorTest extends Specification {
         def task = Mock(TaskRun)
         task.getWorkDir() >> workDir
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
 
         when:
         def handler = new GridTaskHandler(task, executor)
@@ -93,7 +97,9 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun()
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
 
         when:
         def handler = new GridTaskHandler(task, executor)
@@ -112,20 +118,22 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         executor.checkActiveStatus(_) >> { return true }
 
         when:
         def handler = new GridTaskHandler(task, executor)
         handler.status = TaskStatus.RUNNING
         handler.exitFile.text = ''
-        handler.exitStatusReadTimeoutMillis = 1000
+        handler.exitStatusReadTimeoutMillis = 200
 
         then:
         // the first try return false
         !handler.checkIfCompleted()
         // wait more the timeout defined by the property 'exitStatusReadTimeoutMillis'
-        sleep 1_500
+        sleep 300
         // now 'checkIfCompleted' returns true
         handler.checkIfCompleted()
         handler.status == TaskStatus.COMPLETED
@@ -142,7 +150,9 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         executor.checkActiveStatus(_) >> { true }
 
         when:
@@ -151,7 +161,6 @@ class GridExecutorTest extends Specification {
         handler.exitFile.text = ''
 
         assert handler.checkIfCompleted() == false
-        sleep 500
         handler.exitFile.text = '123'
 
         then:

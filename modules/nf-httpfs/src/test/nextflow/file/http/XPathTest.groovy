@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ class XPathTest extends Specification {
         uri.path == PATH
         uri.query == QUERY
         uri.scheme == SCHEME
-        
+
         where:
         LOCATION                                | SCHEME    |  AUTH             | PATH          | QUERY
         'http://www.nextflow.io/abc/d.txt'      | 'http'    | 'www.nextflow.io' | '/abc/d.txt'  | null

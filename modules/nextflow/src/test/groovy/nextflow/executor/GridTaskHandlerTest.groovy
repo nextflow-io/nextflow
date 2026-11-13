@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.executor
@@ -20,7 +19,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
@@ -51,10 +50,19 @@ class GridTaskHandlerTest extends Specification {
 
     }
 
+    def 'should strip secrets from submit error command' () {
+        when:
+        def error = new ProcessNonZeroExitStatusException('Error', 'reason', 1, 'docker run -e "AWS_SECRET_ACCESS_KEY=xyz" -e "FOO=bar" image:1')
+        then:
+        error.command == 'docker run -e "AWS_SECRET_ACCESS_KEY=********" -e "FOO=bar" image:1'
+    }
+
     def 'should capture error cause' () {
         given:
         def task = new TaskRun(name: 'foo', workDir: Paths.get('/some/work'))
-        def exec = Mock(AbstractGridExecutor)
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:
@@ -83,12 +91,14 @@ class GridTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             getWorkDir() >> WORK_DIR
         }
-        def exec = Mock(AbstractGridExecutor)
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:
         def result = handler.submitDirective(task)
-        
+
         then:
         1 * exec.getHeaders(task) >> "#FOO this\n#BAR that\n#OUT file=${WORK_DIR}/.command.log\n"
         and:
@@ -109,11 +119,13 @@ class GridTaskHandlerTest extends Specification {
             getLogFile() >> logFile
             getContainer() >> 'ubuntu:latest'
             getProcessor() >> Mock(TaskProcessor)
-            getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
+            getContainerConfig() >> Mock(DockerConfig)
             toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:] }
             getConfig() >> Mock(TaskConfig) { getContainerOptions() >> '--this=that' }
         }
-        def exec = Mock(AbstractGridExecutor)
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:

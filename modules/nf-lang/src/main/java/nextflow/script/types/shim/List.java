@@ -17,31 +17,31 @@ package nextflow.script.types.shim;
 
 import java.util.function.Predicate;
 
-import groovy.lang.Tuple2;
+import groovy.transform.stc.FirstParam;
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Ops;
+import nextflow.script.dsl.TupleComponents;
+import nextflow.script.types.Tuple;
 
 @Description("""
-    A list is an unordered collection of elements.
+    A list is an ordered collection of elements.
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#list-e)
 """)
-@ShimType(java.util.List.class)
+@Ops(ListOps.class)
 public interface List<E> extends Iterable<E> {
 
     @Description("""
         Collates the list into a list of sub-lists of length `size`. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
     """)
     List<List<E>> collate(int size, boolean keepRemainder);
+    List<List<E>> collate(int size);
 
     @Description("""
         Collates the list into a list of sub-lists of length `size`, stepping through the list `step` elements for each sub-list. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
     """)
     List<List<E>> collate(int size, int step, boolean keepRemainder);
-
-    @Description("""
-        Returns the first value in the list that satisfies the given condition.
-    """)
-    E find(Predicate<E> condition);
+    List<List<E>> collate(int size, int step);
 
     @Description("""
         Returns the first element in the list. Raises an error if the list is empty.
@@ -67,6 +67,11 @@ public interface List<E> extends Iterable<E> {
         Returns a shallow copy of the list with the last element excluded.
     """)
     List<E> init();
+
+    @Description("""
+        Returns the elements of the list that are also in the given iterable, preserving the order and duplicates of the list.
+    """)
+    List<E> intersect(Iterable<E> right);
 
     @Description("""
         Returns the last element in the list. Raises an error if the list is empty.
@@ -101,6 +106,24 @@ public interface List<E> extends Iterable<E> {
     @Description("""
         Returns a list of 2-tuples corresponding to the value and index of each element in the list.
     """)
-    List<Tuple2<E,Integer>> withIndex();
+    List<@TupleComponents({ FirstParam.class, Integer.class }) Tuple> withIndex();
+
+}
+
+interface ListOps<E> {
+
+    Integer compareTo(List<E> a, List<E> b);
+
+    E getAt(List<E> a, Integer b);
+
+    List<E> getAt(List<E> a, List<Integer> b);
+
+    Boolean isCase(E a, List<E> b);
+
+    List<E> multiply(List<E> a, Integer b);
+
+    List<E> plus(List<E> a, List<E> b);
+
+    void putAt(List<E> a, Integer b, E c);
 
 }

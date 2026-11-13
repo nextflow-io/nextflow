@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,81 @@ class ConfigValidatorTest extends Specification {
     @Rule
     OutputCapture capture = new OutputCapture()
 
+    def 'should validate per-executor config options' () {
+        when:
+        new ConfigValidator().validate([
+            executor: [
+                '$local': [
+                    cpus: 8,
+                    memory: '128 GB'
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should validate mail smtp timeout options' () {
+        when:
+        new ConfigValidator().validate([
+            mail: [
+                smtp: [
+                    connectiontimeout: 5000,
+                    timeout: 5000,
+                    writetimeout: 5000
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should warn about invalid per-executor config options' () {
+        when:
+        new ConfigValidator().validate([
+            executor: [
+                '$local': [
+                    cpu: 8
+                ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'executor.cpu\'')
+    }
+
+    def 'should validate per-executor config options within a profile' () {
+        when:
+        new ConfigValidator().validate([
+            profiles: [
+                test: [
+                    executor: [
+                        '$local': [ cpus: 8 ]
+                    ]
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should not treat a $ selector outside the executor scope as a selector' () {
+        when:
+        new ConfigValidator().validate([
+            docker: [
+                '$foo': [ enabled: true ]
+            ],
+            process: [
+                '$bar': [ cpus: 2 ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'docker.$foo.enabled\'')
+        capture.toString().contains('Unrecognized config option \'process.$bar.cpus\'')
+    }
+
     def 'should warn about invalid config options' () {
-        given:
-        def config = new ConfigMap([
+        when:
+        new ConfigValidator().validate([
             wokDir: 'work',
             workDir: 'work',
             process: [
@@ -38,9 +110,6 @@ class ConfigValidatorTest extends Specification {
                 cpus: 2
             ]
         ])
-
-        when:
-        new ConfigValidator().validate(config)
         then:
         capture.toString().contains('Unrecognized config option \'wokDir\'')
         capture.toString().contains('Unrecognized config option \'process.cpu\'')
@@ -48,20 +117,170 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('Unrecognized config option \'process.cpus\'')
     }
 
+    def 'should validate config options in profiles' () {
+        when:
+        new ConfigValidator().validate([
+            profiles: [
+                test: [
+                    workDir: 'work',
+                    process: [
+                        cpus: 2
+                    ]
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            profiles: [
+                test: [
+                    wokDir2: 'work',
+                    process: [
+                        cpu2: 2
+                    ]
+                ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'wokDir2\'')
+        capture.toString().contains('Unrecognized config option \'process.cpu2\'')
+    }
+
     def 'should warn about invalid env config options' () {
         when:
-        new ConfigValidator().validate(new ConfigMap([
+        new ConfigValidator().validate([
             env: [
                 FOO: '/something',
                 NXF_ANSI_SUMMARY: 'true',
                 NXF_DEBUG: 'true'
             ]
-        ]))
+        ])
 
         then:
         capture.toString().contains('the following environment variable in the config will be ignored: \'NXF_ANSI_SUMMARY\'')
         !capture.toString().contains('the following environment variable in the config will be ignored: \'FOO\'')
         !capture.toString().contains('the following environment variable in the config will be ignored: \'NXF_DEBUG\'')
+    }
+
+    def 'should ignore process selectors' () {
+        when:
+        new ConfigValidator().validate([
+            process: [
+                'withLabel:foobar': [
+                    cpus: 2
+                ],
+                'withName:foobar': [
+                    cpus: 2
+                ],
+                "withName:'.*TASK.*'": [
+                    cpus: 2
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should ignore agent selectors and accept process directives in the agent scope' () {
+        when:
+        new ConfigValidator().validate([
+            agent: [
+                disk: '10 GB',
+                publishDir: '/tmp/out',
+                tag: 'x',
+                'withLabel:foobar': [
+                    cpus: 2
+                ],
+                'withName:foobar': [
+                    cpus: 2
+                ],
+                "withName:'.*AGENT.*'": [
+                    cpus: 2
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should warn for an unknown option in the agent scope' () {
+        when:
+        // `model`/`maxIterations` share the agent body directive names, as `process` does
+        new ConfigValidator().validate([agent: [maxIterations: 40, model: 'openai/gpt-5', fooBar: 1]])
+        then:
+        !capture.toString().contains("Unrecognized config option 'agent.maxIterations'")
+        !capture.toString().contains("Unrecognized config option 'agent.model'")
+        capture.toString().contains("Unrecognized config option 'agent.fooBar'")
+    }
+
+    def 'should support map options' () {
+        when:
+        new ConfigValidator().validate([
+            k8s: [
+                pod: [env: 'MESSAGE', value: 'hello world']
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            process: [
+                publishDir: [
+                    path: { "results/foo" },
+                    mode: 'copy',
+                    saveAs: { filename -> filename }
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            process: [
+                resourceLimits: [
+                    cpus: 4,
+                    memory: '10GB',
+                    time: '1.h'
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should not validate core plugin config when plugin is not loaded' () {
+        when:
+        new ConfigValidator().validate([
+            cloudcache: [
+                enabled: true,
+                path: 's3://bucket/cache'
+            ]
+        ])
+        then:
+        !capture.toString().contains("Unrecognized config option 'cloudcache'")
+    }
+
+    static class MapTypesFixture {
+        Map rawMap
+        Map<String,String> stringMap
+        String notAMap
+    }
+
+    def 'isMapType should recognise raw and parameterized map option types' () {
+        given:
+        def rawMap = MapTypesFixture.getDeclaredField('rawMap').genericType
+        def stringMap = MapTypesFixture.getDeclaredField('stringMap').genericType
+        def notAMap = MapTypesFixture.getDeclaredField('notAMap').genericType
+
+        expect:
+        ConfigValidator.isMapType([rawMap])
+        ConfigValidator.isMapType([stringMap])   // Map<String,String> is a ParameterizedType
+        !ConfigValidator.isMapType([notAMap])
+        !ConfigValidator.isMapType([])
     }
 
 }

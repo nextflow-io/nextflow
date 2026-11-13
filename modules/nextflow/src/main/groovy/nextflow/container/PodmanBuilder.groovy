@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
-    private boolean remove = true
+    private boolean remove
 
     private String registry
 
@@ -42,26 +42,32 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
     private String device
 
     private String capAdd
-    
-    PodmanBuilder( String name ) {
+
+    PodmanBuilder(String name, PodmanConfig config) {
         this.image = name
+
+        if( config.engineOptions )
+            addEngineOptions(config.engineOptions)
+
+        if( config.mountFlags )
+            this.mountFlags0 = config.mountFlags
+
+        this.remove = config.remove
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+
+        if( config.temp )
+            this.temp = config.temp
+    }
+
+    PodmanBuilder(String name) {
+        this(name, new PodmanConfig([:]))
     }
 
     @Override
     PodmanBuilder params( Map params ) {
         if( !params ) return this
-
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
-        if( params.containsKey('engineOptions') )
-            addEngineOptions(params.engineOptions.toString())
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if ( params.containsKey('remove') )
-            this.remove = params.remove?.toString() == 'true'
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
@@ -71,9 +77,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
-        if( params.containsKey('mountFlags') )
-            this.mountFlags0 = params.mountFlags
 
         if( params.containsKey('privileged') )
             this.privileged = params.privileged?.toString() == 'true'

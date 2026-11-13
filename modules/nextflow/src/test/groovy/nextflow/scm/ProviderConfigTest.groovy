@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ class ProviderConfigTest extends Specification {
         then:
         config.name == 'bitbucket'
         config.server == 'https://bitbucket.org'
-        config.endpoint == 'https://bitbucket.org'
+        config.endpoint == 'https://api.bitbucket.org'
         config.platform == 'bitbucket'
         config.domain == 'bitbucket.org'
     }
@@ -189,6 +189,16 @@ class ProviderConfigTest extends Specification {
         config.user == null
         config.password == null
         config.token == 'xyz'
+
+        when:
+        config = new ProviderConfig('gitea', [auth: 'xyz'])
+        then:
+        config.auth == null
+        config.user == null
+        config.password == null
+        config.token == 'xyz'
+        config.server == 'https://gitea.com'
+        config.endpoint == 'https://gitea.com/api/v1'
     }
 
     def 'should ending slash and add protocol prefix' () {

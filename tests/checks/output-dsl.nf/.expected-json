@@ -1,0 +1,8 @@
+{
+    "samples": "/results/samples.csv",
+    "summary": {
+        "report": "/results/summary_report.html",
+        "data": "/results/summary_data/data.json",
+        "fastqc": "/results/summary_data/fastqc.txt"
+    }
+}

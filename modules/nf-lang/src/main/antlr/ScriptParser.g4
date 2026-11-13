@@ -110,8 +110,11 @@ scriptDeclaration
     :   featureFlagDeclaration      #featureFlagDeclAlt
     |   includeDeclaration          #includeDeclAlt
     |   importDeclaration           #importDeclAlt
-    |   paramDeclaration            #paramDeclAlt
+    |   paramsDef                   #paramsDefAlt
+    |   paramDeclarationV1          #paramDeclV1Alt
+    |   recordDef                   #recordDefAlt
     |   enumDef                     #enumDefAlt
+    |   agentDef                    #agentDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
     |   outputDef                   #outputDefAlt
@@ -147,9 +150,36 @@ importDeclaration
     :   IMPORT qualifiedClassName
     ;
 
-// -- param declaration
+// -- params definition
+paramsDef
+    :   PARAMS nls LBRACE
+        paramsBody?
+        sep? RBRACE
+    ;
+
+paramsBody
+    :   sep? paramDeclaration (sep paramDeclaration)*
+    ;
+
 paramDeclaration
+    :   identifier (COLON type)? (ASSIGN expression)?
+    |   statement
+    ;
+
+// -- legacy parameter declaration
+paramDeclarationV1
     :   PARAMS (DOT identifier)+ nls ASSIGN nls expression
+    ;
+
+// -- record definition
+recordDef
+    :   RECORD identifier nls LBRACE
+        nls recordBody?
+        nls RBRACE
+    ;
+
+recordBody
+    :   nameTypePair (sep nameTypePair)*
     ;
 
 // -- enum definition
@@ -174,7 +204,9 @@ processBody
     // explicit script/exec body with optional stub
     :   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
@@ -182,14 +214,19 @@ processBody
     // explicit "Mahesh" form
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
+        (sep processWhen)?
         sep processExec
         (sep processStub)?
-        sep processOutputs
+        (sep processOutputs)?
+        (sep processTopics)?
 
     // implicit script/exec body
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep blockStatements
     ;
@@ -199,11 +236,39 @@ processDirectives
     ;
 
 processInputs
-    :   INPUT COLON nls statement (sep statement)*
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+processInput
+    :   identifier (COLON type)?
+    |   processRecordInput
+    |   processTupleInput
+    |   statement
+    ;
+
+processRecordInput
+    :   RECORD LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
+    ;
+
+processTupleInput
+    :   TUPLE LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
+    ;
+
+processStage
+    :   STAGE COLON nls statement (sep statement)*
     ;
 
 processOutputs
-    :   OUTPUT COLON nls statement (sep statement)*
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+processOutput
+    :   nameTypePair (ASSIGN expression)?
+    |   statement
+    ;
+
+processTopics
+    :   TOPIC COLON nls statement (sep statement)*
     ;
 
 processWhen
@@ -218,6 +283,36 @@ processStub
     :   STUB COLON nls blockStatements
     ;
 
+// -- agent definition
+agentDef
+    :   AGENT name=identifier nls LBRACE
+        body=agentBody?
+        sep? RBRACE
+    ;
+
+agentBody
+    :   (sep agentDirectives)?
+        (sep agentInputs)?
+        (sep agentOutputs)?
+        sep agentPrompt
+    ;
+
+agentDirectives
+    :   statement (sep statement)*
+    ;
+
+agentInputs
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+agentOutputs
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+agentPrompt
+    :   PROMPT COLON nls blockStatements
+    ;
+
 // -- workflow definition
 workflowDef
     :   WORKFLOW name=identifier? nls LBRACE
@@ -227,35 +322,43 @@ workflowDef
 
 workflowBody
     // explicit main block with optional take/emit blocks
-    :   (sep TAKE COLON nls workflowTakes)?
-        sep MAIN COLON nls workflowMain
-        (sep EMIT COLON nls workflowEmits)?
-        (sep PUBLISH COLON nls workflowPublishers)?
+    :   (sep TAKE COLON nls take=workflowTakes)?
+        sep MAIN COLON nls main=blockStatements
+        (sep EMIT COLON nls emit=workflowEmits)?
+        (sep PUBLISH COLON nls publish=workflowPublishers)?
+        (sep ONCOMPLETE COLON nls onComplete=blockStatements)?
+        (sep ONERROR COLON nls onError=blockStatements)?
 
     // explicit emit block with optional take/main blocks
-    |   (sep TAKE COLON nls workflowTakes)?
-        (sep MAIN COLON nls workflowMain)?
-        sep EMIT COLON nls workflowEmits
-        (sep PUBLISH COLON nls workflowPublishers)?
+    |   (sep TAKE COLON nls take=workflowTakes)?
+        (sep MAIN COLON nls main=blockStatements)?
+        sep EMIT COLON nls emit=workflowEmits
+        (sep PUBLISH COLON nls publish=workflowPublishers)?
 
     // implicit main block
-    |   sep? workflowMain
+    |   sep? main=blockStatements
     ;
 
 workflowTakes
-    :   identifier (sep identifier)*
+    :   workflowTake (sep workflowTake)*
     ;
 
-workflowMain
-    :   blockStatements
+workflowTake
+    :   identifier (COLON type)?
+    |   statement
     ;
 
 workflowEmits
-    :   statement (sep statement)*
+    :   workflowEmit (sep workflowEmit)*
+    ;
+
+workflowEmit
+    :   nameTypePair (ASSIGN expression)?
+    |   statement
     ;
 
 workflowPublishers
-    :   statement (sep statement)*
+    :   workflowEmit (sep workflowEmit)*
     ;
 
 // -- output definition
@@ -270,14 +373,19 @@ outputBody
     ;
 
 outputDeclaration
-    :   identifier LBRACE nls blockStatements? RBRACE
+    :   identifier (COLON type)? LBRACE nls blockStatements? RBRACE
     |   statement
     ;
 
 // -- function definition
 functionDef
-    :   (DEF | legacyType | DEF legacyType) identifier LPAREN nls (formalParameterList nls)? rparen nls LBRACE
-        nls blockStatements? RBRACE
+    :   DEF
+        identifier LPAREN nls (formalParameterList nls)? rparen (ARROW type)?
+        nls LBRACE nls blockStatements? RBRACE
+
+    |   (legacyType | DEF legacyType)
+        identifier LPAREN nls (formalParameterList nls)? rparen
+        nls LBRACE nls blockStatements? RBRACE
     ;
 
 // -- incomplete script declaration
@@ -322,7 +430,12 @@ tryCatchStatement
     ;
 
 catchClause
-    :   CATCH LPAREN catchTypes? identifier rparen nls statementOrBlock
+    :   CATCH LPAREN catchVariable rparen nls statementOrBlock
+    ;
+
+catchVariable
+    :   identifier (COLON catchTypes)?
+    |   catchTypes identifier
     ;
 
 catchTypes
@@ -336,17 +449,26 @@ assertStatement
 
 // -- variable declaration
 variableDeclaration
-    :   (DEF | legacyType | DEF legacyType) identifier (nls ASSIGN nls initializer=expression)?
-    |   DEF variableNames nls ASSIGN nls initializer=expression
+    :   DEF nameTypePair (nls ASSIGN nls initializer=expression)?
+    |   DEF nameTypePairs nls ASSIGN nls initializer=expression
+    |   (legacyType | DEF legacyType) identifier (nls ASSIGN nls initializer=expression)?
     ;
 
-variableNames
-    :   LPAREN identifier (COMMA identifier)+ rparen
+nameTypePairs
+    :   LPAREN nls nameTypePair (COMMA nls nameTypePair)+ nls rparen
+    ;
+
+nameTypePair
+    :   identifier (COLON type)?
     ;
 
 // -- assignment statement
 multipleAssignmentStatement
     :   variableNames nls ASSIGN nls expression
+    ;
+
+variableNames
+    :   LPAREN nls identifier (COMMA nls identifier)+ nls rparen
     ;
 
 assignmentStatement
@@ -506,17 +628,25 @@ identifier
     |   NEXTFLOW
     |   PARAMS
     |   FROM
+    |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT
     |   MAIN
+    |   ONCOMPLETE
+    |   ONERROR
     |   PUBLISH
     |   TAKE
     ;
@@ -577,7 +707,8 @@ formalParameterList
     ;
 
 formalParameter
-    :   DEF? legacyType? identifier (nls ASSIGN nls expression)?
+    :   identifier (COLON type)? (nls ASSIGN nls expression)?
+    |   DEF? legacyType? identifier (nls ASSIGN nls expression)?
     ;
 
 closureWithLabels
@@ -649,7 +780,7 @@ namedArg
 //
 type
     :   primitiveType
-    |   qualifiedClassName typeArguments?
+    |   qualifiedClassName typeArguments? QUESTION?
     ;
 
 primitiveType
@@ -676,7 +807,12 @@ className
     ;
 
 typeArguments
-    :   LT type (COMMA type)* GT
+    :   LT typeArgument (COMMA typeArgument)* GT
+    ;
+
+typeArgument
+    :   type
+    |   QUESTION
     ;
 
 legacyType
@@ -698,17 +834,25 @@ keywords
     |   PARAMS
     |   INCLUDE
     |   FROM
+    |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT
     |   MAIN
+    |   ONCOMPLETE
+    |   ONERROR
     |   PUBLISH
     |   TAKE
     |   NullLiteral

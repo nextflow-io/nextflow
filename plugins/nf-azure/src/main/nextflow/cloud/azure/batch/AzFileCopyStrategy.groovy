@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package nextflow.cloud.azure.batch
 
-import java.math.MathContext
-import java.math.RoundingMode
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -43,14 +41,12 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private Duration delayBetweenAttempts
     private String sasToken
     private Path remoteBinDir
-    private TaskBean task
 
     protected AzFileCopyStrategy() {}
 
     AzFileCopyStrategy(TaskBean bean, AzBatchExecutor executor) {
         super(bean)
-        this.task = bean
-        this.config = executor.config
+        this.config = executor.azConfig
         this.remoteBinDir = executor.remoteBinDir
         this.sasToken = config.storage().sasToken
         this.maxParallelTransfers = config.batch().maxParallelTransfers
@@ -68,7 +64,6 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        copy.put('AZCOPY_BUFFER_GB', String.valueOf((task.containerMemory?.toGiga()?: 1) * 0.8))
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
@@ -97,7 +92,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
         result += 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'
-        result += 'for cmd in "${downloads[@]}"; do\n    $cmd\ndone\n'
+        result += 'nxf_parallel "${downloads[@]}"\n'
         return result
     }
 
@@ -107,9 +102,12 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
+        // escaped twice because `nxf_parallel` runs each command with `eval`
+        final source = Escape.doubleQuoted("'" + AzHelper.toHttpUrl(path).replace("'", "'\\''") + "'")
+        final target = Escape.doubleQuoted(Escape.dataPath(targetName))
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry nxf_az_download ${AzHelper.toHttpUrl(path)} ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_az_download ${AzHelper.toHttpUrl(path)} ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download ${source} ${target}\")"
+                : "downloads+=(\"nxf_az_download ${source} ${target}\")"
         return stage_cmd
     }
 
@@ -125,20 +123,23 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         if( !patterns )
             return null
 
+        // escaped twice because `eval "..."` parses the patterns twice
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.path(it) )
+            escape.add( Escape.doubleQuoted(escapePattern(it)) )
 
+        // names listed by `ls` are literal, so do not glob them again in the loop (`set -f`)
         return """\
             uploads=()
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload '\$name' ${AzHelper.toHttpUrl(targetDir)}")
+            set -f
+            for name in \$(set +f; eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                printf -v qname %q "\$name"
+                uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(targetDir)}'")
             done
+            set +f
             unset IFS
-            for cmd in "\${uploads[@]}"; do
-                \$cmd
-            done
+            nxf_parallel "\${uploads[@]}"
             """.stripIndent(true)
     }
 

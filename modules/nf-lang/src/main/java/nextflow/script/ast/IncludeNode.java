@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@ import org.codehaus.groovy.ast.expr.ConstantExpression;
  */
 public class IncludeNode extends ASTNode {
     public final ConstantExpression source;
-    public final List<IncludeModuleNode> modules;
+    public final List<IncludeEntryNode> entries;
 
-    public IncludeNode(ConstantExpression source, List<IncludeModuleNode> modules) {
+    public IncludeNode(ConstantExpression source, List<IncludeEntryNode> entries) {
         this.source = source;
-        this.modules = modules;
+        this.entries = entries;
     }
 }

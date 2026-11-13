@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,28 @@
 
 package nextflow.mail
 
-import spock.lang.IgnoreIf
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.mail.Message
+import javax.mail.MessagingException
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 
+import nextflow.SysEnv
 import org.subethamail.wiser.Wiser
+import spock.lang.Specification
+import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
+import test.TestHelper
 
-@IgnoreIf({System.getenv('NXF_SMOKE')})
 class MailerTest extends Specification {
 
 
     def 'should return config properties'() {
         when:
         def SMTP = [host: 'google.com', port: '808', user: 'foo', password: 'bar']
-        def mailer = new Mailer( config: [smtp: SMTP, other: 1]  )
+        def mailer = new Mailer( [smtp: SMTP, other: 1] )
         def props = mailer.createProps()
 
         then:
@@ -49,6 +49,27 @@ class MailerTest extends Specification {
 
     }
 
+    def 'should set default smtp timeouts' () {
+        when:
+        def props = new Mailer( [smtp: [host: 'gmail.com']] ).createProps()
+        then:
+        props.'mail.smtp.connectiontimeout' == '30000'
+        props.'mail.smtp.timeout' == '30000'
+        props.'mail.smtp.writetimeout' == '30000'
+
+        when:
+        props = new Mailer( [smtp: [host: 'gmail.com', connectiontimeout: 5000, timeout: 1000]] ).createProps()
+        then:
+        props.'mail.smtp.connectiontimeout' == '5000'
+        props.'mail.smtp.timeout' == '1000'
+        props.'mail.smtp.writetimeout' == '30000'
+
+        when:
+        props = new Mailer( [:] ).createProps()
+        then:
+        props.isEmpty()
+    }
+
     @RestoreSystemProperties
     def 'should configure proxy setting' () {
 
@@ -56,7 +77,7 @@ class MailerTest extends Specification {
         System.setProperty('http.proxyHost', 'foo.com')
         System.setProperty('http.proxyPort', '8000')
 
-        def mailer = new Mailer( config: [smtp: [host: 'gmail.com', port: 25, user:'yo']]  )
+        def mailer = new Mailer( [smtp: [host: 'gmail.com', port: 25, user:'yo']] )
 
         when:
         def props = mailer.createProps()
@@ -69,18 +90,135 @@ class MailerTest extends Specification {
         props.'mail.transport.protocol' == 'smtp'
     }
 
+    @RestoreSystemProperties
+    def 'should not override configured proxy setting' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.setProperty('http.proxyPort', '8000')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com', proxy: [host: 'bar.com', port: 9000]]] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'bar.com'
+        props.'mail.smtp.proxy.port' == '9000'
+    }
+
+    @RestoreSystemProperties
+    def 'should configure proxy setting without a proxy port' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.clearProperty('http.proxyPort')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com']] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'foo.com'
+        !props.containsKey('mail.smtp.proxy.port')
+    }
+
+
+    /**
+     * Fake SMTP server that accepts connections, optionally replies up to
+     * the DATA command, and then stops reading or replying
+     */
+    static class StalledSmtpServer implements Closeable {
+        final ServerSocket server = new ServerSocket(0)
+        final List<Socket> clients = []
+
+        StalledSmtpServer(boolean greet) {
+            Thread.startDaemon {
+                while( !server.closed ) {
+                    final socket = server.accept()
+                    clients << socket
+                    if( greet )
+                        Thread.startDaemon { converse(socket) }
+                }
+            }
+        }
+
+        int getPort() { server.localPort }
+
+        private void converse(Socket socket) {
+            final reader = socket.inputStream.newReader()
+            final writer = socket.outputStream.newWriter()
+            final reply = { String line -> writer.write(line + '\r\n'); writer.flush() }
+            reply('220 localhost ESMTP')
+            String line
+            while( (line = reader.readLine()) != null ) {
+                if( line.startsWith('DATA') ) {
+                    reply('354 go ahead')
+                    return
+                }
+                reply('250 OK')
+            }
+        }
+
+        @Override
+        void close() {
+            server.close()
+            clients*.close()
+        }
+    }
+
+    /**
+     * Send a mail on a separate thread, since a blocked socket read or write
+     * can't be interrupted, and return the error, if any
+     */
+    static Throwable sendWithDeadline(Mailer mailer, Map mail) {
+        Throwable error = null
+        final thread = Thread.startDaemon {
+            try { mailer.send(mail) }
+            catch( Throwable e ) { error = e }
+        }
+        thread.join(15_000)
+        return thread.alive ? new AssertionError('Mail send still blocked after 15 seconds') : error
+    }
+
+    def 'should time out when the smtp server does not reply' () {
+        given:
+        def server = new StalledSmtpServer(false)
+        def mailer = new Mailer([smtp: [host: 'localhost', port: server.port, timeout: 1000]])
+        def mail = [to: 'you@nextflow.io', from: 'me@nextflow.io', subject: 'Hello', body: 'Hi']
+
+        expect:
+        sendWithDeadline(mailer, mail) instanceof MessagingException
+
+        cleanup:
+        server?.close()
+    }
+
+    def 'should time out when the smtp server stops reading' () {
+        given:
+        def server = new StalledSmtpServer(true)
+        def mailer = new Mailer([smtp: [host: 'localhost', port: server.port, timeout: 1000, writetimeout: 1000]])
+        // large enough to fill the socket buffers once the server stops reading
+        def body = 'x' * (32 * 1024 * 1024)
+        def mail = [to: 'you@nextflow.io', from: 'me@nextflow.io', subject: 'Hello', body: body, type: 'text/plain']
+
+        expect:
+        sendWithDeadline(mailer, mail) instanceof MessagingException
+
+        cleanup:
+        server?.close()
+    }
 
     def "sending mails using javamail"() {
 
         given:
-        def PORT = 3025
+        def PORT = TestHelper.rndServerPort()
         def USER = 'foo'
         def PASSWORD = 'secret'
         def server = new Wiser(PORT)
         server.start()
 
         def SMTP = [ host: 'localhost', port: PORT, user: USER, password: PASSWORD]
-        def mailer = new Mailer( config: [smtp: SMTP])
+        def mailer = new Mailer([smtp: SMTP])
 
         String TO = "receiver@nextflow.io"
         String FROM = 'paolo@gmail.com'
@@ -113,14 +251,14 @@ class MailerTest extends Specification {
     def "sending mails using java with attachment"() {
 
         given:
-        def PORT = 3025
+        def PORT = TestHelper.rndServerPort()
         def USER = 'foo'
         def PASSWORD = 'secret'
         def server = new Wiser(PORT)
         server.start()
 
         def SMTP = [ host: '127.0.0.1', port: PORT, user: USER, password: PASSWORD]
-        def mailer = new Mailer( config: [smtp: SMTP])
+        def mailer = new Mailer([smtp: SMTP])
 
         String TO = "receiver@gmail.com"
         String FROM = 'paolo@nextflow.io'
@@ -157,19 +295,18 @@ class MailerTest extends Specification {
     def 'should send with java' () {
 
         given:
-        def mailer = Spy(Mailer)
+        def mailer = Spy(new Mailer([smtp: [host:'foo.com'] ]))
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
         def provider = Spy(new JavaMailProvider())
 
         when:
-        mailer.config = [smtp: [host:'foo.com'] ]
         mailer.send(mail)
         then:
         0 * mailer.getSysMailer() >> null
         1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
 
     }
 
@@ -186,7 +323,7 @@ class MailerTest extends Specification {
         then:
         1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
     }
 
     def 'should throw an exception' () {
@@ -212,7 +349,7 @@ class MailerTest extends Specification {
         then:
         1 * mailer.provider() >> provider
         1 * mailer.createTextMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
     }
 
 
@@ -224,14 +361,14 @@ class MailerTest extends Specification {
 
         when:
         mail = new Mail(from:'foo@gmail.com')
-        msg = new Mailer(config: [from:'fallback@hotmail.com']).createMimeMessage(mail)
+        msg = new Mailer([from:'fallback@hotmail.com']).createMimeMessage(mail)
         then:
         msg.getFrom().size()==1
         msg.getFrom()[0].toString() == 'foo@gmail.com'
 
         when:
         mail = new Mail()
-        msg = new Mailer(config: [from:'fallback@hotmail.com']).createMimeMessage(mail)
+        msg = new Mailer([from:'fallback@hotmail.com']).createMimeMessage(mail)
         then:
         msg.getFrom().size()==1
         msg.getFrom()[0].toString() == 'fallback@hotmail.com'
@@ -285,33 +422,37 @@ class MailerTest extends Specification {
     def 'should fetch config properties' () {
 
         given:
-        def ENV = [NXF_SMTP_USER: 'jim', NXF_SMTP_PASSWORD: 'secret', NXF_SMTP_HOST: 'g.com', NXF_SMTP_PORT: '864']
+        SysEnv.push(NXF_SMTP_USER: 'jim', NXF_SMTP_PASSWORD: 'secret', NXF_SMTP_HOST: 'g.com', NXF_SMTP_PORT: '864')
+        and:
         def SMTP = [host:'hola.com', user:'foo', password: 'bar', port: 234]
-        Mailer mail
+        Mailer mailer
 
         when:
-        mail = new Mailer(config: [smtp: SMTP])
+        mailer = new Mailer([smtp: SMTP])
         then:
-        mail.host == 'hola.com'
-        mail.user == 'foo'
-        mail.password == 'bar'
-        mail.port == 234
+        mailer.host == 'hola.com'
+        mailer.user == 'foo'
+        mailer.password == 'bar'
+        mailer.port == 234
 
         when:
-        mail = new Mailer(config: [smtp: [host: 'local', port: '999']], env: ENV)
+        mailer = new Mailer([smtp: [host: 'local', port: '999']])
         then:
-        mail.host == 'local'
-        mail.port == 999
-        mail.user == 'jim'
-        mail.password == 'secret'
+        mailer.host == 'local'
+        mailer.port == 999
+        mailer.user == 'jim'
+        mailer.password == 'secret'
 
         when:
-        mail = new Mailer(env: ENV)
+        mailer = new Mailer([:])
         then:
-        mail.host == 'g.com'
-        mail.port == 864
-        mail.user == 'jim'
-        mail.password == 'secret'
+        mailer.host == 'g.com'
+        mailer.port == 864
+        mailer.user == 'jim'
+        mailer.password == 'secret'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should config the mailer' () {
@@ -355,7 +496,7 @@ class MailerTest extends Specification {
         }
 
         then:
-        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> null
+        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> { }
 
     }
 
@@ -391,7 +532,7 @@ class MailerTest extends Specification {
         }
 
         then:
-        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> null
+        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> { }
 
     }
 
@@ -425,6 +566,16 @@ class MailerTest extends Specification {
         'text/html'     | '1<br/>2'
         'text/html'     | '<h1>Big title</h1><p>Hello <b>world</b></p>'
 
+    }
+
+    def 'should not render the environment' () {
+        given:
+        def obj = new Mailer([smtp: [host: 'localhost']])
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'Mailer'
+        !"$obj".contains('s3cr3t-canary')
     }
 
 }

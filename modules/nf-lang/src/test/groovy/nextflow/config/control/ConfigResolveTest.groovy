@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,10 @@ package nextflow.config.control
 import java.nio.file.Path
 
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -34,18 +32,16 @@ import static test.TestUtils.tempFile
  */
 class ConfigResolveTest extends Specification {
 
-    @Shared
-    ConfigParser parser
-
-    def setupSpec() {
-        parser = new ConfigParser()
-    }
+    @TempDir
+    Path root
 
     List<SyntaxException> check(String contents) {
+        final parser = new ConfigParser()
         return TestUtils.check(parser, contents)
     }
 
     List<SyntaxException> check(List<Path> files) {
+        final parser = new ConfigParser()
         return TestUtils.check(parser, files)
     }
 
@@ -61,34 +57,22 @@ class ConfigResolveTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 36
         errors[0].getOriginalMessage() == '`process` is not defined'
-    }
 
-    def 'should report an error for an invalid dynamic config option' () {
         when:
-        def errors = check(
+        errors = check(
             '''\
-            report.file = { "report.html" }
+            process.clusterOptions = "--cpus $PROCESS_CPUS"
             '''
         )
         then:
         errors.size() == 1
         errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 1
-        errors[0].getOriginalMessage() == 'Dynamic config options are only allowed in the `process` scope'
-
-        when:
-        errors = check(
-            '''\
-            process.clusterOptions = { "--cpus ${task.cpus}" }
-            '''
-        )
-        then:
-        errors.size() == 0
+        errors[0].getStartColumn() == 34
+        errors[0].getOriginalMessage() == "`PROCESS_CPUS` is not defined (hint: use `env('...')` to access environment variable)"
     }
 
     def 'should report an error for an invalid config include' () {
         given:
-        def root = tempDir()
         def config = tempFile(root, 'nextflow.config')
         def extra = tempFile(root, 'extra.config', '')
 
@@ -116,9 +100,6 @@ class ConfigResolveTest extends Specification {
         errors = check([config, extra])
         then:
         errors.size() == 0
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should check variables in a closure' () {
@@ -163,6 +144,16 @@ class ConfigResolveTest extends Specification {
             '''\
             process {
                 ext.prefix = { "${meta.id}.filter1" }
+
+                publishDir = [
+                    path: { "${params.outdir}/${task.process.tokenize(':')[-1].tokenize('_')[0].toLowerCase()}" },
+                    mode: params.publish_dir_mode,
+                ]
+
+                publishDir = [
+                    path: { "${params.outdir}/imputation/${meta.tools}/samples/" },
+                    mode: params.publish_dir_mode,
+                ]
             }
             '''
         )
@@ -182,6 +173,15 @@ class ConfigResolveTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 23
         errors[0].getOriginalMessage() == '`meta` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            executor.jobName = { "$task.name - $task.hash" }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }

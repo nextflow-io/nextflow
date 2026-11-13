@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 import com.sun.net.httpserver.Headers
@@ -10,14 +26,21 @@ import com.sun.net.httpserver.HttpHandler
  */
 class FakeIndexHandler implements HttpHandler {
 
-    String PLUGINS = '''
+    final int port
+
+    FakeIndexHandler(int port) {
+        this.port = port
+    }
+
+    String getPlugins() {
+        return """
         [
           {
             "id": "nf-console",
             "releases": [
               {
                 "version": "1.0.0",
-                "url": "http://localhost:9900/download/1.0.0/nf-console-1.0.0.zip",
+                "url": "http://localhost:${port}/download/1.0.0/nf-console-1.0.0.zip",
                 "date": "2021-01-04T17:49:04.62+01:00",
                 "sha512sum": "5875f1fd4c24ab9ecded06fa43a5b87b4e45f70085fe5c8f740da66b318ef3b45005b3dd9a15e69fff20bde52b4d42db8d25163ac49878f64d784d717102f295"
               }
@@ -28,7 +51,7 @@ class FakeIndexHandler implements HttpHandler {
             "releases": [
               {
                 "version": "0.2.0",
-                "url": "http://localhost:9900/download/1.0.0/nf-hello-0.2.0.zip",
+                "url": "http://localhost:${port}/download/1.0.0/nf-hello-0.2.0.zip",
                 "date": "2021-01-04T17:49:04.62+01:00",
                 "sha512sum": "c29fb06f785becc15117fc0587d8f50a313b92f07604a4770f1db9bf55f67a2c544a70588cf93fc1738cdaa43bb083ef9dfbf60e8dc1a7c2fdbce47cbb474441"
               }
@@ -68,7 +91,8 @@ class FakeIndexHandler implements HttpHandler {
             ]
           }
         ]
-'''
+"""
+    }
 
     File zip = new File('src/testResources/nf-console-1.0.0.zip')
     File zip2 = new File('src/testResources/nf-hello-0.2.0.zip')
@@ -78,7 +102,7 @@ class FakeIndexHandler implements HttpHandler {
 
         def path = request.requestURI.toString()
         if( path.endsWith('plugins.json') ) {
-            replyWithJson(request, PLUGINS)
+            replyWithJson(request, getPlugins())
         }
         else if( path.endsWith(zip.name)) {
             replyWithZip(request, zip)

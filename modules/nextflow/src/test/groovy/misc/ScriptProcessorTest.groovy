@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ def session = new Session()
 def values = new DataflowQueue()
 def strings = new DataflowVariable()
 
-values << 1 << 2 << PoisonPill.instance
-strings << 'a'
+values.bind(1); values.bind(2); values.bind(PoisonPill.instance)
+strings.bind('a')
 
 
 def (stdout, aln) = session.createProcessor()

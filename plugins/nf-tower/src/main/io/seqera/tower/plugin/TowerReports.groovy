@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 package io.seqera.tower.plugin
 
@@ -32,10 +31,10 @@ import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.file.FileHelper
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
+import nextflow.trace.config.DagConfig
+import nextflow.trace.config.ReportConfig
+import nextflow.trace.config.TimelineConfig
+import nextflow.trace.config.TraceConfig
 /**
  * If reports are defined at `nf-<workflow_id>-tower.yml`, collects all published files
  * that are reports and writes `nf-<workflow_id>-reports.tsv` file with all the paths.
@@ -233,16 +232,16 @@ class TowerReports {
         final files = []
 
         if( config.navigate('report.enabled') )
-            files << config.navigate('report.file', ReportObserver.DEF_FILE_NAME)
+            files << config.navigate('report.file', ReportConfig.defaultFileName())
 
         if( config.navigate('timeline.enabled') )
-            files << config.navigate('timeline.file', TimelineObserver.DEF_FILE_NAME)
+            files << config.navigate('timeline.file', TimelineConfig.defaultFileName())
 
         if( config.navigate('trace.enabled') )
-            files << config.navigate('trace.file', TraceFileObserver.DEF_FILE_NAME)
+            files << config.navigate('trace.file', TraceConfig.defaultFileName())
 
         if( config.navigate('dag.enabled') )
-            files << config.navigate('dag.file', GraphObserver.DEF_FILE_NAME)
+            files << config.navigate('dag.file', DagConfig.defaultFileName())
 
         for( def file : files )
             filePublish( (file as Path).complete() )

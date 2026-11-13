@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,7 @@ import nextflow.config.ConfigClosurePlaceholder
 import nextflow.exception.ConfigParseException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import spock.lang.Ignore
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -399,7 +397,7 @@ class ConfigParserV1Test extends Specification {
 
     }
 
-    def 'should return the set of visited block names' () {
+    def 'should return the set of declared profiles' () {
 
         given:
         def text = '''
@@ -417,13 +415,13 @@ class ConfigParserV1Test extends Specification {
         def slurper = new ConfigParserV1().setProfiles(['alpha'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
 
         when:
         slurper = new ConfigParserV1().setProfiles(['omega'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
     }
 
     def 'should disable includeConfig parsing' () {
@@ -483,7 +481,7 @@ class ConfigParserV1Test extends Specification {
         result.str1 instanceof String
         result.str2 instanceof GString
         result.closure1 instanceof Closure
-        result.map1.bar instanceof Closure
+        result.map1.bar instanceof Closure;
 
         when:
         result = new ConfigParserV1()
@@ -493,7 +491,7 @@ class ConfigParserV1Test extends Specification {
         result.str1 instanceof String
         result.str2 instanceof GString
         result.closure1 instanceof Closure
-        result.map1.bar instanceof Closure
+        result.map1.bar instanceof Closure;
 
         when:
         result = new ConfigParserV1()
@@ -552,16 +550,20 @@ class ConfigParserV1Test extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         folder.resolve('conf').mkdir()
-        // launch web server
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        // launch web server on an EPHEMERAL port: a fixed one collides with the other tests that
+        // serve HTTP (`SimpleHttpClientTest`, and `PluginsFacadeTest`/`HttpFilesTests` in modules
+        // whose test tasks Gradle runs concurrently with this one), and the loser of that race
+        // fails with a BindException that has nothing to do with what is under test
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        final port = server.address.port
         server.createContext("/", new ConfigFileHandler(folder));
         server.start()
 
         // main `nextflow.config` file
-        folder.resolve('nextflow.config').text = '''
+        folder.resolve('nextflow.config').text = """
         includeConfig 'conf/base.config'
-        includeConfig 'http://localhost:9900/conf/remote.config'
-        '''
+        includeConfig 'http://localhost:${port}/conf/remote.config'
+        """
 
         folder.resolve('conf/base.config').text = '''
         params.foo = 'Hello'
@@ -576,8 +578,8 @@ class ConfigParserV1Test extends Specification {
         '''
 
         when:
-        def url = 'http://localhost:9900/nextflow.config' as Path
-        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        def url = "http://localhost:${port}/nextflow.config".toString() as Path
+        def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'
         cfg.params.bar == 'world!'

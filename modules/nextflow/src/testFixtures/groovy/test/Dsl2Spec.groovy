@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,10 @@
 
 package test
 
-import java.nio.file.Path
-
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
-import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptMeta
 
@@ -32,9 +30,6 @@ import nextflow.script.ScriptMeta
 @Slf4j
 class Dsl2Spec extends BaseSpec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-
     def setup() {
         TaskProcessor.reset()
         ScriptMeta.reset()
@@ -42,17 +37,16 @@ class Dsl2Spec extends BaseSpec {
         NF.init()
     }
 
-    def dsl_eval(String str) {
-        new MockScriptRunner().setScript(str).execute()
+    def cleanup() {
+        ScriptHelper.destroySessions()
+        Global.reset()
     }
 
-    def dsl_eval(Path path) {
-        new MockScriptRunner().setScript(path).execute()
-    }
-
-
-    def dsl_eval(String entry, String str) {
-        new MockScriptRunner()
-                .setScript(str).execute(null, entry)
+    /**
+     * Start a {@link MockSession} with the given config and make it the
+     * global session. It is destroyed after the feature.
+     */
+    protected Session newSession(Map config = null) {
+        return ScriptHelper.startSession(config: config)
     }
 }

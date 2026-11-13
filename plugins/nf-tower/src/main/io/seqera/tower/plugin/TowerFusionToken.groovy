@@ -1,31 +1,35 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.seqera.tower.plugin
 
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.Executors
-import java.util.function.Predicate
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
-import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import dev.failsafe.Failsafe
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.plugin.exception.BadResponseException
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.tower.plugin.exchange.GetLicenseTokenRequest
 import io.seqera.tower.plugin.exchange.GetLicenseTokenResponse
-import io.seqera.util.trace.TraceUtils
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ReportWarningException
@@ -33,8 +37,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionToken
 import nextflow.platform.PlatformHelper
 import nextflow.plugin.Priority
-import nextflow.util.GsonHelper
-import nextflow.util.Threads
+import nextflow.serde.gson.GsonEncoder
 import org.pf4j.Extension
 /**
  * Environment provider for Platform-specific environment variables.
@@ -50,23 +53,8 @@ class TowerFusionToken implements FusionToken {
     // The path relative to the Platform endpoint where license-scoped JWT tokens are obtained
     private static final String LICENSE_TOKEN_PATH = 'license/token/'
 
-    // Server errors that should trigger a retry
-    private static final List<Integer> SERVER_ERRORS = [408, 429, 500, 502, 503, 504]
-
-    // Default connection timeout for HTTP requests
-    private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.of(30, ChronoUnit.SECONDS)
-
-    // Default retry policy settings for HTTP requests: delay, max delay, attempts, and jitter
-    private static final Duration DEFAULT_RETRY_POLICY_DELAY = Duration.of(450, ChronoUnit.MILLIS)
-    private static final Duration DEFAULT_RETRY_POLICY_MAX_DELAY = Duration.of(90, ChronoUnit.SECONDS)
-    private static final int DEFAULT_RETRY_POLICY_MAX_ATTEMPTS = 10
-    private static final double DEFAULT_RETRY_POLICY_JITTER = 0.5
-
-    // The HttpClient instance used to send requests
-    private final HttpClient httpClient = newDefaultHttpClient()
-
-    // The RetryPolicy instance used to retry requests
-    private final RetryPolicy retryPolicy = newDefaultRetryPolicy(SERVER_ERRORS)
+    // The TowerClient instance used to send requests
+    private TowerClient client
 
     // Time-to-live for cached tokens
     private Duration tokenTTL = Duration.of(1, ChronoUnit.HOURS)
@@ -80,7 +68,9 @@ class TowerFusionToken implements FusionToken {
     private String endpoint
 
     // Platform access token to use for requests
-    private String accessToken
+    private volatile String accessToken
+
+    private volatile String refreshToken
 
     // Platform workflowId
     private String workspaceId
@@ -93,15 +83,17 @@ class TowerFusionToken implements FusionToken {
         final env = SysEnv.get()
         this.endpoint = PlatformHelper.getEndpoint(config, env)
         this.accessToken = PlatformHelper.getAccessToken(config, env)
+        this.refreshToken = PlatformHelper.getRefreshToken(config, env)
         this.workflowId = env.get('TOWER_WORKFLOW_ID')
         this.workspaceId = PlatformHelper.getWorkspaceId(config, env)
+        this.client = TowerFactory.client()
     }
 
     protected void validateConfig() {
         if( !endpoint )
             throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         if( !accessToken )
-            throw new IllegalArgumentException("Missing Seqera Platform access token")
+            throw new IllegalArgumentException("Seqera Platform access token is required to use Fusion -- see https://docs.seqera.io/fusion/licensing for more information")
     }
 
     /**
@@ -147,7 +139,7 @@ class TowerFusionToken implements FusionToken {
             workflowId: workflowId,
             workspaceId: workspaceId
         )
-        final key = '${product}-${version}'
+        final String key = "${product}-${version}"
         try {
             final now = Instant.now()
             int i=0
@@ -179,102 +171,6 @@ class TowerFusionToken implements FusionToken {
      *************************************************************************/
 
     /**
-     * Create a new HttpClient instance with default settings
-     * @return The new HttpClient instance
-     */
-    private static HttpClient newDefaultHttpClient() {
-        final builder = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .cookieHandler(new CookieManager())
-            .connectTimeout(DEFAULT_CONNECTION_TIMEOUT)
-        // use virtual threads executor if enabled
-        if ( Threads.useVirtual() ) {
-            builder.executor(Executors.newVirtualThreadPerTaskExecutor())
-        }
-        // build and return the new client
-        return builder.build()
-    }
-
-    /**
-     * Create a new RetryPolicy instance with default settings and the given list of retryable errors. With this policy,
-     * a request is retried on IOExceptions and any server errors defined in errorsToRetry. The number of retries, delay,
-     * max delay, and jitter are controlled by the corresponding values defined at class level.
-     *
-     * @return The new RetryPolicy instance
-     */
-    private static <T> RetryPolicy<HttpResponse<T>> newDefaultRetryPolicy(List<Integer> errorsToRetry) {
-
-        final retryOnException = (e -> e instanceof IOException) as Predicate<? extends Throwable>
-        final retryOnStatusCode = ((HttpResponse<T> resp) -> resp.statusCode() in errorsToRetry) as Predicate<HttpResponse<T>>
-
-        final listener = new EventListener<ExecutionAttemptedEvent<HttpResponse<T>>>() {
-            @Override
-            void accept(ExecutionAttemptedEvent event) throws Throwable {
-                def msg = "connection failure - attempt: ${event.attemptCount}"
-                if (event.lastResult != null)
-                    msg += "; response: ${event.lastResult}"
-                if (event.lastFailure != null)
-                    msg += "; exception: [${event.lastFailure.class.name}] ${event.lastFailure.message}"
-                log.debug(msg)
-            }
-        }
-        return RetryPolicy.<HttpResponse<T>> builder()
-            .handleIf(retryOnException)
-            .handleResultIf(retryOnStatusCode)
-            .withBackoff(DEFAULT_RETRY_POLICY_DELAY.toMillis(), DEFAULT_RETRY_POLICY_MAX_DELAY.toMillis(), ChronoUnit.MILLIS)
-            .withMaxAttempts(DEFAULT_RETRY_POLICY_MAX_ATTEMPTS)
-            .withJitter(DEFAULT_RETRY_POLICY_JITTER)
-            .onRetry(listener)
-            .build()
-    }
-
-    /**
-     * Send an HTTP request and return the response. This method automatically retries the request according to the
-     * given RetryPolicy.
-     *
-     * @param req The HttpRequest to send
-     * @return The HttpResponse received
-     */
-    private <T> HttpResponse<String> safeHttpSend(HttpRequest req, RetryPolicy<T> policy) {
-        return Failsafe.with(policy).get(
-            () -> {
-                log.debug "Http request: method=${req.method()}; uri=${req.uri()}; request=${req}"
-                final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-                log.debug "Http response: statusCode=${resp.statusCode()}; body=${resp.body()}"
-                return resp
-            } as CheckedSupplier
-        ) as HttpResponse<String>
-    }
-
-    /**
-     * Create a {@link HttpRequest} representing a {@link GetLicenseTokenRequest} object
-     *
-     * @param req The LicenseTokenRequest object
-     * @return The resulting HttpRequest object
-     */
-    private HttpRequest makeHttpRequest(GetLicenseTokenRequest req) {
-        final body = HttpRequest.BodyPublishers.ofString( GsonHelper.toJson(req) )
-        return HttpRequest.newBuilder()
-            .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
-            .header('Content-Type', 'application/json')
-            .header('Traceparent', TraceUtils.rndTrace())
-            .header('Authorization', "Bearer ${accessToken}")
-            .POST(body)
-            .build()
-    }
-
-    /**
-     * Serialize a {@link GetLicenseTokenRequest} object into a JSON string
-     *
-     * @param req The LicenseTokenRequest object
-     * @return The resulting JSON string
-     */
-    private static String serializeToJson(GetLicenseTokenRequest req) {
-        return new Gson().toJson(req)
-    }
-
-    /**
      * Parse a JSON string into a {@link GetLicenseTokenResponse} object
      *
      * @param json The String containing the JSON representation of the LicenseTokenResponse object
@@ -283,40 +179,31 @@ class TowerFusionToken implements FusionToken {
      * @throws JsonSyntaxException if the JSON string is not well-formed
      */
     protected static GetLicenseTokenResponse parseLicenseTokenResponse(String json) throws JsonSyntaxException {
-        return GsonHelper.fromJson(json, GetLicenseTokenResponse.class)
+        final gson = new GsonEncoder<GetLicenseTokenResponse>() {}
+        return gson.decode(json)
     }
 
     /**
      * Request a license token from Platform.
      *
-     * @param req The LicenseTokenRequest object
+     * @param request The LicenseTokenRequest object
      * @return The LicenseTokenResponse object
-     *
-     * @throws AbortOperationException if a Platform access token cannot be found
-     * @throws UnauthorizedException if the access token is invalid
-     * @throws BadResponseException if the response is not as expected
-     * @throws IllegalStateException if the request cannot be sent
      */
-    private GetLicenseTokenResponse sendRequest(GetLicenseTokenRequest req) throws AbortOperationException, UnauthorizedException, BadResponseException, IllegalStateException {
+    private GetLicenseTokenResponse sendRequest(GetLicenseTokenRequest request) {
+        final url = "${client.getEndpoint()}/${LICENSE_TOKEN_PATH}"
+        final resp = client.sendHttpMessage(url, request.toMap())
 
-        final httpReq = makeHttpRequest(req)
-
-        try {
-            final resp = safeHttpSend(httpReq, retryPolicy)
-
-            if( resp.statusCode() == 200 ) {
-                final ret = parseLicenseTokenResponse(resp.body())
-                return ret
-            }
-
-            if( resp.statusCode() == 401 ) {
-                throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a Seqera Platform valid access token")
-            }
-
-            throw new BadResponseException("Invalid response: ${httpReq.method()} ${httpReq.uri()} [${resp.statusCode()}] ${resp.body()}")
+        if( resp.code == 200 ) {
+            final ret = parseLicenseTokenResponse(resp.message)
+            return ret
         }
-        catch (IOException e) {
-            throw new IllegalStateException("Unable to send request to '${httpReq.uri()}' : ${e.message}")
+
+        if( resp.code == 401 ) {
+            throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a Seqera Platform valid access token")
         }
+
+        throw new BadResponseException("Invalid response: ${url} [${resp.code}] ${resp.message} -- ${resp.cause}")
+
     }
+
 }

@@ -1,8 +1,89 @@
 nf-google changelog
 ===================
+1.29.1 - 15 Oct 2026
+- Fetch Google Batch task status once per trace record (#7807) [36e08de58]
+- Fix Google Batch array job deleted when a single array task is killed (#7808) [139910816]
+- Retry INTERNAL errors from the Google Batch API (#7805) [24d78183e]
+
+1.29.0 - 12 Oct 2026
+- Fix Google Batch array task status cache never matching (#7778) [6d44d4740]
+- Retry errors on every page when listing Google Batch tasks (#7768) [89fa79675]
+- Fix Google Batch array status polling for arrays of 500+ tasks (#7767) [e7474f1a5]
+- Reuse the Google Batch job a retried submit already created (#7762) [a8f7cc46b]
+
+1.28.2 - 6 Oct 2026
+- Bump jackson to 2.21.7 and 2.18.11 to fix security advisories (#7732) [5a1cd5540]
+- Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]
+- Bump slf4j to 2.0.20 (#7703) [38d88911f]
+
+1.28.1 - 25 Sep 2026
+- Deprecate Google Batch machine type selection via Cloud Info (#7677) [28afbfded]
+- Propagate machine info to array-child tasks in Google Batch executor (#7629) [fc8d42fc6]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
+1.27.5 - 20 Aug 2026
+- Support authenticated forward HTTP/HTTPS proxies across the client stack (#7331) [064a03873]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
+1.27.4 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+
+1.27.3 - 28 May 2026
+- Bump Failsafe to 3.3.2 and force lib-httpx@2.3.0 (#7181) [1c47215a8]
+
+1.27.2 - 25 Apr 2026
+- Replace current cloud info URL call with cloudInfo client (#7065) [629184251]
+
+1.27.1 - 26 Mar 2026
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+
+1.27.0 - 17 Mar 2026
+- Add support for latest-generation Google Cloud machine families (#6841) [27785b171]
+- Add support for GCP Ops Agent (#6608) [247a53bc0]
+- Fix Google Batch exit code when spot claim is successfully retried (#6926) [76927c27e]
+
+1.26.1 - 28 Feb 2026
+- Report actual GCP zone in Google Batch trace records (#6855) [465791294]
+
+1.26.0 - 8 Feb 2026
+- Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
+- Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]
+- Refactor GoogleBatchTaskHandler.newSubmitRequest for reduced complexity (#6687) [38c39108c]
+
+1.25.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+- Refactor Google Batch getExitCode to imperative style (#6649) [addd59e9f]
+- Add default maxSpotAttempts for fusion snapshots in Google Batch (#6652) [458ef97a9]
+
+1.24.0 - 28 Nov 2025
+- Add stageFileEnabled flag to control .command.stage file creation (#6618) [2d117cb59]
+- Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe01]
+
+1.23.3 - 22 Oct 2025
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+
+1.23.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.23.1 - 8 Oct 2025
+- Fix CVE-2025-55163 in nf-google plugin [7d7061797]
+- Bump Google Cloud libraries to latest versions (#6438) [59a63f1ae]
+
+1.22.2 - 15 Aug 2025
+- Fix NPE in GoogleBatchMachineTypeSelector when spotPrice is null [ci fast] [a797a795]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+
+1.22.1 - 6 Jul 2025
+- Fix class not found exception Google Life science executor (#6193) [7bfb9358]
+- Update Google dependencies (#6229) [8bd42acb]
+- Upload Google Batch log on task exit (#6226) [78d9f473]
+- Bump Slf4j version 2.0.17 [93199e09]
+- Bump gson version 2.13.1 [ab8e36a2]
+
 1.22.0 - 2 Jun 2025
 - Sunset the Google LS executor (#6070) [06e0d426]
-- Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
 
 1.21.0 - 8 May 2025
 - Add Support for Google Batch network tags (#5951) [d6e4d6c2]

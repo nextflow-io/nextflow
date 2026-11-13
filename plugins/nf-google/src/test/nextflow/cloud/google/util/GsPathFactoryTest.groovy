@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class GsPathFactoryTest extends Specification {
         _ | PATH                | STR
         _ | 'gs://foo'          | ''
         _ | 'gs://foo/bar'      | '/bar'
-        _ | 'gs://foo/bar/'     | '/bar/'   // <-- bug or feature ?
+        _ | 'gs://foo/bar/'     | '/bar/'   // Google SDK preserves trailing slash for pseudo-directories
         _ | 'gs://foo/b a r'    | '/b a r'
         _ | 'gs://f o o/bar'    | '/bar'
         _ | 'gs://f_o_o/bar'    | '/bar'

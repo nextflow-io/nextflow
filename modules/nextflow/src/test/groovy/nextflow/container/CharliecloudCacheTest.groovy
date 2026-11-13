@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package nextflow.container
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -33,7 +32,7 @@ class CharliecloudCacheTest extends Specification {
     def 'should return a simple name given an image url'() {
 
         given:
-        def helper = new CharliecloudCache(Mock(ContainerConfig))
+        def helper = new CharliecloudCache(Mock(CharliecloudConfig))
 
         expect:
         helper.simpleName(url) == expected
@@ -70,7 +69,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as ContainerConfig)
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as CharliecloudConfig)
         then:
         cache.getCacheDir() == cacheDir
 
@@ -86,7 +85,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir"])
+        def cache = new CharliecloudCache(new CharliecloudConfig([:]), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir"])
         then:
         cache.getCacheDir() == cacheDir
 
@@ -104,8 +103,8 @@ class CharliecloudCacheTest extends Specification {
         def charliecloudCacheDir = dir.resolve('charliecloud')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as ContainerConfig, [CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
-     
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as CharliecloudConfig, [CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
+
         then:
         cache.getCacheDir() == charliecloudCacheDir
 
@@ -123,8 +122,8 @@ class CharliecloudCacheTest extends Specification {
         def charliecloudCacheDir = dir.resolve('charliecloud')
 
         when:
-        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
-     
+        def cache = new CharliecloudCache(new CharliecloudConfig([:]), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
+
         then:
         cache.getCacheDir() == charliecloudCacheDir
 
@@ -140,7 +139,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$cacheDir", writeFake: 'false'] as ContainerConfig, [CH_IMAGE_STORAGE: "$cacheDir"])
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir", writeFake: false] as CharliecloudConfig, [CH_IMAGE_STORAGE: "$cacheDir"])
         and:
         cache.getCacheDir()
 
@@ -160,10 +159,10 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([writeFake: 'false'] as ContainerConfig, [ NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$cacheDir" ])
+        def cache = new CharliecloudCache([writeFake: false] as CharliecloudConfig, [ NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$cacheDir" ])
         and:
         cache.getCacheDir()
-        
+
         then:
         def e = thrown(Exception)
         e.message == "`NXF_CHARLIECLOUD_CACHEDIR` env variable must be different from env variable `CH_IMAGE_STORAGE`"
@@ -181,7 +180,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
+        def cache = Spy(new CharliecloudCache([:] as CharliecloudConfig))
 
         when:
         def result = cache.downloadCharliecloudImage(IMAGE)
@@ -207,7 +206,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
+        def cache = Spy(new CharliecloudCache([:] as CharliecloudConfig))
         TARGET_PATH.mkdirs()
 
         when:
@@ -222,7 +221,6 @@ class CharliecloudCacheTest extends Specification {
         dir.deleteDir()
     }
 
-    @Ignore
     @Timeout(1)
     def 'should pull a charliecloud image'() {
 
@@ -232,13 +230,25 @@ class CharliecloudCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
+        def cache = Spy(new CharliecloudCache([:] as CharliecloudConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)
         then:
         1 * cache.downloadCharliecloudImage(IMAGE) >> container
         file == container
+
+        cleanup:
+        CharliecloudCache.localImageNames.remove(IMAGE)
+    }
+
+    def 'should not render the environment' () {
+        given:
+        def obj = new CharliecloudCache(Mock(CharliecloudConfig), [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'CharliecloudCache'
+        !"$obj".contains('s3cr3t-canary')
     }
 
 }

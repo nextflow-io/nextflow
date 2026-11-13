@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
-import nextflow.script.types.Types
-import spock.lang.Shared
+import nextflow.script.control.TypeCheckingVisitor
+import nextflow.script.dsl.Types
 import spock.lang.Specification
 import test.TestUtils
 
@@ -29,27 +29,24 @@ import test.TestUtils
  */
 class ScriptFormatterTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
-    String format(String contents) {
+    String format(String contents, FormattingOptions options = new FormattingOptions(4, true), boolean typeCheck = false) {
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
+        if( typeCheck )
+            new TypeCheckingVisitor(source).visit()
         assert !TestUtils.hasSyntaxErrors(source)
-        def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true))
+        def formatter = new ScriptFormattingVisitor(source, options)
         formatter.visit()
+        assert formatter.getMissingComments().isEmpty()
         return formatter.toString()
     }
 
-    boolean checkFormat(String input, String output) {
+    boolean checkFormat(String input, String output, FormattingOptions options = new FormattingOptions(4, true)) {
         input = input.stripIndent()
         output = output.stripIndent()
-        assert format(input) == output
-        assert format(output) == output
+        assert format(input, options) == output
+        assert format(output, options) == output
         return true
     }
 
@@ -58,6 +55,8 @@ class ScriptFormatterTest extends Specification {
         assert format(source) == source
         return true
     }
+
+    static final FormattingOptions HARSHIL = new FormattingOptions(4, true, true, false, false)
 
     def 'should format a code snippet' () {
         expect:
@@ -110,7 +109,7 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should format a workflow definition' () {
+    def 'should format a legacy workflow definition' () {
         expect:
         checkFormat(
             '''\
@@ -132,9 +131,84 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            workflow hello{
+            take: x ; y ; emit: result = x * y
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x
+                y
+
+                emit:
+                result = x * y
+            }
+            '''
+        )
     }
 
-    def 'should format a process definition' () {
+    def 'should format a typed workflow definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello{
+            take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                take:
+                x: Integer
+                y: Integer
+
+                main:
+                xy = x * y
+
+                emit:
+                result: Integer = xy
+            }
+            '''
+        )
+    }
+
+    def 'should not copy the output type into a publish target' () {
+        when:
+        def input = '''\
+            nextflow.enable.types = true
+
+            workflow {
+                main:
+                ch = channel.of(1)
+
+                publish:
+                a = ch
+                b: Channel<String> = ch
+            }
+
+            output {
+                a: Channel<Integer> {
+                    path 'a'
+                }
+                b: Channel<Integer> {
+                    path 'b'
+                }
+            }
+            '''.stripIndent()
+        def result = format(input, new FormattingOptions(4, true), true)
+        then:
+        result.contains('    a = ch\n')
+        result.contains('    b = ch\n')
+    }
+
+    def 'should format a legacy process definition' () {
         expect:
         checkFormat(
             '''\
@@ -160,6 +234,93 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a typed process definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types=true
+
+            process hello{
+            debug(true) ; input: tuple(id:String,infile:Path) ; index:Path ; stage: stageAs(infile,'input.txt') ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                debug true
+
+                input:
+                tuple(id: String, infile: Path)
+                index: Path
+
+                stage:
+                stageAs infile, 'input.txt'
+
+                output:
+                result = tuple(id, file('output.txt'))
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
+
+        checkFormat(
+            '''\
+            nextflow.enable.types=true
+
+            process hello{
+            input: record(id:String,infile:Path) ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    infile: Path
+                )
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
+    }
+
+    // -- an `agent` declaration must survive `nextflow lint -format`. Before the AgentNode
+    //    branch was added to the declaration dispatch, the node was walked and emitted NOTHING,
+    //    so formatting an agent module's `main.nf` deleted its entire content.
+    def 'should format an agent definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                model 'openai/gpt-4o'
+                instruction 'You write QA reports.'
+                skills 'qa-report', 'style'
+
+                input:
+                sample: String
+                depth: Integer
+
+                output:
+                stdout()
+
+                prompt:
+                """
+                Write a report for ${sample} at depth ${depth}.
+                """
+            }
+            '''
+        )
+    }
+
     def 'should format a function definition' () {
         expect:
         checkFormat(
@@ -171,6 +332,45 @@ class ScriptFormatterTest extends Specification {
             '''\
             def hello(x, y) {
                 def xy = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            Integer hello(Integer x,Integer y){
+            Integer xy=x*y ; return xy
+            }
+            ''',
+            '''\
+            def hello(x: Integer, y: Integer) -> Integer {
+                def xy: Integer = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            def hello(x:Integer,y:Integer)->Integer{
+            def xy=x*y ; return xy
+            }
+            ''',
+            '''\
+            def hello(x: Integer, y: Integer) -> Integer {
+                def xy = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            Object hello(Object x,String[] y){
+            Object xy=x ; return xy
+            }
+            ''',
+            '''\
+            def hello(x, y) {
+                def xy = x
                 return xy
             }
             '''
@@ -193,16 +393,37 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a record definition' () {
+        expect:
+        checkFormat(
+            '''\
+            record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
+            ''',
+            '''\
+            record FastqPair {
+                id: String
+                fastq_1: Path
+                fastq_2: Path?
+            }
+            '''
+        )
+    }
+
     def 'should format an output block' () {
         expect:
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo{path'foo'}
             bar{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo {
                     path 'foo'
@@ -216,11 +437,59 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        checkFormat(
+            '''\
+            workflow{}
+
+            output{
+            foo:Path{path'foo'}
+            bar:Channel<Path>{path'bar';index{path'index.csv'}}
+            }
+            ''',
+            '''\
+            workflow {
+            }
+
+            output {
+                foo: Path {
+                    path 'foo'
+                }
+                bar: Channel<Path> {
+                    path 'bar'
+                    index {
+                        path 'index.csv'
+                    }
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow{}
+
+            output{
+            foo{index{header ( ['a','b'] );sep('\\t')}}
+            }
+            ''',
+            '''\
+            workflow {
+            }
+
+            output {
+                foo {
+                    index {
+                        header(['a', 'b'])
+                        sep '\\t'
+                    }
+                }
+            }
+            '''
+        )
     }
 
     def 'should not sort script declarations by default' () {
         given:
-        def source = 
+        def source =
             '''\
             params.foo = 'bar'
 
@@ -264,11 +533,34 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             def x=42
-            def(x,y)=[1,2]
+            def(x,y)=tuple(1,2)
+            def(
+            x,
+            y
+            )=tuple(1,2)
             ''',
             '''\
             def x = 42
-            def (x, y) = [1, 2]
+            def (x, y) = tuple(1, 2)
+            def (x, y) = tuple(1, 2)
+            '''
+        )
+        checkFormat(
+            '''\
+            def Integer x=42
+            ''',
+            '''\
+            def x: Integer = 42
+            '''
+        )
+        checkFormat(
+            '''\
+            def x:Integer=42
+            def(x:Integer,y:Integer)=tuple(1,2)
+            ''',
+            '''\
+            def x: Integer = 42
+            def (x: Integer, y: Integer) = tuple(1, 2)
             '''
         )
     }
@@ -280,13 +572,18 @@ class ScriptFormatterTest extends Specification {
             v=42
             list[0]='first'
             map.key='value'
-            (x,y)=[1,2]
+            (x,y)=tuple(1,2)
+            (
+            x,
+            y
+            )=tuple(1,2)
             ''',
             '''\
             v = 42
             list[0] = 'first'
             map.key = 'value'
-            (x, y) = [1, 2]
+            (x, y) = tuple(1, 2)
+            (x, y) = tuple(1, 2)
             '''
         )
     }
@@ -330,7 +627,20 @@ class ScriptFormatterTest extends Specification {
             try {
                 println(file('foo.txt').text)
             }
-            catch (IOException e) {
+            catch (e: IOException) {
+                log.warn("Could not load foo.txt")
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            try{println(file('foo.txt').text)}catch(e){log.warn("Could not load foo.txt")}
+            ''',
+            '''\
+            try {
+                println(file('foo.txt').text)
+            }
+            catch (e) {
                 log.warn("Could not load foo.txt")
             }
             '''
@@ -341,11 +651,11 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            Channel.of( 1, 2, 3 )
+            channel.of( 1, 2, 3 )
                 .multiMap{v->foo:bar:v}.set{result}
             ''',
             '''\
-            Channel.of(1, 2, 3)
+            channel.of(1, 2, 3)
                 .multiMap { v -> foo: bar: v }
                 .set { result }
             '''
@@ -423,10 +733,10 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             """
-            blastp \
-                -in ${input} \
-                -out ${output} \
-                -db ${blast_db} \
+            blastp \\
+                -in ${input} \\
+                -out ${output} \\
+                -db ${blast_db} \\
                 -html
             """
             '''
@@ -472,6 +782,14 @@ class ScriptFormatterTest extends Specification {
             [(x): 1]
             '''
         )
+        checkFormat(
+            '''\
+            [(x.y):1]
+            ''',
+            '''\
+            [(x.y): 1]
+            '''
+        )
     }
 
     def 'should format a closure' () {
@@ -482,6 +800,22 @@ class ScriptFormatterTest extends Specification {
             ''',
             '''\
             { a, b -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {Integer a,Integer b->a+b}
+            ''',
+            '''\
+            { a: Integer, b: Integer -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {a:Integer,b:Integer->a+b}
+            ''',
+            '''\
+            { a: Integer, b: Integer -> a + b }
             '''
         )
         checkFormat(
@@ -552,12 +886,699 @@ class ScriptFormatterTest extends Specification {
             !(2+2==4)
             (1+2)*3
             x%2==0?'x is even!':'x is odd!'
+            (false?'foo':true)?'bar':'baz'
             ''',
             '''\
             !(2 + 2 == 4)
             (1 + 2) * 3
             x % 2 == 0 ? 'x is even!' : 'x is odd!'
+            (false ? 'foo' : true) ? 'bar' : 'baz'
             '''
+        )
+    }
+
+    /// COMMENTS
+
+    def 'should preserve a trailing comment' () {
+        expect:
+        checkFormat(
+            '''\
+            params.index = null     // path to the index
+            ''',
+            '''\
+            params.index = null // path to the index
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+                x = 1 // about x
+                y = 2 // about y
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+                x = 1 // the last statement
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a dangling comment' () {
+        expect:
+        // at the end of a block
+        checkFormat(
+            '''\
+            workflow {
+                x = channel.of(1)
+
+                // PROCESS_1(x)
+                // PROCESS_2(x)
+            }
+            '''
+        )
+        // in an empty block
+        checkFormat(
+            '''\
+            workflow {
+                // nothing here yet
+            }
+            '''
+        )
+        // at the end of the file
+        checkFormat(
+            '''\
+            workflow {
+                println('hi')
+            }
+
+            // process something {
+            // }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a list or map literal' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = [
+                    // first
+                    1,
+                    2, // second
+                ]
+                y = [
+                    a: 1, // one
+                    // two
+                    b: 2,
+                ]
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in call arguments' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                FOO(
+                    // first arg
+                    1,
+                    2, // second arg
+                )
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a process' () {
+        expect:
+        checkFormat(
+            '''\
+            process FOO {
+                // a directive
+                cpus 2
+
+                input:
+                // about x
+                val x
+
+                output:
+                path 'out.txt' // the output
+
+                script:
+                """
+                echo hi
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in an agent' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                // a directive
+                model 'openai/gpt-4o'
+
+                input:
+                // about sample
+                sample: String
+
+                output:
+                report: String // the report
+
+                prompt:
+                """
+                Write a report for ${sample}.
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in an if/else' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                if (true) {
+                    // then branch
+                    x = 1
+                }
+                else {
+                    // else branch
+                    x = 2
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a comment before an else branch' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                if (x) {
+                    a()
+                }
+                // otherwise
+                else if (y) {
+                    b()
+                }
+                // last resort
+                else {
+                    c()
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a block comment' () {
+        expect:
+        checkFormat(
+            '''\
+            /*
+             * A block comment
+             */
+            workflow {
+                println('hi')
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a file header' () {
+        expect:
+        checkFormat(
+            '''\
+            #!/usr/bin/env nextflow
+            /*
+             * Copyright 2013-2024, Seqera Labs
+             */
+
+            // enable the output DSL
+            nextflow.preview.output = true
+
+            /*
+             * Command line input parameter
+             */
+            params.query = 'data/sample.fa'
+            '''
+        )
+    }
+
+    def 'should preserve comments in a params block' () {
+        expect:
+        checkFormat(
+            '''\
+            params {
+                // Comma-separated list of IDs.
+                input: String
+
+                // Whether to save intermediate outputs.
+                save_intermeds: Boolean = false
+            }
+
+            workflow {
+                println(params.input)
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments on a function' () {
+        expect:
+        checkFormat(
+            '''\
+            /*
+             * does a thing
+             */
+            def foo(x) {
+                return x // give it back
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a trailing comment on a single-line if' () {
+        expect:
+        // the branch is expanded onto its own line, so the comment trails
+        // the statement as a whole
+        checkFormat(
+            '''\
+            workflow {
+                if (!group) group = [1] // if new, create a new entry
+            }
+            ''',
+            '''\
+            workflow {
+                if (!group) {
+                    group = [1]
+                } // if new, create a new entry
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a comment after a closure parameter list' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = [1, 2, 2, 3].reduce([:]) { acc, v -> // 'acc' collects all values
+                    acc[v] = 1
+                    return acc // give it back
+                }
+            }
+            ''',
+            '''\
+            workflow {
+                x = [1, 2, 2, 3].reduce([:]) { acc, v ->
+                    // 'acc' collects all values
+                    acc[v] = 1
+                    return acc // give it back
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a crlf source' () {
+        given:
+        def source = "// lead\r\nworkflow {\r\n    x = 1   // trail\r\n}\r\n"
+
+        expect:
+        format(source) == "// lead\nworkflow {\n    x = 1 // trail\n}\n"
+    }
+
+    def 'should hoist a comment that has no place to go' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = 1 +
+                    // about the second operand
+                    2
+            }
+            ''',
+            '''\
+            workflow {
+                // about the second operand
+                x = 1 + 2
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments on method chain links' () {
+        expect:
+        // an end-of-line comment trails the link it follows
+        checkFormat(
+            '''\
+            workflow {
+                result = channel.of(1, 2)
+                    .map { it * 2 } // double
+                    .filter { it > 2 }
+                    .view()
+            }
+            '''
+        )
+        // an own-line comment leads the link it precedes
+        checkFormat(
+            '''\
+            workflow {
+                result = channel.of(1, 2)
+                    .map { it * 2 }
+                    // about the filter
+                    .filter { it > 2 }
+                    .view()
+            }
+            '''
+        )
+        // a comment forces the chain to wrap even when the source is one line
+        checkFormat(
+            '''\
+            workflow {
+                result = channel.of(1, 2).map { it * 2 } // double
+                    .view()
+            }
+            ''',
+            '''\
+            workflow {
+                result = channel.of(1, 2)
+                    .map { it * 2 } // double
+                    .view()
+            }
+            '''
+        )
+        // a namespace receiver is broken onto its own line for a comment
+        checkFormat(
+            '''\
+            workflow {
+                channel // about of
+                    .of(1)
+                    .view()
+            }
+            '''
+        )
+    }
+
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch = channel.fromFilePairs("${params.dir}/*.vcf.gz")
+                url = "${params.host}//path"
+            }
+            '''
+        )
+    }
+
+    /// MULTI-LINE STRINGS
+
+    def 'should re-indent a multi-line string with its statement' () {
+        expect:
+        // the statement moves right, so the string body moves right
+        checkFormat(
+            '''\
+            process FOO {
+              script:
+              """
+              echo hi
+                echo there
+              """
+            }
+            ''',
+            '''\
+            process FOO {
+                script:
+                """
+                echo hi
+                  echo there
+                """
+            }
+            '''
+        )
+        // the statement moves left, so the string body moves left
+        checkFormat(
+            '''\
+            process FOO {
+                script:
+                  """
+                  echo hi
+                    echo there
+                  """
+            }
+            ''',
+            '''\
+            process FOO {
+                script:
+                """
+                echo hi
+                  echo there
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should never shift a string line past its content' () {
+        expect:
+        // `beta` has no indentation to give up, so it stays put and the
+        // relative indentation of the string body is not preserved
+        checkFormat(
+            '''\
+            workflow {
+                    x = """
+                      alpha
+            beta
+                      """
+                    println(x)
+            }
+            ''',
+            '''\
+            workflow {
+                x = """
+                  alpha
+            beta
+                  """
+                println(x)
+            }
+            '''
+        )
+    }
+
+    def 'should not re-indent a string whose statement starts mid-line' () {
+        expect:
+        // the closure body moved because the chain was wrapped, not because
+        // its indentation changed, so there is nothing meaningful to shift by
+        checkFormat(
+            '''\
+            workflow {
+              channel.of(1).map { v -> v }.view { """
+              value: ${v}
+              """ }
+            }
+            ''',
+            '''\
+            workflow {
+                channel.of(1)
+                    .map { v -> v }
+                    .view {
+                        """
+              value: ${v}
+              """
+                    }
+            }
+            '''
+        )
+    }
+
+    /// HARSHIL ALIGNMENT
+
+    def 'should align trailing comments in a legacy workflow' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow WORKFLOW {
+                take:
+                ch_input // channel: [ val(meta), [ fastq ] ]
+                val_reference //  string: the reference key
+
+                main:
+                ch_out = ch_input
+
+                emit:
+                ch_out // channel: out
+                versions = ch_out // channel: versions
+                summary = ch_out.map { v -> v } // channel: summary
+            }
+            ''',
+            '''\
+            workflow WORKFLOW {
+                take:
+                ch_input      // channel: [ val(meta), [ fastq ] ]
+                val_reference //  string: the reference key
+
+                main:
+                ch_out = ch_input
+
+                emit:
+                ch_out                           // channel: out
+                versions = ch_out                // channel: versions
+                summary  = ch_out.map { v -> v } // channel: summary
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should align trailing comments but not type annotations in a typed workflow' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            workflow WORKFLOW {
+                take:
+                samples: Channel<Tuple<String,Path>> // the samples
+                reference: Path // the reference
+                skip: Boolean
+
+                main:
+                result = samples
+
+                emit:
+                result: Channel<Tuple<String,Path>> = result // the result
+                count: Integer = 1 // the count
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            workflow WORKFLOW {
+                take:
+                samples: Channel<Tuple<String, Path>> // the samples
+                reference: Path                       // the reference
+                skip: Boolean
+
+                main:
+                result = samples
+
+                emit:
+                result: Channel<Tuple<String, Path>> = result // the result
+                count: Integer = 1                            // the count
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should align trailing comments in a typed process' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String, infile: Path) // the sample
+                index: Path // the index
+                opts: Map<String,String>? // extra options
+
+                output:
+                result: Path = file('output.txt') // the result
+                log = stdout() // the log
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String, infile: Path) // the sample
+                index: Path                     // the index
+                opts: Map<String, String>?      // extra options
+
+                output:
+                result: Path = file('output.txt') // the result
+                log = stdout()                    // the log
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should align trailing comments in a params block and record' () {
+        expect:
+        checkFormat(
+            '''\
+            params {
+                input: String // the input
+                save_intermeds: Boolean = false // save intermediates
+                outdir: String = 'results'
+            }
+
+            record FastqPair {
+                id: String // the sample id
+                fastq_1: Path // the first read
+                fastq_2: Path? // the second read
+            }
+
+            workflow {
+                println(params.input)
+            }
+            ''',
+            '''\
+            params {
+                input: String                   // the input
+                save_intermeds: Boolean = false // save intermediates
+                outdir: String = 'results'
+            }
+
+            record FastqPair {
+                id: String     // the sample id
+                fastq_1: Path  // the first read
+                fastq_2: Path? // the second read
+            }
+
+            workflow {
+                println(params.input)
+            }
+            ''',
+            HARSHIL
+        )
+    }
+
+    def 'should not align trailing comments of multi-line entries' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(id: String, infile: Path) // the sample
+                index: Path // the index
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    infile: Path
+                ) // the sample
+                index: Path // the index
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            ''',
+            HARSHIL
         )
     }
 

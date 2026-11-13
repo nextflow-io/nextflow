@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package nextflow.script.dsl;
 
 public class FeatureFlagDsl {
 
+    @Deprecated
     @FeatureFlag("nextflow.enable.configProcessNamesValidation")
     @Description("""
         When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
@@ -32,25 +33,28 @@ public class FeatureFlagDsl {
 
     @FeatureFlag("nextflow.enable.moduleBinaries")
     @Description("""
-        When `true`, enables the use of modules with executable scripts i.e. [module binaries](https://nextflow.io/docs/latest/module.html#module-binaries).
+        When `true`, enables the use of module-scoped executable scripts via [module resources](https://docs.seqera.io/nextflow/modules/developing-modules#resources).
     """)
     public boolean moduleBinaries;
 
+    @Deprecated
     @FeatureFlag("nextflow.enable.strict")
     @Description("""
-        When `true`, the pipeline is executed in [strict mode](https://nextflow.io/docs/latest/reference/feature-flags.html).
+        When `true`, the pipeline is executed in [strict mode](https://docs.seqera.io/nextflow/reference/feature-flags).
     """)
     public boolean strict;
 
-    @FeatureFlag("nextflow.preview.output")
+    @FeatureFlag("nextflow.enable.types")
     @Description("""
-        When `true`, enables the use of the [workflow output definition](https://nextflow.io/docs/latest/workflow.html#workflow-output-def).
+        When `true`, enables the use of [typed processes](https://docs.seqera.io/nextflow/process-typed) and [typed workflows](https://docs.seqera.io/nextflow/workflow-typed).
+
+        This feature flag must be enabled in every script that uses typed processes/workflows. Legacy processes/workflows can not be defined in scripts that enable this feature flag.
     """)
-    public boolean previewOutput;
+    public boolean types;
 
     @FeatureFlag("nextflow.preview.recursion")
     @Description("""
-        When `true`, enables the use of [process and workflow recursion](https://github.com/nextflow-io/nextflow/discussions/2521).
+        When `true`, enables the use of [process and workflow recursion](https://docs.seqera.io/nextflow/workflow#process-and-workflow-recursion).
     """)
     public boolean previewRecursion;
 

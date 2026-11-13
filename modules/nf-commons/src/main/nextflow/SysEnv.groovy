@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow
@@ -23,7 +22,7 @@ import groovy.transform.PackageScope
 /**
  * Helper class that holds a reference system environment and
  * allow to swap to a different one for testing purposes
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -36,7 +35,7 @@ class SysEnv {
     static boolean containsKey(String key) {
         return holder.containsKey(key)
     }
-    
+
     static Map<String,String> get()  {
         return holder
     }
@@ -51,7 +50,35 @@ class SysEnv {
 
     static boolean getBool(String name, boolean defValue) {
         final result = get(name,String.valueOf(defValue))
-        return Boolean.parseBoolean(result)
+        return Boolean.parseBoolean(result) || result == '1'
+    }
+
+    static Integer getInteger(String name, Integer defValue) {
+        final result = get(name, defValue!=null ? String.valueOf(defValue) : null)
+        return result!=null ? Integer.valueOf(result) : null
+    }
+
+    static Long getLong(String name, Long defValue) {
+        final result = get(name, defValue!=null ? String.valueOf(defValue) : null)
+        return result!=null ? Long.valueOf(result) : null
+    }
+
+    /**
+     * Check if agent output mode is enabled via environment variables.
+     * When enabled, Nextflow replaces interactive ANSI logging with minimal,
+     * structured output optimized for AI agents.
+     *
+     * The mode is auto-detected from a truthy {@code AGENT} or {@code CLAUDECODE}.
+     * {@code NXF_AGENT_MODE} overrides the detection in either direction: when set,
+     * its boolean value decides and the other variables are ignored.
+     *
+     * @return {@code true} if agent mode is enabled
+     */
+    static boolean isAgentMode() {
+        if( get('NXF_AGENT_MODE') != null )
+            return getBool('NXF_AGENT_MODE', false)
+        return getBool('AGENT', false) ||
+               getBool('CLAUDECODE', false)
     }
 
     static void push(Map<String,String> env) {

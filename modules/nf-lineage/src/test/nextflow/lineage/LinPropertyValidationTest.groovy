@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,13 @@ class LinPropertyValidationTest extends Specification{
     def 'should not throw exception when property exist'(){
         when:
         new LinPropertyValidator().validate(['value', 'output'])
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should accept agent run properties'(){
+        when: 'the fields that only exist on AgentRun are queryable, e.g. `lineage find -q model=...`'
+        new LinPropertyValidator().validate(['runner', 'model', 'resolvedModel', 'promptTemplate', 'maxIterations', 'skills'])
         then:
         noExceptionThrown()
     }

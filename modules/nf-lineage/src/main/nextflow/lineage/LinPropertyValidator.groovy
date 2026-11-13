@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package nextflow.lineage
 
 import groovy.transform.CompileStatic
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.DataPath
 import nextflow.lineage.model.v1beta1.FileOutput
@@ -36,6 +37,7 @@ import nextflow.lineage.model.v1beta1.WorkflowRun
 class LinPropertyValidator {
 
     private static final List<Class> LIN_MODEL_CLASSES = [
+        AgentRun,
         Checksum,
         DataPath,
         FileOutput,

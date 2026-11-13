@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.azure.batch
 
 
@@ -65,12 +81,42 @@ class AzFileCopyStrategyTest extends Specification {
         new Session()
     }
 
+    def 'should preserve special characters in download and upload file names' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def name = 'a\'b $(c) `d` "e" $x;f.txt'
+        folder.resolve(name).text = 'x'
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def copy = new AzFileCopyStrategy(Mock(TaskBean), Mock(AzBatchExecutor) { getAzConfig() >> config })
+        // stub the transfer functions, and run the commands with `eval` as `nxf_parallel` does
+        def script = '''
+            nxf_az_download() { printf '%s\\n' "$1" "$2" >> downloads.log; }
+            nxf_az_upload() { printf '%s\\n' "$1" >> uploads.log; }
+            nxf_parallel() { for cmd in "$@"; do eval "$cmd"; done; }
+            downloads=()
+            '''.stripIndent()
+        script += copy.stageInputFile(mockAzPath('az://my-data/dir/' + name), name) + '\n'
+        script += 'nxf_parallel "${downloads[@]}"\n'
+        script += copy.getUnstageOutputFilesScript(['*.txt'], mockAzPath('az://my-data/out', true))
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('downloads.log').text == 'http://account.blob.core.windows.net/my-data/dir/' + name + '\n' + name + '\n'
+        folder.resolve('uploads.log').text == name + '\n'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'test bash wrapper with input'() {
         given:
         def workDir = mockAzPath( 'az://my-data/work/dir' )
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
-        def executor = Mock(AzBatchExecutor) { getConfig() >> config }
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
 
         when:
         def binding = new AzBatchScriptLauncher([
@@ -84,10 +130,8 @@ class AzFileCopyStrategyTest extends Specification {
         binding.stage_inputs == '''\
                 # stage input files
                 downloads=(true)
-                
-                for cmd in "${downloads[@]}"; do
-                    $cmd
-                done
+
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         binding.unstage_controls == '''\
@@ -103,6 +147,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -113,16 +158,17 @@ class AzFileCopyStrategyTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
-                
+
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -140,7 +186,7 @@ class AzFileCopyStrategyTest extends Specification {
                           [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
-                
+
                         if ((${#pid[@]}>=$max)); then
                           nxf_sleep 0.2
                         else
@@ -155,17 +201,17 @@ class AzFileCopyStrategyTest extends Specification {
                     )
                     unset IFS
                 }
-                
+
                 # custom env variables used for azcopy opts
                 export AZCOPY_BLOCK_SIZE_MB=4
                 export AZCOPY_BLOCK_BLOB_TIER=None
-                
+
                 nxf_az_upload() {
                     local name=$1
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-        
+
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -176,25 +222,25 @@ class AzFileCopyStrategyTest extends Specification {
                       azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
-                
+
                 nxf_az_download() {
                     local source=$1
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
                     mkdir -p "$basedir"
-                
+
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
                         azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
-                            exit 1
+                            return 1
                         }
                     }
                 }
-                
+
                 '''.stripIndent(true)
     }
 
@@ -205,7 +251,7 @@ class AzFileCopyStrategyTest extends Specification {
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
         def executor = Mock(AzBatchExecutor) {
-            getConfig() >> config
+            getAzConfig() >> config
             getRemoteBinDir() >> remoteBin
         }
 
@@ -223,10 +269,8 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
                 chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
-                
-                for cmd in "${downloads[@]}"; do
-                    $cmd
-                done
+
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         binding.task_env == '''\
@@ -234,7 +278,6 @@ class AzFileCopyStrategyTest extends Specification {
                     export BAR="any"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZCOPY_BUFFER_GB="0.8"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -243,6 +286,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -253,16 +297,17 @@ class AzFileCopyStrategyTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
-                
+
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -280,7 +325,7 @@ class AzFileCopyStrategyTest extends Specification {
                           [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
-                
+
                         if ((${#pid[@]}>=$max)); then
                           nxf_sleep 0.2
                         else
@@ -295,17 +340,17 @@ class AzFileCopyStrategyTest extends Specification {
                     )
                     unset IFS
                 }
-                
+
                 # custom env variables used for azcopy opts
                 export AZCOPY_BLOCK_SIZE_MB=4
                 export AZCOPY_BLOCK_BLOB_TIER=None
-                
+
                 nxf_az_upload() {
                     local name=$1
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-        
+
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -316,21 +361,21 @@ class AzFileCopyStrategyTest extends Specification {
                       azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
-                
+
                 nxf_az_download() {
                     local source=$1
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
                     mkdir -p "$basedir"
-                
+
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
                         azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
-                            exit 1
+                            return 1
                         }
                     }
                 }
@@ -350,7 +395,7 @@ class AzFileCopyStrategyTest extends Specification {
         def input2 = mockAzPath('az://my-data/work/dir/file2.txt')
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
-        def executor = Mock(AzBatchExecutor) { getConfig() >> config }
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
 
         when:
         def binding = new AzBatchScriptLauncher([
@@ -376,23 +421,22 @@ class AzFileCopyStrategyTest extends Specification {
                 downloads=(true)
                 rm -f file1.txt
                 rm -f file2.txt
-                downloads+=("nxf_az_download http://account.blob.core.windows.net/my-data/work/dir/file1.txt file1.txt")
-                downloads+=("nxf_az_download http://account.blob.core.windows.net/my-data/work/dir/file2.txt file2.txt")
-                for cmd in "${downloads[@]}"; do
-                    $cmd
-                done
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file2.txt' file2.txt")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         binding.unstage_outputs == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
-                        uploads+=("nxf_az_upload '$name' http://account.blob.core.windows.net/my-data/work/dir")
+                    set -f
+                    for name in $(set +f; eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_az_upload $qname 'http://account.blob.core.windows.net/my-data/work/dir'")
                     done
+                    set +f
                     unset IFS
-                    for cmd in "${uploads[@]}"; do
-                        $cmd
-                    done
+                    nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()
 
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
@@ -400,7 +444,6 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZCOPY_BUFFER_GB="0.8"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -409,6 +452,7 @@ class AzFileCopyStrategyTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -419,14 +463,15 @@ class AzFileCopyStrategyTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -465,13 +510,13 @@ class AzFileCopyStrategyTest extends Specification {
                     # custom env variables used for azcopy opts
                     export AZCOPY_BLOCK_SIZE_MB=4
                     export AZCOPY_BLOCK_BLOB_TIER=None
-                    
+
                     nxf_az_upload() {
                         local name=$1
                         local target=${2%/} ## remove ending slash
                         local base_name="$(basename "$name")"
                         local dir_name="$(dirname "$name")"
-            
+
                         if [[ -d $name ]]; then
                           if [[ "$base_name" == "$name" ]]; then
                             azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -482,27 +527,54 @@ class AzFileCopyStrategyTest extends Specification {
                           azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                         fi
                     }
-                    
+
                     nxf_az_download() {
                         local source=$1
                         local target=$2
                         local basedir=$(dirname $2)
                         local ret
                         mkdir -p "$basedir"
-                    
+
                         ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
                             azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                                 rm -rf $target
                                 >&2 echo "Unable to download path: $source"
-                                exit 1
+                                return 1
                             }
                         }
                     }
 
                     '''.stripIndent(true)
 
+    }
+
+    def 'should link a local input and download the others'() {
+        given:
+        def workDir = mockAzPath( 'az://my-data/work/dir' )
+        def input1 = mockAzPath('az://my-data/work/dir/file1.txt')
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
+
+        when:
+        def binding = new AzBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: workDir,
+                targetDir: workDir,
+                inputFiles: ['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'file1.txt': input1],
+                script: 'echo Hello world!' ] as TaskBean, executor) .makeBinding()
+
+        then:
+        binding.stage_inputs == '''\
+                # stage input files
+                downloads=(true)
+                rm -f ref.fa
+                rm -f file1.txt
+                ln -sfn /mnt/shared/ref.fa ref.fa
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
     }
 
 }

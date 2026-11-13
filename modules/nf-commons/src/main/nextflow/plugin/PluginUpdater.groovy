@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin
@@ -21,18 +20,19 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.function.Predicate
 import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedPredicate
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -69,6 +69,8 @@ class PluginUpdater extends UpdateManager {
 
     private boolean offline
 
+    private boolean registryReposApplied
+
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
@@ -86,6 +88,7 @@ class PluginUpdater extends UpdateManager {
     static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
         List<UpdateRepository> result = new ArrayList<>(1)
         if( offline ) {
+            log.debug "Using local update repository: ${local}"
             result.add(new LocalUpdateRepository('downloaded', local))
         }
         else {
@@ -93,10 +96,116 @@ class PluginUpdater extends UpdateManager {
                 ? new DefaultUpdateRepository('nextflow.io', remote)
                 : new HttpPluginRepository('registry', remote.toURI())
 
+            log.debug "Using plugin repository: ${remoteRepo.getClass().getSimpleName()} [${remoteRepo.id}]; url=${remote}"
             result.add(remoteRepo)
             result.addAll(customRepos())
         }
         return result
+    }
+
+    /** Ids of the default registry repositories created by {@link #wrap} */
+    private static final List<String> DEFAULT_REGISTRY_REPO_IDS = ['registry', 'nextflow.io']
+
+    /**
+     * Apply the plugin registry endpoints declared in the {@code registry} config scope.
+     *
+     * The configured registries are authoritative: the URLs provided by {@link RegistryConfig}
+     * fully replace the default registry repository. Users that want to keep resolving plugins
+     * from the public registry must include its URL explicitly in {@code registry.url}.
+     *
+     * Callers must only invoke this when {@code registry.url} is explicitly configured (see
+     * {@link PluginsFacade#applyRegistryConfig}); when it is empty or unset the default registry
+     * is left in place. {@link RegistryConfig#getAllUrls} always falls back to the default URL,
+     * so it is never empty here.
+     *
+     * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
+     * each {@link HttpPluginRepository} with the metadata it actually needs.
+     *
+     * The registries are applied only once: repeated invocations are a no-op, so re-entrant
+     * callers (e.g. a second {@link PluginsFacade#load}) cannot mint duplicate repositories.
+     */
+    void addRegistryRepos(RegistryConfig registryConfig) {
+        if( offline || !registryConfig || registryReposApplied )
+            return
+        registryReposApplied = true
+        final urls = registryConfig.getAllUrls()
+        // the configured registries take over: drop the default registry repository(ies).
+        // Mutate the list directly rather than removeRepository(id): pf4j-update 2.3.0 logs a
+        // misleading "Repository with id X not found" warning even on a successful removal.
+        this.@repositories.removeIf { it.id in DEFAULT_REGISTRY_REPO_IDS }
+        final existingIds = this.@repositories*.id as Set
+        int counter = 0
+        for( String url : urls ) {
+            String repoId = "registry-${counter++}"
+            while( repoId in existingIds )
+                repoId = "registry-${counter++}"
+            existingIds.add(repoId)
+            final repo = new HttpPluginRepository(repoId, URI.create(url))
+            log.debug "Adding plugin repository: ${repo.getClass().getSimpleName()} [${repo.id}]; url=${url}"
+            addRepository(repo)
+        }
+    }
+
+    /**
+     * Aggregate plugin metadata across all configured registries.
+     *
+     * The default {@link UpdateManager#getPluginsMap()} merges repositories with
+     * {@code Map.putAll}, so the last repository serving a given plugin id fully overwrites
+     * the earlier ones — silently discarding releases that exist only in an earlier-listed
+     * registry. Here the releases of each plugin id are instead unioned across all
+     * repositories. When the same {@code version} is served by more than one registry, the
+     * earlier-listed registry wins, matching the priority order in which the registries are
+     * declared (first listed = highest priority).
+     *
+     * @return a map of plugin id to its merged {@link PluginInfo}
+     */
+    @Override
+    Map<String, PluginInfo> getPluginsMap() {
+        final result = new LinkedHashMap<String, PluginInfo>()
+        for( UpdateRepository repo : getRepositories() ) {
+            for( Map.Entry<String, PluginInfo> entry : repo.getPlugins().entrySet() ) {
+                final merged = result.get(entry.key)
+                if( merged == null )
+                    result.put(entry.key, copyPluginInfo(entry.value))
+                else
+                    mergeReleases(merged, entry.value)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Create a copy of a {@link PluginInfo} with its own releases list, so that merging across
+     * repositories does not mutate the metadata cached by each repository.
+     */
+    private static PluginInfo copyPluginInfo(PluginInfo src) {
+        final copy = new PluginInfo()
+        copy.id = src.id
+        copy.name = src.name
+        copy.description = src.description
+        copy.provider = src.provider
+        copy.projectUrl = src.projectUrl
+        copy.repositoryId = src.repositoryId
+        copy.releases = src.releases != null
+            ? new ArrayList<PluginInfo.PluginRelease>(src.releases)
+            : new ArrayList<PluginInfo.PluginRelease>()
+        return copy
+    }
+
+    /**
+     * Append the releases of {@code src} to {@code target}, skipping any version already present.
+     * Releases already in {@code target} come from an earlier-listed (higher priority) registry
+     * and therefore take precedence on a version clash.
+     */
+    private static void mergeReleases(PluginInfo target, PluginInfo src) {
+        if( !src.releases )
+            return
+        final knownVersions = new HashSet<String>()
+        for( PluginInfo.PluginRelease r : target.releases )
+            knownVersions.add(r.version)
+        for( PluginInfo.PluginRelease r : src.releases )
+            if( knownVersions.add(r.version) )
+                target.releases.add(r)
     }
 
     static private List<DefaultUpdateRepository> customRepos() {
@@ -146,14 +255,62 @@ class PluginUpdater extends UpdateManager {
      * Prefetch metadata for plugins. This gives an opportunity for certain
      * repository types to perform some data-loading optimisations.
      */
-    void prefetchMetadata(List<PluginSpec> plugins) {
-        // use direct field access to avoid the refresh() call in getRepositories()
-        // which could fail anything which hasn't had a chance to prefetch yet
+    void prefetchMetadata(List<PluginRef> plugins) {
+        // Skip plugins that are already installed at the requested pinned version: no remote
+        // metadata is needed to start them. This eliminates the registry round-trip on every
+        // Nextflow invocation in the common CI case (pinned versions, plugins already cached).
+        final needed = plugins.findAll { ref -> !isAlreadyInstalled(ref) }
+        if( !needed ) {
+            log.trace "All requested plugins are already installed - skipping registry metadata prefetch"
+            return
+        }
+        // use direct field access because getRepositories() calls refresh() when the repository
+        // list is null (e.g. in the dev updater), which loads `repositories.json` from the
+        // working directory or fails if it does not exist
         for( def repo : this.@repositories ) {
             if( repo instanceof PrefetchUpdateRepository ) {
-                repo.prefetch(plugins)
+                log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${needed}"
+                repo.prefetch(needed)
             }
         }
+    }
+
+    /**
+     * Fetch the metadata of a plugin that was not prefetched, such as a missing
+     * dependency of a plugin that was already installed.
+     *
+     * @param id The plugin Id
+     */
+    protected void fetchMissingMetadata(String id) {
+        if( offline )
+            return
+        // use direct field access for the same reason as prefetchMetadata()
+        for( def repo : this.@repositories ) {
+            try {
+                // HttpPluginRepository fetches and caches the metadata when missing
+                repo.getPlugin(id)
+            }
+            catch( PluginRuntimeException e ) {
+                log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
+            }
+        }
+    }
+
+    protected boolean isAlreadyInstalled(PluginRef ref) {
+        // in dev mode, a locally built plugin is used regardless of the requested version
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && pluginManager.getPlugin(ref.id) )
+            return true
+        // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
+        // to resolve the latest release.
+        if( !ref.version )
+            return false
+        // Check the on-disk plugin store rather than the runtime PluginManager: at prefetch
+        // time the local plugins have not been loaded into the manager yet (its per-run root
+        // is still empty), so pluginManager.getPlugin() would always return null. installPlugin()
+        // reuses the cached copy whenever the store directory exists (it only downloads when
+        // missing), so its presence is the authoritative signal that no remote metadata is
+        // required to start the plugin.
+        return pluginsStore != null && FilesEx.exists(pluginsStore.resolve("${ref.id}-${ref.version}"))
     }
 
     /**
@@ -185,8 +342,9 @@ class PluginUpdater extends UpdateManager {
     void pullPlugins(List<String> plugins) {
         pullOnly=true
         try {
-            final specs = plugins.collect(it -> PluginSpec.parse(it,defaultPlugins))
-            for( PluginSpec spec : specs ) {
+            final specs = plugins.collect(it -> PluginRef.parse(it,defaultPlugins))
+            prefetchMetadata(specs)
+            for( PluginRef spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
         }
@@ -218,6 +376,9 @@ class PluginUpdater extends UpdateManager {
      */
     @Override
     boolean installPlugin(String id, String version) {
+        // in dev mode, core plugins must be built locally rather than downloaded
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && defaultPlugins.hasPlugin(id) )
+            throw new UnsupportedOperationException("Core plugin $id is not available in dev mode -- make sure it is built locally (e.g. `make compile`)")
         if( !pluginsStore )
             throw new IllegalStateException("Missing pluginStore attribute")
 
@@ -239,20 +400,11 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. rename if filename is sha digest
-        // when the plugin is downloaded from the (OCI) registry, it is named as "sha256:<CHECKSUM>"
-        // rename it to something meaningful using the target plugin path
-        if ( downloaded.getFileName().toString().startsWith("sha256:")) {
-            final targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
-            if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
-            downloaded = targetName
-        }
-
-        // 4. unzip the content and delete downloaded file
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
-        // 5. move the final destination the plugin directory
+        // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
         try {
             safeMove(dir, pluginPath)
@@ -274,11 +426,11 @@ class PluginUpdater extends UpdateManager {
         final listener = new dev.failsafe.event.EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Failed to download plugin: $id; version: $version - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Failed to download plugin: $id; version: $version - attempt: ${event.attemptCount}", event.lastException)
             }
         }
 
-        final condition = new Predicate<Throwable>() {
+        final condition = new CheckedPredicate<Throwable>() {
             @Override
             boolean test(Throwable error) {
                 return error?.cause instanceof ConnectException
@@ -354,6 +506,9 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
         }
 
+        if( !isAlreadyInstalled(new PluginRef(id, requestedVersion)) )
+            fetchMissingMetadata(id)
+
         def version = requestedVersion
         if( !version ) {
             version = getLastPluginRelease(id)?.version
@@ -400,10 +555,12 @@ class PluginUpdater extends UpdateManager {
 
             // 2. find latest satisfying req
             // -- if it's a core nextflow plugin use the version expected by it
-            def depVersion = defaultPlugins.getPlugin(it.pluginId)?.version
+            def depVersion = defaultPlugins.hasPlugin(it.pluginId) ? defaultPlugins.getPlugin(it.pluginId).version : null
             // -- otherwise try to find the newest matching release
-            if( !depVersion )
+            if( !depVersion ) {
+                fetchMissingMetadata(it.pluginId)
                 depVersion = findNewestMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
+            }
             log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - available version: $depVersion"
             if( pullOnly )
                 pullPlugin0(it.pluginId, depVersion)
@@ -435,6 +592,7 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
+        fetchMissingMetadata(id)
         PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")

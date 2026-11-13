@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,9 @@ import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.config.dsl.ConfigDsl;
-import nextflow.config.schema.SchemaNode;
+import nextflow.config.spec.SpecNode;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.control.VariableScopeChecker;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
@@ -41,6 +42,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -87,7 +89,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
         configScopes.add(node.name);
         var names = currentConfigScopes();
-        var option = SchemaNode.ROOT.getDslOption(names);
+        var option = SpecNode.ROOT.getDslOption(names);
         if( option != null ) {
             vsc.pushScope(option.dsl());
             super.visitConfigApplyBlock(node);
@@ -105,7 +107,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         checkMethodCall(node);
     }
 
-    private boolean inProcess;
+    private boolean inProcessScope;
 
     private boolean inClosure;
 
@@ -115,28 +117,49 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
             configScopes.add(node.names.get(i));
 
         var scopes = currentConfigScopes();
-        inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
+        inProcessScope = isProcessScope(scopes, node);
         inClosure = node.value instanceof ClosureExpression;
-        if( inClosure && !inProcess && !isWorkflowHandler(scopes, node) )
-            vsc.addError("Dynamic config options are only allowed in the `process` scope", node);
+        if( isWorkflowHandler(scopes, node) )
+            vsc.addWarning("The use of workflow handlers in the config is deprecated -- use the entry workflow or a plugin instead", String.join(".", node.names), node);
         if( inClosure ) {
             vsc.pushScope(ScriptDsl.class);
-            if( inProcess )
+            if( inProcessScope )
                 vsc.pushScope(ProcessDsl.class);
         }
 
         super.visitConfigAssign(node);
 
         if( inClosure ) {
-            if( inProcess )
+            if( inProcessScope )
                 vsc.popScope();
             vsc.popScope();
         }
         inClosure = false;
-        inProcess = false;
+        inProcessScope = false;
 
         for( int i = 0; i < node.names.size() - 1; i++ )
             configScopes.pop();
+    }
+
+    /**
+     * Determine whether a config option can access the process
+     * DSL for dynamic settings.
+     *
+     * This includes options in the `process` and `agent` config scopes
+     * and `executor.jobName`.
+     *
+     * @param scopes
+     * @param node
+     */
+    private static boolean isProcessScope(List<String> scopes, ConfigAssignNode node) {
+        if( scopes.isEmpty() )
+            return false;
+        if( "process".equals(scopes.get(0)) || "agent".equals(scopes.get(0)) )
+            return true;
+        var option = node.names.get(node.names.size() - 1);
+        return scopes.size() == 1
+            && "executor".equals(scopes.get(0))
+            && "jobName".equals(option);
     }
 
     private static boolean isWorkflowHandler(List<String> scopes, ConfigAssignNode node) {
@@ -144,6 +167,17 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         return scopes.size() == 1
             && "workflow".equals(scopes.get(0))
             && List.of("onComplete", "onError").contains(option);
+    }
+
+    @Override
+    public void visitMapEntryExpression(MapEntryExpression node) {
+        node.getKeyExpression().visit(this);
+
+        var ic = inClosure;
+        if( inProcessScope && node.getValueExpression() instanceof ClosureExpression )
+            inClosure = true;
+        node.getValueExpression().visit(this);
+        inClosure = ic;
     }
 
     @Override
@@ -252,9 +286,11 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         if( !node.isImplicitThis() )
             return;
         var name = node.getMethodAsString();
-        var defNode = vsc.findDslFunction(name, node);
-        if( defNode != null )
-            node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, defNode);
+        var methods = vsc.findDslFunction(name, node);
+        if( methods.size() == 1 )
+            node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, methods.get(0));
+        else if( !methods.isEmpty() )
+            node.putNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS, methods);
         else if( !KEYWORDS.contains(name) )
             vsc.addError("`" + name + "` is not defined", node.getMethod());
     }
@@ -276,18 +312,18 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     public void visitClosureExpression(ClosureExpression node) {
         vsc.pushScope();
         node.setVariableScope(currentScope());
-        if( node.getParameters() != null ) {
+        if( node.isParameterSpecified() ) {
             for( var parameter : node.getParameters() ) {
                 vsc.declare(parameter, parameter);
                 if( parameter.hasInitialExpression() )
-                    visit(parameter.getInitialExpression());
+                    parameter.getInitialExpression().visit(this);
             }
         }
-        super.visitClosureExpression(node);
-        for( var it = currentScope().getReferencedLocalVariablesIterator(); it.hasNext(); ) {
-            var variable = it.next();
-            variable.setClosureSharedVariable(true);
+        else if( node.getParameters() != null ) {
+            var implicit = new ImplicitClosureParameter();
+            currentScope().putDeclaredVariable(implicit);
         }
+        super.visitClosureExpression(node);
         vsc.popScope();
     }
 
@@ -296,15 +332,15 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "it".equals(name) ) {
-                vsc.addParanoidWarning("Implicit closure parameter `it` will not be supported in a future version", node);
-            }
-            else if( inProcess && inClosure ) {
+            if( inProcessScope && inClosure ) {
                 // dynamic process directives can reference process inputs which are not known at this point
             }
             else {
                 variable = new DynamicVariable(name, false);
             }
+        }
+        if( variable instanceof ImplicitClosureParameter ) {
+            vsc.addWarning("Implicit closure parameter is deprecated, declare an explicit parameter instead", variable.getName(), node);
         }
         if( variable != null ) {
             node.setAccessedVariable(variable);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.fusion
@@ -44,16 +43,16 @@ class FusionHelper {
         return result!=null ? result.toString()=='true' : false
     }
 
-    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, String containerOpts, List<String> runCmd) {
+    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, String containerOpts, List<String> runCmd, String containerPlatform = null) {
         if( !containerName )
             throw new IllegalArgumentException("Missing task container -- Fusion requires the task to be executed by a container process")
-        final engine = containerConfig.getEngine()
-        final containerBuilder = ContainerBuilder.create(engine, containerName)
+        final containerBuilder = ContainerBuilder.create(containerConfig, containerName)
                 .addMountWorkDir(false)
-                .addRunOptions(containerConfig.runOptions as String)
                 .addRunOptions(containerOpts)
-                .addRunOptions(containerConfig.fusionOptions())
-                .params(containerConfig)
+                .addRunOptions(containerConfig.getFusionOptions())
+
+        if( containerPlatform )
+            containerBuilder.setPlatform(containerPlatform)
 
         // add fusion env vars
         for(Map.Entry<String,String> it : launcher.fusionEnv()) {

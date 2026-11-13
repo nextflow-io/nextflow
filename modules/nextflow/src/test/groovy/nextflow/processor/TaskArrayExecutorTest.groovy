@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.executor
@@ -45,7 +44,7 @@ class TaskArrayExecutorTest extends Specification {
         def result = executor.getArrayWorkDir(handler)
         then:
         result == EXPECTED
-        
+
         where:
         FUSION  | WORK_DIR                           |  EXPECTED
         false   | Path.of('/work/dir')               | '/work/dir'
@@ -66,7 +65,7 @@ class TaskArrayExecutorTest extends Specification {
 
         where:
         FUSION      | WORK_DIR              | EXPECTED
-        false       | '/work/dir'           | 'bash /work/dir/.command.run 2>&1 > /work/dir/.command.log'
+        false       | '/work/dir'           | 'bash /work/dir/.command.run > /work/dir/.command.log 2>&1'
         true        | '/fusion/work/dir'    | 'bash /fusion/work/dir/.command.run'
     }
 

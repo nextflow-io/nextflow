@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ class SlurperExTest extends Specification {
             "region_id": "R1",
             "feature": "pass_stripy_flag",
             "pass_flag": "TRUE"
-          } ]    
+          } ]
         '''
-        
+
         when:
         def result = new JsonSlurper().parse(file)
         then:
@@ -78,7 +78,7 @@ class SlurperExTest extends Specification {
 '''
         when:
         def result = new Yaml().load(file)
-        
+
         then:
         result.size() == 2
         and:

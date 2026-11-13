@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Ben Sherman
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,41 +36,52 @@ class CsvWriter {
     }
 
     void apply(List records, Path path) {
-        Collection columns
-        if( header == true ) {
-            final first = records.first()
-            if( first !instanceof Map )
-                throw new IllegalArgumentException('Records must be map objects when header=true')
-            columns = ((Map)first).keySet()
-        }
-        else if( header instanceof List ) {
-            columns = header
-        }
-
-        path.delete()
+        final columns = columnHeaders(header, records)
+        final result = new StringBuilder()
 
         if( columns )
-            path << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
+            result << columns.collect(column -> formatCsvValue(column, sep)).join(sep) << '\n'
 
         for( final record : records ) {
-            Collection values
-            if( record instanceof List ) {
-                values = record
-            }
-            else if( record instanceof Map ) {
-                values = columns
-                    ? record.subMap(columns).values()
-                    : record.values()
-            }
-            else if( isSerializable(record) ) {
-                values = [ record ]
-            }
-            else {
-                throw new IllegalArgumentException("Record of type `${record.class.name}` can not be serialized to CSV")
-            }
-
-            path << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
+            final values = rowValues(record, columns)
+            result << values.collect(v -> formatCsvValue(v, sep)).join(sep) << '\n'
         }
+
+        path.text = result.toString()
+    }
+
+    private static Collection columnHeaders(Object header, List records) {
+        if( header instanceof List ) {
+            return header
+        }
+
+        if( header == true && !records.isEmpty() ) {
+            final first = records.first()
+            if( first instanceof Map )
+                return first.keySet()
+            else
+                throw new IllegalArgumentException('Records must be map objects when header=true')
+        }
+
+        return null
+    }
+
+    private static Collection rowValues(Object record, Collection columns) {
+        if( record instanceof List ) {
+            return record
+        }
+
+        if( record instanceof Map ) {
+            return columns
+                ? record.subMap(columns).values()
+                : record.values()
+        }
+
+        if( isSerializable(record) ) {
+            return [ record ]
+        }
+
+        throw new IllegalArgumentException("Record of type `${record.class.name}` can not be serialized to CSV")
     }
 
     private static boolean isSerializable(value) {
@@ -79,6 +90,13 @@ class CsvWriter {
             || value instanceof CharSequence
             || value instanceof Number
             || value instanceof Path
+    }
+
+    private static String formatCsvValue(Object value, String sep) {
+        final str = toCsvString(value)
+        final escaped = str.replace('"', '""')
+        final needsQuote = escaped != str || str.contains(sep) || str.contains('\r') || str.contains('\n')
+        return needsQuote ? "\"${escaped}\"" : str
     }
 
     private static String toCsvString(value) {

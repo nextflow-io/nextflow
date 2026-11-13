@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.script
@@ -21,7 +20,8 @@ import nextflow.Channel
 import nextflow.NextflowMeta
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 
 /**
  *
@@ -36,22 +36,21 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a process execution' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x +1
         }
-       
+
         workflow {
-            main: foo.recurse(1).times(3)
-            emit: foo.out
+            foo.recurse(1).times(3)
+            foo.out
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 2
         result.val == 3
@@ -62,22 +61,21 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a process until a condition is verified' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x+1
         }
-       
+
         workflow {
-            main: foo.recurse(1).until { it >= 4 }
-            emit: foo.out
+            foo.recurse(1).until { it >= 4 }
+            foo.out
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 2
         result.val == 3
@@ -89,37 +87,36 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a workflow execution' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x+1
         }
-  
+
         process bar {
           input: val x
           output: val y
           exec: y = x*x
         }
-       
+
         workflow group {
-            take: x 
-            main: 
+            take: x
+            main:
               foo(x)
               bar(foo.out)
             emit:
               bar.out
         }
-        
+
         workflow {
-            main: group.recurse(1).times(3)
-            emit: group.out  
+            group.recurse(1).times(3)
+            group.out
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 4
         result.val == 25
@@ -138,18 +135,15 @@ class ScriptRecurseTest extends Dsl2Spec {
            exec:
               z = x.sum()+1
          }
-         
+
          workflow {
-           main:
-             data = channel.of(10,20,30) 
+             data = channel.of(10,20,30)
              foo.scan(data)
-           emit:
              foo.out
          }
         '''
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 11 // 10 +1
         result.val == 32 // 20 + 11 +1

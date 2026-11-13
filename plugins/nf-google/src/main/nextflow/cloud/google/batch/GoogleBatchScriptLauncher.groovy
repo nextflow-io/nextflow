@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs.
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.cloud.google.batch
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -25,7 +25,7 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.google.GoogleOpts
 import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
@@ -36,7 +36,7 @@ import nextflow.util.TestOnly
 
 /**
  * Implement Nextflow task launcher script
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -45,7 +45,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     private static final String MOUNT_ROOT = '/mnt/disks'
 
-    private BatchConfig config
+    private GoogleOpts config
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
@@ -66,7 +66,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         bean.workDir = toContainerMount(bean.workDir)
         bean.targetDir = toContainerMount(bean.targetDir)
 
-        // add all children work dir 
+        // add all children work dir
         if( bean.arrayWorkDirs ) {
             for( Path it : bean.arrayWorkDirs )
                 toContainerMount(it)
@@ -75,12 +75,14 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         // add input file mounts
         if( bean.arrayInputFiles ) {
             for( Path it : bean.arrayInputFiles )
-                toContainerMount(it)
+                if( it.fileSystem != FileSystems.default )
+                    toContainerMount(it)
         }
 
-        // remap input files to container mounted paths
+        // remap input files to container mounted paths; a local one was accepted by a ForeignFileFilter and is linked where it is
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
+            if( entry.value.fileSystem != FileSystems.default )
+                bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
         }
 
         // include task script as an input to force its staging in the container work directory
@@ -146,10 +148,10 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         final result = new ArrayList(10)
         for( String it : buckets ) {
             final mountOptions = new LinkedList<String>()
-            if( config && config.gcsfuseOptions )
-                mountOptions.addAll(config.gcsfuseOptions)
-            if( config && config.googleOpts.enableRequesterPaysBuckets )
-                mountOptions << "--billing-project ${config.googleOpts.projectId}".toString()
+            if( config && config.batch.gcsfuseOptions )
+                mountOptions.addAll(config.batch.gcsfuseOptions)
+            if( config && config.enableRequesterPaysBuckets )
+                mountOptions.add("--billing-project ${config.projectId}".toString())
 
             result.add(
                 Volume.newBuilder()
@@ -184,9 +186,22 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    GoogleBatchScriptLauncher withConfig(BatchConfig config) {
+    @Override
+    protected Path targetStageFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
+    }
+
+    GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
+        addLogsBucket(config.batch.logsPath())
         return this
+    }
+
+    protected void addLogsBucket(Path path) {
+        if( path instanceof CloudStoragePath )
+            buckets.add(path.bucket())
+        else if( path != null )
+            throw new IllegalArgumentException("Unexpected value for Google Batch logs path: ${path.toUriString()}")
     }
 
     GoogleBatchScriptLauncher withIsArray(boolean value) {
@@ -204,7 +219,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     }
 
     static String launchCommand( String workDir ) {
-        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" EXIT; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
     }
 
     static String containerMountPath(CloudStoragePath path) {

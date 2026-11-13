@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.IllegalFileException
+import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
@@ -168,7 +169,7 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
     @PackageScope
     String relativize(String path, Path workDir) {
         if( !path.startsWith('/') )
-            return path
+            return FileHelper.stripCurrentDirSegments(path)
 
         final dir = workDir.toString()
         if( !path.startsWith(dir) )
@@ -182,8 +183,10 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
 
     @PackageScope
     String relativize(Path path, Path workDir) {
-        if( !path.isAbsolute() )
-            return glob ? FilePatternSplitter.GLOB.escape(path) : path
+        if( !path.isAbsolute() ) {
+            final rel = FileHelper.stripCurrentDirSegments(path.toString())
+            return glob ? FilePatternSplitter.GLOB.escape(rel) : rel
+        }
 
         if( !path.startsWith(workDir) )
             throw new IllegalFileException("File `$path` is outside the scope of the process work directory: $workDir")

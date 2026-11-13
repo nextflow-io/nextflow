@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@
 package nextflow.util
 
 import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Future
 import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.TimeUnit
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.util.logging.Slf4j
@@ -185,7 +187,7 @@ class ThrottlingExecutorTest extends Specification {
         exec.backOff0(limiter)
         then:
         limiter.rate == 0.5
-        change == 1 
+        change == 1
     }
 
     def 'should not decrease submit rate' () {
@@ -210,9 +212,9 @@ class ThrottlingExecutorTest extends Specification {
     def 'should throttle requests' () {
 
         given:
-        def opts = new ThrottlingExecutor.Options().withRateLimit('1/sec')
-        def exec = ThrottlingExecutor.create(opts)
         long begin = System.currentTimeMillis()
+        def opts = new ThrottlingExecutor.Options().withRateLimit('10/sec')
+        def exec = ThrottlingExecutor.create(opts)
 
         when:
         List<Future> futures = []
@@ -221,12 +223,12 @@ class ThrottlingExecutorTest extends Specification {
             futures << exec.submit( { log.info "tick=${count++}" } )
         }
 
-        futures.each {  while(!it.isDone()) sleep(500) }
+        futures.each { it.get() }
         long delta = System.currentTimeMillis()-begin
-        println "delta=$delta"
         then:
-        delta > 3_000
-        delta < 5_000
+        // 5 requests at 10/sec need at least 400 ms
+        delta >= 350
+        delta < 2_000
         count == 5
     }
 
@@ -238,24 +240,27 @@ class ThrottlingExecutorTest extends Specification {
 
         when:
         int seq = 0
+        // hold the single worker until the other tasks are queued
+        def release = new CountDownLatch(1)
         def f1 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
-            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override protected Object invoke() { release.await(5, TimeUnit.SECONDS); return ++seq }
         })
         def f2 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
-            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override protected Object invoke() { return ++seq }
         })
         def f3 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
-            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override protected Object invoke() { return ++seq }
             @Override byte getPriority() { 10 as byte }
         })
         def f4 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
-            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override protected Object invoke() { return ++seq }
             @Override byte getPriority() { 20 as byte }
         })
         def f5 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
-            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override protected Object invoke() { return ++seq }
             @Override byte getPriority() { 30 as byte }
         })
+        release.countDown()
 
         then:
         f1.get() == 1
@@ -275,7 +280,7 @@ class ThrottlingExecutorTest extends Specification {
         q.offer( 20 as byte )
         q.offer( 0 as byte )
 
-        expect: 
+        expect:
         q.take() == -10
         q.take() == 0
         q.take() == 10

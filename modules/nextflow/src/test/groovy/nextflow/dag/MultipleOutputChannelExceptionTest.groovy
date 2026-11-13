@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,6 @@ class MultipleOutputChannelExceptionTest extends Specification {
         MultipleOutputChannelException.message('channel1',node1,node1) == 'Channel `channel1` has been used as an output by more than a process or an operator'
 
     }
-    
-    
+
+
 }

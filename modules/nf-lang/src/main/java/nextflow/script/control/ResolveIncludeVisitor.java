@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,25 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -46,6 +53,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private URI uri;
 
+    private Path projectDir;
+
     private Compiler compiler;
 
     private Set<URI> changedUris;
@@ -54,15 +63,16 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private boolean changed;
 
-    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler, Set<URI> changedUris) {
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler, Set<URI> changedUris) {
         this.sourceUnit = sourceUnit;
         this.uri = sourceUnit.getSource().getURI();
         this.compiler = compiler;
         this.changedUris = changedUris;
+        this.projectDir = projectDir;
     }
 
-    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler) {
-        this(sourceUnit, compiler, null);
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler) {
+        this(sourceUnit, projectDir, compiler, null);
     }
 
     @Override
@@ -83,12 +93,21 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             setPlaceholderTargets(node);
             return;
         }
-        var includeUri = getIncludeUri(uri, source);
+
+        URI includeUri;
+        try {
+            includeUri = ModuleResolver.getIncludeUri(uri, source, projectDir);
+        }
+        catch( Exception e ) {
+            addError(e.getMessage(), node);
+            return;
+        }
+
         if( !isIncludeStale(node, includeUri) )
             return;
         changed = true;
-        for( var module : node.modules )
-            module.setTarget(null);
+        for( var entry : node.entries )
+            entry.setTarget(null);
         var includeUnit = compiler.getSource(includeUri);
         if( includeUnit == null ) {
             addError("Invalid include source: '" + includeUri.getPath() + "'", node);
@@ -98,55 +117,91 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             addError("Module could not be parsed: '" + includeUri.getPath() + "'", node);
             return;
         }
+        var scriptNode = (ScriptNode) includeUnit.getAST();
         var definitions = getDefinitions(includeUri);
-        for( var module : node.modules ) {
-            var includedName = module.name;
-            var includedNode = definitions.stream()
-                .filter(defNode -> includedName.equals(defNode.getName()))
-                .findFirst();
-            if( !includedNode.isPresent() ) {
+        var hasPipeline = false;
+        for( var entry : node.entries ) {
+            var includedName = entry.name;
+            // a `params` entry that doesn't match a definition of the module
+            // refers to the params block of the pipeline
+            var target = definitions.stream()
+                .filter(defNode -> includedName.equals(definitionName(defNode)))
+                .findFirst()
+                .orElseGet(() -> paramsBlockType(scriptNode, entry));
+            if( target == null ) {
                 addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
                 continue;
             }
-            module.setTarget(includedNode.get());
+            hasPipeline |= target instanceof WorkflowNode wn && wn.isEntry()
+                || target instanceof ClassNode cn && ScriptNode.isPipelineParams(cn);
+            entry.setTarget(target);
         }
+        if( hasPipeline && !((ScriptNode) sourceUnit.getAST()).isTypingEnabled() )
+            addError("Including a pipeline requires `nextflow.enable.types = true` in the including script", node);
+        if( hasPipeline && !scriptNode.isTypingEnabled() )
+            addError("An included pipeline must enable static typing -- set `nextflow.enable.types = true` in '" + includeUri.getPath() + "'", node);
+    }
+
+    /**
+     * Synthesize a record type from the params block of an included
+     * pipeline. The type checker makes it partial (all fields nullable).
+     */
+    private static ClassNode paramsBlockType(ScriptNode sn, IncludeEntryNode entry) {
+        var block = sn.getParams();
+        if( !"params".equals(entry.name) || block == null )
+            return null;
+        var cn = new RecordNode(entry.getNameOrAlias());
+        ScriptNode.setPipelineParams(cn);
+        for( var declaration : block.declarations ) {
+            cn.addField(new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null));
+        }
+        return cn;
     }
 
     private static void setPlaceholderTargets(IncludeNode node) {
-        for( var module : node.modules ) {
-            if( module.getTarget() == null ) {
-                var target = new FunctionNode(module.getNameOrAlias());
-                module.setTarget(target);
+        for( var entry : node.entries ) {
+            if( entry.getTarget() == null ) {
+                var target = new FunctionNode(entry.getNameOrAlias());
+                target.setReturnType(ClassHelper.dynamicType());
+                target.setSynthetic(true);
+                entry.setTarget(target);
             }
         }
-    }
-
-    private static URI getIncludeUri(URI uri, String source) {
-        Path includePath = Path.of(uri).getParent().resolve(source);
-        if( Files.isDirectory(includePath) )
-            includePath = includePath.resolve("main.nf");
-        else if( !source.endsWith(".nf") )
-            includePath = Path.of(includePath.toString() + ".nf");
-        return includePath.normalize().toUri();
     }
 
     private boolean isIncludeStale(IncludeNode node, URI includeUri) {
         if( changedUris == null || changedUris.contains(uri) || changedUris.contains(includeUri) )
             return true;
-        for( var module : node.modules ) {
-            if( module.getTarget() == null )
+        for( var entry : node.entries ) {
+            if( entry.getTarget() == null )
                 return true;
         }
         return false;
     }
 
-    private List<MethodNode> getDefinitions(URI uri) {
+    private List<AnnotatedNode> getDefinitions(URI uri) {
         var scriptNode = (ScriptNode) compiler.getSource(uri).getAST();
-        var result = new ArrayList<MethodNode>();
+        var result = new ArrayList<AnnotatedNode>();
         result.addAll(scriptNode.getWorkflows());
         result.addAll(scriptNode.getProcesses());
+        result.addAll(scriptNode.getAgents());
         result.addAll(scriptNode.getFunctions());
+        result.addAll(scriptNode.getTypes());
         return result;
+    }
+
+    /**
+     * An entire pipeline -- the `params` / `workflow` / `output` trio of a
+     * script -- can be included as a named workflow, using the `workflow`
+     * keyword to refer to the entry workflow of the included script.
+     */
+    private static String definitionName(AnnotatedNode node) {
+        if( node instanceof WorkflowNode wn && wn.isEntry() )
+            return "workflow";
+        return
+            node instanceof ClassNode cn ? cn.getNameWithoutPackage() :
+            node instanceof MethodNode mn ? mn.getName() :
+            null;
     }
 
     @Override

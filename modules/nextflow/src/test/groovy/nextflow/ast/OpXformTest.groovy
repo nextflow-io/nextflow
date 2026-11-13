@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ class OpXformTest extends Specification {
         class OpTest {
             def branch(Closure c) { c.call() }
         }
-        
+
         new OpTest().branch ( $stmt )
 
         """)
@@ -59,7 +59,7 @@ class OpXformTest extends Specification {
         class OpTest {
             def multiMap(Closure c) { c.call() }
         }
-        
+
         new OpTest().multiMap ( $stmt )
 
         """)
@@ -67,7 +67,7 @@ class OpXformTest extends Specification {
         return (TokenMultiMapDef)result
     }
 
-    def 'should transform basic switch' () {
+    def 'should transform basic branch' () {
         when:
         def result = eval_branch('''{
             x: it < 1; return 'hello'
@@ -76,7 +76,7 @@ class OpXformTest extends Specification {
 
         then:
         result instanceof TokenBranchDef
-        result.closure instanceof Closure<TokenBranchChoice>
+        result.closure instanceof Closure
         result.branches == ['x','y']
         and:
         result.closure.call(0).value == 'hello'
@@ -88,7 +88,7 @@ class OpXformTest extends Specification {
         result.closure.call(1) == null
     }
 
-    def 'should transform switch statement' () {
+    def 'should transform branch statements' () {
         when:
         def result = eval_branch('''
             {
@@ -106,7 +106,7 @@ class OpXformTest extends Specification {
     }
 
 
-    def 'should return implicit values' () {
+    def 'should return implicit param in branch' () {
         when:
         def result = eval_branch('''
             {
@@ -123,7 +123,7 @@ class OpXformTest extends Specification {
         result.closure(1) == new TokenBranchChoice(1, 'z')
     }
 
-    def 'should return explicit param' () {
+    def 'should return explicit param in branch' () {
         when:
         def result = eval_branch('''
         { p ->
@@ -141,14 +141,14 @@ class OpXformTest extends Specification {
     }
 
 
-    def 'should allow arbitrary prolog code' () {
+    def 'should allow arbitrary prolog code in branch' () {
         when:
         def result = eval_branch('''
             { p ->
                 def alpha=1
                 def delta=2
                 def omega=alpha+delta
-                x: p < 1; 
+                x: p < 1;
                 return omega;
             }
         ''')
@@ -160,14 +160,14 @@ class OpXformTest extends Specification {
     }
 
 
-    def 'should parse fork block' () {
+    def 'should parse multiMap block' () {
         when:
         def result = eval_multiMap('''
-            { it -> 
+            { it ->
                 foo:
                 it+1
-                
-                bar: 
+
+                bar:
                 it*it
             }
         ''')
@@ -180,15 +180,15 @@ class OpXformTest extends Specification {
     }
 
 
-    def 'should parse fork multi-block' () {
+    def 'should parse multiMap multi-block' () {
         when:
         def result = eval_multiMap('''
-            { it -> 
+            { it ->
                 alpha:
                 beta:
                 delta:
                 it+1
-                
+
                 omega:
                 it*2
             }
@@ -200,10 +200,10 @@ class OpXformTest extends Specification {
     }
 
 
-    def 'should parse fork long ending' () {
+    def 'should parse multiMap long ending' () {
         when:
         def result = eval_multiMap('''
-            { it -> 
+            { it ->
                 alpha:
                 it+1
                 omega:
@@ -218,7 +218,7 @@ class OpXformTest extends Specification {
         result.closure.call(10) == [alpha:11, omega:13]
     }
 
-    def 'should parse empty fork' () {
+    def 'should parse empty multiMap' () {
         when:
         eval_multiMap('''
             { it -> it+1 }
@@ -226,6 +226,6 @@ class OpXformTest extends Specification {
 
         then:
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.contains "The forking criteria should define at least two target channels"
+        e.message.contains "multiMap criteria should declare at least two outputs"
     }
 }

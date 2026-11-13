@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.fusion
@@ -20,6 +19,7 @@ package nextflow.fusion
 import static nextflow.fusion.FusionConfig.FUSION_PATH
 import static nextflow.fusion.FusionHelper.*
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -30,7 +30,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Escape
 /**
  * Command script launcher implementing the support for Fusion files
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -50,9 +50,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.workDir = toContainerMount(bean.workDir, scheme)
         bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
-        // remap input files to container mounted paths
+        // remap input files to container mounted paths; a local one was accepted by a ForeignFileFilter and is linked where it is
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
+            if( entry.value.fileSystem != FileSystems.default )
+                bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
         }
 
         // make it change to the task work dir

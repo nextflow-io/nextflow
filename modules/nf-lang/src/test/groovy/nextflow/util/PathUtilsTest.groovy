@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import spock.lang.Specification
+import spock.lang.TempDir
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDirInMem
 import static test.TestUtils.tempFile
 
 /**
@@ -31,9 +30,11 @@ import static test.TestUtils.tempFile
  */
 class PathUtilsTest extends Specification {
 
+    @TempDir
+    Path root
+
     def 'should visit all files in a directory that satisfy a condition' () {
         given:
-        def root = tempDirInMem()
         def files = [
             'main.nf',
             'nextflow.config',
@@ -55,14 +56,11 @@ class PathUtilsTest extends Specification {
             path -> result.add(root.relativize(path).toString()) )
         then:
         result == files.findAll { filename -> filename.endsWith('.nf') }.toSet()
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should determine whether a path is excluded' () {
         given:
-        def patterns = [ '.git', '.nf-test', 'work', 'foo/bar' ]
+        def patterns = [ '.git', '.nf-test', 'work', 'foo/bar', 'nf-test.config' ]
 
         expect:
         result == PathUtils.isExcluded(Path.of(path), patterns)
@@ -74,6 +72,8 @@ class PathUtilsTest extends Specification {
         'modules/foo/.nf-test'          | true
         'modules/foo/bar'               | true
         'work'                          | true
+        'nf-test.config'                | true
+        'modules/foo/nf-test.config'    | true
         'main.nf'                       | false
         'modules/foo/main.nf'           | false
         'subworkflows/foobar/main.nf'   | false

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.control.ClassNodeResolver;
@@ -60,9 +62,19 @@ import static org.codehaus.groovy.ast.tools.ClosureUtils.getParametersSafe;
  */
 public class ResolveVisitor extends ClassCodeExpressionTransformer {
 
-    public static final String[] DEFAULT_PACKAGE_PREFIXES = { "java.lang.", "java.util.", "java.io.", "java.net.", "groovy.lang.", "groovy.util." };
-
-    public static final String[] EMPTY_STRING_ARRAY = new String[0];
+    public static final ClassNode[] STANDARD_TYPES = {
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
+        ClassHelper.Boolean_TYPE,
+        ClassHelper.Float_TYPE,
+        ClassHelper.Integer_TYPE,
+        ClassHelper.LIST_TYPE,
+        ClassHelper.MAP_TYPE,
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Record.class),
+        ClassHelper.SET_TYPE,
+        ClassHelper.STRING_TYPE,
+        ClassHelper.makeCached(nextflow.script.types.Tuple.class)
+    };
 
     private SourceUnit sourceUnit;
 
@@ -101,53 +113,70 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
     }
 
     public void resolveOrFail(ClassNode type, ASTNode node) {
-        if( !resolve(type) )
-            addError("`" + type.toString(false) + "` is not defined", node);
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        for( var ut : unresolvedTypes )
+            addError("`" + ut.toString(false) + "` is not defined", node);
     }
 
-    public boolean resolve(ClassNode type) {
-        var genericsTypes = type.getGenericsTypes();
-        resolveGenericsTypes(genericsTypes);
+    private boolean resolve(ClassNode type) {
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        return unresolvedTypes.isEmpty();
+    }
 
+    /**
+     * Resolve a type annotation, including generic type arguments.
+     *
+     * Returns the list of types that could not be resolved.
+     *
+     * @param type
+     * @param unresolvedTypes
+     */
+    private void resolve(ClassNode type, List<ClassNode> unresolvedTypes) {
+        if( !resolveType(type) )
+            unresolvedTypes.add(type);
+        var gts = type.getGenericsTypes();
+        if( gts == null )
+            return;
+        for( var gt : gts ) {
+            if( gt.isResolved() )
+                continue;
+            resolve(gt.getType(), unresolvedTypes);
+            gt.setResolved(gt.getType().isResolved());
+        }
+    }
+
+    private boolean resolveType(ClassNode type) {
         if( type.isPrimaryClassNode() )
             return true;
         if( type.isResolved() )
             return true;
-        if( resolveFromModule(type) )
+        if( !type.hasPackageName() && resolveFromModule(type) )
+            return true;
+        if( !type.hasPackageName() && resolveFromStandardTypes(type) )
             return true;
         if( resolveFromLibImports(type) )
             return true;
         if( !type.hasPackageName() && resolveFromDefaultImports(type) )
             return true;
-        return resolveFromClassResolver(type.getName()) != null;
-    }
-
-    private boolean resolveGenericsTypes(GenericsType[] types) {
-        if( types == null )
+        if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
-        boolean resolved = true;
-        for( var type : types ) {
-            if( !resolveGenericsType(type) )
-                resolved = false;
+        var redirect = resolveFromClassResolver(type.getName());
+        if( redirect != null ) {
+            type.setRedirect(redirect);
+            return true;
         }
-        return resolved;
-    }
-
-    private boolean resolveGenericsType(GenericsType genericsType) {
-        if( genericsType.isResolved() )
+        if( resolveAsInnerClass(type) )
             return true;
-        var type = genericsType.getType();
-        resolveOrFail(type, genericsType);
-        if( resolveGenericsTypes(type.getGenericsTypes()) )
-            genericsType.setResolved(genericsType.getType().isResolved());
-        return genericsType.isResolved();
+        return false;
     }
 
     protected boolean resolveFromModule(ClassNode type) {
         var name = type.getName();
         var module = sourceUnit.getAST();
         for( var cn : module.getClasses() ) {
-            if( name.equals(cn.getName()) ) {
+            if( name.equals(cn.getNameWithoutPackage()) ) {
                 if( cn != type )
                     type.setRedirect(cn);
                 return true;
@@ -156,10 +185,19 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         return false;
     }
 
+    protected boolean resolveFromStandardTypes(ClassNode type) {
+        for( var cn : STANDARD_TYPES ) {
+            if( cn.getNameWithoutPackage().equals(type.getName()) ) {
+                type.setRedirect(cn);
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected boolean resolveFromLibImports(ClassNode type) {
-        var name = type.getName();
         for( var cn : libImports ) {
-            if( name.equals(cn.getName()) ) {
+            if( cn.getName().equals(type.getName()) ) {
                 type.setRedirect(cn);
                 return true;
             }
@@ -168,22 +206,29 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
     }
 
     protected boolean resolveFromDefaultImports(ClassNode type) {
-        // resolve from script imports
-        var typeName = type.getName();
         for( var cn : defaultImports ) {
-            if( typeName.equals(cn.getNameWithoutPackage()) ) {
+            if( cn.getNameWithoutPackage().equals(type.getName()) ) {
                 type.setRedirect(cn);
                 return true;
             }
         }
-        // resolve from default imports cache
+        return false;
+    }
+
+    private static final String[] DEFAULT_PACKAGE_PREFIXES = { "java.lang.", "java.util.", "java.io.", "java.net.", "groovy.lang.", "groovy.util." };
+
+    private static final String[] EMPTY_STRING_ARRAY = new String[0];
+
+    protected boolean resolveFromGroovyImports(ClassNode type) {
+        var typeName = type.getName();
+        // resolve from Groovy imports cache
         var packagePrefixSet = DEFAULT_IMPORT_CLASS_AND_PACKAGES_CACHE.get(typeName);
         if( packagePrefixSet != null ) {
-            if( resolveFromDefaultImports(type, packagePrefixSet.toArray(EMPTY_STRING_ARRAY)) )
+            if( resolveFromGroovyImports(type, packagePrefixSet.toArray(EMPTY_STRING_ARRAY)) )
                 return true;
         }
-        // resolve from default imports
-        if( resolveFromDefaultImports(type, DEFAULT_PACKAGE_PREFIXES) ) {
+        // resolve from Groovy imports
+        if( resolveFromGroovyImports(type, DEFAULT_PACKAGE_PREFIXES) ) {
             return true;
         }
         if( "BigInteger".equals(typeName) ) {
@@ -202,7 +247,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         DEFAULT_IMPORT_CLASS_AND_PACKAGES_CACHE.putAll(VMPluginFactory.getPlugin().getDefaultImportClasses(DEFAULT_PACKAGE_PREFIXES));
     }
 
-    protected boolean resolveFromDefaultImports(ClassNode type, String[] packagePrefixes) {
+    protected boolean resolveFromGroovyImports(ClassNode type, String[] packagePrefixes) {
         var typeName = type.getName();
         for( var packagePrefix : packagePrefixes ) {
             var redirect = resolveFromClassResolver(packagePrefix + typeName);
@@ -223,9 +268,38 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var lookupResult = classNodeResolver.resolveName(name, compilationUnit);
         if( lookupResult == null )
             return null;
-        if( !lookupResult.isClassNode() )
-            throw new GroovyBugError("class resolver lookup result is not a class node");
-        return lookupResult.getClassNode();
+        if( lookupResult.isClassNode() )
+            return lookupResult.getClassNode();
+        // When a Groovy class from the lib directory is used, the class
+        // loader returns the URI of the Groovy file. We only need to compile
+        // the Groovy file enough to resolve the class definition for the purpose
+        // of name checking.
+        var su = lookupResult.getSourceUnit();
+        return GroovyCompiler.compile(su).stream()
+            .filter(cn -> cn.getName().equals(name))
+            .findFirst().orElse(null);
+    }
+
+    /**
+     * Try to resolve a ClassNode as an inner class by replacing dots with $.
+     * For example, "groovy.json.JsonGenerator.Options" becomes "groovy.json.JsonGenerator$Options".
+     * This method tries all possible combinations from right to left.
+     *
+     * @param type
+     */
+    protected boolean resolveAsInnerClass(ClassNode type) {
+        var className = type.getName();
+        int lastDot = className.lastIndexOf('.');
+        while( lastDot > 0 ) {
+            var innerClassName = className.substring(0, lastDot) + '$' + className.substring(lastDot + 1);
+            var redirect = resolveFromClassResolver(innerClassName);
+            if( redirect != null ) {
+                type.setRedirect(redirect);
+                return true;
+            }
+            lastDot = className.lastIndexOf('.', lastDot - 1);
+        }
+        return false;
     }
 
     @Override
@@ -254,6 +328,11 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         else if( exp instanceof ConstructorCallExpression cce ) {
             result = transformConstructorCallExpression(cce);
         }
+        else if( exp instanceof TernaryExpression ) {
+            // the type of a ternary is inferred from its branches (since Groovy 5)
+            // and may contain wildcards, so it should not be resolved
+            result = exp.transformExpression(this);
+        }
         else {
             resolveOrFail(exp.getType(), exp);
             result = exp.transformExpression(this);
@@ -278,13 +357,17 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         }
         if( inVariableDeclaration ) {
             // resolve type of variable declaration
-            resolveOrFail(ve.getType(), ve);
-            var origin = ve.getOriginType();
-            if( origin != ve.getType() )
-                resolveOrFail(origin, ve);
+            resolveOrFail(ve);
         }
         // if the variable is still dynamic (i.e. unresolved), it will be handled by DynamicVariablesVisitor
         return ve;
+    }
+
+    public void resolveOrFail(VariableExpression ve) {
+        resolveOrFail(ve.getType(), ve);
+        var origin = ve.getOriginType();
+        if( origin != ve.getType() )
+            resolveOrFail(origin, ve);
     }
 
     protected Expression transformPropertyExpression(PropertyExpression pe) {
@@ -294,13 +377,15 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         property = transform(pe.getProperty());
         var result = new PropertyExpression(objectExpression, property, pe.isSafe());
         result.setSpreadSafe(pe.isSpreadSafe());
+        result.copyNodeMetaData(pe);
         // attempt to resolve property expression as a fully-qualified class name
         var className = lookupClassName(result);
         if( className != null ) {
             var type = ClassHelper.make(className);
-            type.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
-            if( resolve(type) )
+            if( resolve(type) ) {
+                type.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
                 return new ClassExpression(type);
+            }
         }
         return result;
     }

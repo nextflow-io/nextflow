@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.file
@@ -22,6 +21,8 @@ import static java.nio.file.StandardWatchEventKinds.*
 import java.nio.file.Files
 import java.nio.file.Path
 
+import org.apache.commons.io.monitor.FileAlterationMonitor
+import org.apache.commons.io.monitor.FileAlterationObserver
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -34,22 +35,21 @@ class DirWatcherV2Test extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def watcher = new DirWatcherV2('glob', "$folder/", 'hola.txt', false, 'create', folder.getFileSystem())
+        def watcher = newWatcher(folder, 'hola.txt', 'create')
 
         when:
         List results = []
         watcher.apply { Path file -> results.add(file.name) }
-        sleep 500
         Files.createFile(folder.resolve('hello.txt'))
         Files.createFile(folder.resolve('hola.txt'))
         TestHelper.stopUntil { results.size() == 1  }
-        watcher.terminate()
 
         then:
         results.size() == 1
         results.contains('hola.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -59,17 +59,15 @@ class DirWatcherV2Test extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def watcher = new DirWatcherV2('glob', "$folder/", '*.txt', false, 'create', folder.getFileSystem())
+        def watcher = newWatcher(folder, '*.txt', 'create')
 
         when:
         List results = []
         watcher.apply { Path file -> results.add(file.name) }
-        sleep 500
         Files.createFile(folder.resolve('hello.txt'))
         Files.createFile(folder.resolve('hola.txt'))
         Files.createFile(folder.resolve('ciao.fasta'))
         TestHelper.stopUntil { results.size() == 2  }
-        watcher.terminate()
 
         then:
         results.size() == 2
@@ -77,6 +75,7 @@ class DirWatcherV2Test extends Specification {
         results.contains('hola.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -89,16 +88,14 @@ class DirWatcherV2Test extends Specification {
         Files.createFile(folder.resolve('hola.txt'))
         Files.createFile(folder.resolve('ciao.txt'))
 
-        def watcher = new DirWatcherV2('glob', "$folder/", '*', false, 'modify,delete', folder.getFileSystem())
+        def watcher = newWatcher(folder, '*', 'modify,delete')
 
         when:
         Set results = []
         watcher.apply { Path file -> results.add(file.name) }
-        sleep 1000
         folder.resolve('hello.txt').text = '1'
         folder.resolve('ciao.txt').delete()
         TestHelper.stopUntil { results.size() == 2 }
-        watcher.terminate()
 
         then:
         results.size() == 2
@@ -106,6 +103,7 @@ class DirWatcherV2Test extends Specification {
         results.contains('ciao.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -116,19 +114,17 @@ class DirWatcherV2Test extends Specification {
         def folder = Files.createTempDirectory('test')
         Files.createDirectories(folder.resolve('foo/bar'))
 
-        def watcher = new DirWatcherV2('glob', "$folder/", '**.txt', false, 'create', folder.getFileSystem())
+        def watcher = newWatcher(folder, '**.txt', 'create')
 
         when:
         List results = []
         watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
-        sleep 500
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
         folder.resolve('foo/ciao.fa').text = '3'
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.fa').text = '5'
         TestHelper.stopUntil { results.size() == 3 }
-        watcher.terminate()
 
         then:
         results.size() == 3
@@ -137,6 +133,7 @@ class DirWatcherV2Test extends Specification {
         results.contains('foo/bar/bonjour.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -147,19 +144,17 @@ class DirWatcherV2Test extends Specification {
         def folder = Files.createTempDirectory('test')
         Files.createDirectories(folder.resolve('foo/bar'))
 
-        def watcher = new DirWatcherV2('glob', "$folder/", '**/h*', false, 'create', folder.getFileSystem())
+        def watcher = newWatcher(folder, '**/h*', 'create')
 
         when:
         List results = []
         watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
-        sleep 500
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
         folder.resolve('foo/ciao.fa').text = '3'
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.fa').text = '5'
         TestHelper.stopUntil { results.size() == 2 }
-        watcher.terminate()
 
         then:
         results.size() == 2
@@ -167,6 +162,7 @@ class DirWatcherV2Test extends Specification {
         results.contains('foo/bar/hallo.fa')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -176,21 +172,18 @@ class DirWatcherV2Test extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
 
-        def watcher = new DirWatcherV2('glob', "$folder/", '**/*.txt', false, 'create', folder.getFileSystem())
+        def watcher = newWatcher(folder, '**/*.txt', 'create')
 
         when:
         List results = []
         watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
-        sleep 500
         Files.createDirectories(folder.resolve('foo/bar'))
-        sleep 10000
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
         folder.resolve('foo/ciao.txt').text = '3'
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.doc').text = '5'
         TestHelper.stopUntil { results.size() == 3 }
-        watcher.terminate()
 
         then:
         results.size() == 3
@@ -199,11 +192,19 @@ class DirWatcherV2Test extends Specification {
         results.contains('foo/bar/bonjour.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
 
 
+
+    /** Poll every 100 ms; {@code monitor.start()} snapshots the dir, so no settle sleep is needed. */
+    private static DirWatcherV2 newWatcher(Path folder, String pattern, String events) {
+        final watcher = new DirWatcherV2('glob', "$folder/", pattern, false, events, folder.getFileSystem())
+        watcher.@monitor = new FileAlterationMonitor(100, watcher.@observer as FileAlterationObserver)
+        return watcher
+    }
 
     def 'should convert string events'() {
         given:

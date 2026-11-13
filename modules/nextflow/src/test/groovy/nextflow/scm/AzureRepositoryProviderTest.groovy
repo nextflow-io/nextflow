@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,12 @@ import nextflow.exception.AbortOperationException
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Tobias Neumann <tobias.neumann.at@gmail.com>
  */
+@Timeout(60)
 class AzureRepositoryProviderTest extends Specification {
 
     static final String CONFIG = '''
@@ -51,7 +53,6 @@ class AzureRepositoryProviderTest extends Specification {
         't-neumann/hello'                   | ['t-neumann', 'hello', 'hello']
         'ORGANIZATION/PROJECT/hello'        | ['ORGANIZATION','PROJECT','hello']
         'ORGANIZATION/PROJECT/_git/hello'   | ['ORGANIZATION','PROJECT','hello']
-
     }
 
     def 'should throw exception if wrong path' () {
@@ -69,7 +70,6 @@ class AzureRepositoryProviderTest extends Specification {
     }
 
     def 'should return repo url' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
@@ -85,7 +85,6 @@ class AzureRepositoryProviderTest extends Specification {
     }
 
     def 'should return project URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
@@ -97,29 +96,26 @@ class AzureRepositoryProviderTest extends Specification {
         't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello'
         'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
         'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_git/hello'
-
     }
 
     def 'should return content URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf'
-
     }
 
     def 'should return content URL for revision' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
-
+        and:
+        new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("test/branch+with&strangecharacters").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     /*
@@ -142,7 +138,26 @@ class AzureRepositoryProviderTest extends Specification {
         then:
         result == 'println "Hello from Azure repos!"'
 
+
     }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should read bytes file content'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_light.png')
+
+        then:
+        result.length == 22915
+        result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
+    }
+
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
@@ -179,7 +194,8 @@ class AzureRepositoryProviderTest extends Specification {
         result == [
                 new RepositoryProvider.BranchInfo('dev', 'cc0ca18640a5c995231e22d91f1527d5155d024b'),
                 new RepositoryProvider.BranchInfo('feature-x', '13456a001ba5a27d643755614ab8e814d94ef888'),
-                new RepositoryProvider.BranchInfo('master', 'f84130388714582e20f0e2ff9a44b41978ec8929'),
+                new RepositoryProvider.BranchInfo('master', 'a207636e419f18c4b8c8586b00e329ab4788a7f5'),
+                new RepositoryProvider.BranchInfo('test/branch+with&special-chars','a207636e419f18c4b8c8586b00e329ab4788a7f5')
         ]
     }
 
@@ -216,6 +232,15 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('file-on-dev.txt')
         then:
         result=='hello\n'
+
+        when:
+        // check revision with special branches
+        repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        repo.revision = 'test/branch+with&special-chars'
+        result = repo.readText('main.nf')
+        then:
+        result == 'println "Hello from Azure repos!"'
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -233,5 +258,69 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('file-on-dev.txt')
         then:
         result=='hello\n'
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+
+        when:
+        def entries = repo.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'docs' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path == '/docs/images/nf-core-rnaseq_logo_light.png' }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should list docs directory contents'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+
+        when:
+        def entries = repo.listDirectory("/docs", 1)
+
+        then:
+        entries.size() > 0
+        entries.every { it.path.startsWith('/docs/') }
+        entries.any { it.name == 'images' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path == '/docs/images/nf-core-rnaseq_logo_light.png' }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+
+        when:
+        def entries = repo.listDirectory("/docs", 2)
+
+        then:
+        entries.size() > 0
+        entries.every { it.path.startsWith('/docs/') }
+        // Should include both the subdirectory and files within it up to depth 2
+        entries.any { it.name == 'images' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        entries.any { it.name == 'nf-core-rnaseq_logo_light.png' && it.path == '/docs/images/nf-core-rnaseq_logo_light.png'  && it.type == RepositoryProvider.EntryType.FILE }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,18 +22,17 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
 import com.sun.net.httpserver.BasicAuthenticator
 import com.sun.net.httpserver.Headers
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import groovy.transform.CompileStatic
-import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
-import test.TestHelper
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 
 /**
  *
@@ -44,95 +43,60 @@ class HttpFilesTests extends Specification {
     @Rule
     WireMockRule wireMockRule = new WireMockRule(0)
 
-    def 'should read http file from WireMock' () {
-
-        given:
-        def wireMock = new WireMockGroovy(wireMockRule.port())
-        def localhost = "http://localhost:${wireMockRule.port()}"
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/index.html"
-            }
-            response {
-                status 200
-                body """a
-                 b
-                 c
-                 d
-                 """
-                headers {
-                    "Content-Type" "text/html"
-                    "Content-Length" "10"
-                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
-                }
-            }
-        }
-
-        when:
-        def path = Paths.get(new URI("${localhost}/index.html"))
-        then:
-        Files.size(path) == 10
-        Files.getLastModifiedTime(path).toString() == "2016-11-04T21:50:34Z"
-
-        when:
-        def path2 = Paths.get(new URI("${localhost}missing.html"))
-        then:
-        !Files.exists(path2)
+    def setup() {
+        XFileSystemConfig.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0']))
     }
 
-    def 'should re-try read file' () {
-        given:
-        def RESP = 'Hello world'
-        and:
-        // launch web server
-        def attempt = 0
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new BasicHandler(RESP, { ++attempt < 3 ? 404 : 200 } ));
-
-        server.start()
-
-        when:
-        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
-        then:
-        path.text == 'Hello world'
-        and:
-        attempt == 3
-
-        cleanup:
-        server?.stop(0)
+    def cleanup() {
+        XFileSystemConfig.reset()
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def 'read a http file ' () {
+    static final String BODY = 'line 1\nline 2\nline 3\n'
+
+    static final String LAST_MODIFIED = 'Fri, 04 Nov 2016 21:50:34 GMT'
+
+    private String stubFile(String name) {
+        wireMockRule.stubFor(get(urlEqualTo(name))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody(BODY)
+                .withHeader('Content-Type', 'text/plain')
+                .withHeader('Content-Length', BODY.size().toString())
+                .withHeader('Last-Modified', LAST_MODIFIED)))
+        return "http://localhost:${wireMockRule.port()}${name}"
+    }
+
+    private String stubMissing(String name) {
+        wireMockRule.stubFor(get(urlEqualTo(name)).willReturn(aResponse().withStatus(404)))
+        return "http://localhost:${wireMockRule.port()}${name}"
+    }
+
+    def 'should read a http file' () {
         given:
-        def uri = new URI('http://www.nextflow.io/index.html')
-        when:
-        def path = Paths.get(uri)
-        then:
+        def path = Paths.get(new URI(stubFile('/index.txt')))
+
+        expect:
         path instanceof XPath
-
-        when:
-        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
-        then:
-        lines.size()>0
-        lines[0].startsWith('<!DOCTYPE html><html lang="en">')
-        
+        path.fileSystem.provider() instanceof HttpFileSystemProvider
+        and:
+        path.text == BODY
+        Files.readAllLines(path, Charset.forName('UTF-8')) == ['line 1', 'line 2', 'line 3']
+        new String(Files.readAllBytes(path), Charset.forName('UTF-8')) == BODY
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should check file properties' () {
         given:
-        SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '1'])
+        XFileSystemConfig.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0', NXF_HTTPFS_MAX_ATTEMPTS: '1']))
+        and:
+        def url = stubFile('/index.txt')
+        def path1 = Paths.get(new URI(url))
+        def path2 = Paths.get(new URI(stubMissing('/missing.txt')))
+        def path3 = Paths.get(new URI(url))
 
-        when:
-        def path1 = Paths.get(new URI('http://www.nextflow.io/index.html'))
-        def path2 = Paths.get(new URI('http://www.google.com/unknown'))
-        def path3 = Paths.get(new URI('http://www.nextflow.io/index.html'))
-
-        then:
+        expect:
         Files.exists(path1)
-        Files.size(path1) > 0
+        Files.size(path1) == BODY.size()
+        Files.getLastModifiedTime(path1).toString() == '2016-11-04T21:50:34Z'
         !Files.isDirectory(path1)
         Files.isReadable(path1)
         !Files.isExecutable(path1)
@@ -143,9 +107,67 @@ class HttpFilesTests extends Specification {
         Files.isSameFile(path1, path3)
         !Files.isSameFile(path1, path2)
         !Files.exists(path2)
+        and:
+        // the initial request plus one retry
+        wireMockRule.verify(2, getRequestedFor(urlEqualTo('/missing.txt')))
+    }
+
+    def 'should copy a file' () {
+        given:
+        def source = Paths.get(new URI(stubFile('/index.txt')))
+        def target = Files.createTempDirectory('nf').resolve('test.txt')
+
+        when:
+        Files.copy(source, target)
+        then:
+        target.text == BODY
 
         cleanup:
-        SysEnv.pop()
+        target?.parent?.deleteDir()
+    }
+
+    def 'should re-try read file' () {
+        given:
+        def RESP = 'Hello world'
+        and:
+        // launch web server
+        def attempt = 0
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
+        server.createContext("/", new BasicHandler(RESP, { ++attempt < 3 ? 404 : 200 } ));
+
+        server.start()
+
+        when:
+        def path = Paths.get(new URI("http://admin:Secret1@localhost:${server.address.port}/foo/bar"))
+        then:
+        path.text == 'Hello world'
+        and:
+        attempt == 3
+
+        cleanup:
+        server?.stop(0)
+    }
+
+    def 'should give up after max attempts' () {
+        given:
+        XFileSystemConfig.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0', NXF_HTTPFS_MAX_ATTEMPTS: '2']))
+        and:
+        def attempt = 0
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
+        server.createContext("/", new BasicHandler('Unavailable', { ++attempt; 503 } ))
+        server.start()
+
+        when:
+        Paths.get(new URI("http://localhost:${server.address.port}/foo/bar")).text
+        then:
+        def e = thrown(IOException)
+        e.message.contains('503')
+        and:
+        // the initial request plus two retries
+        attempt == 3
+
+        cleanup:
+        server?.stop(0)
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -160,71 +182,25 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read HTTPS file' () {
         given:
-        def uri = new URI('https://www.nextflow.io/index.html')
-        when:
-        def path = Paths.get(uri)
-        then:
+        def path = Paths.get(new URI('https://www.nextflow.io/index.html'))
+
+        expect:
         path instanceof XPath
-
-        when:
-        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
-        then:
-        lines.size()>0
-        lines[0].startsWith('<!DOCTYPE html><html lang="en">')
-    }
-
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def 'should copy a file' () {
-        given:
-        def uri = new URI('https://www.nextflow.io/index.html')
-        def source = Paths.get(uri)
-        def target = Files.createTempDirectory('nf').resolve('test.html')
-
-        when:
-        Files.copy(source, target)
-
-        then:
-        source.text == target.text
-
-        cleanup:
-        target?.parent?.deleteDir()
-    }
-
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def 'should read lines' () {
-        given:
-        def uri = new URI('http://www.nextflow.io/index.html')
-        when:
-        def path = Paths.get(uri)
-        then:
-        path instanceof XPath
-
-        when:
-        def str = new String(Files.readAllBytes(path), Charset.forName('UTF-8'))
-        then:
-        str.size()>0
-        str.startsWith('<!DOCTYPE html><html lang="en">')
+        path.fileSystem.provider() instanceof HttpsFileSystemProvider
+        Files.exists(path)
+        Files.readAllBytes(path).length > 0
     }
 
     def 'should read with a newByteChannel' () {
         given:
-        def wireMock = new WireMockGroovy(wireMockRule.port())
         def localhost = "http://localhost:${wireMockRule.port()}"
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/index.txt"
-            }
-            response {
-                status 200
-                body "01234567890123456789012345678901234567890123456789"
-                headers {
-                    "Content-Type" "text/html"
-                    "Content-Length" "50"
-                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
-                }
-            }
-        }
+        wireMockRule.stubFor(get(urlEqualTo("/index.txt"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("01234567890123456789012345678901234567890123456789")
+                .withHeader("Content-Type", "text/html")
+                .withHeader("Content-Length", "50")
+                .withHeader("Last-Modified", "Fri, 04 Nov 2016 21:50:34 GMT")))
 
         when:
         def path = Paths.get(new URI("${localhost}/index.txt"))
@@ -247,8 +223,7 @@ class HttpFilesTests extends Specification {
         def RESP = 'Hello world'
         and:
         // launch web server
-        int port = TestHelper.rndServerPort()
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
         def hc1 = server.createContext("/", new BasicHandler(RESP, 200));
 
         hc1.setAuthenticator(new BasicAuthenticator("get") {
@@ -260,7 +235,7 @@ class HttpFilesTests extends Specification {
         server.start()
 
         when:
-        def path = Paths.get(new URI("http://admin:Secret1@localhost:${port}/foo/bar"))
+        def path = Paths.get(new URI("http://admin:Secret1@localhost:${server.address.port}/foo/bar"))
         then:
         path.text == 'Hello world'
 
@@ -297,7 +272,7 @@ class HttpFilesTests extends Specification {
             for( Map.Entry<String,String> entry : allHeaders.entrySet() ) {
                 header.set(entry.key, entry.value)
             }
-            
+
             header.set("Content-Type", "text/plain")
             request.sendResponseHeaders(respCode.call(), body.size())
 

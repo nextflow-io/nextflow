@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,12 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.google.common.hash.Hashing
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import nextflow.Global
-import nextflow.Session
+import nextflow.ISession
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -69,31 +70,59 @@ class HashBuilderTest extends Specification {
         path3.delete()
 
     }
-    
+
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")
+        def ROOT = new File("/some/pipeline/")
         and:
-        Global.session = Mock(Session) { getBaseDir() >> BASE }
+        Global.session = Mock(ISession) { getBaseDir() >> BASE }
         then:
-        !HashBuilder.isAssetFile(BASE.resolve('foo'))
+        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
 
 
         when:
-        Global.session = Mock(Session) {
+        Global.session = Mock(ISession) {
             getBaseDir() >> BASE
             getCommitId() >> '123456'
         }
         then:
-        HashBuilder.isAssetFile(BASE.resolve('foo'))
+        HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
         and:
-        !HashBuilder.isAssetFile(Paths.get('/other/dir'))
+        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+
+        cleanup:
+        Global.session = null
+    }
+
+    def 'should validate is asset file when not part of base directory'() {
+        given:
+        Global.session = Mock(ISession) {
+            getBaseDir() >> Paths.get(BASE)
+            getCommitId() >> COMMIT_ID
+        }
+
+        expect:
+        HashBuilder.isAssetFile(Paths.get(PATH), new File(ROOT)) == EXPECTED
+
+        cleanup:
+        Global.session = null
+
+        where:
+        BASE                  | ROOT              | COMMIT_ID | PATH                       | EXPECTED
+        "/some/pipeline/dir"  | "/some/pipeline/" | null      | "/some/pipeline/dir/foo"   | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/other/dir'               | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/some/pipeline/foo'       | true
+        and:
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/other/pipeline/foo'      | false
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/this/pipeline/foo'       | true
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/that/pipeline/foo'       | true
     }
 
     def 'should hash file content'() {
         given:
         def EXPECTED = '64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c'
-        def file = TestHelper.createInMemTempFile('foo', 'Hello world')
+        def file = Files.writeString(Jimfs.newFileSystem(Configuration.unix()).getPath('/foo'), 'Hello world')
         expect:
         HashBuilder.hashFileSha256Impl0(file) == EXPECTED
         and:
@@ -102,7 +131,7 @@ class HashBuilderTest extends Specification {
 
     def 'should hash dir content with sha256'() {
         given:
-        def folder = TestHelper.createInMemTempDir()
+        def folder = Jimfs.newFileSystem(Configuration.unix()).getPath('/')
         folder.resolve('dir1').mkdir()
         folder.resolve('dir2').mkdir()
         and:
@@ -110,13 +139,18 @@ class HashBuilderTest extends Specification {
         folder.resolve('dir1/bar').text = "I'm bar"
         folder.resolve('dir1/xxx/yyy').mkdirs()
         folder.resolve('dir1/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar within yyy"
+        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
+        folder.resolve('dir1/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
         and:
-        folder.resolve('dir2/foo').text = "I'm foo"
+        // create the same directory structure using a different
+        // creation order, the resulting hash should be the same
         folder.resolve('dir2/bar').text = "I'm bar"
-        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/foo').text = "I'm foo"
+        folder.resolve('dir2/xxx').mkdirs()
         folder.resolve('dir2/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar within yyy"
+        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
+        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
 
         when:
         def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
@@ -125,6 +159,46 @@ class HashBuilderTest extends Specification {
 
         then:
         hash1.hash() == hash2.hash()
+    }
 
+    def 'directories with same content but different structure should yield different hashes'() {
+        given:
+        def folder = Jimfs.newFileSystem(Configuration.unix()).getPath('/')
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+        and:
+        folder.resolve('dir1/foo').text = "I'm foo"
+        folder.resolve('dir1/bar').text = "I'm bar"
+        and:
+        // the content of these files is intentionally swapped
+        folder.resolve('dir2/foo').text = "I'm bar"
+        folder.resolve('dir2/bar').text = "I'm foo"
+
+        when:
+        def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        and:
+        def hash2 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+
+        then:
+        hash1.hash() != hash2.hash()
+    }
+
+    def 'should hash enums declared in scripts independently of the script location'() {
+        given:
+        def loader = new GroovyClassLoader()
+        def enum1 = loader.parseClass('package _nf_script_aaaa; enum SampleType { TUMOR }')
+        def enum2 = loader.parseClass('package _nf_script_bbbb; enum SampleType { TUMOR }')
+        def enum3 = loader.parseClass('package foo; enum SampleType { TUMOR }')
+
+        expect:
+        hash(enum1.TUMOR) == hash(enum2.TUMOR)
+        hash(enum1.TUMOR) == hash('SampleType.TUMOR')
+        hash(enum3.TUMOR) == hash('foo.SampleType.TUMOR')
+    }
+
+    private static String hash(Object value) {
+        value instanceof Enum
+            ? CacheHelper.hasher(value).hash().toString()
+            : Hashing.murmur3_128().newHasher().putUnencodedChars((String)value).hash().toString()
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,15 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.fusion
 
 import java.nio.file.Path
 
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.SingularityConfig
 import nextflow.file.http.XPath
+import nextflow.util.StringUtils
 import spock.lang.Specification
 
 /**
@@ -47,6 +48,41 @@ class FusionHelperTest extends Specification {
 
     }
 
+    def 'should include container platform in fusion command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher)
+        def config = new DockerConfig([:])
+
+        when:
+        def result = FusionHelper.runWithContainer(launcher, config, 'image:1', null, ['echo', 'hello'], 'linux/amd64')
+        then:
+        1 * launcher.fusionEnv() >> [:]
+        and:
+        result == "docker run -i --platform linux/amd64 --rm --privileged image:1 echo 'hello'"
+    }
+
+    def 'should strip secrets from fusion container command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher)
+        def secrets = [
+            AWS_SECRET_ACCESS_KEY: 's3cr3t/key+val',
+            AWS_SESSION_TOKEN: 'session-tok',
+            AZURE_STORAGE_ACCOUNT_KEY: 'acc0untKey==',
+            AZURE_STORAGE_SAS_TOKEN: 'sv=2020&sig=abc',
+            FUSION_LICENSE_TOKEN: 'eyJ.abc-def' ]
+
+        when:
+        def result = StringUtils.stripSecrets(FusionHelper.runWithContainer(launcher, CONFIG, 'image:1', null, ['echo', 'hello']))
+        then:
+        1 * launcher.fusionEnv() >> (secrets + [FOO: 'one'])
+        and:
+        result.contains('one')
+        secrets.values().every { !result.contains(it) }
+
+        where:
+        CONFIG << [ new DockerConfig([:]), new SingularityConfig([:]) ]
+    }
+
     def 'should return fusion container command' () {
         given:
         def launcher = Mock(FusionScriptLauncher) {
@@ -54,21 +90,21 @@ class FusionHelperTest extends Specification {
         }
 
         when:
-        def result = FusionHelper.runWithContainer(launcher, new ContainerConfig(CONFIG), NAME, OPTS, CMD)
+        def result = FusionHelper.runWithContainer(launcher, CONFIG, NAME, OPTS, CMD)
         then:
         1 * launcher.fusionEnv() >> ENV
         and:
         result == EXPECTED
 
         where:
-        CONFIG                  | ENV               | NAME          | OPTS          | CMD                   | EXPECTED
-        [engine:'docker']       | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "docker run -i --rm --privileged image:1 echo 'hello'"
-        [engine:'docker']       | [FOO:'one']       | 'image:2'     | null          | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
-        [engine:'docker']       | [FOO:'one']       | 'image:2'     | '--this=that' | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --this=that --rm --privileged image:2 echo 'hello'"
+        CONFIG                     | ENV               | NAME          | OPTS          | CMD                   | EXPECTED
+        new DockerConfig([:])      | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "docker run -i --rm --privileged image:1 echo 'hello'"
+        new DockerConfig([:])      | [FOO:'one']       | 'image:2'     | null          | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
+        new DockerConfig([:])      | [FOO:'one']       | 'image:2'     | '--this=that' | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --this=that --rm --privileged image:2 echo 'hello'"
         and:
-        [engine:'singularity']  | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --no-home --pid image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | '--this=that' | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid --this=that image:1 echo 'hello'"
+        new SingularityConfig([:]) | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --no-home --pid image:1 echo 'hello'"
+        new SingularityConfig([:]) | [FOO:'one']       | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid image:1 echo 'hello'"
+        new SingularityConfig([:]) | [FOO:'one']       | 'image:1'     | '--this=that' | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid --this=that image:1 echo 'hello'"
 
     }
 

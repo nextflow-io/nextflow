@@ -1,0 +1,36 @@
+---
+title: label
+description: Reference for the `label` process directive.
+---
+
+# `label`
+
+The `label` directive attaches a custom label to the process.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    label 'big_mem'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+A label may contain alphanumeric characters or `_`. It must start and end with an alphabetic character.
+
+The same label can be applied to multiple processes. Multiple labels can be applied to the same process by using the `label` directive multiple times.
+
+Process labels are used to apply shared process configuration using `withLabel` selectors. They are not recorded in execution logs, trace reports, or lineage metadata. See [Process selectors][config-process-selectors] for more information.
+
+:::note
+To tag individual task executions for logging and debugging, use [tag](./tag). To tag cloud computing resources for cost tracking, use [resourceLabels](./resource-labels). To attach metadata labels to output files for lineage tracking, use the `label` [output directive][workflow-output-def] in the `output` block.
+:::
+
+[config-process-selectors]: ../../../config#process-selectors
+[workflow-output-def]: ../../../workflow#outputs

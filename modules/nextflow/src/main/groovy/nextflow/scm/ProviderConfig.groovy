@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,13 +77,14 @@ class ProviderConfig {
 
             case 'gitea':
                 attr.platform = name
-                if( !attr.server ) attr.server = 'https://try.gitea.io'
+                if( !attr.server ) attr.server = 'https://gitea.com' // default to free tier
                 if( !attr.endpoint ) attr.endpoint = attr.server.toString().stripEnd('/') + '/api/v1'
                 break
 
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                if( !attr.endpoint ) attr.endpoint = 'https://api.bitbucket.org'
                 break
 
             case 'azurerepos':

@@ -1,18 +1,41 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script.parser.v2
 
 import java.nio.file.Files
 
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
+import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowDef
-import spock.lang.Specification
+import org.junit.Rule
+import test.Dsl2Spec
+import test.MockExecutorFactory
+import test.OutputCapture
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class ScriptLoaderV2Test extends Specification {
+class ScriptLoaderV2Test extends Dsl2Spec {
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def 'should run a file script' () {
 
@@ -115,8 +138,365 @@ class ScriptLoaderV2Test extends Specification {
 
         then:
         meta.definitions.size() == 2
-        meta.getWorkflow('hello').declaredInputs == ['foo', 'bar']
-        meta.getWorkflow('hello').declaredOutputs == ['result']
+        meta.getWorkflow('hello').declaredInputs*.name == ['foo', 'bar']
+        meta.getWorkflow('hello').declaredOutputs*.name == ['result']
+    }
+
+    def 'should register fully-qualified process names' () {
+
+        given:
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+
+            process hello {
+                'echo hello'
+            }
+
+            process bye {
+                'echo bye'
+            }
+
+            workflow aloha {
+                if( params.mode == 'hello' )
+                    hello()
+                if( params.mode == 'bye' )
+                    bye()
+            }
+
+            workflow {
+                aloha()
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        ScriptMeta.allProcessNames() == [ 'hello', 'bye', 'aloha:hello', 'aloha:bye' ] as Set
+    }
+
+    def 'should allow explicit `it` closure parameter' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow {
+                channel.of(1, 2, 3).view { it -> "${it}" }
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should eagerly evaluate GStrings' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow {
+                assert "${'hello'}" == 'hello'
+                assert "${'hello'}" in ['hello']
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should lazily evaluate process inputs/outputs/directives' () {
+
+        given:
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''\
+            process HELLO {
+                tag props.name
+
+                input:
+                val props
+
+                output:
+                val props.name
+
+                script:
+                "echo 'Hello ${props.name}'"
+            }
+
+            workflow {
+                HELLO( [name: 'World'] )
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should not wrap process directives that cannot be dynamic' () {
+
+        given:
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''\
+            process ECHO {
+                secret secrets.NCBI_API_KEY ? "NCBI_API_KEY" : ""
+
+                script:
+                """
+                echo "NCBI_API_KEY=\\$NCBI_API_KEY"
+                """
+            }
+
+            workflow {
+                ECHO()
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        and:
+        TaskProcessor.currentProcessor().createTaskPreview().toTaskBean()
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should register outputs and topic emissions' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+
+            nextflow.enable.types = true
+
+            process hello {
+
+                output:
+                out1: Path = file("out1.txt")
+                out2: Path = file("out2.txt")
+
+                topic:
+                file("version.txt") >> 'versions'
+
+                script:
+                """
+                echo "version" > version.txt
+                echo "result1" > out1.txt
+                echo "result2" > out2.txt
+                """
+            }
+            '''
+
+        when:
+        parser.setModule(true)
+        parser.parse(TEXT)
+        parser.runScript()
+        def process = ScriptMeta.get(parser.getScript()).getProcess('hello')
+        def outputs = process.getProcessConfig().getOutputs()
+
+        then:
+        outputs.getParams().size() == 2
+        outputs.getTopics().size() == 1
+        outputs.getFiles().size() == 3
+    }
+
+    def 'should allow optional param' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            params {
+                path: Path?
+            }
+
+            workflow {
+                params.path
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
+    }
+
+    def 'should report error for invalid publish statements in output block' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow {
+                main:
+                ch = channel.empty()
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples {
+                    path { v ->
+                        if( true ) return 42
+                        v >> 'foo'
+                    }
+                }
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        then:
+        def e = thrown(ScriptCompilationException)
+        e.cause.message.contains 'Publish statements cannot be mixed with other statements in a dynamic publish path'
+    }
+
+    def 'should statically resolve agent names apart from process names' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            nextflow.enable.types = true
+
+            process greet {
+                script:
+                """
+                echo hi
+                """
+            }
+
+            agent critic {
+                model 'openai/gpt-5-mini'
+
+                input:
+                q: String
+
+                output:
+                stdout()
+
+                prompt:
+                """
+                ${q}
+                """
+            }
+
+            workflow inner {
+                take:
+                ch
+
+                main:
+                greet()
+                critic(ch)
+            }
+
+            workflow {
+                inner(channel.of('x'))
+            }
+            '''
+
+        when: 'the script is compiled but not yet run, so only the static call-site walk has contributed'
+        parser.parse(TEXT)
+
+        then: 'the agent is reported under its fully-qualified name, on the agent axis only'
+        ScriptMeta.allAgentNames() == ['inner:critic'] as Set
+        ScriptMeta.allProcessNames() == ['inner:greet'] as Set
+    }
+
+    def 'should report type errors in a script with includes' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('module.nf').text = '''
+            nextflow.enable.types = true
+
+            def hello() {
+                return 'hello'
+            }
+            '''
+        def file = folder.resolve('main.nf')
+        file.text = '''
+            nextflow.enable.types = true
+
+            include { hello } from './module.nf'
+
+            workflow {
+                def x: Integer = hello()
+            }
+            '''
+
+        when:
+        parser.parse(file)
+        then:
+        capture.toString().contains('Type checking found 1 error(s)')
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should return null for a nullable workflow emit' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            nextflow.enable.types = true
+
+            workflow HELLO {
+                main:
+                v = null
+
+                emit:
+                result: Value<String>? = v
+                other: Value<String> = channel.value('x')
+            }
+
+            workflow {
+                HELLO().result
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
     }
 
 }

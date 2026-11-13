@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,10 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
@@ -50,15 +52,15 @@ import nextflow.util.TestOnly
 @CompileStatic
 class BashWrapperBuilder {
 
-    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
-    private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
-    private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
-    private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
+    final private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
+    final private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
+    final private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
+    final private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
-    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
-    private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
-    private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
-    private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
+    final private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
+    final private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
+    final private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
+    final private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
 
     static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
 
@@ -83,7 +85,7 @@ class BashWrapperBuilder {
             level = str ? str as int : 0
         }
         catch( Exception e ) {
-            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
+            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See https://docs.seqera.io/nextflow/reference/config/env"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
 
@@ -159,8 +161,25 @@ class BashWrapperBuilder {
         return targetDir && workDir!=targetDir
     }
 
+    /**
+     * Template method that allows controlling if it's required to unstage
+     * task control files (.command.out, .command.err, .command.trace, .command.env)
+     *
+     * See also https://github.com/nextflow-io/nextflow/pull/6364
+     *
+     * @return false by default; executors may override to implement their own logic
+     */
+    protected boolean shouldUnstageControls() {
+        return false
+    }
+
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
+        // note: only for docker (other container runtimes are not affected)
+        ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
+    }
+
+    protected isLinuxOS() {
+        systemOsName == 'Linux'
     }
 
     protected isMacOS() {
@@ -254,9 +273,10 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
-        // see https://github.com/nextflow-io/nextflow/issues/4279
-        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+        // Write large staging scripts to a separate .command.stage file to avoid command line length limits.
+        // This is enabled only for executors that support it (e.g. HPC grid schedulers with shared filesystem,
+        // See https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
@@ -339,7 +359,7 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames), runWithContainer)
         if( runWithContainer ) {
             binding.task_env = null
             binding.container_env = env
@@ -373,7 +393,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
@@ -388,7 +408,7 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+
         return binding
     }
 
@@ -407,9 +427,52 @@ class BashWrapperBuilder {
         engine.render(res.newReader(), binding)
     }
 
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            final value = result.get(name)
+            // exported as `export NAME=""$'value'""`: ANSI-C quoting, with line breaks as `\n`/`\r` to keep it on one line
+            if( value )
+                result.put(name, '"$\'' + value.replace('\\','\\\\').replace("'","\\'").replace('\n','\\n').replace('\r','\\r') + '\'"')
+        }
+        return result
+    }
+
     @PackageScope String buildNew0(BufferedReader template) {
+        // also needed by job arrays, because it initialises the command files and normalises the script
         final binding = makeBinding()
-        engine.render(template, binding)
+        return bean.arrayIndexName
+            ? getArrayWrapper(binding)
+            : engine.render(template, binding)
+    }
+
+    /**
+     * Render the wrapper for a job array. It only dispatches each array element
+     * to its child task wrapper, therefore it must not write any control file
+     * (.command.begin, .exitcode, etc) into the array work directory, which is
+     * shared by all array elements.
+     *
+     * The header NXF_CHDIR variable is not used, because the array script only
+     * uses absolute paths and each child task wrapper changes to its own work dir.
+     *
+     * @param binding The wrapper template binding
+     * @return The job array wrapper script
+     */
+    protected String getArrayWrapper(Map<String,String> binding) {
+        final result = new StringBuilder()
+        result << '#!/bin/bash\n'
+        if( binding.header_script )
+            result << binding.header_script << '\n'
+        result << binding.task_metadata
+        result << 'set -eu\n'
+        result << '[[ ${NXF_DEBUG:=0} > 1 ]] && set -x\n'
+        result << script.replaceFirst(/^#!.*\n/, '')
+        return result.toString()
     }
 
     /**
@@ -480,10 +543,58 @@ class BashWrapperBuilder {
         return false
     }
 
+    /**
+     * Render a value as a YAML double-quoted string, escaping backslashes, double quotes
+     * and control characters so that the value is kept on a single comment line
+     * and can be decoded back to the original string
+     */
+    @PackageScope
+    static String yamlString(Object value) {
+        if( value == null )
+            return 'null'
+        final str = value.toString()
+        final result = new StringBuilder(str.length() + 2)
+        result.append('"')
+        for( int i=0; i<str.length(); i++ ) {
+            final char ch = str.charAt(i)
+            if( ch == '\\' as char )
+                result.append('\\\\')
+            else if( ch == '"' as char )
+                result.append('\\"')
+            else if( ch == '\n' as char )
+                result.append('\\n')
+            else if( ch == '\r' as char )
+                result.append('\\r')
+            else if( ch == '\t' as char )
+                result.append('\\t')
+            else if( isNonPrintable(str, i) )
+                result.append(String.format('\\u%04x', (int) ch))
+            else
+                result.append(ch)
+        }
+        result.append('"')
+        return result.toString()
+    }
+
+    /**
+     * Check if the char at the given index must be emitted as a `\\uXXXX` escape, i.e. control chars,
+     * line/paragraph separators, non-characters and unpaired surrogates (not allowed in a YAML stream)
+     */
+    private static boolean isNonPrintable(String str, int i) {
+        final char ch = str.charAt(i)
+        if( Character.isISOControl(ch) || ch == '\u2028' as char || ch == '\u2029' as char || ch == '\ufffe' as char || ch == '\uffff' as char )
+            return true
+        if( Character.isHighSurrogate(ch) )
+            return i+1 >= str.length() || !Character.isLowSurrogate(str.charAt(i+1))
+        if( Character.isLowSurrogate(ch) )
+            return i == 0 || !Character.isHighSurrogate(str.charAt(i-1))
+        return false
+    }
+
     protected String getTaskMetadata() {
         final lines = new StringBuilder()
         lines << '### ---\n'
-        lines << "### name: '${bean.name}'\n"
+        lines << "### name: ${yamlString(bean.name)}\n"
         if( bean.arrayIndexName ) {
             lines << '### array:\n'
             lines << "###   index-name: ${bean.arrayIndexName}\n"
@@ -494,12 +605,12 @@ class BashWrapperBuilder {
         }
 
         if( containerConfig?.isEnabled() )
-            lines << "### container: '${bean.containerImage}'\n"
+            lines << "### container: ${yamlString(bean.containerImage)}\n"
 
         if( outputFiles.size() > 0 ) {
             lines << '### outputs:\n'
             for( final output : bean.outputFiles )
-                lines << "### - '${output}'\n"
+                lines << "### - ${yamlString(output)}\n"
         }
 
         lines << '### ...\n'
@@ -563,7 +674,9 @@ class BashWrapperBuilder {
     }
 
     protected boolean isTraceRequired() {
-        statsEnabled || fixOwnership()
+        if( fusionEnabled && Global.isFusionTraceEnabled() )
+            return fixOwnership()
+        return statsEnabled || fixOwnership()
     }
 
     protected String shellPath() {
@@ -595,14 +708,15 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            // the container env lines are inserted in the `bash -c` string and evaluated once in the container
+            String cmd = env ? '$(nxf_container_env); ' + launcher : launcher
             // wrap the command with an extra bash invocation either :
             // - to propagate the container environment or
             // - to change in the task work directory as required by singularity
             final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
             if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
                 if( needChangeTaskWorkDir )
-                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
+                    cmd = 'cd \\"$NXF_TASK_WORKDIR\\"; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
@@ -622,7 +736,7 @@ class BashWrapperBuilder {
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
     }
-    
+
 
     String getCleanupCmd(String scratch) {
         String result = ''
@@ -654,8 +768,8 @@ class BashWrapperBuilder {
     }
 
     @PackageScope
-    ContainerBuilder createContainerBuilder0(String engine) {
-        ContainerBuilder.create(engine, containerImage)
+    ContainerBuilder createContainerBuilder0() {
+        ContainerBuilder.create(containerConfig, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -672,8 +786,7 @@ class BashWrapperBuilder {
     @PackageScope
     ContainerBuilder createContainerBuilder(String changeDir) {
 
-        final engine = containerConfig.getEngine()
-        ContainerBuilder builder = createContainerBuilder0(engine)
+        final builder = createContainerBuilder0()
 
         /*
          * initialise the builder
@@ -728,22 +841,14 @@ class BashWrapperBuilder {
                 builder.addEnv(var)
         }
 
-        // set up run docker params
-        builder.params(containerConfig)
-
-        // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig.temp?.toString()
-        if( temp == 'auto' || temp == 'true' ) {
+        // extra rule for the 'auto' temp dir
+        if( containerConfig.getTemp() == 'auto' )
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
-        }
 
-        if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig.kill)
+        if( containerConfig.getKill() != null )
+            builder.params(kill: containerConfig.getKill())
 
-        if( containerConfig.writableInputMounts==false )
-            builder.params(readOnlyInputs: true)
-
-        if( this.containerConfig.entrypointOverride() )
+        if( containerConfig.entrypointOverride() )
             builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`

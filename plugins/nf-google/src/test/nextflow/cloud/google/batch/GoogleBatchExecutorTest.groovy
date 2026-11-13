@@ -1,8 +1,17 @@
 /*
- * Copyright (c) 2020-2021. Seqera Labs, S.L.
+ * Copyright 2013-2026, Seqera Labs
  *
- * All Rights reserved
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.cloud.google.batch
@@ -126,9 +135,9 @@ class GoogleBatchExecutorTest extends Specification {
 
         where:
         FUSION  | DEFAULT_FS  | TASK_DIR            | EXPECTED
-        false   | false       | 'gs://foo/work/dir' | '/bin/bash -o pipefail -c \'trap "{ cp .command.log gs://foo/work/dir/.command.log; }" ERR; /bin/bash gs://foo/work/dir/.command.run 2>&1 | tee .command.log\''
+        false   | false       | 'gs://foo/work/dir' | '/bin/bash -o pipefail -c \'trap "{ cp .command.log gs://foo/work/dir/.command.log; }" EXIT; /bin/bash gs://foo/work/dir/.command.run 2>&1 | tee .command.log\''
         true    | false       | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
-        false   | true        | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'
+        false   | true        | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run > /nfs/work/dir/.command.log 2>&1'
     }
 
     def 'should validate shouldDeleteJob method' () {

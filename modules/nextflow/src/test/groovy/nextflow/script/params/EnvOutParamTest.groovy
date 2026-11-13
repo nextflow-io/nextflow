@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package nextflow.script.params
 
-import static test.TestParser.*
-
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -30,41 +30,13 @@ class EnvOutParamTest extends Dsl2Spec {
         def text = '''
             process hola {
               output:
-              env FOO
-              env BAR
-              
-              /echo command/ 
-            }
-            
-            workflow { hola() }
-            '''
-
-        def binding = [:]
-        def process = parseAndReturnProcess(text, binding)
-
-        when:
-        def outs = process.config.getOutputs() as List<EnvOutParam>
-
-        then:
-        outs.size() == 2
-        and:
-        outs[0].name == 'FOO'
-        and:
-        outs[1].name == 'BAR'
-
-    }
-
-    def 'should define env outputs with quotes' () {
-        setup:
-        def text = '''
-            process hola {
-              output:
               env 'FOO'
               env 'BAR'
-              
-              /echo command/ 
+
+              script:
+              /echo command/
             }
-            
+
             workflow { hola() }
             '''
 
@@ -88,12 +60,13 @@ class EnvOutParamTest extends Dsl2Spec {
         def text = '''
             process hola {
               output:
-              env FOO, optional: false
-              env BAR, optional: true
+              env 'FOO', optional: false
+              env 'BAR', optional: true
 
+              script:
               /echo command/
             }
-            
+
             workflow { hola() }
             '''
 
@@ -121,10 +94,11 @@ class EnvOutParamTest extends Dsl2Spec {
             process hola {
               output:
               env { 0 }
-              
-              /echo command/ 
+
+              script:
+              /echo command/
             }
-            
+
             workflow { hola() }
             '''
 

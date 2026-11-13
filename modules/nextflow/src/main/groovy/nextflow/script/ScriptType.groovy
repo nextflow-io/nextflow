@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ enum ScriptType {
 
     /** the process executed a piece of native groovy code */
     GROOVY,
+
+    /** The agent executes a prompt in the JVM */
+    PROMPT,
 
     /** The process executes an external system command represented by a string */
     SCRIPTLET

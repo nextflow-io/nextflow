@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.fusion
@@ -29,6 +28,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class FusionScriptLauncherTest extends Specification {
+
+    def cleanup() {
+        Global.reset()
+    }
 
     def 'should get container mount' () {
         given:
@@ -102,4 +105,25 @@ class FusionScriptLauncherTest extends Specification {
         expect:
         FusionScriptLauncher.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
+
+    def 'should link a local input where it is' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        def LOCAL = Path.of('/mnt/shared/ref.fa')
+        def bean = new TaskBean(
+            workDir: XPath.get('http://foo/work'),
+            targetDir: XPath.get('http://foo/work'),
+            inputFiles: ['ref.fa': LOCAL, 'c.txt': XPath.get('http://foo/a/c.txt')] )
+
+        when:
+        def fusion = FusionScriptLauncher.create(bean, 'http')
+        then:
+        bean.inputFiles['ref.fa'] == LOCAL
+        bean.inputFiles['c.txt'] == Path.of('/fusion/http/foo/a/c.txt')
+        and:
+        def script = fusion.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('ln -sfn /fusion/http/foo/a/c.txt c.txt')
+    }
+
 }

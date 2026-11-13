@@ -50,6 +50,11 @@ public interface Iterable<E> {
     boolean contains(E value);
 
     @Description("""
+        Returns `true` if the iterable contains all values in the given iterable.
+    """)
+    boolean containsAll(Iterable<E> values);
+
+    @Description("""
         Invoke the given closure for each element in the iterable.
     """)
     void each(Consumer<E> action);
@@ -58,6 +63,11 @@ public interface Iterable<E> {
         Returns `true` if every element in the iterable satisfies the given condition.
     """)
     boolean every(Predicate<E> predicate);
+
+    @Description("""
+        Returns the first value in the iterable that satisfies the given condition.
+    """)
+    E find(Predicate<E> condition);
 
     @Description("""
         Returns the elements in the iterable that satisfy the given condition.
@@ -105,14 +115,24 @@ public interface Iterable<E> {
     <R> E max(Function<E,R> comparator);
 
     @Description("""
-        Returns the maximum element in the iterable.
+        Returns the maximum element in the iterable according to the given closure. The closure should follow the same semantics as the closure parameter of `toSorted()`.
+    """)
+    E max(BiFunction<E,E,Integer> comparator);
+
+    @Description("""
+        Returns the minimum element in the iterable.
     """)
     E min();
 
     @Description("""
-        Returns the maximum element in the iterable according to the given closure. The closure should follow the same semantics as the closure parameter of `toSorted()`.
+        Returns the minimum element in the iterable according to the given closure. The closure should follow the same semantics as the closure parameter of `toSorted()`.
     """)
     <R> E min(Function<E,R>  comparator);
+
+    @Description("""
+        Returns the minimum element in the iterable according to the given closure. The closure should follow the same semantics as the closure parameter of `toSorted()`.
+    """)
+    E min(BiFunction<E,E,Integer> comparator);
 
     @Description("""
         Returns the number of elements in the iterable.
@@ -130,6 +150,11 @@ public interface Iterable<E> {
     <R> R sum(Function<E,R> transform);
 
     @Description("""
+        Converts the iterable to a list.
+    """)
+    List<E> toList();
+
+    @Description("""
         Converts the iterable to a set. Duplicate elements are excluded.
     """)
     Set<E> toSet();
@@ -145,6 +170,11 @@ public interface Iterable<E> {
     <R> List<E> toSorted(Function<E,R> comparator);
 
     @Description("""
+        Returns the iterable as a list sorted according to the given closure. The closure should accept two parameters and return a negative integer, zero, or a positive integer to denote whether the first argument is less than, equal to, or greater than the second.
+    """)
+    List<E> toSorted(BiFunction<E,E,Integer> comparator);
+
+    @Description("""
         Returns a shallow copy of the iterable with duplicate elements excluded.
     """)
     Iterable<E> toUnique();
@@ -153,5 +183,10 @@ public interface Iterable<E> {
         Returns a shallow copy of the iterable with duplicate elements excluded. The closure should follow the same semantics as the closure parameter of `toSorted()`.
     """)
     <R> Iterable<E> toUnique(Function<E,R> comparator);
+
+    @Description("""
+        Returns a shallow copy of the iterable with duplicate elements excluded. The closure should follow the same semantics as the closure parameter of `toSorted()`.
+    """)
+    Iterable<E> toUnique(BiFunction<E,E,Integer> comparator);
 
 }

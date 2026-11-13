@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class NopeExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 5, Duration.of('50ms'))
+        return TaskPollingMonitor.create(session, config, name, 5, Duration.of('50ms'))
     }
 
     @Override
@@ -50,6 +50,7 @@ class NopeExecutor extends Executor {
 
 
 @Slf4j
+@CompileStatic
 class NopeTaskHandler extends TaskHandler {
 
     protected NopeTaskHandler(TaskRun task) {

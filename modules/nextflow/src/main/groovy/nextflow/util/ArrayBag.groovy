@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
  */
 
 package nextflow.util
+
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import groovy.transform.CompileStatic
+import nextflow.script.types.Bag
 import org.codehaus.groovy.runtime.InvokerHelper
 
 /**

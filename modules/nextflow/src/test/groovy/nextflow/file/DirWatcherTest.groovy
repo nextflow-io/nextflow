@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 import test.TestHelper
 /**
  *
@@ -41,17 +42,17 @@ class DirWatcherTest extends Specification {
         when:
         List results = []
         watcher.apply { Path file -> results.add(file.name) }
-        sleep 500
+        awaitWatching(watcher, folder)
         Files.createFile(folder.resolve('hello.txt'))
         Files.createFile(folder.resolve('hola.txt'))
         TestHelper.stopUntil { results.size() == 1  }
-        watcher.terminate()
 
         then:
         results.size() == 1
         results.contains('hola.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -66,12 +67,11 @@ class DirWatcherTest extends Specification {
         when:
         List results = []
         watcher.apply { Path file -> results.add(file.name) }
-        sleep 500
+        awaitWatching(watcher, folder)
         Files.createFile(folder.resolve('hello.txt'))
         Files.createFile(folder.resolve('hola.txt'))
         Files.createFile(folder.resolve('ciao.fasta'))
         TestHelper.stopUntil { results.size() == 2  }
-        watcher.terminate()
 
         then:
         results.size() == 2
@@ -79,6 +79,7 @@ class DirWatcherTest extends Specification {
         results.contains('hola.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -96,18 +97,18 @@ class DirWatcherTest extends Specification {
         when:
         Set results = []
         watcher.apply { Path file -> results.add(file.name) }
-        sleep 1000
+        awaitWatching(watcher, folder)
         folder.resolve('hello.txt').text = '1'
         folder.resolve('ciao.txt').delete()
         TestHelper.stopUntil { results.size() == 2 }
-        watcher.terminate()
-        
+
         then:
         results.size() == 2
         results.contains('hello.txt')
         results.contains('ciao.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -123,14 +124,13 @@ class DirWatcherTest extends Specification {
         when:
         List results = []
         watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
-        sleep 500
+        awaitWatching(watcher, folder, folder.resolve('foo'), folder.resolve('foo/bar'))
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
         folder.resolve('foo/ciao.fa').text = '3'
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.fa').text = '5'
         TestHelper.stopUntil { results.size() == 3 }
-        watcher.terminate()
 
         then:
         results.size() == 3
@@ -139,6 +139,7 @@ class DirWatcherTest extends Specification {
         results.contains('foo/bar/bonjour.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -154,14 +155,13 @@ class DirWatcherTest extends Specification {
         when:
         List results = []
         watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
-        sleep 500
+        awaitWatching(watcher, folder, folder.resolve('foo'), folder.resolve('foo/bar'))
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
         folder.resolve('foo/ciao.fa').text = '3'
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.fa').text = '5'
         TestHelper.stopUntil { results.size() == 2 }
-        watcher.terminate()
 
         then:
         results.size() == 2
@@ -169,6 +169,7 @@ class DirWatcherTest extends Specification {
         results.contains('foo/bar/hallo.fa')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
@@ -183,16 +184,15 @@ class DirWatcherTest extends Specification {
         when:
         List results = []
         watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
-        sleep 500
+        awaitWatching(watcher, folder)
         Files.createDirectories(folder.resolve('foo/bar'))
-        sleep 10000
+        awaitWatching(watcher, folder.resolve('foo'), folder.resolve('foo/bar'))
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
         folder.resolve('foo/ciao.txt').text = '3'
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.doc').text = '5'
         TestHelper.stopUntil { results.size() == 3 }
-        watcher.terminate()
 
         then:
         results.size() == 3
@@ -201,11 +201,23 @@ class DirWatcherTest extends Specification {
         results.contains('foo/bar/bonjour.txt')
 
         cleanup:
+        watcher?.terminate()
         folder?.deleteDir()
 
     }
 
 
+
+    /**
+     * Wait until the watcher thread has registered the given directories.
+     */
+    private static void awaitWatching(DirWatcher watcher, Path... dirs) {
+        // plain HashMap read across threads, tolerated because the read is retried
+        final Map watchedPaths = watcher.@watchedPaths
+        new PollingConditions(timeout: 15).eventually {
+            assert dirs.every { watchedPaths.containsValue(it) }
+        }
+    }
 
     def 'should convert string events'() {
         given:

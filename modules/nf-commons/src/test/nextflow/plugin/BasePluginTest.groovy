@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 package nextflow.plugin
 
-import org.pf4j.PluginManager
+import org.pf4j.DefaultPluginDescriptor
 import org.pf4j.PluginWrapper
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -30,11 +29,7 @@ class BasePluginTest extends Specification {
     @Unroll
     def 'should validate version match' () {
         given:
-        def wrapper = Mock(PluginWrapper) {
-            getPluginManager() >> Mock(PluginManager) {
-                getVersionManager() >> new CustomVersionManager()
-            }
-        }
+        def wrapper = new PluginWrapper(new CustomPluginManager(), new DefaultPluginDescriptor(), null, null)
 
         def plugin = new BasePlugin(wrapper) { }
 

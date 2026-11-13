@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,15 @@
 package nextflow.processor
 
 import java.lang.management.ManagementFactory
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 import com.sun.management.OperatingSystemMXBean
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.ExecutorConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -28,6 +33,74 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class LocalPollingMonitorTest extends Specification {
+
+    def 'should retain #resource accounting when #operation is paused'() {
+        given:
+        def memory = MemoryUnit.of('26GB')
+        def monitor = new LocalPollingMonitor(cpus: 8, memory: memory.toBytes(),
+                capacity: 8, session: Stub(Session), name: 'local', pollInterval: 100)
+        def testThread = Thread.currentThread()
+        def entered = new CountDownLatch(1)
+        def released = new CountDownLatch(1)
+        def pause = { String name ->
+            if( name == resource && Thread.currentThread() != testThread ) {
+                entered.countDown()
+                assert released.await(10, TimeUnit.SECONDS)
+            }
+        }
+        def config = Stub(TaskConfig) {
+            getCpus() >> { pause('cpus'); 1 }
+            getMemory() >> { pause('memory'); MemoryUnit.of('1GB') }
+        }
+        def first = Stub(TaskHandler) {
+            getTask() >> new TaskRun(config: config)
+        }
+        def second = Stub(TaskHandler) {
+            getTask() >> new TaskRun(config: config)
+        }
+        def fullPool = Stub(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 8, memory: memory))
+            canForkProcess() >> true
+            isReady() >> true
+        }
+        def executor = Executors.newSingleThreadExecutor()
+
+        when:
+        monitor.submit(first)
+        // Pause one thread's resource evaluation while the other updates the counters.
+        def paused = executor.submit({
+            if( operation == 'submission' )
+                monitor.submit(second)
+            else
+                assert monitor.remove(first)
+        } as Runnable)
+        assert entered.await(10, TimeUnit.SECONDS)
+        if( operation == 'submission' )
+            assert monitor.remove(first)
+        else
+            monitor.submit(second)
+        released.countDown()
+        paused.get(10, TimeUnit.SECONDS)
+        assert monitor.remove(second)
+
+        then:
+        monitor.runningQueue.empty
+        monitor.resourceTracker.availableCpus() == 8
+        monitor.resourceTracker.availableMemory() == memory.toBytes()
+        monitor.canSubmit(fullPool)
+
+        cleanup:
+        released.countDown()
+        executor.shutdownNow()
+        assert executor.awaitTermination(10, TimeUnit.SECONDS)
+
+        where:
+        resource | operation
+        'cpus'   | 'submission'
+        'memory' | 'submission'
+        'cpus'   | 'completion'
+        'memory' | 'completion'
+    }
 
     def 'should allocated and free resources' () {
 
@@ -49,30 +122,30 @@ class LocalPollingMonitorTest extends Specification {
         handler.getTask() >> { task }
 
         expect:
-        monitor.availCpus == 10
+        monitor.resourceTracker.availableCpus() == 10
         monitor.capacity == 20
-        monitor.availMemory == _20_GB
-        monitor.maxCpus == 10
-        monitor.maxMemory == _20_GB
+        monitor.resourceTracker.availableMemory() == _20_GB
+        monitor.resourceTracker.totalCpus == 10
+        monitor.resourceTracker.totalMemory == _20_GB
 
         when:
         monitor.submit(handler)
         then:
-        session.notifyTaskSubmit(handler) >> null
+        session.notifyTaskSubmit(handler) >> { }
         monitor.getRunningQueue().size()==1
-        monitor.availCpus == 7
-        monitor.availMemory == MemoryUnit.of('18GB').toBytes()
-        monitor.maxCpus == 10
-        monitor.maxMemory == _20_GB
+        monitor.resourceTracker.availableCpus() == 7
+        monitor.resourceTracker.availableMemory() == MemoryUnit.of('18GB').toBytes()
+        monitor.resourceTracker.totalCpus == 10
+        monitor.resourceTracker.totalMemory == _20_GB
 
         when:
         monitor.remove(handler)
         then:
         monitor.getRunningQueue().size()==0
-        monitor.availCpus == 10
-        monitor.availMemory == _20_GB
-        monitor.maxCpus == 10
-        monitor.maxMemory == _20_GB
+        monitor.resourceTracker.availableCpus() == 10
+        monitor.resourceTracker.availableMemory() == _20_GB
+        monitor.resourceTracker.totalCpus == 10
+        monitor.resourceTracker.totalMemory == _20_GB
 
     }
 
@@ -104,22 +177,22 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
-        1 * handler.submit() >> null
-        1 * session.notifyTaskSubmit(handler) >> null
+        1 * handler.submit() >> { }
+        1 * session.notifyTaskSubmit(handler) >> { }
         and:
         monitor.canSubmit(handler) == true
-        monitor.availCpus == 6
-        monitor.availMemory == MemoryUnit.of('12GB').toBytes()
+        monitor.resourceTracker.availableCpus() == 6
+        monitor.resourceTracker.availableMemory() == MemoryUnit.of('12GB').toBytes()
 
         when:
         monitor.submit(handler)
         then:
-        1 * handler.submit() >> null
-        1 * session.notifyTaskSubmit(handler) >> null
+        1 * handler.submit() >> { }
+        1 * session.notifyTaskSubmit(handler) >> { }
         and:
         monitor.canSubmit(handler) == false
-        monitor.availCpus == 2
-        monitor.availMemory == MemoryUnit.of('4GB').toBytes()
+        monitor.resourceTracker.availableCpus() == 2
+        monitor.resourceTracker.availableMemory() == MemoryUnit.of('4GB').toBytes()
 
     }
 
@@ -143,19 +216,19 @@ class LocalPollingMonitorTest extends Specification {
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
-        
+
         expect:
         monitor.canSubmit(handler) == true
-        monitor.availCpus == 1
+        monitor.resourceTracker.availableCpus() == 1
 
         when:
         monitor.submit(handler)
         then:
-        1 * handler.submit() >> null
-        1 * session.notifyTaskSubmit(handler) >> null
+        1 * handler.submit() >> { }
+        1 * session.notifyTaskSubmit(handler) >> { }
         and:
         monitor.canSubmit(handler) == false
-        monitor.availCpus == 0
+        monitor.resourceTracker.availableCpus() == 0
     }
 
     def 'should throw an exception for missing cpus' () {
@@ -181,7 +254,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e1 = thrown(ProcessUnrecoverableException)
-        e1.message == 'Process requirement exceeds available CPUs -- req: 12; avail: 10'
+        e1.message == 'Task requirement exceeds available CPUs -- req: 12; avail: 10'
 
 
     }
@@ -209,7 +282,39 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e2 = thrown(ProcessUnrecoverableException)
-        e2.message == 'Process requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
+        e2.message == 'Task requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
+
+    }
+
+    def 'should throw an exception for missing accelerators' () {
+
+        given:
+        SysEnv.push(CUDA_VISIBLE_DEVICES: '0,1,2,3')
+        and:
+        def _20_GB = MemoryUnit.of('20GB').toBytes()
+        def session = new Session()
+        def monitor = new LocalPollingMonitor(
+                cpus: 10,
+                capacity: 20,
+                memory: _20_GB,
+                session: session,
+                name: 'local',
+                pollInterval: 100
+        )
+        and:
+        def task = new TaskRun()
+        task.config = new TaskConfig(accelerator: 8)
+        def handler = Mock(TaskHandler)
+        handler.getTask() >> { task }
+
+        when:
+        monitor.canSubmit(handler)
+        then:
+        def e2 = thrown(ProcessUnrecoverableException)
+        e2.message == 'Task requirement exceeds available accelerators -- req: 8; avail: 4'
+
+        cleanup:
+        SysEnv.pop()
 
     }
 
@@ -219,24 +324,24 @@ class LocalPollingMonitorTest extends Specification {
         def OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
 
         when:
-        def session1 = new Session()
+        def config1 = new ExecutorConfig([:])
         then:
-        LocalPollingMonitor.configCpus(session1,'local') == OS.getAvailableProcessors()
+        LocalPollingMonitor.configCpus(config1,'local') == OS.getAvailableProcessors()
 
         when:
-        def session2 = new Session([executor: [cpus: 100]])
+        def config2 = new ExecutorConfig([cpus: 100])
         then:
-        LocalPollingMonitor.configCpus(session2,'local') == 100
+        LocalPollingMonitor.configCpus(config2,'local') == 100
 
         when:
-        def session3 = new Session([executor: ['$local': [cpus: 100]]])
+        def config3 = new ExecutorConfig(['$local': [cpus: 100]])
         then:
-        LocalPollingMonitor.configCpus(session3,'local') == 100
+        LocalPollingMonitor.configCpus(config3,'local') == 100
 
         when:
-        def session4 = new Session([executor: ['$sge': [cpus: 100]]])
+        def config4 = new ExecutorConfig(['$sge': [cpus: 100]])
         then:
-        LocalPollingMonitor.configCpus(session4,'local') == OS.getAvailableProcessors()
+        LocalPollingMonitor.configCpus(config4,'local') == OS.getAvailableProcessors()
 
     }
 
@@ -247,24 +352,24 @@ class LocalPollingMonitorTest extends Specification {
         def _10_GB = MemoryUnit.of('10 GB').toBytes()
 
         when:
-        def session1 = new Session()
+        def config1 = new ExecutorConfig([:])
         then:
-        LocalPollingMonitor.configMem(session1,'local') == OS.getTotalPhysicalMemorySize()
+        LocalPollingMonitor.configMem(config1,'local') == OS.getTotalPhysicalMemorySize()
 
         when:
-        def session2 = new Session([executor: [memory: '10 GB']])
+        def config2 = new ExecutorConfig([memory: '10 GB'])
         then:
-        LocalPollingMonitor.configMem(session2,'local') == _10_GB
+        LocalPollingMonitor.configMem(config2,'local') == _10_GB
 
         when:
-        def session3 = new Session([executor: ['$local': [memory: _10_GB]]])
+        def config3 = new ExecutorConfig(['$local': [memory: _10_GB]])
         then:
-        LocalPollingMonitor.configMem(session3,'local') == _10_GB
+        LocalPollingMonitor.configMem(config3,'local') == _10_GB
 
         when:
-        def session4 = new Session([executor: ['$sge': [memory: '1 GB']]])
+        def config4 = new ExecutorConfig(['$sge': [memory: '1 GB']])
         then:
-        LocalPollingMonitor.configMem(session4,'local') == OS.getTotalPhysicalMemorySize()
+        LocalPollingMonitor.configMem(config4,'local') == OS.getTotalPhysicalMemorySize()
 
     }
 }

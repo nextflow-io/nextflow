@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 package nextflow.util
-
-import java.nio.file.Path
 
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -34,23 +32,6 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class ConfigHelper {
-
-
-    def static getConfigProperty( def config, String execName, String propName ) {
-        def result = null
-
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( execName && config instanceof Map && config['$'+execName] instanceof Map ) {
-            result = config['$'+execName][propName]
-        }
-
-        if( result==null && config instanceof Map && config[propName] != null ) {
-            result = config[propName]
-        }
-
-        return result
-    }
 
     /**
      * Given a string value converts to its native object representation.
@@ -84,32 +65,6 @@ class ConfigHelper {
             return parseValue(obj.toString())
 
         return obj
-    }
-
-    /**
-     * Given a list of paths looks for the files ending with the extension '.jar' and return
-     * a list containing the original directories, plus the JARs paths
-     *
-     * @param dirs
-     * @return
-     */
-    static List<Path> resolveClassPaths( List<Path> dirs ) {
-
-        List<Path> result = []
-        if( !dirs )
-            return result
-
-        for( Path path : dirs ) {
-            if( path.isFile() && path.name.endsWith('.jar') ) {
-                result << path
-            }
-            else if( path.isDirectory() ) {
-                result << path
-                path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) result << it }
-            }
-        }
-
-        return result
     }
 
     static private final String TAB = '   '
@@ -383,5 +338,6 @@ class ConfigHelper {
         else
             return value
     }
+
 }
 

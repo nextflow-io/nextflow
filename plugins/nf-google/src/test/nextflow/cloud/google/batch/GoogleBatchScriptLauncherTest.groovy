@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.batch
@@ -22,6 +21,8 @@ import java.nio.file.Paths
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.processor.TaskBean
+import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -40,7 +41,7 @@ class GoogleBatchScriptLauncherTest extends Specification{
         def path = CloudStorageFileSystem.forBucket(BUCKET).getPath(PATH)
         launcher.toContainerMount(path, PARENT) == EXPECTED
         and:
-        launcher.getContainerMounts() == [MOUNTS] 
+        launcher.getContainerMounts() == [MOUNTS]
         where:
         BUCKET  | PATH          | PARENT    | EXPECTED                              | MOUNTS
         'foo'   | '/'           | false     | Paths.get('/mnt/disks/foo')           | '/mnt/disks/foo:/mnt/disks/foo:rw'
@@ -51,12 +52,12 @@ class GoogleBatchScriptLauncherTest extends Specification{
     def 'should compute volume mounts' () {
         given:
         def launcher = new GoogleBatchScriptLauncher()
-        launcher.config = Mock(BatchConfig) {
-            getGoogleOpts() >> Mock(GoogleOpts) {
-                getProjectId() >> 'my-project'
-                getEnableRequesterPaysBuckets() >> true
+        launcher.config = Mock(GoogleOpts) {
+            getBatch() >> Mock(BatchConfig) {
+                getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
             }
-            getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
+            getProjectId() >> 'my-project'
+            enableRequesterPaysBuckets >> true
         }
         and:
         def PATH1 = CloudStorageFileSystem.forBucket('alpha').getPath('/data/sample1.bam')
@@ -85,6 +86,58 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
         volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
+    }
+
+    def 'should return target files in remote work dir' () {
+        given:
+        def launcher = new GoogleBatchScriptLauncher()
+        def workDir = CloudStorageFileSystem.forBucket('my-bucket').getPath('/work/dir')
+        launcher.@remoteWorkDir = workDir
+
+        expect:
+        launcher.targetInputFile() == workDir.resolve(TaskRun.CMD_INFILE)
+        launcher.targetScriptFile() == workDir.resolve(TaskRun.CMD_SCRIPT)
+        launcher.targetWrapperFile() == workDir.resolve(TaskRun.CMD_RUN)
+        launcher.targetStageFile() == workDir.resolve(TaskRun.CMD_STAGE)
+    }
+
+    def 'should export the config env in the task wrapper' () {
+        given:
+        def workDir = CloudStorageFileSystem.forBucket('my-bucket').getPath('/work/dir')
+        def bean = new TaskBean(
+                name: 'foo',
+                workDir: workDir,
+                targetDir: workDir,
+                script: 'echo hello',
+                containerImage: 'ubuntu:latest',
+                containerEnabled: true,
+                containerNative: true,
+                environment: [MY_ENV_VAR: 'my_value'] )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        then:
+        launcher.makeBinding().task_env == 'export MY_ENV_VAR="my_value"\n'
+    }
+
+    def 'should link a local input where it is' () {
+        given:
+        def LOCAL = Paths.get('/mnt/shared/ref.fa')
+        def bucket = CloudStorageFileSystem.forBucket('alpha')
+        def bean = new TaskBean(
+            workDir: bucket.getPath('/work/dir'),
+            targetDir: bucket.getPath('/work/dir'),
+            inputFiles: ['ref.fa': LOCAL, 'a.bam': bucket.getPath('/data/a.bam')] )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        then:
+        bean.inputFiles['ref.fa'] == LOCAL
+        bean.inputFiles['a.bam'] == Paths.get('/mnt/disks/alpha/data/a.bam')
+        and:
+        def script = launcher.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains('ln -sfn /mnt/disks/alpha/data/a.bam a.bam')
     }
 
 }

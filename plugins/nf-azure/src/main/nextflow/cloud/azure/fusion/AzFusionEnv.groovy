@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.azure.fusion
@@ -37,7 +36,7 @@ import org.pf4j.Extension
 class AzFusionEnv implements FusionEnv {
 
     /**
-     * Get the environment variables for Fusion with Azure, taking into 
+     * Get the environment variables for Fusion with Azure, taking into
      * account a managed identity ID if provided
      *
      * @param scheme The storage scheme ('az' for Azure)
@@ -64,11 +63,17 @@ class AzFusionEnv implements FusionEnv {
         // If pool has a managed identity, ONLY add the MSI client ID
         // DO NOT add any SAS token or reference cfg.storage().sasToken
         if (managedIdentityId) {
-            result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
+            // Fusion will try and pick up a managed identity that is available.
+            // We recommend explicitly setting the config item to the managed ID so you know which one is being used.
+            // However if set to 'true' it will use whichever is available.
+            // This can be helpful if the pools have different managed identities.
+            if (managedIdentityId != 'auto') {
+                result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
+            }
             // No SAS token is added or generated
             return result
         }
-        
+
         // If no managed identity, use the standard environment with SAS token
         result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 

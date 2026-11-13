@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.OutputCapture
+
+import static test.TestHelper.filterLogNoise
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -89,12 +91,7 @@ class LinPathTest extends Specification {
     def 'should warn if query is specified'() {
         when:
         new LinPath(fs, new URI("lid://1234/hola?query"))
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.size() == 1
@@ -161,9 +158,9 @@ class LinPathTest extends Specification {
 
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/path/to/file2.txt').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun","spec":{"name":"test"}}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + outputFolder.toString() + '"}}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + outputFile.toString() + '"}}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         wdir.resolve('5678/').mkdirs()
@@ -433,7 +430,7 @@ class LinPathTest extends Specification {
         def lid2 = new LinPath(fs, '321/x/y/z')
         def rel1 = new LinPath(null, 'foo')
         def rel2 = new LinPath(null, 'bar/')
-        
+
         then:
         lid1.resolve(lid2) == lid2
         lid2.resolve(lid1) == lid1
@@ -533,7 +530,7 @@ class LinPathTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-        when: 'getting name with larger index tha namecount'
+        when: 'getting name with larger index than namecount'
         new LinPath(fs, "1234").getName(2)
         then:
         thrown(IllegalArgumentException)
@@ -543,7 +540,7 @@ class LinPathTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-        when: 'getting subpath with larger index tha namecount'
+        when: 'getting subpath with larger index than namecount'
         new LinPath(fs, "1234").subpath(0,2)
         then:
         thrown(IllegalArgumentException)

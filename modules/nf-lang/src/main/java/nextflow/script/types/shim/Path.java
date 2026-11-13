@@ -17,24 +17,23 @@ package nextflow.script.types.shim;
 
 import java.util.function.Consumer;
 
+import groovy.transform.NamedParam;
+import groovy.transform.NamedParams;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Ops;
 
 @Description("""
-    A Path is a handle for hierarchichal paths such as local files and directories, HTTP/FTP URLs, and object storage paths (e.g. Amazon S3).
+    A Path is a handle for hierarchical paths such as local files and directories, HTTP/FTP URLs, and object storage paths (e.g. Amazon S3).
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#path)
 """)
-@ShimType(java.nio.file.Path.class)
+@Ops(PathOps.class)
 public interface Path {
 
     // file attributes
 
-    @Description("""
-        Returns `true` if the file exists.
-    """)
-    boolean exists();
-
+    @Constant("baseName")
     @Description("""
         Gets the file name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
     """)
@@ -52,11 +51,6 @@ public interface Path {
     """)
     String getName();
 
-    @Description("""
-        Gets the file name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
-    """)
-    String getSimpleName();
-
     @Constant("parent")
     @Description("""
         Gets the file parent path, e.g. `/some/path/file.txt` -> `/some/path`.
@@ -68,6 +62,17 @@ public interface Path {
         Gets the file URI scheme, e.g. `s3://some-bucket/foo.txt` -> `s3`.
     """)
     String getScheme();
+
+    @Constant("simpleName")
+    @Description("""
+        Gets the file name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
+    """)
+    String getSimpleName();
+
+    @Description("""
+        Returns `true` if the file exists.
+    """)
+    boolean exists();
 
     @Description("""
         Returns `true` if the file is a directory.
@@ -127,20 +132,9 @@ public interface Path {
     // reading
 
     @Description("""
-        Iterates over the file, applying the specified closure to each byte.
-    """)
-    void eachByte(Consumer<Byte> action);
-
-    @Description("""
         Iterates over the file, applying the specified closure to each line.
     """)
     void eachLine(Consumer<String> action);
-
-    @Constant("bytes")
-    @Description("""
-        Returns the file content as a byte array.
-    """)
-    byte[] getBytes();
 
     @Constant("text")
     @Description("""
@@ -161,11 +155,6 @@ public interface Path {
     void append(String text);
 
     @Description("""
-        Writes a byte array to a file. Equivalent to setting the `bytes` property.
-    """)
-    void setBytes(byte[] bytes);
-
-    @Description("""
         Writes text to a file. Equivalent to setting the `text` property.
     """)
     void setText(String text);
@@ -180,7 +169,7 @@ public interface Path {
     @Description("""
         Copies a source file or directory to a target file or directory.
     """)
-    void copyTo(Path target);
+    void copyTo(String target);
 
     @Description("""
         Deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise.
@@ -196,16 +185,6 @@ public interface Path {
         Returns a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation), e.g. `'rw-rw-r--'`.
     """)
     String getPermissions();
-
-    @Description("""
-        Returns the first-level elements (files and directories) of a directory as a list of strings.
-    """)
-    List<String> list();
-
-    @Description("""
-        Returns the first-level elements (files and directories) of a directory as a list of Paths.
-    """)
-    List<Path> listFiles();
 
     @Description("""
         Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise.
@@ -225,7 +204,7 @@ public interface Path {
     @Description("""
         Moves a source file or directory to a target file or directory. Follows the same semantics as `copyTo()`.
     """)
-    void moveTo(Path target);
+    void moveTo(String target);
 
     @Description("""
         Rename a file or directory.
@@ -242,20 +221,7 @@ public interface Path {
     """)
     boolean setPermissions(int owner, int group, int other);
 
-    @Description("""
-        Iterates through first-level directories only.
-    """)
-    void eachDir(Consumer<Path> action);
-
-    @Description("""
-        Iterates through directories whose names match the given filter.
-    """)
-    void eachDirMatch(String nameFilter, Consumer<Path> action);
-
-    @Description("""
-        Iterates through directories depth-first (regular files are ignored).
-    """)
-    void eachDirRecurse(Consumer<Path> action);
+    // listing and traversing directories
 
     @Description("""
         Iterates through first-level files and directories.
@@ -263,14 +229,20 @@ public interface Path {
     void eachFile(Consumer<Path> action);
 
     @Description("""
-        Iterates through files and directories whose names match the given filter.
-    """)
-    void eachFileMatch(String nameFilter, Consumer<Path> action);
-
-    @Description("""
         Iterates through files and directories depth-first.
     """)
     void eachFileRecurse(Consumer<Path> action);
+
+    @Description("""
+        Returns the first-level elements (files and directories) in a directory.
+    """)
+    List<Path> listDirectory();
+
+    @Deprecated
+    @Description("""
+        Returns the first-level elements (files and directories) in a directory.
+    """)
+    List<Path> listFiles();
 
     // splitting
 
@@ -297,26 +269,63 @@ public interface Path {
     @Description("""
         Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
     """)
+    List<?> splitCsv(
+        @NamedParams({
+            @NamedParam(value = "by", type = Integer.class),
+            @NamedParam(value = "charset", type = String.class),
+            @NamedParam(value = "decompress", type = Boolean.class),
+            @NamedParam(value = "header", type = Object.class),
+            @NamedParam(value = "limit", type = Integer.class),
+            @NamedParam(value = "quote", type = String.class),
+            @NamedParam(value = "sep", type = String.class),
+            @NamedParam(value = "skip", type = Integer.class),
+            @NamedParam(value = "strip", type = Boolean.class),
+        })
+        Map opts
+    );
     List<?> splitCsv();
 
     @Description("""
         Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
     """)
+    List<?> splitFasta(Map opts);
     List<?> splitFasta();
 
     @Description("""
         Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
     """)
+    List<?> splitFastq(Map opts);
     List<?> splitFastq();
 
     @Description("""
         Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
     """)
+    List<?> splitJson(Map opts);
     List<?> splitJson();
 
     @Description("""
         Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
     """)
+    List<String> splitText(
+        @NamedParams({
+            @NamedParam(value = "by", type = Integer.class),
+            @NamedParam(value = "charset", type = String.class),
+            @NamedParam(value = "compress", type = Boolean.class),
+            @NamedParam(value = "decompress", type = Boolean.class),
+            @NamedParam(value = "keepHeader", type = Boolean.class),
+            @NamedParam(value = "limit", type = Integer.class),
+            @NamedParam(value = "quote", type = String.class)
+        })
+        Map opts
+    );
     List<String> splitText();
+
+}
+
+interface PathOps {
+
+    Path div(Path a, String b);
+
+    Path leftShift(Path a, String b);
 
 }

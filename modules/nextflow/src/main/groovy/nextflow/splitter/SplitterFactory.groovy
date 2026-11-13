@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ class SplitterFactory {
      */
     static DataflowWriteChannel countOverChannel(DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
 
-        // create a new DataflowChannel that will receive the splitter entries
+        // create a new dataflow value that will receive the splitter count
         DataflowVariable result = new DataflowVariable ()
 
         def strategy = splitter as AbstractSplitter

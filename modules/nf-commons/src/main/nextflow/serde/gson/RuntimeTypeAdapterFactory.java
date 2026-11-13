@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import com.google.gson.stream.JsonWriter;
  *
  * See
  * https://github.com/google/gson/blob/main/extras/src/main/java/com/google/gson/typeadapters/RuntimeTypeAdapterFactory.java
- * 
+ *
  */
 
 
@@ -249,6 +249,18 @@ public class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
     @CanIgnoreReturnValue
     public RuntimeTypeAdapterFactory<T> registerSubtype(Class<? extends T> type) {
         return registerSubtype(type, type.getSimpleName());
+    }
+
+    protected Class<?> getSubTypeFromLabel(String label){
+        return labelToSubtype.get(label);
+    }
+
+    protected String getLabelFromSubtype(Class<?> subType){
+        return subtypeToLabel.get(subType);
+    }
+
+    protected String getTypeFieldName(){
+        return typeFieldName;
     }
 
     @Override

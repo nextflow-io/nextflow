@@ -13,5 +13,5 @@ process foo {
 
 
 workflow {
-   channel.of('a'..'z') | foo | view
+   channel.fromList('a'..'z') | foo | view
 }

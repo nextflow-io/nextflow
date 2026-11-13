@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,12 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentOutputPlan
+import nextflow.agent.AgentTaskScript
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
@@ -36,22 +39,20 @@ import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.CmdEvalParam
-import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
-import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
-import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.util.ArrayBag
 /**
  * Models a task instance
  *
@@ -101,14 +102,7 @@ class TaskRun implements Cloneable {
 
     void setInput( InParam param, Object value = null ) {
         assert param
-
         inputs[param] = value
-
-        // copy the value to the task 'input' attribute
-        // it will be used to pipe it to the process stdin
-        if( param instanceof StdInParam) {
-            stdin = value
-        }
     }
 
     void setOutput( OutParam param, Object value = null ) {
@@ -116,9 +110,32 @@ class TaskRun implements Cloneable {
         outputs[param] = value
     }
 
+    /**
+     * The map of input environment vars
+     *
+     * @see TaskProcessor#resolveTaskInputs()
+     */
+    Map<String,String> inputEnv = [:]
+
+    /**
+     * The list of input files
+     *
+     * @see TaskProcessor#resolveTaskInputs()
+     */
+    List<FileHolder> inputFiles = new ArrayBag()
+
+    /**
+     * The files staged by `stageAs` directives in the `stage:` block
+     * of a typed process that are not part of any task input
+     *
+     * @see TaskProcessor#resolveTaskInputsV2()
+     */
+    List<FileHolder> stageAsFiles
 
     /**
      * The value to be piped to the process stdin
+     *
+     * @see TaskProcessor#resolveTaskInputs()
      */
     def stdin
 
@@ -136,6 +153,14 @@ class TaskRun implements Cloneable {
      * Set {@code true} when the task executed is resumed from the cache
      */
     boolean cached
+
+    /**
+     * The list of resolved output files
+     *
+     * @see TaskOutputResolver#_file()
+     * @see TaskOutputResolver#_files()
+     */
+    Set<Path> outputFiles = []
 
     /**
      * Task produced standard output
@@ -190,6 +215,18 @@ class TaskRun implements Cloneable {
      * Print to the current system console the task produced stdout
      */
     void echoStdout(Session session) {
+
+        // print the final answer of an agent rather than the result frame,
+        // or the raw output if it doesn't contain a valid result frame
+        if( AgentTaskScript.isAgentTask(config) ) {
+            try {
+                session.printConsole(AgentOutputPlan.answer(stdout instanceof Path ? ((Path) stdout).text : stdout))
+                return
+            }
+            catch( Exception e ) {
+                log.debug "Unable to echo agent answer -- ${e.message}"
+            }
+        }
 
         // print the stdout
         if( stdout instanceof Path ) {
@@ -401,12 +438,30 @@ class TaskRun implements Cloneable {
         }
     }
 
+    /**
+     * The script as RECORDED, which is not always the script as executed. The value lands in
+     * {@link nextflow.trace.TraceRecord#script}, i.e. in the resume cache database and in whatever
+     * a trace observer forwards -- {@code nf-tower} POSTs it to Seqera Platform.
+     *
+     * <p>For every ordinary task this is exactly {@link #getScript()} (or the template source),
+     * unchanged. The single exception is an AGENT task, whose script is the RPC proxy launch
+     * command and therefore carries the invocation's capability token on argv -- a bearer
+     * credential for the provider API key the driver sends on the start frame. That token is
+     * work-directory-local by design and must not be persisted or transmitted, so it is redacted
+     * here; {@link nextflow.lineage.LinObserver} omits {@code task.script} from the lineage record
+     * for the same reason. {@link nextflow.processor.TaskBean}, which writes {@code .command.sh},
+     * keeps reading {@link #getScript()} and so keeps the real token.
+     */
     String getTraceScript() {
-        return template!=null && body?.source
+        final text = template!=null && body?.source
             ? body.source
             : getScript()
+        return AgentTaskScript.forTrace(config, text)
     }
 
+    boolean hasTypedInputsOutputs() {
+        return processor.config instanceof ProcessConfigV2
+    }
 
     /**
      * Check whenever there are values to be cached
@@ -414,6 +469,14 @@ class TaskRun implements Cloneable {
     boolean hasCacheableValues() {
 
         if( config?.isDynamic() )
+            return true
+
+        // An `exec` task is the only kind whose context must be persisted: the process body *is*
+        // the task execution, therefore whatever it computed lives only in `task.context` and
+        // cannot be re-derived on a cache hit (this is the in-JVM `agent` body too). A script task
+        // instead re-evaluates its body -- and therefore rebuilds its context -- in
+        // TaskProcessor.invokeTask, before the cache is consulted.
+        if( type == ScriptType.GROOVY || type == ScriptType.PROMPT )
             return true
 
         for( OutParam it : outputs.keySet() ) {
@@ -424,18 +487,11 @@ class TaskRun implements Cloneable {
         return false
     }
 
-    Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
-    }
-
     /**
      * Return the list of all input files staged as inputs by this task execution
      */
     List<String> getStagedInputs()  {
-        getInputFiles()
-                .values()
-                .flatten()
-                .collect { it.stageName }
+        return inputFiles.collect { it.stageName }
     }
 
     /**
@@ -443,12 +499,9 @@ class TaskRun implements Cloneable {
      */
     Map<String,Path> getInputFilesMap() {
 
-        final allFiles = getInputFiles().values()
-        final result = new HashMap<String,Path>(allFiles.size())
-        for( List<FileHolder> entry : allFiles ) {
-            if( entry ) for( FileHolder it : entry ) {
-                result[ it.stageName ] = it.storePath
-            }
+        final result = new HashMap<String,Path>(inputFiles.size())
+        for( final holder : inputFiles ) {
+            result[ holder.stageName ] = holder.storePath
         }
 
         return result
@@ -458,18 +511,24 @@ class TaskRun implements Cloneable {
      * Look at the {@code nextflow.script.FileOutParam} which name is the expected
      *  output name
      */
+    @Memoized
     List<String> getOutputFilesNames() {
-        // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
-        // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('outputFileNames', new Function<String,List<String>>() {
-            @Override
-            List<String> apply(String s) {
-                return getOutputFilesNames0()
-            }})
+        if( hasTypedInputsOutputs() )
+            return getOutputFilesNamesV2()
+        else
+            return getOutputFilesNamesV1()
     }
 
-    private List<String> getOutputFilesNames0() {
+    private List<String> getOutputFilesNamesV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        final result = []
+        for( final param : declaredOutputs.files.values() )
+            result.add( param.getFilePattern(context) )
+        return result.unique()
+    }
+
+    private List<String> getOutputFilesNamesV1() {
         def result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
@@ -477,22 +536,6 @@ class TaskRun implements Cloneable {
         }
 
         return result.unique()
-    }
-
-    /**
-     * Get the map of *input* objects by the given {@code InParam} type
-     *
-     * @param types One or more subclass of {@code InParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
-
-        def result = [:]
-        for( def it : inputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
     }
 
     /**
@@ -511,17 +554,6 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * @return A map containing the task environment defined as input declaration by this task
-     */
-    protected Map<String,String> getInputEnvironment() {
-        final Map<String,String> environment = [:]
-        getInputsByType( EnvInParam ).each { param, value ->
-            environment.put( param.name, value?.toString() )
-        }
-        return environment
-    }
-
-    /**
      * @return A map representing the task execution environment
      */
     Map<String,String> getEnvironment() {
@@ -530,7 +562,7 @@ class TaskRun implements Cloneable {
         // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
         // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
         final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
-        result.putAll( getInputEnvironment() )
+        result.putAll( inputEnv )
         return result
     }
 
@@ -556,10 +588,6 @@ class TaskRun implements Cloneable {
         return workDir.toUriString()
     }
 
-    Path getWorkDirFor(HashCode hash) {
-        FileHelper.getWorkFolder(processor.executor.getWorkDir(), hash)
-    }
-
     static final public String CMD_LOG = '.command.log'
     static final public String CMD_SCRIPT = '.command.sh'
     static final public String CMD_INFILE = '.command.in'
@@ -571,6 +599,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_STAGE = '.command.stage'
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
+    static final public String FUSION_TRACE = '.fusion/trace.json'
 
 
     String toString( ) {
@@ -602,6 +631,19 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
+        if( hasTypedInputsOutputs() )
+            return getOutputEnvNamesV2()
+        else
+            return getOutputEnvNamesV1()
+    }
+
+    private List<String> getOutputEnvNamesV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        return new ArrayList(declaredOutputs.getEnv())
+    }
+
+    private List<String> getOutputEnvNamesV1() {
         final items = getOutputsByType(EnvOutParam)
         if( !items )
             return List.<String>of()
@@ -619,6 +661,28 @@ class TaskRun implements Cloneable {
      * output and the value the command the executed.
      */
     Map<String,String> getOutputEvals() {
+        if( hasTypedInputsOutputs() )
+            return getOutputEvalsV2()
+        else
+            return getOutputEvalsV1()
+    }
+
+    private Map<String,String> getOutputEvalsV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        final evalCmds = declaredOutputs.getEval()
+        final result = new LinkedHashMap(evalCmds.size())
+        for( String name : evalCmds.keySet() ) {
+            final target = evalCmds[name]
+            final evalCmd = target instanceof Closure
+                ? target.cloneWith(context).call()
+                : target.toString()
+            result.put(name, evalCmd)
+        }
+        return result
+    }
+
+    private Map<String,String> getOutputEvalsV1() {
         final items = getOutputsByType(CmdEvalParam)
         final result = new LinkedHashMap(items.size())
         for( CmdEvalParam it : items.keySet() ) {
@@ -640,10 +704,10 @@ class TaskRun implements Cloneable {
     }
 
     private Path getCondaEnv0() {
-        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
+        if( !config.conda || !getCondaConfig().isEnabled() )
             return null
 
-        final cache = new CondaCache(processor.session.getCondaConfig())
+        final cache = new CondaCache(getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
 
@@ -726,10 +790,10 @@ class TaskRun implements Cloneable {
             ? containerResolver().getContainerMeta(containerKey)
             : null
     }
-    
+
     String getContainerPlatform() {
         final result = config.getArchitecture()
-        return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
+        return result ? result.containerPlatform() : containerResolver().defaultContainerPlatform()
     }
 
     ResourcesBundle getModuleBundle() {
@@ -747,7 +811,7 @@ class TaskRun implements Cloneable {
         // when 'eng' is null the setting for the current engine marked as 'enabled' will be used
         final result
                 = sess.getContainerConfig(eng)
-                ?: new ContainerConfig(engine:'docker')
+                ?: new DockerConfig([:])
         // if a configuration is found is expected to enabled by default
         if( exe.isContainerNative() ) {
             result.setEnabled(true)
@@ -779,6 +843,10 @@ class TaskRun implements Cloneable {
         return processor.executor?.isSecretNative() ?: false
     }
 
+    boolean isStageFileEnabled() {
+        return processor.executor?.isStageFileEnabled() ?: false
+    }
+
     boolean isSuccess( status = exitStatus ) {
         if( status == null )
             return false
@@ -801,9 +869,48 @@ class TaskRun implements Cloneable {
      * @param body A {@code BodyDef} object instance
      */
     void resolve(BodyDef body)  {
-        processor.session.stubRun && config.getStubBlock()
-            ? resolveStub(config.getStubBlock())
-            : resolveBody(body)
+        // track the directives accessed while the command is rendered -- see #isDirectiveReferenced
+        // note the null guards are load-bearing -- the access below is behind a short-circuit
+        config?.trackDirectiveAccess(true)
+        try {
+            processor.session.stubRun && config.getStubBlock()
+                ? resolveStub(config.getStubBlock())
+                : resolveBody(body)
+        }
+        finally {
+            config?.trackDirectiveAccess(false)
+        }
+    }
+
+    /**
+     * Report whether the rendered task command depends on the value of the given
+     * {@code task} directive e.g. {@code memory} for a script interpolating
+     * {@code "-Xmx${task.memory.toGiga()}g"}.
+     *
+     * The command is rendered *before* the task is scheduled, therefore an executor that
+     * adjusts the requested resources at schedule time needs to know whether the command
+     * carries a value it is about to change.
+     *
+     * The reference is *observed*, not inferred: rendering the command accesses the directive
+     * off the task config, and {@link #resolve} tracks the accesses while it happens. That
+     * covers every path the command can be rendered through -- the script, a {@code shell}
+     * block, a {@code template} file, and a dynamic directive value the command interpolates,
+     * whether declared in the process or in the config file -- without any of them being
+     * known here.
+     *
+     * Note it reports the *last* rendering of this task, hence {@code false} until
+     * {@link #resolve} has run, for an {@code exec} task, and for a task array -- which
+     * {@code TaskArrayCollector} assembles without resolving it.
+     *
+     * ponytail: a directive resolved *after* the command has been rendered is not observed
+     * e.g. `beforeScript = { "-Xmx${task.memory}" }`, which the wrapper builder resolves at
+     * submit time. Widen the tracked action to cover the wrapper if that case shows up.
+     *
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when rendering the command accessed the given directive
+     */
+    boolean isDirectiveReferenced(String directive) {
+        return config != null && config.isDirectiveAccessed(directive)
     }
 
     protected void resolveBody(BodyDef body) {
@@ -992,7 +1099,7 @@ class TaskRun implements Cloneable {
     }
 
     String getStubSource() {
-        return config?.getStubBlock()?.source
+        return config?.getStubBlock()?.getSource()
     }
 }
 

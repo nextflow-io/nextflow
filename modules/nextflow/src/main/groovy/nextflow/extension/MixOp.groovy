@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.extension
@@ -65,8 +64,8 @@ class MixOp {
             target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
         def handlers = [
-                onNext: { target << it },
-                onComplete: { if(count.decrementAndGet()==0) { target << Channel.STOP } }
+                onNext: { target.bind(it) },
+                onComplete: { if(count.decrementAndGet()==0) { target.bind(Channel.STOP) } }
         ]
 
         subscribeImpl(source, handlers)

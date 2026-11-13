@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow
@@ -64,6 +63,9 @@ class SysEnvTest extends Specification {
         expect:
         SysEnv.getBool('FOO', DEF) == EXPECTED
 
+        cleanup:
+        SysEnv.pop()
+
         where:
         STATE           | DEF       | EXPECTED
         [:]             | false     | false
@@ -73,6 +75,87 @@ class SysEnvTest extends Specification {
         [:]             | true      | true
         [FOO:'false']   | false     | false
         [FOO:'true']    | true      | true
+    }
 
+    @Unroll
+    def 'should get integer value' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.getInteger('FOO', DEF) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        STATE           | DEF       | EXPECTED
+        [:]             | null      | null
+        [FOO:'0']       | null      | 0
+        [FOO:'1']       | null      | 1
+        and:
+        [:]             | 0         | 0
+        [FOO:'0']       | 0         | 0
+        [FOO:'100']     | 0         | 100
+        and:
+        [:]             | 1         | 1
+        [FOO:'0']       | 1         | 0
+        [FOO:'100']     | 1         | 100
+    }
+
+    @Unroll
+    def 'should get long value' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.getLong('FOO', DEF) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        STATE           | DEF       | EXPECTED
+        [:]             | null      | null
+        [FOO:'0']       | null      | 0
+        [FOO:'1']       | null      | 1
+        and:
+        [:]             | 0         | 0
+        [FOO:'0']       | 0         | 0
+        [FOO:'100']     | 0         | 100
+        and:
+        [:]             | 1         | 1
+        [FOO:'0']       | 1         | 0
+        [FOO:'100']     | 1         | 100
+    }
+
+    @Unroll
+    def 'should detect agent mode' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.isAgentMode() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        STATE                       | EXPECTED
+        [:]                              | false
+        [NXF_AGENT_MODE:'true']          | true
+        [NXF_AGENT_MODE:'false']         | false
+        // Auto-detected from the environment of an agent
+        [AGENT:'true']                   | true
+        [CLAUDECODE:'true']              | true
+        // NXF_AGENT_MODE overrides the auto-detection in either direction
+        [NXF_AGENT_MODE:'true', AGENT:'false']   | true
+        [NXF_AGENT_MODE:'false', AGENT:'true']   | false
+        [NXF_AGENT_MODE:'false', CLAUDECODE:'1'] | false
+        [NXF_AGENT_MODE:'0', CLAUDECODE:'1']     | false
+        // Support '1' as truthy value (common Unix convention)
+        [NXF_AGENT_MODE:'1']             | true
+        [AGENT:'1']                      | true
+        [CLAUDECODE:'1']                 | true
     }
 }

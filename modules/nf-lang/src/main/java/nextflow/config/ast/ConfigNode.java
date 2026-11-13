@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.config.ast;
 import java.util.ArrayList;
 import java.util.List;
 
+import nextflow.config.spec.SpecNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -30,6 +31,8 @@ public class ConfigNode extends ModuleNode {
 
     private List<ConfigStatement> configStatements = new ArrayList<>();
 
+    private SpecNode.Scope spec;
+
     public ConfigNode(SourceUnit sourceUnit) {
         super(sourceUnit);
     }
@@ -40,5 +43,13 @@ public class ConfigNode extends ModuleNode {
 
     public void addConfigStatement(ConfigStatement statement) {
         configStatements.add(statement);
+    }
+
+    public SpecNode.Scope getSpec() {
+        return spec;
+    }
+
+    public void setSpec(SpecNode.Scope spec) {
+        this.spec = spec;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
 import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure Entra (formerly Active Directory) config options
@@ -25,11 +28,25 @@ import nextflow.cloud.azure.nio.AzFileSystemProvider
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @CompileStatic
-class AzActiveDirectoryOpts {
+class AzActiveDirectoryOpts implements ConfigScope {
 
-    String servicePrincipalId
-    String servicePrincipalSecret
-    String tenantId
+    @ConfigOption
+    @Description("""
+        The service principal client ID. Defaults to environment variable `AZURE_CLIENT_ID`.
+    """)
+    final String servicePrincipalId
+
+    @ConfigOption
+    @Description("""
+        The service principal client secret. Defaults to environment variable `AZURE_CLIENT_SECRET`.
+    """)
+    final String servicePrincipalSecret
+
+    @ConfigOption
+    @Description("""
+        The Azure tenant ID. Defaults to environment variable `AZURE_TENANT_ID`.
+    """)
+    final String tenantId
 
     AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null

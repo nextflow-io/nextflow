@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ class SplitOp {
             multiSplit = true
             pairedEnd = true
         }
-        if( params.elem instanceof List<Integer> ) {
+        if( params.elem instanceof List ) {
             indexes = params.elem as List<Integer>
             multiSplit = true
         }
@@ -188,7 +188,7 @@ class SplitOp {
     void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
         final events = new HashMap(2)
         events.onNext = { entry -> splitter.target(entry).apply() }
-        events.onComplete = { output << Channel.STOP }
+        events.onComplete = { output.bind(Channel.STOP) }
         DataflowHelper.subscribeImpl ( origin, events )
     }
 
@@ -207,7 +207,7 @@ class SplitOp {
     @PackageScope
     DataflowWriteChannel getOrCreateWriteChannel(Map params) {
         def result
-        // create a new DataflowChannel that will receive the splitter entries
+        // create a new channel that will receive the splitter entries
         if( params.into instanceof DataflowWriteChannel ) {
             result = (DataflowWriteChannel)params.into
         }

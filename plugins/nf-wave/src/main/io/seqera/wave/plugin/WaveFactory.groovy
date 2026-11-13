@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin
@@ -20,11 +19,12 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import io.seqera.wave.plugin.config.WaveConfig
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.TraceObserverFactoryV2
 /**
  * Factory class for wave session
  *
@@ -32,12 +32,21 @@ import nextflow.trace.TraceObserverFactory
  */
 @Slf4j
 @CompileStatic
-class WaveFactory implements TraceObserverFactory {
+class WaveFactory implements TraceObserverFactoryV2 {
+
+    static final String SEQERA_EXECUTOR = 'seqera'
+
+    static final String FUSION_MODE_NATIVE = 'native'
 
     @Override
-    Collection<TraceObserver> create(Session session) {
-        shouldEnable(session)
-        return List.<TraceObserver>of()
+    Collection<TraceObserverV2> create(Session session) {
+        if( !shouldEnable(session) )
+            return List.<TraceObserverV2>of()
+        final config = new WaveConfig((Map)session.config.wave ?: Collections.emptyMap())
+        final depth = config.prefetchDepth()
+        return depth > 0
+                ? List.<TraceObserverV2>of(new WavePrefetchObserver(session.dag, depth))
+                : List.<TraceObserverV2>of()
     }
 
     @Memoized // <-- declare as memoized to make it's invoked only once
@@ -52,7 +61,12 @@ class WaveFactory implements TraceObserverFactory {
             return false
         }
 
-        if( fusion.enabled ) {
+        // in native Fusion mode the Seqera executor hosts provide the Fusion client, therefore Wave is optional
+        if( fusion.enabled && isFusionNative(config) ) {
+            if( wave.enabled )
+                enableBundleProjectResources(session, wave, 'Fusion')
+        }
+        else if( fusion.enabled ) {
             checkWaveRequirement(session, wave, 'Fusion')
         }
         if( isAwsBatchFargateMode(config) ) {
@@ -66,10 +80,37 @@ class WaveFactory implements TraceObserverFactory {
             throw new AbortOperationException("$feature feature requires enabling Wave service")
         }
         else {
-            log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
-            wave.bundleProjectResources = true
-            session.disableRemoteBinDir = true
+            enableBundleProjectResources(session, wave, feature)
         }
+    }
+
+    static private void enableBundleProjectResources(Session session, Map wave, String feature) {
+        log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
+        wave.bundleProjectResources = true
+        session.disableRemoteBinDir = true
+    }
+
+    /**
+     * Whether the run uses the Seqera executor, i.e. it is the default executor for every process.
+     * A per-process ({@code withName}/{@code withLabel}) executor is not considered.
+     *
+     * @param config the session config
+     * @return {@code true} when the default executor is {@code seqera}
+     */
+    static boolean isSeqeraExecutor(Map config) {
+        final executor = config.navigate('process.executor') ?: config.navigate('executor.name')
+        return SEQERA_EXECUTOR == executor?.toString()
+    }
+
+    /**
+     * Whether the run uses the Seqera executor in native Fusion mode
+     * ({@code seqera.executor.fusionMode = 'native'}), i.e. the compute hosts provide the Fusion client.
+     *
+     * @param config the session config
+     * @return {@code true} when the default executor is {@code seqera} and its Fusion mode is {@code native}
+     */
+    static boolean isFusionNative(Map config) {
+        return isSeqeraExecutor(config) && FUSION_MODE_NATIVE == config.navigate('seqera.executor.fusionMode')?.toString()
     }
 
     static boolean isAwsBatchFargateMode(Map config) {

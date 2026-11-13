@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,17 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
-import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.LazyValue
 import nextflow.util.TestOnly
 /**
  * Handle Conda environment creation and caching
@@ -43,11 +43,11 @@ import nextflow.util.TestOnly
 @CompileStatic
 class CondaCache {
     static final private Object condaLock = new Object()
-    
+
     /**
      * Cache the prefix path for each Conda environment
      */
-    static final private Map<String,DataflowVariable<Path>> condaPrefixPaths = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> condaPrefixPaths = new ConcurrentHashMap<>()
 
     /**
      * The Conda settings defined in the nextflow config file
@@ -57,13 +57,13 @@ class CondaCache {
     /**
      * Timeout after which the environment creation is aborted
      */
-    private Duration createTimeout = Duration.of('20min')
+    private Duration createTimeout
 
     private String createOptions
 
     private boolean useMamba
 
-    private boolean useMicromamba 
+    private boolean useMicromamba
 
     private Path configCacheDir0
 
@@ -73,7 +73,7 @@ class CondaCache {
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
-    @PackageScope Map<String,String> getEnv() { System.getenv() }
+    @PackageScope Map<String,String> getEnv() { SysEnv.get() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
@@ -82,7 +82,7 @@ class CondaCache {
     @PackageScope String getBinaryName() {
         if (useMamba)
             return "mamba"
-        if (useMicromamba) 
+        if (useMicromamba)
             return "micromamba"
         return "conda"
     }
@@ -109,7 +109,7 @@ class CondaCache {
 
         if( config.useMamba() && config.useMicromamba() )
             throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
-        
+
         if( config.useMamba() ) {
             useMamba = config.useMamba()
         }
@@ -162,21 +162,53 @@ class CondaCache {
         (str.endsWith('.yml') || str.endsWith('.yaml')) && !str.contains('\n')
     }
 
-    boolean isTextFilePath(String str) {
-        str.endsWith('.txt') && !str.contains('\n')
+    /**
+     * Check if the given string is a path to a conda explicit file
+     * by verifying it contains the @EXPLICIT marker in the first 20 lines
+     *
+     * @param str The conda environment string
+     * @return {@code true} if it's a path to an explicit file, {@code false} otherwise
+     */
+    @PackageScope
+    @Memoized // <-- annotate as "Memoized" to avoid parsing multiple time the same file
+    boolean isExplicitFile(String str) {
+        if( str.contains('\n') )
+            return false
+        try {
+            final path = str as Path
+            if( !path.exists() )
+                return false
+            return containsExplicitMarker(path)
+        }
+        catch( Exception e ) {
+            log.debug "Failed to check explicit file: $str - ${e.message}"
+            return false
+        }
     }
 
-    static protected String sipHash(CharSequence data) {
-        Hashing
-            .sipHash24()
-            .newHasher()
-            .putUnencodedChars(data)
-            .hash()
-            .toString()
-    }
-
-    static protected String sipHash(Path path) {
-        sipHash(path.toAbsolutePath().normalize().toString())
+    /**
+     * Check if a file contains the @EXPLICIT marker in the first 20 lines
+     *
+     * @param path The file path to check
+     * @return {@code true} if the marker is found, {@code false} otherwise
+     */
+    private boolean containsExplicitMarker(Path path) {
+        try {
+            try(final reader = path.newReader()) {
+                for( int i = 0; i < 20; i++ ) {
+                    final line = reader.readLine()
+                    if( line == null )
+                        break
+                    if( line.trim() == '@EXPLICIT' )
+                        return true
+                }
+                return false
+            }
+        }
+        catch( Exception e ) {
+            log.debug "Failed to check for @EXPLICIT marker in file: $path - ${e.message}"
+            return false
+        }
     }
 
     /**
@@ -200,7 +232,6 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = 'env-' + sipHash(path)
 
             }
             catch( NoSuchFileException e ) {
@@ -210,17 +241,14 @@ class CondaCache {
                 throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Check the log file for details", e)
             }
         }
-        else if( isTextFilePath(condaEnv) )  {
+        // check if it's a conda explicit file (contains @EXPLICIT marker)
+        else if( isExplicitFile(condaEnv) )  {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = 'env-' + sipHash(path)
-            }
-            catch( NoSuchFileException e ) {
-                throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Check the log file for details", e)
+                throw new IllegalArgumentException("Error reading Conda explicit file: $condaEnv -- Check the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
@@ -284,6 +312,11 @@ class CondaCache {
 
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+        if( prefixPath.isDirectory() ) {
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
+        }
+
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
@@ -291,10 +324,10 @@ class CondaCache {
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
-            final yesOpt = binaryName == 'micromamba' ? '--yes ' : ''
+            final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
-        else if( isTextFilePath(condaEnv) ) {
+        else if( isExplicitFile(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
@@ -344,7 +377,7 @@ class CondaCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
@@ -353,28 +386,13 @@ class CondaCache {
      * @param condaEnv
      *      Conda environment string
      * @return
-     *      The {@link DataflowVariable} which hold (and pull) the local image file
+     *      The {@link LazyValue} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String condaEnv) {
+    LazyValue<Path> getLazyImagePath(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         final condaEnvPath = prefixPath.toString()
-        if( condaEnvPath in condaPrefixPaths ) {
-            log.trace "${binaryName} found local environment `$condaEnv`"
-            return condaPrefixPaths[condaEnvPath]
-        }
-
-        synchronized (condaPrefixPaths) {
-            def result = condaPrefixPaths[condaEnvPath]
-            if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, prefixPath) })
-                condaPrefixPaths[condaEnvPath] = result
-            }
-            else {
-                log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"
-            }
-            return result
-        }
+        return condaPrefixPaths.computeIfAbsent(condaEnvPath, (String key) -> new LazyValue<Path>({ createLocalCondaEnv(condaEnv, prefixPath) }))
     }
 
     /**
@@ -387,10 +405,7 @@ class CondaCache {
      * @return the local environment path prefix {@link Path}
      */
     Path getCachePathFor(String condaEnv) {
-        def promise = getLazyImagePath(condaEnv)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(condaEnv).get()
         if( !result )
             throw new IllegalStateException("Cannot create Conda environment `$condaEnv`")
         log.trace "Conda cache for env `$condaEnv` path=$result"

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.extension
 
 import spock.lang.Specification
@@ -15,11 +31,17 @@ class OpCallTest extends Specification {
     static class MyExt extends OperatorImpl{
 
         DataflowWriteChannel foo1(DataflowReadChannel source) {
-            new DataflowQueue() << 1 << 2
+            final result = new DataflowQueue()
+            result.bind(1)
+            result.bind(2)
+            return result
         }
 
         DataflowWriteChannel foo2(DataflowReadChannel source, DataflowReadChannel channel2) {
-            new DataflowQueue() << 1 << 2
+            final result = new DataflowQueue()
+            result.bind(1)
+            result.bind(2)
+            return result
         }
 
         String foo3(DataflowReadChannel source, List<DataflowReadChannel> channel3) {
@@ -31,7 +53,10 @@ class OpCallTest extends Specification {
         }
 
         DataflowWriteChannel foo5(DataflowReadChannel source, DataflowWriteChannel channel2) {
-            new DataflowQueue() << 1 << 2
+            final result = new DataflowQueue()
+            result.bind(1)
+            result.bind(2)
+            return result
         }
 
         List<DataflowReadChannel> foo6(DataflowReadChannel source, List<DataflowWriteChannel> channel3) {
@@ -57,7 +82,7 @@ class OpCallTest extends Specification {
         op.outputs == [result] as Set
         result instanceof DataflowQueue
         result.val == 1
-        result.val == 2 
+        result.val == 2
 
     }
 

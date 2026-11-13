@@ -1,0 +1,139 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package nextflow.agent
+
+import dev.langchain4j.model.chat.request.json.JsonArraySchema
+import dev.langchain4j.model.chat.request.json.JsonBooleanSchema
+import dev.langchain4j.model.chat.request.json.JsonEnumSchema
+import dev.langchain4j.model.chat.request.json.JsonIntegerSchema
+import dev.langchain4j.model.chat.request.json.JsonNumberSchema
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema
+import dev.langchain4j.model.chat.request.json.JsonSchema
+import dev.langchain4j.model.chat.request.json.JsonSchemaElement
+import dev.langchain4j.model.chat.request.json.JsonStringSchema
+import groovy.transform.CompileStatic
+
+/**
+ * Converts a portable JSON-schema {@link Map} (the shape produced by core's
+ * {@code nextflow.agent.RecordSchema.of}) into a langchain4j
+ * {@link JsonSchema} suitable for use as a structured-output contract.
+ *
+ * The portable shape is:
+ * <pre>
+ * [ type:'object',
+ *   properties:[ field:[ type:'string'|'integer'|'number'|'boolean'|'array'|'object',
+ *                        items:..., properties:..., required:... ] ],
+ *   required:[...],
+ *   additionalProperties:false ]
+ * </pre>
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class JsonSchemaMapper {
+
+    /**
+     * Build a langchain4j {@link JsonSchema} with the given name from a portable
+     * object schema map.
+     *
+     * @param name   the schema name (used as the structured-output schema name)
+     * @param schema the portable schema map (must describe an {@code object})
+     * @return a non-null {@link JsonSchema} whose root is a {@link JsonObjectSchema}
+     */
+    static JsonSchema toJsonSchema(String name, Map schema) {
+        final root = toObjectSchema(schema)
+        return JsonSchema.builder()
+            .name(name)
+            .rootElement(root)
+            .build()
+    }
+
+    /**
+     * Build a langchain4j {@link JsonObjectSchema} from a portable object schema
+     * map. Used both as the root of a structured-output {@link JsonSchema} and as
+     * the {@code parameters} schema of a tool specification.
+     *
+     * @param schema the portable schema map (must describe an {@code object})
+     * @return a non-null {@link JsonObjectSchema}
+     */
+    static JsonObjectSchema toObjectSchema(Map schema) {
+        final builder = JsonObjectSchema.builder()
+        final Map properties = (schema?.properties ?: [:]) as Map
+        for( Map.Entry entry : properties.entrySet() ) {
+            final key = entry.key as String
+            final spec = entry.value as Map
+            builder.addProperty(key, toElement(key, spec))
+        }
+        final required = schema?.required as List
+        if( required != null )
+            builder.required(required.collect { it as String })
+        final additional = schema?.additionalProperties
+        if( additional != null )
+            builder.additionalProperties(additional as Boolean)
+        final description = schema?.description as String
+        if( description != null )
+            builder.description(description)
+        return builder.build()
+    }
+
+    private static JsonSchemaElement toElement(String name, Map spec) {
+        final type = spec?.type as String
+        final description = spec?.description as String
+        switch( type ) {
+            case 'string':
+                final enumValues = spec?.enum as List
+                if( enumValues != null ) {
+                    final eb = JsonEnumSchema.builder()
+                        .enumValues(enumValues.collect { it as String })
+                    if( description != null )
+                        eb.description(description)
+                    return eb.build()
+                }
+                final sb = JsonStringSchema.builder()
+                if( description != null )
+                    sb.description(description)
+                return sb.build()
+            case 'integer':
+                final ib = JsonIntegerSchema.builder()
+                if( description != null )
+                    ib.description(description)
+                return ib.build()
+            case 'number':
+                final nb = JsonNumberSchema.builder()
+                if( description != null )
+                    nb.description(description)
+                return nb.build()
+            case 'boolean':
+                final bb = JsonBooleanSchema.builder()
+                if( description != null )
+                    bb.description(description)
+                return bb.build()
+            case 'array':
+                final items = spec.items as Map
+                if( items == null )
+                    throw new IllegalArgumentException("Array property `${name}` is missing an `items` schema")
+                final ab = JsonArraySchema.builder()
+                    .items(toElement(name + '[]', items))
+                if( description != null )
+                    ab.description(description)
+                return ab.build()
+            case 'object':
+                return toObjectSchema(spec)
+            default:
+                throw new IllegalArgumentException("Unsupported schema type `${type}` for property `${name}`")
+        }
+    }
+}

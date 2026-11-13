@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package nextflow.serde.gson
 
 import java.lang.reflect.Type
+import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 
@@ -80,6 +81,7 @@ abstract class GsonEncoder<T> implements Encoder<T, String> {
         builder.registerTypeAdapter(Instant.class, new InstantAdapter())
         builder.registerTypeAdapter(OffsetDateTime.class, new OffsetDateTimeAdapter())
         builder.registerTypeAdapter(GStringImpl.class, new GStringSerializer())
+        builder.registerTypeHierarchyAdapter(Path.class, new PathAdapter())
         if( factory )
             builder.registerTypeAdapterFactory(factory)
         if( prettyPrint )

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,15 @@
 
 package nextflow.scm
 
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.transport.CredentialItem
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.URIish
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+
 /**
  * Implements a repository provider for the BitBucket service
  *
@@ -39,23 +45,78 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         this.config = config ?: new ProviderConfig('bitbucket')
     }
 
+    @Override
+    protected String[] getAuth() {
+        if (!hasCredentials()) {
+            return null
+        }
+
+        String secret = getToken() ?: getPassword()
+        String authString = "${getUser()}:${secret}".bytes.encodeBase64().toString()
+
+        return new String[] { "Authorization", "Basic " + authString }
+    }
+
+    @Override
+    boolean hasCredentials() {
+        return getUser() && (getPassword() || getToken())
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    CredentialsProvider getGitCredentials() {
+        return getToken()
+            ? new ApiTokenCredentialsProvider(getUser(), getToken())
+            : new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
+
+    /**
+     * Git credentials for Bitbucket API tokens.
+     *
+     * The REST API authenticates with the Atlassian account email, whereas
+     * git over HTTPS requires the Bitbucket username, which is provided by
+     * the user info of the clone URL.
+     *
+     * @see <a href="https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/">Using API tokens</a>
+     */
+    @CompileStatic
+    static class ApiTokenCredentialsProvider extends UsernamePasswordCredentialsProvider {
+
+        ApiTokenCredentialsProvider(String user, String token) {
+            super(user, token)
+        }
+
+        @Override
+        boolean get(URIish uri, CredentialItem... items) {
+            if( !super.get(uri, items) )
+                return false
+            if( uri?.user ) {
+                for( CredentialItem item : items ) {
+                    if( item instanceof CredentialItem.Username )
+                        ((CredentialItem.Username) item).setValue(uri.user)
+                }
+            }
+            return true
+        }
+    }
+
     /** {@inheritDoc} */
     @Override
     String getName() { "BitBucket" }
 
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/api/2.0/repositories/${project}"
+        "${config.endpoint}/2.0/repositories/${project}"
     }
 
     @Override
     String getContentUrl( String path ) {
         final ref = revision ? getRefForRevision(revision) : getMainBranch()
-        return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
+        return "${config.endpoint}/2.0/repositories/$project/src/$ref/$path"
     }
 
     private String getMainBranchUrl() {
-        "${config.endpoint}/api/2.0/repositories/$project"
+        "${config.endpoint}/2.0/repositories/$project"
     }
 
     String getMainBranch() {
@@ -87,13 +148,13 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private String getRefForRevision0(String revision, String type){
-        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/$type/$revision")
+        final resp = invokeAndParseResponse("${config.endpoint}/2.0/repositories/$project/refs/$type/$revision")
         return resp?.target?.hash
     }
 
     @Memoized
-    protected <T> List<T> invokeAndResponseWithPaging(String url, Closure<T> parse) {
-        final result = new ArrayList<T>(50)
+    protected List invokeAndResponseWithPaging0(String url, Closure parse) {
+        final result = new ArrayList(50)
         do {
             final resp = invokeAndParseResponse(url)
             final tags = resp.values as List<Map>
@@ -117,7 +178,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<TagInfo> getTags() {
         final result = new ArrayList<TagInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/tags"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/tags"
         final mapper = { Map entry -> result.add( new TagInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -131,7 +192,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<BranchInfo> getBranches() {
         final result = new ArrayList<BranchInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/branches"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/branches"
         final mapper = { Map entry -> result.add( new BranchInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -159,8 +220,68 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
+        final url = getContentUrl(path)
+        return invokeBytes(url)
+    }
 
-        def url = getContentUrl(path)
-        invoke(url)?.getBytes()
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        final ref = revision ? getRefForRevision(revision) : getMainBranch()
+        // Normalize path using base class helper
+        final dirPath = normalizePath(path)
+
+        // Build the src API URL - BitBucket's src endpoint returns directory listings when path is a directory
+        String url = "${config.endpoint}/2.0/repositories/$project/src/$ref/$dirPath"
+
+        try {
+            // Make the API call
+            Map response = invokeAndParseResponse(url)
+            List<Map> values = response?.values as List<Map>
+
+            if (!values) {
+                return []
+            }
+
+            List<RepositoryEntry> entries = []
+
+            for (Map entry : values) {
+                String entryPath = entry.get('path') as String
+                // Filter entries based on depth using base class helper
+                if (shouldIncludeAtDepth(entryPath, path, depth)) {
+                    entries.add(createRepositoryEntry(entry, path))
+                }
+            }
+
+            return entries.sort { it.name }
+
+        } catch (Exception e) {
+            // If API call fails, it might be because the path is not a directory
+            // or the API doesn't support directory listing
+            throw new UnsupportedOperationException("Directory listing not supported by BitBucket API for path: $path", e)
+        }
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
+        String entryPath = entry.get('path') as String
+        String name = entryPath?.split('/')?.last() ?: entry.get('name') as String
+
+        // Determine type based on BitBucket's response
+        String type = entry.get('type') as String
+        EntryType entryType = (type == 'commit_directory') ? EntryType.DIRECTORY : EntryType.FILE
+
+        String sha = entry.get('commit')?.get('hash') as String
+        Long size = entry.get('size') as Long
+
+        // Ensure absolute path using base class helper
+        String fullPath = ensureAbsolutePath(entryPath)
+
+        return new RepositoryEntry(
+            name: name,
+            path: fullPath,
+            type: entryType,
+            sha: sha,
+            size: size
+        )
     }
 }

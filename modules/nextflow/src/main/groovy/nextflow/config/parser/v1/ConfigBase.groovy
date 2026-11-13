@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package nextflow.config.parser.v1
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import groovy.transform.Memoized
 import nextflow.SysEnv
 import nextflow.config.StripSecretsXform

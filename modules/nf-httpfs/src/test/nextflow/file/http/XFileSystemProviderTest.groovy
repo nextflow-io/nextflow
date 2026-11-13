@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,49 +17,33 @@
 package nextflow.file.http
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
 import org.junit.Rule
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 /**
  * Created by emilio on 08/11/16.
  */
 class XFileSystemProviderTest extends Specification {
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def "should return input stream"() {
-        given:
-        def fsp = new HttpFileSystemProvider()
-        def path = fsp.getPath(new URI('http://www.google.com/index.html'))
-        when:
-        def stream = fsp.newInputStream(path)
-        then:
-        stream.text.startsWith("<!doctype html>")
-    }
-
     def "should return input stream from path"() {
         given:
-        def DATA = 'Hello world'
-        def fsp = Spy(new HttpFileSystemProvider())
-        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
-        def connection = Mock(URLConnection)
-        when:
-        def stream = fsp.newInputStream(path)
-        then:
-        fsp.toConnection(path) >> { Path it ->
-            assert it instanceof XPath
-            assert it.toUri() == new URI('http://host.com/index.html?query=123')
-            return connection
-        }
+        wireMockRule.stubFor(get(urlEqualTo('/index.html?query=123'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('Hello world')))
         and:
-        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
-        connection.getContentLengthLong() >> DATA.size()
-        and:
-        stream.text == 'Hello world'
+        def fsp = new HttpFileSystemProvider()
+        def uri = new URI("http://localhost:${wireMockRule.port()}/index.html?query=123")
+        def path = fsp.getPath(uri)
+
+        expect:
+        path instanceof XPath
+        path.toUri() == uri
+        fsp.newInputStream(path).text == 'Hello world'
     }
 
     def "should read file attributes from map"() {
@@ -99,24 +83,30 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
+        wireMockRule.stubFor(get(urlEqualTo('/index.html'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody('Hello world')
+                .withHeader('Content-Length', '11')
+                .withHeader('Last-Modified', 'Fri, 04 Nov 2016 21:50:34 GMT')))
+        and:
         def fsp = new HttpFileSystemProvider()
-        def path = (XPath) fsp.getPath(new URI('http://www.nextflow.io/index.html'))
+        def path = (XPath) fsp.getPath(new URI("http://localhost:${wireMockRule.port()}/index.html"))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
         then:
-        attrs.lastModifiedTime()
-        attrs.size() > 0
+        attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
+        attrs.size() == 11
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
-        def path = (XPath) fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        // FTP attributes are not fetched, so no connection is made to this host
+        def path = (XPath) fsp.getPath(new URI('ftp://ftp.example.invalid/robots.txt'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
@@ -163,51 +153,29 @@ class XFileSystemProviderTest extends Specification {
     @Unroll
     def 'should follow a redirect when read a http file '() {
         given:
-        def wireMock = new WireMockGroovy(wireMockRule.port())
         def localhost = "http://localhost:${wireMockRule.port()}"
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/index.html"
-            }
-            response {
-                status HTTP_CODE
-                headers {
-                    "Location" "${localhost}${REDIRECT_TO}"
-                }
-            }
-        }
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/index2.html"
-            }
-            response {
-                status HTTP_CODE
-                headers {
-                    "Location" "${localhost}/target.html"
-                }
-            }
-        }
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/target.html"
-            }
-            response {
-                status 200
-                body """a
+        wireMockRule.stubFor(get(urlEqualTo("/index.html"))
+            .willReturn(aResponse()
+                .withStatus(HTTP_CODE)
+                .withHeader("Location", "${localhost}${REDIRECT_TO}")))
+
+        wireMockRule.stubFor(get(urlEqualTo("/index2.html"))
+            .willReturn(aResponse()
+                .withStatus(HTTP_CODE)
+                .withHeader("Location", "${localhost}/target.html")))
+
+        wireMockRule.stubFor(get(urlEqualTo("/target.html"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""a
                  b
                  c
                  d
-                 """
-                headers {
-                    "Content-Type" "text/html"
-                    "Content-Length" "10"
-                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
-                }
-            }
-        }
+                 """)
+                .withHeader("Content-Type", "text/html")
+                .withHeader("Content-Length", "10")
+                .withHeader("Last-Modified", "Fri, 04 Nov 2016 21:50:34 GMT")))
+
         and:
         def provider = new HttpFileSystemProvider()
         when:
@@ -229,13 +197,71 @@ class XFileSystemProviderTest extends Specification {
 
         308       | "/target.html"      | 10
         308       | "/index2.html"      | 10
-        //infinite redirect to himself
-        308       | "/index.html"       | -1
+    }
+
+    def 'should fail on a redirect loop' () {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        wireMockRule.stubFor(get(urlEqualTo("/start.html"))
+            .willReturn(aResponse()
+                .withStatus(302)
+                .withHeader("Location", "${localhost}/loop.html")))
+        wireMockRule.stubFor(get(urlEqualTo("/loop.html"))
+            .willReturn(aResponse()
+                .withStatus(302)
+                .withHeader("Location", "${localhost}/loop.html")))
+        and:
+        def provider = new HttpFileSystemProvider()
+        def path = provider.getPath(new URI("${localhost}/start.html"))
+
+        expect:
+        !Files.exists(path)
+
+        when:
+        Files.size(path)
+        then:
+        def e = thrown(IOException)
+        e.message == "Too many redirects (max 5) - origin: ${localhost}/start.html - last location: ${localhost}/loop.html"
+
+        when:
+        path.text
+        then:
+        e = thrown(IOException)
+        e.message.startsWith('Too many redirects')
+    }
+
+    def 'should fail when http response is shorter than content length' () {
+        given:
+        def server = new ServerSocket(0, 0, InetAddress.getLoopbackAddress())
+        Thread.startDaemon {
+            server.accept().withCloseable { socket ->
+                def reader = new BufferedReader(new InputStreamReader(socket.inputStream))
+                while( reader.readLine() ) {}
+                socket.outputStream << 'HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nHello'
+            }
+        }
+        and:
+        def fsp = new HttpFileSystemProvider()
+        def path = fsp.getPath(new URI('http', null, server.inetAddress.hostAddress, server.localPort, '/data.txt', null, null))
+
+        when:
+        def stream = fsp.newInputStream(path)
+        then:
+        stream instanceof FixedInputStream
+
+        when:
+        stream.text
+        then:
+        thrown(IOException)
+
+        cleanup:
+        stream?.close()
+        server.close()
     }
 
     def 'should normalize location' () {
         given:
-        def provider = Spy(XFileSystemProvider)
+        def provider = new HttpFileSystemProvider()
 
         expect:
         provider.absLocation(LOCATION, new URL(TARGET)) == EXPECTED

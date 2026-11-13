@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,19 +48,9 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     private boolean perTaskReserve
 
-    /*
-     * If LSF_UNIT_FOR_LIMITS is not defined in lsf.conf, then the default setting is in KB, and for RUSAGE it is MB
-     * see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
-     */
-    private String memUnit = 'KB'
-
-    private String usageUnit = 'MB'
-
     protected boolean getPerJobMemLimit() { perJobMemLimit }
     protected boolean getPerTaskReserve() { perTaskReserve }
-    protected String getMemUnit() { memUnit }
-    protected String getUsageUnit() { usageUnit }
-    
+
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -96,13 +86,13 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             def mem1 = ( task.config.getCpus() > 1 && !perJobMemLimit ) ? mem.div(task.config.getCpus() as int) : mem
             def mem2 = ( task.config.getCpus() > 1 && perTaskReserve ) ? mem.div(task.config.getCpus() as int) : mem
 
-            result << '-M' << String.valueOf(mem1.toUnit(memUnit))
-            result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
+            result << '-M' << "${mem1.toMega()}MB".toString()
+            result << '-R' << "select[mem>=${mem.toMega()}MB] rusage[mem=${mem2.toMega()}MB]".toString()
         }
 
         def disk = task.config.getDisk()
         if( disk ) {
-            result << '-R' << "select[tmp>=${disk.toUnit(memUnit)}] rusage[tmp=${disk.toUnit(usageUnit)}]".toString()
+            result << '-R' << "select[tmp>=${disk.toMega()}MB] rusage[tmp=${disk.toMega()}MB]".toString()
         }
 
         // -- the job name
@@ -118,7 +108,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         addClusterOptionsDirective(task.config, result)
 
         // add account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-G' << account
         }
@@ -185,11 +175,11 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             }
         }
 
-        new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n");
+        throw new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n")
     }
 
     @Override
-    protected List<String> getKillCommand() { ['bkill'] }
+    protected List<String> getKillCommand() { ['bkill', '-d'] }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
@@ -212,7 +202,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             'SSUSP': QueueStatus.HOLD,
             'DONE': QueueStatus.DONE,
             'EXIT': QueueStatus.ERROR,
-            'UNKWN': QueueStatus.ERROR,
+            'UNKWN': QueueStatus.HOLD,
             'ZOMBI': QueueStatus.ERROR,
     ]
 
@@ -310,13 +300,6 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         super.register()
         final conf = parseLsfConfig()
 
-        // lsf mem unit
-        // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
-        if( conf.get('LSF_UNIT_FOR_LIMITS') ) {
-            memUnit = usageUnit = conf.get('LSF_UNIT_FOR_LIMITS')
-            log.debug "[LSF] Detected lsf.conf LSF_UNIT_FOR_LIMITS=$memUnit"
-        }
-        
         // per job mem limit
         // https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
         if( conf.get('LSB_JOB_MEMLIMIT') ) {
@@ -325,7 +308,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
 
-        perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
+        perJobMemLimit = config.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
 
         // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
@@ -334,7 +317,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
 
-        perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
+        perTaskReserve = config.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import nextflow.script.dsl.DslScope;
  */
 public interface ConfigDsl extends DslScope {
 
+    // constants
+
     @Deprecated
     @Constant("baseDir")
     @Description("""
@@ -53,6 +55,14 @@ public interface ConfigDsl extends DslScope {
         The directory where the main script is located.
     """)
     Path getProjectDir();
+
+    @Constant("secrets")
+    @Description("""
+        Map of pipeline secrets.
+    """)
+    Map<String,String> getSecrets();
+
+    // functions
 
     @Description("""
         Get the value of an environment variable from the launch environment.

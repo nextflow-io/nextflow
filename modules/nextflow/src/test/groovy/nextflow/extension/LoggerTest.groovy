@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,14 +34,14 @@ class LoggerTest extends Specification {
     OutputCapture capture = new OutputCapture()
 
 
-    def 'should print only a debug line in a second'() {
+    def 'should print only a debug line in the throttle window'() {
 
         when:
-        Dummy.log.debug1("Hello world", throttle: '1s')
-        Dummy.log.debug1("Hello world", throttle: '1s')
-        Dummy.log.debug1("Hello world", throttle: '1s')
-        sleep (1_100)
-        Dummy.log.debug1("Hello world", throttle: '1s')
+        Dummy.log.debug1("Hello world", throttle: '500ms')
+        Dummy.log.debug1("Hello world", throttle: '500ms')
+        Dummy.log.debug1("Hello world", throttle: '500ms')
+        sleep 600
+        Dummy.log.debug1("Hello world", throttle: '500ms')
 
         then:
         capture.toString().readLines().findAll { it.endsWith('Hello world') }.size() ==2

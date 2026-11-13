@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.time.ZoneId
 
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -146,7 +147,7 @@ class BoltsTest extends Specification {
     }
 
     def testAsURL() {
-        expect: 
+        expect:
         'http://foo.com' as URL == new URL('http://foo.com')
         'http://foo.com/some/file.txt' as URL == new URL('http://foo.com/some/file.txt')
     }
@@ -393,7 +394,7 @@ class BoltsTest extends Specification {
         def merge = Bolts.deepMerge(origMap, newMap)
 
         then:
-        merge.foo == 1 
+        merge.foo == 1
         merge.bar.x == 4
         merge.bar.y == 3
         merge.bar.z == 5
@@ -419,6 +420,50 @@ class BoltsTest extends Specification {
         result.bar instanceof ConfigObject
         and:
         !result.is( cfg )
+    }
+
+    def 'should resolve properties as a map entry'() {
+        given:
+        def map = [title: 'foo', properties: [a: 1]]
+
+        expect:
+        map.properties == [a: 1]
+        map['properties'] == [a: 1]
+        DefaultGroovyMethods.getAt((Object) map, 'properties') == [a: 1]
+        and:
+        [title: 'foo'].properties == null
+    }
+
+    def 'should assign properties as a map entry'() {
+        given:
+        def map = [:]
+        def cfg = new ConfigObject()
+
+        when:
+        map.properties = [a: 1]
+        map['properties'] = [b: 2]
+        cfg.properties = [c: 3]
+
+        then:
+        map == [properties: [b: 2]]
+        cfg.get('properties') == [c: 3]
+        cfg.properties == [c: 3]
+    }
+
+    def 'should read the size property of a list' () {
+        given:
+        def array = ['a', 'b', 'c']
+        def linked = new LinkedList(['a', 'b'])
+
+        expect:
+        array.size == 3
+        linked.size == 2
+        [].size == 0
+        ['x', 'x'].unique().size == 1
+        ['a', 'b'].asImmutable().size == 2
+        and: 'spread and map lookups are unchanged'
+        ['ab', 'cde']*.size() == [2, 3]
+        [size: 'big'].size == 'big'
     }
 
 }

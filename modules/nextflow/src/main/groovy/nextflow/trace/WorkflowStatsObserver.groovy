@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,11 @@ package nextflow.trace
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.agent.Agent
 import nextflow.Session
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-import nextflow.util.SimpleAgent
+import nextflow.trace.event.TaskEvent
+import nextflow.util.Threads
 
 /**
  * Collect workflow execution progress and statistics
@@ -30,72 +31,111 @@ import nextflow.util.SimpleAgent
  */
 @Slf4j
 @CompileStatic
-class WorkflowStatsObserver implements TraceObserver {
+class WorkflowStatsObserver implements TraceObserverV2 {
 
-    private WorkflowStats data = new WorkflowStats()
+    // updated by the agent, and copied under its monitor
+    private final WorkflowStats data = new WorkflowStats()
 
     private Session session
 
-    private SimpleAgent<WorkflowStats> agent
+    private Agent<WorkflowStats> agent
 
     WorkflowStatsObserver(Session session) {
         this.session = session
-        this.agent = new SimpleAgent(data).onError { err -> session.abort(err) }
+        this.agent = new Agent<>(data)
+    }
+
+    /**
+     * Runs the action on the agent. An error aborts the run.
+     */
+    private void send(Closure action) {
+        agent.send {
+            try {
+                synchronized (data) {
+                    action.call()
+                }
+            }
+            catch( Throwable e ) {
+                log.debug "Unexpected error while updating the workflow stats | ${e.message ?: e}"
+                // abort on another thread, since the completion handlers wait for the agent
+                Threads.start { session.abort(e) }
+            }
+        }
     }
 
     @Override
     void onFlowComplete() {
-        log.debug "Workflow completed > $data"
+        log.debug "Workflow completed > ${getQuickStats()}"
     }
 
     @Override
-    void onProcessCreate(TaskProcessor process){
+    void onProcessCreate(TaskProcessor process) {
         log.trace "== event create pid=${process.id}"
-        agent.send { data.markCreated(process) }
+        send { data.markCreated(process) }
     }
 
     @Override
-    void onProcessTerminate( TaskProcessor processor ) {
-        log.trace "== event terminated pid=${processor.id}"
-        agent.send { data.markTerminated(processor) }
+    void onProcessTerminate(TaskProcessor process) {
+        log.trace "== event terminated pid=${process.id}"
+        send { data.markTerminated(process) }
     }
 
     @Override
-    void onProcessPending(TaskHandler handler, TraceRecord trace){
-        log.trace "== event pending pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markPending(handler.getTask().processor) }
+    void onTaskPending(TaskEvent event) {
+        log.trace "== event pending pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        send { data.markPending(event.handler.task.processor) }
     }
 
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace){
-        log.trace "== event submit pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markSubmitted(handler.getTask()) }
+    void onTaskSubmit(TaskEvent event) {
+        log.trace "== event submit pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        send { data.markSubmitted(event.handler.task) }
     }
 
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace){
-        log.trace "== event start pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markRunning(handler.getTask()) }
+    void onTaskStart(TaskEvent event) {
+        log.trace "== event start pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        send { data.markRunning(event.handler.task) }
     }
 
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        log.trace "== event complete pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markCompleted(handler.getTask(), trace) }
+    void onTaskComplete(TaskEvent event) {
+        log.trace "== event complete pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        send { data.markCompleted(event.handler.task, event.trace, event.handler.status) }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace){
-        log.trace "== event cached pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markCached(handler.getTask(), trace) }
+    void onTaskCached(TaskEvent event) {
+        log.trace "== event cached pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        send { data.markCached(event.handler.task, event.trace) }
     }
 
+    /**
+     * A copy of the stats, once the events notified before are applied,
+     * or without waiting for them when the caller is interrupted or
+     * runs on the agent thread
+     */
     WorkflowStats getStats() {
-        return agent.getValue()
+        try {
+            agent.await()
+        }
+        catch( InterruptedException e ) {
+            log.warn "Got an interrupted exception while waiting for the workflow stats | ${e}"
+            Thread.currentThread().interrupt()
+        }
+        catch( IllegalStateException e ) {
+            log.debug "Unable to await the workflow stats from the agent thread | ${e.message}"
+        }
+        return getQuickStats()
     }
 
+    /**
+     * A copy of the stats, without waiting for the pending events
+     */
     WorkflowStats getQuickStats() {
-        agent.getQuickValue()
+        synchronized (data) {
+            return data.clone()
+        }
     }
 
     boolean hasProgressRecords() {

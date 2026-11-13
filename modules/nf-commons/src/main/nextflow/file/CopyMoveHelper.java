@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,11 +41,6 @@ import org.slf4j.LoggerFactory;
  * Helper class to handle copy/move files and directories
  */
 public class CopyMoveHelper {
-    /**
-     * True if currently performing a copy of a foreign file.
-     */
-    public static final ThreadLocal<Boolean> IN_FOREIGN_COPY = new ThreadLocal<>();
-
     private static Logger log = LoggerFactory.getLogger(CopyMoveHelper.class);
 
     private CopyMoveHelper() { }
@@ -86,15 +81,12 @@ public class CopyMoveHelper {
             throws IOException
     {
         if( !foreign ) {
-            source.getFileSystem().provider().copy(source, target, options);
+            source.getFileSystem().provider().copy(source, target, SkipDirOption.strip(options));
             return;
         }
 
-        IN_FOREIGN_COPY.set(true);
         try (InputStream in = Files.newInputStream(source)) {
             Files.copy(in, target);
-        } finally {
-            IN_FOREIGN_COPY.set(false);
         }
     }
 
@@ -111,12 +103,17 @@ public class CopyMoveHelper {
     {
 
         final boolean foreign = source.getFileSystem().provider() != target.getFileSystem().provider();
+        final SkipDirOption skipDir = CopyOptions.parse(options).skipDir();
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 
             public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr)
                     throws IOException
             {
+                if( skipDir != null && skipDir.matches(source, current) ) {
+                    log.trace("Skip DIR: " + current);
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
                 // get the *delta* path against the source path
                 Path rel = source.relativize(current);
                 String delta = rel != null ? rel.toString() : null;
@@ -140,6 +137,19 @@ public class CopyMoveHelper {
                     log.trace("Copy file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 copyFile(current, newFile, foreign, options);
                 return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path current, IOException exc)
+                    throws IOException
+            {
+                // the attributes of a skipped dir are read before `preVisitDirectory` is invoked,
+                // ignore the error when it is removed or cannot be accessed in the meanwhile
+                if( skipDir != null && skipDir.matches(source, current) ) {
+                    log.trace("Skip DIR: " + current + " - cause: " + exc);
+                    return FileVisitResult.CONTINUE;
+                }
+                throw exc;
             }
 
         };
@@ -172,7 +182,7 @@ public class CopyMoveHelper {
 
         // create directory or copy file
         if (attrs.isDirectory()) {
-            copyDirectory(source, target);
+            copyDirectory(source, target, opts.skipDir() != null ? new CopyOption[]{ opts.skipDir() } : new CopyOption[0]);
         }
         else {
             copyFile(source, target, true);

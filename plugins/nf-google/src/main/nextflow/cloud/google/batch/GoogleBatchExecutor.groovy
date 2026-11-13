@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +19,15 @@ package nextflow.cloud.google.batch
 import static nextflow.cloud.google.batch.GoogleBatchScriptLauncher.*
 
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
+import com.google.api.gax.rpc.ResourceExhaustedException
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.logging.BatchLogging
@@ -33,11 +36,14 @@ import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
+import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
-import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.RateUnit
+import nextflow.util.ThreadPoolHelper
+import nextflow.util.ThrottlingExecutor
 import nextflow.util.Escape
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
@@ -52,14 +58,25 @@ import org.pf4j.ExtensionPoint
 class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     private BatchClient client
-    private BatchConfig config
+    private GoogleOpts googleOpts
     private Path remoteBinDir
     private BatchLogging logging
 
-    private final Set<String> deletedJobs = new HashSet<>()
+    /**
+     * Executor service to throttle job submission requests
+     */
+    private ThrottlingExecutor submitter
+
+    /**
+     * Executor service to throttle job deletion requests
+     */
+    private ThrottlingExecutor reaper
+
+    private final Set<String> deletedJobs = ConcurrentHashMap.<String>newKeySet()
 
     BatchClient getClient() { return client }
-    BatchConfig getConfig() { return config }
+    GoogleOpts getGoogleOpts() { return googleOpts }
+    BatchConfig getBatchConfig() { return googleOpts.batch }
     Path getRemoteBinDir() { return remoteBinDir }
     BatchLogging getLogging() { logging }
 
@@ -94,13 +111,13 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     protected void createConfig() {
-        this.config = BatchConfig.create(session)
-        log.debug "[GOOGLE BATCH] Executor config=$config"
+        this.googleOpts = GoogleOpts.create(session)
+        log.debug "[GOOGLE BATCH] Executor config=$googleOpts"
     }
 
     protected void createClient() {
-        this.client = new BatchClient(config)
-        this.logging = new BatchLogging(config)
+        this.client = new BatchClient(googleOpts)
+        this.logging = new BatchLogging(googleOpts)
     }
 
     @Override
@@ -114,7 +131,59 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
+        // create the throttling executor services
+        this.submitter = createExecutorService('GoogleBatch-executor')
+        this.reaper = createExecutorService('GoogleBatch-reaper')
+
+        final pollInterval = config.getPollInterval(name, Duration.of('10 sec'))
+        final dumpInterval = config.getMonitorDumpInterval(name)
+        final capacity = config.getQueueSize(name, 1000)
+
+        final def params = [
+                name: name,
+                session: session,
+                config: config,
+                pollInterval: pollInterval,
+                dumpInterval: dumpInterval,
+                capacity: capacity
+        ]
+
+        log.debug "Creating parallel monitor for executor '$name' > capacity=$capacity; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
+        new ParallelPollingMonitor(submitter, params)
+    }
+
+    /**
+     * Creates a {@link ThrottlingExecutor} service to throttle
+     * API requests to the Google Batch service.
+     *
+     * @param poolName The executor service thread pool name
+     * @return A {@link ThrottlingExecutor} instance
+     */
+    private ThrottlingExecutor createExecutorService(String poolName) {
+        final qs = 5_000
+        final limit = config.getExecConfigProp(name, 'submitRateLimit', '50/s') as String
+        final size = Runtime.runtime.availableProcessors() * 5
+
+        final opts = new ThrottlingExecutor.Options()
+                // note: transient errors (unavailable, deadline exceeded, I/O) are already
+                // retried by the retry policy in BatchClient, therefore only the quota
+                // exhaustion error is handled here to trigger the submission auto-throttle
+                .retryOn { Throwable t -> t instanceof ResourceExhaustedException }
+                .onFailure { Throwable t -> session?.abort(t) }
+                .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
+                .withRateLimit(limit)
+                .withQueueSize(qs)
+                .withPoolSize(size)
+                .withKeepAlive(Duration.of('1 min'))
+                .withAutoThrottle(true)
+                .withMaxRetries(10)
+                .withPoolName(poolName)
+
+        ThrottlingExecutor.create(opts)
+    }
+
+    protected void logRateLimitChange(RateUnit rate) {
+        log.debug "New submission rate limit: $rate"
     }
 
     @Override
@@ -122,10 +191,33 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
         return new GoogleBatchTaskHandler(task, this)
     }
 
+    ThrottlingExecutor getReaper() { reaper }
+
     @Override
     void shutdown() {
+        // shutdown the submitter executor
+        def tasks = submitter.shutdownNow()
+        if( tasks ) log.warn "Execution interrupted -- cleaning up execution pool"
+        submitter.awaitTermination(5, TimeUnit.MINUTES)
+
+        // shutdown the reaper executor
+        reaper.shutdown()
+        final waitMsg = "[GOOGLE BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
+        final exitMsg = "[GOOGLE BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
+        awaitCompletion(reaper, Duration.of('60min'), waitMsg, exitMsg)
+
+        // close batch client and logging
         client.shutdown()
         logging.close()
+    }
+
+    protected void awaitCompletion(ThrottlingExecutor executor, Duration duration, String waitMsg, String exitMsg) {
+        try {
+            ThreadPoolHelper.await(executor, duration, waitMsg, exitMsg)
+        }
+        catch( java.util.concurrent.TimeoutException e ) {
+            log.warn(e.message, e)
+        }
     }
 
     @Override
@@ -138,15 +230,9 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     boolean shouldDeleteJob(String jobId) {
-        if( jobId in deletedJobs ) {
-            // if the job is already in the list it has been already deleted
-            return false
-        }
-        synchronized (deletedJobs) {
-            // add the job id to the set of deleted jobs, if it's a new id, the `add` method
-            // returns true therefore the job should be deleted
-            return deletedJobs.add(jobId)
-        }
+        // add the job id to the set of deleted jobs, if it's a new id, the `add` method
+        // returns true therefore the job should be deleted
+        return deletedJobs.add(jobId)
     }
 
     @Override

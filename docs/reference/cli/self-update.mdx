@@ -1,0 +1,54 @@
+---
+title: nextflow self-update
+description: Reference for the nextflow self-update command. Update the Nextflow runtime to the latest available version.
+---
+
+# `nextflow self-update`
+
+Update the Nextflow runtime to the latest available version.
+
+## Usage
+
+```console
+$ nextflow self-update [options]
+```
+
+## Description
+
+The `self-update` command directs the `nextflow` CLI to update itself to the latest stable release.
+
+## Options
+
+##### `-clean`
+
+<AddedInVersion version="27.04" />
+
+Remove the files of all other Nextflow versions after updating. This deletes the framework JARs under `$NXF_HOME/framework` and the launcher caches under `$NXF_HOME/tmp`, and keeps only the newly installed version. It does not remove plugins. Nextflow downloads a removed version again the next time you use it, for example with `NXF_VER`.
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Examples
+
+Update Nextflow:
+
+```console
+$ nextflow self-update
+
+      N E X T F L O W
+      version 20.07.1 build 5412
+      created 24-07-2020 15:18 UTC (20:48 IDT)
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+
+
+Nextflow installation completed. Please note:
+- the executable file `nextflow` has been created in the folder: /usr/local/bin
+```
+
+Update Nextflow and remove the files of older versions:
+
+```console
+$ nextflow self-update -clean
+```

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,13 +86,13 @@ class LinUtilsTest extends Specification{
         when:
         def params = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#params'))
         then:
-        params instanceof List<Parameter>
+        params instanceof List
         (params as List<Parameter>).size() == 2
 
         when:
         def outputs = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#output'))
         then:
-        outputs instanceof List<Parameter>
+        outputs instanceof List
         def param = (outputs as List)[0] as Parameter
         param.name == "output"
 

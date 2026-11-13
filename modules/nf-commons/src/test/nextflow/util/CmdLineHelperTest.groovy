@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
@@ -63,6 +62,11 @@ class CmdLineHelperTest extends Specification{
         '--foo 1 -bar 2'        | '[option{foo: [1, -bar, 2]}]'
         and:
         '--foo-name 1 --bar-opt 2' | '[option{foo-name: [1]}, option{bar-opt: [2]}]'
+        and:
+        // inline value using the `=` separator (GH #5190)
+        '--shm-size=1000000000'    | '[option{shm-size: [1000000000]}]'
+        '--foo=1'                  | '[option{foo: [1]}]'
+        '-a=1'                     | '[option{a: [1]}]'
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.util.CacheHelper
 /**
- * Models a checksum including the value as well as the algortihm and mode used to compute it.
+ * Models a checksum including the value as well as the algorithm and mode used to compute it.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
@@ -37,11 +37,11 @@ class Checksum {
         new Checksum(value, algorithm, mode.toString().toLowerCase())
     }
 
-    static Checksum ofNextflow(String value) {
-        new Checksum(CacheHelper.hasher(value).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+    static Checksum ofNextflow(String value, CacheHelper.HashMode mode = CacheHelper.HashMode.DEFAULT()) {
+        new Checksum(CacheHelper.hasher(value, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 
-    static Checksum ofNextflow(Path path) {
-        new Checksum(CacheHelper.hasher(path).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+    static Checksum ofNextflow(Path path, CacheHelper.HashMode mode = CacheHelper.HashMode.DEFAULT()) {
+        new Checksum(CacheHelper.hasher(path, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package nextflow.script.dsl;
 
 /**
  * Marker interface for DSL scopes, which define the built-in
- * variables and functions for a particular context.
+ * constants and functions for a particular context.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

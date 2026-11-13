@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin
@@ -30,11 +29,6 @@ import org.pf4j.PluginManager
 @Slf4j
 @CompileStatic
 class Plugins {
-
-    // this is deprecated and should not be used to avoid accessing this static attribute
-    // cause the instantiation of the PluginsFacade class
-    @Deprecated
-    public static final String DEFAULT_PLUGINS_REPO = PluginsFacade.DEFAULT_PLUGINS_REPO
 
     private final static PluginsFacade INSTANCE = new PluginsFacade()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -39,7 +40,7 @@ import nextflow.exception.AbortOperationException
 class ThreadPoolManager {
 
     private static final AtomicInteger poolCount = new AtomicInteger()
-    
+
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
     final static public int DEFAULT_QUEUE_SIZE = -1 // use -1 for using an unbound queue
@@ -53,6 +54,7 @@ class ThreadPoolManager {
     private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
     private ExecutorService executorService
+    private final AtomicInteger runningTasks = new AtomicInteger()
     private String name
     private String waitMsg = "Waiting for file transfers to complete (%d files)"
     private String exitMsg = "Exiting before file transfers were completed -- Some files may be lost"
@@ -89,9 +91,33 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
-                : legacyThreadPool()
+        executorService = Threads.useVirtual()
+            ? virtualThreadService()
+            : legacyThreadPool()
+
+        return executorService
+    }
+
+    protected ExecutorService virtualThreadService() {
+        final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
+        final factory = VirtualThreadFactoryBuilder.create(poolName)
+        final ThreadFactory countingFactory = (Runnable task) -> factory.newThread(() -> {
+            runningTasks.incrementAndGet()
+            try {
+                task.run()
+            }
+            finally {
+                runningTasks.decrementAndGet()
+            }
+        })
+        return Executors.newThreadPerTaskExecutor(countingFactory)
+    }
+
+    // this class is required to avoid failures when using Java version < 21
+    private static class VirtualThreadFactoryBuilder {
+        static ThreadFactory create(String name) {
+            return Thread.ofVirtual().name(name).factory()
+        }
     }
 
     protected ExecutorService legacyThreadPool() {
@@ -103,6 +129,12 @@ class ThreadPoolManager {
                 .withKeepAliveTime(keepAlive)
                 .withAllowCoreThreadTimeout(allowThreadTimeout)
                 .build()
+    }
+
+    protected int pending() {
+        return executorService instanceof ThreadPoolExecutor
+            ? ThreadPoolHelper.pending(executorService)
+            : runningTasks.get()
     }
 
     ExecutorService createAndRegisterShutdownCallback(Session session) {
@@ -128,7 +160,7 @@ class ThreadPoolManager {
 
         executorService.shutdown()
         // wait for remaining threads to complete
-        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
+        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg, () -> pending())
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
     }
 

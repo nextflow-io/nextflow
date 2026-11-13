@@ -15,15 +15,23 @@
  */
 package nextflow.script.types.shim;
 
+import java.util.regex.Pattern;
+
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Ops;
 
 @Description("""
     A string is an immutable sequence of characters.
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#string)
 """)
-@ShimType(java.lang.String.class)
+@Ops(StringOps.class)
 public interface String {
+
+    @Description("""
+        Returns `true` if the string contains the given substring.
+    """)
+    boolean contains(String s);
 
     @Description("""
         Returns `true` if the string ends with the given suffix.
@@ -56,14 +64,24 @@ public interface String {
     boolean isEmpty();
 
     @Description("""
-        Returns `true` if the string can be parsed as a floating-point number.
+        Returns `true` if the string can be parsed as a 64-bit floating-point number.
+    """)
+    boolean isDouble();
+
+    @Description("""
+        Returns `true` if the string can be parsed as a 32-bit floating-point number.
     """)
     boolean isFloat();
 
     @Description("""
-        Returns `true` if the string can be parsed as an integer.
+        Returns `true` if the string can be parsed as a 32-bit integer.
     """)
     boolean isInteger();
+
+    @Description("""
+        Returns `true` if the string can be parsed as a 64-bit integer.
+    """)
+    boolean isLong();
 
     @Description("""
         Returns the index within the string of the last occurrence of the given substring. Returns -1 if the string does not contain the substring.
@@ -86,6 +104,11 @@ public interface String {
     String md5();
 
     @Description("""
+        Returns the lines of the string as a list.
+    """)
+    List<String> readLines();
+
+    @Description("""
         Returns a new string in which each occurrence of the target string is replaced with the given replacement string.
     """)
     String replace(String target, String replacement);
@@ -101,12 +124,17 @@ public interface String {
     String replaceFirst(String regex, String replacement);
 
     @Description("""
+        Returns a new string with the characters in reverse order.
+    """)
+    String reverse();
+
+    @Description("""
         Returns the SHA-256 checksum of the string.
     """)
     String sha256();
 
     @Description("""
-        Returns `true` if the string ends with the given prefix.
+        Returns `true` if the string starts with the given prefix.
     """)
     boolean startsWith(String prefix);
 
@@ -146,14 +174,24 @@ public interface String {
     Boolean toBoolean();
 
     @Description("""
-        Parses the string into a floating-point number.
+        Parses the string into a 64-bit floating-point number.
+    """)
+    Double toDouble();
+
+    @Description("""
+        Parses the string into a 32-bit floating-point number.
     """)
     Float toFloat();
 
     @Description("""
-        Parses the string into an integer.
+        Parses the string into a 32-bit integer.
     """)
     Integer toInteger();
+
+    @Description("""
+        Parses the string into a 64-bit integer.
+    """)
+    Long toLong();
 
     @Description("""
         Returns a copy of this string with all characters converted to lower case.
@@ -169,5 +207,31 @@ public interface String {
         Splits the string into a list of substrings using the given delimiters. Each character in the delimiter string is treated as a separate delimiter.
     """)
     List<String> tokenize(String delimiters);
+
+    @Description("""
+        Splits the string into a list of substrings using whitespace as the delimiter.
+    """)
+    List<String> tokenize();
+
+    @Description("""
+        Returns a copy of this string with leading and trailing whitespace removed.
+    """)
+    String trim();
+
+}
+
+interface StringOps {
+
+    Pattern bitwiseNegate();
+
+    Integer compareTo(String a, String b);
+
+    String getAt(String a, Integer b);
+
+    Boolean isCase(String a, String b);
+
+    String multiply(String a, Integer b);
+
+    String plus(String a, String b);
 
 }

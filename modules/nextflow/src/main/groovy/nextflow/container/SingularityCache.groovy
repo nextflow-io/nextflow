@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,14 +25,13 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Const
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.LazyValue
 /**
  * Handle caching of remote Singularity images
  *
@@ -42,15 +41,19 @@ import nextflow.util.Escape
 @CompileStatic
 class SingularityCache {
 
-    static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> localImageNames = new ConcurrentHashMap<>()
 
-    private ContainerConfig config
+    private String cacheDir
+
+    private String libraryDir
+
+    private boolean noHttps
+
+    private Duration pullTimeout
 
     private Map<String,String> env
 
     private boolean missingCacheDir
-
-    private Duration pullTimeout = Duration.of('20min')
 
     protected String getBinaryName() { return 'singularity' }
 
@@ -58,14 +61,15 @@ class SingularityCache {
 
     protected String getEnvPrefix() { getBinaryName().toUpperCase() }
 
-    /**
-     * Create a Singularity cache object
-     *
-     * @param config A {@link ContainerConfig} object
-     * @param env The environment configuration object. Specifying {@code null} the current system environment is used
-     */
-    SingularityCache(ContainerConfig config, Map<String,String> env=null) {
-        this.config = config
+    static SingularityCache create(SingularityConfig config, Map<String,String> env=null) {
+        new SingularityCache(config.cacheDir, config.libraryDir, config.noHttps, config.pullTimeout, env)
+    }
+
+    SingularityCache(String cacheDir, String libraryDir, boolean noHttps, Duration pullTimeout, Map<String,String> env=null) {
+        this.cacheDir = cacheDir
+        this.libraryDir = libraryDir
+        this.noHttps = noHttps
+        this.pullTimeout = pullTimeout
         this.env = env ?: SysEnv.get()
     }
 
@@ -135,10 +139,7 @@ class SingularityCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
-
-        def str = config.cacheDir as String
+        String str = cacheDir
         if( str )
             return checkDir(str)
 
@@ -150,14 +151,14 @@ class SingularityCache {
         if( str )
             return checkDir(str)
 
-        def workDir = Global.session.workDir
+        Path workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
             // when the work dir is a remote path use the local launch directory to cache image files
             workDir = Const.appCacheDir.toAbsolutePath()
         }
 
         missingCacheDir = true
-        def result = workDir.resolve('singularity')
+        final result = workDir.resolve('singularity')
         result.mkdirs()
 
         return result
@@ -177,7 +178,7 @@ class SingularityCache {
      */
     @PackageScope
     Path getLibraryDir() {
-        def str = config.libraryDir as String ?: env.get("NXF_${envPrefix}_LIBRARYDIR".toString())
+        final str = libraryDir ?: env.get("NXF_${envPrefix}_LIBRARYDIR".toString())
         if( str )
             return existsDir(str)
 
@@ -264,7 +265,7 @@ class SingularityCache {
 
         // Construct a temporary name for the image file
         final tmpFile = getTempImagePath(targetPath)
-        final noHttpsOption = (config.noHttps)? '--nohttps' : ''
+        final noHttpsOption = (noHttps)? '--no-https' : ''
 
         String cmd = "${binaryName} pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {
@@ -307,33 +308,18 @@ class SingularityCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
      * image download is actually executed.
      *
      * @param imageUrl The singularity image remote URL
-     * @return The {@link DataflowVariable} which hold (and pull) the local image file
+     * @return The {@link LazyValue} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String imageUrl) {
-        if( imageUrl in localImageNames ) {
-            log.trace "${appName} found local cache for image `$imageUrl`"
-            return localImageNames[imageUrl]
-        }
-
-        synchronized (localImageNames) {
-            def result = localImageNames[imageUrl]
-            if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ downloadContainerImage(imageUrl) })
-                localImageNames[imageUrl] = result
-            }
-            else {
-                log.trace "${appName} found local cache for image `$imageUrl` (2)"
-            }
-            return result
-        }
+    LazyValue<Path> getLazyImagePath(String imageUrl) {
+        return localImageNames.computeIfAbsent(imageUrl, (String key) -> new LazyValue<Path>({ downloadContainerImage(imageUrl) }))
     }
 
     /**
@@ -346,14 +332,15 @@ class SingularityCache {
      * @return the container image local {@link Path}
      */
     Path getCachePathFor(String url) {
-        def promise = getLazyImagePath(url)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(url).get()
         if( !result )
             throw new IllegalStateException("Cannot pull ${appName} image `$url`")
         log.trace "${appName} cache for `$url` path=$result"
         return result
     }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 
 }

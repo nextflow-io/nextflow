@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,20 @@
 package nextflow.processor
 
 
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.locks.ReentrantLock
+
 import nextflow.Session
+import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.ExecutorConfig
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,12 +41,13 @@ class TaskPollingMonitorTest extends Specification {
 
         setup:
         def name = 'hello'
-        def session = new Session( executor: [pollInterval: '1h', queueSize: 11, dumpInterval: '3h'] )
+        def session = Mock(Session)
+        def config = new ExecutorConfig(pollInterval: '1h', queueSize: 11, dumpInterval: '3h')
 
         def defSize = 99
         def defPollDuration = Duration.of('44s')
         when:
-        def monitor = TaskPollingMonitor.create(session, name, defSize, defPollDuration)
+        def monitor = TaskPollingMonitor.create(session, config, name, defSize, defPollDuration)
         then:
         monitor.name == 'hello'
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
@@ -49,12 +60,12 @@ class TaskPollingMonitorTest extends Specification {
 
         given:
         def session = Mock(Session)
-        def monitor = new TaskPollingMonitor(name:'local', session: session, pollInterval: '1s', capacity: 100)
-        
+        def config = new ExecutorConfig(submitRateLimit: RATE)
+        def monitor = new TaskPollingMonitor(name:'local', session: session, config: config, pollInterval: '1s', capacity: 100)
+
         when:
         def limit = monitor.createSubmitRateLimit()
         then:
-        1 * session.getExecConfigProp('local','submitRateLimit', null) >> RATE
         limit ? Math.round(limit.getRate()) : null == EXPECTED
 
         where:
@@ -101,8 +112,8 @@ class TaskPollingMonitorTest extends Specification {
         then:
         1 * session.disableJobsCancellation >> false
         and:
-        1 * handler.kill() >> null
-        1 * session.notifyTaskComplete(handler) >> null
+        1 * handler.kill()
+        1 * session.notifyTaskComplete(handler)
     }
 
     def 'should not cancel running jobs' () {
@@ -148,4 +159,391 @@ class TaskPollingMonitorTest extends Specification {
         3 * session.notifyTaskSubmit(handler)
     }
 
+    @Unroll
+    def 'should throw error if job array size exceeds queue size [capacity: #CAPACITY, array: #ARRAY_SIZE]' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: CAPACITY, pollInterval: Duration.of('1min')))
+        and:
+        def processor = Mock(TaskProcessor)
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getName() >> TASK_NAME
+                getArraySize() >> ARRAY_SIZE
+                getProcessor() >> processor
+            }
+        }
+
+        when:
+        monitor.canSubmit(arrayHandler)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Process '$TASK_NAME' declares array size ($ARRAY_SIZE) which exceeds the executor queue size ($CAPACITY)")
+
+        where:
+        CAPACITY | ARRAY_SIZE | TASK_NAME
+        10       | 15         | 'test_array'
+        5        | 10         | 'large_array'
+        1        | 2          | 'small_array'
+    }
+
+    @Unroll
+    def 'should validate array size accounting in queue capacity [capacity: #CAPACITY, running: #RUNNING_COUNT, array: #ARRAY_SIZE]' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: CAPACITY, pollInterval: Duration.of('1min')))
+        and:
+        def processor = Mock(TaskProcessor)
+        def regularHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskRun) {
+                getProcessor() >> processor
+            }
+            canForkProcess() >> CAN_FORK
+            isReady() >> IS_READY
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getArraySize() >> ARRAY_SIZE
+                getProcessor() >> processor
+            }
+            canForkProcess() >> CAN_FORK
+            isReady() >> IS_READY
+        }
+
+        and:
+        RUNNING_COUNT.times { monitor.runningQueue.add(regularHandler) }
+
+        expect:
+        monitor.runningQueue.size() == RUNNING_COUNT
+        monitor.canSubmit(regularHandler) == REGULAR_EXPECTED
+        monitor.canSubmit(arrayHandler) == ARRAY_EXPECTED
+
+        where:
+        CAPACITY | RUNNING_COUNT | ARRAY_SIZE | CAN_FORK | IS_READY | REGULAR_EXPECTED | ARRAY_EXPECTED
+        10       | 6             | 5          | true     | true     | true             | false     // Array too big (6+5>10)
+        10       | 5             | 5          | true     | true     | true             | true      // Array fits exactly (5+5=10)
+        10       | 9             | 1          | true     | true     | true             | true      // Both fit (9+1=10)
+        10       | 10            | 1          | true     | true     | false            | false     // Queue full (10+1>10)
+        5        | 4             | 1          | true     | true     | true             | true      // Both fit (4+1=5)
+        5        | 4             | 2          | true     | true     | true             | false     // Array too big (4+2>5)
+        0        | 5             | 10         | true     | true     | true             | true      // Unlimited capacity
+        10       | 5             | 3          | false    | true     | false            | false     // Cannot fork
+        10       | 5             | 3          | true     | false    | false            | false     // Not ready
+    }
+
+    def 'should not limit resources by default'() {
+        given:
+        def session = Mock(Session)
+        def config = new ExecutorConfig(cpus: 1, memory: '1GB')
+
+        expect:
+        TaskPollingMonitor.create(session, config, 'k8s', 100, Duration.of('5 sec')).resourceTracker == null
+    }
+
+    def 'should limit submission by cpus and memory'() {
+        given:
+        def session = Mock(Session)
+        def tracker = new ResourceTracker(8, MemoryUnit.of('16GB').toBytes())
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceTracker: tracker)
+        def handler = Mock(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB')))
+            canForkProcess() >> true
+            isReady() >> true
+        }
+
+        when:
+        monitor.submit(handler)
+        monitor.submit(handler)
+        then:
+        2 * handler.submit()
+        tracker.availableCpus() == 0
+        tracker.availableMemory() == 0
+        !monitor.canSubmit(handler)
+
+        when:
+        monitor.remove(handler)
+        then:
+        tracker.availableCpus() == 4
+        tracker.availableMemory() == MemoryUnit.of('8GB').toBytes()
+        monitor.canSubmit(handler)
+    }
+
+    def 'should fail when a task exceeds the executor resources'() {
+        given:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: Mock(Session), pollInterval: Duration.of('1min'), resourceTracker: new ResourceTracker(8, 0))
+        def handler = Mock(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 10))
+        }
+
+        when:
+        monitor.canSubmit(handler)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Task requirement exceeds available CPUs -- req: 10; avail: 8'
+    }
+
+    def 'should release job array resources as each child completes'() {
+        given:
+        def tracker = new ResourceTracker(8, MemoryUnit.of('16GB').toBytes())
+        def monitor = new TaskPollingMonitor(name: 'foo', session: Mock(Session), pollInterval: Duration.of('1min'), resourceTracker: tracker)
+        def children = (1..3).collect {
+            Mock(TaskHandler) {
+                getTask() >> new TaskRun(config: new TaskConfig(cpus: 2, memory: MemoryUnit.of('2GB')))
+            }
+        }
+        def array = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) { getChildren() >> children }
+        }
+
+        when:
+        monitor.submit(array)
+        then:
+        tracker.availableCpus() == 2
+        tracker.availableMemory() == MemoryUnit.of('10GB').toBytes()
+
+        when:
+        monitor.remove(children[0])
+        then:
+        tracker.availableCpus() == 4
+        tracker.availableMemory() == MemoryUnit.of('12GB').toBytes()
+
+        when:
+        monitor.remove(children[1])
+        monitor.remove(children[2])
+        monitor.remove(children[2])
+        then:
+        tracker.availableCpus() == 8
+        tracker.availableMemory() == MemoryUnit.of('16GB').toBytes()
+    }
+
+    @Unroll
+    def 'should finalize task when submission fails [errorStrategy: #STRATEGY]' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: STRATEGY, maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        task.errorAction == ErrorStrategy.valueOf(STRATEGY.toUpperCase())
+        processor.state.val.completed == COMPLETED
+
+        where:
+        STRATEGY    | COMPLETED
+        'ignore'    | 1
+        'retry'     | 0
+    }
+
+    def 'should finalize each child task when task array submission fails' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> 3.times { n -> it.incSubmitted() } }
+        and:
+        def children = (1..3).collect {
+            def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+            Mock(TaskHandler, constructorArgs: [task]) { getTask() >> task }
+        }
+        def array = new TaskArrayRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1), children: children)
+        def handler = Mock(TaskHandler, constructorArgs: [array]) {
+            getTask() >> array
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        children.every { it.task.errorAction == ErrorStrategy.IGNORE }
+        processor.state.val.completed == 3
+    }
+    @Unroll
+    def 'should release fork slot when submission fails [errorStrategy: #STRATEGY]' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: STRATEGY, maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        then:
+        processor.forksCount.sum() == 0
+
+        where:
+        STRATEGY << ['ignore', 'retry']
+    }
+
+    def 'should release fork slot when task array submission fails' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> 3.times { n -> it.incSubmitted() } }
+        and:
+        def children = (1..3).collect {
+            def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+            Mock(TaskHandler, constructorArgs: [task]) { getTask() >> task }
+        }
+        def array = new TaskArrayRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1), children: children)
+        def handler = Mock(TaskHandler, constructorArgs: [array]) {
+            getTask() >> array
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Error submitting process 'foo' for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        processor.state.val.completed == 3
+        processor.forksCount.sum() == 0
+    }
+
+    def 'should not release fork slot when task is rejected before submission' () {
+        given:
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1, cpus: 16))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'), resourceTracker: new ResourceTracker(8, 0))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        processor.state.await()
+        then:
+        0 * handler.submit()
+        processor.state.val.completed == 1
+        processor.forksCount.sum() == 0
+    }
+    @Unroll
+    def 'should finalize task when checking its status fails [errorStrategy: #STRATEGY]' () {
+        given:
+        def session = Mock(Session) {
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([maxForks: 1]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        processor.forksCount.increment()
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: STRATEGY, maxErrors: -1))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            checkIfRunning() >> { throw new ProcessFailedException("Process 'foo' failed") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingLock = new ReentrantLock()
+        monitor.@slotAvail = monitor.@pendingLock.newCondition()
+        monitor.runningQueue.add(handler)
+
+        when:
+        monitor.checkAllTasks([handler])
+        processor.state.await()
+        then:
+        1 * handler.kill()
+        1 * session.notifyTaskComplete(handler)
+        and:
+        task.errorAction == ErrorStrategy.valueOf(STRATEGY.toUpperCase())
+        processor.state.val.completed == COMPLETED
+        processor.forksCount.sum() == 0
+        monitor.runningQueue.isEmpty()
+
+        where:
+        STRATEGY    | COMPLETED
+        'ignore'    | 1
+        'retry'     | 0
+    }
+
+    def 'should not finalize task twice when an error is raised after it was finalized' () {
+        given:
+        def session = Mock(Session) {
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'ignore', maxErrors: -1))
+        task.error = new Exception('Task failed')
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            checkIfCompleted() >> true
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingLock = new ReentrantLock()
+        monitor.@slotAvail = monitor.@pendingLock.newCondition()
+        monitor.@enableAsyncFinalizer = false
+        monitor.runningQueue.add(handler)
+
+        when:
+        monitor.checkAllTasks([handler])
+        processor.state.await()
+        then:
+        1 * session.notifyTaskComplete(handler) >> { throw new RuntimeException('Failed to notify task completion') }
+        and:
+        task.errorAction == ErrorStrategy.TERMINATE
+        processor.state.val.completed == 1
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,21 @@
 package nextflow.processor
 
 import java.nio.file.Paths
+import java.util.concurrent.CopyOnWriteArrayList
 
 import com.google.common.hash.HashCode
 import nextflow.Session
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.Executor
+import nextflow.executor.ExecutorConfig
 import nextflow.executor.TaskArrayExecutor
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
+import nextflow.util.Duration
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 import test.TestHelper
 /**
  *
@@ -40,6 +46,12 @@ class TaskArrayCollectorTest extends Specification {
         String getArrayIndexName() { null }
         int getArrayIndexStart() { 0 }
         String getArrayTaskId(String jobId, int index) { null }
+    }
+
+    def pool = new ArrayLauncherPool('test')
+
+    def cleanup() {
+        pool.shutdown()
     }
 
     def 'should submit tasks as job arrays' () {
@@ -87,6 +99,158 @@ class TaskArrayCollectorTest extends Specification {
         1 * executor.submit(task)
     }
 
+    def 'should submit partial job arrays after timeout' () {
+        given:
+        def submitted = new CopyOnWriteArrayList()
+        def executor = Mock(DummyExecutor) {
+            submit(_) >> { args -> submitted.add(args[0]) }
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PROC'
+            getSession() >> Mock(Session)
+        }
+        def taskArray = [:] as TaskArrayRun
+        def collector = Spy(new TaskArrayCollector(processor, executor, 3, Duration.of('1s'))) {
+            createTaskArray(_) >> taskArray
+        }
+        def conditions = new PollingConditions(timeout: 10)
+        and:
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getAttempt() >> 1
+            }
+        }
+
+        // submit partial job array after timeout
+        when:
+        collector.collect(task)
+        collector.collect(task)
+        then:
+        submitted.isEmpty()
+        conditions.eventually {
+            assert submitted == [taskArray]
+        }
+
+        // submit a single task directly after timeout
+        when:
+        submitted.clear()
+        collector.collect(task)
+        then:
+        conditions.eventually {
+            assert submitted == [task]
+        }
+
+        // cancel timeout when job array is full
+        when:
+        submitted.clear()
+        collector.collect(task)
+        collector.collect(task)
+        collector.collect(task)
+        sleep 1500
+        then:
+        submitted == [taskArray]
+
+        cleanup:
+        collector.close()
+    }
+
+    def 'should not submit after timeout when the collector is closed' () {
+        given:
+        def submitted = new CopyOnWriteArrayList()
+        def executor = Mock(DummyExecutor) {
+            submit(_) >> { args -> submitted.add(args[0]) }
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PROC'
+            getSession() >> Mock(Session)
+        }
+        def taskArray = [:] as TaskArrayRun
+        def collector = Spy(new TaskArrayCollector(processor, executor, 3, Duration.of('200ms'))) {
+            createTaskArray(_) >> taskArray
+        }
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getAttempt() >> 1
+            }
+        }
+
+        when:
+        collector.collect(task)
+        collector.collect(task)
+        collector.close()
+        sleep 500
+        then:
+        submitted == [taskArray]
+    }
+
+    def 'should not submit after timeout when the session is aborted' () {
+        given:
+        def executor = Mock(DummyExecutor)
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PROC'
+            getSession() >> Mock(Session) {
+                isAborted() >> true
+            }
+        }
+        def collector = new TaskArrayCollector(processor, executor, 3, Duration.of('100ms'))
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getAttempt() >> 1
+            }
+        }
+
+        when:
+        collector.collect(task)
+        collector.collect(task)
+        sleep 500
+        then:
+        0 * executor.submit(_)
+    }
+
+    def 'should abort the run when a job array cannot be submitted after timeout' () {
+        given:
+        def aborted = new CopyOnWriteArrayList()
+        def session = Mock(Session) {
+            abort(_) >> { args -> aborted.add(args[0]) }
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PROC'
+            getSession() >> session
+        }
+        def executor = Mock(DummyExecutor)
+        def error = new RuntimeException('Oops')
+        def collector = Spy(new TaskArrayCollector(processor, executor, 3, Duration.of('100ms'))) {
+            createTaskArray(_) >> { throw error }
+        }
+        def conditions = new PollingConditions(timeout: 10)
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getAttempt() >> 1
+            }
+        }
+
+        when:
+        collector.collect(task)
+        collector.collect(task)
+        then:
+        conditions.eventually {
+            assert aborted == [error]
+        }
+    }
+
+    def 'should create collector with the executor array timeout' () {
+        given:
+        def session = Mock(Session)
+        def executor = new DummyExecutor(name: 'slurm', session: session, config: new ExecutorConfig(['$slurm': [arrayTimeout: '5m']]))
+        def config = new ProcessConfig(Mock(BaseScript), 'PROC')
+        config.array = 10
+
+        when:
+        def processor = new TaskProcessor('PROC', executor, session, Mock(BaseScript), config, new BodyDef({}, '..'))
+        then:
+        processor.@arrayCollector.@timeout == Duration.of('5m')
+    }
+
     def 'should create task array' () {
         given:
         def exec = Mock(DummyExecutor) {
@@ -102,7 +266,7 @@ class TaskArrayCollectorTest extends Specification {
             getConfig() >> config
             getExecutor() >> exec
             getName() >> 'PROC'
-            getSession() >> Mock(Session)
+            getSession() >> Mock(Session) { getArrayLauncherPool() >> pool }
             isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
@@ -134,6 +298,75 @@ class TaskArrayCollectorTest extends Specification {
         taskArray.getArraySize() == 3
         taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
         taskArray.isContainerEnabled() == false
+    }
+
+    def 'should create task array with the auto resource labels' () {
+        given:
+        def exec = Mock(DummyExecutor) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getArrayIndexName() >> 'ARRAY_JOB_INDEX'
+        }
+        def config = Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) {
+            createTaskConfig() >> Mock(TaskConfig)
+            get('resourceLabels') >> ['My.Label': 'Foo/Bar']
+        }
+        def proc = Mock(TaskProcessor) {
+            getConfig() >> config
+            getExecutor() >> exec
+            getName() >> 'PROC'
+            getSession() >> Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_frog']; getArrayLauncherPool() >> pool }
+            isSingleton() >> false
+            getTaskBody() >> { new BodyDef(null, 'source') }
+        }
+        def collector = Spy(new TaskArrayCollector(proc, exec, 5))
+        and:
+        def task = Mock(TaskRun) {
+            index >> 1
+            getHash() >> HashCode.fromString('0123456789abcdef')
+            getWorkDir() >> Paths.get('/work/foo')
+        }
+        def handler = Mock(TaskHandler) {
+            getTask() >> task
+        }
+
+        when:
+        def taskArray = collector.createTaskArray([task])
+        then:
+        1 * handler.withArrayChild(true) >> handler
+        1 * exec.createTaskHandler(task) >> handler
+        1 * handler.prepareLauncher()
+        1 * collector.createArrayTaskScript([handler]) >> 'the-task-array-script'
+        and:
+        // the array job carries the auto labels, merged as they are for a plain task
+        taskArray.config.getResourceLabels() == ['nextflow.io/runName': 'crazy_frog', 'My.Label': 'Foo/Bar']
+        and:
+        // and the executor policy applies to the auto entries only
+        taskArray.config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow_io_runname': 'crazy_frog', 'My.Label': 'Foo/Bar']
+    }
+
+    def 'should create the work dir of a task array from the work dirs of its tasks' () {
+        given:
+        def exec = Mock(DummyExecutor) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getArrayIndexName() >> 'ARRAY_JOB_INDEX'
+        }
+        def proc = Mock(TaskProcessor) {
+            getConfig() >> Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) { createTaskConfig() >> Mock(TaskConfig) }
+            getExecutor() >> exec
+            getName() >> 'PROC'
+            getSession() >> Mock(Session) { getArrayLauncherPool() >> pool }
+            getTaskBody() >> { new BodyDef(null, 'source') }
+        }
+        def collector = Spy(new TaskArrayCollector(proc, exec, 5))
+        collector.createArrayTaskScript(_) >> 'the-task-array-script'
+        def handler = Mock(TaskHandler)
+        handler.withArrayChild(true) >> handler
+        exec.createTaskHandler(_) >> handler
+        and: 'every attempt of a task has the same hash'
+        def task = { String dir -> Mock(TaskRun) { getHash() >> HashCode.fromString('0123456789abcdef'); getWorkDir() >> Paths.get(dir) } }
+
+        expect: 'a retry collected again gets an array work dir of its own'
+        collector.createTaskArray([task('/work/ab/cdef')]).workDir != collector.createTaskArray([task('/work/ab/cdef-2')]).workDir
     }
 
     def 'should get array ref' () {
@@ -176,7 +409,7 @@ class TaskArrayCollectorTest extends Specification {
         result == '''\
                 array=( /work/dir/1 /work/dir/2 /work/dir/3 )
                 export nxf_array_task_dir=$array[INDEX]
-                bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+                exec bash $nxf_array_task_dir/.command.run > $nxf_array_task_dir/.command.log 2>&1
                 '''.stripIndent(true)
     }
 }

@@ -1,36 +1,44 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import java.nio.file.Files
-import java.util.concurrent.TimeoutException
+import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
+
 import nextflow.Channel
-import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class OutputDslTest extends Specification {
 
-    void assignOutput(Session session, String name, List values) {
-        def ch = new DataflowQueue()
-        values.each { v -> ch.bind(v) }
-        ch.bind(Channel.STOP)
-        session.outputs.put(name, ch)
-    }
-
-    void await(OutputDsl dsl) {
-        def now = System.currentTimeMillis()
-        while( !dsl.complete ) {
-            sleep 100
-            if( System.currentTimeMillis() - now > 5_000 )
-                throw new TimeoutException()
-        }
+    Session createSession(Map config) {
+        def session = new Session(config)
+        session.init(null)
+        return session
     }
 
     def 'should publish workflow outputs'() {
@@ -43,29 +51,27 @@ class OutputDslTest extends Specification {
         def file1 = work1.resolve('file1.txt'); file1.text = 'Hello'
         def file2 = work2.resolve('file2.txt'); file2.text = 'world'
         and:
-        def session = Mock(Session) {
-            getOutputs() >> [:]
-            getConfig() >> [
-                workflow: [
-                    output: [
-                        mode: 'symlink',
-                        overwrite: true
-                    ]
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir,
+            workflow: [
+                output: [
+                    mode: 'symlink',
+                    overwrite: true
                 ]
             ]
-            getOutputDir() >> outputDir
-            getWorkDir() >> workDir
-        }
-        Global.session = session
-        and:
-        assignOutput(session, 'foo', [file1])
-        assignOutput(session, 'bar', [file2])
-        and:
-        def dsl = new OutputDsl()
+        ]
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
 
         when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(file1))
+        outputs.put('bar', Channel.of(file2))
+
+        def dsl = new OutputDsl()
         dsl.declare('foo') {
             path('foo')
         }
@@ -77,20 +83,119 @@ class OutputDslTest extends Specification {
                 path 'index.csv'
             }
         }
-        dsl.apply(session)
-        await(dsl)
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
         then:
         outputDir.resolve('foo/file1.txt').text == 'Hello'
         outputDir.resolve('barbar/file2.txt').text == 'world'
         outputDir.resolve('index.csv').text == """\
-            "${outputDir}/barbar/file2.txt"
+            ${outputDir}/barbar/file2.txt
             """.stripIndent()
         and:
-        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
-        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), ['foo', 'bar']))
-        1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
-        1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
-        1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
+        session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
+        session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), ['foo', 'bar']))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
+        session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should publish files with the same name from different tasks'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def work2 = workDir.resolve('cd/5678'); Files.createDirectories(work2)
+        def file1 = work1.resolve('report.txt'); file1.text = 'Hello'
+        def file2 = work2.resolve('report.txt'); file2.text = 'world'
+        def record = [id: '1', alpha: file1, beta: file2]
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(record))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v ->
+                publish(v.alpha, "reports/${v.id}.alpha.txt")
+                publish(v.beta, "reports/${v.id}.beta.txt")
+            }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        outputDir.resolve('reports/1.alpha.txt').text == 'Hello'
+        outputDir.resolve('reports/1.beta.txt').text == 'world'
+        and:
+        session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('reports/1.alpha.txt'), null))
+        session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('reports/1.beta.txt'), null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [[
+            id: '1',
+            alpha: outputDir.resolve('reports/1.alpha.txt'),
+            beta: outputDir.resolve('reports/1.beta.txt')
+        ]], null))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should publish files outside the work directory only when includeInputs is enabled'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def input = root.resolve('input.txt'); input.text = 'Hello'
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(input))
+        outputs.put('bar', Channel.of(input))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path 'foo'
+            includeInputs true
+        }
+        dsl.declare('bar') {
+            path 'bar'
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        outputDir.resolve('foo/input.txt').text == 'Hello'
+        !outputDir.resolve('bar/input.txt').exists()
+        and:
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/input.txt')], null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [input], null))
 
         cleanup:
         SysEnv.pop()
@@ -105,30 +210,166 @@ class OutputDslTest extends Specification {
         def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
         def file1 = work1.resolve('file1.txt'); file1.text = 'Hello'
         and:
-        def session = Mock(Session) {
-            getOutputs() >> [:]
-            getConfig() >> [:]
-            getOutputDir() >> outputDir
-            getWorkDir() >> workDir
-        }
-        Global.session = session
-        and:
-        assignOutput(session, 'foo', [file1])
-        and:
-        def dsl = new OutputDsl()
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
 
         when:
+        def session = Spy(createSession(config))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(file1))
+
+        def dsl = new OutputDsl()
         dsl.declare('foo') {
         }
-        dsl.apply(session)
-        await(dsl)
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
         then:
         outputDir.resolve('file1.txt').text == 'Hello'
         and:
-        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), null))
-        1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('file1.txt')], null))
+        session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), null))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('file1.txt')], null))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should not publish outputs when the output directory is disabled'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def file1 = work1.resolve('file1.txt'); file1.text = 'Hello'
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        and:
+        def session = Spy(createSession(config))
+
+        when:
+        def outputs = [:]
+        // the output directory is disabled when a named workflow is executed directly
+        session.outputDir = null
+
+        outputs.put('foo', Channel.of(file1))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        def output = dsl.getOutput()
+
+        then:
+        // the output file is reported by its work directory path
+        output == [foo: [file1]]
+        and:
+        // no output directory is created and no file is published
+        !Files.exists(outputDir)
+        0 * session.notifyFilePublish(_)
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should print outputs when the output directory is disabled'() {
+        given:
+        def file1 = Path.of('/work/ab/1234/file1.txt')
+        def session = Mock(Session) {
+            getOutputDir() >> null
+        }
+
+        when:
+        OutputDsl.printOutput(session, [foo: [file1]])
+
+        then:
+        // the output file is listed, without a bogus 'null' output directory header
+        1 * session.printConsole({ String it ->
+            it.contains('/work/ab/1234/file1.txt') && !it.contains('null')
+        })
+    }
+
+    @Timeout(10)
+    def 'should not print outputs in preview mode'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def config = [
+            outputDir: root.resolve('results'),
+            workDir: root.resolve('work'),
+            preview: true
+        ]
+
+        and:
+        def session = Spy(createSession(config))
+
+        when:
+        def outputs = [:]
+        // process outputs are never closed in preview mode
+        outputs.put('foo', new DataflowQueue())
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork(true)
+        session.workflowMetadata.invokeOnComplete()
+
+        then:
+        0 * session.printConsole(_)
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should preserve non-task output files in workflow output'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def inputDir = root.resolve('inputs'); Files.createDirectories(inputDir)
+        def file1 = inputDir.resolve('file1.txt'); file1.text = 'Hello'
+        def file2 = inputDir.resolve('file2.txt'); file2.text = 'world'
+        def record = [id: '1', file1: file1, file2: file2]
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        and:
+        def session = Spy(createSession(config))
+
+        when:
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(record))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        0 * session.notifyFilePublish(_)
+        session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [ record ], null))
 
         cleanup:
         SysEnv.pop()
@@ -181,6 +422,91 @@ class OutputDslTest extends Specification {
             path: 'path',
             sep: ',',
         ]
+    }
+
+    def 'should report error for invalid path directive' () {
+        when:
+        def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(1, 2, 3))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v -> 42 }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid `path` directive for workflow output 'foo'"
+        e.message.contains "expected a string, a map, or publish statements, but received: 42 [Integer]"
+    }
+
+    def 'should report error for invalid publish target' () {
+        when:
+        def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
+        def file = Path.of('output.txt')
+
+        outputs.put('foo', Channel.of([file, file, file]))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { files -> publish(files, 'foo.txt') }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid publish target 'foo.txt' for workflow output 'foo'"
+    }
+
+    def 'should report error for invalid publish source' () {
+        when:
+        def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.of(42))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v -> publish(v, 'foo') }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid publish source for workflow output 'foo'"
+        e.message.contains "expected a file or collection of files, but received: 42 [Integer]"
+    }
+
+    def 'should report error for invalid index file extension' () {
+        when:
+        def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
+
+        outputs.put('foo', Channel.empty())
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            index {
+                path 'index.txt'
+            }
+        }
+        dsl.apply(session, outputs)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid extension 'txt' for index file 'index.txt'"
     }
 
 }

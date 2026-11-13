@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +31,15 @@ interface InParam extends Cloneable {
 
     Object getRawChannel()
 
-    short index
+    // NOTE: declared as explicit getters (rather than `short index` /
+    // `short mapIndex`) because Groovy 5 compiles a bare typed field in an
+    // interface as a `static final` constant (value 0) instead of an abstract
+    // property. That constant shadowed the real instance value during dynamic
+    // property access (e.g. in `BaseInParam.decodeInputs`), breaking input
+    // resolution.
+    short getIndex()
 
-    short mapIndex
+    short getMapIndex()
 
     def decodeInputs( List values )
 

@@ -18,14 +18,16 @@ package nextflow.script.types.shim;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
+import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Ops;
 
 @Description("""
     A map associates or "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys.
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#map-k-v)
 """)
-@ShimType(java.util.Map.class)
+@Ops(MapOps.class)
 public interface Map<K,V> {
 
     @Description("""
@@ -86,10 +88,30 @@ public interface Map<K,V> {
     @Description("""
         A map entry is a key-value pair.
     """)
-    @ShimType(java.util.Map.Entry.class)
     interface Entry<K,V> {
-        K getKey();
+
+        @Constant("key")
+        @Description("""
+            The key of the entry.
+        """)
+K getKey();
+
+        @Constant("value")
+        @Description("""
+            The value of the entry.
+        """)
         V getValue();
+
     }
+
+}
+
+interface MapOps<K,V> {
+
+    V getAt(Map<K,V> a, K b);
+
+    Boolean isCase(K a, Map<K,V> b);
+
+    Map<K,V> plus(Map<K,V> a, Map<K,V> b);
 
 }

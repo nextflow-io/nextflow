@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,14 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.batch.client
 
-import nextflow.Session
 import nextflow.util.MemoryUnit
-import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -27,14 +24,9 @@ import spock.lang.Specification
  */
 class BatchConfigTest extends Specification {
 
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config' () {
-        given:
-        def CONFIG = [:]
-        def session = Mock(Session) { getConfig()>>CONFIG }
-
         when:
-        def config = BatchConfig.create(session)
+        def config = new BatchConfig([:])
         then:
         !config.getSpot()
         and:
@@ -44,25 +36,24 @@ class BatchConfigTest extends Specification {
         and:
         !config.bootDiskImage
         !config.bootDiskSize
+        !config.logsPath
     }
 
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config with custom settings' () {
         given:
-        def CONFIG = [google: [
-            batch: [
-                spot: true,
-                maxSpotAttempts: 8,
-                autoRetryExitCodes: [50001, 50003, 50005],
-                retryPolicy: [maxAttempts: 10],
-                bootDiskImage: 'batch-foo',
-                bootDiskSize: '100GB'
-            ]
-        ] ]
-        def session = Mock(Session) { getConfig()>>CONFIG }
+        def opts = [
+            spot: true,
+            maxSpotAttempts: 8,
+            autoRetryExitCodes: [50001, 50003, 50005],
+            retryPolicy: [maxAttempts: 10],
+            bootDiskImage: 'batch-foo',
+            bootDiskSize: '100GB',
+            logsPath: 'gs://my-logs-bucket/logs',
+            installOpsAgent: true
+        ]
 
         when:
-        def config = BatchConfig.create(session)
+        def config = new BatchConfig(opts)
         then:
         config.getSpot()
         and:
@@ -72,6 +63,10 @@ class BatchConfigTest extends Specification {
         and:
         config.bootDiskImage == 'batch-foo'
         config.bootDiskSize == MemoryUnit.of('100GB')
+        and:
+        config.logsPath == 'gs://my-logs-bucket/logs'
+        and:
+        config.installOpsAgent == true
     }
 
 }

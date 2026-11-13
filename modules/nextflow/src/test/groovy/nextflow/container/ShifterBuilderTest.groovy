@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,8 +39,7 @@ class ShifterBuilderTest extends Specification {
                 .build()
                 .@runCommand == 'shifter --image busybox'
 
-        new ShifterBuilder('busybox')
-                .params(verbose: true)
+        new ShifterBuilder('busybox', new ShifterConfig(verbose: true))
                 .build()
                 .@runCommand == 'shifter --verbose --image busybox'
 

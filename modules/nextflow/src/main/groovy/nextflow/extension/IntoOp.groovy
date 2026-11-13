@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
@@ -113,10 +114,10 @@ class IntoOp {
                 processor.terminate()
                 // -- close the output channels
                 for( def it : outputs ) {
-                    if( !(it instanceof DataflowExpression))
+                    if( !(it instanceof DataflowVariable))
                         it.bind(Channel.STOP)
 
-                    else if( !(it as DataflowExpression).isBound() )
+                    else if( !(it as DataflowVariable).isBound() )
                         it.bind(Channel.STOP)
 
                 }

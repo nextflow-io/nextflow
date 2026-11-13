@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script.parser.v1
 
 import java.nio.file.Paths
@@ -93,10 +109,10 @@ class ScriptLoaderV1Test extends Specification {
 
         where:
         SCRIPT              | EXPECTED
-        'foo.nf'            | 'Script_foo'
-        'foo-bar-baz.nf'    | 'Script_foo_bar_baz'
-        '123-fo0'           | 'Script_23_fo0'
-        '--a  b  c'         | 'Script_a_b_c'
+        'foo.nf'            | '_nf_script_foo'
+        'foo-bar-baz.nf'    | '_nf_script_foo_bar_baz'
+        '123-fo0'           | '_nf_script_23_fo0'
+        '--a  b  c'         | '_nf_script_a_b_c'
     }
 
     def 'should normalise script text' () {
@@ -107,7 +123,7 @@ class ScriptLoaderV1Test extends Specification {
         when:
         def result = parser.computeClassName('process foo { etc } ')
         then:
-        result == 'Script_dd540db41b3a8b2a'
+        result == '_nf_script_dd540db41b3a8b2a'
     }
 
     def 'should set classpath' () {
@@ -142,5 +158,5 @@ class ScriptLoaderV1Test extends Specification {
         e.message.contains("- cause: Unexpected input: ')'")
         e.message.contains('foo.nf\n')
     }
-    
+
 }

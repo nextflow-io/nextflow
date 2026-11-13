@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, Pawsey Supercomputing Research Centre
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import java.nio.file.Paths
  *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
-class SarusrBuilderTest extends Specification {
+class SarusBuilderTest extends Specification {
 
     def 'test sarus env'() {
 
@@ -40,8 +40,7 @@ class SarusrBuilderTest extends Specification {
                 .build()
                 .@runCommand == 'sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
-        new SarusBuilder('busybox')
-                .params(verbose: true)
+        new SarusBuilder('busybox', new SarusConfig(verbose: true))
                 .build()
                 .@runCommand == 'sarus --verbose run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
@@ -51,8 +50,7 @@ class SarusrBuilderTest extends Specification {
                 .build()
                 .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" -e "VAR_Z=3" --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new SarusBuilder('busybox')
-                .params(runOptions: '-x --zeta')
+        new SarusBuilder('busybox', new SarusConfig(runOptions: '-x --zeta'))
                 .build()
                 .@runCommand == 'sarus run --mount=type=bind,source="$NXF_TASK_WORKDIR",destination="$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" -x --zeta busybox'
 

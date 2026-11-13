@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package nextflow.file
 
-import java.lang.reflect.Field
 import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemLoopException
 import java.nio.file.FileSystemNotFoundException
@@ -25,6 +25,7 @@ import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -64,6 +65,13 @@ class FileHelper {
     static final public Pattern INVALID_URL_PREFIX = ~/^(?!file)([a-zA-Z][a-zA-Z0-9]*):\\/[^\\/].+/
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
+
+    /**
+     * The optional attempt suffix of a task work directory leaf, {@code <30hex>-N}: a cache that
+     * lays the attempts of one task out side by side keeps the two-level {@code <2hex>/<30hex>}
+     * hierarchy and appends the attempt number to the leaf (hex never contains a dash).
+     */
+    static final private Pattern ATTEMPT_SUFFIX = ~/-\d+$/
 
     static final private Path localTempBasePath
 
@@ -105,6 +113,35 @@ class FileHelper {
 
 
         return path
+    }
+
+    /**
+     * Remove current-directory segments from a relative path or glob pattern,
+     * e.g. {@code ./results/x.vcf} becomes {@code results/x.vcf} and
+     * {@code a/./b} becomes {@code a/b}.
+     *
+     * A task output declared as {@code ./results/x.vcf} must name the same object
+     * whether the task uploads it itself or a filesystem mount (e.g. Fusion) writes it.
+     * A filesystem resolves {@code .} before the file is stored, so the object key never
+     * contains {@code /./}; object stores such as S3 treat {@code a/./b} and {@code a/b}
+     * as different keys.
+     *
+     * Repeated slashes are collapsed first, so {@code .//x} becomes {@code x}, not the
+     * absolute {@code /x}. Absolute paths, {@code ..} segments, and a bare {@code .} or
+     * {@code ./} are left unchanged.
+     *
+     * @param path A relative path or glob pattern
+     * @return The same path without {@code .} segments and repeated slashes
+     */
+    static String stripCurrentDirSegments( String path ) {
+        if( !path || path.startsWith('/') )
+            return path
+        String result = path.replaceAll('/{2,}', '/')
+        while( result.startsWith('./') && result.length() > 2 )
+            result = result.substring(2)
+        while( result.contains('/./') )
+            result = result.replace('/./', '/')
+        return result
     }
 
 
@@ -362,7 +399,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure', seqera:'nf-tower']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
@@ -373,6 +410,7 @@ class FileHelper {
         // find out the default plugin for the given scheme and try to load it
         final pluginId = PLUGINS_MAP.get(scheme)
         if( pluginId ) try {
+            log.debug "Detected required plugin '$pluginId'"
             if( Plugins.startIfMissing(pluginId) ) {
                 log.debug "Started plugin '$pluginId' required to handle file: $str"
                 // return true to signal a new plugin was loaded
@@ -471,10 +509,28 @@ class FileHelper {
     }
 
     /**
-     * Check if the specified path is a NFS mount
+     * The file system types that are known to be network shared file systems, and
+     * therefore may expose a delayed view of the writes made by another client.
+     * These are the values reported by {@code stat -f -c %T}.
+     */
+    private static final Set<String> SHARED_FS_TYPES = Set.of('nfs', 'lustre', 'ceph', 'beegfs', 'gpfs')
+
+    /**
+     * Check if the given file system type, as reported by {@code stat -f -c %T},
+     * denotes a network shared file system
+     *
+     * @param type The file system type name
+     * @return {@code true} when the type is a shared file system, {@code false} otherwise
+     */
+    static boolean isSharedFsType(String type) {
+        return type != null && type in SHARED_FS_TYPES
+    }
+
+    /**
+     * Check if the specified path is a shared file system mount
      *
      * @param path The path to verify
-     * @return The {@code true} when the path is a NFS mount {@code false} otherwise
+     * @return The {@code true} when the path is a shared file system mount {@code false} otherwise
      */
     @Memoized
     static boolean isPathSharedFS(Path path) {
@@ -482,8 +538,7 @@ class FileHelper {
         if( path.getFileSystem() != FileSystems.getDefault() )
             return false
 
-        final type = getPathFsType(path)
-        final result = type == 'nfs' || type == 'lustre'
+        final result = isSharedFsType(getPathFsType(path))
         log.debug "FS path type ($result): $path"
         return result
     }
@@ -650,32 +705,44 @@ class FileHelper {
     }
 
     /**
+     * Get the schemes of all available file system providers, including
+     * those registered with {@link #getOrInstallProvider(java.lang.Class)}
+     */
+    static Set<String> getProviderSchemes() {
+        final result = new LinkedHashSet<String>()
+        for( final provider : FileSystemProvider.installedProviders() )
+            result.add(provider.scheme)
+        synchronized (providersMap) {
+            result.addAll(providersMap.keySet())
+        }
+        return result
+    }
+
+    /**
      * Get the instance of the specified {@code FileSystemProvider} class. If the provider is not
-     * in the list of installed provided, it creates a new instance and add it to the list
+     * known, it creates a new instance and registers it so that it can be resolved by
+     * {@link #getProviderFor(java.lang.String)}.
      * <p>
-     * This method has been deprecated use {@link #getOrCreateFileSystemFor(java.lang.String)} instead
-     *
-     * @see {@code FileSystemProvider#installedProviders}
+     * Providers registered this way are not visible to {@code Paths.get(URI)}, use
+     * {@link #asPath(java.lang.String)} instead.
      *
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
-    synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+    static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+        synchronized (providersMap) {
+            FileSystemProvider result = providersMap.values().find { it.class == clazz }
+            if( result )
+                return (T)result
 
-        FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
-        if( result )
+            result = FileSystemProvider.installedProviders().find { it.class == clazz }
+            if( !result ) {
+                result = clazz.getDeclaredConstructor().newInstance()
+                log.debug "> Registered '${clazz.simpleName}' file system provider [${result.scheme}]"
+            }
+            providersMap[result.scheme] = result
             return (T)result
-
-        result = (T)clazz.newInstance()
-
-        // add it manually
-        Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
-        field.setAccessible(true)
-        List installedProviders = new ArrayList((List)field.get(null))
-        installedProviders.add( result )
-        field.set(this, Collections.unmodifiableList(installedProviders))
-        log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
-        return (T)result
+        }
     }
 
     private static Lock _fs_lock = new ReentrantLock()
@@ -871,7 +938,7 @@ class FileHelper {
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
-                    def result = relative ? path : fullPath
+                    def result = relative ? path : stripTrailingSlash(fullPath)
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
@@ -880,7 +947,9 @@ class FileHelper {
 
             @Override
             FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
-                final path = folder.relativize(fullPath)
+                final path = fullPath.isAbsolute()
+                    ? folder.relativize(fullPath)
+                    : fullPath
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
@@ -911,8 +980,24 @@ class FileHelper {
 
     }
 
+    /**
+     * Strip the trailing slash that some cloud storage providers (e.g. GCS)
+     * preserve in the path of a directory
+     *
+     * @param dir A directory path, possibly with a trailing slash
+     * @return The directory path without the trailing slash
+     */
+    static protected Path stripTrailingSlash(Path dir) {
+        // the file name of a GCS path does not include the trailing slash
+        return dir.toString().endsWith('/')
+            ? dir.resolveSibling(dir.getFileName())
+            : dir
+    }
+
     static protected Path relativize0(Path folder, Path fullPath) {
-        def result = folder.relativize(fullPath)
+        final result = fullPath.isAbsolute()
+            ? folder.relativize(fullPath)
+            : fullPath
         String str
         if( folder.is(FileSystems.default) || !(str=result.toString()).endsWith('/') )
             return result
@@ -996,7 +1081,7 @@ class FileHelper {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
-                sourceProvider.copy(source, target, options);
+                sourceProvider.copy(source, target, SkipDirOption.strip(options));
             }
         }
         else {
@@ -1044,12 +1129,66 @@ class FileHelper {
             }
 
             FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                Files.delete(dir)
+                deleteDirEntry(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
+
+    /**
+     * Delete a directory while walking a file tree, tolerating object stores where a
+     * directory is only a key prefix and cannot be deleted on its own.
+     *
+     * Google Cloud Storage keeps a zero-byte placeholder object for every directory created
+     * through gcsfuse, and the NIO provider refuses to delete it. It reports this either as a
+     * {@link NoSuchFileException}, or, when the prefix is not empty, as a
+     * {@code CloudStoragePseudoDirectoryException}, an unchecked {@link InvalidPathException}
+     * that would otherwise escape the walk and abort the caller.
+     *
+     * The provider raises the latter for any non-empty listing, so it is ignored only when
+     * every remaining entry is itself a placeholder. A directory still holding a real object
+     * has not been cleaned and must not be reported as deleted.
+     *
+     * @param dir The directory to delete
+     */
+    static void deleteDirEntry(Path dir) {
+        try {
+            Files.delete(dir)
+        }
+        catch( NoSuchFileException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' )
+                throw e
+            log.debug "Ignoring missing GCS directory: ${FilesEx.toUriString(dir)}"
+        }
+        catch( InvalidPathException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' || !holdsOnlyPlaceholders(dir) )
+                throw e
+            log.debug "Ignoring GCS pseudo-directory that cannot be deleted: ${FilesEx.toUriString(dir)}"
+        }
+    }
+
+    /**
+     * Check that a cloud directory only holds placeholder objects, that is keys ending with a
+     * slash, which the storage provider is unable to delete.
+     */
+    static private boolean holdsOnlyPlaceholders(Path dir) {
+        try( DirectoryStream<Path> stream = Files.newDirectoryStream(dir) ) {
+            for( Path it : stream ) {
+                if( !it.toString().endsWith('/') )
+                    return false
+            }
+            return true
+        }
+        catch( Exception e ) {
+            // a directory that cannot be listed is one that cannot be proven to hold only
+            // placeholders, and the listing may fail with an unchecked provider exception
+            // which would otherwise escape and abort the caller
+            log.debug("Unable to list directory: ${FilesEx.toUriString(dir)}", e)
+            return false
+        }
+    }
+
     /**
      * List the content of a file system path
      *
@@ -1172,7 +1311,11 @@ class FileHelper {
         return null
     }
 
-    public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+    /**
+     * The {@code <2hex>/<30hex>[-N]} leading segments of {@code sourcePath} relative to
+     * {@code workPath}, or {@code null} when it is not shaped like a task work directory.
+     */
+    private static Path taskDirRelative(Path sourcePath, Path workPath) {
         assert sourcePath
         assert workPath
         if( !sourcePath.startsWith(workPath) )
@@ -1180,15 +1323,66 @@ class FileHelper {
         final relativePath = workPath.relativize(sourcePath)
         if( relativePath.getNameCount() < 2 )
             return null
-        final bucket = relativePath.getName(0).toString()
-        if( bucket.size() != 2 )
+        if( relativePath.getName(0).toString().size() != 2 )
             return null
-        final strHash = bucket + relativePath.getName(1).toString()
+        return relativePath.subpath(0, 2)
+    }
+
+    /**
+     * The hash of the task whose work directory {@code sourcePath} lives in, parsed from the path:
+     * {@code <workPath>/<2hex>/<30hex>[-N]/...}. The optional {@code -N} attempt suffix is ignored.
+     *
+     * @return The task hash, or {@code null} when {@code sourcePath} is not below a task work
+     *      directory of {@code workPath}.
+     */
+    static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        final relativePath = taskDirRelative(sourcePath, workPath)
+        if( relativePath == null )
+            return null
+        final bucket = relativePath.getName(0).toString()
+        // tolerate an attempt suffix on the leaf (`<30hex>-N`): the hash is the part before it
+        final leaf = relativePath.getName(1).toString()
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        final strHash = bucket + (suffix.find() ? leaf.substring(0, suffix.start()) : leaf)
         try {
             return HashCode.fromString(strHash)
         } catch (Throwable e) {
             log.debug("String '${strHash}' is not a valid hash", e)
             return null
         }
+    }
+
+    /**
+     * The attempt of the task run in the given work directory: {@code N} for {@code <30hex>-N},
+     * 1 when the leaf has no attempt suffix.
+     */
+    static int getAttemptFromPath(Path workDir) {
+        final leaf = workDir?.getFileName()?.toString()
+        if( !leaf )
+            return 1
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        return suffix.find() ? Integer.parseInt(leaf.substring(suffix.start() + 1)) : 1
+    }
+
+    /**
+     * The work directory of the task {@code sourcePath} lives in, i.e. the
+     * {@code <workPath>/<2hex>/<30hex>[-N]} prefix of it, <b>attempt suffix included</b>.
+     *
+     * <p>Exists because the directory cannot be rebuilt from the hash: {@link #getWorkFolder} always
+     * produces the unsuffixed {@code <2hex>/<30hex>}, so relativizing an output of attempt {@code N}
+     * against it yields a path starting with {@code ..}. A caller that has only the {@code Path} --
+     * lineage resolving a task input back to its producer -- needs the directory the file is really
+     * in.
+     *
+     * @return The task work directory, or {@code null} when {@code sourcePath} is not below one.
+     */
+    static Path getTaskDirFromPath(Path sourcePath, Path workPath) {
+        final relativePath = taskDirRelative(sourcePath, workPath)
+        if( relativePath == null )
+            return null
+        // only a leaf that parses as a task hash names a work directory
+        if( getTaskHashFromPath(sourcePath, workPath) == null )
+            return null
+        return workPath.resolve(relativePath)
     }
 }

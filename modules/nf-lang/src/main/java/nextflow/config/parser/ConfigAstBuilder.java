@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.formatter.Comment;
+import nextflow.script.formatter.Comments;
 import nextflow.config.ast.ConfigApplyNode;
 import nextflow.config.ast.ConfigApplyBlockNode;
 import nextflow.config.ast.ConfigAssignNode;
@@ -92,6 +94,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
 import static nextflow.config.parser.ConfigParser.*;
+import static nextflow.script.parser.EscapeUtils.checkEscapes;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
@@ -108,6 +111,8 @@ public class ConfigAstBuilder {
     private ConfigNode moduleNode;
     private ConfigLexer lexer;
     private ConfigParser parser;
+    private CommonTokenStream tokenStream;
+    private final boolean commentsEnabled;
 
     private Tuple2<ParserRuleContext,Exception> numberFormatError;
 
@@ -117,8 +122,11 @@ public class ConfigAstBuilder {
 
         var charStream = createCharStream(sourceUnit);
         this.lexer = new ConfigLexer(charStream);
-        this.parser = new ConfigParser(new CommonTokenStream(lexer));
+        this.tokenStream = new CommonTokenStream(lexer);
+        this.parser = new ConfigParser(tokenStream);
         parser.setErrorHandler(new DescriptiveErrorStrategy(charStream));
+        this.commentsEnabled = Boolean.TRUE.equals(
+            sourceUnit.getConfiguration().getOptimizationOptions().get(COMMENTS_OPTION));
     }
 
     private CharStream createCharStream(SourceUnit sourceUnit) {
@@ -174,11 +182,23 @@ public class ConfigAstBuilder {
 
     public ModuleNode buildAST() {
         try {
-            return compilationUnit(buildCST());
+            var result = compilationUnit(buildCST());
+            collectComments();
+            return result;
         }
         catch( Throwable t ) {
             throw convertException(t);
         }
+    }
+
+    /**
+     * Collect the comments from the parser token buffer.
+     */
+    private void collectComments() {
+        if( !commentsEnabled )
+            return;
+        tokenStream.fill();
+        moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, Comments.collect(tokenStream.getTokens(), ConfigLexer.NL));
     }
 
     /// CONFIG STATEMENTS
@@ -218,11 +238,10 @@ public class ConfigAstBuilder {
             invalidStatement(ciac.invalidStatement());
             return;
         }
-    
+
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
 
-        saveLeadingComments(result, ctx);
         moduleNode.addConfigStatement(result);
     }
 
@@ -303,19 +322,19 @@ public class ConfigAstBuilder {
             invalidStatement(ciac.invalidStatement());
             return null;
         }
-    
+
         else
             throw createParsingFailedException("Invalid statement in config block: " + ctx.getText(), ctx);
 
-        saveLeadingComments(result, ctx);
         return result;
     }
 
     private ConfigStatement configSelector(ConfigSelectorContext ctx) {
         var kind = ctx.kind.getText();
         var target = configPrimary(ctx.target);
-        var statements = ctx.configAssign().stream()
-            .map(this::configAssign)
+        var statements = ctx.configBlockStatement().stream()
+            .map(this::configBlockStatement)
+            .filter(stmt -> stmt != null)
             .toList();
         return new ConfigBlockNode(kind, target, statements);
     }
@@ -377,7 +396,6 @@ public class ConfigAstBuilder {
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
 
-        saveLeadingComments(result, ctx);
         return result;
     }
 
@@ -388,7 +406,14 @@ public class ConfigAstBuilder {
         var elseStmt = ctx.ELSE() != null
             ? statementOrBlock(ctx.fb)
             : EmptyStatement.INSTANCE;
-        return ifElseS(condition, thenStmt, elseStmt);
+        var result = ifElseS(condition, thenStmt, elseStmt);
+        if( ctx.ELSE() != null ) {
+            // the `else` keyword is the only thing between the two branches,
+            // and it is needed to tell which branch a comment there belongs to
+            var token = ctx.ELSE().getSymbol();
+            result.putNodeMetaData(ASTNodeMarker.ELSE_POSITION, Comment.position(token.getLine(), token.getCharPositionInLine() + 1));
+        }
+        return result;
     }
 
     private Statement statementOrBlock(StatementOrBlockContext ctx) {
@@ -864,6 +889,7 @@ public class ConfigAstBuilder {
 
     private ConstantExpression string(ParserRuleContext ctx) {
         var text = ctx.getText();
+        checkEscapes(text, ctx, text.startsWith(SLASH_STR)).forEach(this::collectSyntaxError);
         var result = constX(stringLiteral(text));
         result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
         return result;
@@ -930,7 +956,7 @@ public class ConfigAstBuilder {
     /**
      * Builder for GStringExpression that inserts empty strings
      * to ensure that there are n+1 strings for n values.
-     * 
+     *
      * @see org.codehaus.groovy.runtime.GStringUtil.writeToImpl()
      */
     private static class GStringBuilder {
@@ -966,6 +992,7 @@ public class ConfigAstBuilder {
 
     private ConstantExpression gstringText(ParserRuleContext ctx, String beginQuotation) {
         var text = ctx.getText();
+        checkEscapes(text, ctx, false).forEach(this::collectSyntaxError);
         var quotedText = new StringBuilder(text)
             .insert(0, beginQuotation)
             .append(beginQuotation)
@@ -1036,7 +1063,7 @@ public class ConfigAstBuilder {
     private List<Expression> expressionList(ExpressionListContext ctx) {
         if( ctx == null )
             return Collections.emptyList();
-        
+
         return ctx.expression().stream()
             .map(this::expression)
             .toList();
@@ -1173,24 +1200,12 @@ public class ConfigAstBuilder {
     /// MISCELLANEOUS
 
     private Parameter[] formalParameterList(FormalParameterListContext ctx) {
-        // NOTE: implicit `it` parameter is deprecated, but allow it for now
         if( ctx == null )
             return Parameter.EMPTY_ARRAY;
 
-        var params = ctx.formalParameter().stream()
+        return ctx.formalParameter().stream()
             .map(this::formalParameter)
-            .toList();
-        for( int n = params.size(), i = n - 1; i >= 0; i -= 1 ) {
-            var param = params.get(i);
-            for( var other : params ) {
-                if( other == param )
-                    continue;
-                if( other.getName().equals(param.getName()) )
-                    throw createParsingFailedException("Duplicated parameter '" + param.getName() + "' found", param);
-            }
-        }
-
-        return params.toArray(Parameter.EMPTY_ARRAY);
+            .toArray(Parameter[]::new);
     }
 
     private Parameter formalParameter(FormalParameterContext ctx) {
@@ -1290,62 +1305,6 @@ public class ConfigAstBuilder {
         return ast( new GenericsType(type(ctx)), ctx );
     }
 
-    /// COMMENTS
-
-    private void saveLeadingComments(ASTNode node, ParserRuleContext ctx) {
-        var comments = new ArrayList<String>();
-        var child = ctx;
-        while( saveLeadingComments0(child, comments) )
-            child = child.getParent();
-
-        if( !comments.isEmpty() )
-            node.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, comments);
-    }
-
-    private boolean saveLeadingComments0(ParserRuleContext ctx, List<String> comments) {
-        var parent = ctx.getParent();
-        if( parent == null )
-            return false;
-
-        // find index of token among siblings
-        var siblings = parent.children;
-        int i = 0;
-        while( i < siblings.size() && siblings.get(i) != ctx ) {
-            i++;
-        }
-
-        // check parent context for additional comments
-        if( i == 0 )
-            return true;
-
-        // prepend each comment/newline to node
-        var added = false;
-        for( int j = i - 1; j >= 0; j-- ) {
-            var sibling = siblings.get(j);
-            if( !(sibling instanceof NlsContext || sibling instanceof SepContext) )
-                break;
-
-            var newlines = sibling instanceof NlsContext
-                ? ((NlsContext) sibling).NL()
-                : ((SepContext) sibling).NL();
-
-            for( int k = newlines.size() - 1; k >= 0; k-- ) {
-                var text = newlines.get(k).getText();
-                comments.add(text);
-                added = true;
-            }
-        }
-
-        // remove leading newline
-        if( added ) {
-            var last = comments.get(comments.size() - 1);
-            if( "\n".equals(last) )
-                comments.remove(comments.size() - 1);
-        }
-
-        return false;
-    }
-
     /// HELPERS
 
     private boolean isInsideParentheses(NodeMetaDataHandler nodeMetaDataHandler) {
@@ -1436,10 +1395,16 @@ public class ConfigAstBuilder {
         return new ANTLRErrorListener() {
             @Override
             public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
-                collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
+                var startColumn = charPositionInLine + 1;
+                var endColumn = offendingSymbol instanceof Token t && t.getType() != Token.EOF && t.getText() != null
+                    ? startColumn + t.getText().length()
+                    : startColumn + 1;
+                collectSyntaxError(new SyntaxException(msg, line, startColumn, line, endColumn));
             }
         };
     }
+
+    public static final String COMMENTS_OPTION = "nextflow.comments";
 
     private static final String CALL_STR = "call";
     private static final String SLASH_STR = "/";

@@ -1,20 +1,39 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.seqera.tower.plugin
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.stubbing.Scenario
+import com.google.gson.GsonBuilder
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.util.GsonHelper
+import nextflow.exception.AbortRunException
+import nextflow.script.WorkflowMetadata
+import nextflow.serde.gson.InstantAdapter
 import spock.lang.Shared
 import spock.lang.Specification
-
-import static com.github.tomakehurst.wiremock.client.WireMock.*
-
 /**
  * Test cases for the TowerFusionEnv class.
  *
@@ -43,9 +62,16 @@ class TowerFusionEnvTest extends Specification {
         SysEnv.pop()      // <-- restore the system host env
     }
 
+    static String toJson(Object obj) {
+        new GsonBuilder()
+            .registerTypeAdapter(Instant, new InstantAdapter())
+            .create()
+            .toJson(obj)
+    }
 
     def 'should return the endpoint from the config'() {
         given: 'a session'
+        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf', 'TOWER_ACCESS_TOKEN': 'abc123'])
         Global.session = Mock(Session) {
             config >> [
                 tower: [
@@ -59,11 +85,13 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'the endpoint has the expected value'
         provider.endpoint == 'https://tower.nf'
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return the endpoint from the environment'() {
         setup:
-        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf'])
+        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf', 'TOWER_ACCESS_TOKEN': 'abc123'])
         Global.session = Mock(Session) {
             config >> [:]
         }
@@ -79,6 +107,7 @@ class TowerFusionEnvTest extends Specification {
     }
 
     def 'should return the default endpoint'() {
+        SysEnv.push(['TOWER_ACCESS_TOKEN': 'abc123'])
         when: 'session config is empty'
         Global.session = Mock(Session) {
             config >> [
@@ -126,6 +155,7 @@ class TowerFusionEnvTest extends Specification {
         }
 
         then: 'the endpoint has the expected value'
+        provider.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when: 'session.config.tower.endpoint is empty'
         Global.session = Mock(Session) {
@@ -135,8 +165,10 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
+        provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
+        provider.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when: 'session.config.tower.endpoint is defined as "-"'
         Global.session = Mock(Session) {
@@ -146,8 +178,13 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
+        provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
+        provider.endpoint == TowerClient.DEF_ENDPOINT_URL
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return the access token from the config'() {
@@ -220,7 +257,8 @@ class TowerFusionEnvTest extends Specification {
         def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
-        provider.accessToken == null
+        def e = thrown(AbortRunException)
+        e.message.contains("Missing Seqera Platform access token")
 
         cleanup:
         SysEnv.pop()
@@ -250,23 +288,43 @@ class TowerFusionEnvTest extends Specification {
     def 'should get a license token with config'() {
         given:
         def config = [
+            enabled    : true,
             endpoint   : wireMockServer.baseUrl(),
-            accessToken: 'abc123',
+            accessToken: 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw==',
             workspaceId: '67890'
         ]
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [ tower: config ]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
         def PRODUCT = 'some-product'
         def VERSION = 'some-version'
         and:
-        Global.session = Mock(Session) {getConfig() >> [ tower: config ] }
-        and:
+        Global.session = session
         def provider = new TowerFusionToken()
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${config.workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def observer = new TowerFactory().create(session)[0]
+        observer.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
-        final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
-                .withHeader('Authorization', equalTo('Bearer abc123'))
+                .withHeader('Authorization', equalTo("Bearer ${config.accessToken}"))
                 .withRequestBody(matchingJsonPath('$.product', equalTo("some-product")))
                 .withRequestBody(matchingJsonPath('$.version', equalTo("some-version")))
                 .withRequestBody(matchingJsonPath('$.workspaceId', equalTo("67890")))
@@ -286,34 +344,125 @@ class TowerFusionEnvTest extends Specification {
 
         and: 'the request is correct'
         wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/license/token/"))
-            .withHeader('Authorization', WireMock.equalTo('Bearer abc123')))
+            .withHeader('Authorization', WireMock.equalTo("Bearer ${config.accessToken}")))
+    }
 
+    def 'should cache license tokens per product and version'() {
+        given:
+        def config = [
+            enabled    : true,
+            endpoint   : wireMockServer.baseUrl(),
+            accessToken: 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw==',
+            workspaceId: '67890'
+        ]
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [ tower: config ]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
+        and:
+        Global.session = session
+        def provider = new TowerFusionToken()
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${config.workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def observer = new TowerFactory().create(session)[0]
+        observer.onFlowCreate(session)
+
+        and: 'the license endpoint returns a distinct token per product'
+        final now = Instant.now()
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("product-a")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"token-a", "expiresAt":' + expirationDate + '}')
+                )
+        )
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("product-b")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"token-b", "expiresAt":' + expirationDate + '}')
+                )
+        )
+
+        when: 'a token is requested for two different products'
+        final tokenA = provider.getLicenseToken('product-a', 'v1')
+        final tokenB = provider.getLicenseToken('product-b', 'v1')
+
+        then: 'each product receives its own token rather than a shared cache entry'
+        tokenA == 'token-a'
+        tokenB == 'token-b'
+
+        and: 'both products reached the license endpoint'
+        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
+            .withRequestBody(matchingJsonPath('$.product', equalTo("product-a"))))
+        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
+            .withRequestBody(matchingJsonPath('$.product', equalTo("product-b"))))
     }
 
     def 'should get a license token with environment'() {
         given:
+        def accessToken = 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw=='
+        def workspaceId = '67890'
         SysEnv.push([
             TOWER_WORKFLOW_ID: '12345',
-            TOWER_ACCESS_TOKEN: 'abc123',
-            TOWER_WORKSPACE_ID: '67890',
+            TOWER_ACCESS_TOKEN: accessToken,
+            TOWER_WORKSPACE_ID: workspaceId,
             TOWER_API_ENDPOINT: wireMockServer.baseUrl()
         ])
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [:]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
         def PRODUCT = 'some-product'
         def VERSION = 'some-version'
         and:
-        Global.session = Mock(Session) {getConfig() >> [:] }
-        and:
+        Global.session = session
         def provider = new TowerFusionToken()
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def client = new TowerFactory().create(session)[0]
+        client.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
-        final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
-                .withHeader('Authorization', equalTo('Bearer abc123'))
+                .withHeader('Authorization', equalTo("Bearer $accessToken"))
                 .withRequestBody(matchingJsonPath('$.product', equalTo("some-product")))
                 .withRequestBody(matchingJsonPath('$.version', equalTo("some-version")))
-                .withRequestBody(matchingJsonPath('$.workspaceId', equalTo("67890")))
+                .withRequestBody(matchingJsonPath('$.workspaceId', equalTo("${workspaceId}")))
                 .willReturn(
                     WireMock.aResponse()
                         .withStatus(200)
@@ -330,30 +479,144 @@ class TowerFusionEnvTest extends Specification {
 
         and: 'the request is correct'
         wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/license/token/"))
-            .withHeader('Authorization', WireMock.equalTo('Bearer abc123')))
+            .withHeader('Authorization', WireMock.equalTo("Bearer ${accessToken}")))
 
         cleanup:
         SysEnv.pop()
     }
 
+    def 'should refresh the auth token on 401 and retry the request'() {
+        given:
+        def accessToken = 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw=='
+        def workspaceId = '67890'
+        SysEnv.push([
+            TOWER_WORKFLOW_ID: '12345',
+            TOWER_ACCESS_TOKEN: accessToken,
+            TOWER_REFRESH_TOKEN: 'xyz-refresh',
+            TOWER_WORKSPACE_ID: workspaceId,
+            TOWER_API_ENDPOINT: wireMockServer.baseUrl()
+        ])
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [:]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
+        def PRODUCT = 'some-product'
+        def VERSION = 'some-version'
+        and:
+        Global.session = session
+        def provider = new TowerFusionToken()
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def client = new TowerFactory().create(session)[0]
+        client.onFlowCreate(session)
+
+        and: 'prepare stubs'
+
+        final now = Instant.now()
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
+
+        // 1️⃣ First attempt: /license/token/ fails with 401
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withHeader('Authorization', equalTo("Bearer $accessToken"))
+                .inScenario("Refresh flow")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(WireMock.aResponse().withStatus(401))
+                .willSetStateTo("Token Refreshed")
+        )
+
+        // 2️⃣ Refresh token call
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/oauth/access_token"))
+                .withHeader('Content-Type', equalTo('application/x-www-form-urlencoded'))
+                .withRequestBody(containing('grant_type=refresh_token'))
+                .withRequestBody(containing('refresh_token=xyz-refresh'))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Set-Cookie', 'JWT=new-abc-token; Path=/; HttpOnly')
+                        .withHeader('Set-Cookie', 'JWT_REFRESH_TOKEN=new-refresh-456; Path=/; HttpOnly')
+                        .withBody('{"token_type":"Bearer"}')
+                )
+        )
+
+        // 3️⃣ Retry: /license/token/ succeeds
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withHeader('Authorization', equalTo('Bearer new-abc-token'))
+                .inScenario("Refresh flow")
+                .whenScenarioStateIs("Token Refreshed")
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"xyz789", "expiresAt":' + expirationDate + '}')
+                )
+        )
+
+        when:
+        final token = provider.getLicenseToken(PRODUCT, VERSION)
+
+        then:
+        token == 'xyz789'
+
+        and: 'verify that refresh endpoint was called'
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/oauth/access_token")))
+
+        and: 'verify both requests to license endpoint'
+        wireMockServer.verify(2, WireMock.postRequestedFor(urlEqualTo("/license/token/")))
+
+        cleanup:
+        SysEnv.pop()
+    }
 
     def 'should throw UnauthorizedException if getting a token fails with 401'() {
         given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [
-                tower: [
-                    endpoint   : wireMockServer.baseUrl(),
-                    accessToken: 'abc123'
-                ]
-            ]
-        }
+        def config = [
+            enabled    : true,
+            endpoint   : wireMockServer.baseUrl(),
+            accessToken: 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw==',
+            workspaceId: '67890'
+        ]
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [ tower: config ]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
         and:
+        Global.session = session
         def provider = new TowerFusionToken()
-
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${config.workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def client = new TowerFactory().create(session)[0]
+        client.onFlowCreate(session)
         and: 'a mock endpoint returning an error'
         wireMockServer.stubFor(
             WireMock.post(WireMock.urlEqualTo("/license/token/"))
-                .withHeader('Authorization', WireMock.equalTo('Bearer abc123'))
+                .withHeader('Authorization', WireMock.equalTo("Bearer ${config.accessToken}"))
                 .willReturn(
                     WireMock.aResponse()
                         .withStatus(401)
@@ -368,7 +631,6 @@ class TowerFusionEnvTest extends Specification {
         then: 'an exception is thrown'
         thrown(UnauthorizedException)
     }
-
 
     def 'should deserialize response' () {
         given:

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import nextflow.file.FileHelper
 
 /**
  * Implements Kryo serializer for {@link XPath}
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -44,6 +44,10 @@ class XPathSerializer extends Serializer<XPath> {
     XPath read(Kryo kryo, Input input, Class<XPath> type) {
         final uri = input.readString()
         log.trace "Path de-serialization > uri=$uri"
-        (XPath) FileHelper.asPath(new URI(uri))
+        // note: pass the raw string (not a pre-parsed URI) so that percent-encoded
+        // characters (e.g. %23 for '#') go through the same string-based parsing
+        // used when the path is first created via file(), instead of being decoded
+        // by java.net.URI#getPath() -- see https://github.com/nextflow-io/nextflow/issues/6109
+        (XPath) FileHelper.asPath(uri)
     }
 }

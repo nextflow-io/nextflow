@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package nextflow.cloud.aws.batch
 
 import groovy.transform.CompileStatic
+import nextflow.container.ContainerHelper
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -47,6 +48,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     @Override
     protected boolean fixOwnership() {
-        return containerConfig?.fixOwnership
+        return ContainerHelper.fixOwnership(containerConfig)
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
@@ -21,10 +20,10 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.function.IntSupplier
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import jdk.internal.vm.ThreadContainer
 /**
  * Thread pool helpers
  *
@@ -35,6 +34,10 @@ import jdk.internal.vm.ThreadContainer
 class ThreadPoolHelper {
 
     static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg) throws TimeoutException {
+        await(pool, maxAwait, waitMessage, exitMsg, () -> pending(pool))
+    }
+
+    static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg, IntSupplier pending) throws TimeoutException {
         final max = maxAwait.millis
         final t0 = System.currentTimeMillis()
         // wait for ongoing file transfer to complete
@@ -50,11 +53,11 @@ class ThreadPoolHelper {
 
             // log to console every 10 minutes (120 * 5 sec)
             if( count % 120 == 0 ) {
-                log.info1(format(waitMessage, pool))
+                log.info1(format(waitMessage, pending.getAsInt()))
             }
             // log to the debug file every minute (12 * 5 sec)
             else if( count % 12 == 0 ) {
-                log.debug(format(waitMessage, pool))
+                log.debug(format(waitMessage, pending.getAsInt()))
             }
             // increment the count
             count++
@@ -64,16 +67,16 @@ class ThreadPoolHelper {
     static protected int pending(ExecutorService pool) {
         if( pool instanceof ThreadPoolExecutor) {
             final p1 = ((ThreadPoolExecutor)pool)
-            return p1.getTaskCount() - p1.getCompletedTaskCount()
-        }
-        else if( pool instanceof ThreadContainer ) {
-            return pool.threadCount()
+            return (int) (p1.getTaskCount() - p1.getCompletedTaskCount())
         }
         return -1
     }
 
     static protected String format(String message, ExecutorService pool) {
-        final pending = pending(pool)
+        return format(message, pending(pool))
+    }
+
+    static protected String format(String message, int pending) {
         return pending>=0
                 ? String.format(message, pending)
                 : message.replaceAll(/\([^)]+\)/, '') // <-- remove text between parentheses

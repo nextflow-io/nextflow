@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cache
@@ -39,7 +38,7 @@ class DefaultCacheStoreTest extends Specification {
         def key1 = CacheHelper.hasher('ONE').hash()
         def key2 = CacheHelper.hasher('TWO').hash()
         def value = "Hello world"
-        
+
         when:
         store.putEntry(key1, value.bytes)
         then:
@@ -54,6 +53,32 @@ class DefaultCacheStoreTest extends Specification {
 
         cleanup:
         store?.close()
+        folder?.deleteDir()
+    }
+
+    def 'should report the underlying cause when the cache DB cannot be opened' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def uuid = UUID.randomUUID()
+        and: 'a db path that cannot be opened by leveldb'
+        def dataDir = folder.resolve("cache/$uuid")
+        Files.createDirectories(dataDir)
+        Files.createFile(dataDir.resolve('db'))
+        and:
+        def store = new DefaultCacheStore(uuid, 'test_1', folder)
+
+        when:
+        store.open()
+        then:
+        def e = thrown(IOException)
+        and:
+        e.message.startsWith("Can't open cache DB:")
+        e.message.contains('Cause: ')
+        e.message.contains('NXF_CACHE_DIR')
+        and:
+        e.cause instanceof IllegalArgumentException
+
+        cleanup:
         folder?.deleteDir()
     }
 

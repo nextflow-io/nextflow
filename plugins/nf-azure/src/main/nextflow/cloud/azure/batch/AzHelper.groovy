@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.blob.models.UserDelegationKey
 import com.azure.storage.blob.sas.BlobContainerSasPermission
-import com.azure.storage.blob.sas.BlobSasPermission
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
 import com.azure.storage.common.StorageSharedKeyCredential
 import com.azure.storage.common.policy.RequestRetryOptions
@@ -69,16 +68,6 @@ class AzHelper {
     }
 
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
-            .setAddPermission(true)
-            .setCreatePermission(true)
-            .setDeletePermission(true)
-            .setListPermission(true)
-            .setMovePermission(true)
-            .setReadPermission(true)
-            .setTagsPermission(true)
-            .setWritePermission(true)
-
-    static BlobSasPermission BLOB_PERMS = new BlobSasPermission()
             .setAddPermission(true)
             .setCreatePermission(true)
             .setDeletePermission(true)
@@ -137,7 +126,7 @@ class AzHelper {
     }
 
     static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
-       
+
         final startTime = OffsetDateTime.now()
         final indicatedExpiryTime = startTime.plusHours(duration.toHours())
 
@@ -148,7 +137,6 @@ class AzHelper {
         final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final signature = new BlobServiceSasSignatureValues()
-                .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
                 .setStartTime(startTime)
                 .setExpiryTime(expiryTime)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,11 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.SysEnv
 import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure managed identity config options
@@ -28,16 +32,24 @@ import nextflow.cloud.azure.nio.AzFileSystemProvider
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class AzManagedIdentityOpts {
+class AzManagedIdentityOpts implements ConfigScope {
 
-    String clientId
+    @ConfigOption
+    @Description("""
+        The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). Defaults to environment variable `AZURE_MANAGED_IDENTITY_USER`.
+    """)
+    final String clientId
 
-    boolean system
+    @ConfigOption
+    @Description("""
+        When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
+    """)
+    final boolean system
 
-    AzManagedIdentityOpts(Map config) {
+    AzManagedIdentityOpts(Map config, Map<String, String> env = SysEnv.get()) {
         assert config != null
-        this.clientId = config.clientId
-        this.system = Boolean.parseBoolean(config.system as String)
+        this.clientId = config.clientId ?: env.get('AZURE_MANAGED_IDENTITY_USER')
+        this.system = config.system != null ? Boolean.parseBoolean(config.system as String) : Boolean.parseBoolean(env.get('AZURE_MANAGED_IDENTITY_SYSTEM'))
     }
 
     Map<String, Object> getEnv() {

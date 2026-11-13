@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
+import nextflow.script.types.ParamsMap;
 
 /**
  * DSL scope for the workflow output definition.
@@ -35,17 +36,17 @@ public interface OutputDsl extends DslScope {
 
     @Constant("params")
     @Description("""
-        Map of workflow parameters specified in the config file or as command line options.
+        Record of pipeline parameters specified in the config file or on the command line.
     """)
-    Map<String,Object> getParams();
+    ParamsMap getParams();
 
     @Description("""
         *Currently only supported for S3.*
 
         Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
     """)
-    /* String | Boolean */
-    void contentType(Object value);
+    void contentType(String value);
+    void contentType(boolean value);
 
     @Description("""
         Enable or disable publishing (default: `true`).
@@ -56,6 +57,11 @@ public interface OutputDsl extends DslScope {
         When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
     """)
     void ignoreErrors(boolean value);
+
+    @Description("""
+        When `true`, files that do not originate from the work directory, such as input files, are also published (default: `false`).
+    """)
+    void includeInputs(boolean value);
 
     @Description("""
         Create an index file of the values that were published.
@@ -75,13 +81,14 @@ public interface OutputDsl extends DslScope {
     @Description("""
         When `true` any existing file in the specified folder will be overwritten (default: `'standard'`).
     """)
-    /* String | Boolean */
-    void overwrite(Object value);
+    void overwrite(boolean value);
+    void overwrite(String value);
 
     @Description("""
         Specify the publish path relative to the output directory (default: the target name).
     """)
     void path(String value);
+    void path(Closure value);
 
     @Description("""
         *Currently only supported for S3.*
@@ -102,13 +109,9 @@ public interface OutputDsl extends DslScope {
         @Description("""
             When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names.
         """)
-        /* List<String> | Boolean */
-        void header(Object value);
-
-        @Description("""
-            Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.
-        """)
-        void mapper(Closure value);
+        void header(boolean value);
+        void header(List<String> value);
+        void header(String... value);
 
         @Description("""
             The name of the index file relative to the target path (required).

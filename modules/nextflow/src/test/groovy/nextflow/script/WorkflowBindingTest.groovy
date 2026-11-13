@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package nextflow.script
 
-import spock.lang.Specification
-
+import nextflow.NF
 import nextflow.extension.OpCall
+import spock.lang.Specification
 
 /**
  *
@@ -27,7 +27,7 @@ import nextflow.extension.OpCall
 class WorkflowBindingTest extends Specification {
 
     def setupSpec() {
-        WorkflowBinding.init()
+        NF.init()
     }
 
     def 'should lookup variables' () {
@@ -44,38 +44,73 @@ class WorkflowBindingTest extends Specification {
         WorkflowBinding.lookup(obj2) == 'bar'
     }
 
+    def 'should store variables named after binding fields' () {
+        given:
+        def owner = Mock(BaseScript)
+        def ch = new Object()
+        def binding = new WorkflowBinding()
+        binding.setOwner(owner)
+
+        when:
+        binding.published = ch
+        binding.owner = ch
+        then:
+        binding.published.is(ch)
+        binding.owner.is(ch)
+        binding.getVariable('published').is(ch)
+        binding.getVariable('owner').is(ch)
+        binding.getPublished() == [:]
+        binding.getOwner().is(owner)
+    }
+
     def 'should invoke an extension method' () {
 
         given:
         def FOO = Mock(ComponentDef)
         def ARGS = ['alpha','beta'] as Object[]
-        def binding = Spy(WorkflowBinding)
-        binding.@meta = Mock(ScriptMeta)
-        
+        def meta = Mock(ScriptMeta)
+        def binding = new WorkflowBinding()
+        binding.@meta = meta
+
         // should invoke an extension component
         when:
         def result = binding.invokeMethod('foo', ARGS)
         then:
-        1 * binding.getComponent0('foo') >> FOO
-        1 * FOO.invoke_o(ARGS) >> 'Hello'
+        1 * meta.getComponent('foo') >> FOO
+        1 * FOO.invoke_a(ARGS) >> 'Hello'
         result == 'Hello'
 
         // should invoke an extension operator
         when:
         result = binding.invokeMethod('map', ARGS)
         then:
-        1 * binding.getComponent0('map') >> null
+        1 * meta.getComponent('map') >> null
         result instanceof OpCall
         (result as OpCall).methodName == 'map'
         (result as OpCall).args == ARGS
 
-        // should throw missing method exception 
+        // should throw missing method exception
         when:
         binding.invokeMethod('foo', ARGS)
         then:
-        1 * binding.getComponent0('foo') >> null
+        1 * meta.getComponent('foo') >> null
         thrown(MissingMethodException)
 
+    }
+
+    def 'should not fail when tracing a method call' () {
+        given:
+        def BOOM = new Object() {
+            @Override
+            String toString() { throw new MissingPropertyException('task', Object) }
+        }
+        def ARGS = [BOOM] as Object[]
+
+        when:
+        def result = WorkflowBinding.renderArgs(ARGS)
+        then:
+        noExceptionThrown()
+        result == '<unable to render args: MissingPropertyException>'
     }
 
     def 'should get an extension method as variable' () {

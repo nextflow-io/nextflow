@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class EscapeTest extends Specification {
 
     def 'should escape wildcards' () {
 
-        expect: 
+        expect:
         Escape.wildcards('file_*') == 'file_\\*'
         Escape.wildcards('file_??') == 'file_\\?\\?'
         Escape.wildcards('file_{a,b}') == 'file_\\{a,b\\}'
@@ -73,7 +73,7 @@ class EscapeTest extends Specification {
     }
 
     def 'should escape cli' () {
-        expect: 
+        expect:
         Escape.cli('nextflow','run','this') == 'nextflow run this'
         Escape.cli('nextflow','--foo','file.txt') == 'nextflow --foo file.txt'
         Escape.cli('nextflow','--foo','*.txt') == "nextflow --foo '*.txt'"
@@ -115,5 +115,62 @@ class EscapeTest extends Specification {
         'foo<x>bar' | 'foo<x>bar'
         and:
         '$foo'      | '\\$foo'
+    }
+
+    def 'should escape a data path' () {
+        expect:
+        Escape.path('a$b c') == 'a$b\\ c'
+        Escape.dataPath('a$b c') == 'a\\$b\\ c'
+        Escape.dataPath(Paths.get('/data/${x}.txt')) == '/data/\\${x}.txt'
+    }
+
+    def 'should reject a data path with a newline' () {
+        when:
+        Escape.dataPath('a\nb')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'File name cannot contain a newline character: a\\nb'
+    }
+
+    def 'should escape a file name for a task script' () {
+        expect:
+        Escape.scriptPath('a$.txt') == 'a$.txt'
+        Escape.scriptPath('Foo$Bar.class') == 'Foo$Bar.class'
+        Escape.scriptPath('a b(c).txt') == 'a\\ b\\(c\\).txt'
+
+        when:
+        Escape.scriptPath(NAME)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == MESSAGE
+
+        where:
+        NAME            | MESSAGE
+        'p${x}.txt'     | 'File name cannot contain \'${\' or \'$[\': p${x}.txt'
+        'p$[x].txt'     | 'File name cannot contain \'${\' or \'$[\': p$[x].txt'
+        'a\nb'          | 'File name cannot contain a newline character: a\\nb'
+    }
+
+    def 'should escape double-quoted string' () {
+        expect:
+        Escape.doubleQuoted('a\\b"c$d`e f') == 'a\\\\b\\"c\\$d\\`e f'
+    }
+
+    @Unroll
+    def 'should preserve a data file name in bash' () {
+        given:
+        def name = 'a b;c `d` $(e) ${f} $g "h" \'i'
+
+        when:
+        def proc = ['bash', '-c', CMD.replace('NAME', ARG(name))].execute()
+
+        then:
+        proc.text == name
+        proc.waitFor() == 0
+
+        where:
+        CMD                     | ARG
+        'printf %s NAME'        | { String it -> Escape.dataPath(it) }
+        'eval "printf %s NAME"' | { String it -> Escape.doubleQuoted(Escape.dataPath(it)) }
     }
 }

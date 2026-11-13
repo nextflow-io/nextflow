@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class ContainerBuilderTest extends Specification {
         result = builder.makeEnv('FOO=hello')
         then:
         result.toString() == '-e "FOO=hello"'
-        
+
         when:
         result = builder.makeEnv( 'FOO' )
         then:
@@ -71,32 +71,22 @@ class ContainerBuilderTest extends Specification {
         def IMAGE = 'foo:latest'
 
         when:
-        def builder = ContainerBuilder.create(ENGINE,IMAGE)
+        def builder = ContainerBuilder.create(CONFIG,IMAGE)
         then:
         builder.class == CLAZZ
         builder.getImage() == IMAGE
 
         where:
-        ENGINE              | CLAZZ
-        'docker'            | DockerBuilder
-        'podman'            | PodmanBuilder
-        'singularity'       | SingularityBuilder
-        'apptainer'         | ApptainerBuilder
-        'sarus'             | SarusBuilder
-        'shifter'           | ShifterBuilder
-        'charliecloud'      | CharliecloudBuilder
-        'udocker'           | UdockerBuilder
-
-    }
-
-    def 'should throw illegal arg' () {
-
-        when:
-        ContainerBuilder.create('foo','image:any')
-
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == 'Unknown container engine: foo'
+        CONFIG                      | CLAZZ
+        new DockerConfig()          | DockerBuilder
+        new PodmanConfig()          | PodmanBuilder
+        new SingularityConfig()     | SingularityBuilder
+        new ApptainerConfig()       | ApptainerBuilder
+        new SarusConfig()           | SarusBuilder
+        new ShifterConfig()         | ShifterBuilder
+        new CharliecloudConfig()    | CharliecloudBuilder
+        new AppleContainerConfig()  | AppleContainerBuilder
+        new SmolVmConfig()          | SmolVmBuilder
 
     }
 

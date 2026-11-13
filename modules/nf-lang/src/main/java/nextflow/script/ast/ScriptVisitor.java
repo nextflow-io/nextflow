@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.GroovyCodeVisitor;
 
 public interface ScriptVisitor extends GroovyCodeVisitor {
@@ -26,13 +27,25 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitInclude(IncludeNode node);
 
-    void visitParam(ParamNode node);
+    void visitParams(ParamBlockNode node);
+
+    void visitParam(Parameter node);
+
+    void visitParamV1(ParamNodeV1 node);
 
     void visitWorkflow(WorkflowNode node);
 
+    void visitAgent(AgentNode node);
+
     void visitProcess(ProcessNode node);
 
+    void visitProcessV2(ProcessNodeV2 node);
+
+    void visitProcessV1(ProcessNodeV1 node);
+
     void visitFunction(FunctionNode node);
+
+    void visitRecord(RecordNode node);
 
     void visitEnum(ClassNode node);
 

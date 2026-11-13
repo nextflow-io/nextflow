@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.script.ChannelOut
 import nextflow.script.TokenMultiMapDef
@@ -57,7 +57,7 @@ class MultiMapOp {
 
     protected void doComplete(nope) {
         for( DataflowWriteChannel ch : targets.values() ) {
-            if( ch instanceof DataflowExpression ) {
+            if( ch instanceof DataflowVariable ) {
                 if( !ch.isBound()) ch.bind(Channel.STOP)
             }
             else {

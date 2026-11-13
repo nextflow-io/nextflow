@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -24,8 +25,10 @@ import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BitwiseNegationExpression;
+import org.codehaus.groovy.ast.expr.BooleanExpression;
 import org.codehaus.groovy.ast.expr.CastExpression;
 import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -76,8 +79,20 @@ public class Formatter extends CodeVisitorSupport {
 
     private int indentCount = 0;
 
+    private CommentAttacher comments = CommentAttacher.of(null);
+
+    private int stringIndentDelta = 0;
+
     public Formatter(FormattingOptions options) {
         this.options = options;
+    }
+
+    public void setComments(CommentAttacher comments) {
+        this.comments = comments;
+    }
+
+    public CommentAttacher getComments() {
+        return comments;
     }
 
     public void append(char c) {
@@ -99,33 +114,177 @@ public class Formatter extends CodeVisitorSupport {
         builder.append('\n');
     }
 
+    /**
+     * Append the comments that precede a node, along with any blank lines
+     * that separate them from each other and from the node.
+     *
+     * @param node
+     */
     public void appendLeadingComments(ASTNode node) {
-        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
-        if( comments == null || comments.isEmpty() )
-            return;
+        for( var comment : comments.leading(node) ) {
+            appendBlankLines(comment.line);
+            appendComment(comment);
+        }
+        if( node != null )
+            appendBlankLines(node.getLineNumber());
+    }
 
-        for( var line : DefaultGroovyMethods.asReversed(comments) ) {
-            if( "\n".equals(line) ) {
-                append(line);
-            }
-            else {
-                appendIndent();
-                append(line.stripLeading());
-            }
+    /**
+     * Append the comments that precede a node that is printed after a fixed
+     * prefix, i.e. an `else` keyword. The prefix already fixes the surrounding
+     * blank lines, so only the comments are appended here.
+     *
+     * @param node
+     */
+    public void appendCommentsBefore(ASTNode node) {
+        for( var comment : comments.leading(node) )
+            appendComment(comment);
+    }
+
+    /**
+     * Append the comments that belong to a construct but not to any
+     * particular child, e.g. a comment before a closing brace.
+     *
+     * @param node
+     */
+    public void appendDanglingComments(ASTNode node) {
+        for( var comment : comments.dangling(node) ) {
+            appendBlankLines(comment.line);
+            appendComment(comment);
         }
     }
 
     public boolean hasTrailingComment(ASTNode node) {
-        var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
-        return comment != null;
+        return !comments.trailing(node).isEmpty();
     }
 
     public void appendTrailingComment(ASTNode node) {
-        var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
-        if( comment != null ) {
+        for( var comment : comments.trailing(node) ) {
+            this.comments.markEmitted(comment);
             append(' ');
-            append(comment);
+            append(comment.text.replace('\n', ' '));
         }
+    }
+
+    public CommentAligner commentAligner() {
+        return new CommentAligner();
+    }
+
+    /**
+     * Align the trailing comments of a group of entries to the
+     * same column when Harshil alignment is enabled. Multi-line
+     * entries are excluded.
+     */
+    public class CommentAligner {
+
+        private record Entry(int end, int width, boolean hasComment) {}
+
+        private final List<Entry> entries = new ArrayList<>();
+
+        private int start;
+
+        public void begin() {
+            start = builder.length();
+        }
+
+        public void end(ASTNode node) {
+            if( !options.harshilAlignment() )
+                return;
+            var end = builder.length();
+            var newline = builder.indexOf("\n", start);
+            if( newline != -1 && newline < end )
+                return;
+            entries.add(new Entry(end, end - start, hasTrailingComment(node)));
+        }
+
+        public void apply() {
+            var width = entries.stream().mapToInt(Entry::width).max().orElse(0);
+            for( int i = entries.size() - 1; i >= 0; i-- ) {
+                var entry = entries.get(i);
+                if( entry.hasComment() )
+                    builder.insert(entry.end(), " ".repeat(width - entry.width()));
+            }
+        }
+    }
+
+    private void appendBlankLines(int line) {
+        if( builder.length() == 0 )
+            return;
+        var count = comments.blankLinesBefore(line);
+        for( int i = 0; i < count; i++ )
+            appendNewLine();
+    }
+
+    private void appendComment(Comment comment) {
+        comments.markEmitted(comment);
+        var lines = comment.text.split("\n", -1);
+        for( int i = 0; i < lines.length; i++ ) {
+            var line = lines[i].strip();
+            appendIndent();
+            // preserve the canonical alignment of a block comment
+            if( i > 0 && line.startsWith("*") )
+                append(' ');
+            append(line);
+            appendNewLine();
+        }
+    }
+
+    /**
+     * Begin emitting a statement, recording how far its indentation moved
+     * from the source. A multi-line string inside the statement is shifted by
+     * the same amount, so that the string body keeps its position relative to
+     * the code around it -- which is the property that matters, since a
+     * process script is dedented at runtime.
+     *
+     * Only a statement that begins its own source line has an indentation
+     * to compare; for one that starts mid-line the column is a position within
+     * a line of code, so its strings are left alone.
+     *
+     * @param node
+     * @return the enclosing statement's shift, to be passed to {@link #endStatement}
+     */
+    public int beginStatement(ASTNode node) {
+        var previous = stringIndentDelta;
+        stringIndentDelta = options.insertSpaces() && comments.startsLine(node)
+            ? options.tabSize() * indentCount - (node.getColumnNumber() - 1)
+            : 0;
+        return previous;
+    }
+
+    public void endStatement(int previous) {
+        stringIndentDelta = previous;
+    }
+
+    /**
+     * Shift the interior lines of a multi-line string by the indentation
+     * shift of the statement that contains it. Blank lines are left alone,
+     * and a line is never shifted past its first non-whitespace character.
+     */
+    private String reindentString(String text) {
+        var delta = stringIndentDelta;
+        if( delta == 0 || text.indexOf('\n') < 0 )
+            return text;
+
+        var lines = text.split("\n", -1);
+        var builder = new StringBuilder(lines[0]);
+        for( int i = 1; i < lines.length; i++ ) {
+            builder.append('\n');
+            var line = lines[i];
+            if( line.isEmpty() ) {
+                // an empty line has no indentation to shift
+            }
+            else if( delta > 0 ) {
+                builder.append(" ".repeat(delta));
+                builder.append(line);
+            }
+            else {
+                int strip = 0;
+                while( strip < -delta && strip < line.length() && line.charAt(strip) == ' ' )
+                    strip++;
+                builder.append(line, strip, line.length());
+            }
+        }
+        return builder.toString();
     }
 
     public void incIndent() {
@@ -143,36 +302,54 @@ public class Formatter extends CodeVisitorSupport {
     // statements
 
     @Override
+    public void visitBlockStatement(BlockStatement node) {
+        super.visitBlockStatement(node);
+        appendDanglingComments(node);
+    }
+
+    @Override
     public void visitIfElse(IfStatement node) {
         visitIfElse(node, true);
     }
 
     protected void visitIfElse(IfStatement node, boolean preIndent) {
-        appendLeadingComments(node);
-        if( preIndent )
+        // an `else if` is printed by its parent, which has already emitted
+        // the comments that precede it
+        if( preIndent ) {
+            appendLeadingComments(node);
             appendIndent();
-        append("if (");
+        }
+        append("if ");
         visit(node.getBooleanExpression());
-        append(") {\n");
+        append(" {\n");
         incIndent();
         visit(node.getIfBlock());
         decIndent();
         appendIndent();
-        append("}\n");
-        if( node.getElseBlock() instanceof IfStatement is ) {
+        append("}");
+        var elseBlock = node.getElseBlock();
+        if( elseBlock instanceof IfStatement is ) {
+            appendTrailingComment(node);
+            appendNewLine();
+            appendCommentsBefore(is);
             appendIndent();
             append("else ");
             visitIfElse(is, false);
+            return;
         }
-        else if( !(node.getElseBlock() instanceof EmptyStatement) ) {
+        if( !(elseBlock instanceof EmptyStatement) ) {
+            appendNewLine();
+            appendCommentsBefore(elseBlock);
             appendIndent();
             append("else {\n");
             incIndent();
-            visit(node.getElseBlock());
+            visit(elseBlock);
             decIndent();
             appendIndent();
-            append("}\n");
+            append("}");
         }
+        appendTrailingComment(node);
+        appendNewLine();
     }
 
     private Expression currentRootExpr;
@@ -183,8 +360,11 @@ public class Formatter extends CodeVisitorSupport {
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
         appendIndent();
+        var sid = beginStatement(node);
         visitStatementLabels(node);
         visit(node.getExpression());
+        endStatement(sid);
+        appendTrailingComment(node);
         appendNewLine();
         currentRootExpr = cre;
     }
@@ -204,8 +384,11 @@ public class Formatter extends CodeVisitorSupport {
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
         appendIndent();
+        var sid = beginStatement(node);
         append("return ");
         visit(node.getExpression());
+        endStatement(sid);
+        appendTrailingComment(node);
         appendNewLine();
         currentRootExpr = cre;
     }
@@ -214,12 +397,15 @@ public class Formatter extends CodeVisitorSupport {
     public void visitAssertStatement(AssertStatement node) {
         appendLeadingComments(node);
         appendIndent();
+        var sid = beginStatement(node);
         append("assert ");
         visit(node.getBooleanExpression());
         if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
             append(" : ");
             visit(node.getMessageExpression());
         }
+        endStatement(sid);
+        appendTrailingComment(node);
         appendNewLine();
     }
 
@@ -232,7 +418,9 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getTryStatement());
         decIndent();
         appendIndent();
-        append("}\n");
+        append("}");
+        appendTrailingComment(node);
+        appendNewLine();
         for( var catchStatement : node.getCatchStatements() ) {
             visit(catchStatement);
         }
@@ -242,8 +430,11 @@ public class Formatter extends CodeVisitorSupport {
     public void visitThrowStatement(ThrowStatement node) {
         appendLeadingComments(node);
         appendIndent();
+        var sid = beginStatement(node);
         append("throw ");
         visit(node.getExpression());
+        endStatement(sid);
+        appendTrailingComment(node);
         appendNewLine();
     }
 
@@ -254,19 +445,20 @@ public class Formatter extends CodeVisitorSupport {
         append("catch (");
 
         var variable = node.getVariable();
-        var type = variable.getType();
-        if( !ClassHelper.isObjectType(type) ) {
-            append(type.getNameWithoutPackage());
-            append(' ');
-        }
         append(variable.getName());
+        if( hasType(variable) ) {
+            append(": ");
+            append(variable.getType().getNameWithoutPackage());
+        }
 
         append(") {\n");
         incIndent();
         visit(node.getCode());
         decIndent();
         appendIndent();
-        append("}\n");
+        append("}");
+        appendTrailingComment(node);
+        appendNewLine();
     }
 
     // expressions
@@ -283,9 +475,16 @@ public class Formatter extends CodeVisitorSupport {
             var receiver = node.getObjectExpression();
             visit(receiver);
             if( inWrappedMethodChain ) {
+                var receiverComment = hasTrailingComment(receiver);
+                appendTrailingComment(receiver);
                 incIndent();
-                if( !(receiver instanceof ClassExpression) ) {
+                var linkComments = comments.leading(node);
+                // a namespace receiver stays on the same line, unless a
+                // comment needs a line of its own
+                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) || !linkComments.isEmpty() || receiverComment ) {
                     appendNewLine();
+                    for( var comment : linkComments )
+                        appendComment(comment);
                     appendIndent();
                 }
             }
@@ -306,13 +505,14 @@ public class Formatter extends CodeVisitorSupport {
             ? DefaultGroovyMethods.init(args)
             : args;
         if( parenArgs.size() > 0 || !lastClosureArg ) {
-            var wrap = shouldWrapMethodCall(node);
+            var wrap = shouldWrapMethodCall(node) || hasComments(node, parenArgs);
             append('(');
             if( wrap )
                 incIndent();
             visitArguments(parenArgs, wrap);
             if( wrap ) {
                 appendNewLine();
+                appendDanglingComments(node);
                 decIndent();
                 appendIndent();
             }
@@ -340,13 +540,36 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitDirective(MethodCallExpression call) {
+        visitDirective(call, call);
+    }
+
+    public void visitDirective(ASTNode owner, MethodCallExpression call) {
         appendIndent();
+        var sid = beginStatement(owner);
         append(call.getMethodAsString());
         var arguments = asMethodCallArguments(call);
         if( !arguments.isEmpty() ) {
-            append(' ');
-            visitArguments(arguments, false);
+            var wrap = hasComments(call, arguments);
+            if( wrap )
+                incIndent();
+            else
+                append(' ');
+            var start = builder.length();
+            visitArguments(arguments, wrap);
+            // `name [...]` would be parsed as an index expression
+            if( !wrap && builder.charAt(start) == '[' ) {
+                builder.setCharAt(start - 1, '(');
+                append(')');
+            }
+            if( wrap ) {
+                appendNewLine();
+                appendDanglingComments(call);
+                decIndent();
+                appendIndent();
+            }
         }
+        endStatement(sid);
+        appendTrailingComment(owner);
         appendNewLine();
     }
 
@@ -365,8 +588,6 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     private boolean inVariableDeclaration;
-
-    private boolean inWrappedPipeChain;
 
     @Override
     public void visitBinaryExpression(BinaryExpression node) {
@@ -394,25 +615,12 @@ public class Formatter extends CodeVisitorSupport {
             return;
         }
 
-        var beginWrappedPipeChain = shouldWrapPipeExpression(node);
-        if( beginWrappedPipeChain )
-            inWrappedPipeChain = true;
-
         visit(node.getLeftExpression());
 
-        if( inWrappedPipeChain ) {
-            appendNewLine();
-            incIndent();
-            appendIndent();
-        }
-        else {
-            append(' ');
-        }
+        append(' ');
         append(node.getOperation().getText());
         append(' ');
 
-        var iwpc = inWrappedPipeChain;
-        inWrappedPipeChain = false;
         if( node.getOperation().isA(Types.ASSIGNMENT_OPERATOR) ) {
             var source = node.getRightExpression();
             var cre = currentRootExpr;
@@ -423,13 +631,6 @@ public class Formatter extends CodeVisitorSupport {
         else {
             visit(node.getRightExpression());
         }
-        inWrappedPipeChain = iwpc;
-
-        if( inWrappedPipeChain )
-            decIndent();
-
-        if( beginWrappedPipeChain )
-            inWrappedPipeChain = false;
     }
 
     @Override
@@ -464,6 +665,11 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     @Override
+    public void visitBooleanExpression(BooleanExpression node) {
+        visit(node.getExpression());
+    }
+
+    @Override
     public void visitNotExpression(NotExpression node) {
         append('!');
         visit(node.getExpression());
@@ -478,10 +684,18 @@ public class Formatter extends CodeVisitorSupport {
             append(" ->");
         }
         var code = (BlockStatement) node.getCode();
-        if( code.getStatements().size() == 0 ) {
+        var dangling = comments.dangling(node);
+        var inlineDangling = !dangling.isEmpty() && dangling.stream().allMatch(c -> c.text.startsWith("/*") && c.text.indexOf('\n') < 0);
+        var hasComments = !dangling.isEmpty() || comments.hasComments(code);
+        if( code.getStatements().size() == 0 && (dangling.isEmpty() || inlineDangling) ) {
+            for( var comment : dangling ) {
+                comments.markEmitted(comment);
+                append(' ');
+                append(comment.text);
+            }
             append(" }");
         }
-        else if( code.getStatements().size() == 1 && code.getStatements().get(0) instanceof ExpressionStatement es && !shouldWrapExpression(node) ) {
+        else if( code.getStatements().size() == 1 && code.getStatements().get(0) instanceof ExpressionStatement es && !shouldWrapExpression(node) && !hasComments && !comments.hasComments(es) ) {
             append(' ');
             visitStatementLabels(es);
             visit(es.getExpression());
@@ -491,6 +705,7 @@ public class Formatter extends CodeVisitorSupport {
             appendNewLine();
             incIndent();
             visit(code);
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
             append('}');
@@ -500,11 +715,11 @@ public class Formatter extends CodeVisitorSupport {
     public void visitParameters(Parameter[] parameters) {
         for( int i = 0; i < parameters.length; i++ ) {
             var param = parameters[i];
-            if( isLegacyType(param.getType()) ) {
-                visitTypeAnnotation(param.getType());
-                append(' ');
-            }
             append(param.getName());
+            if( hasType(param) ) {
+                append(": ");
+                visitTypeAnnotation(param.getType());
+            }
             if( param.hasInitialExpression() ) {
                 append(" = ");
                 visit(param.getInitialExpression());
@@ -516,13 +731,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = shouldWrapExpression(node);
+        var wrap = hasTrailingComma(node) || hasComments(node, node.getExpressions());
         append('(');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -531,13 +747,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node) || shouldWrapExpression(node);
+        var wrap = hasTrailingComma(node) || hasComments(node, node.getExpressions());
         append('[');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -548,13 +765,17 @@ public class Formatter extends CodeVisitorSupport {
         var comma = wrap ? "," : ", ";
         var trailingComma = wrap && args.size() > 1;
         for( int i = 0; i < args.size(); i++ ) {
+            var arg = args.get(i);
             if( wrap ) {
                 appendNewLine();
+                appendLeadingComments(arg);
                 appendIndent();
             }
-            visit(args.get(i));
+            visit(arg);
             if( trailingComma || i + 1 < args.size() )
                 append(comma);
+            if( wrap )
+                appendTrailingComment(arg);
         }
     }
 
@@ -564,13 +785,14 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node) || shouldWrapExpression(node);
+        var wrap = hasTrailingComma(node) || hasComments(node, node.getMapEntryExpressions());
         append('[');
         if( wrap )
             incIndent();
         visitNamedArgs(node.getMapEntryExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -581,13 +803,17 @@ public class Formatter extends CodeVisitorSupport {
         var comma = wrap ? "," : ", ";
         var trailingComma = wrap && args.size() > 1;
         for( int i = 0; i < args.size(); i++ ) {
+            var arg = args.get(i);
             if( wrap ) {
                 appendNewLine();
+                appendLeadingComments(arg);
                 appendIndent();
             }
-            visit(args.get(i));
+            visit(arg);
             if( trailingComma || i + 1 < args.size() )
                 append(comma);
+            if( wrap )
+                appendTrailingComment(arg);
         }
     }
 
@@ -638,7 +864,7 @@ public class Formatter extends CodeVisitorSupport {
     public void visitConstantExpression(ConstantExpression node) {
         var text = (String) node.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
         if( text != null )
-            append(text);
+            append(isTripleQuoted(text) ? reindentString(text) : text);
         else
             append(node.getText());
     }
@@ -649,21 +875,19 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitTypeAnnotation(ClassNode type) {
-        if( isLegacyType(type) ) {
+        if( isLegacyType(type) )
             append(type.getNodeMetaData(ASTNodeMarker.LEGACY_TYPE));
-            return;
-        }
-
-        append(nextflow.script.types.Types.getName(type));
+        else
+            append(nextflow.script.dsl.Types.getName(type));
     }
 
     @Override
     public void visitVariableExpression(VariableExpression node) {
-        if( inVariableDeclaration && isLegacyType(node.getType()) ) {
-            visitTypeAnnotation(node.getType());
-            append(' ');
-        }
         append(node.getText());
+        if( inVariableDeclaration && hasType(node) ) {
+            append(": ");
+            visitTypeAnnotation(node.getType());
+        }
     }
 
     @Override
@@ -681,13 +905,15 @@ public class Formatter extends CodeVisitorSupport {
     public void visitGStringExpression(GStringExpression node) {
         // see also: GStringUtil.writeToImpl()
         var quoteChar = (String) node.getNodeMetaData(ASTNodeMarker.QUOTE_CHAR, k -> DQ_STR);
+        var tripleQuoted = TDQ_STR.equals(quoteChar);
         append(quoteChar);
         var ss = node.getStrings();
         var vs = node.getValues();
         for( int i = 0; i < ss.size(); i++ ) {
             var string = ss.get(i);
-            if( string.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT) != null )
-                visit(string);
+            var text = (String) string.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
+            if( text != null )
+                append(tripleQuoted ? reindentString(text) : text);
             if( i < vs.size() ) {
                 append("${");
                 visit(vs.get(i));
@@ -709,12 +935,59 @@ public class Formatter extends CodeVisitorSupport {
 
     // helpers
 
+    private boolean hasComments(ASTNode container, List<? extends Expression> args) {
+        if( !comments.dangling(container).isEmpty() )
+            return true;
+        for( var arg : args ) {
+            if( comments.hasComments(arg) )
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Determine whether any link of a method chain carries a comment.
+     */
+    private boolean hasChainComments(MethodCallExpression node) {
+        Expression expr = node;
+        while( expr instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
+            var receiver = mce.getObjectExpression();
+            if( !comments.leading(mce).isEmpty() || !comments.trailing(receiver).isEmpty() )
+                return true;
+            expr = receiver;
+        }
+        return false;
+    }
+
     private static boolean hasTrailingComma(Expression node) {
         return node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMA) != null;
     }
 
+    public static boolean hasType(ClassNode type) {
+        // skip legacy type annotations that have no modern equivalent
+        var legacy = (String) type.getNodeMetaData(ASTNodeMarker.LEGACY_TYPE);
+        if( legacy != null )
+            return !"Object".equals(legacy) && legacy.indexOf('[') == -1;
+        // `Object` is equivalent to no type annotation
+        return !ClassHelper.isDynamicTyped(type) && !ClassHelper.isObjectType(type);
+    }
+
+    public static boolean hasType(Variable variable) {
+        var type = variable.getType();
+        // the legacy annotation is recorded on the type node
+        if( isLegacyType(type) )
+            return hasType(type);
+        // `isDynamicTyped()` records that the source declared no type, which
+        // the resolver may since have overwritten (e.g. an untyped catch)
+        return !variable.isDynamicTyped() && !ClassHelper.isObjectType(type);
+    }
+
     public static boolean isLegacyType(ClassNode cn) {
         return cn.getNodeMetaData(ASTNodeMarker.LEGACY_TYPE) != null;
+    }
+
+    private static boolean isTripleQuoted(String text) {
+        return text.startsWith(TDQ_STR) || text.startsWith(TSQ_STR);
     }
 
     private boolean shouldWrapExpression(Expression node) {
@@ -732,6 +1005,9 @@ public class Formatter extends CodeVisitorSupport {
     private boolean shouldWrapMethodChain(MethodCallExpression node) {
         if( currentRootExpr != node )
             return false;
+        // a comment between two links can only be emitted by wrapping
+        if( hasChainComments(node) )
+            return true;
         if( !shouldWrapExpression(node) )
             return false;
 
@@ -745,10 +1021,6 @@ public class Formatter extends CodeVisitorSupport {
         return shouldWrapExpression(root)
             ? false
             : depth >= 2;
-    }
-
-    private boolean shouldWrapPipeExpression(BinaryExpression node) {
-        return currentRootExpr == node && node.getOperation().isA(Types.PIPE) && shouldWrapExpression(node);
     }
 
     private static final String SLASH_STR = "/";

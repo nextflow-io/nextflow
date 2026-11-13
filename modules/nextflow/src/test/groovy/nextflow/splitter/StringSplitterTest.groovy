@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package nextflow.splitter
 
-import groovyx.gpars.dataflow.operator.PoisonPill
 import spock.lang.Specification
 import test.TestHelper
 
@@ -48,19 +47,6 @@ class StringSplitterTest extends Specification {
             .target('012345678901234567')
             .options(by:5, each: {it.reverse()} )
             .list()  == ['43210','98765','43210','765']
-
-    }
-
-    def testSplitChannel() {
-
-        when:
-        def q = new StringSplitter().target('012345678901234567') .options(by:5). channel()
-        then:
-        q.val == '01234'
-        q.val == '56789'
-        q.val == '01234'
-        q.val == '567'
-        q.val == PoisonPill.instance
 
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.batch.logging
@@ -29,8 +28,8 @@ import com.google.cloud.logging.Payload.StringPayload
 import com.google.cloud.logging.Severity
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.cloud.google.batch.client.BatchConfig
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -90,7 +89,7 @@ class BatchLoggingTest extends Specification {
     def 'should fetch logs' () {
         given:
         def sess = Mock(Session) { getConfig() >> [:] }
-        def config = BatchConfig.create(sess)
+        def config = GoogleOpts.create(sess)
         and:
         def batchClient = new BatchClient(config)
         def logClient = new BatchLogging(config)
@@ -124,7 +123,7 @@ class BatchLoggingTest extends Specification {
         log.debug "Test job uid=$uid"
         then:
         uid
-        
+
         when:
         def state=null
         do {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,52 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.BuildInfo
+import nextflow.exception.AbortRunException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
+import org.junit.Rule
 import spock.lang.Specification
+import test.OutputCapture
 import test.TestHelper
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class WorkflowMetadataTest extends Specification {
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
+
+    def 'should capture the abort cause in errorReport and errorMessage' () {
+        given:
+        def script = Mock(ScriptFile)
+        Session session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        // simulate a background abort (e.g. a Tower 502 telemetry failure): error set, no task fault
+        session.getError() >> new AbortRunException('Unexpected HTTP response\n- status code : 502\n- response msg: 502 Bad Gateway')
+        and:
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        metadata.invokeOnComplete()
+
+        then:
+        metadata.errorMessage?.contains('502 Bad Gateway')
+        metadata.errorReport?.contains('502 Bad Gateway')
+    }
 
     def 'should populate workflow object' () {
 
@@ -139,7 +167,7 @@ class WorkflowMetadataTest extends Specification {
 
         def session = Spy(Session)
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
-        
+
         def metadata = new WorkflowMetadata(session, script)
 
         session.binding.setVariable('value_a', 1)
@@ -186,7 +214,7 @@ class WorkflowMetadataTest extends Specification {
         given:
         def session = Spy(Session)
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
-        
+
         def metadata = new WorkflowMetadata(session, null)
 
         when:
@@ -207,12 +235,12 @@ class WorkflowMetadataTest extends Specification {
 
         def session = Spy(Session)
         def metadata = new WorkflowMetadata(session, script)
-        
+
         session.binding.setVariable('value_a', 1)
         session.binding.setVariable('value_b', 2)
         session.binding.setVariable('workflow', metadata)
         session.binding.setParams(foo: 'Hello', bar: 'world')
-        
+
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
 
         def result1
@@ -251,13 +279,105 @@ class WorkflowMetadataTest extends Specification {
 
     }
 
+    def 'should invoke onError handlers with and without arguments' () {
+
+        given:
+        def script = Mock(ScriptFile)
+        def session = Spy(Session)
+        def metadata = new WorkflowMetadata(session, script)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        and:
+        def trace = Mock(TraceRecord)
+        def result1
+        def result2
+        def result3 = false
+
+        when:
+        metadata.setOnError { err -> result1 = err }
+        metadata.setOnError { result2 = it }
+        metadata.setOnError { -> result3 = true }
+        metadata.invokeOnError(trace)
+
+        then:
+        result1 == trace
+        result2 == trace
+        result3
+
+    }
+
+    def 'should invoke onComplete and onError sections on failure' () {
+
+        given:
+        def outdir = Files.createTempDirectory('test')
+        def SCRIPT = '''
+            params {
+                outdir: String
+                foo: String
+            }
+
+            def hello() { 'hello' }
+
+            workflow {
+                main:
+                channel.of(1).map { v -> error('Boom') }
+
+                onComplete:
+                file("${params.outdir}/complete.txt").text = "${workflow.success} ${params.foo} ${hello()}"
+
+                onError:
+                file("${params.outdir}/error.txt").text = "${workflow.success} ${workflow.errorMessage} ${params.foo} ${hello()}"
+            }
+            '''
+
+        when:
+        runScript(SCRIPT, params: [outdir: outdir.toString(), foo: 'bar'])
+        then:
+        thrown(Exception)
+        outdir.resolve('complete.txt').text == 'false bar hello'
+        outdir.resolve('error.txt').text == 'false Boom bar hello'
+
+        cleanup:
+        outdir?.deleteDir()
+    }
+
+    def 'should invoke onComplete section but not onError section on success' () {
+
+        given:
+        def outdir = Files.createTempDirectory('test')
+        def SCRIPT = '''
+            params {
+                outdir: String
+            }
+
+            workflow {
+                main:
+                channel.of(1).view()
+
+                onComplete:
+                file("${params.outdir}/complete.txt").text = "${workflow.success}"
+
+                onError:
+                file("${params.outdir}/error.txt").text = "${workflow.success}"
+            }
+            '''
+
+        when:
+        runScript(SCRIPT, params: [outdir: outdir.toString()])
+        then:
+        outdir.resolve('complete.txt').text == 'true'
+        !Files.exists(outdir.resolve('error.txt'))
+
+        cleanup:
+        outdir?.deleteDir()
+    }
+
     def 'should convert to map object' () {
 
         given:
         def script = Mock(ScriptFile)
         script.getScriptId() >> '123'
         script.getCommitId() >> 'abcd'
-        
+
         def session = Spy(Session)
         def metadata = new WorkflowMetadata(session, script)
         and:
@@ -270,6 +390,83 @@ class WorkflowMetadataTest extends Specification {
         result.scriptId == '123'
         result.commitId == 'abcd'
         result.profile == 'standard'
+    }
+
+    def 'should not cause a stack overflow error on missing property' () {
+
+        given:
+        def script = Mock(ScriptFile)
+        def session = Spy(Session)
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        println metadata.executor
+        then:
+        thrown(MissingPropertyException)
+    }
+
+    def 'should invoke shutdown callbacks once'() {
+        given:
+        SysEnv.push(NXF_TRACE: 'nextflow')
+
+        when:
+        runScript(
+            '''\
+            workflow {
+                main:
+                println 'entry workflow > main'
+
+                onComplete:
+                println 'entry workflow > onComplete'
+            }
+            '''
+        )
+        then:
+        TestHelper.filterLogNoise(capture, true) == [
+            'entry workflow > main',
+            'entry workflow > onComplete'
+        ]
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should report failure when the run is unsuccessful due to failOnIgnore' () {
+        given:
+        def script = Mock(ScriptFile)
+        Session session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        session.getFault() >> null
+        session.getError() >> null
+        session.isSuccess() >> false
+        and:
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        metadata.invokeOnComplete()
+
+        then:
+        !metadata.success
+        metadata.exitStatus == 1
+    }
+
+    def 'should report success when the run is successful' () {
+        given:
+        def script = Mock(ScriptFile)
+        Session session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        session.getFault() >> null
+        session.getError() >> null
+        session.isSuccess() >> true
+        and:
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        metadata.invokeOnComplete()
+
+        then:
+        metadata.success
+        metadata.exitStatus == 0
     }
 
 }

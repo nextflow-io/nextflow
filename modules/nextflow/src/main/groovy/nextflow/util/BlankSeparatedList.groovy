@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ class BlankSeparatedList implements KryoSerializable, PathEscapeAware, List {
         def result = new StringBuilder()
         for( int i=0; i<target.size(); i++ ) {
             if( i ) result.append(' ')
-            result.append(Escape.path(target.get(i).toString()))
+            result.append(Escape.scriptPath(target.get(i).toString()))
         }
         return result.toString()
     }

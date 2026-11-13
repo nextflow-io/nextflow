@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
-import nextflow.Session
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -32,11 +31,19 @@ import spock.lang.Unroll
  */
 class PbsProExecutorTest extends Specification {
 
+    def createExecutor(config) {
+        Spy(PbsProExecutor) {
+            getConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new ExecutorConfig([:]))
+    }
+
     def 'should get directives' () {
         given:
-        def session = Mock(Session) { getConfig()>>[:] }
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> session
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/here')
 
         def task = Mock(TaskRun)
@@ -58,9 +65,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with queue' () {
         given:
-        def session = Mock(Session) { getConfig()>>[:] }
-        def executor = Spy(PbsProExecutor)
-        executor.getSession()>>session
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -83,8 +88,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with cpus' () {
         given:
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
         and:
         def WORK_DIR = Paths.get('/foo/bar')
 
@@ -109,8 +113,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with mem' () {
         given:
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -134,8 +137,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with cpus and mem' () {
         given:
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -159,8 +161,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should ignore cpus and memory when clusterOptions contains -l option' () {
         given:
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -187,8 +188,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with job array' () {
         given:
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
         and:
         def task = Mock(TaskArrayRun) {
             config >> new TaskConfig()
@@ -208,10 +208,10 @@ class PbsProExecutorTest extends Specification {
 
     def 'should return qstat command line' () {
         given:
-        def executor = [:] as PbsProExecutor
+        def executor = createExecutor()
 
         expect:
-        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B -f | awk -v ORS=' ' '\$1 == \"Server:\" {print \"@\"\$2}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
@@ -219,7 +219,7 @@ class PbsProExecutorTest extends Specification {
     def 'should parse queue status'() {
 
         setup:
-        def executor = [:] as PbsProExecutor
+        def executor = createExecutor()
         def text =
                 """
                 Job Id: 12.localhost
@@ -253,8 +253,7 @@ class PbsProExecutorTest extends Specification {
     def 'should report cluster as first' () {
 
         setup:
-        def executor = Spy(PbsProExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -280,7 +279,7 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get array index name and start' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
         executor.getArrayIndexStart() == 0
@@ -289,7 +288,7 @@ class PbsProExecutorTest extends Specification {
     @Unroll
     def 'should get array task id' () {
         given:
-        def executor = Spy(PbsProExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
 
@@ -298,20 +297,19 @@ class PbsProExecutorTest extends Specification {
         'foo[]'     | 1             | 'foo[1]'
         'bar[]'     | 2             | 'bar[2]'
     }
-    
+
     def 'should set pbs account' () {
         given:
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/work/dir')
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> Mock(Session)
         task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
         and:
-        def executor = Spy(PbsProExecutor)
+        def config = new ExecutorConfig(account: ACCOUNT)
+        def executor = createExecutor(config)
         executor.getJobNameFor(_) >> 'foo'
         executor.getName() >> 'pbspro'
-        executor.getSession() >> Mock(Session) { getExecConfigProp('pbspro', 'account',null)>>ACCOUNT }
 
         when:
         def result = executor.getDirectives(task, [])

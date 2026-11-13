@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ClusterConfigTest extends Specification {
-    
+
     def testGetAttribute() {
 
         when:
@@ -179,5 +179,13 @@ class ClusterConfigTest extends Specification {
         cfg.getClusterJoin() == 'multicast:228.1.2.4'
     }
 
+    def 'should not render the environment' () {
+        given:
+        def obj = new ClusterConfig([x: 1], 'master', [FAKE_SECRET: 's3cr3t-canary'])
+
+        expect:
+        obj.toString() == 'ClusterConfig'
+        !"$obj".contains('s3cr3t-canary')
+    }
 
 }

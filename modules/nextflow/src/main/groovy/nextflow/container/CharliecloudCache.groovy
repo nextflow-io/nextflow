@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,10 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.Duration
+import nextflow.util.LazyValue
 import nextflow.util.TestOnly
 /**
  * Handle caching of remote Charliecloud images
@@ -41,15 +40,13 @@ import nextflow.util.TestOnly
 @CompileStatic
 class CharliecloudCache {
 
-    static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> localImageNames = new ConcurrentHashMap<>()
 
-    private ContainerConfig config
+    private CharliecloudConfig config
 
     private Map<String,String> env
 
     private boolean missingCacheDir
-
-    private Duration pullTimeout = Duration.of('20min')
 
     private String registry
 
@@ -60,10 +57,10 @@ class CharliecloudCache {
     /**
      * Create a Charliecloud cache object
      *
-     * @param config A {@link ContainerConfig} object
+     * @param config A {@link CharliecloudConfig} object
      * @param env The environment configuration object. Specifying {@code null} the current system environment is used
      */
-    CharliecloudCache(ContainerConfig config, Map<String,String> env=null) {
+    CharliecloudCache(CharliecloudConfig config, Map<String,String> env=null) {
         this.config = config
         this.env = env ?: System.getenv()
     }
@@ -81,7 +78,7 @@ class CharliecloudCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
-        
+
         // add registry
         if( registry ) {
             if( !registry.endsWith('/') ) {
@@ -91,7 +88,7 @@ class CharliecloudCache {
         }
 
         name = name.replace(':','+').replace('/','%')
-        return name 
+        return name
     }
 
     /**
@@ -108,7 +105,7 @@ class CharliecloudCache {
         def result = Paths.get(str)
         if( !result.exists() ) {
             log.info "Charliecloud cache directory: $str does not exist -- Charliecloud will attempt to initialize it at the specified location"
-        } 
+        }
         else if( !result.resolve('img').exists() || !result.resolve('dlcache').exists() ) {
             throw new IOException("Charliecloud cache directory exists but seems invalid: $str -- See https://hpc.github.io/charliecloud/faq.html#storage-directory-seems-invalid")
         }
@@ -129,22 +126,14 @@ class CharliecloudCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
+        String str = config.cacheDir
 
-        def writeFake = true
+        final charliecloudImageStorage = env.get('CH_IMAGE_STORAGE')
 
-        if( config.writeFake ) 
-            writeFake = config.writeFake?.toString() == 'true'
-
-        def str = config.cacheDir as String
-
-        def charliecloudImageStorage = env.get('CH_IMAGE_STORAGE')
-
-        if( charliecloudImageStorage && writeFake) {
+        if( charliecloudImageStorage && config.writeFake) {
             return checkDir(charliecloudImageStorage)
         }
-            
+
         if( str ) {
             // If charliecloudImageStorage exists and writeFake is true, we never get here
             if( str.equals( charliecloudImageStorage ) ) {
@@ -162,16 +151,14 @@ class CharliecloudCache {
             return checkDir(str)
         }
 
-        def workDir = Global.session.workDir
+        final workDir = Global.session.workDir
 
         if( workDir.fileSystem != FileSystems.default ) {
             throw new IOException("Charliecloud cannot store image in a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_CHARLIECLOUD_CACHEDIR` env variable")
         }
 
         missingCacheDir = true
-        def result = workDir.resolve('charliecloud')
-
-        return result
+        return workDir.resolve('charliecloud')
     }
 
     /**
@@ -213,7 +200,7 @@ class CharliecloudCache {
                 log.info "Another image is currently pulled. Attempting again in 30 seconds [$count/$maxTries]"
                 Thread.sleep(30000)
             }
-        }   
+        }
         return localPath
 
     }
@@ -233,9 +220,9 @@ class CharliecloudCache {
         if( missingCacheDir )
             log.warn1 "Charliecloud cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent.parent -- Use the charliecloud.cacheDir config option or set the NXF_CHARLIECLOUD_CACHEDIR variable to specify a different location"
 
-        
+
         log.info "Charliecloud pulling image $imageUrl [cache $targetPath]"
-            
+
         String cmd = "ch-image pull -s $targetPath.parent.parent $imageUrl > /dev/null"
         try {
             runCommand( cmd, targetPath )
@@ -253,10 +240,10 @@ class CharliecloudCache {
     int runCommand( String cmd, Path storePath ) {
         log.trace """Charliecloud pull
                      command: $cmd
-                     timeout: $pullTimeout
+                     timeout: $config.pullTimeout
                      folder : $storePath""".stripIndent(true)
 
-        final max = pullTimeout.toMillis()
+        final max = config.pullTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
         builder.environment().remove('CH_IMAGE_STORAGE')
         final proc = builder.start()
@@ -266,7 +253,7 @@ class CharliecloudCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (current is \"${pullTimeout}\")\n  message:\n"
+            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (current is \"${config.pullTimeout}\")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
@@ -274,33 +261,18 @@ class CharliecloudCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
      * image download is actually executed.
      *
      * @param imageUrl The Docker image remote URL
-     * @return The {@link DataflowVariable} which holds (and pulls) the local image directory
+     * @return The {@link LazyValue} which holds (and pulls) the local image directory
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String imageUrl) {
-        if( imageUrl in localImageNames ) {
-            log.trace "Charliecloud found local cache for image `$imageUrl`"
-            return localImageNames[imageUrl]
-        }
-
-        synchronized (localImageNames) {
-            def result = localImageNames[imageUrl]
-            if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ downloadCharliecloudImage(imageUrl) })
-                localImageNames[imageUrl] = result
-            }
-            else {
-                log.trace "Charliecloud found local cache for image `$imageUrl` (2)"
-            }
-            return result
-        }
+    LazyValue<Path> getLazyImagePath(String imageUrl) {
+        return localImageNames.computeIfAbsent(imageUrl, (String key) -> new LazyValue<Path>({ downloadCharliecloudImage(imageUrl) }))
     }
 
     /**
@@ -313,14 +285,15 @@ class CharliecloudCache {
      * @return the container image local {@link Path}
      */
     Path getCachePathFor(String url) {
-        def promise = getLazyImagePath(url)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(url).get()
         if( !result )
             throw new IllegalStateException("Charliecloud cannot pull image `$url`")
         log.trace "Charliecloud cache for `$url` path=$result"
         return result
     }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 
 }

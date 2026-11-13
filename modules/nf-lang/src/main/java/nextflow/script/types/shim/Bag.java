@@ -16,12 +16,21 @@
 package nextflow.script.types.shim;
 
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Ops;
 
 @Description("""
     A bag is an unordered collection.
 
     [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#bag-e)
 """)
-@ShimType(nextflow.script.types.Bag.class)
+@Ops(BagOps.class)
 public interface Bag<E> extends Iterable<E> {
+}
+
+interface BagOps<E> {
+
+    Boolean isCase(E a, Bag<E> b);
+
+    Bag<E> plus(Bag<E> a, Bag<E> b);
+
 }

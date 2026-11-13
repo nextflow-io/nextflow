@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ class RateUnit {
      * Create a rate unit using a string annotation as `10 sec` ie. 10 per second
      * or `100 / 5 min` 100 events each 5 minutes
      *
-     * @param str The rate string 
+     * @param str The rate string
      */
     RateUnit(String str) {
         this.rate = parse(str)

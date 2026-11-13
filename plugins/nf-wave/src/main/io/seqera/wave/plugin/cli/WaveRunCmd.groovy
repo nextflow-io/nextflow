@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.cli
@@ -23,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Session
-import nextflow.container.DockerBuilder
+import nextflow.container.ContainerBuilder
 import nextflow.exception.AbortOperationException
 
 /**
@@ -71,11 +70,10 @@ class WaveRunCmd {
 
     void runContainer(String image, List<String> args=Collections.emptyList()) {
         final containerConfig = session.getContainerConfig()
-        final containerBuilder = new DockerBuilder(image)
+        final containerBuilder = ContainerBuilder.create(containerConfig, image)
                 .addMountWorkDir(false)
                 .addRunOptions('--rm')
                 .addMounts(containerMounts)
-                .params(containerConfig)
                 .params(containerParams)
 
         // add env variables

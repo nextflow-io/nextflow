@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
+
 package nextflow.script.parser;
 
 import org.antlr.v4.runtime.BailErrorStrategy;
@@ -88,18 +71,17 @@ public class DescriptiveErrorStrategy extends BailErrorStrategy {
     public void reportError(Parser recognizer, RecognitionException e) {
     }
 
+    private static final String EOF_ERROR_MESSAGE = "Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string";
+
     protected String createNoViableAlternativeErrorMessage(Parser recognizer, NoViableAltException e) {
-        TokenStream tokens = recognizer.getInputStream();
-        String input;
-        if (tokens != null) {
-            if (e.getStartToken().getType() == Token.EOF) {
-                input = "<EOF>";
-            } else {
-                input = e.getOffendingToken().getText();
-            }
-        } else {
-            input = "<unknown input>";
+        if (e.getOffendingToken().getType() == Token.EOF) {
+            return EOF_ERROR_MESSAGE;
         }
+
+        TokenStream tokens = recognizer.getInputStream();
+        String input = tokens != null
+            ? e.getOffendingToken().getText()
+            : "<unknown input>";
 
         return "Unexpected input: " + escapeWSAndQuote(input);
     }
@@ -113,6 +95,10 @@ public class DescriptiveErrorStrategy extends BailErrorStrategy {
 
     protected String createInputMismatchErrorMessage(Parser recognizer,
                                                      InputMismatchException e) {
+        if (e.getOffendingToken().getType() == Token.EOF) {
+            return EOF_ERROR_MESSAGE;
+        }
+
         return "Unexpected input: " + getTokenErrorDisplay(e.getOffendingToken());
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
@@ -44,11 +45,11 @@ import nextflow.Global;
 import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
-import nextflow.file.FileHolder;
 import nextflow.io.SerializableMarker;
+import nextflow.script.types.Bag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import static nextflow.Const.DEFAULT_ROOT;
 import static nextflow.util.CacheHelper.HashMode;
 
 
@@ -66,6 +67,8 @@ public class HashBuilder {
     private static final int HASH_BITS = DEFAULT_HASHING.bits();
 
     private static final int HASH_BYTES = HASH_BITS / 8;
+
+    private static final String SCRIPT_CLASS_PREFIX = "_nf_script_";
 
     private static final Map<String,Object> FIRST_ONLY;
 
@@ -140,14 +143,16 @@ public class HashBuilder {
         else if( value instanceof byte[] )
             hasher.putBytes( (byte[])value );
 
-        else if( value instanceof Object[])
+        else if( value instanceof Object[]) {
             for( Object item : ((Object[])value) )
                 with(item);
+        }
 
-        // note: should map be order invariant as Set ?
+        else if( value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(hasher, mode);
+
         else if( value instanceof Map )
-            for( Object item : ((Map)value).values() )
-                with(item);
+            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -161,9 +166,6 @@ public class HashBuilder {
         else if( value instanceof Collection)
             for( Object item : ((Collection)value) )
                 with(item);
-
-        else if( value instanceof FileHolder )
-            with(((FileHolder) value).getSourceObj());
 
         else if( value instanceof Path )
             hashFile(hasher, (Path)value, mode, basePath);
@@ -182,11 +184,8 @@ public class HashBuilder {
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
 
-        else if( value instanceof CacheFunnel )
-            ((CacheFunnel)value).funnel(hasher, mode);
-
         else if( value instanceof Enum )
-            hasher.putUnencodedChars( value.getClass().getName() + "." + value );
+            hasher.putUnencodedChars( enumTypeName((Enum)value) + "." + value );
 
         else {
             Bolts.debug1(log, FIRST_ONLY, "[WARN] Unknown hashing type: " + value.getClass());
@@ -223,6 +222,18 @@ public class HashBuilder {
      */
     public static HashCode hashPath(Path path, Path basePath, HashMode mode) {
         return new HashBuilder().withMode(mode).withBasePath(basePath).with(path).build();
+    }
+
+    /**
+     * Get the name of an enum type, excluding the package of types
+     * declared in a script module, since it is derived from the absolute
+     * script path and would break resume when the pipeline is moved.
+     */
+    static private String enumTypeName( Enum value ) {
+        final String name = value.getClass().getName();
+        return name.startsWith(SCRIPT_CLASS_PREFIX)
+            ? name.substring(name.indexOf('.') + 1)
+            : name;
     }
 
     /**
@@ -265,9 +276,9 @@ public class HashBuilder {
             log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
-        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path) ) {
+        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path, DEFAULT_ROOT) ) {
             if( attrs==null ) {
-                // when file attributes are not avail or it's a directory
+                // when file attributes are not avail, or it's a directory
                 // hash the file using the file name path and the repository
                 log.warn("Unable to fetch attribute for file: {} - Hash is inferred from Git repository commit Id", FilesEx.toUriString(path));
                 return hashFileAsset(hasher, path);
@@ -322,18 +333,39 @@ public class HashBuilder {
         return hasher;
     }
 
+    /**
+     * Compute an, order independent, hash of a directory path traversing recursively the directory content.
+     *
+     * @param hasher
+     *      The {@link Hasher} object to which the resulting directory hash will be added.
+     * @param dir
+     *      The target directory path to be hashed.
+     * @param base
+     *      The "base" directory path against which resolve relative paths.
+     * @return
+     *      The resulting {@link Hasher} object updated with the directory path.
+     */
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
+        if( base==null )
+            throw new IllegalArgumentException("Argument 'base' cannot be null");
+        // the byte array used as "accumulator" for
+        final byte[] resultBytes = new byte[HASH_BYTES];
         try {
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
                         // the file relative base
-                        if( base!=null )
-                            hasher.putUnencodedChars(base.relativize(path).toString());
+                        final String relPath = base.relativize(path).toString();
                         // the file content sha-256 checksum
-                        String sha256 = sha256Cache.get(path);
-                        hasher.putUnencodedChars(sha256);
+                        final String sha256 = sha256Cache.get(path);
+                        // compute the file path hash and sum to the result hash
+                        // since the sum is commutative, the traverse order does not matter
+                        // compute a hash of the (file path, file hash) pair.
+                        // since the sum is commutative, the resulting hash in `resultBytes` is invariant to the file traversal order.
+                        // however, the file path and file hash do need to be processed together,
+                        // otherwise this introduces an edge case with directories with similar contents with have the same sha (see nextflow-io/nextflow#6198)
+                        sumBytes(resultBytes, hashBytes(Map.entry(relPath, sha256), HashMode.STANDARD));
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
@@ -344,12 +376,15 @@ public class HashBuilder {
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
                     log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
                     // the file relative base
-                    if( base!=null )
-                        hasher.putUnencodedChars(base.relativize(path).toString());
-                    hasher.putUnencodedChars(base.relativize(path).toString());
+                    final String relPath = base.relativize(path).toString();
+                    // compute the file path hash and sum to the result hash
+                    // since the sum is commutative, the traverse order does not matter
+                    sumBytes(resultBytes, hashBytes(relPath, HashMode.STANDARD));
                     return FileVisitResult.CONTINUE;
                 }
             });
+            // finally put the result bytes in the hashing
+            hasher.putBytes(resultBytes);
         }
         catch (IOException t) {
             Throwable err = t.getCause()!=null ? t.getCause() : t;
@@ -441,29 +476,78 @@ public class HashBuilder {
     }
 
     static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
-
         byte[] resultBytes = new byte[HASH_BYTES];
         for (Object item : collection) {
-            byte[] nextBytes = HashBuilder.hasher(defaultHasher(), item, mode).hash().asBytes();
-            if( nextBytes.length != resultBytes.length )
-                throw new IllegalStateException("All hash codes must have the same bit length");
-
-            for (int i = 0; i < nextBytes.length; i++) {
-                resultBytes[i] += nextBytes[i];
-            }
+            // hash ghe collection item
+            byte[] nextBytes = hashBytes(item, mode);
+            // sum the hash bytes to the "resultBytes" accumulator
+            // since the sum is a commutative operation the order does not matter
+            sumBytes(resultBytes, nextBytes);
         }
-
+        // add the result bytes and return the resulting object
         return hasher.putBytes(resultBytes);
+    }
+
+    static private byte[] hashBytes(Object item, HashMode mode) {
+        return hasher(defaultHasher(), item, mode).hash().asBytes();
+    }
+
+    /**
+     * Sum two arras of bytes having the same length, required to compute hash of unordered collections.
+     *
+     * - For each byte position, add the corresponding byte from nextBytes into resultBytes
+     * - Order doesn't matter: addition is commutative (a + b = b + a), so the final result is
+     *   the same no matter the order of items.
+     * - This is what makes it suitable for unordered collections
+     *
+     * @param resultBytes
+     *      The first argument to be summed. This array is used as the accumulator array (i.e. the result)
+     * @param nextBytes
+     *      The second argument to be summed.
+     * @return
+     *      The array resulting adding the bytes in the second array to the first one. Note,
+     *      the result array instance is the same object passed as first argument.
+     *
+     */
+    static private byte[] sumBytes(byte[] resultBytes, byte[] nextBytes) {
+        if( nextBytes.length != resultBytes.length )
+            throw new IllegalStateException("All hash codes must have the same bit length");
+        for (int i = 0; i < nextBytes.length; i++) {
+            resultBytes[i] += nextBytes[i];
+        }
+        return resultBytes;
     }
 
     /**
      * Check if the argument is an asset file i.e. a file that makes part of the
-     * pipeline Git repository
+     * pipeline Git repository.
+     *
+     * <p>Asset files are hashed using their content (SHA-256) rather than metadata
+     * to maintain cache validity across different clones where timestamps may differ
+     * on remote executors like batch processing systems.
+     *
+     * <p>This method checks two locations:
+     * <ol>
+     *   <li>Files under {@code session.getBaseDir()} - the script's working directory</li>
+     *   <li>Files under {@code assetRoot} - the repository root (typically ~/.nextflow/assets)</li>
+     * </ol>
+     *
+     * The distinction is important when executing workflows from subdirectories using
+     * the main-script parameter, as repository assets may exist outside the script's
+     * directory but still be part of the repository.
      *
      * @param path
+     *      The item to check.
+     * @param assetRoot
+     *      Location where assets are being stored (the repository root).
      * @return
+     *      {@code true} if the path is included in the pipeline Git repository,
+     *      {@code false} otherwise.
+     *
+     * @see <a href="https://github.com/nextflow-io/nextflow/issues/6604">Issue #6604</a>
+     * @see <a href="https://github.com/nextflow-io/nextflow/pull/6605">PR #6605</a>
      */
-    static protected boolean isAssetFile(Path path) {
+    static public boolean isAssetFile(Path path, File assetRoot) {
         final ISession session = Global.getSession();
         if( session==null )
             return false;
@@ -473,8 +557,11 @@ public class HashBuilder {
         // if the file belong to different file system, cannot be a file belonging to the repo
         if( session.getBaseDir().getFileSystem()!=path.getFileSystem() )
             return false;
-        // if the file is in the same directory as the base dir it's a asset by definition
-        return path.startsWith(session.getBaseDir());
+        // Check both the script's base directory and the repository root.
+        // This handles cases where a workflow is executed from a subdirectory
+        // (using the main-script parameter) but references assets elsewhere in the repo.
+        // The assetRoot check ensures these non-sibling assets are still recognized.
+        return path.startsWith(session.getBaseDir()) || path.startsWith(assetRoot.toPath());
     }
 
 }

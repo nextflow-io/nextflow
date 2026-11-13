@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,35 +29,36 @@ import nextflow.processor.TaskRun
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-interface TaskArrayExecutor {
+// declared as a trait to keep binary compatibility with plugins compiled with Groovy 4
+trait TaskArrayExecutor {
 
-    String getName()
+    abstract String getName()
 
-    Path getWorkDir()
+    abstract Path getWorkDir()
 
-    void submit( TaskRun task )
+    abstract void submit( TaskRun task )
 
-    TaskHandler createTaskHandler(TaskRun task)
+    abstract TaskHandler createTaskHandler(TaskRun task)
 
-    boolean isFusionEnabled()
+    abstract boolean isFusionEnabled()
 
     /**
      * Get the environment variable name that provides the array index of a task.
      */
-    String getArrayIndexName()
+    abstract String getArrayIndexName()
 
     /**
      * Get the start of the job array index range.
      */
-    int getArrayIndexStart()
+    abstract int getArrayIndexStart()
 
     /**
      * Get the name of a child job based on the array job name
      * and child index.
      */
-    String getArrayTaskId(String jobId, int index)
+    abstract String getArrayTaskId(String jobId, int index)
 
-    default boolean isWorkDirDefaultFS() {
+    boolean isWorkDirDefaultFS() {
         getWorkDir().fileSystem== FileSystems.default
     }
 
@@ -67,18 +68,18 @@ interface TaskArrayExecutor {
      * @param handler
      * @return
      */
-    default String getArrayWorkDir(TaskHandler handler) {
+    String getArrayWorkDir(TaskHandler handler) {
         return isFusionEnabled()
             ? FusionHelper.toContainerMount(handler.task.workDir).toString()
             : handler.task.workDir.toUriString()
     }
 
-    default String getArrayLaunchCommand(String taskDir) {
+    String getArrayLaunchCommand(String taskDir) {
         if( isFusionEnabled() ) {
             return "bash ${taskDir}/${TaskRun.CMD_RUN}"
         }
         else if( isWorkDirDefaultFS() ) {
-            return "bash ${taskDir}/${TaskRun.CMD_RUN} 2>&1 > ${taskDir}/${TaskRun.CMD_LOG}"
+            return "bash ${taskDir}/${TaskRun.CMD_RUN} > ${taskDir}/${TaskRun.CMD_LOG} 2>&1"
         }
         else {
             throw new IllegalStateException("Executor ${getName()} does not support array jobs")

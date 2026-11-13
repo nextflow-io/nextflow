@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
@@ -27,19 +28,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.formatter.Comment;
+import nextflow.script.formatter.Comments;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
-import nextflow.script.ast.IncludeModuleNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -61,6 +72,7 @@ import org.codehaus.groovy.antlr.EnumHelper;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.NodeMetaDataHandler;
@@ -101,6 +113,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
 import static nextflow.script.ast.ASTUtils.*;
+import static nextflow.script.parser.EscapeUtils.checkEscapes;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static nextflow.script.parser.ScriptParser.*;
@@ -118,7 +131,11 @@ public class ScriptAstBuilder {
     private ScriptNode moduleNode;
     private ScriptLexer lexer;
     private ScriptParser parser;
+    private CommonTokenStream tokenStream;
     private final GroovydocManager groovydocManager;
+    private final boolean commentsEnabled;
+
+    private boolean typingEnabled;
 
     private Tuple2<ParserRuleContext,Exception> numberFormatError;
 
@@ -128,11 +145,14 @@ public class ScriptAstBuilder {
 
         var charStream = createCharStream(sourceUnit);
         this.lexer = new ScriptLexer(charStream);
-        this.parser = new ScriptParser(new CommonTokenStream(lexer));
+        this.tokenStream = new CommonTokenStream(lexer);
+        this.parser = new ScriptParser(tokenStream);
         parser.setErrorHandler(new DescriptiveErrorStrategy(charStream));
 
         var groovydocEnabled = sourceUnit.getConfiguration().isGroovydocEnabled();
         this.groovydocManager = new GroovydocManager(groovydocEnabled);
+        this.commentsEnabled = Boolean.TRUE.equals(
+            sourceUnit.getConfiguration().getOptimizationOptions().get(COMMENTS_OPTION));
     }
 
     private CharStream createCharStream(SourceUnit sourceUnit) {
@@ -188,26 +208,44 @@ public class ScriptAstBuilder {
 
     public ModuleNode buildAST() {
         try {
-            return compilationUnit(buildCST());
+            var result = compilationUnit(buildCST());
+            collectComments();
+            return result;
         }
         catch( Throwable t ) {
             throw convertException(t);
         }
     }
 
+    /**
+     * Collect the comments from the parser token buffer.
+     */
+    private void collectComments() {
+        if( !commentsEnabled )
+            return;
+        tokenStream.fill();
+        var comments = Comments.collect(tokenStream.getTokens(), ScriptLexer.NL);
+        moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, comments);
+        if( comments.getShebang() != null )
+            moduleNode.setShebang(comments.getShebang());
+    }
+
     /// SCRIPT DECLARATIONS
 
-    private static final List<String> SCRIPT_DEF_NAMES = List.of("process", "workflow", "output");
+    private static final List<String> SCRIPT_DEF_NAMES = List.of("agent", "process", "workflow", "output");
 
     private ModuleNode compilationUnit(CompilationUnitContext ctx) {
         var statements = new ArrayList<Statement>();
+        var statementContexts = new ArrayList<StatementContext>();
         boolean hasDeclarations = false;
 
         for( var declOrStmt : ctx.scriptDeclarationOrStatement() ) {
             if( declOrStmt.scriptDeclaration() != null )
                 hasDeclarations |= scriptDeclaration(declOrStmt.scriptDeclaration());
-            if( declOrStmt.statement() != null )
+            if( declOrStmt.statement() != null ) {
                 statements.add(statement(declOrStmt.statement()));
+                statementContexts.add(declOrStmt.statement());
+            }
         }
 
         for( int i = 0; i < statements.size(); i++ ) {
@@ -216,7 +254,8 @@ public class ScriptAstBuilder {
                 ? mce.getMethodAsString()
                 : null;
             if( defName != null && SCRIPT_DEF_NAMES.contains(defName) ) {
-                collectSyntaxError(new SyntaxException("Invalid " + defName + " definition -- check for missing or out-of-order section labels", stmt));
+                if( !reparseScriptDeclaration(statementContexts.get(i)) )
+                    collectSyntaxError(new SyntaxException("Invalid " + defName + " definition -- check for missing or out-of-order section labels", stmt));
                 statements.set(i, ast(new InvalidDeclaration(), stmt));
                 hasDeclarations = true;
             }
@@ -225,9 +264,15 @@ public class ScriptAstBuilder {
         if( hasDeclarations ) {
             for( var stmt : statements ) {
                 if( !(stmt instanceof InvalidDeclaration) )
-                    collectSyntaxError(new SyntaxException("Statements cannot be mixed with script declarations -- move statements into a process or workflow", stmt));
+                    collectSyntaxError(new SyntaxException("Statements cannot be mixed with script declarations -- move statements into a process, workflow, or function", stmt));
             }
         }
+
+        if( moduleNode.getEntry() == null && moduleNode.getParams() != null )
+            collectSyntaxError(new SyntaxException("Params block cannot be defined without an entry workflow", moduleNode.getParams()));
+
+        if( moduleNode.getEntry() == null && moduleNode.getOutputs() != null )
+            collectSyntaxError(new SyntaxException("Output block cannot be defined without an entry workflow", moduleNode.getOutputs()));
 
         if( !statements.isEmpty() ) {
             var main = block(new VariableScope(), statements);
@@ -247,22 +292,45 @@ public class ScriptAstBuilder {
         return moduleNode;
     }
 
+    /**
+     * Re-parse a statement as a script declaration in order to
+     * report the syntax error that caused it to be parsed as a
+     * statement, e.g. `process foo { ... }` with an invalid body.
+     *
+     * Returns true if a syntax error was reported.
+     *
+     * @param ctx
+     */
+    private boolean reparseScriptDeclaration(StatementContext ctx) {
+        var parser = new ScriptParser(tokenStream);
+        parser.setErrorHandler(new DescriptiveErrorStrategy(tokenStream.getTokenSource().getInputStream()));
+        parser.getInterpreter().setPredictionMode(PredictionMode.LL);
+        parser.removeErrorListeners();
+        parser.addErrorListener(createANTLRErrorListener());
+        tokenStream.seek(ctx.getStart().getTokenIndex());
+        try {
+            parser.scriptDeclaration();
+            return false;
+        }
+        catch( ParseCancellationException e ) {
+            return true;
+        }
+    }
+
     private boolean scriptDeclaration(ScriptDeclarationContext ctx) {
         if( ctx instanceof FeatureFlagDeclAltContext ffac ) {
             var node = featureFlagDeclaration(ffac.featureFlagDeclaration());
-            saveLeadingComments(node, ctx);
             moduleNode.addFeatureFlag(node);
+            this.typingEnabled = moduleNode.isTypingEnabled();
         }
 
         else if( ctx instanceof EnumDefAltContext edac ) {
             var node = enumDef(edac.enumDef());
-            saveLeadingComments(node, ctx);
             moduleNode.addClass(node);
         }
 
         else if( ctx instanceof FunctionDefAltContext fdac ) {
             var node = functionDef(fdac.functionDef());
-            saveLeadingComments(node, ctx);
             moduleNode.addFunction(node);
         }
 
@@ -274,33 +342,49 @@ public class ScriptAstBuilder {
 
         else if( ctx instanceof IncludeDeclAltContext iac ) {
             var node = includeDeclaration(iac.includeDeclaration());
-            saveLeadingComments(node, ctx);
             moduleNode.addInclude(node);
         }
 
         else if( ctx instanceof OutputDefAltContext odac ) {
             var node = outputDef(odac.outputDef());
-            saveLeadingComments(node, ctx);
             if( moduleNode.getOutputs() != null )
                 collectSyntaxError(new SyntaxException("Output block defined more than once", node));
             moduleNode.setOutputs(node);
         }
 
-        else if( ctx instanceof ParamDeclAltContext pac ) {
-            var node = paramDeclaration(pac.paramDeclaration());
-            saveLeadingComments(node, ctx);
-            moduleNode.addParam(node);
+        else if( ctx instanceof ParamsDefAltContext pac ) {
+            var node = paramsDef(pac.paramsDef());
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Params block defined more than once", node));
+            if( !moduleNode.getParamsV1().isEmpty() )
+                collectSyntaxError(new SyntaxException("Params block cannot be mixed with legacy parameter declarations", node));
+            moduleNode.setParams(node);
+        }
+
+        else if( ctx instanceof ParamDeclV1AltContext pac ) {
+            var node = paramDeclarationV1(pac.paramDeclarationV1());
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Legacy parameter declarations cannot be mixed with the params block", node));
+            moduleNode.addParamV1(node);
+        }
+
+        else if( ctx instanceof AgentDefAltContext adac ) {
+            var node = agentDef(adac.agentDef());
+            moduleNode.addAgent(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
             var node = processDef(pdac.processDef());
-            saveLeadingComments(node, ctx);
             moduleNode.addProcess(node);
+        }
+
+        else if( ctx instanceof RecordDefAltContext rdac ) {
+            var node = recordDef(rdac.recordDef());
+            moduleNode.addClass(node);
         }
 
         else if( ctx instanceof WorkflowDefAltContext wdac ) {
             var node = workflowDef(wdac.workflowDef());
-            saveLeadingComments(node, ctx);
             if( node.isEntry() ) {
                 if( moduleNode.getEntry() != null )
                     collectSyntaxError(new SyntaxException("Entry workflow defined more than once", node));
@@ -329,23 +413,55 @@ public class ScriptAstBuilder {
         return result;
     }
 
-    private ParamNode paramDeclaration(ParamDeclarationContext ctx) {
+    private ParamBlockNode paramsDef(ParamsDefContext ctx) {
+        var declarations = paramsBody(ctx.paramsBody());
+        return ast( new ParamBlockNode(declarations), ctx );
+    }
+
+    private Parameter[] paramsBody(ParamsBodyContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+        return ctx.paramDeclaration().stream()
+            .map(this::paramDeclaration)
+            .filter(param -> param != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter paramDeclaration(ParamDeclarationContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid parameter declaration", ast( new EmptyStatement(), ctx.statement() )));
+            return null;
+        }
+        var type = type(ctx.type());
+        var name = identifier(ctx.identifier());
+        var defaultValue = ctx.expression() != null ? expression(ctx.expression()) : null;
+        var result = ast( param(type, name, defaultValue), ctx );
+        checkInvalidVarName(name, result);
+        groovydocManager.handle(result, ctx);
+        return result;
+    }
+
+    private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
+        if( typingEnabled ) {
+            collectSyntaxError(new SyntaxException("Legacy parameter is not allowed with `nextflow.enable.types = true` -- use the `params` block instead", ast(new EmptyStatement(), ctx)));
+            return null;
+        }
         Expression target = ast( varX("params"), ctx.PARAMS() );
         for( var ident : ctx.identifier() ) {
             var name = ast( constX(identifier(ident)), ident );
             target = ast( propX(target, name), target, name );
         }
         var value = expression(ctx.expression());
-        return ast( new ParamNode(target, value), ctx );
+        return ast( new ParamNodeV1(target, value), ctx );
     }
 
     private IncludeNode includeDeclaration(IncludeDeclarationContext ctx) {
         var source = ast( string(ctx.stringLiteral()), ctx.stringLiteral() );
-        var modules = ctx.includeNames().includeName().stream()
+        var entries = ctx.includeNames().includeName().stream()
             .map(it -> {
                 var name = it.name.getText();
                 var alias = it.alias != null ? it.alias.getText() : null;
-                var result = new IncludeModuleNode(name, alias);
+                var result = new IncludeEntryNode(name, alias);
                 result.putNodeMetaData("_START_NAME", tokenPosition(it.name));
                 if( it.alias != null )
                     result.putNodeMetaData("_START_ALIAS", tokenPosition(it.alias));
@@ -353,12 +469,39 @@ public class ScriptAstBuilder {
             })
             .toList();
 
-        return ast( new IncludeNode(source, modules), ctx );
+        return ast( new IncludeNode(source, entries), ctx );
+    }
+
+    private RecordNode recordDef(RecordDefContext ctx) {
+        var name = identifier(ctx.identifier());
+        var result = ast( new RecordNode(name), ctx );
+        if( ctx.recordBody() != null )
+            recordBody(ctx.recordBody(), result);
+        else
+            collectSyntaxError(new SyntaxException("Missing record body", result));
+        groovydocManager.handle(result, ctx);
+        return result;
+    }
+
+    private void recordBody(RecordBodyContext ctx, RecordNode result) {
+        for( var el : ctx.nameTypePair() ) {
+            var param = nameTypePair(el);
+            if( el.type() == null )
+                collectSyntaxError(new SyntaxException("Missing field type", param));
+            var fn = ast( new FieldNode(
+                param.getText(),
+                Modifier.PUBLIC,
+                param.getType(),
+                result,
+                null), el );
+            groovydocManager.handle(fn, el);
+            result.addField(fn);
+        }
     }
 
     private ClassNode enumDef(EnumDefContext ctx) {
         var name = identifier(ctx.identifier());
-        var result = ast( EnumHelper.makeEnumNode(name, Modifier.PUBLIC, null, null), ctx );
+        var result = ast( EnumHelper.makeEnumNode(name, Modifier.PUBLIC, ClassNode.EMPTY_ARRAY, null), ctx );
         if( ctx.enumBody() != null ) {
             for( var ident : ctx.enumBody().identifier() ) {
                 var fn = ast( EnumHelper.addEnumConstant(result, identifier(ident), null), ident );
@@ -372,15 +515,17 @@ public class ScriptAstBuilder {
     private ProcessNode processDef(ProcessDefContext ctx) {
         var name = ctx.name.getText();
         if( ctx.body == null ) {
-            var empty = EmptyStatement.INSTANCE;
-            var result = ast( new ProcessNode(name, empty, empty, empty, EmptyExpression.INSTANCE, null, empty, empty), ctx );
-            collectSyntaxError(new SyntaxException("Missing process script body", result));
-            return result;
+            return invalidProcess("Missing process script body", ctx);
         }
 
         var directives = processDirectives(ctx.body.processDirectives());
-        var inputs = processInputs(ctx.body.processInputs());
-        var outputs = processOutputs(ctx.body.processOutputs());
+        var inputsV2 = processInputsV2(ctx.body.processInputs());
+        var inputsV1 = processInputsV1(ctx.body.processInputs());
+        var stagers = processStagers(ctx.body.processStage());
+        var outputs = typingEnabled
+            ? processOutputsV2(ctx.body.processOutputs())
+            : processOutputsV1(ctx.body.processOutputs());
+        var topics = processTopics(ctx.body.processTopics());
         var when = processWhen(ctx.body.processWhen());
         var type = processType(ctx.body.processExec());
         var exec = ctx.body.blockStatements() != null
@@ -388,13 +533,29 @@ public class ScriptAstBuilder {
             : blockStatements(ctx.body.processExec().blockStatements());
         var stub = processStub(ctx.body.processStub());
 
+        if( !typingEnabled && !stagers.isEmpty() )
+            collectSyntaxError(new SyntaxException("The `stage:` section is not supported in a legacy process", stagers));
+
+        if( !typingEnabled && !topics.isEmpty() )
+            collectSyntaxError(new SyntaxException("The `topic:` section is not supported in a legacy process", topics));
+
         if( ctx.body.blockStatements() != null ) {
-            if( !(directives instanceof EmptyStatement) || !(inputs instanceof EmptyStatement) || !(outputs instanceof EmptyStatement) )
+            if( !directives.isEmpty() || ctx.body.processInputs() != null || !outputs.isEmpty() || !topics.isEmpty() )
                 collectSyntaxError(new SyntaxException("The `script:` or `exec:` label is required when other sections are present", exec));
         }
 
-        var result = ast( new ProcessNode(name, directives, inputs, outputs, when, type, exec, stub), ctx );
+        var result = typingEnabled
+            ? new ProcessNodeV2(name, directives, inputsV2, stagers, outputs, topics, when, type, exec, stub)
+            : new ProcessNodeV1(name, directives, inputsV1, outputs, when, type, exec, stub);
+        ast(result, ctx);
         groovydocManager.handle(result, ctx);
+        return result;
+    }
+
+    private ProcessNode invalidProcess(String message, ProcessDefContext ctx) {
+        var empty = EmptyStatement.INSTANCE;
+        var result = ast( new ProcessNodeV1("", empty, empty, empty, EmptyExpression.INSTANCE, null, empty, empty), ctx );
+        collectSyntaxError(new SyntaxException(message, result));
         return result;
     }
 
@@ -408,24 +569,204 @@ public class ScriptAstBuilder {
         return ast( block(null, statements), ctx );
     }
 
-    private Statement processInputs(ProcessInputsContext ctx) {
-        if( ctx == null )
+    private Parameter[] processInputsV2(ProcessInputsContext ctx) {
+        if( ctx == null || !typingEnabled )
+            return Parameter.EMPTY_ARRAY;
+
+        return ctx.processInput().stream()
+            .map(this::processInput)
+            .filter(input -> input != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter processInput(ProcessInputContext ctx) {
+        if( ctx.statement() != null ) {
+            var result = statement(ctx.statement());
+            collectSyntaxError(new SyntaxException("Invalid input declaration in typed process", result));
+            return null;
+        }
+
+        Parameter result = null;
+
+        if( ctx.identifier() != null ) {
+            var type = type(ctx.type());
+            var name = identifier(ctx.identifier());
+            result = ast( param(type, name), ctx );
+            checkInvalidVarName(name, result);
+            if( ctx.type() == null )
+                collectWarning("Process input should have a type annotation", name, result);
+        }
+
+        else if( ctx.processRecordInput() != null ) {
+            result = processRecordInput(ctx.processRecordInput());
+        }
+
+        else if( ctx.processTupleInput() != null ) {
+            result = processTupleInput(ctx.processTupleInput());
+        }
+
+        return result;
+    }
+
+    private Parameter processRecordInput(ProcessRecordInputContext ctx) {
+        var components = ctx.nameTypePair().stream()
+            .map((ntp) -> {
+                var name = identifier(ntp.identifier());
+                var fieldType = type(ntp.type());
+                var field = ast( param(fieldType, name), ntp );
+                checkInvalidVarName(field.getName(), field);
+                if( ntp.type() == null )
+                    collectWarning("Record field should have a type annotation", name, field);
+                return field;
+            })
+            .toArray(Parameter[]::new);
+        return ast( new TupleParameter(new ClassNode(Record.class), components), ctx );
+    }
+
+    private Parameter processTupleInput(ProcessTupleInputContext ctx) {
+        var components = ctx.nameTypePair().stream()
+            .map((ntp) -> {
+                var name = identifier(ntp.identifier());
+                var componentType = type(ntp.type());
+                var component = ast( param(componentType, name), ntp );
+                checkInvalidVarName(component.getName(), component);
+                if( ntp.type() == null )
+                    collectWarning("Tuple component should have a type annotation", name, component);
+                return component;
+            })
+            .toArray(Parameter[]::new);
+        var result = ast( new TupleParameter(new ClassNode(Tuple.class), components), ctx );
+        if( ctx.nameTypePair().size() == 1 )
+            collectSyntaxError(new SyntaxException("Process tuple input must have more than one component", result));
+        return result;
+    }
+
+    private Statement processInputsV1(ProcessInputsContext ctx) {
+        if( ctx == null || typingEnabled )
             return EmptyStatement.INSTANCE;
-        var statements = ctx.statement().stream()
-            .map(this::statement)
-            .map(stmt -> checkDirective(stmt, "Invalid process input"))
+        var statements = ctx.processInput().stream()
+            .map(this::processInputV1)
+            .filter(input -> input != null)
             .toList();
         return ast( block(null, statements), ctx );
     }
 
-    private Statement processOutputs(ProcessOutputsContext ctx) {
+    private Statement processInputV1(ProcessInputContext ctx) {
+        Statement result;
+        if( ctx.statement() != null ) {
+            result = statement(ctx.statement());
+        }
+        else if( ctx.identifier() != null && ctx.type() == null ) {
+            // identifier with no type annotation should be parsed as legacy input declaration
+            result = ast( stmt(variableName(ctx.identifier())), ctx );
+        }
+        else {
+            collectSyntaxError(new SyntaxException("Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
+            return null;
+        }
+        return checkDirective(result, "Invalid process input");
+    }
+
+    private Statement processStagers(ProcessStageContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
         var statements = ctx.statement().stream()
             .map(this::statement)
-            .map(stmt -> checkDirective(stmt, "Invalid process output"))
+            .map(stmt -> checkDirective(stmt, "Invalid stage directive"))
             .toList();
         return ast( block(null, statements), ctx );
+    }
+
+    private Statement processOutputsV2(ProcessOutputsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+
+        var statements = ctx.processOutput().stream()
+            .map(this::processOutput)
+            .filter(stmt -> stmt != null)
+            .toList();
+        var result = ast( block(null, statements), ctx );
+        var hasEmitExpression = statements.stream().anyMatch(this::isEmitExpression);
+        if( hasEmitExpression && statements.size() > 1 ) {
+            collectSyntaxError(new SyntaxException("Every output must be assigned to a name when there are multiple outputs", result));
+            return null;
+        }
+        if( !hasEmitExpression && statements.size() > 1 ) {
+            collectWarning("Typed process should have only one output -- consider combining outputs into a record", ctx.OUTPUT().getText(), ast( new EmptyStatement(), ctx.OUTPUT() ));
+        }
+        return result;
+    }
+
+    private Statement processOutput(ProcessOutputContext ctx) {
+        Statement result;
+        if( ctx.statement() != null ) {
+            result = statement(ctx.statement());
+            if( !isEmitExpression(result) ) {
+                collectSyntaxError(new SyntaxException("Invalid output declaration in typed process -- must be a name, assignment, or expression", result));
+                return null;
+            }
+        }
+        else if( ctx.expression() != null ) {
+            var target = nameTypePair(ctx.nameTypePair());
+            var source = expression(ctx.expression());
+            result = stmt(ast( new AssignmentExpression(target, source), ctx ));
+        }
+        else {
+            var target = nameTypePair(ctx.nameTypePair());
+            result = stmt(target);
+        }
+        return ast( result, ctx );
+    }
+
+    private Statement processOutputsV1(ProcessOutputsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        var statements = ctx.processOutput().stream()
+            .map(this::processOutputV1)
+            .filter(stmt -> stmt != null)
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
+    private Statement processOutputV1(ProcessOutputContext ctx) {
+        Statement result;
+        if( ctx.statement() != null ) {
+            result = statement(ctx.statement());
+        }
+        else if( ctx.nameTypePair().identifier() != null && ctx.nameTypePair().type() == null && ctx.expression() == null ) {
+            // identifier with no type annotation or source expression should be parsed as legacy output declaration
+            result = ast( stmt(variableName(ctx.nameTypePair().identifier())), ctx );
+        }
+        else {
+            collectSyntaxError(new SyntaxException("Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
+            return null;
+        }
+        return checkDirective(result, "Invalid process output");
+    }
+
+    private Statement processTopics(ProcessTopicsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+
+        var statements = ctx.statement().stream()
+            .map(this::statement)
+            .filter((stmt) -> {
+                if( isProcessTopic(stmt) ) {
+                    return true;
+                }
+                else {
+                    collectSyntaxError(new SyntaxException("Invalid process topic statement", stmt));
+                    return false;
+                }
+            })
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
+    private boolean isProcessTopic(Statement stmt) {
+        return stmt instanceof ExpressionStatement es
+            && es.getExpression() instanceof BinaryExpression be
+            && be.getOperation().getType() == Types.RIGHT_SHIFT;
     }
 
     private Statement checkDirective(Statement stmt, String errorMessage) {
@@ -480,6 +821,7 @@ public class ScriptAstBuilder {
     private Expression processWhen(ProcessWhenContext ctx) {
         if( ctx == null )
             return EmptyExpression.INSTANCE;
+        collectWarning("The `when` section is deprecated -- use conditional logic in the calling workflow, or the `process.when` config option to disable a process at runtime", ctx.WHEN().getText(), ast( new EmptyStatement(), ctx.WHEN() ));
         return ast( expression(ctx.expression()), ctx );
     }
 
@@ -491,7 +833,7 @@ public class ScriptAstBuilder {
             return "exec";
         }
         if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyStatement(), ctx.SHELL() ));
             return "shell";
         }
         return "script";
@@ -503,68 +845,151 @@ public class ScriptAstBuilder {
         return ast( blockStatements(ctx.blockStatements()), ctx );
     }
 
+    private AgentNode agentDef(AgentDefContext ctx) {
+        var name = ctx.name.getText();
+        if( ctx.body == null )
+            return invalidAgent("Missing agent body", ctx);
+        if( ctx.body.agentPrompt() == null )
+            return invalidAgent("Missing `prompt:` section", ctx);
+
+        var directives = agentDirectives(ctx.body.agentDirectives());
+        var inputs = agentInputs(ctx.body.agentInputs());
+        var outputs = agentOutputs(ctx.body.agentOutputs());
+        var prompt = agentPrompt(ctx.body.agentPrompt());
+
+        var result = new AgentNode(name, directives, inputs, outputs, prompt);
+        ast(result, ctx);
+        return result;
+    }
+
+    private AgentNode invalidAgent(String message, AgentDefContext ctx) {
+        var empty = EmptyStatement.INSTANCE;
+        var result = ast(new AgentNode("", empty, Parameter.EMPTY_ARRAY, empty, empty), ctx);
+        collectSyntaxError(new SyntaxException(message, result));
+        return result;
+    }
+
+    private Statement agentDirectives(AgentDirectivesContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        var statements = ctx.statement().stream()
+            .map(this::statement)
+            .map(stmt -> checkDirective(stmt, "Invalid agent directive"))
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
+    private Parameter[] agentInputs(AgentInputsContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+        return ctx.processInput().stream()
+            .map(this::processInput)
+            .filter(input -> input != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Statement agentOutputs(AgentOutputsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        var statements = ctx.processOutput().stream()
+            .map(this::processOutput)
+            .filter(stmt -> stmt != null)
+            .toList();
+        var result = ast( block(null, statements), ctx );
+        if( statements.size() > 1 ) {
+            collectSyntaxError(new SyntaxException("Agent should have only one output -- combine outputs into a record", result));
+            return null;
+        }
+        return result;
+    }
+
+    private Statement agentPrompt(AgentPromptContext ctx) {
+        // Anchored to the BLOCK, not to ctx. `getSourceText` reads the node's source extent
+        // and that text is part of the agent's resume cache key, so anchoring to ctx -- which
+        // starts at the `prompt` token -- would prepend the `prompt:` label and rekey every
+        // existing agent. Same anchoring as `processExec`.
+        return blockStatements(ctx.blockStatements());
+    }
+
     private WorkflowNode workflowDef(WorkflowDefContext ctx) {
         var name = ctx.name != null ? ctx.name.getText() : null;
 
         if( ctx.body == null ) {
-            var result = ast( new WorkflowNode(name, null, null, null, null), ctx );
+            var result = ast( new WorkflowNode(name, EmptyStatement.INSTANCE), ctx );
             groovydocManager.handle(result, ctx);
             return result;
         }
 
-        var takes = workflowTakes(ctx.body.workflowTakes());
-        var emits = workflowEmits(ctx.body.workflowEmits());
-        var publishers = workflowPublishers(ctx.body.workflowPublishers());
-        var main = blockStatements(
-            ctx.body.workflowMain() != null
-                ? ctx.body.workflowMain().blockStatements()
-                : null
-        );
+        var takes = workflowTakes(ctx.body.take);
+        var main = blockSection(ctx.body.main);
+        var emits = workflowEmits(ctx.body.emit);
+        var publishers = workflowPublishers(ctx.body.publish);
+        var onComplete = blockSection(ctx.body.onComplete);
+        var onError = blockSection(ctx.body.onError);
 
         if( name == null ) {
-            if( takes instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
-            if( emits instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
+            if( ctx.body.take != null )
+                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", ast( new EmptyStatement(), ctx.body.TAKE() )));
+            if( ctx.body.emit != null )
+                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", ast( new EmptyStatement(), ctx.body.EMIT() )));
         }
         if( name != null ) {
-            if( publishers instanceof BlockStatement )
+            if( ctx.body.publish != null )
                 collectSyntaxError(new SyntaxException("Named workflow cannot have a publish section", publishers));
+            if( ctx.body.onComplete != null )
+                collectSyntaxError(new SyntaxException("Named workflow cannot have an onComplete section", onComplete));
+            if( ctx.body.onError != null )
+                collectSyntaxError(new SyntaxException("Named workflow cannot have an onError section", onComplete));
         }
 
-        var result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
+        var result = ast( new WorkflowNode(name, takes, main, emits, publishers, onComplete, onError), ctx );
         groovydocManager.handle(result, ctx);
         return result;
     }
 
     private WorkflowNode workflowDef(BlockStatement main) {
-        var takes = EmptyStatement.INSTANCE;
-        var emits = EmptyStatement.INSTANCE;
-        var publishers = EmptyStatement.INSTANCE;
-        return new WorkflowNode(null, takes, main, emits, publishers);
+        return new WorkflowNode(null, main);
     }
 
-    private Statement workflowTakes(WorkflowTakesContext ctx) {
+    private Parameter[] workflowTakes(WorkflowTakesContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+
+        return ctx.workflowTake().stream()
+            .map(this::workflowTake)
+            .filter(take -> take != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter workflowTake(WorkflowTakeContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow take", ast( new EmptyStatement(), ctx.statement() )));
+            return null;
+        }
+        if( !typingEnabled && ctx.type() != null ) {
+            collectSyntaxError(new SyntaxException("Typed input is not allowed in legacy workflow -- set `nextflow.enable.types = true` to use typed workflows in this script", ast(new EmptyStatement(), ctx)));
+            return null;
+        }
+        var type = type(ctx.type());
+        var name = identifier(ctx.identifier());
+        var result = ast( param(type, name), ctx );
+        if( typingEnabled && ctx.type() == null )
+            collectWarning("Typed workflow input should have a type annotation", name, result);
+        checkInvalidVarName(name, result);
+        return result;
+    }
+
+    private Statement blockSection(BlockStatementsContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
-
-        var statements = ctx.identifier().stream()
-            .map(this::workflowTake)
-            .toList();
-        return ast( block(null, statements), ctx );
-    }
-
-    private Statement workflowTake(IdentifierContext ctx) {
-        var result = ast( stmt(variableName(ctx)), ctx );
-        saveTrailingComment(result, ctx);
-        return result;
+        return blockStatements(ctx);
     }
 
     private Statement workflowEmits(WorkflowEmitsContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
 
-        var statements = ctx.statement().stream()
+        var statements = ctx.workflowEmit().stream()
             .map(this::workflowEmit)
             .filter(stmt -> stmt != null)
             .toList();
@@ -575,20 +1000,36 @@ public class ScriptAstBuilder {
         return result;
     }
 
-    private Statement workflowEmit(StatementContext ctx) {
-        var result = statement(ctx);
-        if( !(result instanceof ExpressionStatement) ) {
-            collectSyntaxError(new SyntaxException("Invalid workflow emit -- must be a name, assignment, or expression", result));
+    private Statement workflowEmit(WorkflowEmitContext ctx) {
+        Statement result;
+        if( ctx.statement() != null ) {
+            result = statement(ctx.statement());
+            if( !isEmitExpression(result) ) {
+                collectSyntaxError(new SyntaxException("Invalid workflow emit -- must be a name, assignment, or expression", result));
+                return null;
+            }
+        }
+        else if( ctx.expression() != null ) {
+            var target = nameTypePair(ctx.nameTypePair());
+            var source = expression(ctx.expression());
+            result = stmt(ast( new AssignmentExpression(target, source), ctx ));
+        }
+        else {
+            var target = nameTypePair(ctx.nameTypePair());
+            result = stmt(target);
+        }
+        if( !typingEnabled && ctx.nameTypePair() != null && ctx.nameTypePair().type() != null ) {
+            collectSyntaxError(new SyntaxException("Typed output is not allowed in legacy workflow -- set `nextflow.enable.types = true` to use typed workflows in this script", result));
             return null;
         }
-        saveTrailingComment(result, ctx);
-        return result;
+        return ast( result, ctx );
     }
 
     private boolean isEmitExpression(Statement stmt) {
         if( stmt instanceof ExpressionStatement es ) {
             var exp = es.getExpression();
-            return !(exp instanceof VariableExpression || exp instanceof AssignmentExpression);
+            return !(exp instanceof VariableExpression)
+                && !(exp instanceof BinaryExpression be && be.getOperation().isA(Types.ASSIGNMENT_OPERATOR));
         }
         return false;
     }
@@ -597,24 +1038,28 @@ public class ScriptAstBuilder {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
 
-        var statements = ctx.statement().stream()
-            .map(this::statement)
-            .map(this::checkWorkflowPublisher)
+        var statements = ctx.workflowEmit().stream()
+            .map(this::workflowPublisher)
             .filter(stmt -> stmt != null)
             .toList();
         return ast( block(null, statements), ctx );
     }
 
-    private Statement checkWorkflowPublisher(Statement stmt) {
-        var valid = stmt instanceof ExpressionStatement es
-            && es.getExpression() instanceof BinaryExpression be
-            && be.getLeftExpression() instanceof VariableExpression
-            && be.getOperation().getType() == Types.ASSIGN;
-        if( !valid ) {
-            collectSyntaxError(new SyntaxException("Invalid workflow publish statement", stmt));
+    private Statement workflowPublisher(WorkflowEmitContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow publish statement -- must be an assignment", ast( new EmptyStatement(), ctx.statement() )));
             return null;
         }
-        return stmt;
+        var target = nameTypePair(ctx.nameTypePair());
+        if( ctx.expression() == null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow publish statement -- must be an assignment", target));
+            return null;
+        }
+        if( ctx.nameTypePair().type() != null )
+            collectWarning("Workflow output type should be declared in the output block -- the type annotation in the publish statement is ignored", target.getText(), target);
+        var source = expression(ctx.expression());
+        var result = stmt(ast( new AssignmentExpression(target, source), ctx ));
+        return ast( result, ctx );
     }
 
     private OutputBlockNode outputDef(OutputDefContext ctx) {
@@ -637,16 +1082,19 @@ public class ScriptAstBuilder {
             return null;
         }
         var name = identifier(ctx.identifier());
+        var type = type(ctx.type());
         var body = blockStatements(ctx.blockStatements());
-        var result = new OutputNode(name, body);
+        var result = ast( new OutputNode(name, type, body), ctx );
         checkInvalidVarName(name, result);
         return result;
     }
 
     private FunctionNode functionDef(FunctionDefContext ctx) {
         var name = identifier(ctx.identifier());
-        var returnType = legacyType(ctx.legacyType());
         var params = Optional.ofNullable(formalParameterList(ctx.formalParameterList())).orElse(Parameter.EMPTY_ARRAY);
+        var returnType = ctx.type() != null
+            ? type(ctx.type())
+            : legacyType(ctx.legacyType());
         var code = blockStatements(ctx.blockStatements());
 
         var result = ast( new FunctionNode(name, returnType, params, code), ctx );
@@ -699,7 +1147,6 @@ public class ScriptAstBuilder {
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
 
-        saveLeadingComments(result, ctx);
         return result;
     }
 
@@ -710,7 +1157,14 @@ public class ScriptAstBuilder {
         var elseStmt = ctx.ELSE() != null
             ? statementOrBlock(ctx.fb)
             : EmptyStatement.INSTANCE;
-        return ifElseS(condition, thenStmt, elseStmt);
+        var result = ifElseS(condition, thenStmt, elseStmt);
+        if( ctx.ELSE() != null ) {
+            // the `else` keyword is the only thing between the two branches,
+            // and it is needed to tell which branch a comment there belongs to
+            var token = ctx.ELSE().getSymbol();
+            result.putNodeMetaData(ASTNodeMarker.ELSE_POSITION, Comment.position(token.getLine(), token.getCharPositionInLine() + 1));
+        }
+        return result;
     }
 
     private Statement statementOrBlock(StatementOrBlockContext ctx) {
@@ -741,14 +1195,23 @@ public class ScriptAstBuilder {
     }
 
     private List<CatchStatement> catchClause(CatchClauseContext ctx) {
+        var variables = catchVariables(ctx.catchVariable());
+        return variables.stream()
+            .map((variable) -> {
+                var code = statementOrBlock(ctx.statementOrBlock());
+                return ast( new CatchStatement(variable, code), ctx );
+            })
+            .toList();
+    }
+
+    private List<Parameter> catchVariables(CatchVariableContext ctx) {
         var types = catchTypes(ctx.catchTypes());
         return types.stream()
-            .map(type -> {
+            .map((type) -> {
                 var name = identifier(ctx.identifier());
                 var variable = ast( param(type, name), ctx.identifier() );
                 checkInvalidVarName(name, variable);
-                var code = statementOrBlock(ctx.statementOrBlock());
-                return ast( new CatchStatement(variable, code), ctx );
+                return variable;
             })
             .toList();
     }
@@ -784,17 +1247,25 @@ public class ScriptAstBuilder {
     }
 
     private Statement variableDeclaration(VariableDeclarationContext ctx) {
-        if( ctx.variableNames() != null ) {
+        if( ctx.nameTypePairs() != null ) {
             // multiple assignment
-            var variables = ctx.variableNames().identifier().stream()
-                .map(ident -> (Expression) variableName(ident))
+            var variables = ctx.nameTypePairs().nameTypePair().stream()
+                .map(this::nameTypePair)
                 .toList();
             var target = new ArgumentListExpression(variables);
             var initializer = expression(ctx.initializer);
             return stmt(ast( declX(target, initializer), ctx ));
         }
-        else {
+        else if( ctx.nameTypePair() != null ) {
             // single assignment
+            var target = nameTypePair(ctx.nameTypePair());
+            var initializer = ctx.initializer != null
+                ? expression(ctx.initializer)
+                : EmptyExpression.INSTANCE;
+            return stmt(ast( declX(target, initializer), ctx ));
+        }
+        else {
+            // single assignment (legacy type)
             var target = variableName(ctx.identifier());
             target.setType(legacyType(ctx.legacyType()));
             var initializer = ctx.initializer != null
@@ -804,11 +1275,12 @@ public class ScriptAstBuilder {
         }
     }
 
-    private Expression variableNames(VariableNamesContext ctx) {
-        var vars = ctx.identifier().stream()
-            .map(this::variableName)
-            .toList();
-        return ast( new TupleExpression(vars), ctx );
+    private Expression nameTypePair(NameTypePairContext ctx) {
+        var name = identifier(ctx.identifier());
+        var type = type(ctx.type());
+        var result = ast( varX(name, type), ctx );
+        checkInvalidVarName(name, result);
+        return result;
     }
 
     private Expression variableName(IdentifierContext ctx) {
@@ -839,6 +1311,13 @@ public class ScriptAstBuilder {
         var target = variableNames(ctx.variableNames());
         var source = expression(ctx.expression());
         return stmt(ast( new AssignmentExpression(target, source), ctx ));
+    }
+
+    private Expression variableNames(VariableNamesContext ctx) {
+        var vars = ctx.identifier().stream()
+            .map(this::variableName)
+            .toList();
+        return ast( new TupleExpression(vars), ctx );
     }
 
     private Statement assignment(AssignmentStatementContext ctx) {
@@ -1211,6 +1690,7 @@ public class ScriptAstBuilder {
 
     private ConstantExpression string(ParserRuleContext ctx) {
         var text = ctx.getText();
+        checkEscapes(text, ctx, text.startsWith(SLASH_STR)).forEach(this::collectSyntaxError);
         var result = constX(stringLiteral(text));
         result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
         return result;
@@ -1277,7 +1757,7 @@ public class ScriptAstBuilder {
     /**
      * Builder for GStringExpression that inserts empty strings
      * to ensure that there are n+1 strings for n values.
-     * 
+     *
      * @see org.codehaus.groovy.runtime.GStringUtil.writeToImpl()
      */
     private static class GStringBuilder {
@@ -1313,6 +1793,7 @@ public class ScriptAstBuilder {
 
     private ConstantExpression gstringText(ParserRuleContext ctx, String beginQuotation) {
         var text = ctx.getText();
+        checkEscapes(text, ctx, false).forEach(this::collectSyntaxError);
         var quotedText = new StringBuilder(text)
             .insert(0, beginQuotation)
             .append(beginQuotation)
@@ -1408,7 +1889,7 @@ public class ScriptAstBuilder {
     private List<Expression> expressionList(ExpressionListContext ctx) {
         if( ctx == null )
             return Collections.emptyList();
-        
+
         return ctx.expression().stream()
             .map(this::expression)
             .toList();
@@ -1545,28 +2026,18 @@ public class ScriptAstBuilder {
     /// MISCELLANEOUS
 
     private Parameter[] formalParameterList(FormalParameterListContext ctx) {
-        // NOTE: implicit `it` parameter is deprecated, but allow it for now
         if( ctx == null )
             return Parameter.EMPTY_ARRAY;
 
-        var params = ctx.formalParameter().stream()
+        return ctx.formalParameter().stream()
             .map(this::formalParameter)
-            .toList();
-        for( int n = params.size(), i = n - 1; i >= 0; i -= 1 ) {
-            var param = params.get(i);
-            for( var other : params ) {
-                if( other == param )
-                    continue;
-                if( other.getName().equals(param.getName()) )
-                    throw createParsingFailedException("Duplicated parameter '" + param.getName() + "' found", param);
-            }
-        }
-
-        return params.toArray(Parameter.EMPTY_ARRAY);
+            .toArray(Parameter[]::new);
     }
 
     private Parameter formalParameter(FormalParameterContext ctx) {
-        var type = legacyType(ctx.legacyType());
+        var type = ctx.type() != null
+            ? type(ctx.type())
+            : legacyType(ctx.legacyType());
         var name = identifier(ctx.identifier());
         var defaultValue = ctx.expression() != null
             ? expression(ctx.expression())
@@ -1594,22 +2065,22 @@ public class ScriptAstBuilder {
     }
 
     private ClassNode createdName(CreatedNameContext ctx) {
-        if( ctx.qualifiedClassName() != null ) {
-            var classNode = qualifiedClassName(ctx.qualifiedClassName());
-            if( ctx.typeArguments() != null )
-                classNode.setGenericsTypes( typeArguments(ctx.typeArguments()) );
-            return classNode;
-        }
-
         if( ctx.primitiveType() != null )
             return primitiveType(ctx.primitiveType());
+
+        if( ctx.qualifiedClassName() != null ) {
+            var result = qualifiedClassName(ctx.qualifiedClassName());
+            if( ctx.typeArguments() != null )
+                result.setGenericsTypes( typeArguments(ctx.typeArguments()) );
+            return result;
+        }
 
         throw createParsingFailedException("Unrecognized created name: " + ctx.getText(), ctx);
     }
 
     private ClassNode primitiveType(PrimitiveTypeContext ctx) {
-        var classNode = ClassHelper.make(ctx.getText()).getPlainNodeReference(false);
-        return ast( classNode, ctx );
+        var result = ClassHelper.make(ctx.getText()).getPlainNodeReference(false);
+        return ast( result, ctx );
     }
 
     private ClassNode qualifiedClassName(QualifiedClassNameContext ctx) {
@@ -1618,17 +2089,17 @@ public class ScriptAstBuilder {
 
     private ClassNode qualifiedClassName(QualifiedClassNameContext ctx, boolean allowProxy) {
         var text = ctx.getText();
-        var classNode = ClassHelper.make(text);
+        var result = ClassHelper.make(text);
         if( text.contains(".") )
-            classNode.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
+            result.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
 
-        if( classNode.isUsingGenerics() && allowProxy ) {
-            var proxy = ClassHelper.makeWithoutCaching(classNode.getName());
-            proxy.setRedirect(classNode);
+        if( result.isUsingGenerics() && allowProxy ) {
+            var proxy = ClassHelper.makeWithoutCaching(result.getName());
+            proxy.setRedirect(result);
             return proxy;
         }
 
-        return ast( classNode, ctx );
+        return ast( result, ctx );
     }
 
     private ClassNode type(TypeContext ctx) {
@@ -1639,27 +2110,32 @@ public class ScriptAstBuilder {
         if( ctx == null )
             return ClassHelper.dynamicType();
 
-        if( ctx.qualifiedClassName() != null ) {
-            var classNode = qualifiedClassName(ctx.qualifiedClassName(), allowProxy);
-            if( ctx.typeArguments() != null )
-                classNode.setGenericsTypes( typeArguments(ctx.typeArguments()) );
-            return classNode;
-        }
-
         if( ctx.primitiveType() != null )
             return primitiveType(ctx.primitiveType());
+
+        if( ctx.qualifiedClassName() != null ) {
+            var result = qualifiedClassName(ctx.qualifiedClassName(), allowProxy);
+            if( ctx.typeArguments() != null )
+                result.setGenericsTypes( typeArguments(ctx.typeArguments()) );
+            if( ctx.QUESTION() != null )
+                result.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
+            return ast( result, ctx );
+        }
 
         throw createParsingFailedException("Unrecognized type: " + ctx.getText(), ctx);
     }
 
     private GenericsType[] typeArguments(TypeArgumentsContext ctx) {
-        return ctx.type().stream()
+        return ctx.typeArgument().stream()
             .map(this::genericsType)
             .toArray(GenericsType[]::new);
     }
 
-    private GenericsType genericsType(TypeContext ctx) {
-        return ast( new GenericsType(type(ctx)), ctx );
+    private GenericsType genericsType(TypeArgumentContext ctx) {
+        var type = ctx.QUESTION() != null
+            ? ClassHelper.dynamicType()
+            : type(ctx.type());
+        return ast( new GenericsType(type), ctx );
     }
 
     private ClassNode legacyType(ParserRuleContext ctx) {
@@ -1667,100 +2143,6 @@ public class ScriptAstBuilder {
         if( ctx != null )
             result.putNodeMetaData(ASTNodeMarker.LEGACY_TYPE, ctx.getText());
         return result;
-    }
-
-    /// COMMENTS
-
-    private void saveLeadingComments(ASTNode node, ParserRuleContext ctx) {
-        var comments = new ArrayList<String>();
-        var child = ctx;
-        while( saveLeadingComments0(child, comments) )
-            child = child.getParent();
-
-        if( !comments.isEmpty() )
-            node.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, comments);
-    }
-
-    private boolean saveLeadingComments0(ParserRuleContext ctx, List<String> comments) {
-        var parent = ctx.getParent();
-        if( parent == null )
-            return false;
-
-        // find index of token among siblings
-        var siblings = parent.children;
-        int i = 0;
-        while( i < siblings.size() && siblings.get(i) != ctx ) {
-            i++;
-        }
-
-        // check parent context for additional comments
-        if( i == 0 )
-            return true;
-
-        // prepend each comment/newline to node
-        var added = false;
-        for( int j = i - 1; j >= 0; j-- ) {
-            var sibling = siblings.get(j);
-            if( !(sibling instanceof NlsContext || sibling instanceof SepContext) )
-                break;
-
-            var newlines = sibling instanceof NlsContext
-                ? ((NlsContext) sibling).NL()
-                : ((SepContext) sibling).NL();
-
-            for( int k = newlines.size() - 1; k >= 0; k-- ) {
-                var text = newlines.get(k).getText();
-                comments.add(text);
-                added = true;
-            }
-        }
-
-        // remove leading newline
-        if( added ) {
-            var last = comments.get(comments.size() - 1);
-            if( "\n".equals(last) ) {
-                comments.remove(comments.size() - 1);
-            }
-            else if( last.startsWith("#!") ) {
-                moduleNode.setShebang(last);
-                comments.remove(comments.size() - 1);
-            }
-        }
-
-        return false;
-    }
-
-    private void saveTrailingComment(ASTNode node, ParserRuleContext ctx) {
-        var child = ctx;
-        while( saveTrailingComment0(child, node) )
-            child = child.getParent();
-    }
-
-    private boolean saveTrailingComment0(ParserRuleContext ctx, ASTNode node) {
-        var parent = ctx.getParent();
-        if( parent == null )
-            return false;
-
-        // find index of token among siblings
-        var siblings = parent.children;
-        int i = 0;
-        while( i < siblings.size() && siblings.get(i) != ctx ) {
-            i++;
-        }
-
-        // check parent context for additional comments
-        if( i == siblings.size() - 1 )
-            return true;
-
-        // save trailing inline comment
-        var next = siblings.get(i + 1);
-        if( next instanceof SepContext sep ) {
-            var text = sep.children.get(0).getText();
-            if( !";".equals(text) && !"\n".equals(text) )
-                node.putNodeMetaData(ASTNodeMarker.TRAILING_COMMENT, text);
-        }
-
-        return false;
     }
 
     /// HELPERS
@@ -1858,10 +2240,16 @@ public class ScriptAstBuilder {
         return new ANTLRErrorListener() {
             @Override
             public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
-                collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
+                var startColumn = charPositionInLine + 1;
+                var endColumn = offendingSymbol instanceof Token t && t.getType() != Token.EOF && t.getText() != null
+                    ? startColumn + t.getText().length()
+                    : startColumn + 1;
+                collectSyntaxError(new SyntaxException(msg, line, startColumn, line, endColumn));
             }
         };
     }
+
+    public static final String COMMENTS_OPTION = "nextflow.comments";
 
     private static final String CALL_STR = "call";
     private static final String SLASH_STR = "/";

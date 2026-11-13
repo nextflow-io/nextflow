@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,10 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
-import com.amazonaws.services.ecs.model.AccessDeniedException
-import com.amazonaws.services.logs.model.ResourceNotFoundException
-import groovy.transform.CompileDynamic
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.BatchException
+import software.amazon.awssdk.services.ecs.model.AccessDeniedException
+import software.amazon.awssdk.services.cloudwatchlogs.model.ResourceNotFoundException
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -177,7 +176,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     @PackageScope
-    AWSBatch getClient() {
+    BatchClient getClient() {
         client
     }
 
@@ -188,19 +187,17 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     protected TaskMonitor createTaskMonitor() {
 
         // create the throttling executor
-        // note this is invoke only the very first time a AWS Batch executor is created
-        // therefore it's safe to assign to a static attribute
-        submitter = createExecutorService('AWSBatch-executor')
+        this.submitter = createExecutorService('AWSBatch-executor')
+        this.reaper = createExecutorService('AWSBatch-reaper')
 
-        reaper = createExecutorService('AWSBatch-reaper')
-
-        final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
-        final dumpInterval = session.getMonitorDumpInterval(name)
-        final capacity = session.getQueueSize(name, 1000)
+        final pollInterval = config.getPollInterval(name, Duration.of('10 sec'))
+        final dumpInterval = config.getMonitorDumpInterval(name)
+        final capacity = config.getQueueSize(name, 1000)
 
         final def params = [
                 name: name,
                 session: session,
+                config: config,
                 pollInterval: pollInterval,
                 dumpInterval: dumpInterval,
                 capacity: capacity
@@ -230,15 +227,15 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
      */
-    private ThrottlingExecutor createExecutorService(String name) {
+    private ThrottlingExecutor createExecutorService(String poolName) {
 
         // queue size can be overridden by submitter options below
         final qs = 5_000
-        final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
+        final limit = config.getExecConfigProp(name, 'submitRateLimit', '50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
+                .retryOn { Throwable t -> t instanceof BatchException && (t.awsErrorDetails().errorCode() == 'TooManyRequestsException' || t.statusCode() in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
@@ -247,15 +244,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
                 .withKeepAlive(Duration.of('1 min'))
                 .withAutoThrottle(true)
                 .withMaxRetries(10)
-                .withOptions( getConfigOpts() )
-                .withPoolName(name)
+                .withPoolName(poolName)
 
         ThrottlingExecutor.create(opts)
-    }
-
-    @CompileDynamic
-    protected Map getConfigOpts() {
-        session.config?.executor?.submitter as Map
     }
 
     @Override
@@ -365,6 +356,29 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         return ['bash','-o','pipefail','-c', cmd.toString()]
     }
 
+    /**
+     * Get the command to launch a job array, i.e. the command run by each array
+     * element to dispatch to its child task (see {@link #getArrayLaunchCommand(String)}
+     * for the child task launch command).
+     *
+     * Unlike {@link #getLaunchCommand(String)} it does not upload the .command.log
+     * file, because the array work directory is shared by all array elements and
+     * each of them saves its own log file. The wrapper is downloaded into a temp
+     * file so that it does not require a writable container working directory.
+     *
+     * @param s3WorkDir The job array work directory
+     * @return The job array launch command
+     */
+    List<String> getArrayJobLaunchCommand(String s3WorkDir) {
+        final opts = getAwsOptions()
+        final download = opts.s5cmdPath
+            ? "${opts.s5cmdPath} cat ${s3WorkDir}/${TaskRun.CMD_RUN} > \"\$f\""
+            : "${opts.getAwsCli()} s3 cp --only-show-errors${opts.debug ? ' --debug' : ''}${opts.requesterPays ? ' --request-payer requester' : ''} ${s3WorkDir}/${TaskRun.CMD_RUN} \"\$f\""
+        // the TERM trap only covers the download, the exec'd wrapper handles signals afterwards
+        final cmd = "trap 'exit 143' TERM; f=\$(mktemp) && ${download} && exec bash \"\$f\""
+        return ['bash','-o','pipefail','-c', cmd.toString()]
+    }
+
     static String s3Cmd(String workDir, AwsOptions opts) {
         final cli = opts.getAwsCli()
         final debug = opts.debug ? ' --debug' : ''
@@ -372,7 +386,39 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
         final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
-        final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+
+        /*
+         * Enhanced signal handling for AWS Batch tasks to fix nested Nextflow execution issues.
+         * This implementation addresses the problem of proper signal forwarding when Nextflow
+         * processes are executed within AWS Batch containers.
+         *
+         * References: https://github.com/nextflow-io/nextflow/pull/6414
+         *
+         * Trap command breakdown:
+         *
+         * 1. TERM signal trap: `trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM`
+         *    - Captures SIGTERM signals sent to the parent shell process
+         *    - Conditionally forwards the TERM signal to the background bash process (stored in $pid)
+         *    - The `[[ -n \\\$pid ]]` test ensures we only attempt to kill if $pid is set and non-empty
+         *    - This prevents attempts to kill process ID 0 or empty values, which could cause unintended behavior
+         *    - Essential for proper cleanup when AWS Batch terminates jobs or when users cancel workflows
+         *
+         * 2. EXIT signal trap: `trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT`
+         *    - Executes cleanup actions when the shell process exits (normal or abnormal termination)
+         *    - Captures the exit status ($?) of the last executed command before cleanup
+         *    - Uploads the command log file to S3 for debugging and monitoring purposes
+         *    - Uses `||true` to prevent the trap from failing if S3 upload fails (ensures exit code preservation)
+         *    - Preserves and returns the original exit status to maintain proper error propagation
+         *
+         * 3. Background execution pattern: `bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid`
+         *    - Runs the actual task command in background (&) to allow signal handling
+         *    - Redirects both stdout and stderr (2>&1) to process substitution for real-time logging
+         *    - Uses `tee` to simultaneously write logs to file and display to console
+         *    - Stores the background process ID in $pid for signal forwarding
+         *    - `wait $pid` ensures the parent shell waits for task completion and returns proper exit code
+         *    - This pattern allows the parent shell to remain responsive to signals while task executes
+         */
+        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
         return cmd
     }
 
@@ -381,7 +427,30 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
-        final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+
+        /*
+         * Enhanced signal handling for AWS Batch tasks using s5cmd (high-performance S3 client).
+         * This implementation mirrors the s3Cmd method but uses s5cmd instead of aws-cli for
+         * improved S3 transfer performance.
+         *
+         * References: https://github.com/nextflow-io/nextflow/pull/6414
+         *
+         * The trap commands follow the same pattern as s3Cmd method:
+         *
+         * 1. TERM signal trap: `trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM`
+         *    - Ensures proper signal forwarding to background processes when SIGTERM is received
+         *    - Critical for handling AWS Batch job termination and user-initiated cancellations
+         *
+         * 2. EXIT signal trap: `trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT`
+         *    - Performs cleanup by uploading task logs using s5cmd instead of aws-cli
+         *    - Maintains exit status preservation for proper error reporting
+         *
+         * 3. Background execution with s5cmd: `$cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid`
+         *    - Uses s5cmd to stream the task script directly into bash execution
+         *    - Maintains the same signal-responsive background execution pattern
+         *    - Provides real-time logging while allowing proper signal handling
+         */
+        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
         return cmd
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.file.http
@@ -75,5 +74,44 @@ class FixedInputStreamTest extends Specification {
         noExceptionThrown()
         and:
         new String(result) == "Hello world"
+    }
+
+    def 'should fail when reaching end of stream before expected length' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length + 10)
+
+        when:
+        stream.readAllBytes()
+        then:
+        def e = thrown(IOException)
+        e.message == 'Read data length does not match expected size - bytes read: 11; expected: 21'
+    }
+
+    def 'should not fail when closing before end of stream' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length)
+
+        when:
+        stream.read(new byte[5])
+        stream.close()
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should not count bytes twice after reset' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length)
+
+        when:
+        stream.mark(bytes.length)
+        stream.read(new byte[5])
+        stream.reset()
+        def result = stream.readAllBytes()
+        then:
+        noExceptionThrown()
+        new String(result) == 'Hello world'
     }
 }

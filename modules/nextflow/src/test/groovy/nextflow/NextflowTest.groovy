@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,13 +85,13 @@ class NextflowTest extends Specification {
         Nextflow.file(null)
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be null'
+        e.message == 'Argument of `file()` function cannot be null'
 
         when:
         Nextflow.file('')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be empty'
+        e.message == 'Argument of `file()` function cannot be empty'
     }
 
     def 'should return http path' () {
@@ -103,7 +103,7 @@ class NextflowTest extends Specification {
         uri.authority == AUTH
         uri.path == PATH
         uri.query == QUERY
-        
+
         where:
         LOCATION                            | SCHEME    | AUTH      | PATH              | QUERY
         'http://foo.com/some/file.txt'      | 'http'    | 'foo.com' | '/some/file.txt'  | null

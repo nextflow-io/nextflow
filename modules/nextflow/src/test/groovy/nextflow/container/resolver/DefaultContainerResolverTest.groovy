@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.container.resolver
 
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.executor.Executor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -46,7 +45,7 @@ class DefaultContainerResolverTest extends Specification {
         when:
         def result = resolver.resolveImage(task, 'ubuntu:latest')
         then:
-        1 * task.getContainerConfig() >> new ContainerConfig([engine:'docker', enabled:true, registry:'quay.io'])
+        1 * task.getContainerConfig() >> new DockerConfig([enabled:true, registry:'quay.io'])
         and:
         result.source == 'ubuntu:latest'
         result.target == 'quay.io/ubuntu:latest'

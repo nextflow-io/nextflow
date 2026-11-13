@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package nextflow.cloud.azure.batch
 
 import nextflow.exception.ProcessException
+import nextflow.util.TestOnly
 
 import java.nio.file.Path
 
@@ -87,7 +88,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // submit the task execution
         this.taskKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$taskKey"
-        // update the status 
+        // update the status
         this.status = TaskStatus.SUBMITTED
     }
 
@@ -102,23 +103,49 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.trace "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
         if( running )
             this.status = TaskStatus.RUNNING
+        else if( state==BatchTaskState.ACTIVE )
+            checkPoolAllocation()
         return running
+    }
+
+    /**
+     * A task waiting on a pool that cannot allocate any node would otherwise stay queued
+     * until the job max wall clock time, since the task wall clock only starts when it runs.
+     * In that case the task is terminated and marked as completed with an error, so that
+     * {@link #checkIfCompleted()} reports it to the task monitor
+     */
+    protected void checkPoolAllocation() {
+        final error = batchService.poolAllocationError(taskKey)
+        if( !error )
+            return
+        log.debug "[AZURE BATCH] Terminating task $task.name taskId=$taskKey - $error"
+        task.error = new ProcessException(error)
+        status = TaskStatus.COMPLETED
+        try {
+            kill()
+        }
+        catch( Throwable e ) {
+            log.warn "Unable to terminate Azure Batch task $taskKey - ${e.message}", e
+        }
     }
 
     @Override
     boolean checkIfCompleted() {
         assert taskKey
+        if( isCompleted() )
+            return true
         if( !isRunning() )
             return false
         final done = taskState0(taskKey)==BatchTaskState.COMPLETED
         if( done ) {
             // finalize the task
             final info = batchService.getTask(taskKey).executionInfo
-            task.exitStatus = info?.exitCode ?: readExitFile()
+            // Try to get exit code from Azure batch API and fallback to .exitcode
+            task.exitStatus = info?.exitCode != null ? info.exitCode : readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
+            if( task.exitStatus == Integer.MAX_VALUE && info?.failureInfo?.message) {
                 final reason = info.failureInfo.message
                 final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
                 // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
@@ -131,7 +158,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     private Boolean shouldDelete() {
-        executor.config.batch().deleteTasksOnCompletion
+        executor.azConfig.batch().deleteTasksOnCompletion
     }
 
     protected void deleteTask(AzTaskKey taskKey, TaskRun task) {
@@ -203,6 +230,11 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.trace "[AZURE BATCH] task=$taskKey => machineInfo=$machineInfo"
         }
         return machineInfo
+    }
+
+    @TestOnly
+    protected setTaskKey(AzTaskKey key){
+        this.taskKey = key
     }
 
 }

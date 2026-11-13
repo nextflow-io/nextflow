@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,24 +19,11 @@ package nextflow.cloud.aws.batch
 import java.nio.file.Path
 import java.time.Instant
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.ContainerProperties
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
-import com.amazonaws.services.batch.model.DescribeJobsRequest
-import com.amazonaws.services.batch.model.DescribeJobsResult
-import com.amazonaws.services.batch.model.EvaluateOnExit
-import com.amazonaws.services.batch.model.JobDefinition
-import com.amazonaws.services.batch.model.JobDetail
-import com.amazonaws.services.batch.model.KeyValuePair
-import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
-import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
-import com.amazonaws.services.batch.model.RetryStrategy
-import com.amazonaws.services.batch.model.SubmitJobRequest
-import com.amazonaws.services.batch.model.SubmitJobResult
 import nextflow.BuildInfo
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.batch.model.ContainerPropertiesModel
+import nextflow.cloud.aws.batch.model.RegisterJobDefinitionModel
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
@@ -46,6 +33,7 @@ import nextflow.executor.Executor
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -53,7 +41,27 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
+import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.AttemptDetail
+import software.amazon.awssdk.services.batch.model.ContainerDetail
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
+import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobsResponse
+import software.amazon.awssdk.services.batch.model.EvaluateOnExit
+import software.amazon.awssdk.services.batch.model.JobDefinition
+import software.amazon.awssdk.services.batch.model.JobDefinitionType
+import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
+import software.amazon.awssdk.services.batch.model.KeyValuePair
+import software.amazon.awssdk.services.batch.model.PlatformCapability
+import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
+import software.amazon.awssdk.services.batch.model.ResourceType
+import software.amazon.awssdk.services.batch.model.RetryStrategy
+import software.amazon.awssdk.services.batch.model.SubmitJobRequest
+import software.amazon.awssdk.services.batch.model.SubmitJobResponse
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -79,12 +87,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         result == looong.substring(0,128)
     }
 
-
     def 'should create an aws submit request'() {
-
         given:
-        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('1')
-        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
+        def VAR_FOO = KeyValuePair.builder().name('FOO').value('1').build()
+        def VAR_BAR = KeyValuePair.builder().name('BAR').value('2').build()
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry')
@@ -101,16 +107,17 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
 
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue1'
-        req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
-        req.getRetryStrategy() == new RetryStrategy()
-                .withAttempts(5)
-                .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue1'
+        req.jobDefinition() == 'job-def:1'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        req.containerOverrides().environment() == [VAR_FOO, VAR_BAR]
+        req.containerOverrides().command() == ['bash', '-c', 'something']
+        req.retryStrategy() == RetryStrategy.builder()
+                .attempts(5)
+                .evaluateOnExit( EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build(), EvaluateOnExit.builder().onReason('*').action('EXIT').build() )
+                .build()
 
         when:
         req = handler.newSubmitRequest(task)
@@ -122,19 +129,17 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
 
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue1'
-        req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
-        req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
-
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue1'
+        req.jobDefinition() == 'job-def:1'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        req.containerOverrides().environment() == [VAR_FOO, VAR_BAR]
+        req.containerOverrides().command() == ['bash', '-c', 'something']
+        req.retryStrategy() == null  // <-- retry is managed by NF, hence this must be null
     }
 
     def 'should create an aws submit request with opts'() {
-
         given:
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
@@ -152,12 +157,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
 
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue1'
-        req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue1'
+        req.jobDefinition() == 'job-def:1'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        req.containerOverrides().command() == ['bash', '-c', 'something']
 
         when:
         def req2 = handler.newSubmitRequest(task)
@@ -169,17 +174,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
 
-        req2.getJobName() == 'batch-task'
-        req2.getJobQueue() == 'queue1'
-        req2.getJobDefinition() == 'job-def:1'
-        req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req2.getContainerOverrides().getCommand() ==['bash', '-c', 'something']
-        req2.getShareIdentifier() == 'priority/high'
-        req2.getSchedulingPriorityOverride() == 9999
-
+        req2.jobName() == 'batch-task'
+        req2.jobQueue() == 'queue1'
+        req2.jobDefinition() == 'job-def:1'
+        req2.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        req2.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        req2.containerOverrides().command() ==['bash', '-c', 'something']
+        req2.shareIdentifier() == 'priority/high'
+        req2.schedulingPriorityOverride() == 9999
     }
-
 
     def 'should set accelerator' () {
         given:
@@ -203,17 +206,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        def res = req.getContainerOverrides().getResourceRequirements()
+        def res = req.containerOverrides().resourceRequirements()
         res.size()==3
         and:
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='GPU'}.getValue() == '2'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '2048'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.GPU}.value() == '2'
     }
 
-
     def 'should create an aws submit request with a timeout'() {
-
         given:
         def task = Mock(TaskRun)
         task.getWorkDirStr() >> 's3://my-bucket/work/dir'
@@ -236,10 +237,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue1'
-        req.getJobDefinition() == 'job-def:1'
-        req.getTimeout() == null
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue1'
+        req.jobDefinition() == 'job-def:1'
+        req.timeout() == null
 
         when:
         req = handler.newSubmitRequest(task)
@@ -253,12 +254,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue2'
         1 * handler.getJobDefinition(task) >> 'job-def:2'
         and:
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue2'
-        req.getJobDefinition() == 'job-def:2'
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue2'
+        req.jobDefinition() == 'job-def:2'
         // minimal allowed timeout is 60 seconds
-        req.getTimeout().getAttemptDurationSeconds() == 60
-
+        req.timeout().attemptDurationSeconds() == 60
 
         when:
         req = handler.newSubmitRequest(task)
@@ -272,20 +272,18 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue3'
         1 * handler.getJobDefinition(task) >> 'job-def:3'
         and:
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue3'
-        req.getJobDefinition() == 'job-def:3'
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue3'
+        req.jobDefinition() == 'job-def:3'
         // minimal allowed timeout is 60 seconds
-        req.getTimeout().getAttemptDurationSeconds() == 3600
-
+        req.timeout().attemptDurationSeconds() == 3600
     }
 
     def 'should create an aws submit request with retry'() {
-
         given:
-        def VAR_RETRY_MODE = new KeyValuePair().withName('AWS_RETRY_MODE').withValue('adaptive')
-        def VAR_MAX_ATTEMPTS = new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue('10')
-        def VAR_METADATA_ATTEMPTS = new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue('10')
+        def VAR_RETRY_MODE = KeyValuePair.builder().name('AWS_RETRY_MODE').value('adaptive').build()
+        def VAR_MAX_ATTEMPTS = KeyValuePair.builder().name('AWS_MAX_ATTEMPTS').value('10').build()
+        def VAR_METADATA_ATTEMPTS = KeyValuePair.builder().name('AWS_METADATA_SERVICE_NUM_ATTEMPTS').value('10').build()
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2)
@@ -303,14 +301,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue1'
-        req.getJobDefinition() == 'job-def:1'
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue1'
+        req.jobDefinition() == 'job-def:1'
         // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
-        req.getRetryStrategy() == new RetryStrategy()
-                .withAttempts(3)
-                .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
-        req.getContainerOverrides().getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
+        req.retryStrategy() == RetryStrategy.builder()
+                .attempts(3)
+                .evaluateOnExit( EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build(),
+                    EvaluateOnExit.builder().onReason('*').action('EXIT').build() ).build()
+        req.containerOverrides().environment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
     def 'should return job queue'() {
@@ -351,11 +350,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * task.getContainer() >> IMAGE
         1 * handler.resolveJobDefinition(task) >> JOB_NAME
         result == JOB_NAME
-
     }
 
     protected KeyValuePair kv(String K, String V) {
-        new KeyValuePair().withName(K).withValue(V)
+        return KeyValuePair.builder().name(K).value(V).build()
     }
 
     def 'should return job envs'() {
@@ -364,7 +362,9 @@ class AwsBatchTaskHandlerTest extends Specification {
             fusionEnabled() >> false
             getAwsOptions() >> Mock(AwsOptions) {
                 getRetryMode() >> RETRY_MODE
-                getMaxTransferAttempts() >> MAX_ATTEMPTS
+                // getMaxTransferAttempts() returns a primitive int; a null stub
+                // cannot be cast to int under Groovy 5, so map null (unset) to 0
+                getMaxTransferAttempts() >> (MAX_ATTEMPTS ?: 0)
             }
         }
 
@@ -414,7 +414,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-
     def 'should validate job validation method' () {
         given:
         def IMAGE = 'foo/bar:1.0'
@@ -423,10 +422,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler)
         def task = Mock(TaskRun) { getContainer()>>IMAGE }
 
-        def req = Mock(RegisterJobDefinitionRequest) {
-            getJobDefinitionName() >> JOB_NAME
-            getParameters() >> [ 'nf-token': JOB_ID ]
-        }
+        def req = new RegisterJobDefinitionModel().jobDefinitionName(JOB_NAME).parameters(['nf-token': JOB_ID])
 
         when:
         handler.resolveJobDefinition(task)
@@ -442,7 +438,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.makeJobDefRequest(task) >> req
         0 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         0 * handler.createJobDef(req) >> null
-
     }
 
     def 'should verify job definition existence' () {
@@ -450,79 +445,82 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def JOB_NAME = 'foo-bar-1-0'
         def JOB_ID = '123'
-        def client = Mock(AWSBatch)
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun)
         def handler = Spy(AwsBatchTaskHandler)
+        handler.task = task
         handler.@client = client
 
-        def req = new DescribeJobDefinitionsRequest().withJobDefinitionName(JOB_NAME)
-        def res = Mock(DescribeJobDefinitionsResult)
-        def job = Mock(JobDefinition)
+        def req = DescribeJobDefinitionsRequest.builder().jobDefinitionName(JOB_NAME).build()
+        def res = GroovyMock(DescribeJobDefinitionsResponse)
+        def job = GroovyMock(JobDefinition)
 
         when:
         def result = handler.findJobDef(JOB_NAME, JOB_ID)
         then:
+        1 * handler.bypassProxy(client) >> client
         1 * client.describeJobDefinitions(req) >> res
-        1 * res.getJobDefinitions() >> []
+        1 * res.jobDefinitions() >> []
         result == null
 
         when:
         result = handler.findJobDef(JOB_NAME, JOB_ID)
         then:
+        1 * handler.bypassProxy(client) >> client
         1 * client.describeJobDefinitions(req) >> res
-        1 * res.getJobDefinitions() >> [job]
-        1 * job.getStatus() >> 'ACTIVE'
-        1 * job.getParameters() >> ['nf-token': JOB_ID]
-        1 * job.getRevision() >> 3
+        1 * res.jobDefinitions() >> [job]
+        1 * job.status() >> 'ACTIVE'
+        1 * job.parameters() >> ['nf-token': JOB_ID]
+        1 * job.asBoolean() >> true
+        1 * job.revision() >> 3
         result == "$JOB_NAME:3"
 
         when:
         result = handler.findJobDef(JOB_NAME, JOB_ID)
         then:
+        1 * handler.bypassProxy(client) >> client
         1 * client.describeJobDefinitions(req) >> res
-        1 * res.getJobDefinitions() >> [job]
-        1 * job.getStatus() >> 'ACTIVE'
-        1 * job.getParameters() >> [:]
+        1 * res.jobDefinitions() >> [job]
+        1 * job.status() >> 'ACTIVE'
+        1 * job.parameters() >> [:]
         result == null
 
         when:
         result = handler.findJobDef(JOB_NAME, JOB_ID)
         then:
+        1 * handler.bypassProxy(client) >> client
         1 * client.describeJobDefinitions(req) >> res
-        1 * res.getJobDefinitions() >> [job]
-        1 * job.getStatus() >> 'INACTIVE'
-        0 * job.getParameters()
+        1 * res.jobDefinitions() >> [job]
+        1 * job.status() >> 'INACTIVE'
+        0 * job.parameters()
         result == null
 
     }
 
     def 'should create job definition existence' () {
-
         given:
         def JOB_NAME = 'foo-bar-1-0'
-        def client = Mock(AWSBatch)
+        def client = Mock(BatchClient)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
 
-        def req = new RegisterJobDefinitionRequest()
-        def res = Mock(RegisterJobDefinitionResult)
+        def req = new RegisterJobDefinitionModel().jobDefinitionName(JOB_NAME)
+        def res = RegisterJobDefinitionResponse.builder().jobDefinitionName(JOB_NAME).revision(10).build()
 
         when:
         def result = handler.createJobDef(req)
         then:
-        1 * client.registerJobDefinition(req) >> res
-        1 * res.getJobDefinitionName() >> JOB_NAME
-        1 * res.getRevision() >> 10
+        1 * client.registerJobDefinition(_) >> res
         and:
         result == "$JOB_NAME:10"
         and:
-        req.getTags().get('nextflow.io/version') == BuildInfo.version
-        Instant.parse(req.getTags().get('nextflow.io/createdAt'))
-
+        req.tags.get('nextflow.io/version') == BuildInfo.version
+        Instant.parse(req.tags.get('nextflow.io/createdAt'))
     }
 
     def 'should add container mounts' () {
         given:
-        def container = new ContainerProperties()
+        def containerModel = new ContainerPropertiesModel()
         def handler = Spy(AwsBatchTaskHandler)
         def mounts = [
                 vol0: '/foo',
@@ -530,38 +528,39 @@ class AwsBatchTaskHandlerTest extends Specification {
                 vol2: '/here:/there:ro',
                 vol3: '/this:/that:rw',
         ]
-        
+        and:
+        handler.addVolumeMountsToContainer(mounts, containerModel)
+
         when:
-        handler.addVolumeMountsToContainer(mounts, container)
+        def container = containerModel.toBatchContainerProperties()
         then:
-        container.volumes.size() == 4
-        container.mountPoints.size() == 4
+        container.volumes().size() == 4
+        container.mountPoints().size() == 4
 
-        container.volumes[0].name == 'vol0'
-        container.volumes[0].host.sourcePath == '/foo'
-        container.mountPoints[0].sourceVolume == 'vol0'
-        container.mountPoints[0].containerPath == '/foo'
-        !container.mountPoints[0].readOnly
+        container.volumes()[0].name() == 'vol0'
+        container.volumes()[0].host().sourcePath() == '/foo'
+        container.mountPoints()[0].sourceVolume() == 'vol0'
+        container.mountPoints()[0].containerPath() == '/foo'
+        !container.mountPoints()[0].readOnly()
 
-        container.volumes[1].name == 'vol1'
-        container.volumes[1].host.sourcePath == '/foo'
-        container.mountPoints[1].sourceVolume == 'vol1'
-        container.mountPoints[1].containerPath == '/bar'
-        !container.mountPoints[1].readOnly
+        container.volumes()[1].name() == 'vol1'
+        container.volumes()[1].host().sourcePath() == '/foo'
+        container.mountPoints()[1].sourceVolume() == 'vol1'
+        container.mountPoints()[1].containerPath() == '/bar'
+        !container.mountPoints()[1].readOnly()
 
-        container.volumes[2].name == 'vol2'
-        container.volumes[2].host.sourcePath == '/here'
-        container.mountPoints[2].sourceVolume == 'vol2'
-        container.mountPoints[2].containerPath == '/there'
-        container.mountPoints[2].readOnly
+        container.volumes()[2].name() == 'vol2'
+        container.volumes()[2].host().sourcePath() == '/here'
+        container.mountPoints()[2].sourceVolume() == 'vol2'
+        container.mountPoints()[2].containerPath() == '/there'
+        container.mountPoints()[2].readOnly()
 
-        container.volumes[3].name == 'vol3'
-        container.volumes[3].host.sourcePath == '/this'
-        container.mountPoints[3].sourceVolume == 'vol3'
-        container.mountPoints[3].containerPath == '/that'
-        !container.mountPoints[3].readOnly
+        container.volumes()[3].name() == 'vol3'
+        container.volumes()[3].host().sourcePath() == '/this'
+        container.mountPoints()[3].sourceVolume() == 'vol3'
+        container.mountPoints()[3].containerPath() == '/that'
+        !container.mountPoints()[3].readOnly()
     }
-
 
     def 'should create a job definition request object' () {
         given:
@@ -580,29 +579,109 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
-        !result.containerProperties.logConfiguration
-        !result.containerProperties.mountPoints
-        !result.containerProperties.privileged
-        
+        result.type == JobDefinitionType.CONTAINER
+        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.toString()]).hash().toString()
+        result.containerProperties.logConfiguration == null
+        result.containerProperties.mountPoints == null
+        result.containerProperties.privileged == false
+
         when:
         result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch'], region: 'us-east-1'))
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.parameters.'nf-token' == 'af124f8899bcfc8a02037599f59a969a'
-        result.containerProperties.logConfiguration.'LogDriver' == 'awslogs'
-        result.containerProperties.logConfiguration.'Options'.'awslogs-region' == 'us-east-1'
-        result.containerProperties.logConfiguration.'Options'.'awslogs-group' == '/aws/batch'
-        result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
-        result.containerProperties.mountPoints[0].containerPath == '/home/conda'
-        result.containerProperties.mountPoints[0].readOnly
-        result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
-        result.containerProperties.volumes[0].name == 'aws-cli'
+        result.type == JobDefinitionType.CONTAINER
+        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.toString()]).hash().toString()
+        result.containerProperties.logConfiguration.logDriver().toString() == 'awslogs'
+        result.containerProperties.logConfiguration.options()['awslogs-region'] == 'us-east-1'
+        result.containerProperties.logConfiguration.options()['awslogs-group'] == '/aws/batch'
+        result.containerProperties.mountPoints[0].sourceVolume() == 'aws-cli'
+        result.containerProperties.mountPoints[0].containerPath() == '/home/conda'
+        result.containerProperties.mountPoints[0].readOnly()
+        result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
+        result.containerProperties.volumes[0].name() == 'aws-cli'
+        result.consumableResourceProperties == null
+    }
 
+    def 'should create a job definition with consumable resources from hints' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+            foo: 'bar'
+        )
+        def taskConfig = process.createTaskConfig()
+        and:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> taskConfig
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should apply awsbatch/-prefixed consumableResources over unprefixed' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([
+            consumableResources: ['legacy': 9],
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+        ])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should return null when hints empty or no consumableResources' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getConsumableResources(null) == null
+        handler.getConsumableResources([:]) == null
+        handler.getConsumableResources([foo: 'bar']) == null
+        handler.getConsumableResources([consumableResources: null]) == null
+        handler.getConsumableResources([consumableResources: [:]]) == null
+    }
+
+    def 'should fail with a clear error on invalid consumableResources value' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when: 'value is a string instead of a map'
+        handler.getConsumableResources([consumableResources: 'bad-string'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("expected a map")
+
+        when: 'quantity is not a number'
+        handler.getConsumableResources([consumableResources: ['license-a': 'not-a-number']])
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be a number")
     }
 
     def 'should create a fargate job definition' () {
@@ -632,14 +711,14 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> opts
         and:
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.getPlatformCapabilities() == ['FARGATE']
+        result.type == JobDefinitionType.CONTAINER
+        result.platformCapabilities == [PlatformCapability.FARGATE]
         result.containerProperties.getJobRoleArn() == 'the-job-role'
         result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
-        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
-        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '2048'
         and:
-        result.containerProperties.getEphemeralStorage().sizeInGiB == 50
+        result.containerProperties.getEphemeralStorage().sizeInGiB() == 50
         result.containerProperties.getRuntimePlatform() == null
 
         when:
@@ -651,15 +730,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> opts
         and:
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.getPlatformCapabilities() == ['FARGATE']
+        result.type == JobDefinitionType.CONTAINER
+        result.platformCapabilities == [PlatformCapability.FARGATE]
         result.containerProperties.getJobRoleArn() == 'the-job-role'
         result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
-        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
-        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '2048'
         and:
-        result.containerProperties.getEphemeralStorage().sizeInGiB == 100
-        result.containerProperties.getRuntimePlatform().getCpuArchitecture() == 'ARM64'
+        result.containerProperties.getEphemeralStorage().sizeInGiB() == 100
+        result.containerProperties.getRuntimePlatform().cpuArchitecture() == 'ARM64'
     }
 
     def 'should create a job definition request object for fusion' () {
@@ -680,10 +759,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.parameters.'nf-token' == '9da434654d8c698f87da973625f57489'
+        result.type == JobDefinitionType.CONTAINER
+        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.toString()]).hash().toString()
         result.containerProperties.privileged
-
     }
 
     def 'should create user mounts' () {
@@ -768,74 +846,66 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> opts
 
         then:
-        result.getContainerProperties().getUser() == 'foo'
-        result.getContainerProperties().getPrivileged() == true
-
+        result.containerProperties.user == 'foo'
+        result.containerProperties.privileged == true
     }
 
     def 'should check task status' () {
-
         given:
         def JOB_ID = 'job-2'
-        def client = Mock(AWSBatch)
+        def client = Mock(BatchClient)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
 
-        def JOB1 = new JobDetail().withJobId('job-1')
-        def JOB2 = new JobDetail().withJobId('job-2')
-        def JOB3 = new JobDetail().withJobId('job-3')
+        def JOB1 = JobDetail.builder().jobId('job-1').build()
+        def JOB2 = JobDetail.builder().jobId('job-2').build()
+        def JOB3 = JobDetail.builder().jobId('job-3').build()
         def JOBS = [ JOB1, JOB2, JOB3 ]
-        def resp = Mock(DescribeJobsResult)
-        resp.getJobs() >> JOBS
+        def resp = DescribeJobsResponse.builder().jobs(JOBS).build()
 
         when:
         def result = handler.describeJob(JOB_ID)
         then:
-        1 * client.describeJobs(new DescribeJobsRequest().withJobs(JOB_ID)) >> resp
+        1 * client.describeJobs(DescribeJobsRequest.builder().jobs(JOB_ID).build()) >> resp
         result == JOB2
-
     }
 
     def 'should check task status with empty batch collector' () {
-
         given:
         def collector = Mock(BatchContext)
         def JOB_ID = 'job-1'
-        def client = Mock(AWSBatch)
+        def client = Mock(BatchClient)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
         handler.@jobId = JOB_ID
         handler.batch(collector)
 
-        def JOB1 = new JobDetail().withJobId('job-1')
-        def JOB2 = new JobDetail().withJobId('job-2')
-        def JOB3 = new JobDetail().withJobId('job-3')
+        def JOB1 = JobDetail.builder().jobId('job-1').build()
+        def JOB2 = JobDetail.builder().jobId('job-2').build()
+        def JOB3 = JobDetail.builder().jobId('job-3').build()
         def JOBS = [ JOB1, JOB2, JOB3 ]
-        def RESP = Mock(DescribeJobsResult)
-        RESP.getJobs() >> JOBS
+        def RESP = DescribeJobsResponse.builder().jobs(JOBS).build()
 
         when:
         def result = handler.describeJob(JOB_ID)
         then:
         1 * collector.contains(JOB_ID) >> false
         1 * collector.getBatchFor(JOB_ID, 100) >> ['job-1','job-2','job-3']
-        1 * client.describeJobs(new DescribeJobsRequest().withJobs(['job-1','job-2','job-3'])) >> RESP
+        1 * client.describeJobs(DescribeJobsRequest.builder().jobs(['job-1','job-2','job-3']).build()) >> RESP
         result == JOB1
-
     }
 
     def 'should check task status with cache batch collector' () {
-
         given:
         def collector = Mock(BatchContext)
         def JOB_ID = 'job-1'
-        def client = Mock(AWSBatch)
+        def client = Mock(BatchClient)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
         handler.@jobId = JOB_ID
         handler.batch(collector)
 
-        def JOB1 = new JobDetail().withJobId('job-1')
+        def JOB1 = JobDetail.builder().jobId('job-1').build()
 
         when:
         def result = handler.describeJob(JOB_ID)
@@ -845,21 +915,19 @@ class AwsBatchTaskHandlerTest extends Specification {
         0 * collector.getBatchFor(JOB_ID, 100) >> null
         0 * client.describeJobs(_) >> null
         result == JOB1
-
     }
 
     def 'should submit job' () {
-
         given:
         def task = Mock(TaskRun)
-        def client = Mock(AWSBatch)
+        def client = Mock(BatchClient)
         def proxy = Mock(AwsBatchProxy)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = proxy
         handler.task = task
 
-        def req = Mock(SubmitJobRequest)
-        def resp = Mock(SubmitJobResult)
+        def req = SubmitJobRequest.builder().build()
+        def resp = SubmitJobResponse.builder().jobId('12345').build()
 
         when:
         handler.submit()
@@ -867,12 +935,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.newSubmitRequest(task) >> req
         1 * handler.bypassProxy(proxy) >> client
         1 * client.submitJob(req) >> resp
-        1 * resp.getJobId() >> '12345'
 
         handler.status == TaskStatus.SUBMITTED
         handler.jobId == '12345'
     }
-
 
     def 'should kill a job' () {
         given:
@@ -888,7 +954,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -896,7 +962,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -904,7 +970,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * handler.terminateJob('job1') >> null
+        0 * handler.terminateJob('job1')
     }
 
     def 'should create the trace record' () {
@@ -926,15 +992,55 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        1 * handler.isCompleted() >> false
+        2 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
-        
+
         and:
         trace.native_id == 'xyz-123'
         trace.executorName == 'awsbatch'
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
+    }
+
+    def 'should create the trace record when job is completed with spot interruptions' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'awsbatch' }
+        def processor = Mock(TaskProcessor)
+        processor.getExecutor() >> exec
+        processor.getName() >> 'foo'
+        processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> GroovyMock(TaskConfig)
+        def proxy = Mock(AwsBatchProxy)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.@client = proxy
+        handler.task = task
+        handler.@jobId = 'xyz-123'
+        handler.setStatus(TaskStatus.COMPLETED)
+
+        def attempt1 = GroovyMock(AttemptDetail)
+        def attempt2 = GroovyMock(AttemptDetail)
+        attempt1.statusReason() >> 'Host EC2 (instance i-123) terminated.'
+        attempt1.container() >> null
+        attempt2.statusReason() >> 'Essential container in task exited'
+        attempt2.container() >> null
+        def job = JobDetail.builder().attempts([attempt1, attempt2]).build()
+
+        handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
+        handler.describeJob('xyz-123') >> job
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.native_id == 'xyz-123'
+        trace.executorName == 'awsbatch'
+        trace.machineInfo.type == 'x1.large'
+        trace.machineInfo.zone == 'us-east-1b'
+        trace.machineInfo.priceModel == PriceModel.spot
+        trace.numSpotInterruptions == 1
     }
 
     def 'should render submit command' () {
@@ -951,7 +1057,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         executor.getAwsOptions()>> Mock(AwsOptions) { getAwsCli() >> 'aws' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
         when:
         result =  handler.getSubmitCommand()
@@ -963,8 +1069,45 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageKmsKeyId() >> 'kms-key-123'
         }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+    }
 
+    def 'should render job array submit command' () {
+        given:
+        def executor = Spy(AwsBatchExecutor)
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
+            fusionEnabled() >> false
+            getTask() >> Mock(TaskArrayRun) { getWorkDirStr()>> 's3://work'}
+        }
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) {
+            getAwsCli() >> 'aws'
+            getDebug() >> true
+            getStorageEncryption() >> 'aws:kms'
+        }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && aws s3 cp --only-show-errors --debug s3://work/.command.run "$f" && exec bash "$f"']
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) {
+            getAwsCli() >> '/opt/aws/bin/aws --region eu-west-1'
+            getRequesterPays() >> true
+        }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && /opt/aws/bin/aws --region eu-west-1 s3 cp --only-show-errors --request-payer requester s3://work/.command.run "$f" && exec bash "$f"']
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) { getS5cmdPath() >> 's5cmd' }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && s5cmd cat s3://work/.command.run > "$f" && exec bash "$f"']
     }
 
     def 'should render submit command with s5cmd' () {
@@ -981,7 +1124,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         executor.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
         when:
         result =  handler.getSubmitCommand()
@@ -992,15 +1135,14 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageKmsKeyId() >> 'kms-key-123'
         }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
     }
 
     def 'should create an aws submit request with labels'() {
-
         given:
-        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('1')
-        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
+        def VAR_FOO = KeyValuePair.builder().name('FOO').value('1').build()
+        def VAR_BAR = KeyValuePair.builder().name('BAR').value('2').build()
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry', resourceLabels:[a:'b'])
@@ -1017,18 +1159,52 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
 
-        req.getJobName() == 'batch-task'
-        req.getJobQueue() == 'queue1'
-        req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['sh', '-c','hello']
-        req.getRetryStrategy() == new RetryStrategy()
-                .withAttempts(5)
-                .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
-        req.getTags() == [a:'b']
-        req.getPropagateTags() == true
+        req.jobName() == 'batch-task'
+        req.jobQueue() == 'queue1'
+        req.jobDefinition() == 'job-def:1'
+        req.containerOverrides().resourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '4'
+        req.containerOverrides().resourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '8192'
+        req.containerOverrides().environment() == [VAR_FOO, VAR_BAR]
+        req.containerOverrides().command() == ['sh', '-c','hello']
+        req.retryStrategy() == RetryStrategy.builder()
+                .attempts(5)
+                .evaluateOnExit( EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build(),
+                    EvaluateOnExit.builder().onReason('*').action('EXIT').build())
+                .build()
+        req.tags() == [a:'b']
+        req.propagateTags() == true
+    }
+
+    def 'should create an aws submit request with auto resource labels'() {
+        given:
+        def VAR_FOO = KeyValuePair.builder().name('FOO').value('1').build()
+        def config = new TaskConfig(memory: '8GB', cpus: 4, resourceLabels: ['my!label': 'a,b#c'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy#frog',
+                'seqera.io/platform/workflowId': '4a#bcd' ])
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> config
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['sh', '-c', 'hello']
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO]
+
+        and:
+        // the auto labels are normalised to the Batch tag syntax, the declared one is untouched
+        req.tags() == [
+                'nextflow.io/runName': 'crazy_frog',
+                'seqera.io/platform/workflowId': '4a_bcd',
+                'my!label': 'a,b#c' ]
+        req.propagateTags() == true
     }
 
     def 'get fusion submit command' () {
@@ -1092,6 +1268,66 @@ class AwsBatchTaskHandlerTest extends Specification {
         16      | 200000    | 122880
     }
 
+    def 'should round task cpus up to the next valid fargate cpu value' () {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'ingress:minimap2_alignment (1)'
+        task.getConfig() >> new TaskConfig(memory: '16GB', cpus: 12)
+        and:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.maxSpotAttempts() >> 0
+        _ * handler.fusionEnabled() >> false
+        _ * handler.getTask() >> task
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws', platformType: 'fargate'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        and:
+        noExceptionThrown()
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU }.value() == '16'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY }.value() == '32768'
+    }
+
+    @Unroll
+    def 'should normalise fargate cpus' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+        expect:
+        handler.normaliseFargateCpus(CPUS) == EXPECTED
+
+        where:
+        CPUS  | EXPECTED
+        1     | 1
+        2     | 2
+        3     | 4
+        4     | 4
+        5     | 8
+        7     | 8
+        8     | 8
+        9     | 16
+        12    | 16
+        16    | 16
+    }
+
+    def 'should throw when fargate cpus exceed the max allowed' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+
+        when:
+        handler.normaliseFargateCpus(17)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Requirement of 17 CPUs is not allowed by Fargate -- Check process with name 'foo'"
+    }
+
     @Unroll
     def 'should normalise job id' () {
         given:
@@ -1099,7 +1335,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         expect:
         handler.normaliseJobId(JOB_ID) == EXPECTED
-        
+
         where:
         JOB_ID       | EXPECTED
         null         | null
@@ -1118,7 +1354,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getName() >> NAME
         and:
         result == EXPECTED
-        
+
         where:
         ENV                             | NAME      | EXPECTED
         [:]                             | 'foo'     | 'foo'
@@ -1155,8 +1391,162 @@ class AwsBatchTaskHandlerTest extends Specification {
         2           | true  | false      | 2
         and:
         null        | true  | true       | 5    // <-- default to 5
-        0           | true  | true       | 5    // <-- default to 5 
+        0           | true  | true       | 5    // <-- default to 5
         1           | true  | true       | 1
         2           | true  | true       | 2
     }
+
+    def 'should check if completed with exit code from scheduler'() {
+        given:
+        def task = new TaskRun()
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder()
+            .exitCode(0).build()).status(JobStatus.SUCCEEDED)
+            .build()
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        0 * handler.readExitFile()  // Should NOT read exit file when scheduler provides exit code
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+    }
+
+    def 'should check if completed with non-zero exit code from scheduler'() {
+        given:
+        def task = new TaskRun()
+        def executor = Mock(AwsBatchExecutor)
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, executor: executor))
+        and:
+        def job = JobDetail.builder().container(ContainerDetail.builder().exitCode(137).build())
+            .status(JobStatus.FAILED)
+            .statusReason('Task terminated')
+            .build()
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+
+        1 * handler.describeJob(jobId) >> job
+        0 * handler.readExitFile()  // Should NOT read exit file when scheduler provides exit code
+        1 * executor.getJobOutputStream('job-123') >> null
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 137
+
+    }
+
+    def 'should check if completed and fallback to exit file when scheduler exit code is null'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .build()
+
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        1 * handler.readExitFile() >> 0   // Should read exit file as fallback
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+
+    }
+
+    def 'should check if completed no container exit code neither .exitcode file'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, executor: executor))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .statusReason('Unknown termination')
+            .build()
+
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob(jobId) >> job
+        1 * handler.readExitFile() >> Integer.MAX_VALUE   // Should read exit file as fallback
+        1 * executor.getJobOutputStream(jobId) >> null
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == Integer.MAX_VALUE
+        handler.task.error.message == 'Unknown termination'
+
+    }
+
+    def 'should return zero spot interruptions when no attempts or non-spot terminations exist'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+        def attempt1 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Essential container in task exited'
+        }
+        def attempt2 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Some other reason'
+        }
+
+        when:
+        def resultNoAttempts = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-123') >> JobDetail.builder().attempts([]).build()
+        resultNoAttempts == 0
+
+        when:
+        def resultNonSpot = handler.getNumSpotInterruptions('job-456')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-456') >> JobDetail.builder().attempts([attempt1, attempt2]).build()
+        resultNonSpot == 0
+    }
+
+    def 'should return null when job cannot be processed'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def resultNotCompleted = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> false
+        0 * handler.describeJob(_)
+        resultNotCompleted == null
+
+        when:
+        def resultNullJobId = handler.getNumSpotInterruptions(null)
+        then:
+        0 * handler.isCompleted()
+        0 * handler.describeJob(_)
+        resultNullJobId == null
+
+        when:
+        def resultException = handler.getNumSpotInterruptions('job-789')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-789') >> { throw new RuntimeException("Error") }
+        resultException == null
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,11 @@
 
 package nextflow.cloud.aws.codecommit
 
+import software.amazon.awssdk.auth.credentials.AwsCredentials
+
 import javax.crypto.Mac
 
-/*
- * Copyright 2013-2019 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 
 import javax.crypto.spec.SecretKeySpec
 import javax.security.auth.login.CredentialException
@@ -40,12 +28,11 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.text.SimpleDateFormat
 
-import com.amazonaws.auth.AWSCredentials
-import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.auth.AWSSessionCredentials
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
@@ -201,23 +188,23 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     }
 
     /**
-     * Get the AWSCredentials. If an AWSCredentialProvider was specified, use that,
-     * otherwise, create a new AWSCredentialsProvider. If the username and password are
-     * provided, use those directly as AWSCredentials. Otherwise, use the
-     * {@link DefaultAWSCredentialsProviderChain} as is standard with AWS applications.
+     * Get the AWSCredentials. If an AwsCredentialProvider was specified, use that,
+     * otherwise, create a new AwsCredentialsProvider. If the username and password are
+     * provided, use those directly as AwsCredentials. Otherwise, use the
+     * {@link DefaultCredentialsProvider} as is standard with AWS applications.
      * @return the AWS credentials.
      */
-    private AWSCredentials retrieveAwsCredentials() {
-        AWSCredentialsProvider credsProvider
+    private AwsCredentials retrieveAwsCredentials() {
+        AwsCredentialsProvider credsProvider
         if ( username && password ) {
             log.debug "Creating a static AWS credentials provider"
-            credsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials( username, password ))
+            credsProvider = StaticCredentialsProvider.create( AwsBasicCredentials.create(username,password) )
         }
         else {
             log.debug "Creating a default AWS credentials provider chain"
-            credsProvider = new DefaultAWSCredentialsProviderChain()
+            credsProvider = DefaultCredentialsProvider.builder().build()
         }
-        return credsProvider.getCredentials()
+        return credsProvider.resolveCredentials()
     }
 
     /**
@@ -260,14 +247,14 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
         String awsSecretKey
 
         try {
-            AWSCredentials awsCredentials = retrieveAwsCredentials()
+            AwsCredentials awsCredentials = retrieveAwsCredentials()
             StringBuilder awsKey = new StringBuilder();
-            awsKey.append(awsCredentials.getAWSAccessKeyId());
-            awsSecretKey = awsCredentials.getAWSSecretKey();
-            if (awsCredentials instanceof AWSSessionCredentials) {
-                AWSSessionCredentials sessionCreds = (AWSSessionCredentials) awsCredentials;
-                if ( sessionCreds.getSessionToken() ) {
-                    awsKey.append('%').append(sessionCreds.getSessionToken())
+            awsKey.append(awsCredentials.accessKeyId());
+            awsSecretKey = awsCredentials.secretAccessKey();
+            if (awsCredentials instanceof AwsSessionCredentials) {
+                AwsSessionCredentials sessionCreds = (AwsSessionCredentials) awsCredentials;
+                if ( sessionCreds.sessionToken() ) {
+                    awsKey.append('%').append(sessionCreds.sessionToken())
                 }
             }
             awsAccessKey = awsKey.toString()
@@ -322,7 +309,7 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     /**
      * @param awsCredentialProvider the awsCredentialProvider to set
      */
-    void setAwsCredentialsProvider(AWSCredentialsProvider awsCredentialsProvider) {
+    void setAwsCredentialsProvider(AwsCredentialsProvider awsCredentialsProvider) {
         this.awsCredentialsProvider = awsCredentialsProvider
     }
 

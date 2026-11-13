@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,20 @@ package nextflow.script.ast;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public enum ASTNodeMarker {
+    // the comments in a source file (ModuleNode)
+    COMMENTS,
+
+    // the packed source position of the `else` keyword (IfStatement)
+    ELSE_POSITION,
+
     // denotes a fully-qualified type annotation (ClassNode)
     FULLY_QUALIFIED,
 
     // denotes that an assignment is an implicit declaration
     IMPLICIT_DECLARATION,
+
+    // the inferred return type of a closure expression or untyped function
+    INFERRED_RETURN_TYPE,
 
     // the inferred type of an expression
     INFERRED_TYPE,
@@ -33,11 +42,11 @@ public enum ASTNodeMarker {
     // the number of enclosing parentheses around an expression
     INSIDE_PARENTHESES_LEVEL,
 
-    // the comments preceding a statement or declaration
-    LEADING_COMMENTS,
-
     // the verbatim text of a Groovy-style type annotation (ClassNode)
     LEGACY_TYPE,
+
+    // the list of candidate MethodNode's for a MethodCallExpression
+    METHOD_OVERLOADS,
 
     // the MethodNode targeted by a MethodCallExpression
     METHOD_TARGET,
@@ -45,14 +54,27 @@ public enum ASTNodeMarker {
     // the MethodNode targeted by a variable expression (PropertyNode)
     METHOD_VARIABLE_TARGET,
 
+    // the Parameter targeted by a named argument (MapEntryExpression)
+    NAMED_PARAM,
+
+    // denotes a nullable type annotation (ClassNode)
+    NULLABLE,
+
+    // the body variable referenced by a typed output name, e.g. `x: T` (VariableExpression)
+    OUTPUT_SOURCE,
+
+    // the ScriptNode that declares an entry workflow (WorkflowNode), so that
+    // the params and output blocks of a pipeline can be resolved from a call
+    PIPELINE_SCRIPT,
+
+    // the FieldNode targeted by a PropertyExpression
+    PROPERTY_TARGET,
+
     // the starting quote sequence of a string literal or gstring expression
     QUOTE_CHAR,
 
     // denotes that an expression list has a trailing comma
     TRAILING_COMMA,
-
-    // the trailing comment on the same line as a statement or declaration
-    TRAILING_COMMENT,
 
     // the verbatim text of a string literal or gstring expression
     VERBATIM_TEXT

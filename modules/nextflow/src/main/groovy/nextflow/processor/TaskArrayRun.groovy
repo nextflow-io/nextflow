@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,11 @@ class TaskArrayRun extends TaskRun {
     @Override
     ContainerConfig getContainerConfig() {
         final config = super.getContainerConfig()
-        final envWhitelist = config.getEnvWhitelist() ?: []
-        final executor = (TaskArrayExecutor)processor.getExecutor()
-        envWhitelist << executor.getArrayIndexName()
-        config.put('envWhitelist', envWhitelist)
+        final envWhitelist = config.getEnvWhitelist()
+        if( envWhitelist != null ) {
+            final executor = (TaskArrayExecutor)processor.getExecutor()
+            envWhitelist.add(executor.getArrayIndexName())
+        }
         return config
     }
 
@@ -55,6 +56,11 @@ class TaskArrayRun extends TaskRun {
     @Override
     final boolean isArray() {
         return true
+    }
+
+    @Override
+    List<String> getOutputFilesNames() {
+        return Collections.<String>emptyList()
     }
 
 }

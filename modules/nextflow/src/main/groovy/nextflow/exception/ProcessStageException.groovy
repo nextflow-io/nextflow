@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import groovy.transform.InheritConstructors
  * Exception thrown when an error is raised during the process file staging phase
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- * 
+ *
  * Note: This exception extends ProcessUrecoverableException to force the execution to fail instead of
  * retrying the task execution because the file staging process has its own retry strategy, and
  * therefore it's likely to be a permanent error.
