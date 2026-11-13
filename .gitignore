@@ -19,11 +19,11 @@ out/
 .lineage/
 /work/
 /modules/nextflow/work/
+/results/
 
 # Docker image build (see docker/Makefile)
 /docker/dist/
 /docker/nextflow
-/.dockerignore
 
 # nf-agent-pi: proxy binary left by a local `go build`; the image builds its own
 /plugins/nf-agent-pi/agent-rpc/agent-rpc
