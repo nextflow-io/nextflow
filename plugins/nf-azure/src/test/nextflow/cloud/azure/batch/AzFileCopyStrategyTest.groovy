@@ -380,8 +380,8 @@ class AzFileCopyStrategyTest extends Specification {
         binding.stage_inputs == '''\
                 # stage input files
                 cp "$NXF_TASK_LAUNCH_DIR"/.command.sh .
-                cp "$NXF_TASK_LAUNCH_DIR"/.command.run . 2>/dev/null || true
-                cp "$NXF_TASK_LAUNCH_DIR"/.command.in . 2>/dev/null || true
+                cp "$NXF_TASK_LAUNCH_DIR"/.command.run .
+                cp "$NXF_TASK_LAUNCH_DIR"/.command.in .
                 nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $NXF_TASK_LAUNCH_DIR/.nextflow-bin
                 chmod +x $NXF_TASK_LAUNCH_DIR/.nextflow-bin/* || true
                 downloads=(true)
@@ -390,6 +390,33 @@ class AzFileCopyStrategyTest extends Specification {
                 '''.stripIndent()
         binding.exit_file == ' > "${NXF_TASK_LAUNCH_DIR:-$PWD}"/.exitcode'
         binding.launch_cmd == '/bin/bash -ue .command.sh < .command.in'
+    }
+
+    def 'should not copy the stdin file in the scratch dir when the task has no input' () {
+        given:
+        def workDir = mockAzPath( 'az://my-data/work/dir' )
+        def config = new AzConfig([storage:[sasToken: '12345']])
+        def executor = Mock(AzBatchExecutor) {
+            getAzConfig() >> config
+        }
+
+        when:
+        def binding = new AzBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: workDir,
+                script: 'echo Hello world!',
+                scratch: true ] as TaskBean, executor) .makeBinding()
+
+        then:
+        binding.stage_inputs == '''\
+                # stage input files
+                cp "$NXF_TASK_LAUNCH_DIR"/.command.sh .
+                cp "$NXF_TASK_LAUNCH_DIR"/.command.run .
+                downloads=(true)
+
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
+        binding.launch_cmd == '/bin/bash -ue .command.sh'
     }
 
     def 'test bash wrapper with outputs and stats'() {

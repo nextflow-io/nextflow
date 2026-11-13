@@ -42,6 +42,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private String sasToken
     private Path remoteBinDir
     private boolean scratch
+    private boolean stdin
 
     protected AzFileCopyStrategy() {}
 
@@ -56,6 +57,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         // same rule as BashWrapperBuilder#getScratchDirectoryCommand
         final scratchStr = bean.scratch?.toString()
         this.scratch = scratchStr != null && scratchStr != 'false'
+        this.stdin = bean.input != null
     }
 
     @Override
@@ -97,8 +99,9 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         // with scratch enabled the task runs outside the Batch task dir, copy the task scripts in it
         if( scratch ) {
             result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_SCRIPT} .\n"
-            result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_RUN} . 2>/dev/null || true\n"
-            result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_INFILE} . 2>/dev/null || true\n"
+            result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_RUN} .\n"
+            if( stdin )
+                result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_INFILE} .\n"
         }
         // download bin scripts into the dir already on the PATH, i.e. the Batch task dir
         final binDir = scratch ? '$NXF_TASK_LAUNCH_DIR/.nextflow-bin' : '$PWD/.nextflow-bin'
