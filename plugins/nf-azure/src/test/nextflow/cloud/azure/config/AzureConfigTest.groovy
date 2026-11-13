@@ -66,6 +66,7 @@ class AzureConfigTest extends Specification {
         and:
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
+                                   AZURE_STORAGE_ENDPOINT: "https://${NAME}.blob.core.windows.net".toString(),
                                    AZURE_STORAGE_SAS_TOKEN: SAS ]
 
         and:
