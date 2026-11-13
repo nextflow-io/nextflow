@@ -391,6 +391,7 @@ class AzBashLibTest extends Specification {
         'dir'         | 0      | 'dir'  | 2     | ''
         // the real azcopy exits 0 on a recursive copy of a missing path, leaving an empty directory
         'missing'     | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (azcopy exit status 1)\n'
+        // azcopy 10.8.0 leaves a full-size file when killed, 10.34.1 leaves none
         'oom.txt'     | 137    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/oom.txt (azcopy exit status 137)\n'
         'oomdir'      | 137    | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/oomdir (azcopy exit status 137)\n'
     }
