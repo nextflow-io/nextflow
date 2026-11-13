@@ -36,6 +36,15 @@ class AzBashLibTest extends Specification {
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
 
+            nxf_az_cp() {
+                ## pools created by older Nextflow versions may have an AzCopy without `--output-level`
+                if azcopy --output-level essential env >/dev/null 2>&1; then
+                    azcopy --output-level essential cp "$@"
+                else
+                    azcopy cp "$@"
+                fi
+            }
+
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
@@ -44,12 +53,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy --output-level essential cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    nxf_az_cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   else
-                    azcopy --output-level essential cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    nxf_az_cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   fi
                 else
-                  azcopy --output-level essential cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  nxf_az_cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
 
@@ -60,10 +69,10 @@ class AzBashLibTest extends Specification {
                 local ret
                 mkdir -p "$basedir"
 
-                ret=$(azcopy --output-level essential cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                ret=$(nxf_az_cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy --output-level essential cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    nxf_az_cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         return 1
@@ -140,6 +149,15 @@ class AzBashLibTest extends Specification {
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
 
+            nxf_az_cp() {
+                ## pools created by older Nextflow versions may have an AzCopy without `--output-level`
+                if azcopy --output-level essential env >/dev/null 2>&1; then
+                    azcopy --output-level essential cp "$@"
+                else
+                    azcopy cp "$@"
+                fi
+            }
+
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
@@ -148,12 +166,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy --output-level essential cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    nxf_az_cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   else
-                    azcopy --output-level essential cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    nxf_az_cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   fi
                 else
-                  azcopy --output-level essential cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  nxf_az_cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
 
@@ -164,10 +182,10 @@ class AzBashLibTest extends Specification {
                 local ret
                 mkdir -p "$basedir"
 
-                ret=$(azcopy --output-level essential cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                ret=$(nxf_az_cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy --output-level essential cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    nxf_az_cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         return 1
@@ -244,6 +262,15 @@ class AzBashLibTest extends Specification {
             export AZCOPY_BLOCK_SIZE_MB=10
             export AZCOPY_BLOCK_BLOB_TIER=Hot
 
+            nxf_az_cp() {
+                ## pools created by older Nextflow versions may have an AzCopy without `--output-level`
+                if azcopy --output-level essential env >/dev/null 2>&1; then
+                    azcopy --output-level essential cp "$@"
+                else
+                    azcopy cp "$@"
+                fi
+            }
+
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
@@ -252,12 +279,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy --output-level essential cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    nxf_az_cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   else
-                    azcopy --output-level essential cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    nxf_az_cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   fi
                 else
-                  azcopy --output-level essential cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  nxf_az_cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
 
@@ -268,10 +295,10 @@ class AzBashLibTest extends Specification {
                 local ret
                 mkdir -p "$basedir"
 
-                ret=$(azcopy --output-level essential cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                ret=$(nxf_az_cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy --output-level essential cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    nxf_az_cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         return 1
@@ -286,7 +313,8 @@ class AzBashLibTest extends Specification {
         def workDir = Files.createTempDirectory('az-retry')
         def bin = Files.createDirectory(workDir.resolve('bin'))
         def azcopy = bin.resolve('azcopy')
-        azcopy.text = '#!/bin/bash\necho x >> calls\nexit 1\n'
+        // count only copy attempts, not the `--output-level` support probe
+        azcopy.text = '#!/bin/bash\n[[ " $* " == *" env "* ]] || echo x >> calls\nexit 1\n'
         azcopy.toFile().setExecutable(true)
         def script = workDir.resolve('test.sh')
         script.text = AzBashLib.script(new AzCopyOpts(), 4, 3, Duration.of('1 sec')) + """
@@ -307,6 +335,32 @@ class AzBashLibTest extends Specification {
 
         cleanup:
         workDir?.toFile()?.deleteDir()
+    }
+
+    def 'should pass --output-level only when azcopy supports it'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        // fake azcopy that logs its args and rejects `--output-level` when OLD is set
+        def bin = folder.resolve('azcopy')
+        bin.text = '#!/bin/bash\n[[ $OLD && $1 == --output-level ]] && exit 1\necho "$*" >> calls.log\n'
+        bin.toFile().setExecutable(true)
+        def script = "PATH=$folder:\$PATH\n" + AzBashLib.script() + '\nnxf_az_cp src dst\n'
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile())
+        if( OLD ) proc.environment().put('OLD', '1')
+        proc.start().waitFor()
+
+        then:
+        folder.resolve('calls.log').readLines().last() == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        OLD     | EXPECTED
+        false   | '--output-level essential cp src dst'
+        true    | 'cp src dst'
     }
 
 }
