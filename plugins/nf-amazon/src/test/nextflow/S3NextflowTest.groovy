@@ -46,7 +46,7 @@ class S3NextflowTest extends Specification {
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should resolve list of files' () {
         when:
         def result = Nextflow.files('s3://ngi-igenomes/*')
@@ -55,7 +55,7 @@ class S3NextflowTest extends Specification {
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    @Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
     def 'should check s3 bucket exists files' () {
         when:
         def result = Nextflow.file('s3://ngi-igenomes/')

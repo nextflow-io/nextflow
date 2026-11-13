@@ -16,10 +16,6 @@
 
 package io.seqera.executor
 
-import nextflow.NextflowMeta
-import nextflow.config.Manifest
-import nextflow.script.PlatformMetadata
-import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 
 /**
@@ -29,172 +25,55 @@ import spock.lang.Specification
  */
 class LabelsTest extends Specification {
 
-    def 'should create labels with all workflow metadata'() {
-        given:
-        def sessionId = UUID.randomUUID()
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'nf-core/rnaseq'
-            getUserName() >> 'pditommaso'
-            getRunName() >> 'crazy_darwin'
-            getSessionId() >> sessionId
-            isResume() >> true
-            getRevision() >> '3.12.0'
-            getCommitId() >> 'abc1234'
-            getRepository() >> 'https://github.com/nf-core/rnaseq'
-            getManifest() >> new Manifest([name: 'nf-core/rnaseq'])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        labels.entries['nextflow.io/projectName'] == 'nf-core/rnaseq'
-        labels.entries['nextflow.io/userName'] == 'pditommaso'
-        labels.entries['nextflow.io/runName'] == 'crazy_darwin'
-        labels.entries['nextflow.io/sessionId'] == sessionId.toString()
-        labels.entries['nextflow.io/resume'] == 'true'
-        labels.entries['nextflow.io/revision'] == '3.12.0'
-        labels.entries['nextflow.io/commitId'] == 'abc1234'
-        labels.entries['nextflow.io/repository'] == 'https://github.com/nf-core/rnaseq'
-        labels.entries['nextflow.io/manifestName'] == 'nf-core/rnaseq'
-        labels.entries['nextflow.io/runtimeVersion'] == NextflowMeta.instance.version.toString()
-    }
-
-    def 'should compute stable runId from sessionId and runName'() {
-        given:
-        def sid = 'e2315a82-49b0-4langc3-a58a-0d7d52f7e3a1'
-        def runName = 'crazy_darwin'
-
+    def 'should merge label maps coercing values with the overlay winning on collision'() {
         expect:
-        Labels.runId(sid, runName) == Labels.runId(sid, runName)
-        Labels.runId(sid, runName) != Labels.runId(sid, 'other_name')
-        Labels.runId(sid, runName) != Labels.runId(UUID.randomUUID().toString(), runName)
+        Labels.merge(
+                ['nextflow.io/runName': 'happy_turing', 'nextflow.io/projectName': 'hello'],
+                ['nextflow.io/runName': 'custom', team: 7]
+        ) == ['nextflow.io/runName': 'custom', 'nextflow.io/projectName': 'hello', team: '7']
     }
 
-    def 'should omit null workflow metadata from labels'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getRevision() >> null
-            getCommitId() >> null
-            getRepository() >> null
-            getManifest() >> new Manifest([:])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        labels.entries.containsKey('nextflow.io/projectName')
-        labels.entries.containsKey('nextflow.io/userName')
-        labels.entries.containsKey('nextflow.io/runName')
-        labels.entries.containsKey('nextflow.io/sessionId')
-        labels.entries['nextflow.io/resume'] == 'false'
-        !labels.entries.containsKey('nextflow.io/revision')
-        !labels.entries.containsKey('nextflow.io/commitId')
-        !labels.entries.containsKey('nextflow.io/repository')
-        !labels.entries.containsKey('nextflow.io/manifestName')
+    def 'should treat a null or empty map as no labels when merging'() {
+        expect:
+        Labels.merge(null, null) == [:]
+        Labels.merge(['team': 'a'], null) == ['team': 'a']
+        Labels.merge(null, ['team': 'a']) == ['team': 'a']
     }
 
-    def 'should add scheduler labels'() {
-        when:
-        def labels = new Labels()
-                .withSchedRunId('run-123')
-                .withSchedClusterId('cluster-456')
-
-        then:
-        labels.entries['seqera:sched:runId'] == 'run-123'
-        labels.entries['seqera:sched:clusterId'] == 'cluster-456'
+    def 'should coerce map values to strings'() {
+        expect:
+        Labels.toStringMap(null) == [:]
+        Labels.toStringMap([:]) == [:]
+        Labels.toStringMap([a: 1, b: 'x', c: true]) == [a: '1', b: 'x', c: 'true']
     }
 
-    def 'should skip null scheduler labels'() {
+    def 'should reject non-map resourceLabels with a clear error'() {
         when:
-        def labels = new Labels()
-                .withSchedRunId(null)
-                .withSchedClusterId(null)
+        Labels.toStringMap(['foo', 'bar'])
 
         then:
-        !labels.entries.containsKey('seqera:sched:runId')
-        !labels.entries.containsKey('seqera:sched:clusterId')
+        def err = thrown(IllegalArgumentException)
+        err.message.contains("'resourceLabels'")
+        err.message.contains('map of key/value pairs')
+        err.message.contains('java.util.ArrayList')
     }
 
-    def 'should allow user labels to override implicit labels'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-                .withUserLabels([
-                    'nextflow.io/runName': 'custom_name',
-                    'team': 'research'
-                ])
-
-        then:
-        labels.entries['nextflow.io/runName'] == 'custom_name'
-        labels.entries['team'] == 'research'
-        labels.entries['nextflow.io/projectName'] == 'hello'
+    def 'should compute null delta when task labels are empty'() {
+        expect:
+        Labels.delta(null, [team: 'a']) == null
+        Labels.delta([:], [team: 'a']) == null
     }
 
-    def 'should include platform workflowId when available'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-            getPlatform() >> new PlatformMetadata('wf-abc123')
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        labels.entries['seqera.io/platform/workflowId'] == 'wf-abc123'
+    def 'should return full task labels when run labels are empty'() {
+        expect:
+        Labels.delta([team: 'a', region: 'us'], null) == [team: 'a', region: 'us']
+        Labels.delta([team: 'a', region: 'us'], [:]) == [team: 'a', region: 'us']
     }
 
-    def 'should omit platform workflowId when not set'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-            getPlatform() >> new PlatformMetadata()
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        !labels.entries.containsKey('seqera.io/platform/workflowId')
-    }
-
-    def 'should handle null user labels'() {
-        when:
-        def labels = new Labels()
-                .withUserLabels(null)
-
-        then:
-        labels.entries.isEmpty()
+    def 'should keep only differing or missing keys in delta'() {
+        expect:
+        Labels.delta([team: 'a', region: 'us'], [team: 'a']) == [region: 'us']
+        Labels.delta([team: 'b'], [team: 'a']) == [team: 'b']
+        Labels.delta([team: 'a', region: 'us'], [team: 'a', region: 'us']) == null
     }
 }

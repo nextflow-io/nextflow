@@ -22,6 +22,7 @@ import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.platform.PlatformHelper
+import nextflow.util.Duration
 
 /**
  * Model Seqera Platform configuration
@@ -35,11 +36,40 @@ import nextflow.platform.PlatformHelper
 @CompileStatic
 class TowerConfig implements ConfigScope {
 
+    static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.of('60s')
+
+    static final Duration DEFAULT_READ_TIMEOUT = Duration.of('60s')
+
     @ConfigOption
     @Description("""
         The unique access token for your Seqera Platform account.
     """)
     final String accessToken
+
+    @ConfigOption(types=[Boolean, List, String])
+    @Description("""
+        Automatically derive resource labels from the workflow metadata (using the `nextflow.io/`
+        and `seqera.io/platform/` key prefixes) and attach them to the compute resources created
+        by the executor. Accepts:
+          - `true`: include all available metadata labels
+          - `false` (default): disable
+          - a list or comma-separated string of short names: e.g.
+            `['runName', 'projectName']` or `'runName,projectName'`
+
+        Valid names: `projectName`, `userName`, `runName`, `sessionId`, `resume`,
+        `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`,
+        `workflowId`, `workspaceId`, `computeEnvId`.
+
+        The labels declared with the `resourceLabels` process directive take precedence
+        on key collision.
+    """)
+    final Object autoLabels
+
+    @ConfigOption
+    @Description("""
+        The Compute Environment ID in Seqera Platform in which to launch the run (default: the primary environment in the workspace).
+    """)
+    final String computeEnvId
 
     @ConfigOption
     @Description("""
@@ -53,6 +83,18 @@ class TowerConfig implements ConfigScope {
     """)
     final String endpoint
 
+    @ConfigOption
+    @Description("""
+        The HTTP connection timeout for Seqera Platform API requests (default: `60.s`).
+    """)
+    final Duration httpConnectTimeout
+
+    @ConfigOption
+    @Description("""
+        The HTTP read timeout for Seqera Platform API requests (default: `60.s`).
+    """)
+    final Duration httpReadTimeout
+
     final TowerRetryPolicy retryPolicy
 
     @ConfigOption
@@ -61,22 +103,21 @@ class TowerConfig implements ConfigScope {
     """)
     final String workspaceId
 
-    @ConfigOption
-    @Description("""
-        The Compute Environment ID in Seqera Platform in which to launch the run (default: the primary environment in the workspace).
-    """)
-    final String computeEnvId
-
     /* required by extension point -- do not remove */
     TowerConfig() {}
 
     TowerConfig(Map opts, Map<String,String> env) {
         this.accessToken = PlatformHelper.getAccessToken(opts, env)
-        this.enabled = opts.enabled as boolean
-        this.endpoint = PlatformHelper.getEndpoint(opts, env)
-        this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
-        this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
+        // keep the raw value: the runtime parses it with `AutoLabels.parse` and needs to
+        // tell apart the boolean, list and comma-separated string forms
+        this.autoLabels = opts.get('autoLabels')
         if( opts.computeEnvId )
             this.computeEnvId = opts.computeEnvId as String
+        this.enabled = opts.enabled as boolean
+        this.endpoint = PlatformHelper.getEndpoint(opts, env)
+        this.httpConnectTimeout = opts.httpConnectTimeout ? opts.httpConnectTimeout as Duration : DEFAULT_CONNECT_TIMEOUT
+        this.httpReadTimeout = opts.httpReadTimeout ? opts.httpReadTimeout as Duration : DEFAULT_READ_TIMEOUT
+        this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
+        this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
     }
 }

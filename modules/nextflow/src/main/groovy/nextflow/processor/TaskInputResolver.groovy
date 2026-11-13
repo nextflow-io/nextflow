@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Nextflow
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ForeignFileFilter
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
@@ -32,7 +33,9 @@ import nextflow.file.LogicalDataPath
 import nextflow.script.ScriptType
 import nextflow.script.params.FileInParam
 import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.types.Bag
 import nextflow.util.ArrayBag
+import nextflow.util.HashBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.RecordMap
 /**
@@ -108,12 +111,19 @@ class TaskInputResolver {
         }
 
         if( value instanceof Collection ) {
-            return value.collect { el -> normalizeValue(el, holders) }
+            final elements = value.collect { el -> normalizeValue(el, holders) }
+            return \
+                value instanceof List ? elements as List :
+                value instanceof Set ? elements as Set :
+                value instanceof Bag ? new HashBag<>(elements) :
+                elements
         }
 
         if( value instanceof Map ) {
             final normalized = value.collectEntries { k, v -> [k, normalizeValue(v, holders)] }
-            return value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) : normalized
+            return \
+                value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) :
+                normalized
         }
 
         return value
@@ -121,7 +131,7 @@ class TaskInputResolver {
 
     private Path normalizePath(Path value, Map<Path,FileHolder> holders) {
         return holders.containsKey(value)
-            ? new TaskPath(holders[value])
+            ? makePath(holders[value], task.type)
             : value
     }
 
@@ -136,7 +146,9 @@ class TaskInputResolver {
 
             if( item instanceof Path || coerceToPath ) {
                 final path = normalizeToPath(item)
-                final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
+                // a filter can only veto an upload, so it is asked only for foreign files
+                final foreign = executor.isForeignFile(path) && !isTaskAccessible(path)
+                final target = foreign ? foreignFiles.addToForeign(path) : path
                 final holder = new FileHolder(path, target)
                 files << holder
             }
@@ -146,6 +158,14 @@ class TaskInputResolver {
         }
 
         return files
+    }
+
+    protected boolean isTaskAccessible(Path path) {
+        for( ForeignFileFilter it : executor.getForeignFileFilters() ) {
+            if( it.isTaskAccessible(path, executor) )
+                return true
+        }
+        return false
     }
 
     protected static Path normalizeToPath( obj ) {
@@ -310,12 +330,12 @@ class TaskInputResolver {
     }
 
     private static Path makePath( FileHolder holder, ScriptType type ) {
-        if( type == ScriptType.SCRIPTLET ) {
+        // agents refer to inputs by their staged name, since they are staged into the task work dir
+        if( type == ScriptType.SCRIPTLET || type == ScriptType.PROMPT ) {
             return new TaskPath(holder)
         }
-        if( type == ScriptType.GROOVY) {
-            // the real path for the native task needs to be fixed -- see #378
-            return Path.of(holder.stageName)
+        if( type == ScriptType.GROOVY ) {
+            return holder.storePath
         }
         throw new IllegalStateException("Unknown task type: $type")
     }

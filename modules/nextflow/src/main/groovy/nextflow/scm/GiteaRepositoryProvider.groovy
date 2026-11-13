@@ -20,6 +20,8 @@ package nextflow.scm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
 import java.nio.charset.StandardCharsets
 
@@ -63,6 +65,12 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
         return getToken()
             ? true
             : super.hasCredentials()
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getToken() ?: getPassword())
     }
 
     @Override

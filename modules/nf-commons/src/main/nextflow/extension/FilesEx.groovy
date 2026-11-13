@@ -25,6 +25,7 @@ import java.nio.file.FileSystemException
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotLinkException
@@ -133,14 +134,16 @@ class FilesEx {
                 }
 
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    Files.delete(dir)
+                    FileHelper.deleteDirEntry(dir)
                     FileVisitResult.CONTINUE
                 }
 
             })
             return true
         }
-        catch( IOException e ) {
+        catch( IOException | InvalidPathException e ) {
+            // deleteDirEntry rethrows the unchecked CloudStoragePseudoDirectoryException when a
+            // cloud directory still holds a real object, which is a failure like any other here
             return false
         }
     }
@@ -495,7 +498,7 @@ class FilesEx {
             return true
         }
         catch(IOException e) {
-            log.debug "Failed to create directory '$self'", e
+            log.debug "Failed to create directory '${toUriString(self)}'", e
             return false
         }
     }
@@ -515,7 +518,7 @@ class FilesEx {
             Files.isReadable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get read permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get read permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -536,7 +539,7 @@ class FilesEx {
             Files.isWritable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get write permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get write permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -560,7 +563,7 @@ class FilesEx {
             Files.isExecutable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get execute permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get execute permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -590,7 +593,7 @@ class FilesEx {
             Files.getLastModifiedTime(self,options).toMillis()
         }
         catch( IOException e ) {
-            log.trace "Cannot get lastModified time on file: $self -- Cause: ${e.getMessage()}"
+            log.trace "Cannot get lastModified time on file '${toUriString(self)}' -- Cause: ${e.getMessage()}"
             return 0
         }
     }

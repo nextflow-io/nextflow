@@ -1,0 +1,65 @@
+---
+title: Charliecloud
+description: Run Nextflow pipeline tasks in Charliecloud containers without root privileges.
+---
+
+# Charliecloud
+
+:::note{title="Requires Charliecloud 0.28 or later."}
+:::
+
+:::warning{title="Experimental: not recommended for production environments."}
+:::
+
+[Charliecloud](https://hpc.github.io/charliecloud) is a container runtime for high-performance computing (HPC) environments. Charliecloud runs without root privileges by using user namespaces in the Linux kernel, and it can pull from Docker registries.
+
+## Prerequisites
+
+Charliecloud must be installed in your execution environment.
+
+## How it works
+
+Enable Charliecloud in the Nextflow configuration file:
+
+```groovy
+charliecloud.enabled = true
+process.container = '/path/to/container'
+```
+
+Whenever your pipeline launches a task, Nextflow runs it inside a Charliecloud container created from the specified image using the `ch-run` command.
+
+You can also enable Charliecloud on the command line:
+
+```bash
+nextflow run main.nf -with-charliecloud
+```
+
+:::warning
+If you provide an absolute path, the container must be in the Charliecloud flat directory format. See [Charliecloud and Docker Hub](#charliecloud-and-docker-hub) for compatibility with Docker registries.
+:::
+
+## Charliecloud and Docker Hub
+
+Nextflow can pull remote container images from any Docker-compatible registry and convert them to the Charliecloud format.
+
+When you specify a container name, Nextflow first checks whether a container with that name exists in the local file system. If it does, Nextflow uses that container. If it does not, Nextflow pulls an image with that name from the registry.
+
+To pull an image from a specific registry, give the URL to the image. Without a URL, Nextflow uses Docker Hub. For example, this configuration pulls an image from quay.io and converts it to the Charliecloud format:
+
+```groovy
+charliecloud.enabled = true
+process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
+```
+
+This configuration pulls from Docker Hub:
+
+```groovy
+charliecloud.enabled = true
+process.container = 'nextflow/examples:latest'
+```
+
+## Advanced settings
+
+See the [`charliecloud`][config-charliecloud] configuration scope for advanced Charliecloud settings.
+
+[config-charliecloud]: ../reference/config/charliecloud

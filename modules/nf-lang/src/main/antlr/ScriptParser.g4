@@ -114,6 +114,7 @@ scriptDeclaration
     |   paramDeclarationV1          #paramDeclV1Alt
     |   recordDef                   #recordDefAlt
     |   enumDef                     #enumDefAlt
+    |   agentDef                    #agentDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
     |   outputDef                   #outputDefAlt
@@ -246,13 +247,11 @@ processInput
     ;
 
 processRecordInput
-    :   identifier (COLON type)? nls LBRACE
-        nls recordBody?
-        nls RBRACE
+    :   RECORD LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
     ;
 
 processTupleInput
-    :   LPAREN identifier (COMMA identifier)* rparen (COLON type)?
+    :   TUPLE LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
     ;
 
 processStage
@@ -282,6 +281,36 @@ processExec
 
 processStub
     :   STUB COLON nls blockStatements
+    ;
+
+// -- agent definition
+agentDef
+    :   AGENT name=identifier nls LBRACE
+        body=agentBody?
+        sep? RBRACE
+    ;
+
+agentBody
+    :   (sep agentDirectives)?
+        (sep agentInputs)?
+        (sep agentOutputs)?
+        sep agentPrompt
+    ;
+
+agentDirectives
+    :   statement (sep statement)*
+    ;
+
+agentInputs
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+agentOutputs
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+agentPrompt
+    :   PROMPT COLON nls blockStatements
     ;
 
 // -- workflow definition
@@ -600,6 +629,8 @@ identifier
     |   PARAMS
     |   FROM
     |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -609,6 +640,7 @@ identifier
     |   STAGE
     |   STUB
     |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT
@@ -803,6 +835,8 @@ keywords
     |   INCLUDE
     |   FROM
     |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -812,6 +846,7 @@ keywords
     |   STAGE
     |   STUB
     |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT

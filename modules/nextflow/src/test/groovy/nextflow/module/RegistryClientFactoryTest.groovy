@@ -19,6 +19,8 @@ package nextflow.module
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import groovy.json.JsonOutput
+import nextflow.Global
+import nextflow.SysEnv
 import nextflow.config.RegistryConfig
 import io.seqera.npr.client.RegistryException
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
@@ -45,8 +47,15 @@ class RegistryClientFactoryTest extends Specification {
 
     WireMockServer wireMock
     String url
+    Map prevConfig
     static final String MODULES_API_PATH = "/api/v1/modules"
     def setup() {
+        // use config, not NXF_RETRY_POLICY_* env vars, because RetryConfig.config() is memoized
+        prevConfig = Global.config
+        Global.config = [nextflow: [retryPolicy: [delay: '10ms', maxDelay: '50ms', maxAttempts: 3]]]
+        // isolate from the host environment, otherwise `NXF_REGISTRY_TOKEN`
+        // leaks into the client via `RegistryConfig.getApiKey()`
+        SysEnv.push([:])
         wireMock = new WireMockServer(wireMockConfig().dynamicPort())
         wireMock.start()
         WireMock.configureFor("localhost", wireMock.port())
@@ -55,16 +64,20 @@ class RegistryClientFactoryTest extends Specification {
 
     def cleanup() {
         wireMock?.stop()
+        SysEnv.pop()
+        Global.config = prevConfig
     }
 
     def 'should fetch module metadata from registry'() {
         given:
         def moduleResponse = [
-            name: 'nf-core/fastqc',
-            description: 'FastQC quality control',
-            latest: [
-                version: '1.1.0',
-                createdAt: '2024-02-01T00:00:00Z'
+            module: [
+                name: 'nf-core/fastqc',
+                description: 'FastQC quality control',
+                latest: [
+                    version: '1.1.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
             ]
         ]
 
@@ -80,7 +93,7 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        def result = client.fetchModule('nf-core/fastqc')
+        def result = client.getModule('nf-core/fastqc')
 
         then:
         result != null
@@ -90,6 +103,72 @@ class RegistryClientFactoryTest extends Specification {
 
         and: 'verify request was made'
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
+    }
+
+    def 'should query the configured registries in the order listed'() {
+        given:
+        def moduleResponse = [
+            module: [
+                name: 'nf-core/fastqc',
+                latest: [
+                    version: '1.0.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
+            ]
+        ]
+        and: 'two registries are configured; the first misses and the second serves the module'
+        String first = "http://localhost:${wireMock.port()}/first"
+        String second = "http://localhost:${wireMock.port()}/second"
+        stubFor(get(urlEqualTo('/first/v1/modules/nf-core%2Ffastqc'))
+            .willReturn(aResponse().withStatus(404).withBody('Module not found')))
+        stubFor(get(urlEqualTo('/second/v1/modules/nf-core%2Ffastqc'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Type', 'application/json')
+                .withBody(JsonOutput.toJson(moduleResponse))))
+        and:
+        def config = new RegistryConfig([url: [first, second]])
+        def client = RegistryClientFactory.forConfig(config)
+
+        when:
+        def result = client.getModule('nf-core/fastqc')
+
+        then: 'the module is resolved from the second registry after the first misses'
+        result != null
+        result.name == 'nf-core/fastqc'
+
+        and: 'only the configured registries are queried, in order'
+        verify(getRequestedFor(urlEqualTo('/first/v1/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo('/second/v1/modules/nf-core%2Ffastqc')))
+    }
+
+    def 'should query only the configured registry, without a default fallback'() {
+        given:
+        def moduleResponse = [
+            module: [
+                name: 'nf-core/fastqc',
+                latest: [
+                    version: '1.0.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
+            ]
+        ]
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Type', 'application/json')
+                .withBody(JsonOutput.toJson(moduleResponse))))
+        and:
+        def config = new RegistryConfig([url: url])
+        def client = RegistryClientFactory.forConfig(config)
+
+        when:
+        def result = client.getModule('nf-core/fastqc')
+
+        then:
+        result.name == 'nf-core/fastqc'
+        and: 'the registry is queried exactly once (no default fallback appended)'
+        verify(1, getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should search modules in registry'() {
@@ -130,7 +209,7 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        def result = client.search('fastqc', 10)
+        def result = client.searchModules('fastqc', 10)
 
         then:
         result != null
@@ -166,7 +245,7 @@ class RegistryClientFactoryTest extends Specification {
         def destFile = tempDir.resolve('module.tgz')
 
         when:
-        def result = client.downloadModule('nf-core/fastqc', '1.0.0', destFile)
+        def result = client.downloadModuleRelease('nf-core/fastqc', '1.0.0', destFile)
 
         then:
         result == url
@@ -183,14 +262,14 @@ class RegistryClientFactoryTest extends Specification {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
-                .withBody(JsonOutput.toJson([name: 'nf-core/fastqc', latest: [version: '1.0.0']]))))
+                .withBody(JsonOutput.toJson([module: [name: 'nf-core/fastqc', latest: [version: '1.0.0']]]))))
 
         and:
         def config = new RegistryConfig([url: url])
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        def result = client.fetchModule('nf-core/fastqc')
+        def result = client.getModule('nf-core/fastqc')
 
         then:
         result != null
@@ -212,7 +291,7 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        client.fetchModule('nf-core/nonexistent')
+        client.getModule('nf-core/nonexistent')
 
         then:
         def ex = thrown(RegistryException)
@@ -234,10 +313,13 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        client.fetchModule('nf-core/fastqc')
+        client.getModule('nf-core/fastqc')
 
         then:
         thrown(RegistryException)
+        and:
+        // 3 requests = maxAttempts
+        verify(3, getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should send user agent header'() {
@@ -246,14 +328,14 @@ class RegistryClientFactoryTest extends Specification {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
-                .withBody(JsonOutput.toJson([name: 'nf-core/fastqc', latest: [version: '1.0.0'], releases: []]))))
+                .withBody(JsonOutput.toJson([module: [name: 'nf-core/fastqc', latest: [version: '1.0.0'], releases: []]]))))
 
         and:
         def config = new RegistryConfig([url: url])
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        client.fetchModule('nf-core/fastqc')
+        client.getModule('nf-core/fastqc')
 
         then:
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
@@ -278,7 +360,7 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        def result = client.search('nonexistent', 10)
+        def result = client.searchModules('nonexistent', 10)
 
         then:
         result != null
@@ -303,7 +385,7 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        client.search('test', 25)
+        client.searchModules('test', 25)
 
         then:
         verify(getRequestedFor(urlPathEqualTo(MODULES_API_PATH ))
@@ -323,7 +405,7 @@ class RegistryClientFactoryTest extends Specification {
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        client.fetchModule('nf-core/fastqc')
+        client.getModule('nf-core/fastqc')
 
         then:
         thrown(RegistryException)
@@ -348,7 +430,7 @@ class RegistryClientFactoryTest extends Specification {
         def destFile = tempDir.resolve('module.tgz')
 
         when:
-        def result = client.downloadModule('nf-core/fastqc', '1.0.0', destFile)
+        def result = client.downloadModuleRelease('nf-core/fastqc', '1.0.0', destFile)
 
         then:
         result == url
@@ -360,12 +442,11 @@ class RegistryClientFactoryTest extends Specification {
 
     def 'should handle network errors gracefully'() {
         given:
-        // Stub will not be set up, causing connection refused
-        def config = new RegistryConfig([url: "http://localhost:9999"]) // Invalid port
+        def config = new RegistryConfig([url: 'http://localhost:0'])
         def client = RegistryClientFactory.forConfig(config)
 
         when:
-        client.fetchModule('nf-core/fastqc')
+        client.getModule('nf-core/fastqc')
 
         then:
         thrown(RegistryException)
@@ -378,7 +459,7 @@ class RegistryClientFactoryTest extends Specification {
         def publishRequest = [name: 'nf-core/mymodule', version: '1.0.0']
 
         when:
-        client.publishModule('nf-core/mymodule', publishRequest, null)
+        client.publishModuleRelease('nf-core/mymodule', publishRequest, null)
 
         then:
         def ex = thrown(RegistryException)
@@ -392,7 +473,7 @@ class RegistryClientFactoryTest extends Specification {
         def publishRequest = [name: 'nf-core/mymodule', version: '1.0.0']
 
         when:
-        client.publishModule('nf-core/mymodule', publishRequest, null)
+        client.publishModuleRelease('nf-core/mymodule', publishRequest, null)
 
         then:
         def ex = thrown(RegistryException)

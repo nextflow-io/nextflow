@@ -177,6 +177,24 @@ class KryoHelperTest extends  Specification {
         KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
     }
 
+    def 'should serialise xpath preserving percent-encoding' () {
+        // regression test for https://github.com/nextflow-io/nextflow/issues/6109
+        // a percent-encoded URL (e.g. %23 for '#') must survive a serialize/deserialize
+        // round-trip without being decoded, otherwise the URL is corrupted on -resume
+        given:
+        def url = 'http://host.com/41741_2%237.sub.cram'
+        def file = FileHelper.asPath(url)
+
+        when:
+        def buffer = KryoHelper.serialize(file)
+        def copy = KryoHelper.deserialize(buffer)
+
+        then:
+        copy.getClass().getName() == 'nextflow.file.http.XPath'
+        copy == file
+        copy.toUri().toString() == url
+    }
+
     def 'should serialise xfilesystem' () {
         when:
         def uri = new URI('https://host.com/path/foo.txt')

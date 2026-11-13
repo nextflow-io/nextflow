@@ -25,18 +25,21 @@ import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
 
 import spock.lang.IgnoreIf
 
+import nextflow.scm.HubOptions
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class AssetManagerTest extends Specification {
 
@@ -121,48 +124,54 @@ class AssetManagerTest extends Specification {
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new AssetManager()
-
         when:
-        def result = manager.resolveName('x/y')
+        def result = new AssetManager().resolveName('x/y')
         then:
         result == 'x/y'
 
         when:
-        result = manager.resolveName('blast')
+        result = new AssetManager().resolveName('blast')
         then:
         result == 'ncbi/blast'
 
         when:
-        result = manager.resolveName('ncbi/blast/script.nf')
+        result = new AssetManager().resolveName('ncbi/blast/script.nf')
         then:
         result == 'ncbi/blast'
 
         when:
-        result = manager.resolveName('blast/script.nf')
+        result = new AssetManager().resolveName('blast/script.nf')
         then:
         result == 'ncbi/blast'
 
         when:
-        manager.resolveName('pipe')
+        new AssetManager().resolveName('pipe')
         then:
         thrown(AbortOperationException)
 
         when:
-        manager.resolveName('pipe/alpha/beta')
+        new AssetManager().resolveName('pipe/alpha/beta')
         then:
         thrown(AbortOperationException)
 
         when:
-        result = manager.resolveName('../blast/script.nf')
+        new AssetManager().resolveName('../blast/script.nf')
         then:
         thrown(AbortOperationException)
 
         when:
-        result = manager.resolveName('./blast/script.nf')
+        new AssetManager().resolveName('./blast/script.nf')
         then:
         thrown(AbortOperationException)
 
+        when:
+        // mainScript already set via `-main-script` AND name ends with a script file
+        def manager = new AssetManager()
+        manager.mainScript = 'my-script.nf'
+        manager.resolveName('ncbi/blast/script.nf')
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains('Project name must be a directory when main script is provided')
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -462,6 +471,20 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should pass the scm config http client opts to the provider' () {
+        given:
+        def config = [
+            httpClient: [connectTimeout: '30s', requestTimeout: '90s'],
+            providers: [github: [user: 'foo', password: 'bar']] ]
+
+        when:
+        def manager = new AssetManager().build('nextflow-io/hello', config)
+        def provider = manager.createHubProvider('github')
+        then:
+        provider.getHttpClientOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+        provider.getHttpClientOpts().requestTimeout() == java.time.Duration.ofSeconds(90)
+    }
+
     def testCreateProviderFor(){
 
         when:
@@ -520,6 +543,29 @@ class AssetManagerTest extends Specification {
         holder.manifest.getDescription() == 'This pipeline do this and that'
         holder.manifest.getAuthor() == 'Hi Dude'
 
+    }
+
+    def 'should propagate explicit main script' () {
+
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        // pass an explicit script file via the new build(...) signature
+        def holder = new AssetManager()
+        holder.build('foo/bar', null, null, null, 'sub/entry.nf')
+        then:
+        holder.getMainScriptName() == 'sub/entry.nf'
+
+        when:
+        // exercise the new (pipelineName, revision, scriptFile, cliOpts) constructor
+        holder = new AssetManager('foo/bar', null, 'sub/entry.nf')
+        then:
+        holder.getMainScriptName() == 'sub/entry.nf'
     }
 
     def 'should return default main script file' () {
@@ -667,6 +713,53 @@ class AssetManagerTest extends Specification {
         result == 'foo/bar'
         manager.hub == 'gitea'
 
+        when:
+        // a repository URL ending with a `.nf` script file is not a valid repo URL
+        manager = new AssetManager()
+        manager.resolveNameFromGitUrl('https://github.com/foo/bar/main.nf')
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains('-main-script')
+    }
+
+    def 'should detect local scm source' () {
+        when: 'provider is a LocalRepositoryProvider'
+        def config = new ProviderConfig('local', [path: '/tmp/workflows'])
+        def manager = new AssetManager(provider: new LocalRepositoryProvider('socks', config))
+        then:
+        manager.isLocalScmSource()
+
+        when: 'provider is a remote RepositoryProvider'
+        manager = new AssetManager(provider: Mock(RepositoryProvider))
+        then:
+        !manager.isLocalScmSource()
+
+        when: 'provider is null'
+        manager = new AssetManager()
+        then:
+        !manager.isLocalScmSource()
+    }
+
+    def 'should detect local scm for pipelineNames' () {
+        when:
+        def manager = new AssetManager('my-repo', new HubOptions(null, null))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager('my-project/repo',  new HubOptions(null, null))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager('https://github.com/nextflow-io/socks.git',  new HubOptions(null, null))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager( 'file:/path/my-project/repo.git', new HubOptions(null, null))
+        then:
+        manager.isLocalScmSource()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})

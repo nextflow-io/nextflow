@@ -18,6 +18,7 @@ package nextflow.trace
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.Path
 import java.time.OffsetDateTime
 
 import groovy.json.JsonSlurper
@@ -181,12 +182,12 @@ class ReportObserverTest extends Specification {
         when:
         observer.onTaskComplete(EVENT1)
         then:
-        1 * observer.aggregate(RECORD1) >> null
+        1 * observer.aggregate(RECORD1) >> { }
 
         when:
         observer.onTaskCached(EVENT2)
         then:
-        1 * observer.aggregate(RECORD2) >> null
+        1 * observer.aggregate(RECORD2) >> { }
         observer.records[TASKID2] == RECORD2
 
         when:
@@ -198,7 +199,7 @@ class ReportObserverTest extends Specification {
     def 'should render not tasks payload' () {
 
         given:
-        def observer = Spy(new ReportObserver(new ReportConfig([:])))
+        def observer = Spy(new ReportObserver(new ReportConfig([:]), Path.of('report.html')))
         def BIG = Mock(Map)
         BIG.size() >> ReportConfig.DEF_MAX_TASKS+1
 
@@ -211,7 +212,7 @@ class ReportObserverTest extends Specification {
 
     def 'should render tasks payload' () {
         given:
-        def observer = Spy(new ReportObserver(new ReportConfig([:])))
+        def observer = Spy(new ReportObserver(new ReportConfig([:]), Path.of('report.html')))
 
         def TASKID1 = TaskId.of(10)
         def TASKID2 = TaskId.of(20)

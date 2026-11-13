@@ -91,7 +91,7 @@ class CrossOp {
             log.trace "Cross #${target.hashCode()} ($index) > Complete"
             if( stopCount.decrementAndGet()==0) {
                 log.trace "Cross #${target.hashCode()} ($index) > STOP"
-                target << Channel.STOP
+                target.bind(Channel.STOP)
             }}
 
         return result

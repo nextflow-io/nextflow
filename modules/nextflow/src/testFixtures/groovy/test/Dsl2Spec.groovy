@@ -19,7 +19,7 @@ package test
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
-import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptMeta
 
@@ -35,5 +35,18 @@ class Dsl2Spec extends BaseSpec {
         ScriptMeta.reset()
         Global.reset()
         NF.init()
+    }
+
+    def cleanup() {
+        ScriptHelper.destroySessions()
+        Global.reset()
+    }
+
+    /**
+     * Start a {@link MockSession} with the given config and make it the
+     * global session. It is destroyed after the feature.
+     */
+    protected Session newSession(Map config = null) {
+        return ScriptHelper.startSession(config: config)
     }
 }

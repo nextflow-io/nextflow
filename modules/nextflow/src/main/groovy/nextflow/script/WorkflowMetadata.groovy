@@ -400,7 +400,7 @@ class WorkflowMetadata {
             errorReport = msg
         }
         else {
-            exitStatus = 0
+            exitStatus = session.isSuccess() ? 0 : 1
         }
     }
 
@@ -411,7 +411,7 @@ class WorkflowMetadata {
     void invokeOnComplete() {
         this.complete = OffsetDateTime.now()
         this.duration = Duration.between( start, complete )
-        this.success = !(session.aborted || session.cancelled)
+        this.success = session.isSuccess()
         this.stats = getWorkflowStats()
 
         setErrorAttributes()
@@ -439,7 +439,11 @@ class WorkflowMetadata {
         setErrorAttributes()
         onErrorActions.each { Closure action ->
             try {
-                action.call(trace)
+                // handlers from an `onError:` section take no arguments
+                if( action.maximumNumberOfParameters > 0 )
+                    action.call(trace)
+                else
+                    action.call()
             }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onError` event handler", e)

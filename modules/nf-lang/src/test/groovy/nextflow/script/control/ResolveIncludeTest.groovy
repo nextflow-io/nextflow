@@ -20,10 +20,9 @@ import java.nio.file.Path
 
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -33,6 +32,9 @@ import static test.TestUtils.tempFile
  */
 class ResolveIncludeTest extends Specification {
 
+    @TempDir
+    Path root
+
     List<SyntaxException> check(Path projectDir, List<Path> files) {
         final parser = new ScriptParser(projectDir)
         return TestUtils.check(parser, files)
@@ -40,7 +42,6 @@ class ResolveIncludeTest extends Specification {
 
     def 'should report an error for an invalid include source' () {
         given:
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             include { hello } from './hello.nf'
@@ -54,14 +55,10 @@ class ResolveIncludeTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 13
         errors[0].getOriginalMessage() == "Invalid include source: '${module}'"
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should report an error for an include source that could not be parsed' () {
         given:
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             include { hello } from './modules/hello'
@@ -83,14 +80,10 @@ class ResolveIncludeTest extends Specification {
         errors[1].getStartLine() == 1
         errors[1].getStartColumn() == 23
         errors[1].getOriginalMessage() == "Unexpected input: '2'"
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should report an error for an undefined include' () {
         given:
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             include { hello } from './modules/hello'
@@ -109,14 +102,89 @@ class ResolveIncludeTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 13
         errors[0].getOriginalMessage() == "Included name 'hello' is not defined in module '${module}'"
+    }
 
-        cleanup:
-        deleteDir(root)
+    def 'should report an error for an aliased type include' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { Thing as Alias } from './types.nf'
+            ''')
+        def module = tempFile(root, 'types.nf',
+            '''\
+            record Thing {
+                id: String
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getStartLine() == 1
+        errors[0].getOriginalMessage() == 'Included types cannot be aliased'
+    }
+
+    def 'should require static typing in a script that includes a pipeline: #INCLUDE' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            """\
+            include { ${INCLUDE} } from './greet.nf'
+            """)
+        def module = tempFile(root, 'greet.nf',
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                greeting: String = 'Hello'
+            }
+
+            workflow {
+                println params.greeting
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == 'Including a pipeline requires `nextflow.enable.types = true` in the including script'
+
+        where:
+        INCLUDE << [ 'workflow as GREET', 'params as GreetParams' ]
+    }
+
+    def 'should require static typing in an included pipeline' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { workflow as GREET } from './greet.nf'
+            ''')
+        def module = tempFile(root, 'greet.nf',
+            '''\
+            params {
+                greeting: String = 'Hello'
+            }
+
+            workflow {
+                println params.greeting
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == "An included pipeline must enable static typing -- set `nextflow.enable.types = true` in '${module}'"
     }
 
     def 'should resolve an include' () {
         given:
-        def root = tempDir()
         def main = tempFile(root, 'main.nf',
             '''\
             include { hello } from './modules/hello'
@@ -131,9 +199,136 @@ class ResolveIncludeTest extends Specification {
         def errors = check(root, [main, module])
         then:
         errors.size() == 0
+    }
 
-        cleanup:
-        deleteDir(root)
+    def 'should not check arguments of a plugin function in a typed script' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            nextflow.enable.types = true
+
+            include { samplesheetToList } from 'plugin/nf-schema'
+
+            workflow {
+                def rows = samplesheetToList('s.csv', 'schema.json')
+                println rows
+                println rows.size()
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main])
+        then:
+        errors.size() == 0
+    }
+
+    // -- agent modules. An `agent` must bind through the ordinary include statement, in both the
+    //    plain-file and the directory (`main.nf`) form. The directory form matters twice over
+    //    because getLocalIncludeUri is duplicated verbatim in ResolveIncludeVisitor and
+    //    ModuleResolver (lint/LSP vs run); only a test driving the include catches a divergence.
+
+    private static final String AGENT_MODULE = '''\
+        nextflow.enable.types = true
+
+        agent reporter {
+            model 'openai/gpt-4o'
+            instruction 'You write QA reports.'
+
+            input:
+            sample: String
+
+            output:
+            stdout()
+
+            prompt:
+            """
+            Report on ${sample}.
+            """
+        }
+        '''.stripIndent()
+
+    def 'should resolve an agent include from a module file' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './reporter.nf'
+
+            workflow {
+                reporter('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'reporter.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+    }
+
+    def 'should resolve an agent include from a module directory' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './mods/reporter'
+
+            workflow {
+                reporter('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+    }
+
+    def 'should resolve an aliased agent include at the call site' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter as qc } from './mods/reporter'
+
+            workflow {
+                qc('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+    }
+
+    def 'should resolve an agent include that is never called' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './mods/reporter'
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for an undefined agent include' () {
+        given:
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { nope } from './mods/reporter'
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == "Included name 'nope' is not defined in module '${module}'"
     }
 
 }

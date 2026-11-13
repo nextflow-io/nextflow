@@ -42,10 +42,12 @@ import nextflow.util.Duration
 @ToString(includeNames = true, includePackage = false, includeFields = true, useGetters = false)
 @CompileStatic
 class WaveConfig implements ConfigScope {
+
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
+
     final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda')
 
-    final BuildOpts build
+    final WaveBuildConfig build
 
     @ConfigOption
     @Description("""
@@ -79,7 +81,19 @@ class WaveConfig implements ConfigScope {
 
     final RetryOpts retryPolicy
 
-    final ScanOpts scan
+    final WaveScanConfig scan
+
+    @ConfigOption
+    @Description("""
+        Enable SOCI lazy loading for Wave containers (default: `false`). Wave attaches a SOCI index to the containers, so that hosts running the SOCI snapshotter start them before the whole image is downloaded. Not applied to Singularity containers.
+    """)
+    final boolean soci
+
+    @ConfigOption
+    @Description("""
+        The number of downstream process levels whose containers are requested ahead (default: `0`, disabled). When the first task of a process is submitted, Wave is asked for the containers of the processes up to this many levels downstream, so that their provisioning (e.g. a SOCI index or a build) runs while the upstream tasks run. Only containers that do not depend on the task inputs are requested ahead.
+    """)
+    final int prefetchDepth
 
     @ConfigOption(types=[String])
     @Description("""
@@ -96,14 +110,16 @@ class WaveConfig implements ConfigScope {
     WaveConfig() {}
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
-        this.build = new BuildOpts(opts.build as Map ?: Collections.emptyMap())
+        this.build = new WaveBuildConfig(opts.build as Map ?: Collections.emptyMap())
         this.enabled = opts.enabled as boolean
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.freeze = opts.freeze as boolean
         this.httpClient = new HttpOpts(opts.httpClient as Map ?: Collections.emptyMap())
         this.mirror = opts.mirror as boolean
         this.retryPolicy = retryOpts0(opts)
-        this.scan = new ScanOpts(opts.scan as Map ?: Collections.emptyMap())
+        this.scan = new WaveScanConfig(opts.scan as Map ?: Collections.emptyMap())
+        this.soci = opts.soci as boolean
+        this.prefetchDepth = opts.prefetchDepth ? opts.prefetchDepth as int : 0
         this.strategy = parseStrategy(opts.strategy)
 
         this.bundleProjectResources = opts.bundleProjectResources
@@ -118,7 +134,7 @@ class WaveConfig implements ConfigScope {
 
     String endpoint() { this.endpoint }
 
-    CondaOpts condaOpts() { this.build.conda }
+    CondaOpts condaOpts() { this.build.conda.toCondaOpts() }
 
     RetryOpts retryOpts() { this.retryPolicy }
 
@@ -129,6 +145,10 @@ class WaveConfig implements ConfigScope {
     boolean freezeMode() { this.freeze }
 
     boolean mirrorMode() { this.mirror }
+
+    boolean sociMode() { this.soci }
+
+    int prefetchDepth() { this.prefetchDepth }
 
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
@@ -142,12 +162,14 @@ class WaveConfig implements ConfigScope {
 
     Duration buildMaxDuration() { build.maxDuration }
 
-    BuildCompression buildCompression() { build.compression }
+    BuildCompression buildCompression() { build.compression?.toBuildCompression() }
 
     private void validateConfig() {
         def scheme= FileHelper.getUrlProtocol(endpoint)
         if( scheme !in ['http','https'] )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
+        if( prefetchDepth < 0 )
+            throw new IllegalArgumentException("Config setting 'wave.prefetchDepth' cannot be negative - offending value: $prefetchDepth")
         if( FileHelper.getUrlProtocol(build.repository) )
             throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$build.repository'")
         if( FileHelper.getUrlProtocol(build.cacheRepository) )
@@ -226,7 +248,7 @@ class WaveConfig implements ConfigScope {
 
 @ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
-class ScanOpts implements ConfigScope {
+class WaveScanConfig implements ConfigScope {
 
     @ConfigOption(types=[String])
     @Description("""
@@ -240,7 +262,7 @@ class ScanOpts implements ConfigScope {
     """)
     final ScanMode mode
 
-    ScanOpts(Map opts) {
+    WaveScanConfig(Map opts) {
         allowedLevels = parseScanLevels(opts.allowedLevels)
         mode = opts.mode as ScanMode
     }
@@ -262,7 +284,7 @@ class ScanOpts implements ConfigScope {
 
 @ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
-class BuildOpts implements ConfigScope {
+class WaveBuildConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
@@ -278,38 +300,147 @@ class BuildOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
+        The build template used to build Conda containers (default: `conda/micromamba:v2`). Can be `conda/micromamba:v1`, `conda/micromamba:v2`, `conda/micromamba:v2-fast`, `conda/pixi:v1`, or `conda/pixi:v1-fast`.
     """)
     final String template
 
-    final CondaOpts conda
+    @Description("""
+        The `wave.build.conda` scope controls how Conda packages are provisioned into containers.
+    """)
+    final WaveBuildCondaConfig conda
 
-    final BuildCompression compression
+    @Description("""
+        The `wave.build.compression` scope controls compression of the container image built by Wave.
+    """)
+    final WaveBuildCompressionConfig compression
 
     @ConfigOption
     @Description("""
     """)
     final Duration maxDuration
 
-    BuildOpts(Map opts) {
+    WaveBuildConfig(Map opts) {
         repository = opts.repository
         cacheRepository = opts.cacheRepository
         template = opts.template
-        conda = new CondaOpts(opts.conda as Map ?: Collections.emptyMap())
-        compression = parseCompression(opts.compression as Map)
+        conda = new WaveBuildCondaConfig(opts.conda as Map ?: Collections.emptyMap())
+        compression = new WaveBuildCompressionConfig(opts.compression as Map ?: Collections.emptyMap())
         maxDuration = opts.maxDuration as Duration ?: Duration.of('40m')
     }
+}
 
-    protected BuildCompression parseCompression(Map opts) {
-        if( !opts )
+
+/**
+ * Model the `wave.build.conda` config scope.
+ *
+ * This is a Nextflow-side mirror of the wave-api {@link CondaOpts} type, which
+ * cannot implement {@link ConfigScope} because it belongs to an external
+ * library. Use {@link #toCondaOpts()} to obtain the corresponding domain object.
+ */
+@ToString(includeNames = true, includePackage = false, includeFields = true)
+@CompileStatic
+class WaveBuildCondaConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The Mamba container image used to build Conda based containers. This is expected to be a [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
+    """)
+    final String mambaImage
+
+    @ConfigOption
+    @Description("""
+        The base image of the Conda containers built with the `conda/micromamba:v2` and `conda/micromamba:v2-fast` templates (default: `ubuntu:24.04`). Ignored by the other templates.
+    """)
+    final String baseImage
+
+    @ConfigOption
+    @Description("""
+        One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
+    """)
+    final String basePackages
+
+    @ConfigOption
+    @Description("""
+        One or more commands to be added to the Dockerfile used to build a Conda based image.
+    """)
+    final List<String> commands
+
+    WaveBuildCondaConfig(Map opts) {
+        mambaImage = opts.mambaImage
+        baseImage = opts.baseImage
+        basePackages = opts.basePackages
+        commands = opts.commands as List<String>
+    }
+
+    /**
+     * Adapt this config scope to the wave-api {@link CondaOpts} domain object,
+     * applying the same defaults as {@link CondaOpts} for options that are not set.
+     */
+    CondaOpts toCondaOpts() {
+        final Map<String,Object> opts = [:]
+        if( mambaImage != null )
+            opts.mambaImage = mambaImage
+        if( baseImage != null )
+            opts.baseImage = baseImage
+        if( basePackages != null )
+            opts.basePackages = basePackages
+        if( commands != null )
+            opts.commands = commands
+        return new CondaOpts(opts)
+    }
+}
+
+
+/**
+ * Model the `wave.build.compression` config scope.
+ *
+ * This is a Nextflow-side mirror of the wave-api {@link BuildCompression} type,
+ * which cannot implement {@link ConfigScope} because it belongs to an external
+ * library. Use {@link #toBuildCompression()} to obtain the corresponding domain
+ * object.
+ */
+@ToString(includeNames = true, includePackage = false, includeFields = true)
+@CompileStatic
+class WaveBuildCompressionConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The compression algorithm used when building the container. Allowed values are `gzip`, `estargz` and `zstd` (default: `gzip`).
+    """)
+    final String mode
+
+    @ConfigOption
+    @Description("""
+        The compression level used when building a container, depending on the chosen algorithm: gzip and estargz (0-9), zstd (0-22).
+    """)
+    final Integer level
+
+    @ConfigOption
+    @Description("""
+        Forcefully apply the compression option to all layers, including already existing layers (default: `false`).
+    """)
+    final Boolean force
+
+    WaveBuildCompressionConfig(Map opts) {
+        mode = opts?.mode
+        level = opts?.level as Integer
+        force = opts?.force as Boolean
+    }
+
+    /**
+     * Adapt this config scope to the wave-api {@link BuildCompression} domain
+     * object, or {@code null} if no compression options are set.
+     */
+    BuildCompression toBuildCompression() {
+        if( !mode && !level && !force )
             return null
         final result = new BuildCompression()
-        if( opts.mode )
-            result.mode = BuildCompression.Mode.valueOf(opts.mode.toString().toLowerCase())
-        if( opts.level )
-            result.level = opts.level as Integer
-        if( opts.force )
-            result.force = opts.force as Boolean
+        if( mode )
+            result.mode = BuildCompression.Mode.valueOf(mode.toLowerCase())
+        if( level )
+            result.level = level
+        if( force )
+            result.force = force
         return result
     }
 }

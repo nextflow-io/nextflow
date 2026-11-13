@@ -3,6 +3,7 @@
 # Nextflow Release Script
 #
 # This script performs the complete Nextflow release process including:
+# - Publishing the nf-agent-pi runner image
 # - Building and assembling artifacts
 # - Uploading to S3 and Maven repositories 
 # - Releasing plugins to registry
@@ -11,8 +12,9 @@
 # REQUIRED SECRETS/ENVIRONMENT VARIABLES FOR GITHUB ACTIONS:
 #
 # AWS S3 Deployment:
-#   NXF_AWS_ACCESS       - AWS Access Key for deploying to s3://www2.nextflow.io
-#   NXF_AWS_SECRET       - AWS Secret Key for S3 deployment
+#   NXF_AWS_ACCESS        - Temporary AWS Access Key (assumed role) for deploying to s3://www2.nextflow.io
+#   NXF_AWS_SECRET        - Temporary AWS Secret Key for S3 deployment
+#   NXF_AWS_SESSION_TOKEN - Session token matching the temporary credentials above
 #
 # Maven Repository (Seqera S3-based):
 #   AWS_ACCESS_KEY_ID    - AWS credentials for Maven repository access
@@ -25,10 +27,20 @@
 #   NPR_API_URL          - Nextflow Plugin Registry API URL
 #   NPR_API_KEY          - Nextflow Plugin Registry API key
 #
+# Java bundles:
+#   NXF_RELEASE_BUNDLES  - Directory with the Java bundles of each platform (built by the
+#                          Bundle workflow), uploaded by `deploy` next to the jar
+#
 # Container Registry Authentication:
 #   DOCKERHUB_USERNAME   - Docker Hub username for container publishing
 #   DOCKERHUB_TOKEN      - Docker Hub token/password for container publishing
 #   SEQERA_PUBLIC_CR_PASSWORD - Seqera public container registry password
+#                          The same credential authorizes step 1, which publishes the
+#                          nf-agent-pi runner image to public.cr.seqera.io/nextflow - the
+#                          registry and namespace this release already pushes
+#                          `nextflow/nextflow` to. The push is authorized by the workflow's
+#                          `Docker Login to Seqera public CR` step, so nothing new is
+#                          required here and step 1 adds no entry to REQUIRED_VARS below.
 #
 # Usage: Only run when commit message contains '[release]'
 #
@@ -42,6 +54,7 @@ echo "=== Checking required environment variables ==="
 REQUIRED_VARS=(
     "NXF_AWS_ACCESS"
     "NXF_AWS_SECRET"
+    "NXF_AWS_SESSION_TOKEN"
     "AWS_ACCESS_KEY_ID"
     "AWS_SECRET_ACCESS_KEY"
     "GITHUB_TOKEN"
@@ -71,24 +84,56 @@ fi
 
 echo "✅ All required environment variables are set"
 
-echo "🔧 === Step 1: Assemble, upload, and deploy ==="
-make assemble upload deploy
+# A release must run once. GitHub can deliver the same push twice, and re-running a CI run
+# re-runs its release job: either would re-publish artifacts over an existing release.
+VERSION=$(cat VERSION)
+# --exit-code returns 2 when the tag is missing, anything else is a network or auth error
+rc=0
+git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null || rc=$?
+if [ $rc -eq 0 ]; then
+    echo "❌ ERROR: Tag v$VERSION already exists -- this version has already been released"
+    exit 1
+elif [ $rc -ne 2 ]; then
+    echo "❌ ERROR: Cannot check tag v$VERSION on origin (git exit $rc)"
+    exit 1
+fi
+
+# The Java bundles of each platform are uploaded by `deploy` (step 2), but are checked before
+# anything is published, so that a release can't be published without them.
+echo "=== Checking the Java bundles ==="
+make check-release-bundles
+
+echo "🐳 === Step 1: Publish the pi agent runner image ==="
+# FIRST, before anything is published: `deploy` (step 2) uploads to s3://www2.nextflow.io,
+# `release-plugins` (step 4) creates permanent registry entries, and `make release` (step 5)
+# creates the git tag and the GitHub release. None of those is undoable, and the image build is
+# the newest and least proven thing in this script - it is the only step that reaches a
+# third-party registry, bootstraps buildkit and runs an emulated `npm ci`. Placed first, a
+# failure there is the harmless one: nothing has been published yet. Its build context is only
+# plugins/nf-agent-pi/ (see the .dockerignore allowlist), so it depends on nothing the Gradle
+# build produces and can run first. Skips when the tag is already published.
+make release-agent-image
 echo "✅ Step 1 completed successfully"
 echo ""
 
-echo "📦 === Step 2: Publish artifacts ==="
-make publish-artifacts
+echo "🔧 === Step 2: Assemble, upload, and deploy ==="
+make assemble upload deploy
 echo "✅ Step 2 completed successfully"
 echo ""
 
-echo "🔌 === Step 3: Release plugins ==="
-make release-plugins
+echo "📦 === Step 3: Publish artifacts ==="
+make publish-artifacts
 echo "✅ Step 3 completed successfully"
 echo ""
 
-echo "🚀 === Step 4: Final release ==="
-make release
+echo "🔌 === Step 4: Release plugins ==="
+make release-plugins
 echo "✅ Step 4 completed successfully"
+echo ""
+
+echo "🚀 === Step 5: Final release ==="
+make release
+echo "✅ Step 5 completed successfully"
 echo ""
 
 echo "🎉 === Release process completed successfully ==="

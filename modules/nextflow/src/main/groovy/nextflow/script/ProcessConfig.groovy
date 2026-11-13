@@ -147,6 +147,18 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     }
 
+    @Override
+    void setProperty( String name, Object value ) {
+        // use the declared setter if any (e.g. `processName`), otherwise store the value
+        // as a directive -- Groovy 5 no longer falls back to the map for read-only
+        // properties (e.g. `fair`) and throws ReadOnlyPropertyException instead
+        final meta = metaClass.getMetaProperty(name)
+        if( meta instanceof MetaBeanProperty && meta.setter )
+            meta.setProperty(this, value)
+        else
+            put(name, value)
+    }
+
     BaseScript getOwnerScript() { ownerScript }
 
     String getProcessName() { processName }
@@ -171,6 +183,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     HashMode getHashMode() {
         HashMode.of(configProperties.cache) ?: HashMode.DEFAULT()
+    }
+
+    Map<String,Object> getHints() {
+        (configProperties.get('hints') ?: Collections.emptyMap()) as Map<String, Object>
     }
 
     Map<String,Object> getResourceLabels() {

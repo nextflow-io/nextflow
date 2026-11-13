@@ -19,6 +19,7 @@ package nextflow.executor.local
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -35,6 +36,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
+import nextflow.util.StringUtils
 /**
  * A process wrapper adding the ability to access to the Posix PID
  * and the {@code hasExited} flag
@@ -79,6 +81,10 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile TaskResult result
 
+    String acceleratorEnv
+
+    List<String> acceleratorIds
+
     LocalTaskHandler(TaskRun task, LocalExecutor executor) {
         super(task)
         // create the task handler
@@ -101,7 +107,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final logFile = builder.redirectOutput().file()
 
         // run async via thread pool
-        session.getExecService().submit( {
+        executor.getExecService().submit( {
             try {
                 // start the execution and notify the event to the monitor
                 process = builder.start()
@@ -141,11 +147,13 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final workDir = task.workDir.toFile()
         final logFile = new File(workDir, TaskRun.CMD_LOG)
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logFile)
                 .directory(workDir)
                 .command(cmd)
+        prepareAccelerators(pb)
+        return pb
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
@@ -156,15 +164,23 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final containerOpts = task.config.getContainerOptions()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
-        log.debug "Launch cmd line: ${cmd}"
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit, task.getContainerPlatform())
+        log.debug "Launch cmd line: ${StringUtils.stripSecrets(cmd)}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
                 .command(List.of('sh','-c', cmd))
+        prepareAccelerators(pb)
+        return pb
+    }
+
+    protected void prepareAccelerators(ProcessBuilder pb) {
+        if( !acceleratorEnv )
+            return
+        pb.environment().put(acceleratorEnv, acceleratorIds.join(','))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {
@@ -217,7 +233,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
              */
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
-                task.exitStatus = process.exitValue()
+                // destroy() is async, so wait for the process to actually exit
+                task.exitStatus = process.waitFor(5, TimeUnit.SECONDS) ? process.exitValue() : Integer.MAX_VALUE
                 task.stdout = outputFile
                 task.stderr = errorFile
                 task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")

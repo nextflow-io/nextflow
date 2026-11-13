@@ -15,10 +15,15 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
@@ -31,9 +36,13 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
+import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
@@ -50,6 +59,9 @@ import static nextflow.script.ast.ASTUtils.*;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class ScriptResolveVisitor extends ScriptVisitorSupport {
+
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(Record.class);
+    private static final ClassNode TUPLE_TYPE = ClassHelper.makeCached(Tuple.class);
 
     private SourceUnit sourceUnit;
 
@@ -91,6 +103,8 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitParamV1(paramNode);
             for( var workflowNode : sn.getWorkflows() )
                 visitWorkflow(workflowNode);
+            for( var agentNode : sn.getAgents() )
+                visitAgent(agentNode);
             for( var processNode : sn.getProcesses() )
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
@@ -103,6 +117,10 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             }
             if( sn.getOutputs() != null )
                 visitOutputs(sn.getOutputs());
+
+            // check agent outputs once record field types are resolved
+            for( var agentNode : sn.getAgents() )
+                checkAgentOutputs(agentNode.outputs);
 
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(sn);
@@ -132,6 +150,81 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.onError);
     }
 
+    @Override
+    public void visitAgent(AgentNode node) {
+        resolveInputs(node.inputs);
+        resolver.visit(node.directives);
+        resolveTypedOutputs(node.outputs);
+        resolver.visit(node.outputs);
+        resolver.visit(node.prompt);
+    }
+
+    /**
+     * A typed agent output (`name: Type`) is answered by the model under
+     * a JSON schema, so it must declare a supported type.
+     */
+    private void checkAgentOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            if( !(((ExpressionStatement) stmt).getExpression() instanceof VariableExpression ve) )
+                continue;
+            // a bare name without a type refers to an existing variable, such as an input
+            var av = ve.getAccessedVariable();
+            var type = ve.getOriginType();
+            if( (av != null && av != ve) || ClassHelper.isDynamicTyped(type) ) {
+                resolver.addError("Agent output `" + ve.getName() + "` should declare a type -- typed outputs are answered by the model", ve);
+                continue;
+            }
+            var unsupported = unsupportedAgentOutputType(type, new HashSet<>());
+            if( unsupported != null )
+                resolver.addError("Agent output `" + ve.getName() + "` has unsupported " + unsupported + " -- supported types are Boolean, Float, Integer, List<E>, Path, String, or a record type", ve);
+        }
+    }
+
+    // the declared type name, since the display name of e.g. Double is Float
+    private static String typeName(ClassNode type) {
+        var gts = type.getGenericsTypes();
+        if( gts == null )
+            return type.getNameWithoutPackage();
+        var args = Arrays.stream(gts).map(gt -> typeName(gt.getType())).toList();
+        return type.getNameWithoutPackage() + "<" + String.join(", ", args) + ">";
+    }
+
+    private static final List<ClassNode> AGENT_OUTPUT_TYPES = List.of(
+        ClassHelper.Boolean_TYPE,
+        ClassHelper.Float_TYPE,
+        ClassHelper.Integer_TYPE,
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.STRING_TYPE
+    );
+
+    /**
+     * Get a description of the unsupported part of an agent output type,
+     * or null if the type is supported.
+     *
+     * @param type
+     * @param visited
+     */
+    private static String unsupportedAgentOutputType(ClassNode type, Set<ClassNode> visited) {
+        if( ClassHelper.LIST_TYPE.equals(type) ) {
+            var gts = type.getGenericsTypes();
+            if( gts == null || gts.length != 1 )
+                return "type " + typeName(type);
+            var result = unsupportedAgentOutputType(gts[0].getType(), visited);
+            return result == null || result.startsWith("field ") ? result : "type " + typeName(type);
+        }
+        if( type.redirect() instanceof RecordNode rn ) {
+            if( !visited.add(rn) )
+                return null;
+            for( var fn : rn.getFields() ) {
+                var result = unsupportedAgentOutputType(fn.getType(), visited);
+                if( result != null )
+                    return result.startsWith("field ") ? result : "field `" + fn.getName() + "` with " + result;
+            }
+            return null;
+        }
+        return AGENT_OUTPUT_TYPES.contains(type) ? null : "type " + typeName(type);
+    }
+
     private void resolveTypedOutputs(Statement block) {
         for( var stmt : asBlockStatements(block) ) {
             var stmtX = (ExpressionStatement)stmt;
@@ -148,12 +241,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
-        for( var input : node.inputs ) {
-            var type = input.getType();
-            resolver.resolveOrFail(type, input);
-            if( type.getNameWithoutPackage().startsWith("__Record") )
-                visitRecord((RecordNode) type.redirect());
-        }
+        resolveInputs(node.inputs);
         resolver.visit(node.directives);
         resolver.visit(node.stagers);
         resolveTypedOutputs(node.outputs);
@@ -162,6 +250,35 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.when);
         resolver.visit(node.exec);
         resolver.visit(node.stub);
+    }
+
+    private void resolveInputs(Parameter[] inputs) {
+        for( var input : asFlatParams(inputs) ) {
+            resolver.resolveOrFail(input.getType(), input);
+        }
+        for( var input : inputs ) {
+            var type = input.getType();
+            if( input instanceof TupleParameter tp && RECORD_TYPE.equals(type) )
+                resolveRecordInput(tp);
+            if( input instanceof TupleParameter tp && TUPLE_TYPE.equals(type) )
+                resolveTupleInput(tp);
+        }
+    }
+
+    private void resolveRecordInput(TupleParameter tp) {
+        var type = tp.getType();
+        for( var param : tp.components ) {
+            var fn = new FieldNode(param.getName(), Modifier.PUBLIC, param.getType(), type, null);
+            fn.setDeclaringClass(type);
+            type.addField(fn);
+        }
+    }
+
+    private void resolveTupleInput(TupleParameter tp) {
+        var genericsTypes = Arrays.stream(tp.components)
+            .map(p -> new GenericsType(p.getType()))
+            .toArray(GenericsType[]::new);
+        tp.getType().setGenericsTypes(genericsTypes);
     }
 
     @Override

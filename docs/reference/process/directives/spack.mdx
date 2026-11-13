@@ -1,0 +1,31 @@
+---
+title: spack
+description: Reference for the `spack` process directive.
+---
+
+# `spack`
+
+The `spack` directive defines the set of [Spack](https://spack.io) packages required by each task.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    spack 'bwa@0.7.15'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Nextflow automatically creates a Spack environment for each unique set of packages.
+
+Specify multiple packages by separating them with a space, for example, `bwa@0.7.15 fastqc@0.11.5`.
+
+The `spack` directive also accepts a Spack environment file path or the path of an existing Spack environment. See [Spack][spack-page] for more information.
+
+[spack-page]: ../../../spack

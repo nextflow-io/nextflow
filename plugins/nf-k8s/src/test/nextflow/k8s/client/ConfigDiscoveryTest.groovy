@@ -16,7 +16,9 @@
 
 package nextflow.k8s.client
 import javax.net.ssl.KeyManager
+import javax.net.ssl.X509KeyManager
 import java.nio.file.Files
+import java.security.interfaces.ECPrivateKey
 
 import spock.lang.Specification
 import test.TestHelper
@@ -387,6 +389,7 @@ class ConfigDiscoveryTest extends Specification {
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
         config.token == 'my-token'
+        config.tokenPath == TOKEN_FILE
         config.sslCert == CERT_FILE.text.bytes
         config.isFromCluster
 
@@ -424,7 +427,7 @@ class ConfigDiscoveryTest extends Specification {
         managers.size()==1
     }
 
-    def 'should create key managers from an EC-encrypted client key' () {
+    def 'should create key managers from a k3s EC client credential' () {
         given:
         final CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENDQVRlZ0F3SUJBZ0lJSGw1Zmx0UmRTdDB3Q2dZSUtvWkl6ajBFQXdJd0l6RWhNQjhHQTFVRUF3d1kKYXpOekxXTnNhV1Z1ZEMxallVQXhOekUwTnpRM09UVTNNQjRYRFRJME1EVXdNekUwTlRJek4xb1hEVEkxTURVdwpNekUwTlRJek4xb3dNREVYTUJVR0ExVUVDaE1PYzNsemRHVnRPbTFoYzNSbGNuTXhGVEFUQmdOVkJBTVRESE41CmMzUmxiVHBoWkcxcGJqQlpNQk1HQnlxR1NNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJQN1Q5RHVvUlllLzBlUkwKUmNHV2RoYnl2Q3BucXlsSVIyaUwxdGkwc1hVdEpZZjUrVXhIOWFBMjdzY2FSYW1qbjdnTTFrKzZNaVk5cm15OApyRmdoWm1xalNEQkdNQTRHQTFVZER3RUIvd1FFQXdJRm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0RBakFmCkJnTlZIU01FR0RBV2dCU0NhdXFoQVEvWEdoaFRtaFBoY21vRVdOeWluakFLQmdncWhrak9QUVFEQWdOSUFEQkYKQWlCZzRaNmlWeFV3Mk5uMHBQTG02VlovUGttQnVuTDEwZG50dEg3UVdIcklCd0loQU0vTDhVMGxQN0IyeFEyZwpsZjlhNHNhbzJ1bE5ONnQvQ0dibzlxTlo1QzZHCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkekNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdFkyeHAKWlc1MExXTmhRREUzTVRRM05EYzVOVGN3SGhjTk1qUXdOVEF6TVRRMU1qTTNXaGNOTXpRd05UQXhNVFExTWpNMwpXakFqTVNFd0h3WURWUVFEREJock0zTXRZMnhwWlc1MExXTmhRREUzTVRRM05EYzVOVGN3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFRZHFYVHdIQS9mVjRKZGdYa2FubXB1OVE0QStwUGRGaXZGdytiUmVhdEYKUXVOUTBKWndIbzlaa2ltb2lEUU5qb2h0TWdHckdtTVlsTTZuaXM4ZVFvM3RvMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVWdtcnFvUUVQMXhvWVU1b1Q0WEpxCkJGamNvcDR3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUloQUlvb2ZmNzdvb1VYS2hmNVo3aVRzdExhOTVwU2VaRmUKRHZjMXdFQXVEa3NTQWlBNzJQajJxNnpBclhpYkpUa0s2RTBHTEtVODdhTHhHc3BmS29uVVJnalI2Zz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K'.decodeBase64()
         final KEY = 'LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUNvQTNvRHkzN3NXdmszM3JGRGtRdlZ1Wkh1cCt1Uk40V3RqbUlPR1c4cHBvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFL3RQME82aEZoNy9SNUV0RndaWjJGdks4S21lcktVaEhhSXZXMkxTeGRTMGxoL241VEVmMQpvRGJ1eHhwRnFhT2Z1QXpXVDdveUpqMnViTHlzV0NGbWFnPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo='.decodeBase64()
@@ -434,4 +437,68 @@ class ConfigDiscoveryTest extends Specification {
         then:
         managers.size()==1
     }
+
+    def 'should create key managers from a kube config with an EC client credential' () {
+        given:
+        // CA-signed P-256 client cert and SEC1 key, as issued for a kubeconfig user
+        final CLIENT_CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJSVENCN1FJVUNveWFVbUg0eTBieXZldmFxWXdDWWJSRUZpQXdDZ1lJS29aSXpqMEVBd0l3R0RFV01CUUcKQTFVRUF3d05hM1ZpWlhKdVpYUmxjeTFqWVRBZUZ3MHlOakV4TURNeE5USTBNakJhRncweU56RXhNRE14TlRJMApNakJhTURReEZ6QVZCZ05WQkFvTURuTjVjM1JsYlRwdFlYTjBaWEp6TVJrd0Z3WURWUVFEREJCcmRXSmxjbTVsCmRHVnpMV0ZrYldsdU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRWtrRGlXMXl1NEgrTHVFc1YKcGtJSTJiN1M4N3hOWjJTNVZkL0VneE1GVStHSFUzMUttVmFaVTFBbVQ2R0JYY0x1N0JRbzZXbFQ3QVdGVlVhdQpaV2NaYXpBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCZTRSbWl0TVdaK2JqaGN6ZWQxZExKYzdweDdzYi9xSE5PCjF1M1JyNFV1V1FJZ1dHblpzUGlmbnRtQUtON0pmTit3Z3MxMno3Rk1mUmNCc1F5TEp0aXhLNTQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K'
+        final CLIENT_KEY = 'LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUpYWXN5dklrN2xyaEdseHRkdWlEWXBUS0NIaktBR05jNmxMN3J5TWg3TXlvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFa2tEaVcxeXU0SCtMdUVzVnBrSUkyYjdTODd4TloyUzVWZC9FZ3hNRlUrR0hVMzFLbVZhWgpVMUFtVDZHQlhjTHU3QlFvNldsVDdBV0ZWVWF1WldjWmF3PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo='
+
+        def CONFIG = TestHelper.createInMemTempFile('config')
+        CONFIG.text = """
+            apiVersion: v1
+            clusters:
+            - cluster:
+                server: https://localhost:6443
+              name: kind-cluster
+            contexts:
+            - context:
+                cluster: kind-cluster
+                user: kind-user
+              name: kind
+            current-context: kind
+            kind: Config
+            users:
+            - name: kind-user
+              user:
+                client-certificate-data: $CLIENT_CERT
+                client-key-data: $CLIENT_KEY
+            """
+            .stripIndent()
+
+        when:
+        def config = new ConfigDiscovery().fromKubeConfig(CONFIG, null, null, null)
+        then:
+        config.keyManagers.size() == 1
+        and:
+        def manager = (X509KeyManager) config.keyManagers[0]
+        def alias = manager.getClientAliases('EC', null)[0]
+        manager.getPrivateKey(alias) instanceof ECPrivateKey
+        manager.getCertificateChain(alias)[0].subjectX500Principal.name == 'CN=kubernetes-admin,O=system:masters'
+    }
+
+    def 'should report the EC error when a client key cannot be read' () {
+        given:
+        final CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJSVENCN1FJVUNveWFVbUg0eTBieXZldmFxWXdDWWJSRUZpQXdDZ1lJS29aSXpqMEVBd0l3R0RFV01CUUcKQTFVRUF3d05hM1ZpWlhKdVpYUmxjeTFqWVRBZUZ3MHlOakV4TURNeE5USTBNakJhRncweU56RXhNRE14TlRJMApNakJhTURReEZ6QVZCZ05WQkFvTURuTjVjM1JsYlRwdFlYTjBaWEp6TVJrd0Z3WURWUVFEREJCcmRXSmxjbTVsCmRHVnpMV0ZrYldsdU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRWtrRGlXMXl1NEgrTHVFc1YKcGtJSTJiN1M4N3hOWjJTNVZkL0VneE1GVStHSFUzMUttVmFaVTFBbVQ2R0JYY0x1N0JRbzZXbFQ3QVdGVlVhdQpaV2NaYXpBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCZTRSbWl0TVdaK2JqaGN6ZWQxZExKYzdweDdzYi9xSE5PCjF1M1JyNFV1V1FJZ1dHblpzUGlmbnRtQUtON0pmTit3Z3MxMno3Rk1mUmNCc1F5TEp0aXhLNTQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K'.decodeBase64()
+        // SEC1 key without the curve parameters
+        final KEY = '-----BEGIN EC PRIVATE KEY-----\nMCUCAQEEIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB\n-----END EC PRIVATE KEY-----\n'.bytes
+
+        when:
+        new ConfigDiscovery().createKeyManagers(CERT, KEY)
+        then:
+        def e = thrown(Exception)
+        e.suppressed.size() == 1
+        e.suppressed[0].message.contains('curve parameters')
+    }
+
+    def 'should not render the environment' () {
+        given:
+        def obj = new ConfigDiscovery()
+        obj.@env = [FAKE_SECRET: 's3cr3t-canary']
+
+        expect:
+        obj.toString() == 'ConfigDiscovery'
+        !"$obj".contains('s3cr3t-canary')
+    }
+
 }

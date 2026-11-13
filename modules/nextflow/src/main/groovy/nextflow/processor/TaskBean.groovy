@@ -41,6 +41,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Map<String,String> environment
 
+    Set<String> inputEnvNames
+
     String headerScript
 
     String containerImage
@@ -72,6 +74,8 @@ class TaskBean implements Serializable, Cloneable {
     Path containerMount
 
     boolean statsEnabled
+
+    boolean fusionEnabled
 
     List<String> outputEnvNames
 
@@ -136,6 +140,7 @@ class TaskBean implements Serializable, Cloneable {
 
         // set the environment
         this.environment = task.getEnvironment()
+        this.inputEnvNames = task.inputEnv ? new HashSet<String>(task.inputEnv.keySet()) : null
 
         this.condaEnv = task.getCondaEnv()
         this.useMicromamba = task.getCondaConfig()?.useMicromamba()
@@ -164,6 +169,7 @@ class TaskBean implements Serializable, Cloneable {
         this.outputEnvNames = task.getOutputEnvNames()
         this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
+        this.fusionEnabled = task.getProcessor().isFusionEnabled()
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()

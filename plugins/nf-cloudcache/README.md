@@ -79,7 +79,7 @@ azure {
 
 ## Resources
 
-- [Nextflow Cache and Resume](https://nextflow.io/docs/latest/cache-and-resume.html)
+- [Nextflow Cache and Resume](https://docs.seqera.io/nextflow/cache-and-resume)
 
 ## License
 

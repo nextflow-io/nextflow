@@ -16,6 +16,8 @@
 
 package nextflow.scm
 
+import static nextflow.util.StringUtils.redactUrlPassword
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -30,15 +32,20 @@ import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Ref
+import org.eclipse.jgit.lib.RefUpdate
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.lib.SubmoduleConfig
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.FetchResult
 import org.eclipse.jgit.transport.RefSpec
+import org.eclipse.jgit.transport.TrackingRefUpdate
 
 /**
  * Multi-revision repository strategy that uses a bare repository with shared clones.
  * This approach allows multiple revisions to coexist efficiently by sharing objects
  * through a bare repository and creating lightweight clones for each commit.
+ * The bare repository is stored in `$NXF_ASSETS/.repos/{project}/bare/` and each
+ * commit is cloned into `$NXF_ASSETS/.repos/{project}/clones/{commitId}/`.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
@@ -183,7 +190,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         if( provider.hasCredentials() ) {
             fetch.setCredentialsProvider(provider.getGitCredentials())
         }
-        fetch.call()
+        verifyFetchResult(fetch.call(), updateRevision, "bare repo")
     }
 
     private void createBareRepo(Manifest manifest) {
@@ -195,7 +202,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
         try {
             final cloneURL = provider.getCloneUrl()
-            log.debug "Pulling bare repo for ${project} -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling bare repo for ${project} -- Using remote clone url: ${redactUrlPassword(cloneURL)}"
             def bare = Git.cloneRepository()
             if( provider.hasCredentials() )
                 bare.setCredentialsProvider(provider.getGitCredentials())
@@ -253,7 +260,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         finally {
             file.delete()
         }
-        return "downloaded from ${getGitRepositoryUrl()}"
+        return "downloaded from ${redactUrlPassword(getGitRepositoryUrl())}"
     }
 
     /** Checkout in multi-revision is just updating the commit dir. This methods check if bare repo, commit id and commit path exists.
@@ -323,7 +330,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
                 .setRefSpecs(refSpecForName(downloadRevision))
             if( recurseSubmodules )
                 fetch.setRecurseSubmodules(SubmoduleConfig.FetchRecurseSubmodulesMode.YES)
-            fetch.call()
+            verifyFetchResult(fetch.call(), downloadRevision, "shared clone")
             getCommitGit().checkout().setName(downloadRevision).call()
 
         } catch( Throwable t ) {
@@ -333,7 +340,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
 
         // return status message
-        return "downloaded from ${getGitRepositoryUrl()}"
+        return "downloaded from ${redactUrlPassword(getGitRepositoryUrl())}"
     }
 
     private RefSpec refSpecForName(String revision) {
@@ -341,7 +348,8 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         final branchName = "refs/heads/$revision".toString()
         final branch = getBareGit().getRepository().findRef(branchName)
         if( branch != null ) {
-            return new RefSpec("$branchName:$branchName")
+            // force-update: branches are mutable and may be force-pushed remotely
+            return new RefSpec("+$branchName:$branchName")
         }
 
         // Check if it's a local tag
@@ -356,7 +364,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
         // Is it a remote branch?
         if( remoteRefs.containsKey(branchName) ) {
-            return new RefSpec("$branchName:$branchName")
+            return new RefSpec("+$branchName:$branchName")
         }
 
         // Is it a remote tag?
@@ -368,6 +376,23 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         return new RefSpec("$revision:$tagName")
     }
 
+    @PackageScope
+    void verifyFetchResult(FetchResult result, String revision, String repoLabel) {
+        for( TrackingRefUpdate update : result.getTrackingRefUpdates() ) {
+            final r = update.result
+            final detail = "${project} [revision: $revision]: ${update.localName} <- ${update.remoteName} => $r (old=${update.oldObjectId?.name()}, new=${update.newObjectId?.name()})"
+            if( r == RefUpdate.Result.FORCED ) {
+                log.warn "Force-push detected on $repoLabel ($detail); resetting local copy to match remote"
+            }
+            else if( r == RefUpdate.Result.NEW || r == RefUpdate.Result.FAST_FORWARD || r == RefUpdate.Result.NO_CHANGE ) {
+                log.debug "Fetch update on $repoLabel: $detail"
+            }
+            else {
+                throw new AbortOperationException("Unable to update revision '${revision}' in $repoLabel for ${project}: ${update.localName} => $r")
+            }
+        }
+    }
+
     @Override
     File getLocalPath() {
         return this.commitPath ?: legacyRepoPath
@@ -377,6 +402,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         assert bareRepo
         if( !_bareGit ) {
             _bareGit = Git.open(this.bareRepo)
+            removeBitbucketToken(_bareGit, provider)
         }
         return _bareGit
     }
@@ -390,8 +416,10 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     private Git getLegacyGit() {
         if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() ) {
-            if( !_legacyGit )
+            if( !_legacyGit ) {
                 _legacyGit = Git.open(this.legacyRepoPath)
+                removeBitbucketToken(_legacyGit, provider)
+            }
             return _legacyGit
         }
         return null

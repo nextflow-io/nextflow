@@ -17,7 +17,7 @@
 package nextflow.util;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import nextflow.script.types.Record;
@@ -28,7 +28,7 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethods;
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class RecordMap extends HashMap<String,Object> implements Record {
+public class RecordMap extends LinkedHashMap<String,Object> implements Record {
 
     public RecordMap() {}
 
@@ -42,30 +42,40 @@ public class RecordMap extends HashMap<String,Object> implements Record {
 
     @Override
     public void clear() {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot clear record");
     }
 
     @Override
     public Object put(String key, Object value) {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot set record field '" + key + "'");
     }
 
     @Override
     public void putAll(Map<? extends String, ? extends Object> m) {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot set record fields " + m.keySet());
     }
 
     @Override
     public Object remove(Object key) {
-        throw new UnsupportedOperationException();
+        throw immutable("Cannot remove record field '" + key + "'");
     }
 
+    private static UnsupportedOperationException immutable(String message) {
+        return new UnsupportedOperationException(message + " -- records are immutable");
+    }
+
+    @Override
+    public Record subMap(Iterable<String> keys) {
+        return subMap(DefaultGroovyMethods.toList(keys));
+    }
+
+    // needed to take precedence over DGM Map::subMap(Collection) at runtime
     public Record subMap(Collection<String> keys) {
         return new RecordMap(DefaultGroovyMethods.subMap(this, keys));
     }
 
     public RecordMap plus(RecordMap other) {
-        var result = new HashMap<String,Object>();
+        var result = new LinkedHashMap<String,Object>();
         result.putAll(this);
         result.putAll(other);
         return new RecordMap(result);

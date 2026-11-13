@@ -5,6 +5,9 @@ exit_status=0
 NXF_CMD=${NXF_CMD:-nextflow}
 NXF_FILES=${*:-'*.nf'}
 
+# agent mode changes console output
+export NXF_AGENT_MODE=false
+
 for pipeline in $NXF_FILES ; do
 
     echo "> Running test: $pipeline"
@@ -26,6 +29,6 @@ for pipeline in $NXF_FILES ; do
 
 done
 
-rm -rf .nextflow* work .out a.out b.out
+rm -rf .nextflow* work results .out a.out b.out
 
 [ $exit_status -eq 0 ] || false

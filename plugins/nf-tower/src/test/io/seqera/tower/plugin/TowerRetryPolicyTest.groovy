@@ -34,7 +34,7 @@ class TowerRetryPolicyTest extends Specification {
         then:
         policy.delay == RetryConfig.DEFAULT_DELAY
         policy.maxDelay == RetryConfig.DEFAULT_MAX_DELAY
-        policy.maxAttempts == RetryConfig.DEFAULT_MAX_ATTEMPTS
+        policy.maxAttempts == 10
         policy.jitter == RetryConfig.DEFAULT_JITTER
         policy.multiplier == RetryConfig.DEFAULT_MULTIPLIER
     }

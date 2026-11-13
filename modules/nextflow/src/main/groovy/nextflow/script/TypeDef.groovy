@@ -39,6 +39,8 @@ class TypeDef extends ComponentDef {
         this.alias = alias
     }
 
+    Class getTarget() { target }
+
     @Override
     String getType() { 'type' }
 

@@ -1,0 +1,43 @@
+---
+title: Set<E>
+description: Reference for the Set type, an unordered collection of unique values.
+---
+
+# Set\<E\>
+
+*Implements the [Iterable\<E\>][stdlib-types-iterable] trait.*
+
+A set is an unordered collection of values of type `E` which cannot contain duplicates.
+
+A set can be created from a list using the `toSet()` method:
+
+```nextflow
+[1, 2, 2, 3].toSet()
+// -> [1, 2, 3]
+```
+
+The following operations are supported for sets:
+
+##### `+ : (Set<E>, Iterable<E>) -> Set<E>`
+
+Given a set and an iterable, returns a new set containing the elements of both collections.
+
+##### `- : (Set<E>, Iterable<E>) -> Set<E>`
+
+Given a set and an iterable, returns a shallow copy of the set minus the elements of the iterable.
+
+##### `in, !in : (E, Set<E>) -> Boolean`
+
+Given a value and a set, returns `true` if the set contains the value (or not).
+
+The following methods are available for a set:
+
+##### `intersect( right: Iterable<E> ) -> Set<E>`
+
+Returns the intersection of the set and the given iterable.
+
+:::note
+Sets in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Set.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Set.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+[stdlib-types-iterable]: ./iterable

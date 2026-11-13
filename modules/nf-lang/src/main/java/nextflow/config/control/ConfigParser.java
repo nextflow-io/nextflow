@@ -18,10 +18,11 @@ package nextflow.config.control;
 import java.io.File;
 
 import groovy.lang.GroovyClassLoader;
+import nextflow.config.parser.ConfigAstBuilder;
 import nextflow.config.parser.ConfigParserPluginFactory;
 import nextflow.script.control.Compiler;
 import nextflow.script.control.LazyErrorCollector;
-import nextflow.script.types.Types;
+import nextflow.script.dsl.Types;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.WarningMessage;
@@ -73,6 +74,7 @@ public class ConfigParser {
         var config = new CompilerConfiguration();
         config.setPluginFactory(new ConfigParserPluginFactory());
         config.setWarningLevel(WarningMessage.POSSIBLE_ERRORS);
+        config.getOptimizationOptions().put(ConfigAstBuilder.COMMENTS_OPTION, true);
         return config;
     }
 

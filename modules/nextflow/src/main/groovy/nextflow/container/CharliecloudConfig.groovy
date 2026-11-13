@@ -49,7 +49,7 @@ class CharliecloudConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
-        The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).
+        The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20.m`).
     """)
     final Duration pullTimeout
 

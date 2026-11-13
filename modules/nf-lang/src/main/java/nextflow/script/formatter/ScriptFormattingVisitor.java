@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -37,10 +38,9 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.types.Types;
 import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -74,6 +74,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         this.sourceUnit = sourceUnit;
         this.options = options;
         this.fmt = new Formatter(options);
+        this.fmt.setComments(CommentAttacher.of(sourceUnit.getAST()));
+    }
+
+    /**
+     * Get the comments that were not printed. Should always be empty --
+     * a non-empty result means formatting would delete source.
+     */
+    public List<Comment> getMissingComments() {
+        return fmt.getComments().getMissingComments();
     }
 
     @Override
@@ -86,13 +95,16 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !(moduleNode instanceof ScriptNode) )
             return;
         var scriptNode = (ScriptNode) moduleNode;
-        if( scriptNode.getShebang() != null )
+        if( scriptNode.getShebang() != null ) {
             fmt.append(scriptNode.getShebang());
+            fmt.appendNewLine();
+        }
 
         // format code snippet if applicable
         var entry = scriptNode.getEntry();
         if( entry != null && entry.isCodeSnippet() ) {
             fmt.visit(entry.main);
+            fmt.appendDanglingComments(scriptNode);
             return;
         }
 
@@ -118,7 +130,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
 
         for( var decl : declarations ) {
-            if( decl instanceof ClassNode cn && cn.isEnum() )
+            if( decl instanceof AgentNode an )
+                visitAgent(an);
+            else if( decl instanceof ClassNode cn && cn.isEnum() )
                 visitEnum(cn);
             else if( decl instanceof FeatureFlagNode ffn )
                 visitFeatureFlag(ffn);
@@ -139,6 +153,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
+
+        fmt.appendDanglingComments(scriptNode);
     }
 
     public String toString() {
@@ -153,6 +169,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(node.name);
         fmt.append(" = ");
         fmt.visit(node.value);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
@@ -193,6 +210,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.append("} from ");
         fmt.visit(node.source);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
@@ -204,22 +222,16 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(node.declarations)
-            : 0;
-
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
+        var aligner = fmt.commentAligner();
         for( var param : node.declarations ) {
             fmt.appendLeadingComments(param);
+            aligner.begin();
             fmt.appendIndent();
             fmt.append(param.getName());
             if( fmt.hasType(param) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - param.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(param.getType());
             }
@@ -227,16 +239,16 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.append(" = ");
                 fmt.visit(param.getInitialExpression());
             }
+            aligner.end(param);
+            fmt.appendTrailingComment(param);
             fmt.appendNewLine();
         }
+        aligner.apply();
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
-    }
-
-    private static int maxParameterWidth(Parameter[] parameters) {
-        return Arrays.stream(parameters)
-            .map(param -> parameterWidth(param))
-            .max(Integer::compare).orElse(0);
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     @Override
@@ -250,6 +262,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.append(" = ");
         fmt.visit(node.value);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
@@ -276,7 +289,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             visitTypedInputs(takes);
         }
         if( !node.main.isEmpty() ) {
-            if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() ) {
+            if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() || !node.onComplete.isEmpty() || !node.onError.isEmpty() ) {
                 fmt.appendNewLine();
                 fmt.appendIndent();
                 fmt.append("main:\n");
@@ -307,54 +320,68 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.append("onError:\n");
             fmt.visit(node.onError);
         }
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     private void visitTypedInputs(Parameter[] inputs) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(inputs)
-            : 0;
-
+        var aligner = fmt.commentAligner();
         for( var input : inputs ) {
+            fmt.appendLeadingComments(input);
+            aligner.begin();
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
-                var components = Arrays.stream(tp.components)
-                    .map(p -> p.getName())
-                    .collect(Collectors.joining(", "));
-                fmt.append('(');
-                fmt.append(components);
-                fmt.append(')');
+                visitStructuredInput(tp);
             }
             else {
-                fmt.append(input.getName());
+                visitTypedInput(input);
             }
-            if( fmt.hasType(input) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - parameterWidth(input) + 1;
-                    fmt.append(" ".repeat(padding));
-                }
-                fmt.append(": ");
-                var type = input.getType();
-                if( type.getNameWithoutPackage().startsWith("__Record") )
-                    visitProcessInputRecordType((RecordNode) type.redirect());
-                else
-                    fmt.visitTypeAnnotation(type);
-            }
+            aligner.end(input);
             fmt.appendTrailingComment(input);
             fmt.appendNewLine();
         }
+        aligner.apply();
     }
 
-    private static int parameterWidth(Parameter param) {
-        return param instanceof TupleParameter tp
-            ? Arrays.stream(tp.components).mapToInt(p -> 2 + p.getName().length()).sum()
-            : param.getName().length();
+    private void visitStructuredInput(TupleParameter tp) {
+        var isRecord = "Record".equals(tp.getType().getNameWithoutPackage());
+        var wrap = isRecord;
+
+        fmt.append(isRecord ? "record" : "tuple");
+        fmt.append('(');
+        if( wrap )
+            fmt.incIndent();
+        for( int i = 0; i < tp.components.length; i++ ) {
+            var p = tp.components[i];
+            if( wrap ) {
+                fmt.appendNewLine();
+                fmt.appendIndent();
+            }
+            fmt.append(p.getName());
+            if( fmt.hasType(p) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(p.getType());
+            }
+            if( i < tp.components.length - 1 )
+                fmt.append(wrap ? "," : ", ");
+        }
+        if( wrap ) {
+            fmt.appendNewLine();
+            fmt.decIndent();
+            fmt.appendIndent();
+        }
+        fmt.append(')');
     }
 
-    private void visitProcessInputRecordType(RecordNode type) {
-        fmt.append("Record");
-        visitRecordBody(type);
+    private void visitTypedInput(Parameter node) {
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(node.getType());
+        }
     }
 
     private void visitTypedOutputs(List<Statement> outputs) {
@@ -362,6 +389,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             ? maxParameterWidth(outputs)
             : 0;
 
+        var aligner = fmt.commentAligner();
         for( var stmt : outputs ) {
             var stmtX = (ExpressionStatement)stmt;
             var output = stmtX.getExpression();
@@ -374,8 +402,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 null;
 
             if( target != null ) {
+                fmt.appendLeadingComments(stmt);
+                aligner.begin();
                 fmt.appendIndent();
                 visitOutputAssignment(target, source, alignmentWidth);
+                aligner.end(stmt);
                 fmt.appendTrailingComment(stmt);
                 fmt.appendNewLine();
             }
@@ -383,27 +414,42 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.visit(stmt);
             }
         }
+        aligner.apply();
     }
 
     private void visitWorkflowPublishers(List<Statement> publishers) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(publishers)
+        var alignmentWidth = options.harshilAlignment() && publishers.size() > 1
+            ? publishers.stream()
+                .map((stmt) -> publisherTarget(stmt).getName().length())
+                .max(Integer::compare).orElse(0)
             : 0;
 
+        var aligner = fmt.commentAligner();
         for( var stmt : publishers ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = (AssignmentExpression)stmtX.getExpression();
-            var target = (VariableExpression)emit.getLeftExpression();
-            var source = emit.getRightExpression();
+            var target = publisherTarget(stmt);
+            var source = ((AssignmentExpression)((ExpressionStatement)stmt).getExpression()).getRightExpression();
 
+            fmt.appendLeadingComments(stmt);
+            aligner.begin();
             fmt.appendIndent();
-            visitOutputAssignment(target, source, alignmentWidth);
+            fmt.append(target.getName());
+            if( alignmentWidth > 0 )
+                fmt.append(" ".repeat(alignmentWidth - target.getName().length()));
+            fmt.append(" = ");
+            fmt.visit(source);
+            aligner.end(stmt);
             fmt.appendTrailingComment(stmt);
             fmt.appendNewLine();
         }
+        aligner.apply();
     }
 
-    private static int maxParameterWidth(List<Statement> statements) {
+    private static VariableExpression publisherTarget(Statement stmt) {
+        var emit = (AssignmentExpression)((ExpressionStatement)stmt).getExpression();
+        return (VariableExpression)emit.getLeftExpression();
+    }
+
+    private int maxParameterWidth(List<Statement> statements) {
         if( statements.size() == 1 )
             return 0;
 
@@ -411,12 +457,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             .map((stmt) -> {
                 var stmtX = (ExpressionStatement)stmt;
                 var emit = stmtX.getExpression();
-                if( emit instanceof VariableExpression ve ) {
+                if( emit instanceof VariableExpression ve && !fmt.hasType(ve) ) {
                     return ve.getName().length();
                 }
                 if( emit instanceof AssignmentExpression assign ) {
                     var target = (VariableExpression)assign.getLeftExpression();
-                    return target.getName().length();
+                    return fmt.hasType(target) ? 0 : target.getName().length();
                 }
                 return 0;
             })
@@ -425,13 +471,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private void visitOutputAssignment(VariableExpression target, Expression source, int alignmentWidth) {
         fmt.append(target.getText());
-        if( (fmt.hasType(target) || source != null) && alignmentWidth > 0 ) {
+        if( !fmt.hasType(target) && source != null && alignmentWidth > 0 ) {
             var padding = alignmentWidth - target.getName().length();
             fmt.append(" ".repeat(padding));
         }
         if( fmt.hasType(target) ) {
-            if( alignmentWidth > 0 )
-                fmt.append(' ');
             fmt.append(": ");
             fmt.visitTypeAnnotation(target.getType());
         }
@@ -439,6 +483,38 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.append(" = ");
             fmt.visit(source);
         }
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("agent ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        if( !node.directives.isEmpty() ) {
+            visitDirectives(node.directives);
+            fmt.appendNewLine();
+        }
+        var inputs = node.inputs;
+        if( inputs.length > 0 ) {
+            fmt.appendIndent();
+            fmt.append("input:\n");
+            visitTypedInputs(inputs);
+            fmt.appendNewLine();
+        }
+        if( !node.outputs.isEmpty() ) {
+            visitProcessOutputs(node.outputs);
+            fmt.appendNewLine();
+        }
+        fmt.appendIndent();
+        fmt.append("prompt:\n");
+        fmt.visit(node.prompt);
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     @Override
@@ -502,8 +578,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitProcessTopics(node.topics);
             }
         }
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     private void visitProcessOutputs(Statement outputs) {
@@ -560,8 +639,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendNewLine();
             visitProcessOutputsV1(node.outputs);
         }
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     private void visitProcessOutputsV1(Statement outputs) {
@@ -585,8 +667,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(" {\n");
         fmt.incIndent();
         fmt.visit(node.getCode());
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     @Override
@@ -595,38 +680,32 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("record ");
         fmt.append(node.getName());
         visitRecordBody(node);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
     private void visitRecordBody(RecordNode node) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxFieldWidth(node.getFields())
-            : 0;
-
         fmt.append(" {\n");
         fmt.incIndent();
+        var aligner = fmt.commentAligner();
         for( var fn : node.getFields() ) {
+            fmt.appendLeadingComments(fn);
+            aligner.begin();
             fmt.appendIndent();
             fmt.append(fn.getName());
             if( fmt.hasType(fn) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - fn.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(fn.getType());
             }
+            aligner.end(fn);
+            fmt.appendTrailingComment(fn);
             fmt.appendNewLine();
         }
+        aligner.apply();
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
         fmt.appendIndent();
         fmt.append("}");
-    }
-
-    private int maxFieldWidth(List<FieldNode> fields) {
-        return fields.stream()
-            .map(fn -> fn.getName().length())
-            .max(Integer::compare).orElse(0);
     }
 
     @Override
@@ -637,13 +716,18 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(" {\n");
         fmt.incIndent();
         for( var fn : node.getFields() ) {
+            fmt.appendLeadingComments(fn);
             fmt.appendIndent();
             fmt.append(fn.getName());
             fmt.append(',');
+            fmt.appendTrailingComment(fn);
             fmt.appendNewLine();
         }
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     @Override
@@ -652,8 +736,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("output {\n");
         fmt.incIndent();
         super.visitOutputs(node);
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     @Override
@@ -668,9 +755,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(" {\n");
         fmt.incIndent();
         visitOutputBody((BlockStatement) node.body);
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
         fmt.appendIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     private void visitOutputBody(BlockStatement block) {
@@ -682,24 +772,28 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             // treat as index definition
             var name = call.getMethodAsString();
             if( "index".equals(name) ) {
-                var code = asDslBlock(call, 1);
-                if( code != null ) {
+                var args = asMethodCallArguments(call);
+                var closure = args.size() == 1 && args.get(0) instanceof ClosureExpression ce ? ce : null;
+                if( closure != null ) {
                     fmt.appendLeadingComments(stmt);
                     fmt.appendIndent();
                     fmt.append(name);
                     fmt.append(" {\n");
                     fmt.incIndent();
-                    visitDirectives(code);
+                    visitDirectives((BlockStatement) closure.getCode());
+                    fmt.appendDanglingComments(closure);
                     fmt.decIndent();
                     fmt.appendIndent();
-                    fmt.append("}\n");
+                    fmt.append("}");
+                    fmt.appendTrailingComment(stmt);
+                    fmt.appendNewLine();
                     return;
                 }
             }
 
             // treat as regular directive
             fmt.appendLeadingComments(stmt);
-            fmt.visitDirective(call);
+            fmt.visitDirective(stmt, call);
         });
     }
 
@@ -709,7 +803,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             if( call == null )
                 return;
             fmt.appendLeadingComments(stmt);
-            fmt.visitDirective(call);
+            fmt.visitDirective(stmt, call);
         });
     }
 

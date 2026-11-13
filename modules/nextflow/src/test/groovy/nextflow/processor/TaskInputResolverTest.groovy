@@ -24,6 +24,7 @@ import nextflow.Global
 import nextflow.ISession
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ForeignFileFilter
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
 import nextflow.script.params.v2.ProcessFileInput
@@ -172,6 +173,38 @@ class TaskInputResolverTest extends Specification {
         task.context.input.bam.toString() == 'input.bam'
     }
 
+    def 'should normalize typed path input to store path for exec processes'() {
+        given:
+        def file = Files.createTempFile('test', '.txt')
+        def holder = new FileHolder(file).withName('staged.txt')
+        def resolver = new TaskInputResolver(new TaskRun(type: ScriptType.GROOVY), Mock(FilePorter.Batch), Mock(Executor))
+
+        when:
+        def result = resolver.normalizeValue(file, [(file): holder])
+        then:
+        result == file.toRealPath()
+        result.text == ''
+
+        cleanup:
+        Files.deleteIfExists(file)
+    }
+
+    def 'should normalize typed path input to staged path for agent prompts'() {
+        given:
+        def file = Files.createTempFile('test', '.txt')
+        def holder = new FileHolder(file).withName('staged.txt')
+        def resolver = new TaskInputResolver(new TaskRun(type: ScriptType.PROMPT), Mock(FilePorter.Batch), Mock(Executor))
+
+        when:
+        def result = resolver.normalizeValue(file, [(file): holder])
+        then:
+        result instanceof TaskPath
+        result.toString() == 'staged.txt'
+
+        cleanup:
+        Files.deleteIfExists(file)
+    }
+
     def 'should return single item or collection'() {
 
         setup:
@@ -197,6 +230,36 @@ class TaskInputResolverTest extends Specification {
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 
+    }
+
+    def 'should return absolute store path for exec processes'() {
+        // see issue #378: a `path` input in an `exec:` block must resolve to the
+        // absolute, symlink-resolved real path so that e.g. `.exists()` works,
+        // not the relative stage name (which is never materialized for native tasks)
+        // note: the holders are built as the resolver does it in production, ie. via
+        // the `FileHolder` constructor which resolves the store path to the real path
+        given:
+        def file1 = Files.createTempFile('test1', '.txt')
+        def file2 = Files.createTempFile('test2', '.txt')
+
+        when:
+        def list = [ new FileHolder(file1).withName('staged_1.txt') ]
+        def result = TaskInputResolver.singleItemOrList(list, true, ScriptType.GROOVY)
+        then:
+        result == file1.toRealPath()
+        result.isAbsolute()
+        result.exists()
+
+        when:
+        list = [ new FileHolder(file1).withName('staged_1.txt'), new FileHolder(file2).withName('staged_2.txt') ]
+        result = TaskInputResolver.singleItemOrList(list, false, ScriptType.GROOVY)
+        then:
+        result*.toString() == [ file1.toRealPath().toString(), file2.toRealPath().toString() ]
+        result.every { it.isAbsolute() && it.exists() }
+
+        cleanup:
+        Files.deleteIfExists(file1)
+        Files.deleteIfExists(file2)
     }
 
 
@@ -395,6 +458,7 @@ class TaskInputResolverTest extends Specification {
 
         cleanup:
         tempFolder?.deleteDir()
+        Global.session = null
     }
 
     def 'should normalise to path' () {
@@ -432,6 +496,58 @@ class TaskInputResolverTest extends Specification {
         result.size() == 1
         result[0] == new FileHolder(PATH)
 
+    }
+
+    def 'should not stage a foreign file a filter declares task accessible' () {
+        given:
+        def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
+        def filter = Mock(ForeignFileFilter)
+        def PATH = Path.of('/mnt/shared/ref.fa')
+        def resolver = new TaskInputResolver(new TaskRun(), batch, executor)
+
+        when:
+        def result = resolver.normalizeInputToFiles(PATH.toString(), 0, true)
+        then:
+        1 * executor.isForeignFile(PATH) >> true
+        1 * executor.getForeignFileFilters() >> [filter]
+        1 * filter.isTaskAccessible(PATH, executor) >> true
+        0 * batch.addToForeign(_)
+        and:
+        result[0] == new FileHolder(PATH)
+    }
+
+    def 'should stage a foreign file no filter accepts' () {
+        given:
+        def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
+        def filter = Mock(ForeignFileFilter)
+        def PATH = Path.of('/data/ref.fa')
+        def STAGED = Path.of('/work/stage/ref.fa')
+        def resolver = new TaskInputResolver(new TaskRun(), batch, executor)
+
+        when:
+        def result = resolver.normalizeInputToFiles(PATH.toString(), 0, true)
+        then:
+        1 * executor.isForeignFile(PATH) >> true
+        1 * executor.getForeignFileFilters() >> [filter]
+        1 * filter.isTaskAccessible(PATH, executor) >> false
+        1 * batch.addToForeign(PATH) >> STAGED
+        and:
+        result[0] == new FileHolder(PATH, STAGED)
+    }
+
+    def 'should not ask the filters for a local file' () {
+        given:
+        def executor = Mock(Executor)
+        def PATH = Path.of('/some/path')
+        def resolver = new TaskInputResolver(Mock(TaskRun), Mock(FilePorter.Batch), executor)
+
+        when:
+        resolver.normalizeInputToFiles(PATH.toString(), 0, true)
+        then:
+        1 * executor.isForeignFile(PATH) >> false
+        0 * executor.getForeignFileFilters()
     }
 
 }

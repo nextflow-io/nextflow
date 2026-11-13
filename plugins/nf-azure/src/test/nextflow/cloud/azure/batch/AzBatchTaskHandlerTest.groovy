@@ -17,10 +17,8 @@
 package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.models.BatchTask
-import com.azure.compute.batch.models.BatchTaskExecutionInfo
-import com.azure.compute.batch.models.BatchTaskFailureInfo
 import com.azure.compute.batch.models.BatchTaskState
-import com.azure.compute.batch.models.ErrorCategory
+import com.azure.json.JsonProviders
 import com.sun.jna.platform.unix.X11
 import nextflow.processor.TaskStatus
 
@@ -28,6 +26,7 @@ import java.nio.file.Path
 
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.Executor
@@ -132,11 +131,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        execInfo.exitCode = 0
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"exitCode":0}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -145,7 +140,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -169,11 +164,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        execInfo.exitCode = 137
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"exitCode":137}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -182,7 +173,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -207,10 +198,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -219,7 +207,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -243,13 +231,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        def failureInfo = new BatchTaskFailureInfo(ErrorCategory.USER_ERROR)
-        failureInfo.message = 'Unknown error'
-        execInfo.failureInfo = failureInfo
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"failureInfo":{"category":"userError","message":"Unknown error"}}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -258,7 +240,7 @@ class AzBatchTaskHandlerTest extends Specification {
             getBatchService() >> batchService
         }
         def handler = Spy(new AzBatchTaskHandler(task, executor)){
-            deleteTask(_,_) >> null
+            deleteTask(_,_) >> { }
         }
         handler.status = TaskStatus.RUNNING
         handler.taskKey = taskKey
@@ -273,5 +255,74 @@ class AzBatchTaskHandlerTest extends Specification {
         handler.task.exitStatus == Integer.MAX_VALUE
         handler.status == TaskStatus.COMPLETED
         handler.task.error.message == 'Unknown error'
+    }
+
+    def 'should fail a waiting task when its pool cannot allocate nodes' () {
+        given:
+        def task = Spy(new TaskRun()){
+            getContainer() >> 'ubuntu'
+        }
+        task.name = 'foo'
+        task.workDir = Path.of('/tmp/wdir')
+        def taskKey = new AzTaskKey('job-1', 'task-1')
+        def batchService = Mock(AzBatchService)
+        def executor = Mock(AzBatchExecutor){
+            getBatchService() >> batchService
+        }
+        def handler = new AzBatchTaskHandler(task, executor)
+        handler.status = TaskStatus.SUBMITTED
+        handler.taskKey = taskKey
+
+        when:
+        def running = handler.checkIfRunning()
+
+        then:
+        1 * batchService.getTask(taskKey) >> new BatchTask(state: BatchTaskState.ACTIVE)
+        1 * batchService.poolAllocationError(taskKey) >> "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached"
+        1 * batchService.terminate(taskKey)
+        !running
+        handler.status == TaskStatus.COMPLETED
+        task.error instanceof ProcessException
+        task.error.message == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached"
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        0 * batchService.getTask(_)
+        completed
+    }
+
+    def 'should keep waiting when the pool has no blocking resize errors' () {
+        given:
+        def task = Spy(new TaskRun()){
+            getContainer() >> 'ubuntu'
+        }
+        task.name = 'foo'
+        task.workDir = Path.of('/tmp/wdir')
+        def taskKey = new AzTaskKey('job-1', 'task-1')
+        def batchService = Mock(AzBatchService)
+        def executor = Mock(AzBatchExecutor){
+            getBatchService() >> batchService
+        }
+        def handler = new AzBatchTaskHandler(task, executor)
+        handler.status = TaskStatus.SUBMITTED
+        handler.taskKey = taskKey
+
+        when:
+        def running = handler.checkIfRunning()
+
+        then:
+        1 * batchService.getTask(taskKey) >> new BatchTask(state: STATE)
+        CHECKS * batchService.poolAllocationError(taskKey) >> null
+        running == RUNNING
+        handler.status == (RUNNING ? TaskStatus.RUNNING : TaskStatus.SUBMITTED)
+
+        where:
+        STATE                       | CHECKS | RUNNING
+        BatchTaskState.ACTIVE       | 1      | false
+        BatchTaskState.PREPARING    | 0      | false
+        BatchTaskState.RUNNING      | 0      | true
+        BatchTaskState.COMPLETED    | 0      | true
     }
 }

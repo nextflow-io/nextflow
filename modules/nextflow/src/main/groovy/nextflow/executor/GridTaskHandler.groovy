@@ -21,13 +21,13 @@ import static nextflow.processor.TaskStatus.*
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
 import java.util.regex.Pattern
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedPredicate
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -44,6 +44,7 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.StringUtils
 import nextflow.util.TestOnly
 import nextflow.util.Throttle
 /**
@@ -125,9 +126,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Memoized
-    protected Predicate<? extends Throwable> retryCondition(String reasonPattern) {
+    protected CheckedPredicate<? extends Throwable> retryCondition(String reasonPattern) {
         final pattern = Pattern.compile(reasonPattern)
-        return new Predicate<Throwable>() {
+        return new CheckedPredicate<Throwable>() {
             @Override
             boolean test(Throwable failure) {
                 if( failure instanceof ProcessNonZeroExitStatusException ) {
@@ -145,7 +146,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
-                final failure = event.getLastFailure()
+                final failure = event.getLastException()
                 if( failure instanceof ProcessNonZeroExitStatusException ) {
                     final failure0 = (ProcessNonZeroExitStatusException)failure
                     final msg = """\
@@ -182,7 +183,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             // -- forward the job launcher script to the command stdin if required
             if( pipeScript ) {
-                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
+                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${StringUtils.stripSecrets(pipeScript).indent()}"
                 process.out << pipeScript
                 process.out.close()
             }
@@ -223,7 +224,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final containerOpts = task.config.getContainerOptions()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit, task.getContainerPlatform())
         // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }

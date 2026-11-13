@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import io.seqera.http.HxClient
 import io.seqera.npr.client.RegistryClient
 import nextflow.config.RegistryConfig
+import nextflow.util.ProxyConfig
 import nextflow.util.RetryConfig
 
 import java.net.http.HttpClient
@@ -36,10 +37,13 @@ class RegistryClientFactory {
 
     static RegistryClient forConfig(RegistryConfig config) {
         final cfg = config ?: new RegistryConfig()
+        // the configured registries are authoritative: use exactly the URLs declared in the
+        // `registry` scope (which falls back to the default registry when none are configured)
         return new RegistryClient(
             cfg.allUrls as List<String>,
             cfg.apiKey,
             HxClient.newBuilder()
+                .withProxyConfig(ProxyConfig.proxyConfig())
                 .retryConfig(RetryConfig.config())
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build()

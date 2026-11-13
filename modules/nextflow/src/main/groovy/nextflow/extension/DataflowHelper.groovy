@@ -101,14 +101,13 @@ class DataflowHelper {
         }
     }
 
-    @PackageScope
     static DataflowEventAdapter stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
 
         new DataflowEventAdapter() {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( source instanceof DataflowExpression ) {
-                    if( !(target instanceof DataflowExpression) )
+                    if( !(target instanceof DataflowVariable) )
                         processor.bindOutput( Channel.STOP )
                     processor.terminate()
                 }

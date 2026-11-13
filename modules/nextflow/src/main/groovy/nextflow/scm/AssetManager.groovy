@@ -18,6 +18,7 @@ package nextflow.scm
 
 import static nextflow.Const.*
 import static GitReferenceHelper.*
+import static nextflow.util.StringUtils.redactUrlPassword
 
 import java.nio.file.Path
 
@@ -28,13 +29,14 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.cli.HubOptions
-import nextflow.config.Manifest
 import nextflow.config.ConfigParserFactory
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
+import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.SysEnv
+import nextflow.util.HttpClientOpts
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.RefNotFoundException
@@ -52,6 +54,7 @@ import org.eclipse.jgit.merge.MergeStrategy
  * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
  * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
  * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
+ * Setting `NXF_SCM_LEGACY=true` forces the {@link LegacyRepositoryStrategy}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -89,6 +92,11 @@ class AssetManager implements Closeable {
     private RepositoryStrategy strategy
 
     /**
+     * The http client settings declared in the SCM config file
+     */
+    private HttpClientOpts httpClientOpts
+
+    /**
      * Create a new asset manager object with default parameters
      */
     AssetManager() {
@@ -100,12 +108,12 @@ class AssetManager implements Closeable {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, HubOptions hubOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts)
+        build(pipelineName, config, hubOpts)
     }
 
     AssetManager( String pipelineName, Map config ) {
@@ -114,12 +122,12 @@ class AssetManager implements Closeable {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null ) {
+    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null ) {
         assert pipelineName
-        // build the object
+        // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts, revision)
+        build(pipelineName, config, hubOpts, revision, mainScript)
     }
 
     /**
@@ -127,31 +135,33 @@ class AssetManager implements Closeable {
      *
      * @param pipelineName A project name or a project repository Git URL
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
-     * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String revision = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
+        this.httpClientOpts = RepositoryProvider.httpClientOpts(config)
 
         this.project = resolveName(pipelineName)
+        if( mainScript )
+            this.mainScript = mainScript
 
-        if( !isValidProjectName(this.project) ) {
-            throw new IllegalArgumentException("Not a valid project name: ${this.project}")
-        }
+        if( !isValidProjectName(project) )
+            throw new IllegalArgumentException("Not a valid project name: ${project}")
+
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
-        this.hub = checkHubProvider(cliOpts)
+        this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
-        if( revision ){
+        if( revision )
             setRevision(revision)
-        }
 
         strategy.setProvider(this.provider)
 
-        setupCredentials(cliOpts)
+        setupCredentials(hubOpts)
 
         validateProjectDir()
 
@@ -320,14 +330,15 @@ class AssetManager implements Closeable {
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
-     * @param cliOpts The user credentials specified on the program command line. See {@code HubOptions}
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      */
     @PackageScope
-    void setupCredentials( HubOptions cliOpts ) {
-        if( cliOpts?.hubUser ) {
-            cliOpts.hubProvider = hub
-            final user = cliOpts.getHubUser()
-            final pwd = cliOpts.getHubPassword()
+    void setupCredentials( HubOptions hubOpts ) {
+        if( hubOpts?.getUser() ) {
+            // rebind to the resolved hub provider so the password prompt names it correctly
+            hubOpts = hubOpts.withProvider(hub)
+            final user = hubOpts.getUser()
+            final pwd = hubOpts.getPassword()
             provider.setCredentials(user, pwd)
         }
     }
@@ -365,15 +376,15 @@ class AssetManager implements Closeable {
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
      *
-     * @param cliOpts The user hub info provider as command line options. See {@link HubOptions}
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      * @return The name of hub name e.g. {@code github}, {@code bitbucket}, etc.
      */
     @PackageScope
-    String checkHubProvider( HubOptions cliOpts ) {
+    String checkHubProvider( HubOptions hubOpts ) {
 
         def result = hub
         if( !result )
-            result = cliOpts?.getHubProvider()
+            result = hubOpts?.getProvider()
         if( !result )
             result = guessHubProviderFromGitConfig()
         if( !result )
@@ -414,9 +425,12 @@ class AssetManager implements Closeable {
 
         def parts = name.split('/') as List<String>
         def last = parts[-1]
-        if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
+        if( last.endsWith('.nf') ) {
             if( parts.size()==1 )
                 throw new AbortOperationException("Not a valid project name: $name")
+
+            if( mainScript )
+                throw new AbortOperationException("Not a valid project name: $name -- Project name must be a directory when main script is provided")
 
             if( parts.size()==2 ) {
                 mainScript = last
@@ -461,6 +475,9 @@ class AssetManager implements Closeable {
         final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
         if( !isUrl )
             return null
+
+        if( repository.endsWith('.nf') )
+            throw new AbortOperationException("Repository URL must not end with a script file extension (.nf) -- use `-main-script` to specify the relative script path")
 
         try {
             def url = new GitUrl(repository)
@@ -508,7 +525,9 @@ class AssetManager implements Closeable {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        return RepositoryFactory.newRepositoryProvider(config, project)
+        return RepositoryFactory
+            .newRepositoryProvider(config, project)
+            .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 
     AssetManager setLocalPath(File path) {
@@ -559,7 +578,7 @@ class AssetManager implements Closeable {
         def mainScript = scriptName ?: getMainScriptName()
         def result = new File(localPath, mainScript)
         if( !result.exists() )
-            throw new AbortOperationException("Missing project main script: $result")
+            throw new AbortOperationException("Missing project main script: ${result.canonicalPath}")
 
         return result
     }
@@ -649,6 +668,13 @@ class AssetManager implements Closeable {
     }
 
     /**
+     * @return {@code true} when the SCM source points to a local file-system repository.
+     */
+    boolean isLocalScmSource() {
+        return provider instanceof LocalRepositoryProvider
+    }
+
+    /**
      * @return {@code true} when the local project path exists and contains at least the default script
      *      file (i.e. main.nf) or the nextflow manifest file (i.e. nextflow.config)
      */
@@ -733,6 +759,7 @@ class AssetManager implements Closeable {
         // Fallback to legacy behavior if strategy not initialized
         if( !_git ) {
             _git = Git.open(localPath)
+            AbstractRepositoryStrategy.removeBitbucketToken(_git, provider)
         }
         return _git
     }
@@ -766,7 +793,7 @@ class AssetManager implements Closeable {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -991,8 +1018,8 @@ class AssetManager implements Closeable {
             return
 
         List<String> filter = []
-        if( modules instanceof List<String> ) {
-            filter.addAll(modules)
+        if( modules instanceof List ) {
+            filter.addAll(modules as List<String>)
         }
         else if( modules instanceof String ) {
             filter.addAll( modules.tokenize(', ') )
@@ -1067,7 +1094,7 @@ class AssetManager implements Closeable {
         final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
     }
 
@@ -1116,7 +1143,7 @@ class AssetManager implements Closeable {
 
         final result = domain ? providerConfigs.find { it -> it.domain == domain } : (ProviderConfig)null
         if( !result && failFast ) {
-            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://docs.seqera.io/nextflow/sharing#git-configuration"
             throw new AbortOperationException(message)
         }
 

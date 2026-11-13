@@ -52,6 +52,7 @@ class Manifest implements ConfigScope {
     """)
     final List<Contributor> contributors
 
+    @Deprecated
     @ConfigOption
     @Description("""
         Git repository default branch (default: `master`).
@@ -63,6 +64,12 @@ class Manifest implements ConfigScope {
         Free text describing the workflow project.
     """)
     final String description
+
+    @ConfigOption
+    @Description("""
+        Project workflow diagram location (Relative path or URL).
+    """)
+    final String diagram
 
     @ConfigOption
     @Description("""
@@ -146,6 +153,7 @@ class Manifest implements ConfigScope {
         contributors = parseContributors(opts.contributors)
         defaultBranch = opts.defaultBranch as String
         description = opts.description as String
+        diagram = opts.diagram as String
         docsUrl = opts.docsUrl as String
         doi = opts.doi as String
         gitmodules = opts.gitmodules
@@ -192,6 +200,7 @@ class Manifest implements ConfigScope {
             doi: doi,
             docsUrl: docsUrl,
             icon: icon,
+            diagram: diagram,
             organization: organization,
             license: license,
         ]

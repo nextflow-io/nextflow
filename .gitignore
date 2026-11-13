@@ -1,73 +1,85 @@
-# IDE and Editor
-.devcontainer/
-.idea/
-.vscode/
-modules/**/*.iml
-nextflow.eml
-nextflow.iml
-
-# Build System
-.gradle/
-.launch.classpath
-**/build/
-**/out/
-
-# Nextflow Runtime
-.lineage/
+.idea/**
+.gradle
+.*.log*
+.cache/*
+.vagrant/*
+.cache/*
 .nextflow*
 .node-nextflow*
+.devcontainer
+.vscode/*
+.lineage/
+*/*/bin/*
+**/build/**
+build/**
+modules/**/build/
+modules/**/*.iml
 modules/nextflow/work/
-work/
-
-# Logs and Cache
-.*.log*
-.cache/
-
-# Temporary Files
-temp/
-tmp/
-
-# Development and Testing
-.vagrant/
+**/out/*
+tmp/*
+work/*
+nextflow.eml
+nextflow.iml
 Vagrantfile
-docker-test/
+resources/*
+test/*
+tools/*
+tests_other
+other
+./*.txt
 errors/
 misc/
-other/
-tests_other/
-
-# Docker Artifacts
-.dockerignore
-docker/dist/
-docker/nextflow
-
-# Cloud Configuration
 cloud/my-*
-
-# Documentation
-docs/_build/
-
-# Build and Distribution
-*/*/bin/
-plugins-prod/
-
-# Project-Specific Directories
-/minio/
-/results/
-/sandbox/
-/test-module/
-/test-sched/
-/wave-tests/
-/x/
-
-# Broad Patterns
-resources/
-test/
-tools/
-
-# Root-Level Text Files
-/*.txt
-!changelog.txt
-
-# Configuration
+docker-test
+docker/dist
+docker/nextflow
+temp
+.dockerignore
+# ... except the one that belongs to a committed Dockerfile: it is what keeps a developer's
+# node_modules/ out of the runner image build context - see plugins/nf-agent-pi/Dockerfile
+!plugins/nf-agent-pi/.dockerignore
+# the agent proxy binary a local `go build` leaves beside its source; the image builds it
+# in its own stage, so a checked-in copy would only ever be stale
+plugins/nf-agent-pi/agent-rpc/agent-rpc
+.launch.classpath
+plugins-prod
+/minio
+/sandbox
+/wave-tests
+/test-sched
+/test-module
+/results
+/x/*
 mise.toml
+.netlify/
+
+# Dependencies
+node_modules
+
+# Production
+.docusaurus_site/build
+
+# Generated files
+.docusaurus
+.cache-loader
+.docusaurus_site/nextflow_stable
+.docusaurus_site/versioned_docs
+.docusaurus_site/versioned_sidebars
+.docusaurus_site/versions.json
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local agent example validation output
+examples/agents/.validate/
+# agent example validation output (validation/agent.sh)
+validation/agent-validation/

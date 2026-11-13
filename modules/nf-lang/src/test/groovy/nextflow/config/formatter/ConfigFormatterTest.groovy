@@ -18,7 +18,6 @@ package nextflow.config.formatter
 
 import nextflow.config.control.ConfigParser
 import nextflow.script.formatter.FormattingOptions
-import spock.lang.Shared
 import spock.lang.Specification
 
 /**
@@ -27,19 +26,20 @@ import spock.lang.Specification
  */
 class ConfigFormatterTest extends Specification {
 
-    @Shared
-    ConfigParser parser
-
-    def setupSpec() {
-        parser = new ConfigParser()
-    }
-
     String format(String contents) {
+        final parser = new ConfigParser()
         def source = parser.parse('main.nf', contents)
         assert !source.getErrorCollector().hasErrors()
         def formatter = new ConfigFormattingVisitor(source, new FormattingOptions(4, true))
         formatter.visit()
+        assert formatter.getMissingComments().isEmpty()
         return formatter.toString()
+    }
+
+    boolean checkFormat(String source) {
+        source = source.stripIndent()
+        assert format(source) == source
+        return true
     }
 
     boolean checkFormat(String input, String output) {
@@ -85,6 +85,69 @@ class ConfigFormatterTest extends Specification {
             '''\
             plugins {
                 id 'nf-hello'
+            }
+            '''
+        )
+    }
+
+    /// COMMENTS
+
+    def 'should preserve comments in a config file' () {
+        expect:
+        checkFormat(
+            '''\
+            // about the process scope
+            process {
+                cpus = 2 // how many
+                // dangling
+            }
+
+            // about the plugins
+            plugins {
+                id 'nf-hello' // a plugin
+                // dangling
+            }
+
+            // trailing comment at the end of the file
+            '''
+        )
+    }
+
+    def 'should preserve a comment on an include' () {
+        expect:
+        checkFormat(
+            '''\
+            // about the include
+            includeConfig 'other.config' // over here
+            '''
+        )
+    }
+
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            params.pattern = "${params.dir}/*.vcf.gz"
+            params.url = "${params.host}//path"
+            '''
+        )
+    }
+
+    def 'should re-indent a multi-line string with its statement' () {
+        expect:
+        checkFormat(
+            '''\
+            process {
+              beforeScript = """
+              echo one
+              """
+            }
+            ''',
+            '''\
+            process {
+                beforeScript = """
+                echo one
+                """
             }
             '''
         )

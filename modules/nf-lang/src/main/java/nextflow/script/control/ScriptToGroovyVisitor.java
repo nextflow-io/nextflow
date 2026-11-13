@@ -15,14 +15,14 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.ast.AssignmentExpression;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
@@ -36,18 +36,18 @@ import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.Nullable;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
-import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
-import org.codehaus.groovy.ast.expr.VariableExpression;
-import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -91,12 +91,17 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         if( moduleNode == null )
             return;
 
+        if( moduleNode.isTypingEnabled() )
+            moduleNode.addStatement(stmt(callThisX("enableTyping", new ArgumentListExpression())));
+
         var declarations = moduleNode.getDeclarations();
 
         declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
 
         for( var decl : declarations ) {
-            if( decl instanceof ClassNode cn && cn.isEnum() )
+            if( decl instanceof AgentNode an )
+                visitAgent(an);
+            else if( decl instanceof ClassNode cn && cn.isEnum() )
                 visitEnum(cn);
             else if( decl instanceof FeatureFlagNode ffn )
                 visitFeatureFlag(ffn);
@@ -124,6 +129,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        // static typing is enabled per-script rather than globally
+        if( "nextflow.enable.types".equals(node.name) )
+            return;
+
         var names = node.name.split("\\.");
         Expression target = varX(DefaultGroovyMethods.head(names));
         for( var name : DefaultGroovyMethods.tail(names) )
@@ -135,15 +144,26 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        var entries = (List<Expression>) node.entries.stream()
-            .map((entry) -> {
-                var name = constX(entry.name);
-                return entry.alias != null
-                    ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
-                    : createX("nextflow.script.IncludeDef.Module", args(name));
-            })
-            .collect(Collectors.toList());
+        // an included params block is only a type -- add it to this
+        // script so that it is compiled, and don't include it at runtime
+        var entries = new ArrayList<Expression>();
+        for( var entry : node.entries ) {
+            if( entry.getTarget() instanceof ClassNode cn && ScriptNode.isPipelineParams(cn) ) {
+                // the type is qualified by the including script, so that two
+                // scripts can include the same block
+                cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
+                addNullableAnnotations(cn);
+                moduleNode.addClass(cn);
+                continue;
+            }
+            var name = constX(entry.name);
+            entries.add(entry.alias != null
+                ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
+                : createX("nextflow.script.IncludeDef.Module", args(name)));
+        }
 
+        if( entries.isEmpty() )
+            return;
         var include = callThisX("include", args(createX("nextflow.script.IncludeDef", args(listX(entries)))));
         var from = callX(include, "from", args(node.source));
         var result = stmt(callX(from, "load0", args(varX("params"))));
@@ -152,19 +172,31 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
+        var paramsType = new RecordNode(sgh.packageName(moduleNode) + "." + "__Params");
+        for( var param : node.declarations ) {
+            var fn = new FieldNode(
+                param.getName(),
+                Modifier.PUBLIC,
+                param.getType(),
+                paramsType,
+                param.getInitialExpression()
+            );
+            paramsType.addField(fn);
+        }
+        moduleNode.addClass(paramsType);
+
         var statements = Arrays.stream(node.declarations)
             .map((param) -> {
-                var name = constX(param.getName());
-                var type = classX(param.getType());
-                var optional = constX(param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
+                var name = param.getName();
+                var optional = param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
                 var arguments = param.hasInitialExpression()
-                    ? args(name, type, optional, param.getInitialExpression())
-                    : args(name, type, optional);
+                    ? args(constX(name), constX(optional), param.getInitialExpression())
+                    : args(constX(name), constX(optional));
                 return stmt(callThisX("declare", arguments));
             })
             .toList();
         var closure = closureX(block(new VariableScope(), statements));
-        var result = stmt(callThisX("params", args(closure)));
+        var result = stmt(callThisX("params", args(classX(paramsType), closure)));
         moduleNode.addStatement(result);
     }
 
@@ -178,77 +210,15 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         if( !node.isEntry() )
             checkReservedMethodName(node, "workflow");
-
-        var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
-        visitWorkflowEmits(node.emits, main);
-        visitWorkflowPublishers(node.publishers, main);
-        visitWorkflowHandler(node.onComplete, "setOnComplete", main);
-        visitWorkflowHandler(node.onError, "setOnError", main);
-
-        var bodyDef = stmt(createX(
-            "nextflow.script.BodyDef",
-            args(
-                closureX(null, main),
-                constX(null),
-                constX("workflow")
-            )
-        ));
-        var closure = closureX(null, block(new VariableScope(), List.of(
-            workflowTakes(node.getParameters()),
-            node.emits,
-            bodyDef
-        )));
-        var arguments = node.isEntry()
-            ? args(closure)
-            : args(constX(node.getName()), closure);
-        var result = stmt(callThisX("workflow", arguments));
+        var result = new WorkflowToGroovyVisitor(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 
-    private Statement workflowTakes(Parameter[] takes) {
-        var statements = Arrays.stream(takes)
-            .map((take) ->
-                stmt(callThisX("_take_", args(constX(take.getName()))))
-            )
-            .toList();
-        return block(null, statements);
-    }
-
-    private void visitWorkflowEmits(Statement emits, BlockStatement main) {
-        for( var stmt : asBlockStatements(emits) ) {
-            var es = (ExpressionStatement)stmt;
-            var emit = es.getExpression();
-            if( emit instanceof VariableExpression ve ) {
-                es.setExpression(callThisX("_emit_", args(constX(ve.getName()))));
-            }
-            else if( emit instanceof AssignmentExpression ae ) {
-                var target = (VariableExpression)ae.getLeftExpression();
-                main.addStatement(assignS(target, emit));
-                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                main.addStatement(es);
-            }
-            else {
-                var target = varX("$out");
-                main.addStatement(assignS(target, emit));
-                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                main.addStatement(es);
-            }
-        }
-    }
-
-    private void visitWorkflowPublishers(Statement publishers, BlockStatement main) {
-        for( var stmt : asBlockStatements(publishers) ) {
-            var es = (ExpressionStatement)stmt;
-            var publish = (BinaryExpression)es.getExpression();
-            var target = asVarX(publish.getLeftExpression());
-            es.setExpression(callThisX("_publish_", args(constX(target.getName()), publish.getRightExpression())));
-            main.addStatement(es);
-        }
-    }
-
-    private void visitWorkflowHandler(Statement code, String name, BlockStatement main) {
-        if( code instanceof BlockStatement block )
-            main.addStatement(stmt(callX(varX("workflow"), name, args(closureX(null, block)))));
+    @Override
+    public void visitAgent(AgentNode node) {
+        checkReservedMethodName(node, "agent");
+        var result = new AgentToGroovyVisitor(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
     }
 
     @Override
@@ -291,10 +261,20 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
+    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
+
     @Override
     public void visitRecord(RecordNode node) {
+        addNullableAnnotations(node);
         var result = stmt(callThisX("declareType", args(classX(node))));
         moduleNode.addStatement(result);
+    }
+
+    private static void addNullableAnnotations(ClassNode node) {
+        for( var fn : node.getFields() ) {
+            if( fn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+                fn.addAnnotation(NULLABLE);
+        }
     }
 
     @Override

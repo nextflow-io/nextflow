@@ -49,6 +49,10 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new ShifterBuilder(containerImage, config)
         if( config instanceof CharliecloudConfig )
             return new CharliecloudBuilder(containerImage, config)
+        if( config instanceof AppleContainerConfig )
+            return new AppleContainerBuilder(containerImage, config)
+        if( config instanceof SmolVmConfig )
+            return new SmolVmBuilder(containerImage, config)
         //
         throw new IllegalArgumentException("Unknown container engine: $config.engine")
     }
@@ -314,7 +318,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     }
 
     protected String escape(String path) {
-        path.startsWith('$') ? "\"$path\"" : Escape.path(path)
+        path.startsWith('$') ? "\"$path\"" : Escape.dataPath(path)
     }
 
     protected String mountFlags(boolean readOnly) {

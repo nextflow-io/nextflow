@@ -25,13 +25,12 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.LazyValue
 import nextflow.util.TestOnly
 import org.yaml.snakeyaml.Yaml
 /**
@@ -46,7 +45,7 @@ class SpackCache {
     /**
      * Cache the prefix path for each Spack environment
      */
-    static final private Map<String,DataflowVariable<Path>> spackPrefixPaths = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> spackPrefixPaths = new ConcurrentHashMap<>()
 
     /**
      * The Spack settings defined in the nextflow config file
@@ -330,7 +329,7 @@ class SpackCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
@@ -339,35 +338,12 @@ class SpackCache {
      * @param spackEnv
      *      Spack environment string
      * @return
-     *      The {@link DataflowVariable} which hold (and pull) the local image file
+     *      The {@link LazyValue} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String spackEnv, String arch) {
-
-        def spackEnvArch
-
-        spackEnvArch = arch ? "${spackEnv}_${arch}".toString() : spackEnv
-
-        if( spackEnv in spackPrefixPaths ) {
-            def msg = "spack found local environment `$spackEnv`"
-            if( arch ) msg += " and arch `$arch`"
-            log.trace "$msg"
-            return spackPrefixPaths[spackEnvArch]
-        }
-
-        synchronized (spackPrefixPaths) {
-            def result = spackPrefixPaths[spackEnvArch]
-            if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv, arch) })
-                spackPrefixPaths[spackEnvArch] = result
-            }
-            else {
-                def msg = "spack found local cache for environment `$spackEnv` (2)"
-                if( arch ) msg += " and arch `$arch`"
-                log.trace "$msg"
-            }
-            return result
-        }
+    LazyValue<Path> getLazyImagePath(String spackEnv, String arch) {
+        final spackEnvArch = arch ? "${spackEnv}_${arch}".toString() : spackEnv
+        return spackPrefixPaths.computeIfAbsent(spackEnvArch, (String key) -> new LazyValue<Path>({ createLocalSpackEnv(spackEnv, arch) }))
     }
 
     /**
@@ -380,10 +356,7 @@ class SpackCache {
      * @return the local environment path prefix {@link Path}
      */
     Path getCachePathFor(String spackEnv, String arch) {
-        def promise = getLazyImagePath(spackEnv, arch)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(spackEnv, arch).get()
         if( !result )
             throw new IllegalStateException("Cannot create Spack environment `$spackEnv`")
         log.trace "Spack cache for env `$spackEnv` path=$result"

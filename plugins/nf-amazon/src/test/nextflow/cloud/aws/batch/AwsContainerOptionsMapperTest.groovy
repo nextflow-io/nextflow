@@ -136,6 +136,15 @@ class AwsContainerOptionsMapperTest extends Specification {
         properties.linuxParameters.sharedMemorySize() == 1024
     }
 
+    def 'should set shared memory size using equals syntax'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--shm-size=256m')
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
+        then:
+        properties.linuxParameters.sharedMemorySize() == 256
+    }
+
     def 'should set memory swappiness'() {
 
         when:

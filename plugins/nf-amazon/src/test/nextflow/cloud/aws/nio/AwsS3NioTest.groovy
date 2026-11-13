@@ -23,6 +23,7 @@ import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -39,6 +40,7 @@ import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.CopyMoveHelper
 import nextflow.file.FileHelper
+import nextflow.file.SkipDirOption
 import nextflow.trace.TraceHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
@@ -54,18 +56,22 @@ import spock.lang.Unroll
 @Slf4j
 @Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-@Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
     private S3Client s3Client0
 
+    @Shared
+    private List<String> sharedBuckets0 = []
+
     S3Client getS3Client() { s3Client0 }
 
+    List<String> getSharedBuckets() { sharedBuckets0 }
+
     static private Map config0() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-        return [aws:[accessKey: accessKey, secretKey: secretKey]]
+        // no static keys: the default provider chain also reads the session token of the CI role credentials
+        return [aws: [:]]
     }
 
     def setup() {
@@ -77,9 +83,13 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Global.session = Mock(Session) { getConfig()>>cfg }
     }
 
+    def cleanupSpec() {
+        deleteSharedBuckets()
+    }
+
     def 'should create a blob' () {
         given:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         def path = s3path("s3://$bucket/file-name.txt")
 
         when:
@@ -88,14 +98,14 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         existsPath("$bucket/file-name.txt")
 
         cleanup:
-        if( bucket ) deleteBucket(bucket)
+        if( bucket ) deleteTestDir(bucket)
     }
 
     def 'should write a file' () {
         given:
         def TEXT = "Hello world!"
         and:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         def path = s3path("s3://$bucket/file-name.txt")
 
         when:
@@ -105,14 +115,14 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(path) == TEXT
 
         cleanup:
-        if( bucket ) deleteBucket(bucket)
+        if( bucket ) deleteTestDir(bucket)
     }
 
     def 'should read a file' () {
         given:
         def TEXT = "Hello world!"
         and:
-        def bucket = createBucket()
+        def bucket = createTestDir()
         def path = s3path("s3://$bucket/file-name.txt")
         when:
         createObject("$bucket/file-name.txt", TEXT)
@@ -121,7 +131,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.readAllLines(path, Charset.forName('UTF-8')).get(0) == TEXT
 
         cleanup:
-        if( bucket ) deleteBucket(bucket)
+        if( bucket ) deleteTestDir(bucket)
     }
 
     def 'should read file attributes' () {
@@ -130,9 +140,10 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         final TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
-        def objectKey = 'data/alpha.txt'
-        def filePath = "$bucketName/$objectKey"
+        def bucketName = createTestDir()
+        def dirKey = "${bucketName.tokenize('/')[1]}/data" as String
+        def objectKey = "$dirKey/alpha.txt" as String
+        def filePath = "${sharedBuckets[0]}/$objectKey"
         createObject(filePath, TEXT)
         and:
 
@@ -180,7 +191,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         attrs.size() == 0
         !attrs.isSymbolicLink()
         !attrs.isOther()
-        attrs.fileKey() == "data/"
+        attrs.fileKey() == "$dirKey/"
         attrs.lastAccessTime() .toMillis()-start < 5_000
         attrs.lastModifiedTime() .toMillis()-start < 5_000
         attrs.creationTime() .toMillis()-start < 5_000
@@ -189,7 +200,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         // -- readAttributes for a bucket
         //
         when:
-        attrs = Files.readAttributes(s3path("s3://$bucketName"), BasicFileAttributes)
+        attrs = Files.readAttributes(s3path("s3://${sharedBuckets[0]}"), BasicFileAttributes)
         then:
         !attrs.isRegularFile()
         attrs.isDirectory()
@@ -202,7 +213,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         attrs.lastModifiedTime() == null
 
         cleanup:
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
     }
 
     def 'should copy a stream to bucket' () {
@@ -210,7 +221,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = s3path("s3://$bucketName/data/file.txt")
 
         and:
@@ -234,7 +245,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         thrown(FileAlreadyExistsException)
 
         cleanup:
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
     }
 
     def 'copy local file to a bucket' () {
@@ -242,7 +253,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = s3path("s3://$bucketName/data/file.txt")
         def source = Files.createTempFile('test','nf')
         source.text = TEXT
@@ -254,7 +265,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         cleanup:
         if( source ) Files.delete(source)
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
     }
 
     def 'copy a remote file to a bucket' () {
@@ -262,7 +273,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = s3path("s3://$bucketName/target/file.txt")
 
         and:
@@ -278,16 +289,15 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(target) == TEXT
 
         cleanup:
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
     }
 
-    @Ignore // FIXME
     def 'move a remote file to a bucket' () {
         given:
         def TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = s3path("s3://$bucketName/target/file.txt")
 
         and:
@@ -303,7 +313,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(target) == TEXT
 
         cleanup:
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
     }
 
     def 'move local file to a bucket' () {
@@ -311,7 +321,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = s3path("s3://$bucketName/target/file.txt")
 
         and:
@@ -325,7 +335,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(target) == TEXT
 
         cleanup:
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
     }
 
     def 'move a remote file to local' () {
@@ -333,7 +343,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def TEXT = "Hello world!"
 
         when:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = Files.createTempFile('foo',null)
 
         and:
@@ -349,12 +359,11 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         target.text == TEXT
 
         cleanup:
-        if( bucketName ) deleteBucket(bucketName)
+        if( bucketName ) deleteTestDir(bucketName)
         if( target ) Files.deleteIfExists(target)
     }
 
-    @Ignore //FIXME
-    def 'should create a directory' () {
+    def 'should throw unsupported when create directory is a bucket' () {
 
         given:
         def bucketName = getRndBucketName()
@@ -363,15 +372,17 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         when:
         Files.createDirectory(dir)
         then:
-        existsPath(dir)
+        thrown(UnsupportedOperationException)
 
         cleanup:
-        deleteBucket(bucketName)
+        if (existsPath(dir)) {
+            deleteBucket(bucketName)
+        }
     }
 
     def 'should create a directory tree' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def dir = s3path("s3://$bucketName/alpha/bravo/omega/")
         when:
         Files.createDirectories(dir)
@@ -386,12 +397,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         noExceptionThrown()
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should create a file' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
 
         when:
         def path = s3path("s3://$bucketName/data/file.txt")
@@ -400,12 +411,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         existsPath(path)
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should create temp file and directory' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def base = s3path("s3://$bucketName")
 
         when:
@@ -419,12 +430,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(t2)
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should delete a file' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def target = s3path("s3://$bucketName/data/file.txt")
         and:
         createObject(target.toString(), 'HELLO WORLD')
@@ -436,19 +447,20 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         !existsPath(target)
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
-    @Ignore // FIXME
-    def 'should delete a bucket' () {
+    def 'should throw unsupported when trying delete a bucket' () {
         given:
-        final bucketName = createBucket()
+        def bucketName = createBucket()
 
         when:
         Files.delete(s3path("s3://$bucketName"))
         then:
-        !existsPath(bucketName)
+        thrown(UnsupportedOperationException)
 
+        cleanup:
+        deleteBucket(bucketName)
     }
 
     @Ignore // FIXME
@@ -480,7 +492,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
-    @Ignore // FIXME
     def 'should throw a NoSuchFileException when deleting an object not existing' () {
 
         given:
@@ -496,7 +507,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should delete a non-empty directory on S3 without throwing' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         createObject("$bucketName/dir1/file1.txt", 'HELLO')
         createObject("$bucketName/dir1/file2.txt", 'WORLD')
@@ -509,41 +520,40 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         noExceptionThrown()
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
-    @Ignore //FIXME
     def 'should validate exists method' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         def missingBucket = getRndBucketName()
         and:
         createObject("$bucketName/file.txt", 'HELLO')
 
         expect:
-        Files.exists(s3path("s3://$bucketName"))
+        Files.exists(s3path("s3://${sharedBuckets[0]}"))
         Files.exists(s3path("s3://$bucketName/file.txt"))
         !Files.exists(s3path("s3://$bucketName/fooooo.txt"))
         !Files.exists(s3path("s3://$missingBucket"))
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
 
     def 'should check is it is a directory' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
 
         when:
-        def path = s3path("s3://$bucketName")
+        def path = s3path("s3://${sharedBuckets[0]}")
         then:
         Files.isDirectory(path)
         !Files.isRegularFile(path)
 
         when:
-        def file = path.resolve('this/and/that')
+        def file = s3path("s3://$bucketName/this/and/that")
         createObject(file, 'Hello world')
         then:
         !Files.isDirectory(file)
@@ -562,7 +572,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         !Files.isSymbolicLink(file)
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should check that is the same file' () {
@@ -580,7 +590,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should create a newBufferedReader' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         def TEXT = randomText(50 * 1024)
         def path = s3path("s3://$bucketName/file.txt")
@@ -598,12 +608,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         thrown(NoSuchFileException)
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should create a newBufferedWriter' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(50 * 1024)
         final path = s3path("s3://$bucketName/file.txt")
@@ -616,12 +626,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(path) == TEXT
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should create a newInputStream' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(50 * 1024)
         final path = s3path("s3://$bucketName/file.txt")
@@ -633,7 +643,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         reader.text == TEXT
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should copy a bucket' () {
@@ -641,7 +651,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def target = folder.resolve('file.txt')
         and:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(50 * 1024)
         final path = s3path("s3://$bucketName/file.txt")
@@ -655,7 +665,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         cleanup:
         folder?.deleteDir()
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should download empty file from bucket' () {
@@ -663,7 +673,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def target = folder.resolve('empty.txt')
         and:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         final path = s3path("s3://$bucketName/empty.txt")
         createObject(path, '')
 
@@ -676,12 +686,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         cleanup:
         folder?.deleteDir()
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should create a newOutputStream' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(2048)
         final path = s3path("s3://$bucketName/file.txt")
@@ -697,12 +707,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(path) == TEXT
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should read a newByteChannel' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(1024)
         final path = s3path("s3://$bucketName/file.txt")
@@ -714,12 +724,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readChannel(channel, 100) == TEXT
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should write a byte channel' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(1024)
         final path = s3path("s3://$bucketName/file.txt")
@@ -732,12 +742,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         readObject(path) == TEXT
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should check file size' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         final TEXT = randomText(50 * 1024)
         final path = s3path("s3://$bucketName/file.txt")
@@ -753,7 +763,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         thrown(NoSuchFileException)
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     // test fails on GHA, likely due to concurrent execution
@@ -1013,7 +1023,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should handle file names with same prefix' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         createObject("$bucketName/transcript_index.junctions.fa", 'foo')
         createObject("$bucketName/alpha-beta/file1", 'bar')
@@ -1030,12 +1040,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(s3path("s3://$bucketName/alpha"))
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should tag a file' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         def path = s3path("s3://$bucketName/alpha.txt")
         def copy = s3path("s3://$bucketName/omega.txt")
@@ -1064,7 +1074,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         copyTags.find { it.key() =='BAR' } == null
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     def 'should download file from encrypted bucket' () {
@@ -1072,7 +1082,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def target = folder.resolve('test-data.txt')
         and:
-        def source = s3path("s3://nf-kms-xyz/test-data.txt")
+        def source = s3path("s3://nextflow-ci-oss-kms/fixtures/test-data.txt")
 
         when:
         FileHelper.copyPath(source, target)
@@ -1085,12 +1095,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should upload file to encrypted bucket' () {
         given:
-        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        def KEY = 'arn:aws:kms:eu-west-1:807882257208:key/28c34bc1-d8da-4682-9b2e-3356aeb77cc9'
         and:
         def folder = Files.createTempDirectory('test')
         def source = folder.resolve('hello.txt'); source.text = 'Hello world'
         and:
-        def target = s3path("s3://nf-kms-xyz/test-${UUID.randomUUID()}.txt")
+        def target = s3path("s3://nextflow-ci-oss-kms/test-${UUID.randomUUID()}.txt")
         and: // assign some tags
         target.setTags([ONE: 'HELLO'])
 
@@ -1111,7 +1121,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should upload directory to encrypted bucket' () {
         given:
-        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        def KEY = 'arn:aws:kms:eu-west-1:807882257208:key/28c34bc1-d8da-4682-9b2e-3356aeb77cc9'
         and:
         def folder = Files.createTempDirectory('test')
         def source = folder.resolve('data'); source.mkdir()
@@ -1124,7 +1134,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         source.resolve('alpha/beta/file-5.txt').text = 'file 5'
 
         and:
-        def target = s3path("s3://nf-kms-xyz/test-${UUID.randomUUID()}")
+        def target = s3path("s3://nextflow-ci-oss-kms/test-${UUID.randomUUID()}")
         and: // assign some tags
         target.setTags([ONE: 'HELLO'])
 
@@ -1154,10 +1164,11 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should download s3 dir to local dir' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         createObject("$bucketName/cache/foo/file-1",'File one')
         createObject("$bucketName/cache/foo/bar/file-2",'File two')
         createObject("$bucketName/cache/foo/baz/file-3",'File three')
+        createObject("$bucketName/cache/foo/baz/.fusion/chks/part-0",'Fusion part')
         and:
         def local = Files.createTempDirectory('test')
         def cache1 = local.resolve('cache1')
@@ -1166,30 +1177,32 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def remote = s3path("s3://$bucketName/cache/foo")
 
         when:
-        CopyMoveHelper.copyToForeignTarget(remote, cache1)
+        CopyMoveHelper.copyToForeignTarget(remote, cache1, new SkipDirOption('.fusion'))
         then:
         cache1.resolve('file-1').exists()
         cache1.resolve('bar/file-2').exists()
         cache1.resolve('baz/file-3').exists()
+        !cache1.resolve('baz/.fusion').exists()
 
         when:
         // the use of 'FileHelper.copyPath' will invoke the s3 provider download directory method
         // make sure the resulting local directory structure matches the one created by 'CopyMoveHelper.copyToForeignTarget'
-        FileHelper.copyPath(remote, cache2)
+        FileHelper.copyPath(remote, cache2, new SkipDirOption('.fusion'))
         then:
         cache2.resolve('file-1').exists()
         cache2.resolve('bar/file-2').exists()
         cache2.resolve('baz/file-3').exists()
+        !cache2.resolve('baz/.fusion').exists()
 
         cleanup:
         local?.deleteDir()
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
 
     def 'should upload local dir to s3 directory' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         def local = Files.createTempDirectory('test')
         local.resolve('cache/foo').mkdirs()
         local.resolve('cache/foo/bar').mkdirs()
@@ -1199,6 +1212,10 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         local.resolve('cache/foo/bar/file-2').text = 'File two'
         local.resolve('cache/foo/baz/file-3').text = 'File three'
         local.resolve('cache/foo/baz/file-4').text = 'File four'
+        and:
+        // symlinks must be dereferenced when the directory is uploaded
+        Files.createSymbolicLink(local.resolve('cache/foo/link-file-1'), local.resolve('cache/foo/file-1'))
+        Files.createSymbolicLink(local.resolve('cache/foo/link-baz'), local.resolve('cache/foo/baz'))
 
         when:
         CopyMoveHelper.copyToForeignTarget(local.resolve('cache/foo'), s3path("s3://$bucketName/cache1"))
@@ -1207,6 +1224,10 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(s3path("s3://$bucketName/cache1/bar/file-2"))
         Files.exists(s3path("s3://$bucketName/cache1/baz/file-3"))
         Files.exists(s3path("s3://$bucketName/cache1/baz/file-4"))
+        and:
+        readObject(s3path("s3://$bucketName/cache1/link-file-1")) == 'File one'
+        readObject(s3path("s3://$bucketName/cache1/link-baz/file-3")) == 'File three'
+        Files.exists(s3path("s3://$bucketName/cache1/link-baz/file-4"))
 
         when:
         FileHelper.copyPath(local.resolve('cache/foo'), s3path("s3://$bucketName/cache2"))
@@ -1215,15 +1236,87 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(s3path("s3://$bucketName/cache2/bar/file-2"))
         Files.exists(s3path("s3://$bucketName/cache2/baz/file-3"))
         Files.exists(s3path("s3://$bucketName/cache2/baz/file-4"))
+        and:
+        readObject(s3path("s3://$bucketName/cache2/link-file-1")) == 'File one'
+        readObject(s3path("s3://$bucketName/cache2/link-baz/file-3")) == 'File three'
+        Files.exists(s3path("s3://$bucketName/cache2/link-baz/file-4"))
 
         cleanup:
         local?.deleteDir()
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
+    }
+
+    def 'should upload a symlink to a local dir to s3 directory' () {
+        given:
+        def bucketName = createTestDir()
+        def local = Files.createTempDirectory('test')
+        local.resolve('cache/foo/bar').mkdirs()
+        and:
+        local.resolve('cache/foo/file-1').text = 'File one'
+        local.resolve('cache/foo/bar/file-2').text = 'File two'
+        and:
+        // the source directory itself is a symlink
+        def link = Files.createSymbolicLink(local.resolve('cache/foo-link'), local.resolve('cache/foo'))
+
+        when:
+        FileHelper.copyPath(link, s3path("s3://$bucketName/cache1"))
+        then:
+        readObject(s3path("s3://$bucketName/cache1/file-1")) == 'File one'
+        readObject(s3path("s3://$bucketName/cache1/bar/file-2")) == 'File two'
+
+        cleanup:
+        local?.deleteDir()
+        deleteTestDir(bucketName)
+    }
+
+    def 'should upload a symlink to a local file to s3 file' () {
+        given:
+        def bucketName = createTestDir()
+        def local = Files.createTempDirectory('test')
+        local.resolve('cache').mkdirs()
+        and:
+        local.resolve('cache/file-1').text = 'File one'
+        and:
+        def link = Files.createSymbolicLink(local.resolve('cache/link-file-1'), local.resolve('cache/file-1'))
+
+        when:
+        FileHelper.copyPath(link, s3path("s3://$bucketName/cache1/file-1"))
+        then:
+        readObject(s3path("s3://$bucketName/cache1/file-1")) == 'File one'
+
+        cleanup:
+        local?.deleteDir()
+        deleteTestDir(bucketName)
+    }
+
+    def 'should not follow symlinks uploading a local dir to s3 directory' () {
+        given:
+        def bucketName = createTestDir()
+        def local = Files.createTempDirectory('test')
+        local.resolve('cache/foo/bar').mkdirs()
+        and:
+        local.resolve('cache/foo/file-1').text = 'File one'
+        local.resolve('cache/foo/bar/file-2').text = 'File two'
+        and:
+        Files.createSymbolicLink(local.resolve('cache/foo/link-file-1'), local.resolve('cache/foo/file-1'))
+
+        when:
+        FileHelper.copyPath(local.resolve('cache/foo'), s3path("s3://$bucketName/cache1"), LinkOption.NOFOLLOW_LINKS)
+        then:
+        Files.exists(s3path("s3://$bucketName/cache1/file-1"))
+        Files.exists(s3path("s3://$bucketName/cache1/bar/file-2"))
+        and:
+        // symlinks are not dereferenced, therefore they are not uploaded
+        !Files.exists(s3path("s3://$bucketName/cache1/link-file-1"))
+
+        cleanup:
+        local?.deleteDir()
+        deleteTestDir(bucketName)
     }
 
     void "should upload a stream with multiple flush"(){
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         def path = s3path("s3://$bucketName/alpha.txt")
 
@@ -1239,12 +1332,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.readString(s3path("s3://$bucketName/alpha.txt")).length() == 42 // 2*20 + 2 return lines
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     void "should upload a stream without flush"(){
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         and:
         def path = s3path("s3://$bucketName/alpha.txt")
 
@@ -1258,7 +1351,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.readString(s3path("s3://$bucketName/alpha.txt")).length() == 42 // 2*20 + 2 return lines
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
     @Unroll
@@ -1268,8 +1361,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
         and:
-        def bucket1 = createBucket()
-        def bucket2 = createBucket()
+        def bucket1 = createTestDir()
+        def bucket2 = createTestDir(1)
 
         // upload a file to a remote bucket
         when:
@@ -1299,8 +1392,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.size(target2) == Files.size(result)
 
         cleanup:
-        deleteBucket(bucket1)
-        deleteBucket(bucket2)
+        deleteTestDir(bucket1)
+        deleteTestDir(bucket2)
         folder?.deleteDir()
 
         // check the limits in the file `amazon.properties`
@@ -1318,8 +1411,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
         and:
-        def bucket1 = createBucket()
-        def bucket2 = createBucket()
+        def bucket1 = createTestDir()
+        def bucket2 = createTestDir(1)
 
         // upload a file to a remote bucket
         when:
@@ -1352,8 +1445,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
                 .contentType() == 'text/bar'
 
         cleanup:
-        deleteBucket(bucket1)
-        deleteBucket(bucket2)
+        deleteTestDir(bucket1)
+        deleteTestDir(bucket2)
         folder?.deleteDir()
 
         // check the limits in the file `amazon.properties`
@@ -1371,14 +1464,14 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
         and:
-        def bucket1 = createBucket()
-        def bucket2 = createBucket()
+        def bucket1 = createTestDir()
+        def bucket2 = createTestDir(1)
 
         // upload a file to a remote bucket
         when:
         def target1 = s3path("s3://$bucket1/foo.data")
         and:
-        target1.setStorageClass('REDUCED_REDUNDANCY')
+        target1.setStorageClass('STANDARD_IA')
         def client = target1.getFileSystem().getClient()
         and:
         FileHelper.copyPath(file, target1)
@@ -1388,7 +1481,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         and:
         client
                 .getObjectMetadata(target1.getBucket(), target1.getKey())
-                .storageClass() == StorageClass.REDUCED_REDUNDANCY
+                .storageClass() == StorageClass.STANDARD_IA
 
         // copy a file across buckets
         when:
@@ -1405,8 +1498,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
                 .storageClass() == StorageClass.STANDARD_IA
 
         cleanup:
-        deleteBucket(bucket1)
-        deleteBucket(bucket2)
+        deleteTestDir(bucket1)
+        deleteTestDir(bucket2)
         folder?.deleteDir()
 
         // check the limits in the file `amazon.properties`
@@ -1419,7 +1512,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should overwrite a file' () {
         given:
-        def bucket1 = createBucket()
+        def bucket1 = createTestDir()
         def path = s3path("s3://$bucket1/foo/bar.txt")
         and:
         path.text = 'foo'
@@ -1432,12 +1525,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         path.text == 'Hola'
 
         cleanup:
-        deleteBucket(bucket1)
+        deleteTestDir(bucket1)
     }
 
     def 'should not overwrite a file' () {
         given:
-        def bucket1 = createBucket()
+        def bucket1 = createTestDir()
         def path = s3path("s3://$bucket1/foo/bar.txt")
         and:
         path.text = 'foo'
@@ -1449,7 +1542,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         e.message == "Test file already exists: ${path.toUriString()} -- enable the 'test.overwrite' option in your config file to overwrite existing files"
 
         cleanup:
-        deleteBucket(bucket1)
+        deleteTestDir(bucket1)
     }
 
     // In S3, keys are listed in lexicographic order and characters such as '-' and '.'
@@ -1460,7 +1553,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
     // detect directories when sibling keys with smaller-than-'/' characters exist.
     def 'should exists file with similar files' () {
         given:
-        def bucketName = createBucket()
+        def bucketName = createTestDir()
         createObject("$bucketName/similar-lexic-order/a/file-1",'File one')
         createObject("$bucketName/similar-lexic-order/a.txt",'File two')
         createObject("$bucketName/similar-lexic-order/a-a/file-3",'File three')
@@ -1471,7 +1564,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         path.isDirectory()
 
         cleanup:
-        deleteBucket(bucketName)
+        deleteTestDir(bucketName)
     }
 
 }
