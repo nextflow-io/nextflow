@@ -336,7 +336,8 @@ class LinObserver implements TraceObserverV2 {
             task.inputs ? manageTaskInputParameters(task.inputs, hashMode(task), normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             asUriString(executionHash),
-            getTaskModuleId(task)
+            getTaskModuleId(task),
+            task.hashVersion
         )
     }
 
@@ -359,8 +360,17 @@ class LinObserver implements TraceObserverV2 {
                 Checksum.ofNextflow(p, hashMode(task)) )
             },
             asUriString(executionHash),
-            getTaskModuleId(task)
+            getTaskModuleId(task),
+            task.hashVersion,
+            getTaskResourcesBundle(task),
+            task.config?.getModule() ?: null
         )
+    }
+
+    /** Mirrors the module bundle key of {@link TaskHasher}: absent unless module binaries are on. */
+    protected String getTaskResourcesBundle(TaskRun task) {
+        final bundle = session.enableModuleBinaries() ? task.processor?.getModuleBundle() : null
+        return bundle?.hasEntries() ? bundle.fingerprint() : null
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {

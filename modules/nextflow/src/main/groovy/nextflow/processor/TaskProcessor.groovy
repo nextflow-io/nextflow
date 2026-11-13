@@ -704,7 +704,9 @@ class TaskProcessor {
         // -- download foreign files
         session.filePorter.transfer(foreignFiles)
 
-        final hash = createTaskHasher(task).compute()
+        final hasher = createTaskHasher(task)
+        task.hashVersion = hasher.getHashVersion()
+        final hash = hasher.compute()
         checkCachedOrLaunchTask(task, hash, resumable)
     }
 

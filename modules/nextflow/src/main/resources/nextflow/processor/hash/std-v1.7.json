@@ -1,0 +1,77 @@
+{
+  "id": "std/v1.7",
+  "note": "From 26.09.0-edge onwards: eval hashed as the raw map. Matches current master.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true,
+    "assetRootDetection": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "contributor": "sessionId",
+      "lineage": ["sessionId"]
+    },
+    {
+      "key": "PROCESS_NAME",
+      "contributor": "processName",
+      "lineage": ["name"]
+    },
+    {
+      "key": "TASK_SOURCE",
+      "contributor": "taskSource",
+      "lineage": ["codeChecksum"]
+    },
+    {
+      "key": "CONTAINER",
+      "contributor": "containerFingerprint",
+      "lineage": ["container"]
+    },
+    {
+      "key": "INPUTS",
+      "contributor": "inputs.raw",
+      "lineage": ["input"]
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "contributor": "evalOutputs.rawMap",
+      "lineage": ["eval"]
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "contributor": "scriptVars",
+      "lineage": ["globalVars"]
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "contributor": "binEntries",
+      "lineage": ["binEntries"]
+    },
+    {
+      "key": "RESOURCES_BUNDLE",
+      "contributor": "resourcesBundleFingerprint",
+      "lineage": ["resourcesBundle"]
+    },
+    {
+      "key": "ENV_MODULES",
+      "contributor": "envModules",
+      "lineage": ["envModules"]
+    },
+    {
+      "key": "CONDA",
+      "contributor": "condaEnv",
+      "lineage": ["conda"]
+    },
+    {
+      "key": "SPACK",
+      "contributor": "spackEnvAndArch",
+      "lineage": ["spack", "architecture"]
+    },
+    {
+      "key": "STUB_MARKER",
+      "contributor": "stubMarker",
+      "lineage": ["codeChecksum"]
+    }
+  ]
+}
