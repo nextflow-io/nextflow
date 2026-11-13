@@ -658,6 +658,7 @@ class AzBatchService implements Closeable {
     protected List<ResourceFile> resourceFileUrls(TaskRun task, String sas) {
         final cmdRun = (AzPath) task.workDir.resolve(TaskRun.CMD_RUN)
         final cmdScript = (AzPath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
+        final cmdInfile = (AzPath) task.workDir.resolve(TaskRun.CMD_INFILE)
 
         final resFiles = new ArrayList(10)
 
@@ -678,7 +679,7 @@ class AzBatchService implements Closeable {
 
         if( task.stdin ) {
             resFiles << new ResourceFile()
-                    .setHttpUrl(AzHelper.toHttpUrl(cmdScript, sas))
+                    .setHttpUrl(AzHelper.toHttpUrl(cmdInfile, sas))
                     .setFilePath(TaskRun.CMD_INFILE)
         }
 
@@ -992,29 +993,28 @@ class AzBatchService implements Closeable {
 
     protected BatchStartTask createStartTask(AzStartTaskOpts opts) {
         log.trace "AzStartTaskOpts: ${opts}"
-        final startCmd = new ArrayList<String>(5)
         final resourceFiles = new ArrayList<ResourceFile>()
+        String script = opts.script
 
-        // If enabled, append azcopy installer to start task command
+        // If enabled, prepend the azcopy installer to the start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
-            startCmd << 'bash -c "chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+            final install = 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
+            // Group the user script so a failed install skips all of it, not just its first line.
+            // The newline before } keeps trailing comments and heredocs in the user script safe.
+            script = script ? "${install} && {\n${script}\n}".toString() : install
             resourceFiles << new ResourceFile()
                 .setHttpUrl(AZCOPY_URL)
                 .setFilePath('azcopy')
         }
 
-        // Get any custom start task command
-        if ( opts.script ) {
-            startCmd << "bash -c '${opts.script.replace(/'/,/''/)}'".toString()
-        }
-
         // If there is no start task contents we return a null to indicate no start task
-        if( !startCmd ) {
+        if( !script ) {
             return null
         }
 
-        // otherwise return a StartTask object with the start task command and resource files
-        return new BatchStartTask(startCmd.join(' && '))
+        // Batch doesn't run the command line in a shell, so wrap everything in a single bash -c
+        final combinedScript = script.replace(/'/, /'\''/)
+        return new BatchStartTask("bash -c '${combinedScript}'".toString())
             .setResourceFiles(resourceFiles)
             .setUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }

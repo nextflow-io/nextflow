@@ -41,6 +41,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private Duration delayBetweenAttempts
     private String sasToken
     private Path remoteBinDir
+    private boolean scratch
+    private boolean stdin
 
     protected AzFileCopyStrategy() {}
 
@@ -52,6 +54,10 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
+        // same rule as BashWrapperBuilder#getScratchDirectoryCommand
+        final scratchStr = bean.scratch?.toString()
+        this.scratch = scratchStr != null && scratchStr != 'false'
+        this.stdin = bean.input != null
     }
 
     @Override
@@ -62,6 +68,10 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         final result = new StringBuilder()
         final copy = environment ? new LinkedHashMap<String,String>(environment) : new LinkedHashMap<String,String>()
         copy.remove('PATH')
+        // the Batch task dir holds the task resource files and is where the Batch output files are collected,
+        // keep track of it because with scratch enabled the task runs in a different directory
+        if( scratch )
+            copy.put('NXF_TASK_LAUNCH_DIR', '$PWD')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
         // azcopy defaults its job plan dir to $HOME, which may not be writable on Batch nodes
@@ -87,9 +97,19 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
-        String result = ( remoteBinDir ? """\
-            nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
-            chmod +x \$PWD/.nextflow-bin/* || true
+        String result = ''
+        // with scratch enabled the task runs outside the Batch task dir, copy the task scripts in it
+        if( scratch ) {
+            result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_SCRIPT} .\n"
+            result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_RUN} .\n"
+            if( stdin )
+                result += "cp \"\$NXF_TASK_LAUNCH_DIR\"/${TaskRun.CMD_INFILE} .\n"
+        }
+        // download bin scripts into the dir already on the PATH, i.e. the Batch task dir
+        final binDir = scratch ? '$NXF_TASK_LAUNCH_DIR/.nextflow-bin' : '$PWD/.nextflow-bin'
+        result += ( remoteBinDir ? """\
+            nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' ${binDir}
+            chmod +x ${binDir}/* || true
             """.stripIndent(true) : '' )
 
         result += 'downloads=(true)\n'
@@ -173,7 +193,11 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        " > ${TaskRun.CMD_EXIT}"
+        // with scratch enabled write the exit file in the Batch task dir so it's uploaded as task output file.
+        // fallback to $PWD because on_exit can run before NXF_TASK_LAUNCH_DIR is exported (before changing dir)
+        scratch
+            ? " > \"\${NXF_TASK_LAUNCH_DIR:-\$PWD}\"/${TaskRun.CMD_EXIT}"
+            : " > ${TaskRun.CMD_EXIT}"
     }
 
     /**

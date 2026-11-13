@@ -31,6 +31,9 @@ out/
 # Agent example validation output (validation/agent.sh)
 /validation/agent-validation/
 
+# Google Batch validation output (validation/google.sh)
+/validation/google-runs/
+
 # Docs site (Docusaurus / Netlify)
 node_modules/
 .docusaurus/
