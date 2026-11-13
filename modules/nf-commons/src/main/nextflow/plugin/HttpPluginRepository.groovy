@@ -95,7 +95,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             // Don't abort Nextflow startup if the registry is unreachable or rate-limited:
             // downstream code will either resolve the plugins from the local store or fail
             // with a more specific error when the metadata is actually needed.
-            log.warn "Failed to prefetch plugin metadata from ${url} - cause: ${e.message}"
+            log.debug "Failed to prefetch plugin metadata from ${url} - cause: ${e.message}"
             this.plugins = new HashMap<>()
         }
     }
@@ -117,6 +117,20 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     PluginInfo getPlugin(String id) {
+        try {
+            return fetchPlugin(id)
+        }
+        catch( PluginRuntimeException e ) {
+            // pf4j asks each repository in turn: report "not found" so the next repository is still asked
+            log.debug "Failed to fetch metadata for plugin ${id} from ${url} - cause: ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Like {@link #getPlugin(String)}, but throws the registry error instead of returning null.
+     */
+    PluginInfo fetchPlugin(String id) {
         return plugins.computeIfAbsent(id) { key -> fetchMetadataByIds([key]).get(key) }
     }
 
@@ -160,7 +174,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             .GET()
             .build()
         try {
-            return sendAndParse(req)
+            return sendAndParse(req, specs)
         }
         catch (PluginRuntimeException e) {
             throw e
@@ -170,11 +184,17 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
     }
 
-    private Map<String, PluginInfo> sendAndParse(HttpRequest req) {
+    private Map<String, PluginInfo> sendAndParse(HttpRequest req, List<PluginRef> specs) {
         final encoder = new GsonEncoder<ListDependenciesResponse>() {}
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         final body = resp.body()
         log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
+        // a registry without namespace support refuses any id with a `/`
+        final namespaced = specs.findAll { it.id.contains('/') }*.id
+        if( resp.statusCode() in [400, 404, 422] && namespaced ) {
+            final msg = "The plugin registry at ${url} refused the namespaced plugin ID: ${namespaced.join(', ')}\nThe registry may not support namespaced plugins. See the registry response for the reason.\n- http status: ${resp.statusCode()}\n- response   : ${body}"
+            throw new PluginRuntimeException(msg)
+        }
         if( resp.statusCode() != 200 ) {
             final msg = "Invalid response while fetching plugin metadata from: ${req.uri()}\n- http status: ${resp.statusCode()}\n- response   : ${body}"
             throw new PluginRuntimeException(msg)

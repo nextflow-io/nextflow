@@ -73,6 +73,14 @@ class CmdPluginTest extends Specification {
         !out.contains('Unknown plugin sub-command')
     }
 
+    def 'should print the plugin-specific command usage for a namespaced plugin' () {
+        when:
+        def out = capture(['myorg/nf-foo:hello'])
+        then:
+        out.contains('Usage: nextflow plugin <plugin-name>:<command> [args]')
+        !out.contains('Unknown plugin sub-command')
+    }
+
     def 'should print the failure reason followed by the general usage for an unknown sub-command' () {
         when:
         def out = capture(['instal'])

@@ -18,7 +18,6 @@ package nextflow.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.extension.FilesEx
 import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptor
 import org.pf4j.update.FileDownloader
@@ -27,6 +26,7 @@ import org.pf4j.update.PluginInfo
 import org.pf4j.update.UpdateRepository
 import org.pf4j.update.verifier.CompoundVerifier
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -86,13 +86,38 @@ class LocalUpdateRepository implements UpdateRepository {
     private static Map<String, PluginInfo> loadPlugins(Path dir) {
         // each plugin is stored in a dir called $id-$version; grab the descriptor from each
         final manifestReader = new ManifestPluginDescriptorFinder()
-        final descriptors = FilesEx.listFiles(dir)
+        final descriptors = listPluginDirs(dir)
             .collect { plugin -> new LocalPlugin(plugin, manifestReader.find(plugin)) }
 
         // now group the descriptors by id, to create a PluginInfo with list of versions
         return descriptors
             .groupBy { d -> d.getPluginId() }
             .collectEntries { id, versions -> Map.entry(id, toPluginInfo(id, versions)) }
+    }
+
+    /**
+     * List the plugin folders in the store, including the ones inside a namespace folder.
+     * pf4j cannot tell them apart because it searches `MANIFEST.MF` recursively.
+     */
+    static List<Path> listPluginDirs(Path root) {
+        final result = new ArrayList<Path>()
+        for( Path it : childDirs(root) ) {
+            if( isPluginDir(it) )
+                result.add(it)
+            else
+                result.addAll(childDirs(it).findAll { Path p -> isPluginDir(p) })
+        }
+        return result
+    }
+
+    private static List<Path> childDirs(Path dir) {
+        try( def stream = Files.list(dir) ) {
+            return stream.filter { Path p -> Files.isDirectory(p) && !p.fileName.toString().startsWith('.') }.toList()
+        }
+    }
+
+    private static boolean isPluginDir(Path dir) {
+        return Files.exists(dir.resolve('MANIFEST.MF')) || Files.exists(dir.resolve('classes/META-INF/MANIFEST.MF'))
     }
 
     private static PluginInfo toPluginInfo(String id, List<LocalPlugin> versions) {

@@ -73,6 +73,9 @@ class PluginUpdater extends UpdateManager {
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
+    // the last metadata error per plugin id, so the final error can show why the plugin was not found
+    private Map<String,PluginRuntimeException> metadataErrors = new HashMap<>()
+
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
         this.pluginManager = pluginManager
@@ -288,10 +291,12 @@ class PluginUpdater extends UpdateManager {
         for( def repo : this.@repositories ) {
             try {
                 // HttpPluginRepository fetches and caches the metadata when missing
-                repo.getPlugin(id)
+                repo instanceof HttpPluginRepository ? repo.fetchPlugin(id) : repo.getPlugin(id)
             }
             catch( PluginRuntimeException e ) {
-                log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
+                // not a warning: the error is reported as the cause when the plugin cannot be found
+                log.debug "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
+                metadataErrors.put(id, e)
             }
         }
     }
@@ -407,6 +412,8 @@ class PluginUpdater extends UpdateManager {
         // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
         try {
+            // a namespaced plugin goes in a namespace folder that may not exist yet
+            Files.createDirectories(pluginPath.parent)
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
@@ -496,7 +503,15 @@ class PluginUpdater extends UpdateManager {
      */
     private File lockFile(String id, String version) {
         def tmp = System.getProperty('java.io.tmpdir')
-        new File(tmp, "nextflow-plugin-${id}-${version}.lock")
+        new File(tmp, "nextflow-plugin-${id.replace('/', '~')}-${version}.lock")
+    }
+
+    private IllegalStateException notFound(String id, String msg) {
+        // the registry error explains the failure only when no repository knows the plugin
+        final cause = getPluginsMap().containsKey(id) ? null : metadataErrors.get(id)
+        return cause
+            ? new IllegalStateException("$msg -- cause: ${cause.message}", cause)
+            : new IllegalStateException(msg)
     }
 
     private boolean load0(String id, String requestedVersion) {
@@ -523,7 +538,7 @@ class PluginUpdater extends UpdateManager {
             final msg = requestedVersion
                 ? "Cannot find version of $id plugin matching $requestedVersion"
                 : "Cannot find latest version of $id plugin"
-            throw new IllegalStateException(msg)
+            throw notFound(id, msg)
         }
 
         if( version != requestedVersion ) {
@@ -532,7 +547,15 @@ class PluginUpdater extends UpdateManager {
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
-            pluginPath = safeDownload(id, version)
+            try {
+                pluginPath = safeDownload(id, version)
+            }
+            catch( PluginRuntimeException e ) {
+                // only a missing metadata explains a failed download
+                if( !metadataErrors.containsKey(id) || getPluginsMap().containsKey(id) )
+                    throw e
+                throw notFound(id, e.message)
+            }
         }
 
         // verify the plugin install path contains the expected manifest path
@@ -594,6 +617,8 @@ class PluginUpdater extends UpdateManager {
 
         fetchMissingMetadata(id)
         PluginInfo pluginInfo = getPluginsMap().get(id)
+        if (pluginInfo == null && metadataErrors.containsKey(id))
+            throw notFound(id, "Plugin $id does not exist in any repository")
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")
         }
@@ -651,6 +676,8 @@ class PluginUpdater extends UpdateManager {
         final versionManager = pluginManager.getVersionManager()
 
         PluginInfo pluginInfo = getPluginsMap().get(id)
+        if( !pluginInfo && metadataErrors.containsKey(id) )
+            throw notFound(id, "Unknown plugin id: $id")
         if( !pluginInfo )
             throw new IllegalArgumentException("Unknown plugin id: $id")
 

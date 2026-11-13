@@ -50,6 +50,13 @@ class EmbeddedPluginManager extends CustomPluginManager {
 
     @Override
     protected PluginRepository createPluginRepository() {
-        return new DefaultPluginRepository(getPluginsRoot())
+        return new DefaultPluginRepository(getPluginsRoot()) {
+            @Override
+            List<Path> getPluginPaths() {
+                // the parent unpacks the plugin zip files
+                super.getPluginPaths()
+                return LocalUpdateRepository.listPluginDirs(getPluginsRoot())
+            }
+        }
     }
 }
