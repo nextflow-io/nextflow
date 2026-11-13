@@ -36,6 +36,7 @@ import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
+import nextflow.exception.IllegalFileException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
@@ -513,10 +514,17 @@ class TaskRun implements Cloneable {
      */
     @Memoized
     List<String> getOutputFilesNames() {
-        if( hasTypedInputsOutputs() )
-            return getOutputFilesNamesV2()
-        else
-            return getOutputFilesNamesV1()
+        final result = hasTypedInputsOutputs()
+            ? getOutputFilesNamesV2()
+            : getOutputFilesNamesV1()
+        for( final pattern : result )
+            checkOutputFilePattern(pattern)
+        return result
+    }
+
+    private void checkOutputFilePattern(String pattern) {
+        if( Path.of(pattern).normalize().startsWith('..') )
+            throw new IllegalFileException("File `$pattern` is outside the scope of the task work directory: $workDir")
     }
 
     private List<String> getOutputFilesNamesV2() {
