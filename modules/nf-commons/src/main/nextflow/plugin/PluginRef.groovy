@@ -43,7 +43,7 @@ class PluginRef implements Comparable<PluginRef> {
      */
     static PluginRef parse(String fqid, DefaultPlugins defaultPlugins=null) {
         final tokens = fqid.tokenize('@') as List<String>
-        final id = tokens[0]
+        final id = tokens[0] ?: ''
         final ver = tokens[1]
         // the id becomes a file path, so refuse empty and relative parts
         final parts = id.split('/', -1)

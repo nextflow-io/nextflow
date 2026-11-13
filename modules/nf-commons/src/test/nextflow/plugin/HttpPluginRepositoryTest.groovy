@@ -216,8 +216,7 @@ class HttpPluginRepositoryTest extends Specification {
 
         then:
         def e = thrown(PluginRuntimeException)
-        e.message.startsWith('The plugin registry at')
-        e.message.contains('refused the namespaced plugin ID: myorg/nf-foo')
+        e.message.startsWith("The plugin registry at http://localhost:${wiremock.port()}/ refused the namespaced plugin ID: myorg/nf-foo\n")
         e.message.contains(body)
     }
 

@@ -73,9 +73,9 @@ class PluginRefTest extends Specification {
         PluginRef.parse(FQID)
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == "Invalid plugin ID '${FQID.tokenize('@')[0]}' -- expected format: [<namespace>/]<name>"
+        e.message == "Invalid plugin ID '${FQID.tokenize('@')[0] ?: ''}' -- expected format: [<namespace>/]<name>"
         where:
-        FQID << ['a/b/c', '/nf-foo', 'myorg/', '../nf-foo', 'myorg/..', './nf-foo', 'a/b/c@1.0.0']
+        FQID << ['a/b/c', '/nf-foo', 'myorg/', '../nf-foo', 'myorg/..', './nf-foo', 'a/b/c@1.0.0', '']
     }
 
 }
