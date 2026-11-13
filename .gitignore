@@ -52,20 +52,4 @@ yarn-error.log*
 .env.production.local
 .DS_Store
 mise.toml
-
-# Local scratch directories
 /.cache/
-/tmp/
-/temp/
-/x/
-/errors/
-/misc/
-/other/
-/tests_other/
-/docker-test/
-/minio/
-/sandbox/
-/wave-tests/
-/test-sched/
-/test-module/
-/results/
