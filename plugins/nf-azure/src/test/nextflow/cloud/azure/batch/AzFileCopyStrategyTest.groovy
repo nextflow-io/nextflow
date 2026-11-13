@@ -410,6 +410,7 @@ class AzFileCopyStrategyTest extends Specification {
                     export NXF_TASK_LAUNCH_DIR="$PWD"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_JOB_PLAN_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
                     '''.stripIndent()
         binding.stage_inputs == '''\
