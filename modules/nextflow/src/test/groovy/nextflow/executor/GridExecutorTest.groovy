@@ -127,13 +127,13 @@ class GridExecutorTest extends Specification {
         def handler = new GridTaskHandler(task, executor)
         handler.status = TaskStatus.RUNNING
         handler.exitFile.text = ''
-        handler.exitStatusReadTimeoutMillis = 1000
+        handler.exitStatusReadTimeoutMillis = 200
 
         then:
         // the first try return false
         !handler.checkIfCompleted()
         // wait more the timeout defined by the property 'exitStatusReadTimeoutMillis'
-        sleep 1_500
+        sleep 300
         // now 'checkIfCompleted' returns true
         handler.checkIfCompleted()
         handler.status == TaskStatus.COMPLETED
@@ -161,7 +161,6 @@ class GridExecutorTest extends Specification {
         handler.exitFile.text = ''
 
         assert handler.checkIfCompleted() == false
-        sleep 500
         handler.exitFile.text = '123'
 
         then:

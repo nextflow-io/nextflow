@@ -19,18 +19,18 @@ package nextflow.mail
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.mail.Message
+import javax.mail.MessagingException
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 
 import nextflow.SysEnv
 import org.subethamail.wiser.Wiser
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
+import test.TestHelper
 
-@IgnoreIf({System.getenv('NXF_SMOKE')})
 class MailerTest extends Specification {
 
 
@@ -47,6 +47,27 @@ class MailerTest extends Specification {
         props.get('mail.smtp.port') == '808'
         !props.containsKey('mail.other')
 
+    }
+
+    def 'should set default smtp timeouts' () {
+        when:
+        def props = new Mailer( [smtp: [host: 'gmail.com']] ).createProps()
+        then:
+        props.'mail.smtp.connectiontimeout' == '30000'
+        props.'mail.smtp.timeout' == '30000'
+        props.'mail.smtp.writetimeout' == '30000'
+
+        when:
+        props = new Mailer( [smtp: [host: 'gmail.com', connectiontimeout: 5000, timeout: 1000]] ).createProps()
+        then:
+        props.'mail.smtp.connectiontimeout' == '5000'
+        props.'mail.smtp.timeout' == '1000'
+        props.'mail.smtp.writetimeout' == '30000'
+
+        when:
+        props = new Mailer( [:] ).createProps()
+        then:
+        props.isEmpty()
     }
 
     @RestoreSystemProperties
@@ -69,11 +90,128 @@ class MailerTest extends Specification {
         props.'mail.transport.protocol' == 'smtp'
     }
 
+    @RestoreSystemProperties
+    def 'should not override configured proxy setting' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.setProperty('http.proxyPort', '8000')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com', proxy: [host: 'bar.com', port: 9000]]] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'bar.com'
+        props.'mail.smtp.proxy.port' == '9000'
+    }
+
+    @RestoreSystemProperties
+    def 'should configure proxy setting without a proxy port' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.clearProperty('http.proxyPort')
+
+        def mailer = new Mailer( [smtp: [host: 'gmail.com']] )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.proxy.host' == 'foo.com'
+        !props.containsKey('mail.smtp.proxy.port')
+    }
+
+
+    /**
+     * Fake SMTP server that accepts connections, optionally replies up to
+     * the DATA command, and then stops reading or replying
+     */
+    static class StalledSmtpServer implements Closeable {
+        final ServerSocket server = new ServerSocket(0)
+        final List<Socket> clients = []
+
+        StalledSmtpServer(boolean greet) {
+            Thread.startDaemon {
+                while( !server.closed ) {
+                    final socket = server.accept()
+                    clients << socket
+                    if( greet )
+                        Thread.startDaemon { converse(socket) }
+                }
+            }
+        }
+
+        int getPort() { server.localPort }
+
+        private void converse(Socket socket) {
+            final reader = socket.inputStream.newReader()
+            final writer = socket.outputStream.newWriter()
+            final reply = { String line -> writer.write(line + '\r\n'); writer.flush() }
+            reply('220 localhost ESMTP')
+            String line
+            while( (line = reader.readLine()) != null ) {
+                if( line.startsWith('DATA') ) {
+                    reply('354 go ahead')
+                    return
+                }
+                reply('250 OK')
+            }
+        }
+
+        @Override
+        void close() {
+            server.close()
+            clients*.close()
+        }
+    }
+
+    /**
+     * Send a mail on a separate thread, since a blocked socket read or write
+     * can't be interrupted, and return the error, if any
+     */
+    static Throwable sendWithDeadline(Mailer mailer, Map mail) {
+        Throwable error = null
+        final thread = Thread.startDaemon {
+            try { mailer.send(mail) }
+            catch( Throwable e ) { error = e }
+        }
+        thread.join(15_000)
+        return thread.alive ? new AssertionError('Mail send still blocked after 15 seconds') : error
+    }
+
+    def 'should time out when the smtp server does not reply' () {
+        given:
+        def server = new StalledSmtpServer(false)
+        def mailer = new Mailer([smtp: [host: 'localhost', port: server.port, timeout: 1000]])
+        def mail = [to: 'you@nextflow.io', from: 'me@nextflow.io', subject: 'Hello', body: 'Hi']
+
+        expect:
+        sendWithDeadline(mailer, mail) instanceof MessagingException
+
+        cleanup:
+        server?.close()
+    }
+
+    def 'should time out when the smtp server stops reading' () {
+        given:
+        def server = new StalledSmtpServer(true)
+        def mailer = new Mailer([smtp: [host: 'localhost', port: server.port, timeout: 1000, writetimeout: 1000]])
+        // large enough to fill the socket buffers once the server stops reading
+        def body = 'x' * (32 * 1024 * 1024)
+        def mail = [to: 'you@nextflow.io', from: 'me@nextflow.io', subject: 'Hello', body: body, type: 'text/plain']
+
+        expect:
+        sendWithDeadline(mailer, mail) instanceof MessagingException
+
+        cleanup:
+        server?.close()
+    }
 
     def "sending mails using javamail"() {
 
         given:
-        def PORT = 3025
+        def PORT = TestHelper.rndServerPort()
         def USER = 'foo'
         def PASSWORD = 'secret'
         def server = new Wiser(PORT)
@@ -113,7 +251,7 @@ class MailerTest extends Specification {
     def "sending mails using java with attachment"() {
 
         given:
-        def PORT = 3025
+        def PORT = TestHelper.rndServerPort()
         def USER = 'foo'
         def PASSWORD = 'secret'
         def server = new Wiser(PORT)
@@ -168,7 +306,7 @@ class MailerTest extends Specification {
         0 * mailer.getSysMailer() >> null
         1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
 
     }
 
@@ -185,7 +323,7 @@ class MailerTest extends Specification {
         then:
         1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
     }
 
     def 'should throw an exception' () {
@@ -211,7 +349,7 @@ class MailerTest extends Specification {
         then:
         1 * mailer.provider() >> provider
         1 * mailer.createTextMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
     }
 
 
@@ -358,7 +496,7 @@ class MailerTest extends Specification {
         }
 
         then:
-        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> null
+        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> { }
 
     }
 
@@ -394,7 +532,7 @@ class MailerTest extends Specification {
         }
 
         then:
-        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> null
+        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> { }
 
     }
 

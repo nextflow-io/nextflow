@@ -19,7 +19,7 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchChoice
@@ -59,7 +59,7 @@ class BranchOp {
 
     protected void doComplete(nope) {
         for( DataflowWriteChannel ch : targets.values() ) {
-            if( ch instanceof DataflowExpression ) {
+            if( ch instanceof DataflowVariable ) {
                 if( !ch.isBound()) ch.bind(Channel.STOP)
             }
             else {

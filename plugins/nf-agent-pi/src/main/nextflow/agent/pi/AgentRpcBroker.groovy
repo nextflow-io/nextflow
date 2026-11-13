@@ -230,7 +230,7 @@ class AgentRpcBroker {
      */
     private static class OutcomeHistory extends LinkedHashMap<String,Outcome> {
         @Override protected boolean removeEldestEntry(Map.Entry<String,Outcome> eldest) {
-            return size() > OUTCOME_HISTORY
+            return size() > AgentRpcBroker.OUTCOME_HISTORY
         }
     }
 

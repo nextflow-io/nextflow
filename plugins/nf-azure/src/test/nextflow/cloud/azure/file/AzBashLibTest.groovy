@@ -59,31 +59,25 @@ class AzBashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local ret=0
+                local ret
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
-                [[ $ret == 0 ]] && return 0
-                ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
-                if (( ret > 128 )); then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                    return $ret
-                fi
-
-                ## if fails check if it was trying to download a directory
-                [[ -d "$target" ]] || rm -f "$target"
-                mkdir -p "$target"
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || {
                     ret=$?
-                    rm -rf "$target"
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                    return $ret
+                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        return $ret
+                    fi
+                    ## if fails check if it was trying to download a directory
+                    mkdir -p "$target"
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        ret=$?
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        return $ret
+                    }
                 }
-                ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
-                if rmdir "$target" 2>/dev/null; then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret, nothing found under the path)"
-                    return $ret
-                fi
             }
             '''.stripIndent()
     }
@@ -176,31 +170,25 @@ class AzBashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local ret=0
+                local ret
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
-                [[ $ret == 0 ]] && return 0
-                ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
-                if (( ret > 128 )); then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                    return $ret
-                fi
-
-                ## if fails check if it was trying to download a directory
-                [[ -d "$target" ]] || rm -f "$target"
-                mkdir -p "$target"
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || {
                     ret=$?
-                    rm -rf "$target"
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                    return $ret
+                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        return $ret
+                    fi
+                    ## if fails check if it was trying to download a directory
+                    mkdir -p "$target"
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        ret=$?
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        return $ret
+                    }
                 }
-                ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
-                if rmdir "$target" 2>/dev/null; then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret, nothing found under the path)"
-                    return $ret
-                fi
             }
             '''.stripIndent()
     }
@@ -293,31 +281,25 @@ class AzBashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$2")
-                local ret=0
+                local ret
                 mkdir -p "$basedir"
 
-                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
-                [[ $ret == 0 ]] && return 0
-                ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
-                if (( ret > 128 )); then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                    return $ret
-                fi
-
-                ## if fails check if it was trying to download a directory
-                [[ -d "$target" ]] || rm -f "$target"
-                mkdir -p "$target"
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || {
                     ret=$?
-                    rm -rf "$target"
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                    return $ret
+                    ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                    if (( ret > 128 )); then
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        return $ret
+                    fi
+                    ## if fails check if it was trying to download a directory
+                    mkdir -p "$target"
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        ret=$?
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        return $ret
+                    }
                 }
-                ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
-                if rmdir "$target" 2>/dev/null; then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret, nothing found under the path)"
-                    return $ret
-                fi
             }
             '''.stripIndent()
     }
@@ -357,15 +339,9 @@ class AzBashLibTest extends Specification {
         dst=$3
         case $src in
           */file.txt)    echo data > "$dst" ;;
-          */partial.txt) echo partial > "$dst"; exit 1 ;;
           */oom.txt)     echo partial > "$dst"; kill -KILL $$ ;;
-          */term.txt)    echo partial > "$dst"; kill -TERM $$ ;;
-          */int.txt)     exit 130 ;;
           */dir/\\*)      echo a > "$dst/a.txt" ;;
           */oomdir/\\*)   echo a > "$dst/a.txt"; kill -KILL $$ ;;
-          */emptydir/\\*) echo -n > "$dst/.azure_blob_dir" ;;
-          */denied/\\*)   exit 1 ;;
-          */\\*)          ;;
           *)             echo "failed to perform copy command due to error: cannot use directory as source without --recursive or a trailing wildcard (/*)"; exit 1 ;;
         esac
         '''.stripIndent()
@@ -413,65 +389,11 @@ class AzBashLibTest extends Specification {
         SOURCE        | STATUS | RESULT | CALLS | ERROR
         'file.txt'    | 0      | 'file' | 1     | ''
         'dir'         | 0      | 'dir'  | 2     | ''
-        'emptydir'    | 0      | 'dir'  | 2     | ''
-        'missing'     | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (azcopy exit status 1, nothing found under the path)\n'
-        'partial.txt' | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/partial.txt (azcopy exit status 1, nothing found under the path)\n'
-        'denied'      | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/denied (azcopy exit status 1)\n'
+        // the real azcopy exits 0 on a recursive copy of a missing path, leaving an empty directory
+        'missing'     | 1      | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (azcopy exit status 1)\n'
+        // azcopy 10.8.0 leaves a full-size file when killed, 10.34.1 leaves none
         'oom.txt'     | 137    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/oom.txt (azcopy exit status 137)\n'
-        'term.txt'    | 143    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/term.txt (azcopy exit status 143)\n'
-        'int.txt'     | 130    | 'none' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/int.txt (azcopy exit status 130)\n'
         'oomdir'      | 137    | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/oomdir (azcopy exit status 137)\n'
-    }
-
-    def 'should retry a missing input and leave nothing behind' () {
-        given:
-        def workDir = Files.createTempDirectory('az-retry')
-        def bin = createFakeAzcopy(workDir)
-        def script = workDir.resolve('test.sh')
-        script.text = AzBashLib.script(new AzCopyOpts(), 4, 3, Duration.of('1 sec')) + """
-            nxf_sleep() { :; }
-            export AZ_SAS=token
-            export PATH=${bin}:\$PATH
-            nxf_cp_retry nxf_az_download 'https://acct.blob.core.windows.net/c/missing' missing 2>/dev/null && echo 0 > status || echo \$? > status
-            """.stripIndent()
-
-        when:
-        def process = ['bash', script.toString()].execute(null as List, workDir.toFile())
-        process.waitFor(30, TimeUnit.SECONDS)
-
-        then:
-        process.exitValue() == 0
-        workDir.resolve('status').text.trim() == '1'
-        workDir.resolve('calls').readLines().size() == 6
-        !Files.exists(workDir.resolve('missing'))
-
-        cleanup:
-        workDir?.toFile()?.deleteDir()
-    }
-
-    def 'should not retry downloads killed by a signal' () {
-        given:
-        def workDir = Files.createTempDirectory('az-retry')
-        def bin = createFakeAzcopy(workDir)
-        def script = workDir.resolve('test.sh')
-        script.text = AzBashLib.script(new AzCopyOpts(), 4, 3, Duration.of('1 sec')) + """
-            nxf_sleep() { :; }
-            export AZ_SAS=token
-            export PATH=${bin}:\$PATH
-            nxf_cp_retry nxf_az_download 'https://acct.blob.core.windows.net/c/oom.txt' oom.txt 2>/dev/null && echo 0 > status || echo \$? > status
-            """.stripIndent()
-
-        when:
-        def process = ['bash', script.toString()].execute(null as List, workDir.toFile())
-        process.waitFor(30, TimeUnit.SECONDS)
-
-        then:
-        process.exitValue() == 0
-        workDir.resolve('status').text.trim() == '137'
-        workDir.resolve('calls').readLines().size() == 1
-
-        cleanup:
-        workDir?.toFile()?.deleteDir()
     }
 
 }

@@ -47,6 +47,7 @@ class SpecNodeTest extends Specification {
         scope.children.get('memory').types == [ MemoryUnit ]
         scope.children.get('publishDir').types as Set == [ Map, String, List ] as Set
         scope.children.get('resourceLimits').types == [ Map ]
+        scope.children.get('secret').types == [ List ]
         scope.children.get('time').types == [ Duration ]
     }
 

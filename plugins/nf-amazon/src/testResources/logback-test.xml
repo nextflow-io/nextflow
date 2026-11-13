@@ -22,6 +22,7 @@
     </appender>
 
     <logger name="org.apache.http" level="INFO" />
+    <logger name="org.apache.hc" level="INFO" />
     <logger name="software.amazon" level="INFO" />
     <logger name="com.upplication" level="DEBUG" />
 

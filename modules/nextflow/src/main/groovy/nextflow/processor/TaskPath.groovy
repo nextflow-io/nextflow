@@ -456,6 +456,6 @@ final class TaskPath implements Path, PathEscapeAware {
 
     @Override
     String toStringEscape() {
-        return Escape.path(this)
+        return Escape.scriptPath(this.toString())
     }
 }

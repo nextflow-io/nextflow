@@ -52,6 +52,11 @@ class CsvSplitter extends AbstractTextSplitter {
     protected int skipLines = 0
 
     /**
+     * Lines starting with this character are skipped
+     */
+    protected String comment
+
+    /**
      * Set the splitter options by specifying a map of named parameters.
      * Valid parameters are:
      * <li>{@code sep}
@@ -59,6 +64,7 @@ class CsvSplitter extends AbstractTextSplitter {
      * <li>{@code header}
      * <li>{@code quote}
      * <li>{@code skip}
+     * <li>{@code comment}
      *
      * @param options
      * @return The splitter instance itself
@@ -91,7 +97,18 @@ class CsvSplitter extends AbstractTextSplitter {
         if( options.skip )
             skipLines = options.skip as int
 
+        if( options.comment )
+            comment = validateComment(options.comment as String, options.sep as String ?: ',', options.quote as String)
+
         return this
+    }
+
+    static private String validateComment(String comment, String sep, String quote) {
+        if( comment.size() != 1 )
+            throw new IllegalArgumentException("Not a valid CSV comment character: $comment")
+        if( comment == sep || comment == quote )
+            throw new IllegalArgumentException("CSV comment character cannot be the same as the separator or quote character: $comment")
+        return comment
     }
 
     /**
@@ -107,6 +124,7 @@ class CsvSplitter extends AbstractTextSplitter {
         result.header = [ Boolean, List ]
         result.quote = String
         result.skip = Integer
+        result.comment = String
         return result
     }
 
@@ -132,7 +150,7 @@ class CsvSplitter extends AbstractTextSplitter {
         while( z++ < skipLines && reader.readLine() != null ) { /* nope */ }
 
         if( firstLineAsHeader ) {
-            line = reader.readLine()
+            line = readParsableLine(reader)
             if( !line ) throw new IllegalStateException("Missing 'header' in CSV file")
             List allCols = parser.parse(line)
             columnsHeader = new ArrayList<>(allCols.size())
@@ -145,6 +163,24 @@ class CsvSplitter extends AbstractTextSplitter {
     }
 
     /**
+     * Read the next parsable line, skipping empty lines and comment lines
+     *
+     * @param reader The reader from which to read
+     * @return The next parsable line, or {@code null} if end of file
+     */
+    protected String readParsableLine(BufferedReader reader) {
+        String line
+        while( (line = reader.readLine()) != null ) {
+            if( !line )
+                continue
+            if( comment && line.stripLeading().startsWith(comment) )
+                continue
+            return line
+        }
+        return null
+    }
+
+    /**
      * Process a CSV row at time
      *
      * @param reader The reader from which read the row
@@ -152,14 +188,9 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     @Override
     protected fetchRecord(BufferedReader reader) {
-        String line
-        while( true ) {
-            line = reader.readLine()
-            if( line )
-                break
-            if( line==null )
-                return null
-        }
+        final line = readParsableLine(reader)
+        if( line==null )
+            return null
 
         final tokens = parser.parse(line)
 

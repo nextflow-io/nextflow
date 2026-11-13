@@ -77,31 +77,25 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             local source=$1
             local target=$2
             local basedir=$(dirname "$2")
-            local ret=0
+            local ret
             mkdir -p "$basedir"
 
-            azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || ret=$?
-            [[ $ret == 0 ]] && return 0
-            ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
-            if (( ret > 128 )); then
-                >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                return $ret
-            fi
-
-            ## if fails check if it was trying to download a directory
-            [[ -d "$target" ]] || rm -f "$target"
-            mkdir -p "$target"
-            azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+            azcopy cp "$source?$AZ_SAS" "$target" >/dev/null 2>&1 || {
                 ret=$?
-                rm -rf "$target"
-                >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
-                return $ret
+                ## killed by a signal (e.g. out of memory), retrying as a directory would hide the cause
+                if (( ret > 128 )); then
+                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                    return $ret
+                fi
+                ## if fails check if it was trying to download a directory
+                mkdir -p "$target"
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    ret=$?
+                    rm -rf "$target"
+                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                    return $ret
+                }
             }
-            ## azcopy exits 0 when no blob matches the prefix, while an empty directory still holds its marker blob
-            if rmdir "$target" 2>/dev/null; then
-                >&2 echo "Unable to download path: $source (azcopy exit status $ret, nothing found under the path)"
-                return $ret
-            fi
         }
         '''.stripIndent(true)
     }

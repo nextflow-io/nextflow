@@ -19,7 +19,6 @@ package nextflow.container
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -187,7 +186,6 @@ class SingularityCacheTest extends Specification {
         dir.deleteDir()
     }
 
-    @Ignore
     @Timeout(1)
     def 'should pull a singularity image' () {
 
@@ -204,6 +202,9 @@ class SingularityCacheTest extends Specification {
         then:
         1 * cache.downloadContainerImage(IMAGE) >> container
         file == container
+
+        cleanup:
+        SingularityCache.localImageNames.remove(IMAGE)
     }
 
     def 'should not render the environment' () {

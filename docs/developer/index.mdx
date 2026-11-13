@@ -87,13 +87,15 @@ Once complete, you can run your local build of Nextflow using the `launch.sh` sc
 ./launch.sh run <script> ...
 ```
 
+`launch.sh` uses the locally built core plugins. Any other plugins, such as third-party plugins, are downloaded from the plugin registry into `$NXF_HOME/plugins` as usual.
+
 Alternatively, you can build a self-contained executable with the following command:
 
 ```bash
 make pack
 ```
 
-It will create a binary in the `build/releases` directory which can be used in place of `nextflow`. This approach is useful when testing a pipeline that uses third-party plugins, which is not supported by `launch.sh`.
+It will create a binary in the `build/releases` directory which can be used in place of `nextflow`.
 
 ## Testing
 
@@ -138,7 +140,7 @@ Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.gi
 
 ### Groovy REPL
 
-The `groovysh` command provides a command-line REPL that you can use to play around with Groovy code independently of Nextflow. The `groovyConsole` command provides a graphical REPL similar to `nextflow console`. These commands require a standalone Groovy distribution, which can be installed as described for Java on the [Installation][install-requirements] page.
+The `groovysh` command provides a command-line REPL that you can use to play around with Groovy code independently of Nextflow. The `groovyConsole` command provides a graphical REPL. These commands require a standalone Groovy distribution, which can be installed as described for Java on the [Installation][install-requirements] page.
 
 :::note
 If you are using WSL, you must also install an X server for Windows, such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](http://www.straightrunning.com/XmingNotes/), in order to use these commands.
@@ -160,4 +162,4 @@ You can perform limited breakpoint debugging on a Nextflow script using IntelliJ
 
 Note that this approach can only be used to debug the *script* execution, which does not include the *pipeline* execution.
 
-[install-requirements]: ../install#requirements
+[install-requirements]: ../install.mdx#requirements

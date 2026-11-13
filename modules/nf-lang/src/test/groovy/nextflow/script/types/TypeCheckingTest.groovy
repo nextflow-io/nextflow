@@ -35,6 +35,7 @@ import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TestUtils
 
 import static nextflow.script.types.TypeCheckingUtils.*
 
@@ -479,9 +480,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 2
-        errors[0].getOriginalMessage() == "Missing return statement"
+        TestUtils.errorList(errors) == [[2, 5, 'Missing return statement']]
 
         when:
         errors = getErrors(
@@ -496,9 +495,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 3
-        errors[0].getOriginalMessage() == "Missing return statement"
+        TestUtils.errorList(errors) == [[3, 9, 'Missing return statement']]
 
         when: 'the body is empty'
         errors = getErrors(
@@ -511,12 +508,10 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then: 'the error is reported against the function or closure'
-        errors.size() == 2
-        errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 1
-        errors[1].getStartLine() == 4
-        errors[1].getStartColumn() == 23
-        errors.every { it.getOriginalMessage() == "Missing return statement" }
+        TestUtils.errorList(errors) == [
+            [1, 1, 'Missing return statement'],
+            [4, 23, 'Missing return statement']
+        ]
     }
 
     @Unroll
@@ -887,6 +882,25 @@ class TypeCheckingTest extends Specification {
         "2 in [2]"      | null
         "[2] == ['2']"  | "The `==` operator is not defined for operands with types List<Integer> and List<String>"
         "[2] == [2]"    | null
+        "[[1]] == [['a']]"              | "The `==` operator is not defined for operands with types List<List<Integer>> and List<List<String>>"
+        "[1] == [1.0]"                  | null
+        "[a: 1] == [a: 'x']"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<String, String>"
+        "[a: 1] == [(1): 1]"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<Integer, Integer>"
+        "[a: 1] == [a: 1.0]"            | null
+        "tuple(1, 2) == tuple('a', 2)"  | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<String, Integer>"
+        "tuple(1, 2) == tuple(1, 2, 3)" | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<Integer, Integer, Integer>"
+        "tuple(1, 2) == tuple(1.0, 2)"  | null
+        "record(id: 'a') == record(name: 'b')"  | null
+        "record(id: 'a') == record(id: 1)"      | null
+        "record(id: 'a') == [id: 'a']"          | "The `==` operator is not defined for operands with types Record {\n    id: String\n} and Map<String, String>"
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a') }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { record(id: 'a') != s }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(name: 'a') }"           | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a', extra: 1) }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: A, b: B) { a == b }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: List<A>, b: List<B>) { a == b }"   | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 1) }"               | null
+        "record A { id: String }\ndef f(a: A, m: Map<String,String>) { a == m }"              | "The `==` operator is not defined for operands with types A and Map<String, String>"
         "['a', 'b', 'c'][0]"        | null
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
@@ -2027,8 +2041,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage() == 'Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value'
+        TestUtils.errorList(errors) == [[3, 25, 'Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value']]
     }
 
     def 'should resolve a `groupBy` operation' () {
@@ -2079,9 +2092,10 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 2
-        errors[0].getOriginalMessage() == 'Join field `sample_id` is not present in left-hand side'
-        errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
+        TestUtils.errorList(errors) == [
+            [3, 22, 'Join field `sample_id` is not present in left-hand side'],
+            [3, 22, 'Join field `sample_id` is not present in right-hand side']
+        ]
     }
 
     def 'should report a soft error for a `join` that overwrites left-hand fields' () {
@@ -2094,9 +2108,8 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
+        TestUtils.errorList(errors) == [[3, 22, 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values']]
         errors[0].isSoftError()
-        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
 }

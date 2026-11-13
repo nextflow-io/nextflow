@@ -26,6 +26,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cache.CacheDB
 import nextflow.Global
@@ -189,8 +190,11 @@ class CmdClean extends CmdBase implements CacheBase {
      */
     private void removeRecord(HashCode hash, TraceRecord record, int refCount) {
         if( dryRun ) {
-            if( wouldRemove(hash,refCount) )
+            if( wouldRemove(hash,refCount) ) {
                 printMessage(record.workDir,true)
+                if( !keepLogs && isCompleted(record) )
+                    previousAttempts(hash, FileHelper.asPath(record.workDir)).each { dir -> printMessage(dir.toUriString(),true) }
+            }
             return
         }
 
@@ -201,8 +205,45 @@ class CmdClean extends CmdBase implements CacheBase {
             if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
                 if(!quiet) printMessage(record.workDir,false)
             }
-
+            if( !keepLogs && isCompleted(record) ) {
+                for( Path dir : previousAttempts(hash, FileHelper.asPath(record.workDir)) ) {
+                    if( deleteFolder(dir, false) && !quiet )
+                        printMessage(dir.toUriString(),false)
+                }
+            }
         }
+    }
+
+    /**
+     * Whether the record is of a completed attempt, also when listed by a run that resumed it
+     */
+    private static boolean isCompleted(TraceRecord record) {
+        return record.isCompleted() || record.isCached()
+    }
+
+    /**
+     * The work dirs of the attempts before a completed one that no run lists, such as an attempt
+     * interrupted along with its run. Attempt N of a task runs in {@code <hash>-N}, attempt 1 in
+     * {@code <hash>}, see {@link nextflow.processor.DefaultTaskCacheStrategy}.
+     *
+     * @param hash The key of the completed attempt
+     * @param workDir The work dir of the completed attempt
+     */
+    @PackageScope
+    List<Path> previousAttempts(HashCode hash, Path workDir) {
+        final last = FileHelper.getAttemptFromPath(workDir)
+        if( last == 1 )
+            return List.<Path>of()
+        final leaf = workDir.fileName.toString()
+        final name = leaf.substring(0, leaf.lastIndexOf('-'))
+        final result = new ArrayList<Path>()
+        for( int attempt = 1; attempt < last; attempt++ ) {
+            final dir = workDir.resolveSibling(attempt == 1 ? name : "${name}-${attempt}".toString())
+            // a failed attempt with an entry is removed with the run that lists it, if any
+            if( Files.exists(dir) && currentCacheDb.getTraceRecord(CacheDB.attemptKey(hash, attempt)) == null )
+                result.add(dir)
+        }
+        return result
     }
 
     private printMessage(String path, boolean dryRun) {

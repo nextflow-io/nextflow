@@ -33,15 +33,16 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Session
@@ -100,7 +101,6 @@ import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
-import nextflow.util.Escape
 import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -327,7 +327,7 @@ class TaskProcessor {
 
     private TaskArrayCollector createArrayCollector(int arraySize) {
         if( arraySize > 0 && executor instanceof TaskArrayExecutor )
-            return new TaskArrayCollector(this, executor, arraySize)
+            return new TaskArrayCollector(this, executor, arraySize, executor.config?.getArrayTimeout(executor.name))
         if( arraySize > 0 )
             log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
         return null
@@ -365,7 +365,7 @@ class TaskProcessor {
     boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
 
     /**
-     * @return The {@code DataflowOperator} underlying this process
+     * @return The {@code DataflowProcessor} underlying this process
      */
     DataflowProcessor getOperator() { operator }
 
@@ -560,7 +560,7 @@ class TaskProcessor {
             // the iterator operator needs to executed just one time
             // thus add a dataflow queue binding a single value and then a stop signal
             def termination = new DataflowQueue<>()
-            termination << Boolean.TRUE
+            termination.bind(Boolean.TRUE)
             opInputs[size] = termination
 
             // the channel forwarding the data from the *iterator* process to the target task
@@ -1283,10 +1283,10 @@ class TaskProcessor {
             if( channel instanceof DataflowQueue ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowStreamWriteAdapter ) {
+            else if( channel instanceof DataflowBroadcast ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowExpression && !channel.isBound()) {
+            else if( channel instanceof DataflowVariable && !channel.isBound()) {
                 channel.bind( PoisonPill.instance )
             }
         }
@@ -1340,7 +1340,7 @@ class TaskProcessor {
             if( value instanceof Path ) {
                 files.add((Path)value)
             }
-            else if( value instanceof Collection<Path> ) {
+            else if( value instanceof Collection ) {
                 files.addAll(value)
             }
             else if( value != null ) {
@@ -1596,7 +1596,7 @@ class TaskProcessor {
      * Given a map holding variables key-value pairs, create a script fragment
      * exporting the required environment variables
      */
-    static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
+    static String bashEnvironmentScript( Map<String,String> environment ) {
         if( !environment )
             return null
 
@@ -1609,12 +1609,8 @@ class TaskProcessor {
                 log.warn "Environment variable `$name` evaluates to an empty value"
                 script << "export $name=''"
             }
-            else if( !escape ) {
-                script << /export $name="$value"/
-            }
             else {
-                // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${Escape.variable(value)}"/
+                script << /export $name="$value"/
             }
         }
         script << ''
@@ -1768,6 +1764,7 @@ class TaskProcessor {
         // -- resolve input files
         final resolver = new TaskInputResolver(task, foreignFiles, executor)
         final resolvedValues = new HashSet<>()
+        final inputPaths = collectPaths(task.inputs.values(), new HashSet<Path>())
 
         for( final fileInput : declaredInputs.getFiles() ) {
             final value = fileInput.resolve(ctx)
@@ -1779,6 +1776,14 @@ class TaskProcessor {
                 continue
             final resolved = resolver.resolve(fileInput, value)
             task.inputFiles.addAll(resolved)
+            // files that come from task inputs are already covered by the task hash
+            for( final holder : resolved ) {
+                if( holder.sourcePath in inputPaths )
+                    continue
+                if( task.stageAsFiles == null )
+                    task.stageAsFiles = new ArrayList<FileHolder>()
+                task.stageAsFiles.add(holder)
+            }
             resolvedValues.add(value)
         }
 
@@ -1808,6 +1813,21 @@ class TaskProcessor {
         // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
+    }
+
+    /**
+     * Collect the paths contained in a value, including paths
+     * nested in collections, records and maps.
+     */
+    @CompileStatic
+    protected static Set<Path> collectPaths(Object value, Set<Path> result) {
+        if( value instanceof Path )
+            result.add(value)
+        else if( value instanceof Collection )
+            for( final el : value ) collectPaths(el, result)
+        else if( value instanceof Map )
+            for( final el : value.values() ) collectPaths(el, result)
+        return result
     }
 
     @CompileStatic
@@ -1934,7 +1954,6 @@ class TaskProcessor {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
-        def fault = null
         try {
             // -- verify task exit status
             if( task.error )
@@ -1954,14 +1973,28 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error, handler.getTraceRecord())
-            log.trace "Task fault (3): $fault"
+            return finalizeFailedTask(handler, error)
         }
 
-        // -- finalize the task
+        finalizeTask0(task)
+        return null
+    }
+
+    /**
+     * Finalize a task that failed with the given error, unless
+     * the task is retried according to its error strategy
+     *
+     * @param handler The {@link TaskHandler} of the failed task
+     * @param error The error raised by the task
+     * @return The error strategy or {@link TaskFault} returned by {@link #resumeOrDie}
+     */
+    @PackageScope
+    final finalizeFailedTask( TaskHandler handler, Throwable error ) {
+        final task = handler.task
+        final fault = resumeOrDie(task, error, handler.getTraceRecord())
+        log.trace "Task fault (3): $fault"
         if( fault != ErrorStrategy.RETRY )
             finalizeTask0(task)
-
         return fault
     }
 

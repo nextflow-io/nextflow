@@ -1227,7 +1227,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
             case COMPARE_EQUAL:
             case COMPARE_NOT_EQUAL:
-                resultType = Types.isEqual(lhsType, rhsType) || resolveOpResultType(lhsType, rhsType, lhsOps, rhsOps, "compareTo") != null
+                resultType = Types.isComparable(lhsType, rhsType) || resolveOpResultType(lhsType, rhsType, lhsOps, rhsOps, "compareTo") != null
                     ? ClassHelper.Boolean_TYPE
                     : null;
                 break;

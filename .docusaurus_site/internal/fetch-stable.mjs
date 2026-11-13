@@ -1,4 +1,4 @@
-import git from "simple-git";
+import { simpleGit } from "simple-git";
 import fs from "fs-extra";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 
 // Fetch the latest stable tag from the remote (excludes edge)
 async function getLatestStableTag(url) {
-  const result = await git().listRemote(["--tags", "--refs", url]);
+  const result = await simpleGit().listRemote(["--tags", "--refs", url]);
   const tags = result
     .split("\n")
     .map((line) => line.split("\t")[1])
@@ -39,7 +39,7 @@ const repositories = [
 async function cloneRepo({ name, url, path: repoPath, ref }) {
   console.log(`${name}: Cloning into ${repoPath} at ${ref}`);
   try {
-    await git().clone(url, repoPath, ["--branch", ref, "--depth", "1"]);
+    await simpleGit().clone(url, repoPath, ["--branch", ref, "--depth", "1"]);
     console.log(`✅ ${name}: Cloned at ${ref}`);
   } catch (error) {
     console.error(`❌ Error cloning ${name}:`);

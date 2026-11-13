@@ -73,7 +73,7 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
+        The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default: `400.MB`).
     """)
     final MemoryUnit maxDownloadHeapMemory
 
@@ -92,7 +92,7 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The minimum part size used for multipart uploads to S3 (default: `8 MB`).
+        The minimum part size used for multipart uploads to S3 (default: `8.MB`).
     """)
     final MemoryUnit minimumPartSize
 
@@ -185,7 +185,7 @@ class AwsS3Config implements ConfigScope {
     @Deprecated
     @ConfigOption
     @Description("""
-        The size of a single part in a multipart upload (default: `100 MB`).
+        The size of a single part in a multipart upload (default: `100.MB`).
     """)
     final MemoryUnit uploadChunkSize
 
@@ -206,7 +206,7 @@ class AwsS3Config implements ConfigScope {
     @Deprecated
     @ConfigOption
     @Description("""
-        The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+        The time to wait after a failed upload attempt to retry the part upload (default: `500.ms`).
     """)
     final Duration uploadRetrySleep
 

@@ -34,6 +34,7 @@ import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.executor.res.AcceleratorResource
 import nextflow.cloud.types.PriceModel
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -447,6 +448,64 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedError == null
     }
 
+    @Unroll
+    def 'should handle the scheduler retry verdict [status=#STATUS; exit=#EXIT; retryable=#RETRYABLE; failCount=#FAIL_COUNT]'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig) { getMaxRetries() >> 3 }
+            lazyName() >> 'test_task'
+            getFailCount() >> FAIL_COUNT
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(STATUS)
+            .exitCode(EXIT)
+            .errorMessage('Fusion snapshot restore failed')
+        def describeResponse = new DescribeTaskResponse()
+            .taskState(taskState)
+            .retryable(RETRYABLE)
+            .retryReason(RETRYABLE ? 'SNAPSHOT_RESTORE_FAILED' : null)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+        handler.setBatchTaskId('task-175')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == (EXIT != null ? EXIT : Integer.MAX_VALUE)
+        capturedError?.getClass() == ERROR
+        capturedError?.message == MESSAGE
+        0 * taskRun.setAborted(_)
+
+        where:
+        STATUS                    | EXIT | RETRYABLE | FAIL_COUNT  | ERROR                    | MESSAGE
+        SchedTaskStatus.FAILED    | 175  | true      | 0           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | true      | 2           | SeqeraRetryableException | 'Task failed with a retryable error (reason: SNAPSHOT_RESTORE_FAILED; exit: 175) -- Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | true      | 3           | null                     | null
+        SchedTaskStatus.FAILED    | null | true      | 3           | ProcessException         | 'Fusion snapshot restore failed'
+        SchedTaskStatus.FAILED    | 175  | false     | 0           | null                     | null
+        SchedTaskStatus.FAILED    | 175  | null      | 0           | null                     | null
+        SchedTaskStatus.SUCCEEDED | 0    | true      | 0           | null                     | null
+    }
+
     def 'should use scheduler API exit code when exit file is not available on a failed task'() {
         given:
         Throwable capturedError = null
@@ -816,6 +875,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def resources = new ResourceRequirement()
             .cpuShares(2048)
             .memoryMiB(4096)
+            .acceleratorCuda('12.2')
         def attempt = new TaskAttempt()
             .index(1)
             .nativeId('task-1')
@@ -830,6 +890,7 @@ class SeqeraTaskHandlerTest extends Specification {
         result != null
         result.cpuShares == 2048
         result.memoryMiB == 4096
+        result.acceleratorCuda == '12.2'
     }
 
     def 'should use last attempt resources when multiple attempts exist'() {
@@ -977,6 +1038,50 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedTask != null
         capturedTask.getResourceRequirement().memoryMiB == null
         capturedTask.getResourceRequirement().cpuShares == 2048
+    }
+
+    def 'submit should forward the accelerator cuda release'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> capturedTask = args[1] as Task }
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) { getMachineRequirement() >> null }
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> new AcceleratorResource([request: 1, type: 'nvidia-l4', cuda: '12.2'])
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) { fusionEnv() >> [:] }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        def req = capturedTask.getResourceRequirement()
+        req.acceleratorCount == 1
+        req.acceleratorName == 'nvidia-l4'
+        req.acceleratorCuda == '12.2'
     }
 
     def 'should build resource limit from task config'() {
