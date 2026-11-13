@@ -52,4 +52,3 @@ yarn-error.log*
 .env.production.local
 .DS_Store
 mise.toml
-/.cache/
