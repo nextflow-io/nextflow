@@ -1,0 +1,98 @@
+name: Bundle (PR)
+# Opt-in: runs when a maintainer adds the `ci/pr-build` label, and on each push while it is there.
+# Nothing is published: the artifacts are only available to signed-in GitHub users, and expire.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+    paths-ignore:
+      - 'docs/**'
+      - '.docusaurus_site/**'
+
+permissions:
+  contents: read
+
+# adding another label must not cancel a running build
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'ci/pr-build' && format('-{0}', github.run_id) || '' }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'ci/pr-build' || github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'ci/pr-build') }}
+    uses: ./.github/workflows/bundle.yml
+    with:
+      jre-version: ${{ vars.NXF_BUNDLE_JRE_VERSION }}
+
+  plugins:
+    name: Core plugins
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'ci/pr-build' || github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'ci/pr-build') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # no Gradle cache, see bundle.yml
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '25'
+          distribution: 'corretto'
+
+      - name: Build the core plugins
+        run: NXF_PLUGINS_DIR="$PWD/build/plugins" ./gradlew --console=plain installPlugin
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: plugins
+          path: build/plugins
+          if-no-files-found: error
+          retention-days: 30
+
+  comment:
+    name: Comment on the PR
+    needs: [bundle, plugins]
+    # don't advertise builds of untrusted fork code
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Create or update the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MARKER: '<!-- bundle-pr-comment -->'
+        run: |
+          body=$(cat <<EOF
+          $MARKER
+          📦 Standalone builds of this PR (\`${HEAD_SHA:0:7}\`) are attached to actions run [$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) as artifacts.
+
+          <details><summary>Testing instructions</summary>
+
+          To test them with the [GitHub CLI](https://cli.github.com), in an empty directory:
+
+          ~~~bash
+          platform=macos-arm64    # or linux-x64, linux-arm64
+          gh run download $GITHUB_RUN_ID -R $GITHUB_REPOSITORY -n bundle-\$platform -n plugins
+          tar -xzf bundle-\$platform/*.tar.gz
+          NXF_PLUGINS_DIR=\$PWD/plugins ./nextflow-*-\$platform/bin/nextflow run <pipeline>
+          ~~~
+
+          The build includes its own Java runtime and the core plugins of this PR. Third-party plugins are downloaded from the plugin registry as usual. The artifacts expire after 30 days. For testing only. This comment is updated on each push while the PR has the \`ci/pr-build\` label.
+
+          </details>
+          EOF
+          )
+          comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" --paginate \
+            --jq '.[] | select(.body | startswith(env.MARKER)) | .id' | head -n1)
+          if [ -n "$comment_id" ]; then
+            gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -f body="$body"
+          else
+            gh api --silent -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -f body="$body"
+          fi

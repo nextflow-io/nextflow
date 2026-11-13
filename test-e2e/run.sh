@@ -91,6 +91,14 @@ else
   fi
 fi
 
+if [ "$ENVIRONMENT" = build-only ]; then
+  echo "Build only: skipping the showcase run"
+  if [ -n "$GITHUB_OUTPUT" ]; then
+    printf 'launcher=%s\nlauncher_dind=%s\n' "$launcher" "$launcher_dind" >> "$GITHUB_OUTPUT"
+  fi
+  exit 0
+fi
+
 #
 # Finally launch the showcase automation
 # see https://github.com/seqeralabs/showcase-automation/
