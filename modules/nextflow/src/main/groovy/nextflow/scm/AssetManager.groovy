@@ -18,6 +18,7 @@ package nextflow.scm
 
 import static nextflow.Const.*
 import static GitReferenceHelper.*
+import static nextflow.util.StringUtils.redactUrlPassword
 
 import java.nio.file.Path
 
@@ -35,6 +36,7 @@ import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.SysEnv
+import nextflow.util.HttpClientOpts
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.RefNotFoundException
@@ -52,6 +54,7 @@ import org.eclipse.jgit.merge.MergeStrategy
  * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
  * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
  * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
+ * Setting `NXF_SCM_LEGACY=true` forces the {@link LegacyRepositoryStrategy}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -87,6 +90,11 @@ class AssetManager implements Closeable {
      * The repository strategy (legacy or multi-revision)
      */
     private RepositoryStrategy strategy
+
+    /**
+     * The http client settings declared in the SCM config file
+     */
+    private HttpClientOpts httpClientOpts
 
     /**
      * Create a new asset manager object with default parameters
@@ -134,6 +142,7 @@ class AssetManager implements Closeable {
     AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
+        this.httpClientOpts = RepositoryProvider.httpClientOpts(config)
 
         this.project = resolveName(pipelineName)
         if( mainScript )
@@ -516,7 +525,9 @@ class AssetManager implements Closeable {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        return RepositoryFactory.newRepositoryProvider(config, project)
+        return RepositoryFactory
+            .newRepositoryProvider(config, project)
+            .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 
     AssetManager setLocalPath(File path) {
@@ -748,6 +759,7 @@ class AssetManager implements Closeable {
         // Fallback to legacy behavior if strategy not initialized
         if( !_git ) {
             _git = Git.open(localPath)
+            AbstractRepositoryStrategy.removeBitbucketToken(_git, provider)
         }
         return _git
     }
@@ -781,7 +793,7 @@ class AssetManager implements Closeable {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -1006,8 +1018,8 @@ class AssetManager implements Closeable {
             return
 
         List<String> filter = []
-        if( modules instanceof List<String> ) {
-            filter.addAll(modules)
+        if( modules instanceof List ) {
+            filter.addAll(modules as List<String>)
         }
         else if( modules instanceof String ) {
             filter.addAll( modules.tokenize(', ') )
@@ -1082,7 +1094,7 @@ class AssetManager implements Closeable {
         final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
     }
 

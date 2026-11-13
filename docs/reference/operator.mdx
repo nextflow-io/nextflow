@@ -752,7 +752,7 @@ An optional [closure][script-closure] can be used to control how two items are m
 
 The `merge` operator may return a channel or value depending on the inputs:
 
-- If the first argument is a channel, the `merge` operator returns a channel merging as many values as are available for all inputs. Dataflow values are re-used for each merged value.
+- If the first argument is a channel, the `merge` operator returns a channel merging as many values as are available for all inputs. Dataflow values are reused for each merged value.
 
 - If the first argument is a dataflow value, the `merge` operator returns a dataflow value, merging the first value from each input, regardless of whether there are channel inputs with additional values.
 
@@ -947,6 +947,12 @@ When specified, group rows into *chunks* with the given size (default: none).
 ##### `charset`
 
 Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
+
+##### `comment`
+
+<AddedInVersion version="27.04" />
+
+The character used to denote comment lines (default: none). Lines that start with this character, ignoring leading whitespace, are skipped. The comment character is treated as regular text anywhere else in a line.
 
 ##### `decompress`
 
@@ -1521,10 +1527,10 @@ Associate the channel with a tag. For example:
 
 [cache-nondeterministic-inputs]: ../cache-and-resume#non-deterministic-process-inputs
 [config-feature-flags]: ./feature-flags
-[operator-empty]: ./channel#empty
-[operator-typed]: ./operator-typed
-[preparing-static-types]: ../tutorials/static-types#preparing-for-static-typing
-[process-cache]: ./process#cache
+[operator-empty]: ./stdlib-namespaces/channel#empty
+[operator-typed]: ./stdlib-types/channel
+[preparing-static-types]: ../static-typing-prep
+[process-cache]: ./process/directives/cache
 [script-closure]: ../script#closures
 [script-regexp]: ../script#regular-expressions
 [static-types-operators]: ../tutorials/static-types-operators

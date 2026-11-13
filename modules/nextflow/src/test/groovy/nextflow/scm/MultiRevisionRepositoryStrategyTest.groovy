@@ -34,12 +34,14 @@ import spock.lang.IgnoreIf
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 
 /**
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
+@Timeout(60)
 class MultiRevisionRepositoryStrategyTest extends Specification {
 
     @Rule
@@ -295,7 +297,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         def work = Git.init().setDirectory(workDir).setInitialBranch('main').call()
         new File(workDir, 'a.txt').text = 'A'
         work.add().addFilepattern('a.txt').call()
-        def commitA = work.commit().setMessage('A').call()
+        def commitA = work.commit().setSign(false).setMessage('A').call()
         work.push().setRemote(upstreamDir.absolutePath).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
         work.close()
 
@@ -323,7 +325,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         work = Git.open(workDir)
         new File(workDir, 'a.txt').text = 'B'
         work.add().addFilepattern('a.txt').call()
-        def commitB = work.commit().setAmend(true).setMessage('B').call()
+        def commitB = work.commit().setSign(false).setAmend(true).setMessage('B').call()
         work.push().setRemote(upstreamDir.absolutePath).setForce(true).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
         work.close()
 
@@ -337,4 +339,37 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         bareGitB.close()
     }
 
+    def 'should remove bitbucket token from remote url'() {
+        given:
+        def dir = tempDir.getRoot().resolve('repo').toFile()
+        def git = Git.init().setDirectory(dir).call()
+        def config = git.getRepository().getConfig()
+        config.setString('remote', 'origin', 'url', REMOTE)
+        config.save()
+
+        when:
+        AbstractRepositoryStrategy.removeBitbucketToken(git, PROVIDER)
+        then:
+        git.getRepository().getConfig().getString('remote', 'origin', 'url') == EXPECTED
+
+        cleanup:
+        git?.close()
+
+        where:
+        PROVIDER            | REMOTE                                            | EXPECTED
+        bitbucket('xyz')    | 'https://user:secret@bitbucket.org/foo/bar.git'   | 'https://user@bitbucket.org/foo/bar.git'
+        bitbucket('xyz')    | 'https://user@bitbucket.org/foo/bar.git'          | 'https://user@bitbucket.org/foo/bar.git'
+        bitbucket('xyz')    | 'git@bitbucket.org:foo/bar.git'                   | 'git@bitbucket.org:foo/bar.git'
+        bitbucket(null)     | 'https://user:secret@bitbucket.org/foo/bar.git'   | 'https://user:secret@bitbucket.org/foo/bar.git'
+        github('xyz')       | 'https://user:secret@github.com/foo/bar.git'      | 'https://user:secret@github.com/foo/bar.git'
+        null                | 'https://user:secret@bitbucket.org/foo/bar.git'   | 'https://user:secret@bitbucket.org/foo/bar.git'
+    }
+
+    private static RepositoryProvider bitbucket(String token) {
+        new BitbucketRepositoryProvider('foo/bar', new ProviderConfig('bitbucket', [user: 'me@example.com', token: token]))
+    }
+
+    private static RepositoryProvider github(String token) {
+        new GithubRepositoryProvider('foo/bar', new ProviderConfig('github', [user: 'me', token: token]))
+    }
 }

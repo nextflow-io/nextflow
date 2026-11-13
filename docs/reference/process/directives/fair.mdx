@@ -1,0 +1,44 @@
+---
+title: fair
+description: Reference for the `fair` process directive.
+---
+
+# `fair`
+
+<AddedInVersion version="23.04" />
+
+When enabled, the `fair` directive guarantees that process outputs are emitted in the order in which they were received.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    fair true
+
+    input:
+    val x
+
+    output:
+    tuple val(task.index), val(x)
+
+    script:
+    """
+    sleep \$((RANDOM % 3))
+    """
+}
+
+workflow {
+    channel.of('A','B','C','D') | hello | view
+}
+```
+
+This example produces:
+
+```
+[1, A]
+[2, B]
+[3, C]
+[4, D]
+```

@@ -74,8 +74,8 @@ process {
 
 ## Resources
 
-- [Google Cloud Batch Executor Documentation](https://docs.seqera.io/nextflow/google)
-- [Google Cloud Storage Documentation](https://docs.seqera.io/nextflow/google)
+- [Google Cloud Batch Executor Documentation](https://docs.seqera.io/nextflow/reference/executor/google-batch)
+- [Google Cloud Storage Documentation](https://docs.seqera.io/nextflow/google-storage)
 
 ## License
 

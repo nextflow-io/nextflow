@@ -300,7 +300,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         final S3Client s3Client = source.getFileSystem().getClient();
         log.debug("S3 download {} from={} to={} size={}", type, FilesEx.toUriString(source), localDestination, size);
         if( isDir ) {
-            s3Client.downloadDirectory(source, localDestination.toFile());
+            s3Client.downloadDirectory(source, localDestination.toFile(), opts.skipDir());
         }
         else if( size > 0 ) {
             s3Client.downloadFile(source, localDestination.toFile(), size);
@@ -337,7 +337,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         log.debug("S3 upload {} from={} to={}", type, localFile, FilesEx.toUriString(target));
         final S3Client s3Client = target.getFileSystem().getClient();
         if( isDir ) {
-            s3Client.uploadDirectory(localFile.toFile(), target);
+            s3Client.uploadDirectory(localFile.toFile(), target, opts.followLinks());
         }
         else {
             s3Client.uploadFile(localFile.toFile(), target);

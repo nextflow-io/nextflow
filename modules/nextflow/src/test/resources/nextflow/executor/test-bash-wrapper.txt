@@ -2,7 +2,7 @@
 #BSUB -x 1
 #BSUB -y 2
 ### ---
-### name: 'Hello 1'
+### name: "Hello 1"
 ### ...
 set -e
 set -u
@@ -89,8 +89,8 @@ on_exit() {
     local exit_status=${nxf_main_ret:=0}
     [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
     [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
-    printf -- $exit_status > {{folder}}/.exitcode
     set +u
+    printf -- $exit_status > {{folder}}/.exitcode
     exit $exit_status
 }
 

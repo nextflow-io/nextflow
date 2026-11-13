@@ -16,15 +16,13 @@
 
 package nextflow.cli
 
-import java.nio.file.Paths
-
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.config.ConfigBuilder
-import nextflow.config.ConfigCmdAdapter
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
 import static PluginExecAware.CMD_SEP
 
 /**
@@ -38,23 +36,27 @@ trait PluginAbstractExec implements PluginExecAware {
     private static Logger log = LoggerFactory.getLogger(PluginAbstractExec)
 
     private Session session
-    private Launcher launcher
 
     Session getSession() { session }
-
-    Launcher getLauncher() { launcher }
 
     abstract List<String> getCommands()
 
     @Override
-    final int exec(Launcher launcher1, String pluginId, String cmd, List<String> args) {
-        this.launcher = launcher1
-        // create the config
-        final config = new ConfigCmdAdapter(new ConfigBuilder())
-                .setOptions(launcher1.options)
-                .setBaseDir(Paths.get('.'))
-                .build()
+    final int exec(String pluginId, String cmd, List<String> args) {
+        return run0(pluginId, cmd, args, getConfig())
+    }
 
+    @Override
+    final int exec(String pluginId, String cmd, List<String> args, Map config) {
+        return run0(pluginId, cmd, args, config)
+    }
+
+    /*
+     * note: both `exec` methods must delegate to this private method, instead of
+     * invoking each other, because plugins compiled against a previous version
+     * only implement `exec(String,String,List)` and call into the trait helper
+     */
+    private int run0(String pluginId, String cmd, List<String> args, Map config) {
         if( !cmd || cmd !in getCommands() ) {
             def msg = cmd ? "Invalid command '$pluginId:$cmd' - usage: nextflow plugin ${pluginId}${CMD_SEP}<command>" : "Usage: nextflow plugin ${pluginId}${CMD_SEP}<command>"
             msg += "\nAvailable commands:"
@@ -65,6 +67,7 @@ trait PluginAbstractExec implements PluginExecAware {
 
         // create the session object
         this.session = new Session(config)
+
         // invoke the command
         try {
             exec(cmd, args)
@@ -78,7 +81,16 @@ trait PluginAbstractExec implements PluginExecAware {
         return 0
     }
 
-    abstract int exec(String cmd, List<String> args)
+    private Map getConfig() {
+        final result = [
+            workDir: SysEnv.get('NXF_WORK') ?: 'work'
+        ]
+        final cloudCachePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
+        if( cloudCachePath )
+            result.cloudcache = [ enabled: true, path: cloudCachePath ]
+        return result
+    }
 
+    abstract int exec(String cmd, List<String> args)
 
 }

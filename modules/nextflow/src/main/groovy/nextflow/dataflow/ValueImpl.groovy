@@ -85,15 +85,15 @@ class ValueImpl {
         return new ValueImpl(target)
     }
 
-    ChannelImpl flatMap(Function<?,Iterable> transform = null) {
+    ChannelImpl flatMap(Function<Object,Iterable> transform = null) {
         final target = CH.create()
         final onNext = { value ->
             final iterable = transform != null ? transform.apply(value) : value
             if( iterable instanceof Tuple )
                 throw new ScriptRuntimeException("Operator `flatMap` expected an Iterable but received a tuple: ${iterable}\n")
             for( final e : iterable )
-                target << e
-            target << CH.stop()
+                target.bind(e)
+            target.bind(CH.stop())
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
         NodeMarker.addOperatorNode("flatMap", [source], [target])

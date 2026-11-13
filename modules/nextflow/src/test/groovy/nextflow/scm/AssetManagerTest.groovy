@@ -32,12 +32,14 @@ import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class AssetManagerTest extends Specification {
 
@@ -467,6 +469,20 @@ class AssetManagerTest extends Specification {
         holder.resolveName('hello/my-script.nf') == 'nextflow-io/hello'
         holder.getMainScriptName() == 'my-script.nf'
 
+    }
+
+    def 'should pass the scm config http client opts to the provider' () {
+        given:
+        def config = [
+            httpClient: [connectTimeout: '30s', requestTimeout: '90s'],
+            providers: [github: [user: 'foo', password: 'bar']] ]
+
+        when:
+        def manager = new AssetManager().build('nextflow-io/hello', config)
+        def provider = manager.createHubProvider('github')
+        then:
+        provider.getHttpClientOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+        provider.getHttpClientOpts().requestTimeout() == java.time.Duration.ofSeconds(90)
     }
 
     def testCreateProviderFor(){

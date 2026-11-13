@@ -445,6 +445,41 @@ class ConfigParserV2Test extends Specification {
         slurper.getDeclaredParams() == [a: 3, b: 2]
     }
 
+    def 'should apply nested CLI params to nested config params' () {
+        given:
+        def cliParams = [rnaseq: [aligner: 'hisat2'], qc: [limit: '5']]
+        def text = '''
+        params {
+            rnaseq.aligner = 'star'
+            rnaseq.fasta = 'genome.fa'
+            qc = [limit: 10, skip: false]
+        }
+        '''
+
+        when:
+        def slurper = new ConfigParserV2().setParams(cliParams)
+        def config = slurper.parse(text)
+        then:
+        config.params.rnaseq == [aligner: 'hisat2', fasta: 'genome.fa']
+        config.params.qc == [limit: '5', skip: false]
+        slurper.getDeclaredParams() == [rnaseq: [aligner: 'hisat2', fasta: 'genome.fa'], qc: [limit: '5', skip: false]]
+    }
+
+    def 'should not modify nested CLI params when assigning nested config params' () {
+        given:
+        def cliParams = [rnaseq: [aligner: 'hisat2']]
+        def text = '''
+        params.rnaseq.skip_qc = false
+        params.rnaseq.skip_qc = true
+        '''
+
+        when:
+        def config = new ConfigParserV2().setParams(cliParams).parse(text)
+        then:
+        config.params.rnaseq == [aligner: 'hisat2', skip_qc: true]
+        cliParams == [rnaseq: [aligner: 'hisat2']]
+    }
+
     def 'should ignore config includes when specified' () {
         given:
         def text = '''
@@ -568,14 +603,17 @@ class ConfigParserV2Test extends Specification {
         def folder = Files.createTempDirectory('test')
         folder.resolve('conf').mkdir()
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        // ephemeral port - see the note in ConfigParserV1Test: a fixed port races the other
+        // HTTP-serving tests, including ones in modules whose test tasks run concurrently
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        final port = server.address.port
         server.createContext("/", new ConfigFileHandler(folder));
         server.start()
 
-        folder.resolve('nextflow.config').text = '''
+        folder.resolve('nextflow.config').text = """
             includeConfig 'conf/base.config'
-            includeConfig 'http://localhost:9900/conf/remote.config'
-            '''
+            includeConfig 'http://localhost:${port}/conf/remote.config'
+            """
 
         folder.resolve('conf/base.config').text = '''
             params.foo = 'Hello'
@@ -590,7 +628,7 @@ class ConfigParserV2Test extends Specification {
             '''
 
         when:
-        def url = 'http://localhost:9900/nextflow.config' as Path
+        def url = "http://localhost:${port}/nextflow.config".toString() as Path
         def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'
@@ -800,6 +838,81 @@ class ConfigParserV2Test extends Specification {
         config.params.max_cpus == 8
         config.params.publish_mode == 'symlink'
         config.params.config_profile_name == 'Test profile'
+    }
+
+    def 'should parse selectors in the agent scope' () {
+        given:
+        def CONFIG = '''
+            agent {
+                cpus = 1
+                withName: 'x' {
+                    cpus = 2
+                }
+                withLabel: 'big' {
+                    memory = '2 GB'
+                }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserV2().parse(CONFIG)
+        then:
+        config.agent.cpus == 1
+        config.agent['withName:x'] == [cpus: 2]
+        config.agent['withLabel:big'] == [memory: '2 GB']
+    }
+
+    def 'should parse a dynamic directive in the agent scope' () {
+        given:
+        def CONFIG = '''
+            agent {
+                cpus = { task.attempt * 2 }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserV2().parse(CONFIG)
+        then:
+        config.agent.cpus instanceof Closure
+    }
+
+    def 'should reject selectors outside the process and agent scopes' () {
+        given:
+        def CONFIG = '''
+            docker {
+                withName: 'x' {
+                    enabled = true
+                }
+            }
+            '''
+
+        when:
+        new ConfigParserV2().parse(CONFIG)
+        then:
+        def e = thrown(ConfigParseException)
+        e.message.contains('Config selectors are only allowed in the `process` and `agent` scopes')
+        e.message.contains('offending scope: `docker`')
+    }
+
+    def 'should parse a config with a relative include on a non-default file system' () {
+        given:
+        def config = createInMemTempFile('nextflow.config', "includeConfig 'extra.config'\n")
+        config.resolveSibling('extra.config').text = 'process.cpus = 8\n'
+
+        when:
+        def result = new ConfigParserV2().parse(config)
+        then:
+        result.process.cpus == 8
+    }
+
+    def 'should report a syntax error in a config on a non-default file system' () {
+        given:
+        def config = createInMemTempFile('nextflow.config', 'process {\n')
+
+        when:
+        new ConfigParserV2().parse(config)
+        then:
+        thrown(ConfigParseException)
     }
 
     static class ConfigFileHandler implements HttpHandler {

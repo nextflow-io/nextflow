@@ -67,6 +67,16 @@ class HintHelperTest extends Specification {
         result.maxSpotAttempts == 3
     }
 
+    def 'should overlay onDemandCostRatio hint over the config value, zero included'() {
+        given:
+        def base = new MachineRequirementOpts([onDemandCostRatio: 3.25])
+
+        when:
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.onDemandCostRatio': 0])
+        then: 'a task 0 (no limit) is a real value, not "unset"'
+        result.onDemandCostRatio == 0d
+    }
+
     def 'should overlay machineTypes as list'() {
         given:
         def base = new MachineRequirementOpts([:])

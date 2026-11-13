@@ -302,6 +302,9 @@ class NameGenerator {
             // Leonardo Da Vinci invented too many things to list here. https://en.wikipedia.org/wiki/Leonardo_da_Vinci.
             "davinci",
 
+            // Margaret Dayhoff - physical chemist and a pioneer in bioinformatics. Often called the mother of bioinformatics. https://pmc.ncbi.nlm.nih.gov/articles/PMC5037978/
+            "dayhoff",
+
             // René Descartes - French philosopher, mathematician, and scientist. His best known philosophical statement is "Cogito ergo sum". https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
             "descartes",
 

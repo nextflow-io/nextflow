@@ -33,6 +33,7 @@ import nextflow.executor.Executor
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -361,7 +362,9 @@ class AwsBatchTaskHandlerTest extends Specification {
             fusionEnabled() >> false
             getAwsOptions() >> Mock(AwsOptions) {
                 getRetryMode() >> RETRY_MODE
-                getMaxTransferAttempts() >> MAX_ATTEMPTS
+                // getMaxTransferAttempts() returns a primitive int; a null stub
+                // cannot be cast to int under Groovy 5, so map null (unset) to 0
+                getMaxTransferAttempts() >> (MAX_ATTEMPTS ?: 0)
             }
         }
 
@@ -951,7 +954,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -959,7 +962,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -967,7 +970,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * handler.terminateJob('job1') >> null
+        0 * handler.terminateJob('job1')
     }
 
     def 'should create the trace record' () {
@@ -1069,6 +1072,44 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
     }
 
+    def 'should render job array submit command' () {
+        given:
+        def executor = Spy(AwsBatchExecutor)
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
+            fusionEnabled() >> false
+            getTask() >> Mock(TaskArrayRun) { getWorkDirStr()>> 's3://work'}
+        }
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) {
+            getAwsCli() >> 'aws'
+            getDebug() >> true
+            getStorageEncryption() >> 'aws:kms'
+        }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && aws s3 cp --only-show-errors --debug s3://work/.command.run "$f" && exec bash "$f"']
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) {
+            getAwsCli() >> '/opt/aws/bin/aws --region eu-west-1'
+            getRequesterPays() >> true
+        }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && /opt/aws/bin/aws --region eu-west-1 s3 cp --only-show-errors --request-payer requester s3://work/.command.run "$f" && exec bash "$f"']
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        executor.getAwsOptions() >> Mock(AwsOptions) { getS5cmdPath() >> 's5cmd' }
+        then:
+        result == ['bash', '-o', 'pipefail', '-c', 'trap \'exit 143\' TERM; f=$(mktemp) && s5cmd cat s3://work/.command.run > "$f" && exec bash "$f"']
+    }
+
     def 'should render submit command with s5cmd' () {
         given:
         def executor = Spy(AwsBatchExecutor)
@@ -1131,6 +1172,38 @@ class AwsBatchTaskHandlerTest extends Specification {
                     EvaluateOnExit.builder().onReason('*').action('EXIT').build())
                 .build()
         req.tags() == [a:'b']
+        req.propagateTags() == true
+    }
+
+    def 'should create an aws submit request with auto resource labels'() {
+        given:
+        def VAR_FOO = KeyValuePair.builder().name('FOO').value('1').build()
+        def config = new TaskConfig(memory: '8GB', cpus: 4, resourceLabels: ['my!label': 'a,b#c'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy#frog',
+                'seqera.io/platform/workflowId': '4a#bcd' ])
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> config
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['sh', '-c', 'hello']
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO]
+
+        and:
+        // the auto labels are normalised to the Batch tag syntax, the declared one is untouched
+        req.tags() == [
+                'nextflow.io/runName': 'crazy_frog',
+                'seqera.io/platform/workflowId': '4a_bcd',
+                'my!label': 'a,b#c' ]
         req.propagateTags() == true
     }
 

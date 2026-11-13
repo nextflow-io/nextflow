@@ -16,10 +16,13 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FilePatternSplitter
 import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -130,10 +133,10 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             // given (which is more likely during pipeline development) and
             // drop in any case  when they are more than 100
             if( len<100 )
-                delete << "rm -f ${Escape.path(stageName)}"
+                delete << "rm -f ${Escape.dataPath(stageName)}"
 
             // link them
-            links << stageInputFile( storePath, stageName )
+            links << ( isLocalInput(storePath) ? stageLocalFile(storePath, stageName) : stageInputFile(storePath, stageName) )
         }
 
         // return a big string containing the command
@@ -152,10 +155,25 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return The script which will apply the staging for this file in the main script
      */
     String stageInputFile( Path path, String targetName ) {
+        return stageLocalFile(path, targetName)
+    }
+
+    /**
+     * A local input with a remote work dir was accepted by a {@link ForeignFileFilter}
+     * and is linked where it is, whatever staging mechanism the executor uses
+     */
+    private boolean isLocalInput( Path path ) {
+        return workDir != null && workDir.fileSystem != FileSystems.default && path.fileSystem == FileSystems.default
+    }
+
+    /**
+     * Stage the input file with the default mechanism, which subclasses cannot override
+     */
+    private String stageLocalFile( Path path, String targetName ) {
         def cmd = ''
         def p = targetName.lastIndexOf('/')
         if( p>0 ) {
-            cmd += "mkdir -p ${Escape.path(targetName.substring(0,p))} && "
+            cmd += "mkdir -p ${Escape.dataPath(targetName.substring(0,p))} && "
         }
         cmd += stageInCommand(path.toAbsolutePath().toString(), targetName, stageinMode)
 
@@ -167,7 +185,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * to the shared working directory
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path unstageDir) {
         final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $patterns"
@@ -175,17 +193,39 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( !patterns )
             return null
 
+        // escaped twice because `eval "..."` parses the patterns twice
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.path(it) )
+            escape.add( Escape.doubleQuoted(escapePattern(it)) )
 
-        final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
+        final mode = stageoutMode ?: ( this.targetDir==null || this.workDir==this.targetDir ? 'copy' : 'move' )
+        // names listed by `ls` are literal, so do not glob them again in the loop (`set -f`)
         return """\
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                ${stageOutCommand('$name', targetDir, mode)}
+            set -f
+            for name in \$(set +f; eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                ${stageOutCommand('$name', unstageDir, mode)}
             done
+            set +f
             unset IFS""".stripIndent(true)
+    }
+
+    /**
+     * Escape an output file pattern the way the output file collector reads it:
+     * a glob pattern keeps its backslash escapes, e.g. `*\.txt`, any other value is a literal file name
+     */
+    static protected String escapePattern(String pattern) {
+        final splitter = FilePatternSplitter.glob().parse(pattern)
+        if( !splitter.isPattern() )
+            return Escape.dataPath(splitter.strip(pattern)).replaceAll('[*?\\[\\]{}]', '\\\\$0')
+        final result = new StringBuilder()
+        final matcher = Pattern.compile('\\\\.', Pattern.DOTALL).matcher(pattern)
+        int last = 0
+        while( matcher.find() ) {
+            result.append(Escape.dataPath(pattern.substring(last, matcher.start()))).append(matcher.group())
+            last = matcher.end()
+        }
+        return result.append(Escape.dataPath(pattern.substring(last))).toString()
     }
 
     /**
@@ -214,7 +254,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             throw new IllegalArgumentException("Process input file target path must be relative: $target")
 
         if( mode == 'symlink' || !mode )
-            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.dataPath(source)} ${Escape.dataPath(target)}"
 
         if( mode == 'rellink' ) {
             // GNU ln has the '-r' flag, but BSD ln doesn't, so we have to
@@ -224,14 +264,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             def sourcePath = workDir.resolve(source)
             source = targetPath.getParent().relativize(sourcePath).toString()
 
-            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.dataPath(source)} ${Escape.dataPath(target)}"
         }
 
         if( mode == 'link' )
-            return "ln -f ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -f ${Escape.dataPath(source)} ${Escape.dataPath(target)}"
 
         if( mode == 'copy' || !mode )
-            return "cp -fRL ${Escape.path(source)} ${Escape.path(target)}"
+            return "cp -fRL ${Escape.dataPath(source)} ${Escape.dataPath(target)}"
 
         throw new IllegalArgumentException("Unknown stage-in strategy: $mode")
     }
@@ -404,11 +444,16 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             return TaskProcessor.bashEnvironmentScript(environment)
         }
         else {
+            final script = TaskProcessor.bashEnvironmentScript(environment)
+            // no valid variable name, nothing to export in the container
+            if( !script.trim() )
+                return null
+            // quoted delimiter: the host prints the env script as is, it is evaluated in the container
             final wrapper = new StringBuilder()
             wrapper << "nxf_container_env() {\n"
-            wrapper << 'cat << EOF\n'
-            wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
-            wrapper << 'EOF\n'
+            wrapper << "cat << 'NXF_ENV_EOF'\n"
+            wrapper << script
+            wrapper << 'NXF_ENV_EOF\n'
             wrapper << '}\n'
             return wrapper.toString()
         }

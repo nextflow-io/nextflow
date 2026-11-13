@@ -79,7 +79,7 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
-        The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
+        The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20.m`).
     """)
     final Duration pullTimeout
 

@@ -31,6 +31,14 @@ class SpecNodeTest extends Specification {
         def scope = SpecNode.ROOT.children.get('process')
 
         expect:
+        // every directive should have a description, even if it is overloaded
+        scope.children.get('arch').description
+        scope.children.get('cache').description
+        scope.children.get('clusterOptions').description
+        scope.children.get('cpus').description
+        scope.children.get('disk').description
+        scope.children.get('publishDir').description
+        and:
         scope.children.get('clusterOptions').types as Set == [ String, List, String[] ] as Set
         scope.children.get('cpus').types == [ Integer ]
         scope.children.get('errorStrategy').types == [ String ]
@@ -39,7 +47,19 @@ class SpecNodeTest extends Specification {
         scope.children.get('memory').types == [ MemoryUnit ]
         scope.children.get('publishDir').types as Set == [ Map, String, List ] as Set
         scope.children.get('resourceLimits').types == [ Map ]
+        scope.children.get('secret').types == [ List ]
         scope.children.get('time').types == [ Duration ]
+    }
+
+    def 'should define nextflow retry policy config options' () {
+        expect:
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','delay']).types == [ Duration ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','maxDelay']).types == [ Duration ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','maxAttempts']).types == [ Integer ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','jitter']).types == [ Double ]
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','multiplier']).types == [ Double ]
+        and:
+        SpecNode.ROOT.getOption(['nextflow','retryPolicy','delay']).description
     }
 
 }

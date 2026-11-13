@@ -248,4 +248,8 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         path.text = result
         return path
     }
+
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
 }

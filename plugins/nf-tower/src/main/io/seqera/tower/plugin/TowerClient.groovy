@@ -18,6 +18,8 @@ package io.seqera.tower.plugin
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
+import java.net.http.HttpTimeoutException
+import java.util.function.Predicate
 import java.util.regex.Matcher
 
 import groovy.json.JsonGenerator
@@ -27,6 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import io.seqera.tower.plugin.exception.ForbiddenException
 import io.seqera.tower.plugin.exception.NotFoundException
 import io.seqera.tower.plugin.exception.UnauthorizedException
@@ -221,14 +224,30 @@ class TowerClient {
         return result
     }
 
+    /**
+     * Retry-on-exception rule for the Seqera Platform client. Retries the httpx default network
+     * conditions, plus a request timeout raised after the request was sent - which the httpx
+     * default deliberately excludes (see {@link HxConfig#defaultRetryCondition}). The trace calls
+     * are idempotent telemetry, so a stalled request is safe to re-send; otherwise a single
+     * transient timeout aborts the whole run.
+     */
+    protected static boolean retryCondition(Throwable t) {
+        return HxConfig.defaultRetryCondition(t) || t instanceof HttpTimeoutException
+    }
+
     protected void initHttpClient() {
         final builder = HxClient.newBuilder()
-        // auth settings
+        // retry backoff + condition (config() replaces the config builder, so seed it before auth)
+        builder.config(
+            HxConfig.newBuilder()
+                .retryConfig(this.retryPolicy)
+                .retryCondition({ Object t -> retryCondition((Throwable) t) } as Predicate)
+                .build() )
+        // auth settings (applied on top of the seeded config)
         setupClientAuth(builder, getAccessToken())
-        // retry + proxy settings (proxy applies to the main client and the token-refresh client)
+        // proxy + client settings (proxy applies to the main client and the token-refresh client)
         this.httpClient = builder
             .withProxyConfig(ProxyConfig.proxyConfig())
-            .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(java.time.Duration.ofMillis(connectTimeout.millis))

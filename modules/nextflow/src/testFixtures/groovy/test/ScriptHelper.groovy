@@ -17,8 +17,10 @@
 package test
 
 import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
 
 import groovy.transform.InheritConstructors
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.Session
 import nextflow.config.ConfigParserFactory
@@ -46,6 +48,7 @@ import nextflow.script.ScriptType
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 class ScriptHelper {
 
     /**
@@ -63,17 +66,15 @@ class ScriptHelper {
      * This function compiles and executes the script without
      * running the pipeline. The entry workflow is executed
      * (i.e. to construct the workflow DAG) unless opts.module
-     * is enabled.
+     * is enabled. Set opts.moduleRun to emulate `nextflow module
+     * run`, which allows a single process or named workflow to be
+     * executed directly.
      *
      * @param opts
      * @param text
      */
     static BaseScript loadScript(Map opts = [:], String text) {
-        def session = opts.config ? new MockSession(opts.config as Map) : new MockSession()
-        session.setBinding(new ScriptBinding())
-
-        session.init(null, null, opts.params, opts.configParams)
-        session.start()
+        def session = startSession(opts)
 
         def loader = ScriptLoaderFactory.create(session)
         if( opts.module )
@@ -82,6 +83,52 @@ class ScriptHelper {
         loader.runScript()
 
         return loader.getScript()
+    }
+
+    private static final List<Session> startedSessions = new CopyOnWriteArrayList<>()
+
+    /**
+     * Create, init and start a {@link MockSession}, making it the global session.
+     *
+     * The session is tracked until {@link #destroySessions()} is called,
+     * which {@link Dsl2Spec} does after every feature.
+     *
+     * @param opts The session options: {@code config}, {@code params}, {@code configParams}, {@code moduleRun}
+     */
+    static MockSession startSession(Map opts = [:]) {
+        return startSession0(opts, null)
+    }
+
+    private static MockSession startSession0(Map opts, ScriptFile scriptFile) {
+        def session = opts.config ? new MockSession(opts.config as Map) : new MockSession()
+        session.setBinding(new ScriptBinding())
+
+        session.init(scriptFile, null, opts.params as Map, opts.configParams as Map)
+        if( opts.moduleRun )
+            session.setModuleRun(true)
+        session.start()
+
+        startedSessions.add(session)
+        return session
+    }
+
+    /**
+     * Destroy the sessions created by {@link #startSession(Map)} (and so
+     * {@code loadScript} and {@code runScript}) that the test did not destroy itself.
+     */
+    static void destroySessions() {
+        for( Session session : startedSessions ) {
+            // already destroyed
+            if( session.getExecService() == null )
+                continue
+            try {
+                session.destroy()
+            }
+            catch( Throwable e ) {
+                log.warn "Unable to destroy test session -- ${e.message}", e
+            }
+        }
+        startedSessions.clear()
     }
 
     /**
@@ -159,11 +206,7 @@ class ScriptHelper {
      * @param text
      */
     static Object runScript(Map opts = [:], String text) {
-        def session = opts.config ? new MockSession(opts.config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-
-        session.init(null, null, opts.params, opts.configParams)
-        session.start()
+        def session = startSession(opts)
 
         def loader = ScriptLoaderFactory.create(session)
         loader.parse(text)
@@ -193,11 +236,7 @@ class ScriptHelper {
      * @param path
      */
     static Object runScript(Map opts = [:], Path path) {
-        def session = opts.config ? new MockSession(opts.config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-
-        session.init( new ScriptFile(path), null, opts.params, null )
-        session.start()
+        def session = startSession0(opts, new ScriptFile(path))
 
         def loader = ScriptLoaderFactory.create(session)
         loader.parse(path)
@@ -344,7 +383,7 @@ class MockTaskHandler extends TaskHandler {
             task.exitStatus = 0
         }
         else {
-            task.code.call()
+            task.stdout = task.code.call()
         }
         status = TaskStatus.COMPLETED
         final fault = task.processor.finalizeTask(this)

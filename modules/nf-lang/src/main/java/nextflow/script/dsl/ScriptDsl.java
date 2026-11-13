@@ -43,7 +43,7 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         The `channel` namespace contains the built-in channel factories.
 
-        [Read more](https://docs.seqera.io/nextflow/reference/channel)
+        [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces/channel)
     """)
     ChannelNamespace getChannel();
 
@@ -123,7 +123,6 @@ public interface ScriptDsl extends DslScope {
     """)
     void error(String message);
 
-    @Deprecated
     @Description("""
         Stop the pipeline execution and return an exit code and optional error message.
     """)

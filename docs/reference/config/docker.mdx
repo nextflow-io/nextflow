@@ -1,0 +1,75 @@
+---
+title: docker
+description: Reference for the docker config scope, which controls how Docker containers are executed by Nextflow.
+---
+
+# `docker`
+
+The `docker` scope controls how [Docker](https://www.docker.com) containers are executed by Nextflow.
+
+##### `docker.cpuLimits`
+
+<AddedInVersion version="26.10" />
+
+Use the `--cpus` flag to limit CPU usage instead of `--cpu-shares` (default: `false`).
+
+Unlike `--cpu-shares`, which only affects the relative scheduling weight of a container, `--cpus` enforces a hard limit on the number of CPUs available to it. See the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#cpu) for details.
+
+##### `docker.enabled`
+
+Enable Docker execution (default: `false`).
+
+##### `docker.engineOptions`
+
+Specify additional options supported by the Docker engine i.e. `docker [OPTIONS]`.
+
+##### `docker.envWhitelist`
+
+Comma separated list of environment variable names to be included in the container environment.
+
+##### `docker.fixOwnership`
+
+Fix ownership of files created by the Docker container (default: `false`).
+
+##### `docker.legacy`
+
+Use command line options removed since Docker 1.10.0 (default: `false`).
+
+##### `docker.mountFlags`
+
+Add the specified flags to the volume mounts e.g. `'ro,Z'`.
+
+##### `docker.registry`
+
+The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+##### `docker.registryOverride`
+
+<AddedInVersion version="25.10" />
+
+When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default: `false`).
+This setting allows you to redirect container image pulls from their original registry to a different registry, such as a private mirror or proxy.
+
+##### `docker.remove`
+
+Clean up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.
+
+##### `docker.runOptions`
+
+Specify extra command line options supported by the `docker run` command. See the [Docker documentation](https://docs.docker.com/engine/reference/run/) for details.
+
+##### `docker.sudo`
+
+Executes Docker run command as `sudo` (default: `false`).
+
+##### `docker.temp`
+
+Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
+
+##### `docker.tty`
+
+Allocates a pseudo-tty (default: `false`).
+
+##### `docker.writableInputMounts`
+
+When `false`, mount input directories as read-only (default: `true`).

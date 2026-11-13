@@ -18,7 +18,7 @@ package nextflow.k8s
 
 import nextflow.k8s.client.K8sRetryConfig
 
-import javax.annotation.Nullable
+import org.jspecify.annotations.Nullable
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -62,7 +62,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Job`).
     """)
     final String computeResourceType
 
@@ -82,7 +82,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+        The interval after which the Kubernetes client configuration is refreshed (default: `50.m`).
     """)
     final Duration clientRefreshInterval
 
@@ -114,13 +114,13 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
+        The Kubernetes HTTP client request connection timeout e.g. `60.s`.
     """)
     final Duration httpConnectTimeout
 
     @ConfigOption
     @Description("""
-        The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
+        The Kubernetes HTTP client request connection read timeout e.g. `60.s`.
     """)
     final Duration httpReadTimeout
 
@@ -221,7 +221,7 @@ class K8sConfig implements ConfigScope {
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
         clientRefreshInterval = opts.clientRefreshInterval as Duration ?: Duration.of('50m')
-        computeResourceType = opts.computeResourceType
+        computeResourceType = opts.computeResourceType ?: ResourceType.Job.name()
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean
         debug = new K8sDebug(opts.debug as Map ?: Collections.emptyMap())

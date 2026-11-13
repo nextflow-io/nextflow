@@ -466,6 +466,16 @@ class LsfExecutorTest extends Specification {
 
     }
 
+    def testParseJobIdInvalidResponse() {
+
+        when:
+        def executor = createExecutor()
+        executor.parseJobId( 'Cannot connect to LSF. Please wait...' )
+        then:
+        thrown(IllegalStateException)
+
+    }
+
     def testKillCommand() {
         when:
         // executor stub object

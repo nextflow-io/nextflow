@@ -30,6 +30,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -48,6 +49,21 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     private transient Map cache = new LinkedHashMap(20)
 
+    /** The directive names accessed while {@link #trackingAccess} is enabled */
+    private transient Set<String> accessedDirectives = new HashSet<>(10)
+
+    /**
+     * The resource labels derived from the workflow metadata, assigned by the task processor
+     * -- see {@link nextflow.Session#getAutoResourceLabels()}.
+     *
+     * Note it is held aside from the directives map on purpose: it is not a directive, it must
+     * not take part in the directive resolution and it must not shadow a `resourceLabels`
+     * declared by the process.
+     */
+    private transient Map<String,String> autoResourceLabels = Collections.<String,String>emptyMap()
+
+    private transient boolean trackingAccess
+
     TaskConfig() {  }
 
     TaskConfig( Map<String,Object> entries ) {
@@ -58,11 +74,45 @@ class TaskConfig extends LazyMap implements Cloneable {
         def copy = (TaskConfig)super.clone()
         copy.setTarget(new HashMap<>(this.getTarget()))
         copy.newCache()
+        // copied, not reset: the copy carries over the command rendered from them
+        // -- see TaskRun#clone -- therefore it depends on the same directives
+        copy.accessedDirectives = new HashSet<>(this.accessedDirectives)
+        // note: the immutable auto labels map is already carried over by super.clone(), so it is shared as-is
         return copy
     }
 
+    /**
+     * Discard the resolved directive values. Note it does *not* touch the accessed names: the
+     * value cache belongs to a context, the access log to a rendered command.
+     */
     private void newCache() {
         cache = [:]
+    }
+
+    /**
+     * Track the directives accessed while the given action runs.
+     *
+     * The task command is rendered by accessing the directives it interpolates off this object,
+     * therefore tracking the accesses while it happens tells which directives the rendered
+     * command depends on. It is scoped to that action because the directives are accessed all
+     * the time by the rest of the engine e.g. the executor asking for the memory to request.
+     *
+     * The caller must disable it once the command is rendered, including on failure, since
+     * a flag left enabled would report every later access as a dependency of the command.
+     *
+     * @see nextflow.processor.TaskRun#resolve
+     * @param value Whether the directive accesses must be tracked
+     */
+    void trackDirectiveAccess(boolean value) {
+        trackingAccess = value
+    }
+
+    /**
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when the given directive was accessed while the accesses were tracked
+     */
+    boolean isDirectiveAccessed(String directive) {
+        return accessedDirectives.contains(directive)
     }
 
     /**
@@ -73,15 +123,18 @@ class TaskConfig extends LazyMap implements Cloneable {
     TaskConfig setContext( Map context ) {
         assert context != null
 
-        // set the binding context for this map
-        this.binding = context
+        // call the setter explicitly -- the static compiler would treat
+        // `this.binding = context` as a map entry
+        setBinding(context)
 
         // clear cache to force re-compute dynamic entries
         this.cache.clear()
 
-        // set the binding context for 'ext' map
-        if( target.ext instanceof LazyMap )
-            (target.ext as LazyMap).binding = context
+        // set the binding context for 'ext' map -- call the setter explicitly:
+        // a bare `ext.binding = context` is not routed to the protected
+        // `setBinding` under Groovy 5 and would be stored as a map entry
+        if( getTarget().ext instanceof LazyMap ext )
+            ext.setBinding(context)
 
         // set the this object in the task context in order to allow task properties to be resolved in process script
         context.put(TASK_CONTEXT_PROPERTY_NAME, this)
@@ -132,26 +185,48 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get(name)
     }
 
+    void setProperty(String name, Object value) {
+        // use the declared setter if any (e.g. `context`), otherwise store the value
+        // as a directive -- Groovy 5 no longer falls back to the map for read-only
+        // properties (e.g. `shell`) and throws ReadOnlyPropertyException instead
+        final meta = metaClass.getMetaProperty(name)
+        if( meta instanceof MetaBeanProperty && meta.setter )
+            meta.setProperty(this, value)
+        else
+            put(name, value)
+    }
+
     final getRawValue(String key) {
-        return target.get(key)
+        return getTarget().get(key)
     }
 
     def get( String key ) {
+        // note this is the funnel for a directive *property* access, either directly or via the
+        // matching getter e.g. #getMemory. Only #eval (used by the task hasher) and #getRawValue
+        // bypass it -- a directive read through those while tracking would go unnoticed
+        if( trackingAccess )
+            accessedDirectives.add(key)
+
+        // note the access is tracked before the cache is consulted, so a directive already
+        // resolved outside the tracked window is still reported
         if( cache.containsKey(key) )
             return cache.get(key)
 
         def result
         if( key == 'ext' ) {
-            if( target.containsKey(key) )
-                result = target.get(key)
+            if( getTarget().containsKey(key) )
+                result = getTarget().get(key)
             else {
                 result = new LazyMap()
-                target.put(key, result)
+                getTarget().put(key, result)
             }
         }
         else
             result = super.get(key)
 
+        // note a dynamic top-level directive is cached by its resolved value, so a directive its
+        // closure accesses in turn is only seen on the first resolution -- resolving one before
+        // the command is rendered would hide it. `ext` is unaffected: what is cached is its map
         cache.put(key,result)
         return result
     }
@@ -167,7 +242,7 @@ class TaskConfig extends LazyMap implements Cloneable {
                     super.setDynamic(flag)
                 }
             }
-            target.put(key, value)
+            getTarget().put(key, value)
         }
         else if( key == 'ext' && value instanceof Map ) {
             super.put( key, new LazyMap(value) )
@@ -181,8 +256,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( super.isDynamic() )
             return true
 
-        if( target.ext instanceof LazyMap )
-            return (target.ext as LazyMap).isDynamic()
+        if( getTarget().ext instanceof LazyMap ext )
+            return ext.isDynamic()
 
         return false
     }
@@ -531,8 +606,48 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('hints') as Map<String, Object> ?: Collections.<String,Object>emptyMap()
     }
 
+    /**
+     * Assign the resource labels derived from the workflow metadata. They are merged *under*
+     * the labels declared by the process -- see {@link #getResourceLabels()}.
+     *
+     * @param labels The auto-derived labels, or {@code null} when the feature is disabled
+     */
+    void setAutoResourceLabels(Map<String,String> labels) {
+        this.autoResourceLabels = labels ?: Collections.<String,String>emptyMap()
+    }
+
+    /**
+     * @return
+     *      The resource labels declared by the process, merged over the labels derived from
+     *      the workflow metadata. A label declared by the process always wins, therefore this
+     *      is what the trace records and the execution report observe
+     */
     Map<String, String> getResourceLabels() {
-        return get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+        return getResourceLabels(ResourceLabelPolicy.IDENTITY)
+    }
+
+    /**
+     * Same as {@link #getResourceLabels()} but the auto-derived labels are normalised by the
+     * given policy, so that they can be applied by the target executor backend. The labels
+     * declared by the process are passed through untouched.
+     *
+     * @param policy The {@link ResourceLabelPolicy} of the executor backend applying the labels
+     * @return The resource labels to be applied to the task compute resources
+     */
+    Map<String, String> getResourceLabels(ResourceLabelPolicy policy) {
+        final declared = get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+        if( !autoResourceLabels )
+            return declared
+        // the collision is decided *before* the normalisation, so that a label declared with the
+        // canonical key overrides the auto one even when the policy mangles that key
+        final overridden = autoResourceLabels.findAll { k, v -> !declared.containsKey(k) } as Map<String,String>
+        final auto = policy.sanitize(overridden)
+        final result = new LinkedHashMap<String, String>(auto.size() + declared.size())
+        result.putAll(auto)
+        // the declared labels are applied last, so that they win also when the key collision
+        // only shows up once the auto key has been mangled by the policy
+        result.putAll(declared)
+        return result
     }
 
     String getResourceLabelsAsString() {
@@ -553,7 +668,7 @@ class TaskConfig extends LazyMap implements Cloneable {
      */
     protected boolean getWhenGuard(boolean defValue=true) throws FailedGuardException {
 
-        final code = target.get(NextflowDSLImpl.PROCESS_WHEN)
+        final code = getTarget().get(NextflowDSLImpl.PROCESS_WHEN)
         if( code == null )
             return defValue
 
@@ -573,7 +688,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
 
     protected TaskClosure getStubBlock() {
-        final code = target.get(NextflowDSLImpl.PROCESS_STUB)
+        final code = getTarget().get(NextflowDSLImpl.PROCESS_STUB)
         if( !code )
             return null
         if( code instanceof TaskClosure )

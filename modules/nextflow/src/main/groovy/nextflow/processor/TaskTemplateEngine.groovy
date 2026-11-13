@@ -20,7 +20,7 @@
 
 package nextflow.processor
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import groovy.text.Template
 import groovy.text.TemplateEngine
 import groovy.transform.CompileStatic

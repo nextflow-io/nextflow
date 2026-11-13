@@ -59,6 +59,11 @@ public interface OutputDsl extends DslScope {
     void ignoreErrors(boolean value);
 
     @Description("""
+        When `true`, files that do not originate from the work directory, such as input files, are also published (default: `false`).
+    """)
+    void includeInputs(boolean value);
+
+    @Description("""
         Create an index file of the values that were published.
     """)
     void index(Closure closure);

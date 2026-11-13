@@ -28,7 +28,6 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
@@ -122,11 +121,11 @@ class CH {
         }
     }
 
-    static void init() { bridges.clear() }
+    static void init() { bridges.clear(); allTopics.clear() }
 
     @PackageScope
     static DataflowWriteChannel close0(DataflowWriteChannel source) {
-        if( source instanceof DataflowExpression ) {
+        if( source instanceof DataflowVariable ) {
             if( !source.isBound() )
                 source.bind(stop())
         }
@@ -181,7 +180,7 @@ class CH {
     }
 
     static boolean isChannelQueue(obj) {
-        obj instanceof DataflowQueue || obj instanceof DataflowStreamReadAdapter || obj instanceof DataflowStreamWriteAdapter
+        obj instanceof DataflowQueue || obj instanceof DataflowStreamReadAdapter || obj instanceof DataflowBroadcast
     }
 
     static boolean allScalar(List args) {

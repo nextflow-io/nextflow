@@ -193,6 +193,16 @@ public class ASTUtils {
         return expression instanceof VariableExpression ve ? ve : null;
     }
 
+    public static String methodType(MethodNode node) {
+        if( node instanceof ProcessNode )
+            return "Process";
+        if( node instanceof AgentNode )
+            return "Agent";
+        if( node instanceof WorkflowNode )
+            return "Workflow";
+        return "Function";
+    }
+
     /**
      * Given a variable which represents a method being accessed
      * as a variable, return the underlying method.

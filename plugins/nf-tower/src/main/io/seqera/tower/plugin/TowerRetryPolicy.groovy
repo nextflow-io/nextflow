@@ -52,13 +52,13 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Initial delay before retrying a failed Tower operation (default: `350ms`).
+        Initial delay before retrying a failed Tower operation (default: `350.ms`).
     """)
     Duration delay
 
     @ConfigOption
     @Description("""
-        Maximum delay between retry attempts for Tower operations (default: `90s`).
+        Maximum delay between retry attempts for Tower operations (default: `90.s`).
     """)
     Duration maxDelay
 

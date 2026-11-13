@@ -35,6 +35,7 @@ A Nextflow script may contain the following top-level declarations:
 - Parameter declarations (legacy)
 - Workflow definitions
 - Process definitions
+- Agent definitions
 - Function definitions
 - Enum types
 - Record types
@@ -86,6 +87,10 @@ include { hello as sayHello } from './some/module'
 
 The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hello` is included under the alias `sayHello`.
 
+:::note
+[Enum](#enum-type) and [record](#record-type) types cannot be aliased. They must be included under their original name. The `params` block of an included pipeline is the exception -- it is a type created for the include, so it must be aliased.
+:::
+
 Include clauses can be separated by semi-colons or newlines:
 
 ```nextflow
@@ -94,7 +99,7 @@ include { hello ; bye as goodbye } from './some/module'
 
 // newlines
 include {
-hello
+    hello
     bye as goodbye
 } from './some/module'
 ```
@@ -105,6 +110,19 @@ Include clauses can also be specified as separate includes:
 include { hello } from './some/module'
 include { bye as goodbye } from './some/module'
 ```
+
+<AddedInVersion version="26.10" />
+
+The `workflow` name refers to the entire pipeline defined by the included script, i.e., its params block, entry workflow, and output block. The `params` name refers to the params block as a record type. Each of these names must be given an alias:
+
+```nextflow
+include {
+    params as RnaseqParams ;
+    workflow as RNASEQ
+} from './pipelines/rnaseq.nf'
+```
+
+See [pipeline composition][pipeline-composition] for more information.
 
 ### Params block
 
@@ -209,7 +227,7 @@ Typed workflows have the following new features:
 
 - Each named workflow output in the `emit:` section may specify a type.
 
-See [Workflows (typed)][workflow-typed-page] for more information on the semantics of typed workflows.
+See [Typed workflows][workflow-typed-page] for more information on the semantics of typed workflows.
 
 ### Process
 
@@ -327,6 +345,51 @@ Typed processes use the same behavior as legacy processes for all other sections
 :::
 
 See [Typed processes][process-typed] for more information on the semantics of typed processes.
+
+### Agent
+
+An agent consists of a name and a body. The agent body may define sections for *directives*, *inputs*, *outputs*, and *prompt*:
+
+```nextflow
+agent qa {
+    // directives
+    model 'openai/gpt-5-mini'
+    instruction 'You are a concise scientific assistant.'
+
+    input:
+    question: String
+
+    output:
+    stdout()
+
+    prompt:
+    """
+    Answer briefly: ${question}
+    """
+}
+```
+
+- An agent must define a prompt section. All other sections are optional. Directives do not have an explicit section label, but must be defined first.
+
+- Sections must be defined in the order shown above.
+
+- Agent inputs and outputs are declared in the same manner as a [typed process](#process-typed).
+
+Agents may specify the following sections:
+
+##### `input:`
+
+Consists of one or more agent inputs. Each input has a name and type, or is a destructured record or tuple.
+
+##### `output:`
+
+Consists of a single *output statement*. An output with a name and type is answered by the model as structured output. An output may instead be an expression, which is composed from the agent's final answer (`stdout()`), output files (`file()`, `files()`), and inputs.
+
+##### `prompt:`
+
+Consists of one or more [statements](#statements) and must return a string in the same manner as a [function](#function). The returned string is the prompt sent to the model.
+
+Directives must be [function calls](#function-call). See [Agents][agent-page] for the set of available directives and more information on the semantics of each agent section.
 
 ### Function
 
@@ -532,6 +595,8 @@ def sayHello(name) {
     println "Hello, ${name}!"
 }
 ```
+
+A return statement can only be used in a [function](#function) or [closure](#closure). It cannot be used in a [workflow](#workflow) body.
 
 ### throw
 
@@ -944,23 +1009,14 @@ Compound expressions are evaluated in the following order:
 - `?:` (ternary)
 - `?:` (elvis)
 
-## Deprecations
-
-The following legacy features were excluded from this page because they are deprecated:
-
-- The `addParams` and `params` clauses of include declarations.
-- The `when:` section of a process definition.
-- The `shell:` section of a process definition.
-
-See [strict syntax][strict-syntax-page] for more information.
-
+[agent-page]: ../agent
 [config-feature-flags]: ./feature-flags
 [operator-page]: ./operator
 [process-page]: ../process
 [process-reference]: ./process
-[inputs-and-outputs-typed]: ./process#inputs-and-outputs-typed
+[inputs-and-outputs-typed]: ./process/inputs-outputs-typed
 [process-typed]: ../process-typed
 [stdlib-types-iterable]: ./stdlib-types/iterable
-[strict-syntax-page]: ../strict-syntax
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-page]: ../workflow-typed
+[pipeline-composition]: ../workflow-typed#pipeline-composition

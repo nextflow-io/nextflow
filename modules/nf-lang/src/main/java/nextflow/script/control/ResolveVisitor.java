@@ -38,6 +38,7 @@ import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.control.ClassNodeResolver;
@@ -161,8 +162,11 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
             return true;
         if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
-        if( resolveFromClassResolver(type.getName()) != null )
+        var redirect = resolveFromClassResolver(type.getName());
+        if( redirect != null ) {
+            type.setRedirect(redirect);
             return true;
+        }
         if( resolveAsInnerClass(type) )
             return true;
         return false;
@@ -323,6 +327,11 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         }
         else if( exp instanceof ConstructorCallExpression cce ) {
             result = transformConstructorCallExpression(cce);
+        }
+        else if( exp instanceof TernaryExpression ) {
+            // the type of a ternary is inferred from its branches (since Groovy 5)
+            // and may contain wildcards, so it should not be resolved
+            result = exp.transformExpression(this);
         }
         else {
             resolveOrFail(exp.getType(), exp);

@@ -16,6 +16,9 @@
 
 package nextflow.dataflow
 
+import java.util.concurrent.TimeUnit
+
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.dataflow.ChannelNamespace as channel
 import nextflow.exception.ScriptRuntimeException
 import nextflow.exception.WorkflowScriptErrorException
@@ -111,6 +114,34 @@ class ChannelImplTest extends Specification {
         result.val == record(id: 2, a: 'y', b: 'foo', c: 'bar')
         result.val == record(id: 3, a: 'z', b: 'foo', c: 'bar')
         result.val == CH.stop()
+    }
+
+    def testCombineNamedArgsWithLateValue() {
+
+        given:
+        def value = new DataflowVariable()
+
+        when:
+        def results = runDataflow {
+            (1..4).collect {
+                def ch = channel.of( record(id: 1), record(id: 2), record(id: 3) )
+                ch.combine(b: new ValueImpl(value), c: 'bar')
+            }
+        }
+        then:
+        results.every { result -> result.getVal(100, TimeUnit.MILLISECONDS) == null }
+        // no thread is held waiting for the value
+        Thread.allStackTraces.values().every { stack -> !stack.any { it.className.contains('CombineOpV2') } }
+
+        when:
+        value.bind('foo')
+        then:
+        results.every { result ->
+            result.val == record(id: 1, b: 'foo', c: 'bar')
+                && result.val == record(id: 2, b: 'foo', c: 'bar')
+                && result.val == record(id: 3, b: 'foo', c: 'bar')
+                && result.val == CH.stop()
+        }
     }
 
     def testCombineError() {
@@ -324,6 +355,19 @@ class ChannelImplTest extends Specification {
         result.contains( record(id: 'X', a: 1, b: 4) )
         result.contains( record(id: 'Y', a: 2, b: 5) )
         result.contains( record(id: 'Z', a: 3, b: 6) )
+    }
+
+    def testJoinFieldPrecedence() {
+        when:
+        def result = runDataflow {
+            def ch1 = channel.of(record(id: 'X', a: 1, c: 'left'), record(id: 'Y', a: 2, c: 'left'))
+            def ch2 = channel.of(record(id: 'Y', b: 5, c: 'right'), record(id: 'X', b: 4, c: 'right'))
+            ch1.join(ch2, by: 'id').collect()
+        }.getVal()
+        then:
+        result.size() == 2
+        result.contains( record(id: 'X', a: 1, b: 4, c: 'right') )
+        result.contains( record(id: 'Y', a: 2, b: 5, c: 'right') )
     }
 
     def testJoinDuplicates() {

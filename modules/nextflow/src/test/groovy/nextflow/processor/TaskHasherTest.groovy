@@ -19,8 +19,11 @@ package nextflow.processor
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.file.FileHolder
 import nextflow.script.ProcessConfig
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.v2.ProcessInput
+import nextflow.util.CacheHelper
 import spock.lang.Specification
 /**
  *
@@ -162,23 +165,140 @@ class TaskHasherTest extends Specification {
         ]
     }
 
-    def 'should compute hash entries for eval outputs'() {
+    def 'should hash eval outputs independently of map order'() {
+        given:
+        // same entries, different insertion order and different map implementation
+        def evals1 = new LinkedHashMap(['nxf_out_eval_0': 'echo one', 'nxf_out_eval_1': 'echo two'])
+        def evals2 = new HashMap(['nxf_out_eval_1': 'echo two', 'nxf_out_eval_0': 'echo one'])
 
-        when:
-        def result1 = TaskHasher.computeEvalOutputCommands([
-            'nxf_out_eval_2': 'echo "value2"',
-            'nxf_out_eval_1': 'echo "value1"',
-            'nxf_out_eval_3': 'echo "value3"'
-        ])
+        expect:
+        CacheHelper.hasher(evals1).hash() == CacheHelper.hasher(evals2).hash()
+    }
 
-        def result2 = TaskHasher.computeEvalOutputCommands([
-            'nxf_out_eval_3': 'echo "value3"',
-            'nxf_out_eval_1': 'echo "value1"',
-            'nxf_out_eval_2': 'echo "value2"'
-        ])
+    def 'should hash eval outputs depending on the name-command binding'() {
+        given:
+        // same names and same commands, but paired the other way round
+        def evals1 = ['nxf_out_eval_0': 'echo one', 'nxf_out_eval_1': 'echo two']
+        def evals2 = ['nxf_out_eval_0': 'echo two', 'nxf_out_eval_1': 'echo one']
 
-        then:
-        result1 == result2
-        result1 == 'nxf_out_eval_1=echo "value1"\nnxf_out_eval_2=echo "value2"\nnxf_out_eval_3=echo "value3"'
+        expect:
+        CacheHelper.hasher(evals1).hash() != CacheHelper.hasher(evals2).hash()
+    }
+
+    private List<Object> stageKeys(Map params) {
+        final processor = Mock(TaskProcessor) {
+            getSession() >> Mock(Session)
+        }
+        final task = Mock(TaskRun) {
+            getProcessor() >> processor
+            getInputEnv() >> params.env
+            getStdin() >> params.stdin
+            getStageAsFiles() >> params.staged
+        }
+        final keys = new ArrayList<Object>()
+        new TaskHasher(task).addStageDirectives(keys)
+        return keys
+    }
+
+    private String stageHash(Map params, CacheHelper.HashMode mode = CacheHelper.HashMode.STANDARD) {
+        return CacheHelper.hasher(stageKeys(params), mode).hash().toString()
+    }
+
+    def 'should not add stage keys when the stage block is not used' () {
+        expect:
+        stageKeys([:]) == []
+    }
+
+    def 'should hash stage directives to a stable value' () {
+        given:
+        def staged = new FileHolder(Path.of('/data/helper.sh')).withName('helper.sh')
+
+        expect:
+        stageHash(env: [FOO: 'one'], stdin: 'two', staged: [staged]) == 'b23ba6625981cf30ff07663a0129befc'
+    }
+
+    def 'should hash staged files by source but not by stage name' () {
+        given:
+        def a = Path.of('/data/a.sh')
+        def b = Path.of('/data/b.sh')
+
+        expect:
+        stageHash(staged: [new FileHolder(a).withName('x.sh')]) == stageHash(staged: [new FileHolder(a).withName('y.sh')])
+        stageHash(staged: [new FileHolder(a)]) != stageHash(staged: [new FileHolder(b)])
+        stageHash(staged: [new FileHolder(a)]) != stageHash([:])
+    }
+
+    def 'should keep a stable hash for typed tasks without stage directives' () {
+        given:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+        }
+        def task = Mock(TaskRun) {
+            getSource() >> 'echo hello'
+            isContainerEnabled() >> false
+            getConfig() >> Mock(TaskConfig)
+            getProcessor() >> processor
+            hasTypedInputsOutputs() >> true
+            getInputs() >> [(new ProcessInput('x', String, false)): 'a', (new ProcessInput('s', Map, false)): [id: 's1']]
+            getInputEnv() >> [:]
+        }
+        def hasher = Spy(new TaskHasher(task))
+        hasher.getTaskGlobalVars() >> [:]
+
+        expect: 'the pinned hash of a typed task without stage directives'
+        hasher.compute().toString() == '6812ed701a957edc84fbe25166e015ba'
+    }
+
+    def 'should hash stage env and stdin values as strings' () {
+        expect:
+        stageHash(env: [FOO: 'one']) == stageHash(env: [FOO: 'one'])
+        stageHash(env: [FOO: 'one']) != stageHash(env: [FOO: 'two'])
+        stageHash(env: [FOO: 'one']) != stageHash(env: [BAR: 'one'])
+        stageHash(env: [A: '1', B: '2']) == stageHash(env: [B: '2', A: '1'])
+        and:
+        stageHash(stdin: 'one') == stageHash(stdin: 'one')
+        stageHash(stdin: 'one') != stageHash(stdin: 'two')
+        stageKeys(stdin: 1) == stageKeys(stdin: '1')
+        stageKeys(stdin: Path.of('/some/file.txt')) == ['stage_stdin', '/some/file.txt']
+        and:
+        stageHash(env: [X: 'one']) != stageHash(stdin: 'one')
+    }
+
+    def 'should include stage directives in the hash of typed tasks only' () {
+        given:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+        }
+        def hashFor = { boolean typed, String value ->
+            def task = Mock(TaskRun) {
+                getSource() >> 'hello world'
+                isContainerEnabled() >> false
+                getConfig() >> Mock(TaskConfig)
+                getProcessor() >> processor
+                hasTypedInputsOutputs() >> typed
+                getInputEnv() >> [FOO: value]
+            }
+            def hasher = Spy(new TaskHasher(task))
+            hasher.getTaskGlobalVars() >> [:]
+            return hasher.compute()
+        }
+
+        expect:
+        hashFor(true, 'one') == hashFor(true, 'one')
+        hashFor(true, 'one') != hashFor(true, 'two')
+        and: 'legacy env values are task inputs and are hashed as such'
+        hashFor(false, 'one') == hashFor(false, 'two')
     }
 }

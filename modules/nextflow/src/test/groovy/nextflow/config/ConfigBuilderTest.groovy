@@ -25,7 +25,6 @@ import nextflow.exception.ConfigParseException
 import nextflow.extension.FilesEx
 import nextflow.secret.SecretsLoader
 import nextflow.util.ConfigHelper
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -256,7 +255,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().build([file])
         then:
         def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
+        e.message == "Unknown config attribute `bar` -- check config file: ${file}".toString()
 
         cleanup:
         SysEnv.pop()
@@ -340,7 +339,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().build([file])
         then:
         def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
+        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file}".toString()
 
         cleanup:
         SysEnv.pop()
@@ -548,6 +547,44 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should resolve agent selectors inside a profile' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            profiles {
+                cloud {
+                    agent {
+                        cpus = 2
+                        ext.args = '--verbose'
+
+                        withName: bar {
+                            cpus = 4
+                            ext.opts = '--fast'
+                        }
+
+                        withLabel: foo {
+                            cpus = 8
+                        }
+                    }
+                }
+            }
+            '''
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('cloud').build([file1])
+        then:
+        cfg.agent.cpus == 2
+        cfg.agent.ext == [args: '--verbose']
+        cfg.agent.'withName:bar'.cpus == 4
+        cfg.agent.'withName:bar'.ext == [opts: '--fast']
+        cfg.agent.'withLabel:foo'.cpus == 8
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should resolve ext config' () {
 
         given:
@@ -577,11 +614,11 @@ class ConfigBuilderTest extends Specification {
     }
 
     // issue 2422 - https://github.com/nextflow-io/nextflow/issues/2422
-    // ideally this should behave as the previous test
-    @Ignore
     def 'should resolve ext config with properties' () {
 
         given:
+        // the v1 parser is still affected by #2422
+        SysEnv.push('NXF_SYNTAX_PARSER': 'v2')
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('test.conf')
         file1.text = '''
@@ -605,6 +642,7 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+        SysEnv.pop()
     }
 
     def 'should access top params from profile' () {

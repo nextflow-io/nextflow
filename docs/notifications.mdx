@@ -138,6 +138,16 @@ mail {
 ```
 :::
 
+Nextflow waits up to 30 seconds for the SMTP server to accept a connection, to reply, and to accept data. Use `smtp.connectiontimeout`, `smtp.timeout` and `smtp.writetimeout` to change these timeouts, in milliseconds. Set a timeout to `0` to disable it. When a timeout is reached, the email is not sent. For a [workflow notification](#workflow-notification), Nextflow logs a warning and the run continues. A `sendMail` call raises an error instead.
+
+```groovy
+mail {
+    smtp.connectiontimeout = 10000
+    smtp.timeout = 60000
+    smtp.writetimeout = 60000
+}
+```
+
 See the [mail scope][config-mail] section to learn more the mail server configuration options.
 
 ### AWS SES configuration
@@ -216,7 +226,5 @@ See the [Mail configuration](#mail-configuration) section to learn about the ava
 
 See [Completion handler](#completion-handler) to learn more about the workflow notification configuration details.
 
-[config-mail]: ./reference/config#mail
-[config-notification]: ./reference/config#notification
-[process-error-strategy]: ./reference/process#errorstrategy
+[config-mail]: ./reference/config/mail
 [stdlib-namespaces-sendmail]: ./reference/stdlib-namespaces/global#sendmail-options-

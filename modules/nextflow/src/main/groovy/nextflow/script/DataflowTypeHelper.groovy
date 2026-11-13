@@ -34,7 +34,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * - Legacy workflows use v1 dataflow types: DataflowBroadcast, DataflowVariable
  *
  * While a given script must be either typed or legacy, typed workflows
- * can be composed with legacy workflows and vise versa. In order to support
+ * can be composed with legacy workflows and vice versa. In order to support
  * this, the calling workflow must be able to convert between v1 and v2 dataflow
  * types based on whether the callee is typed or legacy.
  *
@@ -100,8 +100,8 @@ class DataflowTypeHelper {
         if( source.size() == 1 )
             return normalizeV2(source[0])
         final result = new HashMap<String,Object>()
-        for( int i = 0; i < source.size(); i++ )
-            result.put(names[i], normalizeV2(source[i]))
+        for( final name : names )
+            result.put(name, normalizeV2(source.getProperty(name)))
         return new RecordMap(result)
     }
 

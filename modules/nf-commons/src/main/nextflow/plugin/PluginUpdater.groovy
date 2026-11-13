@@ -264,8 +264,9 @@ class PluginUpdater extends UpdateManager {
             log.trace "All requested plugins are already installed - skipping registry metadata prefetch"
             return
         }
-        // use direct field access to avoid the refresh() call in getRepositories()
-        // which could fail anything which hasn't had a chance to prefetch yet
+        // use direct field access because getRepositories() calls refresh() when the repository
+        // list is null (e.g. in the dev updater), which loads `repositories.json` from the
+        // working directory or fails if it does not exist
         for( def repo : this.@repositories ) {
             if( repo instanceof PrefetchUpdateRepository ) {
                 log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${needed}"
@@ -274,7 +275,31 @@ class PluginUpdater extends UpdateManager {
         }
     }
 
+    /**
+     * Fetch the metadata of a plugin that was not prefetched, such as a missing
+     * dependency of a plugin that was already installed.
+     *
+     * @param id The plugin Id
+     */
+    protected void fetchMissingMetadata(String id) {
+        if( offline )
+            return
+        // use direct field access for the same reason as prefetchMetadata()
+        for( def repo : this.@repositories ) {
+            try {
+                // HttpPluginRepository fetches and caches the metadata when missing
+                repo.getPlugin(id)
+            }
+            catch( PluginRuntimeException e ) {
+                log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
+            }
+        }
+    }
+
     protected boolean isAlreadyInstalled(PluginRef ref) {
+        // in dev mode, a locally built plugin is used regardless of the requested version
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && pluginManager.getPlugin(ref.id) )
+            return true
         // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
         // to resolve the latest release.
         if( !ref.version )
@@ -351,6 +376,9 @@ class PluginUpdater extends UpdateManager {
      */
     @Override
     boolean installPlugin(String id, String version) {
+        // in dev mode, core plugins must be built locally rather than downloaded
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && defaultPlugins.hasPlugin(id) )
+            throw new UnsupportedOperationException("Core plugin $id is not available in dev mode -- make sure it is built locally (e.g. `make compile`)")
         if( !pluginsStore )
             throw new IllegalStateException("Missing pluginStore attribute")
 
@@ -478,6 +506,9 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
         }
 
+        if( !isAlreadyInstalled(new PluginRef(id, requestedVersion)) )
+            fetchMissingMetadata(id)
+
         def version = requestedVersion
         if( !version ) {
             version = getLastPluginRelease(id)?.version
@@ -524,10 +555,12 @@ class PluginUpdater extends UpdateManager {
 
             // 2. find latest satisfying req
             // -- if it's a core nextflow plugin use the version expected by it
-            def depVersion = defaultPlugins.getPlugin(it.pluginId)?.version
+            def depVersion = defaultPlugins.hasPlugin(it.pluginId) ? defaultPlugins.getPlugin(it.pluginId).version : null
             // -- otherwise try to find the newest matching release
-            if( !depVersion )
+            if( !depVersion ) {
+                fetchMissingMetadata(it.pluginId)
                 depVersion = findNewestMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
+            }
             log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - available version: $depVersion"
             if( pullOnly )
                 pullPlugin0(it.pluginId, depVersion)
@@ -559,6 +592,7 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
+        fetchMissingMetadata(id)
         PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")

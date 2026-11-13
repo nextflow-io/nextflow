@@ -19,6 +19,7 @@ package io.seqera.config
 import groovy.transform.CompileStatic
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
+import nextflow.platform.AutoLabels
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
@@ -33,13 +34,14 @@ import nextflow.util.Duration
 @CompileStatic
 class ExecutorOpts implements ConfigScope {
 
-    static final Set<String> VALID_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
-        'projectName', 'userName', 'runName', 'sessionId', 'resume',
-        'revision', 'commitId', 'repository', 'manifestName',
-        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
-    ]))
+    static final List<String> FUSION_MODES = ['wave', 'native']
 
     final RetryOpts retryPolicy
+
+    @Description("""
+        HTTP client settings for requests to the Seqera scheduler service.
+    """)
+    final HttpClientOpts httpClient
 
     @ConfigOption
     @Description("""
@@ -77,7 +79,7 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval for batching task submissions (default: `5 sec`).
+        The interval for batching task submissions (default: `5.s`).
     """)
     final Duration batchFlushInterval
 
@@ -86,10 +88,15 @@ class ExecutorOpts implements ConfigScope {
     """)
     final MachineRequirementOpts machineRequirement
 
+    @Deprecated
     @ConfigOption
     @Description("""
+        DEPRECATED: use `tower.autoLabels` instead. This option is honoured for backward
+        compatibility and takes precedence over `tower.autoLabels` when specified, including
+        when set to `false`.
+
         Automatically attach workflow metadata labels (with the `nextflow.io/` and
-        `seqera.io/platform/` prefixes) to the session. Accepts:
+        `seqera.io/platform/` prefixes) to the compute resources. Accepts:
           - `true`: include all available metadata labels
           - `false` (default): disable
           - a list or comma-separated string of short names: e.g.
@@ -145,12 +152,23 @@ class ExecutorOpts implements ConfigScope {
     """)
     final boolean shellEnabled
 
+    @ConfigOption
+    @Description("""
+        *Experimental: may change in a future release.*
+
+        How the task containers get the Fusion client. Supported values:
+          - `wave` (default): Wave adds the Fusion layer to the task container
+          - `native`: the compute hosts provide the Fusion client; Wave is optional
+    """)
+    final String fusionMode
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
 
     ExecutorOpts(Map opts) {
         this.retryPolicy = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.httpClient = new HttpClientOpts(opts.httpClient as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
@@ -164,7 +182,9 @@ class ExecutorOpts implements ConfigScope {
             : Duration.of('5 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
-        this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
+        // note the labels are resolved session-wide by `Session#getAutoResourceLabels` -- parsing
+        // them here still validates the setting and rejects an unknown name at config load time
+        this.autoLabels = AutoLabels.parse(opts.get('autoLabels'), 'seqera.executor.autoLabels')
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
         // scheduling requirements (e.g. per-user vCPU cap)
@@ -177,10 +197,24 @@ class ExecutorOpts implements ConfigScope {
         this.computeEnvId = opts.computeEnvId as String
         // on-demand shell access to task containers (default false)
         this.shellEnabled = opts.shellEnabled as boolean
+        // how the task containers get the Fusion client (default wave)
+        this.fusionMode = parseFusionMode(opts.fusionMode as String)
+    }
+
+    private static String parseFusionMode(String value) {
+        if( !value )
+            return null
+        if( value !in FUSION_MODES )
+            throw new IllegalArgumentException("Invalid 'seqera.executor.fusionMode' value: '$value' - valid values: ${FUSION_MODES.join(', ')}")
+        return value
     }
 
     RetryOpts retryOpts() {
         this.retryPolicy
+    }
+
+    HttpClientOpts httpOpts() {
+        this.httpClient
     }
 
     String getEndpoint() {
@@ -215,24 +249,6 @@ class ExecutorOpts implements ConfigScope {
         return autoLabels
     }
 
-    protected static Set<String> parseAutoLabels(Object value) {
-        if( value == null || value == false )
-            return Collections.<String>emptySet()
-        if( value == true )
-            return VALID_AUTO_LABELS
-        List<String> raw
-        if( value instanceof CharSequence )
-            raw = value.toString().tokenize(',').collect { String s -> s.trim() }.findAll { String s -> s }
-        else if( value instanceof List )
-            raw = ((List) value).collect { it?.toString()?.trim() }.findAll { String s -> s } as List<String>
-        else
-            throw new IllegalArgumentException("Invalid 'seqera.executor.autoLabels' value '${value}' - expected true, false, a list, or a comma-separated string")
-        final invalid = raw.findAll { String s -> !(s in VALID_AUTO_LABELS) }
-        if( invalid )
-            throw new IllegalArgumentException("Invalid 'seqera.executor.autoLabels' name(s) ${invalid} - valid names are: ${VALID_AUTO_LABELS.join(', ')}")
-        return Collections.unmodifiableSet(new LinkedHashSet<>(raw))
-    }
-
     String getPredictionModel() {
         return predictionModel
     }
@@ -255,5 +271,9 @@ class ExecutorOpts implements ConfigScope {
 
     boolean getShellEnabled() {
         return shellEnabled
+    }
+
+    String getFusionMode() {
+        return fusionMode
     }
 }

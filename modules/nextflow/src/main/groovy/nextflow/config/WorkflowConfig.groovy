@@ -49,7 +49,7 @@ class WorkflowConfig implements ConfigScope {
     @Description("""
         The `workflow.output` scope provides options for publishing workflow outputs.
 
-        [Read more](https://docs.seqera.io/nextflow/reference/config#workflow)
+        [Read more](https://docs.seqera.io/nextflow/reference/config/workflow)
     """)
     final WorkflowOutputConfig output
 
@@ -98,13 +98,19 @@ class WorkflowOutputConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        When `true`, files that do not originate from the work directory, such as input files, are also published (default: `false`).
+    """)
+    final boolean includeInputs
+
+    @ConfigOption
+    @Description("""
         The file publishing method (default: `'symlink'`).
     """)
     final String mode
 
     @ConfigOption
     @Description("""
-        When `true` any existing file in the specified folder will be overwritten (default: `'standard'`).
+        Determines when to overwrite an existing file in the output directory (default: `'standard'`).
     """)
     final Object overwrite
 
@@ -132,6 +138,7 @@ class WorkflowOutputConfig implements ConfigScope {
         copyAttributes = opts.copyAttributes as boolean
         enabled = opts.enabled as boolean
         ignoreErrors = opts.ignoreErrors as boolean
+        includeInputs = opts.includeInputs as boolean
         mode = opts.mode
         overwrite = opts.overwrite
         storageClass = opts.storageClass

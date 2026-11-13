@@ -1,0 +1,28 @@
+---
+title: report
+description: Reference for the report config scope, which controls the generation of the execution report.
+---
+
+# `report`
+
+The `report` scope controls the generation of the [execution report][execution-report].
+
+##### `report.directory`
+
+<AddedInVersion version="26.10" />
+
+The directory where the report file should be saved. The path is resolved against the workflow output directory (`outputDir`). It must be a relative path within the output directory, and it cannot be used when `report.file` is an absolute path. By default, it is not used and `report.file` is resolved against the launch directory.
+
+##### `report.enabled`
+
+Create the execution report on workflow completion (default: `false`).
+
+##### `report.file`
+
+The path of the created execution report file (default: `'report-<timestamp>.html'`).
+
+##### `report.overwrite`
+
+Overwrite any existing report file with the same name (default: `false`).
+
+[execution-report]: ../../reports#execution-report

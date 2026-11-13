@@ -1,0 +1,39 @@
+---
+title: smolvm
+description: Run Nextflow pipeline tasks in smolvm microVMs.
+---
+
+# smolvm
+
+[smolvm](https://github.com/smol-machines/smolvm) is a lightweight container runtime that runs each task inside its own microVM.
+
+## Prerequisites
+
+The `smolvm` CLI must be installed and available on the `PATH` in the launch environment.
+
+## How it works
+
+Enable smolvm in the Nextflow configuration file:
+
+```groovy
+smolvm.enabled = true
+process.container = 'nextflow/examples:latest'
+```
+
+Whenever your pipeline launches a task, Nextflow runs it inside a microVM created from the specified image using the `smolvm machine run` command. Images are standard OCI images that you can pull from any registry.
+
+:::tip
+On Apple silicon, running a `linux/amd64` image requires Rosetta 2 translation. Enable it by passing `--rosetta` via `smolvm.runOptions`:
+
+```groovy
+smolvm.runOptions = '--rosetta'
+```
+
+Without `--rosetta`, the microVM fails to start the container and reports `the container ... is not running`. Native `arm64` images do not need this option.
+:::
+
+## Advanced settings
+
+See the [`smolvm`][config-smolvm] configuration scope for advanced smolvm settings.
+
+[config-smolvm]: ../reference/config/smolvm

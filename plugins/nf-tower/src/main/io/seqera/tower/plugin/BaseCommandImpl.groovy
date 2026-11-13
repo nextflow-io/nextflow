@@ -50,9 +50,13 @@ class BaseCommandImpl {
         return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
-    protected Map readConfig() {
+    protected ConfigObject readConfig() {
         final configFile = Const.APP_HOME_DIR.resolve('config')
-        return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : []).flatten()
+        return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : [])
+    }
+
+    protected Map readConfigFlat() {
+        return readConfig().flatten()
     }
 
     protected List<Map> listUserWorkspaces(TowerClient client, String userId) {

@@ -25,6 +25,7 @@ import java.nio.file.FileSystemException
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotLinkException
@@ -133,14 +134,16 @@ class FilesEx {
                 }
 
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    Files.delete(dir)
+                    FileHelper.deleteDirEntry(dir)
                     FileVisitResult.CONTINUE
                 }
 
             })
             return true
         }
-        catch( IOException e ) {
+        catch( IOException | InvalidPathException e ) {
+            // deleteDirEntry rethrows the unchecked CloudStoragePseudoDirectoryException when a
+            // cloud directory still holds a real object, which is a failure like any other here
             return false
         }
     }

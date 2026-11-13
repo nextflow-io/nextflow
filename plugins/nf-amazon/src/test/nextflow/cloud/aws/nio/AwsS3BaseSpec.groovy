@@ -68,6 +68,40 @@ trait AwsS3BaseSpec {
         return "nf-s3fs-test-${UUID.randomUUID()}"
     }
 
+    /**
+     * Buckets shared by all tests of a spec, created on first use by {@link #createTestDir}.
+     * Implementations must back this with a {@code @Shared} list and call
+     * {@link #deleteSharedBuckets} from {@code cleanupSpec}.
+     */
+    abstract List<String> getSharedBuckets()
+
+    /**
+     * Create a unique directory in the shared bucket at the given index,
+     * returned as {@code <bucket>/<uuid>} so that it can replace a bucket name in a path.
+     */
+    String createTestDir(int index=0) {
+        while( sharedBuckets.size() <= index )
+            sharedBuckets.add(createBucket())
+        return "${sharedBuckets[index]}/${UUID.randomUUID()}"
+    }
+
+    def deleteTestDir(String dir) {
+        log.debug "Deleting blob directory '$dir'"
+        if( !dir )
+            return
+        def (bucketName, prefix) = splitName(dir)
+        assert prefix
+        final request = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefix + '/').build() as ListObjectsV2Request
+        for( S3Object obj : s3Client.listObjectsV2Paginator(request).contents() )
+            s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(obj.key()).build() as DeleteObjectRequest)
+    }
+
+    def deleteSharedBuckets() {
+        for( String bucketName : sharedBuckets )
+            tryDeleteBucket(bucketName)
+        sharedBuckets.clear()
+    }
+
     def createObject(String path, String content) {
         createObject(Paths.get(path), content)
     }
