@@ -19,6 +19,7 @@ package nextflow.cloud.azure.batch
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.time.Duration as JavaDuration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -325,7 +326,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
-        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'"
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'"
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
     }
@@ -339,7 +340,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && echo hello-world'"
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && {\necho hello-world\n}'"
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
@@ -354,10 +355,47 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && echo '\\''hello-world'\\'''"
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && {\necho '\\''hello-world'\\''\n}'"
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should skip the whole multi-line startTask script when the azcopy install fails' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+        and:
+        def workDir = Files.createTempDirectory('test')
+        def sharedDir = Files.createTempDirectory('shared')
+        // bin dir already present, as when the start task re-runs on a rebooted node
+        Files.createDirectory(sharedDir.resolve('bin'))
+        if( AZCOPY ) workDir.resolve('azcopy').text = '#!/bin/sh'
+
+        when:
+        def commandLine = svc.createStartTask( new AzStartTaskOpts(script: SCRIPT) ).commandLine
+        and:
+        // run the command line through a shell to mimic the Batch agent splitting it into argv
+        def builder = new ProcessBuilder('bash', '-c', commandLine).directory(workDir.toFile()).redirectErrorStream(true)
+        builder.environment().put('AZ_BATCH_NODE_SHARED_DIR', sharedDir.toString())
+        def proc = builder.start()
+        def output = proc.inputStream.text
+        def exitCode = proc.waitFor()
+
+        then:
+        exitCode == EXIT
+        output.readLines().findAll { !it.contains('azcopy') } == OUTPUT
+
+        cleanup:
+        workDir?.deleteDir()
+        sharedDir?.deleteDir()
+
+        where:
+        AZCOPY | SCRIPT                                        | EXIT | OUTPUT
+        false  | 'echo line1\necho line2'                      | 1    | []
+        false  | 'false || echo fallback'                      | 1    | []
+        true   | "echo 'line1'\necho line2 # trailing comment" | 0    | ['line1', 'line2']
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
