@@ -35,6 +35,10 @@ import static test.ScriptHelper.*
  */
 class ChannelFactoryInstanceTest extends Specification {
 
+    def cleanup() {
+        Global.reset()
+    }
+
     class Ext1 extends PluginExtensionPoint {
 
         int initCount
@@ -114,6 +118,8 @@ class ChannelFactoryInstanceTest extends Specification {
 
     def 'should invoke alias in custom plugin factory' () {
         given:
+        Global.session = Mock(Session)
+        and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
         new PluginExtensionProvider()
                 .install()
@@ -187,6 +193,8 @@ class ChannelFactoryInstanceTest extends Specification {
 
     def 'should invoke operator extension' () {
         given:
+        Global.session = Mock(Session)
+        and:
         def ext1 = new Ext1();
         new PluginExtensionProvider()
                 .install()

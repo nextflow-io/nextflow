@@ -30,8 +30,8 @@ def session = new Session()
 def values = new DataflowQueue()
 def strings = new DataflowVariable()
 
-values << 1 << 2 << PoisonPill.instance
-strings << 'a'
+values.bind(1); values.bind(2); values.bind(PoisonPill.instance)
+strings.bind('a')
 
 
 def (stdout, aln) = session.createProcessor()

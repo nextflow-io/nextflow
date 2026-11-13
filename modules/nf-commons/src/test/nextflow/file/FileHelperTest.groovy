@@ -247,6 +247,30 @@ class FileHelperTest extends Specification {
 
     }
 
+    def 'should strip current-dir segments' () {
+        expect:
+        FileHelper.stripCurrentDirSegments(PATH) == EXPECTED
+
+        where:
+        PATH                         | EXPECTED
+        null                         | null
+        ''                           | ''
+        'results/x.vcf.gz'           | 'results/x.vcf.gz'
+        './results/x.vcf.gz'         | 'results/x.vcf.gz'
+        '././x.txt'                  | 'x.txt'
+        'a/./b/./c.txt'              | 'a/b/c.txt'
+        './/x.txt'                   | 'x.txt'
+        './/./x.txt'                 | 'x.txt'
+        'a//b/.//c.txt'              | 'a/b/c.txt'
+        './/'                        | './'
+        './*.vcf'                    | '*.vcf'
+        '.hidden'                    | '.hidden'
+        '../x.txt'                   | '../x.txt'
+        '.'                          | '.'
+        './'                         | './'
+        '/abs/./x.txt'               | '/abs/./x.txt'
+    }
+
     def 'test isEmpty file'() {
 
         setup:
@@ -1056,17 +1080,12 @@ class FileHelperTest extends Specification {
     def 'should check if glob is allowed' () {
 
         given:
-        def FS = Mock(FileSystem)
-        def PROVIDER = Mock(FileSystemProvider)
-        def PATH = Mock(Path)
+        def provider = new FakeFileSystemProvider(SCHEME)
+        def fs = [provider: { provider }] as FileSystem
+        def path = [getFileSystem: { fs }] as Path
 
-        when:
-        def result = FileHelper.isGlobAllowed(PATH)
-        then:
-        PATH.getFileSystem() >> FS
-        FS.provider() >> PROVIDER
-        PROVIDER.getScheme() >> SCHEME
-        result == EXPECTED
+        expect:
+        FileHelper.isGlobAllowed(path) == EXPECTED
 
         where:
         SCHEME      | EXPECTED
@@ -1375,7 +1394,9 @@ class FileHelperTest extends Specification {
     }
 
     static class FakeFileSystemProvider extends FileSystemProvider {
-        String getScheme() { 'fake' }
+        final String scheme
+        FakeFileSystemProvider(String scheme='fake') { this.scheme = scheme }
+        String getScheme() { scheme }
         FileSystem newFileSystem(URI uri, Map<String,?> env) { throw new UnsupportedOperationException() }
         FileSystem getFileSystem(URI uri) { throw new UnsupportedOperationException() }
         Path getPath(URI uri) { throw new UnsupportedOperationException() }

@@ -102,7 +102,7 @@ class CombineOp {
 
         opts.onComplete = {
             if( stopCount.decrementAndGet()==0) {
-                target << Channel.STOP
+                target.bind(Channel.STOP)
             }}
 
         return opts

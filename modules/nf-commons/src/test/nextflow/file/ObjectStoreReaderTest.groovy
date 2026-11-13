@@ -24,7 +24,8 @@ import spock.lang.Specification
 class ObjectStoreReaderTest extends Specification {
 
     static class FakeReader extends ObjectStoreReader {
-        boolean canHandle(String scheme) { scheme == 'file' }
+        String scheme = 'file'
+        boolean canHandle(String scheme) { scheme == this.scheme }
         List<Map.Entry<String,ObjectMeta>> listWithMeta(Path prefix) { return [Map.entry('a.bin', new ObjectMeta(10, 1))] }
         protected byte[] readRange0(Path path, long offset, int len) { return [1,2,3] as byte[] }
     }
@@ -32,9 +33,9 @@ class ObjectStoreReaderTest extends Specification {
     def 'lookup resolves a provider by scheme'() {
         given:
         def provider = new FakeReader()
-        ObjectStoreReader.setProviders([provider] as List<ObjectStoreReader>)
+        ObjectStoreReader.setProviders([new FakeReader(scheme: 's3'), provider] as List<ObjectStoreReader>)
         expect:
-        ObjectStoreReader.lookup(Paths.get('/tmp/x')).is(provider)   // 'file' scheme
+        ObjectStoreReader.lookup(Path.of('/tmp/x')).is(provider)   // 'file' scheme
         cleanup:
         ObjectStoreReader.setProviders(null)
     }
@@ -70,7 +71,7 @@ class ObjectStoreReaderTest extends Specification {
         cachedProviders() == null
 
         when: 'the provider becomes available'
-        def provider = Stub(ObjectStoreReader) { canHandle('s3') >> true }
+        def provider = new FakeReader()
         ObjectStoreReader.setProviders([provider])
 
         then: 'it resolves; the earlier empty answer did not latch'
