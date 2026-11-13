@@ -507,7 +507,8 @@ class PluginUpdater extends UpdateManager {
     }
 
     private IllegalStateException notFound(String id, String msg) {
-        final cause = metadataErrors.get(id)
+        // the registry error explains the failure only when no repository knows the plugin
+        final cause = getPluginsMap().containsKey(id) ? null : metadataErrors.get(id)
         return cause
             ? new IllegalStateException("$msg -- cause: ${cause.message}", cause)
             : new IllegalStateException(msg)
