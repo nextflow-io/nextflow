@@ -836,7 +836,8 @@ class AzBatchServiceTest extends Specification {
     @Unroll
     def 'should create task resource files' () {
         given:
-        def SAS = 'sas-token'
+        // the SAS token must be at least 100 chars to create the az file system
+        def SAS = '1234567890' * 10
         def AZURE = [storage: [sasToken: SAS, accountName: 'my-account'], batch: [copyToolInstallMode: 'node']]
         Global.session = Mock(Session) { getConfig()>>[azure: AZURE] }
         def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
@@ -850,15 +851,12 @@ class AzBatchServiceTest extends Specification {
         when:
         def result = svc.resourceFileUrls(TASK, SAS)
         then:
-        result.collect { [it.filePath, it.httpUrl] } == EXPECTED
+        result.collect { [it.filePath, it.httpUrl] } == FILES.collect { [it, "https://my-account.blob.core.windows.net/foo/work/dir/${it}?${SAS}".toString()] }
 
         where:
-        STDIN       | EXPECTED
-        null        | [ ['.command.run', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.run?sas-token'],
-                        ['.command.sh', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.sh?sas-token'] ]
-        'some input'| [ ['.command.run', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.run?sas-token'],
-                        ['.command.sh', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.sh?sas-token'],
-                        ['.command.in', 'https://my-account.blob.core.windows.net/foo/work/dir/.command.in?sas-token'] ]
+        STDIN        | FILES
+        null         | ['.command.run', '.command.sh']
+        'some input' | ['.command.run', '.command.sh', '.command.in']
     }
 
     @Unroll
