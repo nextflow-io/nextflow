@@ -55,6 +55,15 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
+            nxf_az_download_error() {
+                local sas=${AZ_SAS:-}
+                local sig=${sas#*sig=}
+                sig=${sig%%&*}
+                ## show the azcopy output, without the SAS signature
+                [[ -z $3 ]] || >&2 echo "${3//"$sig"/<redacted>}"
+                >&2 echo "Unable to download path: $1 (azcopy exit status $2)"
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -68,14 +77,14 @@ class AzBashLibTest extends Specification {
                     ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
                     ## or a transient error fails (and can be retried) instead of being staged as a directory
                     if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
-                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        nxf_az_download_error "$source" $ret "$out"
                         return $ret
                     fi
                     mkdir -p "$target"
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || {
                         ret=$?
                         rm -rf "$target"
-                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        nxf_az_download_error "$source" $ret "$out"
                         return $ret
                     }
                 }
@@ -167,6 +176,15 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
+            nxf_az_download_error() {
+                local sas=${AZ_SAS:-}
+                local sig=${sas#*sig=}
+                sig=${sig%%&*}
+                ## show the azcopy output, without the SAS signature
+                [[ -z $3 ]] || >&2 echo "${3//"$sig"/<redacted>}"
+                >&2 echo "Unable to download path: $1 (azcopy exit status $2)"
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -180,14 +198,14 @@ class AzBashLibTest extends Specification {
                     ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
                     ## or a transient error fails (and can be retried) instead of being staged as a directory
                     if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
-                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        nxf_az_download_error "$source" $ret "$out"
                         return $ret
                     fi
                     mkdir -p "$target"
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || {
                         ret=$?
                         rm -rf "$target"
-                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        nxf_az_download_error "$source" $ret "$out"
                         return $ret
                     }
                 }
@@ -279,6 +297,15 @@ class AzBashLibTest extends Specification {
                 fi
             }
 
+            nxf_az_download_error() {
+                local sas=${AZ_SAS:-}
+                local sig=${sas#*sig=}
+                sig=${sig%%&*}
+                ## show the azcopy output, without the SAS signature
+                [[ -z $3 ]] || >&2 echo "${3//"$sig"/<redacted>}"
+                >&2 echo "Unable to download path: $1 (azcopy exit status $2)"
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
@@ -292,14 +319,14 @@ class AzBashLibTest extends Specification {
                     ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
                     ## or a transient error fails (and can be retried) instead of being staged as a directory
                     if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
-                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        nxf_az_download_error "$source" $ret "$out"
                         return $ret
                     fi
                     mkdir -p "$target"
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || {
                         ret=$?
                         rm -rf "$target"
-                        >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                        nxf_az_download_error "$source" $ret "$out"
                         return $ret
                     }
                 }
@@ -346,7 +373,7 @@ class AzBashLibTest extends Specification {
           */dir/\\*)      echo a > "$dst/a.txt" ;;
           */oomdir/\\*)   echo a > "$dst/a.txt"; kill -KILL $$ ;;
           */dir|*/oomdir) echo "Cannot perform copy due to error: cannot use directory as source without --recursive or a trailing wildcard (/*)"; exit 1 ;;
-          */flaky.txt)   echo "Cannot perform copy due to error: cannot list files due to reason HEAD https://acct.blob.core.windows.net/c/flaky.txt: connection reset by peer"; exit 1 ;;
+          */flaky.txt)   echo "Cannot perform copy due to error: cannot list files due to reason HEAD $2: connection reset by peer"; exit 1 ;;
           *)             echo "Cannot perform copy due to error: The specified file was not found."; exit 1 ;;
         esac
         '''.stripIndent()
@@ -367,7 +394,7 @@ class AzBashLibTest extends Specification {
         def script = workDir.resolve('test.sh')
         // run in the background, as nxf_parallel does, so that errexit applies inside the function
         script.text = 'set -eu\n' + AzBashLib.script() + """
-            export AZ_SAS=token
+            export AZ_SAS='sv=2021-06-08&sig=secret'
             export PATH=${bin}:\$PATH
             nxf_az_download 'https://acct.blob.core.windows.net/c/${SOURCE}' target 2> stderr &
             wait \$! && echo 0 > status || echo \$? > status
@@ -386,19 +413,21 @@ class AzBashLibTest extends Specification {
         workDir.resolve('calls').readLines().size() == CALLS
         ERROR ? stderr.endsWith(ERROR) : stderr.isEmpty()
         !stderr.contains('File exists')
+        stderr.contains(AZCOPY_OUTPUT)
+        !stderr.contains('secret')
 
         cleanup:
         workDir?.toFile()?.deleteDir()
 
         where:
-        SOURCE        | STATUS | RESULT | CALLS | ERROR
-        'file.txt'    | 0      | 'file' | 1     | ''
-        'dir'         | 0      | 'dir'  | 2     | ''
-        'missing'     | 1      | 'none' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (azcopy exit status 1)\n'
-        'flaky.txt'   | 1      | 'none' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/flaky.txt (azcopy exit status 1)\n'
+        SOURCE        | STATUS | RESULT | CALLS | ERROR | AZCOPY_OUTPUT
+        'file.txt'    | 0      | 'file' | 1     | ''    | ''
+        'dir'         | 0      | 'dir'  | 2     | ''    | ''
+        'missing'     | 1      | 'none' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/missing (azcopy exit status 1)\n' | 'Cannot perform copy due to error: The specified file was not found.\n'
+        'flaky.txt'   | 1      | 'none' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/flaky.txt (azcopy exit status 1)\n' | 'flaky.txt?sv=2021-06-08&sig=<redacted>: connection reset by peer\n'
         // azcopy 10.8.0 leaves a full-size file when killed, 10.34.1 leaves none
-        'oom.txt'     | 137    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/oom.txt (azcopy exit status 137)\n'
-        'oomdir'      | 137    | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/oomdir (azcopy exit status 137)\n'
+        'oom.txt'     | 137    | 'file' | 1     | 'Unable to download path: https://acct.blob.core.windows.net/c/oom.txt (azcopy exit status 137)\n' | ''
+        'oomdir'      | 137    | 'none' | 2     | 'Unable to download path: https://acct.blob.core.windows.net/c/oomdir (azcopy exit status 137)\n' | ''
     }
 
 }

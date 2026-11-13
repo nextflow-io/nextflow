@@ -73,6 +73,15 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             fi
         }
 
+        nxf_az_download_error() {
+            local sas=${AZ_SAS:-}
+            local sig=${sas#*sig=}
+            sig=${sig%%&*}
+            ## show the azcopy output, without the SAS signature
+            [[ -z $3 ]] || >&2 echo "${3//"$sig"/<redacted>}"
+            >&2 echo "Unable to download path: $1 (azcopy exit status $2)"
+        }
+
         nxf_az_download() {
             local source=$1
             local target=$2
@@ -86,14 +95,14 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
                 ## or a transient error fails (and can be retried) instead of being staged as a directory
                 if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                    nxf_az_download_error "$source" $ret "$out"
                     return $ret
                 fi
                 mkdir -p "$target"
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || {
                     ret=$?
                     rm -rf "$target"
-                    >&2 echo "Unable to download path: $source (azcopy exit status $ret)"
+                    nxf_az_download_error "$source" $ret "$out"
                     return $ret
                 }
             }
