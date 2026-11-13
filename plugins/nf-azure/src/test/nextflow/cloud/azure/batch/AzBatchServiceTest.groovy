@@ -958,6 +958,32 @@ class AzBatchServiceTest extends Specification {
     }
 
     @Unroll
+    def 'should create task resource files' () {
+        given:
+        // the SAS token must be at least 100 chars to create the az file system
+        def SAS = '1234567890' * 10
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account'], batch: [copyToolInstallMode: 'node']]
+        Global.session = Mock(Session) { getConfig()>>[azure: AZURE] }
+        def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
+        def svc = new AzBatchService(createExecutor(new AzConfig(AZURE)))
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> WORKDIR
+            getStdin() >> STDIN
+        }
+
+        when:
+        def result = svc.resourceFileUrls(TASK, SAS)
+        then:
+        result.collect { [it.filePath, it.httpUrl] } == FILES.collect { [it, "https://my-account.blob.core.windows.net/foo/work/dir/${it}?${SAS}".toString()] }
+
+        where:
+        STDIN        | FILES
+        null         | ['.command.run', '.command.sh']
+        'some input' | ['.command.run', '.command.sh', '.command.in']
+    }
+
+    @Unroll
     def 'should create user-assigned managed identity credentials token' () {
         given:
         def config = Mock(AzConfig)
