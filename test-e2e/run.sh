@@ -66,8 +66,8 @@ echo "Nextflow snapshots launcher image $image"
 # As in Platform, the dind launcher (including the Docker client) is used by cloud compute
 # environments, the plain launcher by all others
 #
-launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v2)
-launcher_dind=$(wave -i ${base_dind} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v2)
+launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
+launcher_dind=$(wave -i ${base_dind} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
 echo "Running Platform tests using image launcher: $launcher"
 echo "Running Platform tests using image launcher (dind): $launcher_dind"
 
