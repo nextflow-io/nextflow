@@ -112,7 +112,8 @@ public class ConfigCompiler {
         unit.compile(Phases.CLASS_GENERATION);
 
         // return compiled script class
-        var clazz = (Class) collector.getLoadedClasses().stream().findFirst().orElse(null);
+        var it = collector.getLoadedClasses().iterator();
+        var clazz = it.hasNext() ? (Class<?>) it.next() : null;
         return InvokerHelper.createScript(clazz, new Binding());
     }
 
