@@ -264,4 +264,36 @@ class AzFusionEnvTest extends Specification {
         env.size() == 1  // Only account name
     }
 
+    def 'should use the managed identity with the seqera executor (executor=#EXECUTOR, storage=#STORAGE, identity=#IDENTITY, pool=#POOL)'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [
+                process: [executor: EXECUTOR],
+                azure: [
+                    storage: [accountName: 'myaccount'] + STORAGE,
+                    managedIdentity: IDENTITY,
+                    batch: POOL ? [poolIdentityClientId: POOL] : [:]
+                ]
+            ]
+        }
+
+        when:
+        def fusionEnv = Spy(AzFusionEnv)
+        fusionEnv.getOrCreateSasToken() >> 'sas'
+        def env = fusionEnv.getEnvironment('az', Mock(FusionConfig))
+
+        then:
+        env == [AZURE_STORAGE_ACCOUNT: 'myaccount'] + EXPECTED
+
+        where:
+        EXECUTOR      | STORAGE              | IDENTITY              | POOL      | EXPECTED
+        'seqera'      | [:]                  | [clientId: 'ce-id']   | null      | [FUSION_AZ_MSI_CLIENT_ID: 'ce-id']
+        'seqera'      | [:]                  | [clientId: 'ce-id']   | 'pool-id' | [FUSION_AZ_MSI_CLIENT_ID: 'pool-id']
+        'seqera'      | [sasToken: 'user']   | [clientId: 'ce-id']   | null      | [AZURE_STORAGE_SAS_TOKEN: 'sas']
+        'seqera'      | [accountKey: 'key']  | [clientId: 'ce-id']   | null      | [AZURE_STORAGE_SAS_TOKEN: 'sas']
+        'seqera'      | [:]                  | [system: true]        | null      | [AZURE_STORAGE_SAS_TOKEN: 'sas']
+        'azurebatch'  | [:]                  | [clientId: 'ce-id']   | null      | [AZURE_STORAGE_SAS_TOKEN: 'sas']
+        'local'       | [:]                  | [clientId: 'ce-id']   | null      | [AZURE_STORAGE_SAS_TOKEN: 'sas']
+    }
+
 }
