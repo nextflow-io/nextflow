@@ -17,6 +17,8 @@ To enable this executor, set `process.executor = 'seqera'` in the `nextflow.conf
 
 The executor requires [Fusion](https://docs.seqera.io/fusion) (`fusion.enabled = true`). By default, [Wave](https://docs.seqera.io/wave) is also required, because it adds the Fusion client to the task containers.
 
+On Azure, when `azure.managedIdentity.clientId` is set, Fusion authenticates to Azure Storage as that managed identity instead of a SAS token scoped to the work directory container. The scheduler runs the task VMs as the same identity, so tasks can access every container the identity has access to. Set `azure.storage.sasToken` or `azure.storage.accountKey` to have Fusion use a SAS token instead.
+
 :::warning{title="Experimental: may change in a future release."}
 :::
 

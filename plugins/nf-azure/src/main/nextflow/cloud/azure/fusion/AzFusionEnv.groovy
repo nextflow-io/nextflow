@@ -37,11 +37,11 @@ class AzFusionEnv implements FusionEnv {
 
     /**
      * Get the environment variables for Fusion with Azure, taking into
-     * account a managed identity ID if provided
+     * account a managed identity ID if provided (`azure.batch.poolIdentityClientId`, or
+     * `azure.managedIdentity.clientId` with the Seqera executor)
      *
      * @param scheme The storage scheme ('az' for Azure)
      * @param config The Fusion configuration
-     * @param managedIdentityId Optional managed identity client ID from pool options
      * @return Map of environment variables
      */
     @Override
@@ -51,7 +51,7 @@ class AzFusionEnv implements FusionEnv {
         }
 
         final cfg = AzConfig.config
-        final managedIdentityId = cfg.batch().poolIdentityClientId
+        final managedIdentityId = cfg.batch().poolIdentityClientId ?: seqeraIdentityClientId(cfg)
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {
@@ -60,7 +60,7 @@ class AzFusionEnv implements FusionEnv {
 
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
 
-        // If pool has a managed identity, ONLY add the MSI client ID
+        // If a managed identity is configured, ONLY add the MSI client ID
         // DO NOT add any SAS token or reference cfg.storage().sasToken
         if (managedIdentityId) {
             // Fusion will try and pick up a managed identity that is available.
@@ -78,6 +78,29 @@ class AzFusionEnv implements FusionEnv {
         result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 
         return result
+    }
+
+    /**
+     * With the Seqera executor, task VMs run as the same managed identity Nextflow uses
+     * ({@code azure.managedIdentity.clientId}), so Fusion can authenticate with it directly
+     * instead of a SAS token scoped to the work-dir container.
+     *
+     * @param cfg The Azure configuration
+     * @return The managed identity client ID, or {@code null} to keep the SAS token behaviour
+     */
+    protected static String seqeraIdentityClientId(AzConfig cfg) {
+        if( !isSeqeraExecutor() )
+            return null
+        // explicit storage credentials take precedence
+        if( cfg.storage().sasToken || cfg.storage().accountKey )
+            return null
+        // null with a system-assigned identity, which the task VMs do not share
+        return cfg.managedIdentity().clientId
+    }
+
+    protected static boolean isSeqeraExecutor() {
+        final process = Global.session?.config?.process
+        return process instanceof Map && ((Map) process).executor == 'seqera'
     }
 
     /**
