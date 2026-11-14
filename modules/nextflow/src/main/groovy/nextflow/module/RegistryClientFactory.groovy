@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import io.seqera.http.HxClient
 import io.seqera.npr.client.RegistryClient
 import nextflow.config.RegistryConfig
+import nextflow.scm.RepositoryProvider
 import nextflow.util.ProxyConfig
 import nextflow.util.RetryConfig
 
@@ -45,6 +46,8 @@ class RegistryClientFactory {
             HxClient.newBuilder()
                 .withProxyConfig(ProxyConfig.proxyConfig())
                 .retryConfig(RetryConfig.config())
+                // same NXF_HTTPCLIENT_CONNECT_TIMEOUT as the Git provider
+                .connectTimeout(RepositoryProvider.httpClientOpts().connectTimeout())
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build()
         )

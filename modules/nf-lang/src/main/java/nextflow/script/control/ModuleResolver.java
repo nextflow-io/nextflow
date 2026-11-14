@@ -45,6 +45,8 @@ public class ModuleResolver {
     private Compiler compiler;
     private Path projectDir;
 
+    private Map<String, RuntimeException> includeFailures = new HashMap<>();
+
     public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
         this.projectDir = projectDir;
@@ -101,15 +103,46 @@ public class ModuleResolver {
             return;
         if( source.getAST() instanceof ScriptNode sn ) {
             for( var in : sn.getIncludes() ) {
-                var include = in.source.getText();
-                if( include.startsWith("plugin/") )
+                if( in.source.getText().startsWith("plugin/") )
                     continue;
-                var dep = byUri.get(getIncludeUri(uri, include, projectDir));
+                var includeUri = tryGetIncludeUri(uri, in);
+                var dep = includeUri != null ? byUri.get(includeUri) : null;
                 if( dep != null )
                     visitDependencies(dep, byUri, visited, ordered);
             }
         }
         ordered.add(source);
+    }
+
+    /**
+     * @return the include URI, or null if it cannot be resolved (reported
+     * as an include error by {@link ResolveIncludeVisitor})
+     */
+    private URI tryGetIncludeUri(URI uri, IncludeNode node) {
+        try {
+            return getIncludeUri(uri, node);
+        }
+        catch( Exception e ) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolve an include URI, remembering failures so that a failing remote include
+     * (e.g. a pipeline auto-install) is attempted once per resolver instance.
+     */
+    public URI getIncludeUri(URI uri, IncludeNode node) {
+        var key = uri + "|" + node.source.getText();
+        var failure = includeFailures.get(key);
+        if( failure != null )
+            throw failure;
+        try {
+            return getIncludeUri(uri, node, projectDir);
+        }
+        catch( RuntimeException e ) {
+            includeFailures.put(key, e);
+            throw e;
+        }
     }
 
     private SourceUnit resolveInclude(IncludeNode node, SourceUnit sourceUnit, Function<URI,SourceUnit> sourceResolver) {
@@ -118,7 +151,9 @@ public class ModuleResolver {
             return null;
 
         var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source, projectDir);
+        var includeUri = tryGetIncludeUri(uri, node);
+        if( includeUri == null )
+            return null;
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -144,10 +179,23 @@ public class ModuleResolver {
      * Resolve an include source to the URI of the included script.
      *
      * @param uri the URI of the including script
-     * @param source the include source
+     * @param node the include node
      * @param projectDir the project directory, used to resolve remote modules
      */
+    public static URI getIncludeUri(URI uri, IncludeNode node, Path projectDir) {
+        var names = node.entries.stream().map(e -> e.name).toList();
+        return getIncludeUri(uri, node.source.getText(), projectDir, RemoteModuleResolver.isPipelineInclude(names));
+    }
+
+    /**
+     * Resolve an include source as a module (not a pipeline) include. Callers that have the
+     * include node should use the other overload so pipeline includes resolve.
+     */
     public static URI getIncludeUri(URI uri, String source, Path projectDir) {
+        return getIncludeUri(uri, source, projectDir, false);
+    }
+
+    private static URI getIncludeUri(URI uri, String source, Path projectDir, boolean pipeline) {
         var localUri = getLocalIncludeUri(uri, source);
         if( localUri != null )
             return localUri;
@@ -156,9 +204,11 @@ public class ModuleResolver {
         // nested `modules/` directory (nested vendoring). Any other script -- the entry
         // script, or a plain local script -- resolves against the project directory.
         var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
-        return RemoteModuleResolverProvider.getInstance()
-            .resolve(source, base)
-            .normalize()
+        var resolver = RemoteModuleResolverProvider.getInstance();
+        var path = pipeline
+            ? resolver.resolvePipeline(source, base)
+            : resolver.resolve(source, base);
+        return path.normalize()
             .toUri();
     }
 

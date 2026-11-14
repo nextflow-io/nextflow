@@ -20,6 +20,9 @@ package nextflow.cli
 import java.nio.file.Files
 import java.nio.file.Path
 
+import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineRelease
+import io.seqera.npr.client.RegistryClient
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
@@ -478,6 +481,54 @@ class CmdRunTest extends Specification {
         then: 'an AbortOperationException is thrown'
         def e = thrown(AbortOperationException)
         e.message.contains('automatic download from remote repositories is disabled')
+    }
+
+    def 'should run a registry release from its pinned commit' () {
+        given: 'a bare repo with two commits'
+        def folder = tempDir.getRoot()
+        def sourceDir = folder.resolve('source-repo')
+        Files.createDirectories(sourceDir)
+        def git = Git.init().setDirectory(sourceDir.toFile()).call()
+        sourceDir.resolve('main.nf').text = "println 'v1'"
+        git.add().addFilepattern('.').call()
+        def v1 = git.commit().setSign(false).setMessage('v1').call().name()
+        sourceDir.resolve('main.nf').text = "println 'v2'"
+        git.add().addFilepattern('.').call()
+        git.commit().setSign(false).setMessage('v2').call()
+        git.close()
+        def bareDir = folder.resolve('hello.git')
+        Git.cloneRepository().setURI(sourceDir.toUri().toString()).setDirectory(bareDir.toFile()).setBare(true).call().close()
+        AssetManager.root = folder.resolve('assets').toFile()
+
+        and: 'a registry release pinned to the first commit'
+        def client = Mock(RegistryClient)
+        def release = new PipelineRelease().version('1.0.0').gitRevision('1.0.0').commitId(v1)
+        client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl("file:${bareDir}".toString()).latest(release)
+
+        when:
+        def cmd = new CmdRun(registryClient: client)
+        def scriptFile = cmd.getScriptFile0('acme/hello')
+
+        then:
+        scriptFile.main.text.contains("println 'v1'")
+        scriptFile.revisionInfo.commitId == v1
+    }
+
+    def 'should not look up the registry offline or with -hub' () {
+        given:
+        def client = Mock(RegistryClient)
+
+        when:
+        def result = new CmdRun(registryClient: client, offline: OFFLINE, hubProvider: HUB).registryLookup('nf-core/rnaseq')
+
+        then:
+        result == null
+        0 * client._
+
+        where:
+        OFFLINE | HUB
+        true    | null
+        false   | 'gitlab'
     }
 
     private static <T extends CmdRun> T withFakeEnv(T cmd) {

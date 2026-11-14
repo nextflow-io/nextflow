@@ -246,6 +246,7 @@ public class ScriptCompiler {
         private Set<SourceUnit> analyzed = Collections.newSetFromMap(new IdentityHashMap<>());
 
         private boolean typeChecked;
+        private ModuleResolver moduleResolver;
 
         private Map<WorkflowNode, Map<String, MethodNode>> callSites = new IdentityHashMap<>();
 
@@ -294,7 +295,8 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                modules = new ModuleResolver(projectDir, compiler).resolve(source, uri -> createSourceUnit(uri));
+                moduleResolver = new ModuleResolver(projectDir, compiler);
+                modules = moduleResolver.resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -314,7 +316,7 @@ public class ScriptCompiler {
             imports.add(channelType);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler, moduleResolver);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
@@ -344,7 +346,6 @@ public class ScriptCompiler {
             if( typeChecked || !analyzed.contains(entry) )
                 return;
             typeChecked = true;
-            var moduleResolver = new ModuleResolver(projectDir, compiler);
             for( var source : moduleResolver.orderByDependencies(compiler.getSources().values()) ) {
                 if( !analyzed.contains(source) )
                     continue;
