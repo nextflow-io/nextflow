@@ -80,7 +80,7 @@ class CmdPipelineView extends CmdBase {
         if( !pipeline || !release )
             throw new AbortOperationException("No release information available for ${name}")
 
-        final url = "${PipelineCmdSupport.pageUrl(registryConfig.url)}/pipelines/${name}@${release.version}".toString()
+        final url = "${PipelineCmdSupport.pageUrl(registryConfig.url)}/pipelines/${name}".toString()
         final params = schemaParams(release.schema)
         final usage = "nextflow run ${name} -hub ${URI.create(registryConfig.url).authority} -r ${release.version}".toString()
 

@@ -13,7 +13,7 @@ This spec covers the Nextflow client side:
 - Install from the Git commit pinned by a registry release.
 - `nextflow run` and `nextflow pull` run a registry release when the registry is addressed explicitly (a registry page URL, or a registry host as `-hub`/`NXF_HUB`), with no fallback to Git. A plain `scope/name` still runs from Git.
 
-It uses only the registry API that exists today, so it needs no server change. The client needs the `npr-client` read methods from seqeralabs/nextflow-registry#439. Publishing and installing from a registry bundle are specified separately in `docs/specs/261105-pipeline-registry-publish/spec.md`.
+It uses only the registry API that exists today, so it needs no server change. The client needs new `npr-client` read methods. Publishing and installing from a registry bundle are specified separately.
 
 ## Terms
 
@@ -57,7 +57,7 @@ An installed pipeline that uses registry-style includes behaves as it does when 
 2. `-version 3.14.0` installs that release. It replaces an installed different version only if the installed copy is unmodified.
 3. If the installed copy was edited by hand, install refuses and suggests `-force`. With `-force`, it replaces the copy.
 4. If the installed version and checksum already match, it prints `Pipeline <name>@<version> is already installed and up to date` and does nothing.
-5. The release's `repositoryUrl` is fetched at `commitId` with Git (JGit). `.git` is not kept. If the revision no longer points to `commitId`, install fails. Credentials are not needed, because the registry accepts only public repositories.
+5. The release's `repositoryUrl` is fetched at `commitId` with Git (JGit). `.git` is not kept. A release without a `commitId` is fetched at its revision. Credentials are not needed, because the registry accepts only public repositories.
 
 ## User Story 4: `list`, `remove`, `search`, `view` (P2)
 
@@ -98,7 +98,7 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 - **FR-004**: A pipeline include resolves to `<base>/pipelines/<scope>/<name>/<workflowPath>`, where `workflowPath` comes from the registry (default `main.nf`) and must stay inside the pipeline folder.
 - **FR-005**: `.pipeline-info` is a Java properties file with `name`, `version`, `workflowPath`, `repositoryUrl`, `revision`, `commitId`, `registryUrl` and `checksum`. The checksum is a SHA-256 over the installed files without `.pipeline-info`, `.git/`, and subfolders that hold their own `.module-info` or `.pipeline-info`, so modules installed later inside the pipeline don't mark it modified.
 - **FR-006**: Auto-install and `install` share one installer. The installer writes to a temporary directory and moves it into place only when it is complete, so that a failed fetch leaves no partial pipeline.
-- **FR-007**: The registry client uses `registry.url` and `registry.auth`, as for modules. It calls the `npr-client` methods `getPipeline`, `getPipelineRelease`, `listPipelineReleases` and `listPipelines(search, page, size)` from seqeralabs/nextflow-registry#439. `search` reads further pages until `-limit` results, because the server caps the page size at 100.
+- **FR-007**: The registry client uses `registry.url` and `registry.auth`, as for modules. It calls the `npr-client` methods `getPipeline`, `getPipelineRelease` and `listPipelines(search, page, size)`. `search` reads further pages until `-limit` results, because the server caps the page size at 100.
 - **FR-008**: The language server must not install anything. It reports a missing pipeline like a missing module.
 - **FR-009**: `CmdRun` resolves a registry address with `PipelineManager.resolveRelease`, the same lookup as `pipeline install`, before it creates the `AssetManager`. The `AssetManager` gets the release's `repositoryUrl` as the Git address, its `commitId` as the revision, its `workflowPath` as the main script unless `-main-script` is given, and the registry name as the local name.
 - **FR-010**: `AssetManager` keeps the local name (cache folder, `nextflow list`, `workflow.projectName`) apart from the remote project (Git provider). Only a project with a local name is checked against its clone: given as a URL, a clone of a different repository is an error; given as a plain name (offline), the remote project is read from the clone's `origin` remote. Plain Git runs are not checked, as today.

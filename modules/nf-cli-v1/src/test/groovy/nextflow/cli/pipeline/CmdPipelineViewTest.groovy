@@ -77,7 +77,7 @@ class CmdPipelineViewTest extends Specification {
         out.contains('Revision:    3.14.0')
         out.contains('Commit:      abc123')
         out.contains('Keywords:    rna, seq')
-        out.contains('/pipelines/nf-core/rnaseq@3.14.0')
+        out.contains('URL:         https://registry.nextflow.io/pipelines/nf-core/rnaseq\n')
         out.contains('--input (string)')
         out.contains('Samplesheet. CSV.')
         out.contains('--outdir\n')
