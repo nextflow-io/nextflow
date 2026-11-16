@@ -1,5 +1,5 @@
 name: Bundle (check)
-# Builds and tests the bundles of every PR that changes them. PRs labelled `ci/pr-build`
+# Builds and tests the bundles of every PR that changes them. PRs labelled `preview/bundle`
 # are built by bundle-pr.yml instead.
 
 on:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   bundle:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci/pr-build') }}
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'preview/bundle') }}
     uses: ./.github/workflows/bundle.yml
     with:
       jre-version: ${{ vars.NXF_BUNDLE_JRE_VERSION }}
