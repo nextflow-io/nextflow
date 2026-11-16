@@ -118,4 +118,34 @@ class RemoteModuleResolverTest extends Specification {
         RemoteModuleResolver.isPipelineInclude(['params'])
         !RemoteModuleResolver.isPipelineInclude(['FASTQC'])
     }
+
+    def 'should resolve an installed pipeline to its workflow path'() {
+        given:
+        def resolver = new FallbackRemoteModuleResolver()
+        def dir = Files.createDirectories(projectDir.resolve('pipelines/acme/hello'))
+        if( INFO != null )
+            dir.resolve('.pipeline-info').text = INFO
+
+        expect:
+        resolver.resolvePipeline('acme/hello', projectDir) == dir.resolve(EXPECTED)
+
+        where:
+        INFO                            | EXPECTED
+        null                            | 'main.nf'
+        'name=acme/hello\n'             | 'main.nf'
+        'workflowPath=workflows/x.nf\n' | 'workflows/x.nf'
+    }
+
+    def 'should reject a workflow path outside the pipeline directory'() {
+        given:
+        def dir = Files.createDirectories(projectDir.resolve('pipelines/acme/hello'))
+        dir.resolve('.pipeline-info').text = 'workflowPath=../../other/main.nf\n'
+
+        when:
+        new FallbackRemoteModuleResolver().resolvePipeline('acme/hello', projectDir)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('must stay inside the pipeline directory')
+    }
 }
