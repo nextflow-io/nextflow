@@ -193,7 +193,7 @@ include {
 
 An include of `<scope>/<name>` whose entries are `workflow` or `params` is a pipeline include. Any other `<scope>/<name>` include is a [module include][using-modules-including].
 
-A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. The main script is the one declared by the registry release (`main.nf` by default). If the directory is missing, Nextflow installs the latest published release, as [`nextflow pipeline install`][cli-pipeline] does. Use that command to install a specific version.
+A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. If the directory is missing, Nextflow installs the latest published release, as [`nextflow pipeline install`][cli-pipeline] does. Use that command to install a specific version.
 
 Note the following:
 
@@ -204,8 +204,6 @@ Note the following:
 - Registry includes in an included pipeline resolve against that pipeline's own directory, so it uses its own `modules/` and `pipelines/`, not those of the calling pipeline.
 
 - The registry is configured with the [`registry`][config-registry] config scope of the run, as for registry modules.
-
-- The language server does not install missing pipelines. Run `nextflow pipeline install` to resolve the include in your editor.
 
 - Only public Git repositories are supported.
 

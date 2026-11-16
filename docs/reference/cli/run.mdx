@@ -97,8 +97,6 @@ The script file to execute when launching a project directory or repository. Sho
 
 The project `nextflow.config` is always read from the project root regardless of the main script location.
 
-For a [registry pipeline](#registry-pipelines), the default is the main script declared by the registry release, except with `-offline`.
-
 ##### `-name`
 
 Assign a mnemonic name to the pipeline run.
@@ -249,17 +247,13 @@ Directory where intermediate result files are stored.
 
 The `run` command can run a pipeline published in the [Nextflow registry](https://registry.nextflow.io). The registry is used only when it is addressed explicitly, in one of the following ways:
 
-- A registry page URL, for example `https://registry.nextflow.io/pipelines/nf-core/rnaseq`. The URL must be `<registry>/pipelines/<scope>/<name>`, where `<registry>` is a registry configured in [`registry.url`][config-registry] without the trailing `/api`, or the public registry `https://registry.nextflow.io`. A URL on the host of a known Git provider is always treated as a Git URL.
+- A registry page URL, for example `https://registry.nextflow.io/pipelines/nf-core/rnaseq`. The URL must be `<registry>/pipelines/<scope>/<name>`, where `<registry>` is a registry configured in [`registry.url`][config-registry] without the trailing `/api`, or the public registry `https://registry.nextflow.io`.
 
-- `-hub` set to the host (or `host:port`) of a configured registry or of the public registry, for example `-hub registry.nextflow.io`. A Git provider name keeps its usual meaning, and any other value is an error. Set the `NXF_HUB` environment variable to a registry host to use that registry by default for the `run` and `pull` commands.
+- `-hub` set to the host of a configured registry or of the public registry, for example `-hub registry.nextflow.io`. Set the `NXF_HUB` environment variable to a registry host to use that registry by default for the `run` and `pull` commands.
 
 A plain project name such as `nf-core/rnaseq` is resolved with Git.
 
-Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. The version cannot be part of the address: use `-r` instead of `nf-core/rnaseq@3.14.0`. Before launching, Nextflow logs the release, for example:
-
-```console
-Using registry release nf-core/rnaseq@3.14.0 (commit 1a2b3c4d5e)
-```
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release.
 
 Note the following:
 
@@ -267,11 +261,11 @@ Note the following:
 
 - Registry settings are read from `~/.nextflow/config`, `./nextflow.config`, and `-c` files, not from the pipeline config. The API key is sent only to the first entry of `registry.url`.
 
-- The pipeline is cached under its registry name, which `list`, `info`, and `drop` show. A registry pipeline should have the same name as its Git repository, as nf-core pipelines do. Otherwise, a Git run of that name uses the registry copy without a check, and a registry run fails if another repository is cached under the name.
+- The pipeline is cached under its registry name. A registry pipeline should have the same name as its Git repository, as nf-core pipelines do, since both are cached under that name.
 
 - With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pull`][cli-pull] to download a registry pipeline ahead of time.
 
-- When `NXF_HUB` is set to a registry host, commands without registry support (`info`, `drop`, `view`, and `config`) work only with projects that are already cached, and `clone` requires a Git URL or a Git `-hub`.
+- When `NXF_HUB` is a registry host, the other project commands work only with cached projects or Git addresses.
 
 ## Examples
 
