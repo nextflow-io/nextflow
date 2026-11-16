@@ -199,8 +199,6 @@ Note the following:
 
 - If the files of an installed pipeline were edited, Nextflow warns and uses the local files. It never overwrites them automatically.
 
-- A pipeline directory without a `.pipeline-info` file, such as a manual clone or a Git submodule, is used as it is, with a warning that it has no registry origin.
-
 - Registry includes in an included pipeline resolve against that pipeline's own directory, so it uses its own `modules/` and `pipelines/`, not those of the calling pipeline.
 
 - The registry is configured with the [`registry`][config-registry] config scope of the run, as for registry modules.
