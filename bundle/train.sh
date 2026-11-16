@@ -43,5 +43,5 @@ export NXF_ANSI_LOG=false
 export NXF_DISABLE_CHECK_LATEST=true
 mkdir -p "$(dirname "$output")"
 # classes that can't be archived (e.g. generated or in an error state) are reported as warnings
-NXF_JVM_ARGS="-XX:AOTCacheOutput=$output.tmp -Xlog:aot=error" "$home/bin/nextflow" run main.nf
+NXF_JVM_ARGS="-XX:AOTCacheOutput=$output.tmp -Xlog:aot=error" "$home/bin/nextflow" run main.nf -profile test
 mv -f "$output.tmp" "$output"
