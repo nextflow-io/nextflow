@@ -34,7 +34,7 @@ import nextflow.util.TestOnly
 @Parameters(commandDescription = "List installed pipelines")
 class CmdPipelineList extends CmdBase {
 
-    @Parameter(names = ['-o', '-output'], description = PipelineCmdSupport.OUTPUT_MODE_HELP, validateWith = PipelineCmdSupport.OutputModeValidator)
+    @Parameter(names = ['-o', '-output'], description = PipelineCmdSupport.TEXT_OUTPUT_HELP, validateWith = PipelineCmdSupport.TextOutputValidator)
     String output = 'text'
 
     @TestOnly

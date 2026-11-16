@@ -41,8 +41,8 @@ class CmdPipelineSearch extends CmdBase {
 
     @Parameter(
         names = ['-o', '-output'],
-        description = PipelineCmdSupport.OUTPUT_MODE_HELP,
-        validateWith = PipelineCmdSupport.OutputModeValidator
+        description = PipelineCmdSupport.SIMPLE_OUTPUT_HELP,
+        validateWith = PipelineCmdSupport.SimpleOutputValidator
     )
     String output = 'simple'
 

@@ -41,18 +41,29 @@ import nextflow.scm.ProviderConfig
 @CompileStatic
 class PipelineCmdSupport {
 
-    static final String OUTPUT_MODE_HELP = 'Output mode: text, simple (search), json'
+    static final String TEXT_OUTPUT_HELP = 'Output mode: text, json'
 
-    /** Accepts the output modes of list/view (text) and search (simple), plus json */
-    static class OutputModeValidator implements IParameterValidator {
+    static final String SIMPLE_OUTPUT_HELP = 'Output mode: simple, json'
 
-        private static final List<String> MODES = List.of('text', 'simple', 'json')
-
+    /** Output modes of `list` and `view` */
+    static class TextOutputValidator implements IParameterValidator {
         @Override
         void validate(String name, String value) {
-            if( !MODES.contains(value) )
-                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
+            validateOutput(value, List.of('text', 'json'))
         }
+    }
+
+    /** Output modes of `search` */
+    static class SimpleOutputValidator implements IParameterValidator {
+        @Override
+        void validate(String name, String value) {
+            validateOutput(value, List.of('simple', 'json'))
+        }
+    }
+
+    private static void validateOutput(String value, List<String> modes) {
+        if( !modes.contains(value) )
+            throw new ParameterException("Output mode must be one of $modes (found: $value)")
     }
 
     static RegistryConfig registryConfig(CmdBase cmd, Path baseDir, List<Path> configFiles = []) {

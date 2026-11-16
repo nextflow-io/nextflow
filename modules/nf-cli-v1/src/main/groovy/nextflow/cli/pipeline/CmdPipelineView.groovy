@@ -41,8 +41,8 @@ class CmdPipelineView extends CmdBase {
 
     @Parameter(
         names = ['-o', '-output'],
-        description = PipelineCmdSupport.OUTPUT_MODE_HELP,
-        validateWith = PipelineCmdSupport.OutputModeValidator
+        description = PipelineCmdSupport.TEXT_OUTPUT_HELP,
+        validateWith = PipelineCmdSupport.TextOutputValidator
     )
     String output = 'text'
 
