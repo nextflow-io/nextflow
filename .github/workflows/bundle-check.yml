@@ -1,0 +1,25 @@
+name: Bundle (check)
+# Builds and tests the bundles of every PR that changes them. PRs labelled `ci/pr-build`
+# are built by bundle-pr.yml instead.
+
+on:
+  pull_request:
+    paths:
+      - 'nextflow'
+      - 'bundle/**'
+      - 'gradle/bundle.gradle'
+      - '.github/workflows/bundle*.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci/pr-build') }}
+    uses: ./.github/workflows/bundle.yml
+    with:
+      jre-version: ${{ vars.NXF_BUNDLE_JRE_VERSION }}

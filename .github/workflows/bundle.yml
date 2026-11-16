@@ -3,7 +3,8 @@ name: Bundle
 # runner, since the AOT cache can only be created by the target runtime, and tests it.
 # The release (build.yml) calls this workflow and uploads the bundles with the other release
 # files, from the artifacts `bundle-<platform>` (`.tar.gz` and `.tar.gz.sha256`).
-# bundle-pr.yml calls it for each pull request.
+# On pull requests, bundle-check.yml calls it when the bundle changes, and bundle-pr.yml when
+# the PR has the `ci/pr-build` label.
 # No Gradle cache: on a PR, it would be saved first, without the test dependencies, under the
 # key that the CI build (build.yml) of the PR restores.
 
