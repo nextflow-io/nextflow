@@ -27,7 +27,7 @@ The registry now has a read-only pipeline catalog (nextflow-registry #418). The 
 
 - `nextflow pipeline publish` and installing from a registry bundle (see [Future work](#future-work)).
 - `nextflow pipeline run`, `create`, `spec`, `validate`. `nextflow run` runs a pipeline.
-- Registry lookup in `pull`, `config`, `clone`, `info`, `view` and `drop` (see [Future work](#future-work)).
+- Registry lookup in `pull`, `config` and `info` (see [Future work](#future-work)).
 - A version in the include statement or in config.
 - Loading the included pipeline's config or plugins. The meta-pipeline provides them, as stated in the composition ADR.
 - Changing `projectDir` for an included pipeline. See [Open questions](#open-questions).
@@ -117,14 +117,30 @@ The same rules as modules:
 
 Each command follows its `nextflow module` counterpart in options and output. All of them use `registry.url` and `registry.auth`. `view` shows the usage snippet `nextflow run <scope/name> -r <version>`.
 
-The `pipeline` commands and the existing project commands have similar names, but they manage different things:
+The `pipeline` commands and the remaining project commands manage different things:
 
 | Command | What it manages | Used for |
 |---|---|---|
-| `pull`, `drop`, `info`, `list`, `clone` | the global Git cache `~/.nextflow/assets` | `nextflow run` |
+| `pull`, `info` | the global Git cache `~/.nextflow/assets` | `nextflow run` |
 | `pipeline install`, `remove`, `list` | pipelines vendored into the project's `pipelines/`, with `.pipeline-info` | `include` |
-| `view` | prints the cached `main.nf` | reading the code |
-| `pipeline view` | registry metadata (versions, description, params) | choosing a release |
+| `pipeline search`, `view` | registry metadata (versions, description, params) | choosing a release |
+
+### Removed project commands
+
+The project commands `clone`, `drop`, `list` and `view` are removed. They are replaced by stubs that report the removal and the replacement, as for `kuberun`. They add little over standard tools, and `list` and `view` clash with `pipeline list` and `pipeline view`, which do something else.
+
+| Command | Replacement |
+|---|---|
+| `clone` | `git clone` |
+| `drop` | delete the project folder from `$NXF_ASSETS` (path shown by `info`) |
+| `list` | `pipeline search` for the registry, `pipeline list` for installed pipelines |
+| `view` | `pipeline view` for a registry pipeline, `info` to find the local copy |
+
+The global Git cache is managed like the plugin cache: Nextflow fills it on demand, and there is no command to list or clean it.
+
+Alternatives:
+- **Deprecate first, remove later.** Rejected: the commands are thin wrappers with direct replacements, and a stub gives the same guidance as a warning.
+- **Keep `list` and `drop`, or fold them into `info` and `pull`.** Rejected: `nextflow plugin` has no list or drop for its cache either, and `rm -rf` is enough.
 
 ### Running a registry pipeline
 
@@ -159,7 +175,7 @@ The release runs at its pinned `commitId`, not at its tag, because a tag can be 
 - **Fail by default, with an environment variable to opt out.** Rejected: it breaks existing runs until users learn the variable.
 - **Warn by default, with an environment variable to opt in to failing.** Deferred: it can be added later without changing anything for existing users.
 
-**Cache.** A registry release is fetched with `AssetManager`, with the release's `repositoryUrl` as the project and its `commitId` as the revision. It is cached in `~/.nextflow/assets/.repos/<project>/clones/<commit>/` like any Git revision. So `pull`, `list`, `info` and `drop` keep working, and `scm` credentials apply. A new registry cache was rejected: it would repeat what `AssetManager` does for Git, and the existing commands would ignore it.
+**Cache.** A registry release is fetched with `AssetManager`, with the release's `repositoryUrl` as the project and its `commitId` as the revision. It is cached in `~/.nextflow/assets/.repos/<project>/clones/<commit>/` like any Git revision. So `pull` and `info` keep working, and `scm` credentials apply. A new registry cache was rejected: it would repeat what `AssetManager` does for Git, and the existing commands would ignore it.
 - The cache uses the Git name. `jorge-test/nf-demo-fetchngs`, which points to `github.com/jorgee/nf-demo-fetchngs`, is listed as `jorgee/nf-demo-fetchngs`. For nf-core both names are the same.
 - `-offline` skips the registry. So a pipeline whose registry name differs from its Git name must be run offline by its Git name.
 - A bundle release with no Git (M1) can't use `AssetManager`. Its cache is decided in the M1 ADR.
@@ -170,7 +186,7 @@ The release runs at its pinned `commitId`, not at its tag, because a tag can be 
 
 ## Future work
 
-- **Registry lookup in other commands**: `pull`, `config`, `clone`, `info`, `view` and `drop` use the Git name. With the lookup in `pull`, `-offline` would also work with a registry name that differs from the Git name.
+- **Registry lookup in other commands**: `pull`, `config` and `info` use the Git name. With the lookup in `pull`, `-offline` would also work with a registry name that differs from the Git name.
 - **Strict mode**: an opt-in environment variable to fail, instead of warning, on a revoked release or a `-r` that is not a registry version.
 - **Publish and install from a bundle**: `nextflow pipeline publish`, and installing a release from a bundle stored in the registry so that install does not depend on a Git host. This is decided in a separate ADR, `20261105-pipeline-registry-publish.md`, together with the server design in nextflow-registry #440.
 

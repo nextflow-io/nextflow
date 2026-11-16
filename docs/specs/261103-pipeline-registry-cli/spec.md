@@ -83,7 +83,7 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 5. **Given** the name is not in the registry, **then** Nextflow runs from Git, as today, with no warning.
 6. **Given** the registry is down or times out, **then** Nextflow warns and runs from Git, as today.
 7. **Given** a URL (`https://github.com/nf-core/rnaseq`), `-hub`, `-offline`, a single-word name, a `.nf` path, or a local file or folder with that name, **then** the registry is not called.
-8. **Given** a registry name that points to a different Git repository (`jorge-test/nf-demo-fetchngs` → `github.com/jorgee/nf-demo-fetchngs`), **then** the release is cached under the Git name, and `nextflow list` shows `jorgee/nf-demo-fetchngs`.
+8. **Given** a registry name that points to a different Git repository (`jorge-test/nf-demo-fetchngs` → `github.com/jorgee/nf-demo-fetchngs`), **then** the release is cached under the Git name, in `~/.nextflow/assets/.repos/jorgee/nf-demo-fetchngs/`.
 9. **Given** `nextflow inspect nf-core/rnaseq`, **then** the same lookup applies.
 
 ## Functional requirements
@@ -101,4 +101,4 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 
 ## Out of scope
 
-Publishing and installing from a registry bundle (separate spec); registry lookup in `pull`, `config`, `clone`, `info`, `view` and `drop`; failing instead of warning on a revoked release or a `-r` that is not a registry version; `pipeline run`, `create`, `spec` and `validate`; a version in the include or in config; loading the included pipeline's config or plugins; `projectDir` for included pipelines; private Git repositories.
+Publishing and installing from a registry bundle (separate spec); registry lookup in `pull`, `config` and `info`; failing instead of warning on a revoked release or a `-r` that is not a registry version; `pipeline run`, `create`, `spec` and `validate`; a version in the include or in config; loading the included pipeline's config or plugins; `projectDir` for included pipelines; private Git repositories.

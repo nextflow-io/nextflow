@@ -25,18 +25,23 @@ Print the command usage.
 
 ## Examples
 
-Print the help for the `drop` command:
+Print the help for the `info` command:
 
 ```console
-$ nextflow help drop
+$ nextflow help info
 
-Delete the local copy of a project
-Usage: drop [options] name of the project to drop
-   Options:
-     -f
-          Delete the repository without taking care of local changes
-          Default: false
-     -h, -help
-          Print the command usage
-          Default: false
+Print project and system runtime information
+Usage: info [options] project name
+  Options:
+    -u, -check-updates
+       Check for remote updates
+       Default: false
+    -d
+       Show detailed information
+       Default: false
+    -h, -help
+       Print the command usage
+       Default: false
+    -o
+       Output format, either: text (default), json, yaml
 ```

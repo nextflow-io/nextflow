@@ -16,42 +16,23 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
 
 /**
- * CLI sub-command DROP
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Stub for the removed `drop` command.
  */
-@Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete the local copy of a project")
-class CmdDrop extends CmdBase {
+@Parameters
+class CmdDrop extends CmdRemoved {
 
-    static final public NAME = 'drop'
-
-    @Parameter(required=true, description = 'name of the project to drop')
-    List<String> args
-
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
-    String revision
-
-    @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
-    boolean force
+    static final public String NAME = 'drop'
 
     @Override
-    final String getName() { NAME }
+    String getName() { NAME }
 
     @Override
-    void run() {
-        Plugins.init()
-        try (final manager = new AssetManager(args[0])) {
-            manager.drop(revision, force)
-        }
+    String getMessage() {
+        "The `drop` command has been removed -- delete the project directory from the asset cache instead (\$NXF_ASSETS, default: ~/.nextflow/assets)"
     }
 }

@@ -5,44 +5,24 @@ description: Reference for the nextflow drop command. Delete the local copy of a
 
 # `nextflow drop`
 
-Delete the local copy of a project.
+<DeprecatedInVersion version="27.04">
+The `drop` command has been removed. Delete the project directory from the asset cache instead.
+</DeprecatedInVersion>
 
-## Usage
+The `drop` command deleted a project that was downloaded into the asset cache.
 
-```console
-$ nextflow drop [options] [project]
+## Migrating from `drop`
+
+Projects are downloaded into the asset cache, which is `$NXF_ASSETS` (default: `$HOME/.nextflow/assets`). Delete the project directory to remove it:
+
+```bash
+# before
+nextflow drop nextflow-io/hello
+
+# after
+rm -rf ~/.nextflow/assets/.repos/nextflow-io/hello
 ```
 
-## Description
+Projects downloaded by older versions of Nextflow are stored in `$NXF_ASSETS/<org>/<repo>` (e.g., `~/.nextflow/assets/nextflow-io/hello`). Use `nextflow info <project>` to print the local path of a project.
 
-The `drop` command removes a project that was downloaded into the global cache. Use the `list` command to list the downloaded pipelines.
-
-## Options
-
-##### `-f`
-
-Delete the repository, ignoring any local changes.
-
-##### `-h, -help`
-
-Print the command usage.
-
-##### `-r, -revision`
-
-<AddedInVersion version="26.04" />
-
-Project revision to drop. Can be a git branch, tag, or commit SHA number.
-
-## Examples
-
-Drop the `nextflow-io/hello` project:
-
-```console
-$ nextflow drop nextflow-io/hello
-```
-
-Drop the `nextflow-io/hello` project, ignoring any local changes:
-
-```console
-$ nextflow drop nextflow-io/hello -f
-```
+To remove a pipeline installed with `nextflow pipeline install`, use `nextflow pipeline remove` instead.

@@ -16,73 +16,23 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
 
 /**
- * CLI sub-command VIEW -- Print a pipeline script to console
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Stub for the removed `view` command.
  */
-@Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View project script file(s)")
-class CmdView extends CmdBase {
+@Parameters
+class CmdView extends CmdRemoved {
 
-    static final public NAME = 'view'
+    static final public String NAME = 'view'
 
     @Override
     String getName() { NAME }
 
-    @Parameter(description = 'project name', required = true)
-    List<String> args = []
-
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
-    String revision
-
-    @Parameter(names = '-q', description = 'Hide header line', arity = 0)
-    boolean quiet
-
-    @Parameter(names = '-l', description = 'List repository content', arity = 0)
-    boolean all
-
     @Override
-    void run() {
-        Plugins.init()
-        try (final manager = new AssetManager(args[0], revision)) {
-            if( !manager.isLocal() )
-                throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
-            if( revision && manager.isUsingLegacyStrategy()){
-                log.warn("The local asset ${args[0]} does not support multi-revision - 'revision' option is ignored\n" +
-                    "Consider updating the asset using 'nextflow pull ${args[0]} -r $revision -migrate'")
-            }
-            if( all ) {
-                if( !quiet )
-                    println "== content of path: ${manager.localPath}"
-
-                manager.localPath.eachFile { File it ->
-                    println it.name
-                }
-            }
-
-            else {
-                /*
-                 * prints the script main file
-                 */
-                final script = manager.getMainScriptFile()
-                if( !script.exists() )
-                    throw new AbortOperationException("Missing script file: '${script}'")
-
-                if( !quiet )
-                    println "== content of file: $script"
-
-                script.readLines().each { println it }
-            }
-        }
+    String getMessage() {
+        "The `view` command has been removed -- use `nextflow pipeline view` to view a registry pipeline, or `nextflow info` to find the local path of a downloaded project"
     }
 }

@@ -18,34 +18,21 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
 
 /**
- * CLI sub-command LIST. Prints a list of locally installed pipelines
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Stub for the removed `list` command.
  */
-@Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded projects")
-class CmdList extends CmdBase {
+@Parameters
+class CmdList extends CmdRemoved {
 
-    static final public NAME = 'list'
-
-    @Override
-    final String getName() { NAME }
+    static final public String NAME = 'list'
 
     @Override
-    void run() {
+    String getName() { NAME }
 
-        def all = AssetManager.list()
-        if( !all ) {
-            log.info '(none)'
-            return
-        }
-
-        all.each { println it }
+    @Override
+    String getMessage() {
+        "The `list` command has been removed -- use `nextflow pipeline search` to find pipelines in the registry, or `nextflow pipeline list` to list installed pipelines"
     }
-
 }
