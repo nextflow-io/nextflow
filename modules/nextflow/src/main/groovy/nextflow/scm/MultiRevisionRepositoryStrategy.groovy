@@ -504,35 +504,6 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     @Override
-    void drop(String revision, boolean force) {
-        if( revision ) {
-            dropRevision(revision, force)
-        } else {
-            listDownloadedCommits().each { dropRevision(it, force) }
-            bareRepo.parentFile.deleteDir()
-        }
-    }
-
-    private void dropRevision(String revision, boolean force) {
-        assert revision
-        setRevision(revision)
-
-        if( !commitPath || !commitPath.exists() ) {
-            log.info "No local folder found for revision '$revision' in '$project' -- Nothing to do"
-            return
-        }
-
-        if( force || isClean() ) {
-            close()
-            if( !commitPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${project}` -- Check access permissions for path: ${localPath}")
-            return
-        }
-
-        throw new AbortOperationException("Revision $revision for project `${project}` contains uncommitted changes -- won't drop it")
-    }
-
-    @Override
     void close() {
         if( _bareGit ) {
             _bareGit.close()
