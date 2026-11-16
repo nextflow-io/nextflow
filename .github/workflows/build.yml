@@ -202,6 +202,16 @@ jobs:
           # the agent examples call a real model: once per run is enough
           - java_version: 25
             test_mode: test_agent
+          # cloud tests are dominated by remote infrastructure and not sensitive to the
+          # client JDK (the plugin unit tests still run on both JDKs in the build job)
+          - java_version: 25
+            test_mode: test_aws
+          - java_version: 25
+            test_mode: test_azure
+          - java_version: 25
+            test_mode: test_google
+          - java_version: 25
+            test_mode: test_wave
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
