@@ -85,10 +85,10 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 6. **Given** a plain `scope/name`, a Git URL or `-hub gitlab`, **then** the registry is not called, as today.
 7. **Given** a registry name that points to a different Git repository (`jorge-test/nf-demo-fetchngs` → `github.com/jorgee/nf-demo-fetchngs`), **then** the release is cached under the registry name, `nextflow list` shows `jorge-test/nf-demo-fetchngs`, and `workflow.repository` is the Git URL.
 8. **Given** a plain name whose cached clone comes from another Git project, **then** the clone is used, and Nextflow logs `Using <name> cached from <Git project>`.
-9. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry-dev.nextflow.io -r <commit>`, or `pull`, `info` or `drop` by the registry name with no registry host as hub, **then** the cached clone and its own Git repository are used. With a registry host as `-hub` or `NXF_HUB`, `pull` stops with the error of scenario 12, cached or not.
+9. **Given** a cached registry pipeline, **when** the user runs `-offline -hub registry-dev.nextflow.io -r <commit>`, or `info` or `drop` by the registry name, **then** the cached clone and its own Git repository are used. `-offline -r <version>` works only when the version is also a Git tag (as for nf-core).
 10. **Given** a clone cached under `acme/foo` from `github.com/other/foo`, **when** the user runs `https://github.com/acme/foo`, **then** the run fails because the name was downloaded from a different repository.
 11. **Given** `nextflow inspect`, **then** the same addresses apply.
-12. **Given** `nextflow pull` or `nextflow clone` with a registry page URL or a registry host as `-hub` or `NXF_HUB`, **then** the command fails with an error saying that registry pipelines are only supported by `nextflow run`.
+12. **Given** `nextflow pull` with a registry page URL or a registry host as `-hub` or `NXF_HUB`, **then** it resolves the release like `run` and downloads its pinned commit into the cache under the registry name, ready for `run -offline`. `pull -all` updates the cached projects by name, as before. `nextflow clone` with a registry address fails with an error saying that registry pipelines are only supported by `nextflow run` and `nextflow pull`.
 
 ## Functional requirements
 
@@ -107,4 +107,4 @@ A user runs a pipeline they found in the registry, without knowing its Git repos
 
 ## Out of scope
 
-Publishing and installing from a registry bundle (separate spec); registry addresses in `pull`, `config`, `clone`, `info` and `view`; a short prefix for registry addresses; `pipeline run`, `create`, `spec` and `validate`; a version in the include or in config; loading the included pipeline's config or plugins; `projectDir` for included pipelines; private Git repositories.
+Publishing and installing from a registry bundle (separate spec); registry addresses in `config`, `clone`, `info` and `view`; a registry version for `-r` offline when it is not a Git tag; a short prefix for registry addresses; `pipeline run`, `create`, `spec` and `validate`; a version in the include or in config; loading the included pipeline's config or plugins; `projectDir` for included pipelines; private Git repositories.

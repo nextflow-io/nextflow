@@ -44,9 +44,7 @@ import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineInfo
-import nextflow.pipeline.PipelineManager
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.scm.HubOptions
@@ -709,16 +707,10 @@ class CmdRun extends CmdBase implements HubAware {
         }
         if( !address )
             return null
-        if( address.name.contains('@') )
-            throw new AbortOperationException("Not a valid registry pipeline address: $name -- give the version with the `-r` option")
         // the release can't be resolved offline: use the copy cached under the registry name
         if( offline )
             return new PipelineInfo(name: address.name)
-        // an address names one registry: resolve it only there
-        final client = registryClient ?: RegistryClientFactory.forUrls([address.url], address.apiKey)
-        final release = PipelineManager.resolveRelease(client, address.name, revision)
-        log.info "Using registry release ${address.name}@${release.version} (commit ${release.commitId?.take(10)})"
-        return release
+        return PipelineCmdSupport.resolveRelease(address, revision, registryClient)
     }
 
     static protected File tryReadFromStdin() {

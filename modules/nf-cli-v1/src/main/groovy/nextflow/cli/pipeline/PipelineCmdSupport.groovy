@@ -22,16 +22,22 @@ import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.ParameterException
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import nextflow.SysEnv
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
+import nextflow.module.RegistryClientFactory
+import nextflow.pipeline.PipelineInfo
+import nextflow.pipeline.PipelineManager
 import nextflow.scm.ProviderConfig
 
 /**
  * Helpers shared by the pipeline subcommands
  */
+@Slf4j
 @CompileStatic
 class PipelineCmdSupport {
 
@@ -104,6 +110,19 @@ class PipelineCmdSupport {
             throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
         }
         return new RegistryAddress(api, name, apiKey)
+    }
+
+    /**
+     * Resolve the release of a registry address, only against the registry it names.
+     *
+     * @param revision The registry version, or {@code null} for the latest release
+     */
+    static PipelineInfo resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
+        if( address.name.contains('@') )
+            throw new AbortOperationException("Not a valid registry pipeline address: ${address.name} -- give the version with the `-r` option")
+        final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
+        log.info "Using registry release ${address.name}@${release.version} (commit ${release.commitId?.take(10)})"
+        return release
     }
 
     /** Base URL of the registry web pages: the API URL without {@code /api} */
