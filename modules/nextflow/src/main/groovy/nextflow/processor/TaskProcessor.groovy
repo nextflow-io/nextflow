@@ -327,7 +327,7 @@ class TaskProcessor {
 
     private TaskArrayCollector createArrayCollector(int arraySize) {
         if( arraySize > 0 && executor instanceof TaskArrayExecutor )
-            return new TaskArrayCollector(this, executor, arraySize)
+            return new TaskArrayCollector(this, executor, arraySize, executor.config?.getArrayTimeout(executor.name))
         if( arraySize > 0 )
             log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
         return null
