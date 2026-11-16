@@ -140,9 +140,9 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 | Plain name | `nextflow run nf-core/rnaseq` | Git, default hub (`NXF_HUB` or `github`), as today |
 | Git URL or Git hub | `https://github.com/nf-core/rnaseq`, `-hub gitlab` | Git, as today |
 
-- A URL is a registry address when it starts with one of the configured `registry.url` values (without `/api`) followed by `/pipelines/`. This is the same rule as for Git URLs, where the host picks the provider. The default public registry (`https://registry.nextflow.io`) is always recognized, even when `registry.url` lists only other registries, because the user typed its address.
+- A URL is a registry address when it starts with one of the configured `registry.url` values (without `/api`) followed by `/pipelines/`, ignoring the scheme (requests always use the configured API URL). A URL on the host of a known Git provider (built-in or from the SCM file) is a Git URL, without reading the registry config, even when its path holds a `pipelines` segment. This is the same rule as for Git URLs, where the host picks the provider. The default public registry (`https://registry.nextflow.io`) is always recognized, even when `registry.url` lists only other registries, because the user typed its address.
 - An address names exactly one registry, whether it is a URL or a host. It is resolved only against that registry, not against the other configured ones. The API key is sent only when that registry is the primary one in `registry.url`, since the key belongs to the primary registry.
-- A URL carries no version. A URL that ends with `@<version>` is an error: the version is given with `-r`.
+- An address carries no version. A URL or a name that ends with `@<version>` is an error, also with `-offline`: the version is given with `-r`.
 - A `-hub` (or `NXF_HUB`) value is read in this order:
   1. a Git provider name (`github`, `gitlab`, a name from the SCM file): Git, as today. This is checked first, so existing setups behave the same.
   2. the host (or `host:port`) of a configured `registry.url`, or of the default public registry: that registry.

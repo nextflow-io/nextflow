@@ -557,13 +557,20 @@ class CmdRunTest extends Specification {
         e.message.contains('registries: registry.nextflow.io')
     }
 
-    def 'should reject a version in a registry URL' () {
+    def 'should reject a version in a registry address' () {
         when:
-        runCmd().registryLookup('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0')
+        runCmd(offline: OFFLINE, hubProvider: HUB).registryLookup(NAME)
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('give the version with the `-r` option')
+
+        where:
+        NAME                                                            | HUB                    | OFFLINE
+        'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null                   | false
+        'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null                   | true
+        'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io' | false
+        'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io' | true
     }
 
     def 'should not fall back to Git for a registry address' () {
