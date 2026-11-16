@@ -1318,7 +1318,7 @@ class AssetManagerTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('downloaded from a different repository: `other/hello`')
+        e.message.contains('downloaded from a different repository: `other/hello` -- use `nextflow drop acme/hello` to remove it')
 
         when: 'it is given with its own Git address and local name'
         manager = new AssetManager('https://github.com/other/hello', null, null, null, 'acme/hello')

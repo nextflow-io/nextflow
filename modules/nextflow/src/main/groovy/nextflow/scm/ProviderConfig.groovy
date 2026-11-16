@@ -333,6 +333,11 @@ class ProviderConfig {
         return createFromMap(getDefault())*.name
     }
 
+    /** Domains of the providers of the default SCM config file, plus the built-in ones */
+    static List<String> getDefaultProviderDomains() {
+        return createFromMap(getDefault())*.domain.findAll() as List<String>
+    }
+
     static Map getDefault() {
         final file = getScmConfigPath()
         return getFromFile(file)

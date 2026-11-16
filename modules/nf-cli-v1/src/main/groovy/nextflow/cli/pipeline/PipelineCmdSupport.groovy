@@ -85,8 +85,11 @@ class PipelineCmdSupport {
         if( !isUrl && !hub )
             return null
         final uri = isUrl ? toUri(name) : null
-        // a registry URL is a pipeline page; a Git URL with `/pipelines/` in its path is ruled out by the config below
+        // a registry URL is a pipeline page
         if( isUrl && !uri?.path?.contains('/pipelines/') )
+            return null
+        // a Git provider host is known without the launch config, e.g. a GitLab group named `pipelines`
+        if( isUrl && isGitProviderHost(uri) )
             return null
         final providers = isUrl ? null : ProviderConfig.getDefaultProviderNames()
         if( !isUrl && hub in providers )
@@ -99,17 +102,31 @@ class PipelineCmdSupport {
         // an address names one registry, and the API key belongs to the primary one
         final apiKey = api && api == config.url ? config.apiKey : null
         if( isUrl ) {
-            // a registry URL must be a pipeline page
-            final prefix = api ? pageUrl(api) + '/pipelines/' : null
-            if( !prefix || !name.startsWith(prefix) )
+            if( !api )
                 return null
-            return new RegistryAddress(api, name.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey)
+            // a registry URL must be a pipeline page; the scheme is ignored since requests use the configured API URL
+            final prefix = (URI.create(pageUrl(api)).path ?: '') + '/pipelines/'
+            if( !uri.path.startsWith(prefix) )
+                return null
+            return newAddress(api, uri.path.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey)
         }
         if( !api ) {
             final hosts = registries.collect { URI.create(it).authority }.unique()
             throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
         }
+        return newAddress(api, name, apiKey)
+    }
+
+    // checked here rather than when resolving the release, so that it applies offline too
+    private static RegistryAddress newAddress(String api, String name, String apiKey) {
+        if( name.contains('@') )
+            throw new AbortOperationException("Not a valid registry pipeline address: ${name} -- give the version with the `-r` option")
         return new RegistryAddress(api, name, apiKey)
+    }
+
+    private static boolean isGitProviderHost(URI uri) {
+        final domains = ProviderConfig.getDefaultProviderDomains()
+        return domains.any { String it -> it.equalsIgnoreCase(uri.host) || it.equalsIgnoreCase(uri.authority) }
     }
 
     /**
@@ -118,8 +135,6 @@ class PipelineCmdSupport {
      * @param revision The registry version, or {@code null} for the latest release
      */
     static PipelineInfo resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
-        if( address.name.contains('@') )
-            throw new AbortOperationException("Not a valid registry pipeline address: ${address.name} -- give the version with the `-r` option")
         final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
         log.info "Using registry release ${address.name}@${release.version} (commit ${release.commitId?.take(10)})"
         return release

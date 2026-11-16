@@ -397,7 +397,7 @@ class AssetManager implements Closeable {
         if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
             return
         if( fromUrl || remoteProject != project )
-            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned`")
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow drop $project` to remove it")
         log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned
     }
