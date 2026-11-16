@@ -33,14 +33,15 @@ class PluginsFacadeTest extends Specification {
 
     def 'should setup plugins' () {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
+        final port = server.address.port
+        server.createContext("/", new FakeIndexHandler(port))
         server.start()
         and:
         def folder = Files.createTempDirectory('test')
         def plugins = new PluginsFacade(folder)
         plugins.env = [:]
-        plugins.indexUrl = 'http://localhost:9900/plugins.json'
+        plugins.indexUrl = "http://localhost:${port}/plugins.json"
 
         when:
         plugins.init()
@@ -556,8 +557,11 @@ class PluginsFacadeTest extends Specification {
         and:
         def THE_LIST = [yyy, xxx, zzz, www]; THE_LIST.shuffle()
         and:
-        def facade = Spy( new PluginsFacade() ) {
-            getExtensions(Foo) >> THE_LIST
+        def facade = new PluginsFacade() {
+            def <T> List<T> getExtensions(Class<T> type) {
+                assert type == Foo
+                return THE_LIST
+            }
         }
 
         when:
@@ -581,11 +585,30 @@ class PluginsFacadeTest extends Specification {
 
     }
 
+    /**
+     * Updater that records the calls made by the facade instead of installing plugins.
+     */
+    static class RecordingUpdater extends PluginUpdater {
+        List<List> calls = []
+        List<RegistryConfig> registryConfigs = []
+
+        RecordingUpdater() { super(new CustomPluginManager()) }
+
+        @Override
+        void prefetchMetadata(List<PluginRef> plugins) { calls << ['prefetchMetadata', plugins] }
+
+        @Override
+        void prepareAndStart(String pluginId, String version) { calls << ['prepareAndStart', pluginId, version] }
+
+        @Override
+        void addRegistryRepos(RegistryConfig config) { registryConfigs << config }
+    }
+
     def 'should prefetch plugin metadata when starting plugins'() {
         def specs = [new PluginRef("nf-one"), new PluginRef("nf-two", "~1.2.0")]
 
         given:
-        def updater = Mock(PluginUpdater)
+        def updater = new RecordingUpdater()
         def unit = new PluginsFacade() {
             PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
                 return updater
@@ -596,10 +619,12 @@ class PluginsFacadeTest extends Specification {
         when:
         unit.start(specs)
         then:
-        1 * updater.prefetchMetadata(specs) // order is important!
-        then:
-        1 * updater.prepareAndStart("nf-one", null)
-        1 * updater.prepareAndStart("nf-two", "~1.2.0")
+        // order is important!
+        updater.calls == [
+            ['prefetchMetadata', specs],
+            ['prepareAndStart', 'nf-one', null],
+            ['prepareAndStart', 'nf-two', '~1.2.0'],
+        ]
     }
 
     @Unroll
@@ -650,7 +675,7 @@ class PluginsFacadeTest extends Specification {
 
     def 'should apply registry config when url is set' () {
         given:
-        def updater = Mock(PluginUpdater)
+        def updater = new RecordingUpdater()
         def facade = new PluginsFacade(Paths.get('plugins'), 'prod')
         facade.@updater = updater
 
@@ -658,13 +683,13 @@ class PluginsFacadeTest extends Specification {
         facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
 
         then: 'the configured registries are applied to the updater'
-        1 * updater.addRegistryRepos({ RegistryConfig cfg -> cfg.allUrls == ['https://reg.example/api'] })
+        updater.registryConfigs*.allUrls == [['https://reg.example/api']]
     }
 
     @Unroll
     def 'should not apply registry config when url is not set' () {
         given:
-        def updater = Mock(PluginUpdater)
+        def updater = new RecordingUpdater()
         def facade = new PluginsFacade(Paths.get('plugins'), 'prod')
         facade.@updater = updater
 
@@ -672,23 +697,23 @@ class PluginsFacadeTest extends Specification {
         facade.applyRegistryConfig(CONFIG)
 
         then: 'the updater is left untouched'
-        0 * updater.addRegistryRepos(_)
+        updater.registryConfigs == []
 
         where:
         CONFIG << [ [:], [registry: [:]], [registry: [url: []]] ]
     }
 
-    def 'should ignore registry config in dev mode' () {
+    def 'should apply registry config in dev mode' () {
         given:
-        def updater = Mock(PluginUpdater)
+        def updater = new RecordingUpdater()
         def facade = new PluginsFacade(Paths.get('plugins'), 'dev')
         facade.@updater = updater
 
         when:
         facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
 
-        then: 'plugins are resolved from the dev classpath, so the registry scope is ignored'
-        0 * updater.addRegistryRepos(_)
+        then: 'plugins not built locally are downloaded from the configured registry'
+        updater.registryConfigs*.allUrls == [['https://reg.example/api']]
     }
 
     def 'should not render the environment' () {

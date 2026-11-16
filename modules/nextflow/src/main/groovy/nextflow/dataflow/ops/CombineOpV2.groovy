@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
@@ -67,28 +68,67 @@ class CombineOpV2 {
                 throw new ScriptRuntimeException("Operator `combine` named argument '${name}' cannot be a channel")
         }
 
+        // the named dataflow values are operator inputs, read on every firing, so that the
+        // operator never blocks a dataflow thread waiting for them
+        final inputs = new ArrayList<DataflowReadChannel>()
+        inputs.add(left)
+        for( final value : namedArgs.values() ) {
+            if( value instanceof ValueImpl )
+                inputs.add(value.getSource())
+        }
+
         final target = CH.createBy(left)
-        final onNext = { r ->
+        final params = new HashMap<String,Object>()
+        params.inputs = inputs
+        params.outputs = [target]
+        params.listeners = [DataflowHelper.stopErrorListener(left, target)]
+        DataflowHelper.newOperator(params, new NamedArgsClosure(namedArgs, inputs.size()))
+        return target
+    }
+
+    /**
+     * Adds the named arguments to each record, taking the dataflow values from the operator inputs
+     */
+    @CompileStatic
+    private static class NamedArgsClosure extends Closure {
+
+        private Map<String,Object> namedArgs
+
+        private int numOfParams
+
+        NamedArgsClosure(Map<String,Object> namedArgs, int numOfParams) {
+            super(null, null)
+            this.namedArgs = namedArgs
+            this.numOfParams = numOfParams
+        }
+
+        @Override
+        int getMaximumNumberOfParameters() {
+            return numOfParams
+        }
+
+        @Override
+        Class[] getParameterTypes() {
+            return Collections.nCopies(numOfParams, Object) as Class[]
+        }
+
+        @Override
+        Object call(Object... args) {
+            final r = args[0]
             if( r !instanceof RecordMap )
                 throw new ScriptRuntimeException("Operator `combine` with named arguments expected a channel of records but received: ${r} [${r.class.simpleName}]")
 
             final fields = new HashMap<String,Object>(namedArgs.size())
+            int i = 1
             for( final name : namedArgs.keySet() ) {
                 final value = namedArgs[name]
-                final rawValue = value instanceof ValueImpl
-                    ? value.getSource().get()
-                    : value
-                fields.put(name, rawValue)
+                fields.put(name, value instanceof ValueImpl ? args[i++] : value)
             }
 
-            target << ((RecordMap) r).plus(new RecordMap(fields))
+            final result = ((RecordMap) r).plus(new RecordMap(fields))
+            ((DataflowProcessor) getDelegate()).bindOutput(result)
+            return result
         }
-        final onComplete = {
-            if( !CH.isValue(target) )
-                target << CH.stop()
-        }
-        DataflowHelper.subscribeImpl(left, [onNext: onNext, onComplete: onComplete])
-        return target
     }
 
     private Map<String,Closure> handler(DataflowWriteChannel target, int index) {

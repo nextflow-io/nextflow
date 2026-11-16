@@ -34,6 +34,7 @@ import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.executor.res.AcceleratorResource
 import nextflow.cloud.types.PriceModel
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -806,6 +807,19 @@ class SeqeraTaskHandlerTest extends Specification {
         result == [FUSION_KEY: 'fusion_val']
     }
 
+    def 'should replace the Azure SAS token with the managed identity'() {
+        expect:
+        SeqeraTaskHandler.withAzureIdentity(ENV, CONFIG) == EXPECTED
+
+        where:
+        ENV                                                                  | CONFIG                                                              | EXPECTED
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']      | [azure: [managedIdentity: [clientId: 'cid']]]                       | [AZURE_STORAGE_ACCOUNT: 'acct', FUSION_AZ_MSI_CLIENT_ID: 'cid']
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']      | [azure: [managedIdentity: [system: true]]]                          | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']      | null                                                                | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
+        [AZURE_STORAGE_ACCOUNT: 'acct', FUSION_AZ_MSI_CLIENT_ID: 'pool']     | [azure: [managedIdentity: [clientId: 'cid']]]                       | [AZURE_STORAGE_ACCOUNT: 'acct', FUSION_AZ_MSI_CLIENT_ID: 'pool']
+        [AWS_ACCESS_KEY_ID: 'key']                                           | [azure: [managedIdentity: [clientId: 'cid']]]                       | [AWS_ACCESS_KEY_ID: 'key']
+    }
+
     def 'should merge config environment with fusion env'() {
         given:
         def seqeraConfig = Mock(ExecutorOpts) {
@@ -874,6 +888,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def resources = new ResourceRequirement()
             .cpuShares(2048)
             .memoryMiB(4096)
+            .acceleratorCuda('12.2')
         def attempt = new TaskAttempt()
             .index(1)
             .nativeId('task-1')
@@ -888,6 +903,7 @@ class SeqeraTaskHandlerTest extends Specification {
         result != null
         result.cpuShares == 2048
         result.memoryMiB == 4096
+        result.acceleratorCuda == '12.2'
     }
 
     def 'should use last attempt resources when multiple attempts exist'() {
@@ -1035,6 +1051,50 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedTask != null
         capturedTask.getResourceRequirement().memoryMiB == null
         capturedTask.getResourceRequirement().cpuShares == 2048
+    }
+
+    def 'submit should forward the accelerator cuda release'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> capturedTask = args[1] as Task }
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) { getMachineRequirement() >> null }
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> new AcceleratorResource([request: 1, type: 'nvidia-l4', cuda: '12.2'])
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) { fusionEnv() >> [:] }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        def req = capturedTask.getResourceRequirement()
+        req.acceleratorCount == 1
+        req.acceleratorName == 'nvidia-l4'
+        req.acceleratorCuda == '12.2'
     }
 
     def 'should build resource limit from task config'() {

@@ -17,6 +17,7 @@
 package nextflow.util
 
 import java.nio.file.Paths
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -73,6 +74,8 @@ class KryoHelperCompatTest extends Specification {
         result.memory = MemoryUnit.of('2 GB')
         result.tuple = new ArrayTuple(['a', 1])
         result.record = new RecordMap([id: 'x', n: 1])
+        result.bag = new ArrayBag(['a', 1])
+        result.version = new VersionNumber('1.2.3')
         result.entry = [k: 'v'].entrySet().first()
         result.taskStatus = TaskStatus.COMPLETED
         result.timeUnit = TimeUnit.SECONDS
@@ -96,11 +99,10 @@ class KryoHelperCompatTest extends Specification {
         return result
     }
 
-    // types without a no-arg constructor, which cannot be read back
-    static final List<String> NOT_READABLE = ['listOf', 'mapOf', 'arraysAsList', 'range']
+    static final List<String> UNSUPPORTED = ['atomic']
 
-    // types read as a different implementation
-    static final List<String> NORMALISED = ['entry']
+    // types without an accessible constructor, which are read as the standard implementation
+    static final List<String> NORMALISED = ['listOf', 'mapOf', 'arraysAsList', 'range', 'entry']
 
     @Unroll
     def 'should read #name written by a previous version' () {
@@ -111,11 +113,11 @@ class KryoHelperCompatTest extends Specification {
         when:
         def result = KryoHelper.deserialize(bytes)
         then:
-        name in ['pattern', 'atomic'] ? result.toString() == expected.toString() : result == expected
+        name == 'pattern' ? result.toString() == expected.toString() : result == expected
         name in NORMALISED || result.getClass() == expected.getClass()
 
         where:
-        name << values().keySet().findAll { it !in NOT_READABLE }
+        name << values().keySet().findAll { it !in UNSUPPORTED }
     }
 
     @Unroll
@@ -124,18 +126,49 @@ class KryoHelperCompatTest extends Specification {
         KryoHelper.serialize(values().get(name)) == golden().get(name)
 
         where:
-        name << values().keySet()
+        name << values().keySet().findAll { it !in UNSUPPORTED }
     }
 
-    @Unroll
-    def 'should fail to read #name written by a previous version' () {
+    def 'should normalise collections without an accessible constructor' () {
+        expect:
+        KryoHelper.deserialize(KryoHelper.serialize(List.of(1, 2))).getClass() == ArrayList
+        KryoHelper.deserialize(KryoHelper.serialize(Set.of(1))).getClass() == LinkedHashSet
+        KryoHelper.deserialize(KryoHelper.serialize(Map.of('a', 1))).getClass() == LinkedHashMap
+        KryoHelper.deserialize(KryoHelper.serialize([a: 1].keySet())) == ['a'] as Set
+        KryoHelper.deserialize(KryoHelper.serialize([a: 1].values())) == [1]
+    }
+
+    def 'should fail to read an unsupported type written by a previous version' () {
         when:
         KryoHelper.deserialize(golden().get(name))
         then:
         def e = thrown(KryoException)
-        e.message.contains('missing no-arg constructor')
+        e.message.contains(type)
 
         where:
-        name << NOT_READABLE
+        name    | type
+        'atomic'| 'java.util.concurrent.atomic.AtomicInteger'
+        'ALL'   | 'java.util.concurrent.atomic.AtomicInteger'
+    }
+
+    def 'should fail to write a JDK type without a serializer' () {
+        when:
+        KryoHelper.serialize([foo: value])
+        then:
+        def e = thrown(KryoException)
+        e.message.contains("No serializer is defined for type: ${value.getClass().name}")
+
+        where:
+        value << [new AtomicInteger(1), LocalDate.of(2020,1,2), ('abc' =~ /b/), Optional.of(1)]
+    }
+
+    def 'should be usable after a failure' () {
+        when:
+        KryoHelper.serialize([foo: new AtomicInteger(1)])
+        then:
+        thrown(KryoException)
+
+        expect:
+        KryoHelper.deserialize(KryoHelper.serialize([foo: 'bar'])) == [foo: 'bar']
     }
 }

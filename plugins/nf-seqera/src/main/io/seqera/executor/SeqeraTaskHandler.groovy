@@ -38,6 +38,7 @@ import io.seqera.util.HintHelper
 import io.seqera.util.SchemaMapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
+import nextflow.extension.Bolts
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -123,6 +124,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             // specific accelerator model name e.g. "nvidia-tesla-v100", "nvidia-a10g"
             if( accelerator.type )
                 resourceReq.acceleratorName(accelerator.type)
+            // CUDA release the task image was built with e.g. "12.2"; the scheduler only picks
+            // GPU models and drivers supporting it
+            if( accelerator.cuda )
+                resourceReq.acceleratorCuda(accelerator.cuda)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
         // overlay any seqera/machineRequirement.* hints on top of config-scope values (hints win)
@@ -253,11 +258,36 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     protected Map<String, String> getTaskEnvironment() {
         final configEnv = executor.getSeqeraConfig()?.taskEnvironment
-        final fusionEnv = fusionLauncher().fusionEnv()
+        final fusionEnv = withAzureIdentity(fusionLauncher().fusionEnv(), executor.session?.config)
         if( !configEnv )
             return fusionEnv
         final result = new LinkedHashMap<String, String>(configEnv)
         result.putAll(fusionEnv)
+        return result
+    }
+
+    /**
+     * On Azure, the scheduler runs the task VMs as the managed identity in
+     * {@code azure.managedIdentity.clientId}. Fusion authenticates as that identity
+     * instead of the SAS token, which only covers the work-dir container. The identity
+     * takes precedence over any SAS token, as with {@code azure.batch.poolIdentityClientId}.
+     *
+     * <p>This relies on the VMs carrying that identity: it does not hold when the scheduler
+     * overrides the VM identity ({@code sched.azure.vm-managed-identity}).
+     *
+     * @param fusionEnv The Fusion environment
+     * @param config The session config
+     * @return The Fusion environment, with the SAS token replaced by the managed identity client id
+     */
+    static protected Map<String, String> withAzureIdentity(Map<String, String> fusionEnv, Map config) {
+        if( !fusionEnv.containsKey('AZURE_STORAGE_SAS_TOKEN') )
+            return fusionEnv
+        final clientId = config ? Bolts.navigate(config, 'azure.managedIdentity.clientId') : null
+        if( !clientId )
+            return fusionEnv
+        final result = new LinkedHashMap<String, String>(fusionEnv)
+        result.remove('AZURE_STORAGE_SAS_TOKEN')
+        result.put('FUSION_AZ_MSI_CLIENT_ID', clientId.toString())
         return result
     }
 
@@ -549,6 +579,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             result.put('acceleratorType', resources.getAcceleratorType().toString())
         if (resources.getAcceleratorName() != null)
             result.put('acceleratorName', resources.getAcceleratorName())
+        if (resources.getAcceleratorCuda() != null)
+            result.put('acceleratorCuda', resources.getAcceleratorCuda())
         if (resources.getTime() != null)
             result.put('time', resources.getTime())
         return result.isEmpty() ? null : result

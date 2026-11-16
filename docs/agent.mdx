@@ -496,6 +496,10 @@ Because language models are non-deterministic, resuming an agent run only replay
 
 The `pi` runner requires a container for agent runs. By default, it uses an image published alongside each Nextflow release. Set `agent.container` to override it.
 
+The default image is a minimal Debian image. It does not include Node.js, `npm`, or `npx`. If an agent's `shell:bash` commands need additional tools, use a custom image that adds them to the default image.
+
+Model requests from the container honor the `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` environment variables, if they are set in the agent task environment.
+
 The `langchain4j` runner does not support containerization.
 
 ### RPC configuration

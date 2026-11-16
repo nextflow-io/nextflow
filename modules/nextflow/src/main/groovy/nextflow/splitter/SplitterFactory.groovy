@@ -84,7 +84,7 @@ class SplitterFactory {
      */
     static DataflowWriteChannel countOverChannel(DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
 
-        // create a new DataflowChannel that will receive the splitter entries
+        // create a new dataflow value that will receive the splitter count
         DataflowVariable result = new DataflowVariable ()
 
         def strategy = splitter as AbstractSplitter

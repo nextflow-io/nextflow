@@ -142,6 +142,8 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack, validatePluginVersion
         }
 
         if( !files ) error("Can't find any file to upload -- Check path: $path")
+        // fails the build (unlike `error`) when the Java bundles are missing, see gradle/bundle.gradle
+        files.addAll(releaseBundles())
         files << file('nextflow').absoluteFile
         files << file('nextflow.sha1').absoluteFile
         files << file('nextflow.sha256').absoluteFile

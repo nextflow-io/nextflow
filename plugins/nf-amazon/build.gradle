@@ -50,7 +50,8 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
-    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
+    // async S3 uses the CRT client, so Netty is not needed
+    implementation.exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
 }
 
 dependencies {

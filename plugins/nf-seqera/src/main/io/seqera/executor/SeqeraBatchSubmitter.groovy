@@ -69,6 +69,9 @@ class SeqeraBatchSubmitter {
         CompletableFuture<InputFilesMetrics> metricsFuture
     }
 
+    /** Queued by {@link #shutdown()} to wake the sender thread from its poll */
+    private static final PendingTask WAKE_UP = new PendingTask()
+
     private final SchedClient client
     private final String runId
     private final Duration requestInterval
@@ -151,6 +154,7 @@ class SeqeraBatchSubmitter {
         log.debug "[SEQERA] Shutting down batch submitter"
         completed = true
         if (sender) {
+            pendingQueue.add(WAKE_UP)
             sender.join()
         }
         // Shutdown metrics executor
@@ -180,7 +184,7 @@ class SeqeraBatchSubmitter {
             while (!completed || !pendingQueue.isEmpty()) {
                 // Poll with timeout
                 final PendingTask pending = pendingQueue.poll(delay, TimeUnit.MILLISECONDS)
-                if (pending) {
+                if (pending && !pending.is(WAKE_UP)) {
                     // Start the batch timer when first task arrives
                     if (batch.isEmpty()) {
                         previous = System.currentTimeMillis()
@@ -253,6 +257,8 @@ class SeqeraBatchSubmitter {
     private void drainAndFailPendingTasks(Exception cause) {
         PendingTask pending
         while ((pending = pendingQueue.poll()) != null) {
+            if (pending.is(WAKE_UP))
+                continue
             try {
                 pending.handler.onBatchSubmitFailure(cause)
             }

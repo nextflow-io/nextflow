@@ -36,6 +36,11 @@ class ProcessFileOutputTest extends Specification {
         input = new ProcessFileOutput({ -> "${id}.txt" })
         then:
         input.getFilePattern([id: 'sample1']) == 'sample1.txt'
+
+        when:
+        input = new ProcessFileOutput('./results/variants/somatic.snvs.vcf.gz')
+        then:
+        input.getFilePattern([:]) == 'results/variants/somatic.snvs.vcf.gz'
     }
 
 }

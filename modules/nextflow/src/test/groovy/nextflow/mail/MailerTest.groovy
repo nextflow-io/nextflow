@@ -26,12 +26,11 @@ import javax.mail.internet.MimeMultipart
 
 import nextflow.SysEnv
 import org.subethamail.wiser.Wiser
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
+import test.TestHelper
 
-@IgnoreIf({System.getenv('NXF_SMOKE')})
 class MailerTest extends Specification {
 
 
@@ -212,7 +211,7 @@ class MailerTest extends Specification {
     def "sending mails using javamail"() {
 
         given:
-        def PORT = 3025
+        def PORT = TestHelper.rndServerPort()
         def USER = 'foo'
         def PASSWORD = 'secret'
         def server = new Wiser(PORT)
@@ -252,7 +251,7 @@ class MailerTest extends Specification {
     def "sending mails using java with attachment"() {
 
         given:
-        def PORT = 3025
+        def PORT = TestHelper.rndServerPort()
         def USER = 'foo'
         def PASSWORD = 'secret'
         def server = new Wiser(PORT)

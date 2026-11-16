@@ -19,6 +19,7 @@ package nextflow.cloud.azure.batch
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.time.Duration as JavaDuration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -42,6 +43,7 @@ import com.azure.core.http.HttpResponse
 import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
+import groovy.json.JsonSlurper
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -324,7 +326,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'"
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
     }
@@ -338,10 +340,62 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/" && bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && {\necho hello-world\n}'"
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should configure custom startTask with quoted script when azcopy is enabled' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
+        then:
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && {\necho '\\''hello-world'\\''\n}'"
+        and:
+        configuredStartTask.resourceFiles.size()==1
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should skip the whole multi-line startTask script when the azcopy install fails' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+        and:
+        def workDir = Files.createTempDirectory('test')
+        def sharedDir = Files.createTempDirectory('shared')
+        // bin dir already present, as when the start task re-runs on a rebooted node
+        Files.createDirectory(sharedDir.resolve('bin'))
+        if( AZCOPY ) workDir.resolve('azcopy').text = '#!/bin/sh'
+
+        when:
+        def commandLine = svc.createStartTask( new AzStartTaskOpts(script: SCRIPT) ).commandLine
+        and:
+        // run the command line through a shell to mimic the Batch agent splitting it into argv
+        def builder = new ProcessBuilder('bash', '-c', commandLine).directory(workDir.toFile()).redirectErrorStream(true)
+        builder.environment().put('AZ_BATCH_NODE_SHARED_DIR', sharedDir.toString())
+        def proc = builder.start()
+        def output = proc.inputStream.text
+        def exitCode = proc.waitFor()
+
+        then:
+        exitCode == EXIT
+        output.readLines().findAll { !it.contains('azcopy') } == OUTPUT
+
+        cleanup:
+        workDir?.deleteDir()
+        sharedDir?.deleteDir()
+
+        where:
+        AZCOPY | SCRIPT                                        | EXIT | OUTPUT
+        false  | 'echo line1\necho line2'                      | 1    | []
+        false  | 'false || echo fallback'                      | 1    | []
+        true   | "echo 'line1'\necho line2 # trailing comment" | 0    | ['line1', 'line2']
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
@@ -366,7 +420,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.commandLine == "bash -c 'echo '\\''hello-world'\\'''"
         configuredStartTask.resourceFiles.isEmpty()
     }
 
@@ -904,6 +958,32 @@ class AzBatchServiceTest extends Specification {
     }
 
     @Unroll
+    def 'should create task resource files' () {
+        given:
+        // the SAS token must be at least 100 chars to create the az file system
+        def SAS = '1234567890' * 10
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account'], batch: [copyToolInstallMode: 'node']]
+        Global.session = Mock(Session) { getConfig()>>[azure: AZURE] }
+        def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
+        def svc = new AzBatchService(createExecutor(new AzConfig(AZURE)))
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> WORKDIR
+            getStdin() >> STDIN
+        }
+
+        when:
+        def result = svc.resourceFileUrls(TASK, SAS)
+        then:
+        result.collect { [it.filePath, it.httpUrl] } == FILES.collect { [it, "https://my-account.blob.core.windows.net/foo/work/dir/${it}?${SAS}".toString()] }
+
+        where:
+        STDIN        | FILES
+        null         | ['.command.run', '.command.sh']
+        'some input' | ['.command.run', '.command.sh', '.command.in']
+    }
+
+    @Unroll
     def 'should create user-assigned managed identity credentials token' () {
         given:
         def config = Mock(AzConfig)
@@ -1056,6 +1136,44 @@ class AzBatchServiceTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def 'should mount file shares with the account key and file url in the right fields' () {
+        given:
+        def CONFIG = new AzConfig([storage: [accountName: 'mystorage', accountKey: 'my-key', fileShares: [myshare: [mountOptions: '-o vers=3.0']]]])
+        def service = Spy(new AzBatchService(createExecutor(CONFIG)))
+        def spec = new AzVmPoolSpec(poolId: 'my-pool', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        and: 'capture the pool create request sent to Azure Batch'
+        String requestBody = null
+        def httpClient = { HttpRequest request ->
+            requestBody = request.bodyAsBinaryData.toString()
+            Mono.just(new HttpResponse(request) {
+                int getStatusCode() { 201 }
+                String getHeaderValue(String name) { null }
+                HttpHeaders getHeaders() { new HttpHeaders() }
+                Flux<ByteBuffer> getBody() { Flux.empty() }
+                Mono<byte[]> getBodyAsByteArray() { Mono.empty() }
+                Mono<String> getBodyAsString() { Mono.empty() }
+                Mono<String> getBodyAsString(Charset charset) { Mono.empty() }
+            } as HttpResponse)
+        } as HttpClient
+        service.getClient() >> new BatchClientBuilder()
+            .endpoint('https://acct.westeurope.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('acct', Base64.encoder.encodeToString('key'.bytes)))
+            .httpClient(httpClient)
+            .buildClient()
+        service.poolVmConfig(_) >> null
+
+        when:
+        service.createPool(spec)
+        def share = new JsonSlurper().parseText(requestBody).mountConfiguration[0].azureFileShareConfiguration
+
+        then:
+        share.accountName == 'mystorage'
+        share.accountKey == 'my-key'
+        share.azureFileUrl == 'https://mystorage.file.core.windows.net/myshare'
+        share.relativeMountPath == 'myshare'
+        share.mountOptions == '-o vers=3.0'
+    }
+
     private static HttpClient stubHttpClient(int statusCode, String errorCode) {
         final body = """{"odata.metadata":"x","code":"${errorCode}","message":{"lang":"en-US","value":"error"}}""".getBytes(StandardCharsets.UTF_8)
         final headers = new HttpHeaders().set('Content-Type', 'application/json;odata=minimalmetadata')
@@ -1162,7 +1280,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should create job successfully on first try'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1182,7 +1300,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should retry on ActiveJobAndScheduleQuotaReached and then succeed'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1208,7 +1326,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should throw after exceeding max job quota retries'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1235,7 +1353,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should fail immediately when maxJobQuotaRetries is 0'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1261,7 +1379,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should not retry on non-quota 409 error'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1286,7 +1404,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should not retry on non-HttpResponseException'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {

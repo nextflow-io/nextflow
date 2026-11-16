@@ -277,4 +277,22 @@ class SpackCacheTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should cache the same env with and without arch separately' () {
+        given:
+        // use a unique env name, since the cache is static
+        def ENV = "foo-${System.nanoTime()}".toString()
+        def cache = Spy(SpackCache)
+
+        when:
+        def noArch = cache.getCachePathFor(ENV, null)
+        def withArch = cache.getCachePathFor(ENV, 'x86_64')
+        def noArchAgain = cache.getCachePathFor(ENV, null)
+        then:
+        1 * cache.createLocalSpackEnv(ENV, null) >> Paths.get('/spack/no-arch')
+        1 * cache.createLocalSpackEnv(ENV, 'x86_64') >> Paths.get('/spack/x86_64')
+        noArch == Paths.get('/spack/no-arch')
+        withArch == Paths.get('/spack/x86_64')
+        noArchAgain == noArch
+    }
 }

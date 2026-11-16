@@ -80,6 +80,15 @@ class ExecutorConfigTest extends Specification {
 
     }
 
+    def 'test get array timeout'() {
+        expect:
+        new ExecutorConfig([:]).getExecConfigProp('slurm', 'arrayTimeout', null, [:]) == null
+        and:
+        def config = new ExecutorConfig([arrayTimeout: '10m', '$slurm': [arrayTimeout: '1h']])
+        config.getArrayTimeout('slurm') == Duration.of('1h')
+        config.getArrayTimeout('sge') == Duration.of('10m')
+    }
+
     def 'test get queue stat interval'() {
 
         setup:

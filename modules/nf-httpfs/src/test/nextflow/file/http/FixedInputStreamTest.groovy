@@ -75,4 +75,43 @@ class FixedInputStreamTest extends Specification {
         and:
         new String(result) == "Hello world"
     }
+
+    def 'should fail when reaching end of stream before expected length' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length + 10)
+
+        when:
+        stream.readAllBytes()
+        then:
+        def e = thrown(IOException)
+        e.message == 'Read data length does not match expected size - bytes read: 11; expected: 21'
+    }
+
+    def 'should not fail when closing before end of stream' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length)
+
+        when:
+        stream.read(new byte[5])
+        stream.close()
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should not count bytes twice after reset' () {
+        given:
+        def bytes = "Hello world". bytes
+        def stream = new FixedInputStream(new ByteArrayInputStream(bytes), bytes.length)
+
+        when:
+        stream.mark(bytes.length)
+        stream.read(new byte[5])
+        stream.reset()
+        def result = stream.readAllBytes()
+        then:
+        noExceptionThrown()
+        new String(result) == 'Hello world'
+    }
 }

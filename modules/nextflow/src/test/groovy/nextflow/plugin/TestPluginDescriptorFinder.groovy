@@ -23,7 +23,7 @@ import java.util.jar.Manifest
 import org.pf4j.ManifestPluginDescriptorFinder
 /**
  * Plugin finder specialised for test environment. It looks for
- * the plugin 'MANIFEST.MF' file in the 'testFixtures' resources directory
+ * the plugin 'MANIFEST.MF' file in the 'testPlugin' resources directory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -34,7 +34,7 @@ class TestPluginDescriptorFinder extends ManifestPluginDescriptorFinder {
         if( !Files.isDirectory(pluginPath) )
             return null
 
-        final manifestPath = pluginPath.resolve('build/resources/testFixtures/META-INF/MANIFEST.MF')
+        final manifestPath = Path.of(System.getProperty('nextflow.testPlugin.resourcesDir'), 'META-INF/MANIFEST.MF')
         if( !Files.exists(manifestPath) )
             return null
 

@@ -38,7 +38,15 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Task wrapper scripts treat `$` in file names literally. Input file names that contain `${` or `$[` are rejected when they are referenced in the task script.
 
+- Nextflow no longer opens the internal packages of the Java standard library (`java.lang`, `java.util`, `java.io`, etc.) to deep reflection. Plugins and libraries that rely on it fail with an `InaccessibleObjectException`. As a workaround, open the package named in the error with [`NXF_OPTS`][env-vars-NXF_OPTS], for example:
+
+  ```bash
+  export NXF_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED"
+  ```
+
 ### Cache-breaking changes
+
+- Java types that are not [standard types][stdlib-types], such as `Optional` or `AtomicInteger`, can no longer be stored in the task cache. A task whose inputs or outputs hold such a value is not cached and re-executes when you resume, with a warning.
 
 - Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
 
@@ -53,4 +61,6 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout
 [config-mail-smtp-timeout]: ../reference/config/mail#mailsmtptimeout
 [config-mail-smtp-writetimeout]: ../reference/config/mail#mailsmtpwritetimeout
+[env-vars-NXF_OPTS]: ../reference/env-vars#nxf_opts
 [process-env-inputs]: ../process#input-environment-variables-env
+[stdlib-types]: ../reference/stdlib-types
