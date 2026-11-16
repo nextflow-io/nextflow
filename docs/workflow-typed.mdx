@@ -201,8 +201,6 @@ Commit installed pipelines to the calling pipeline's repository, as you would fo
 
 - Registry includes in an included pipeline resolve against that pipeline's own directory, so it uses its own `modules/` and `pipelines/`, not those of the calling pipeline.
 
-- Concurrent runs that install the same pipeline wait for each other, so the pipeline is fetched only once.
-
 - The registry is configured with the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the launch directory, and any `-c` config files.
 
 The following limitations apply:
