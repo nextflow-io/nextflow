@@ -312,7 +312,7 @@ jobs:
             integration-tests.tar.gz
 
   test-e2e:
-    if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') || (github.event_name == 'workflow_dispatch' && inputs.e2e != 'none')) && needs.build.outputs.docs_only != 'true' }}
+    if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') || (github.event_name == 'workflow_dispatch' && inputs.e2e != 'none')) && needs.build.outputs.docs_only != 'true' && github.event.pull_request.head.repo.fork != true }}
     needs: build
     uses: ./.github/workflows/e2e.yml
     with:
