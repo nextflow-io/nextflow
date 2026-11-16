@@ -16,18 +16,17 @@
 
 package nextflow.cli.pipeline
 
+import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
-import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
-
-import java.nio.file.Paths
 
 /**
  * Pipeline view subcommand - displays pipeline info and parameters
@@ -41,10 +40,21 @@ class CmdPipelineView extends CmdBase {
 
     @Parameter(
         names = ['-o', '-output'],
-        description = PipelineCmdSupport.OUTPUT_MODE_HELP,
-        validateWith = PipelineCmdSupport.OutputModeValidator
+        description = 'Output mode: text, json',
+        validateWith = OutputModeValidator
     )
     String output = 'text'
+
+    static class OutputModeValidator implements IParameterValidator {
+
+        private static final List<String> MODES = List.of('text', 'json')
+
+        @Override
+        void validate(String name, String value) {
+            if( !MODES.contains(value) )
+                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
+        }
+    }
 
     @Parameter(description = "<scope/name>", required = true)
     List<String> args
@@ -63,16 +73,16 @@ class CmdPipelineView extends CmdBase {
             throw new AbortOperationException("Unexpected number of parameters")
 
         final name = args[0]
-        final registryConfig = PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize())
+        final registryConfig = PipelineCmdSupport.registryConfig(this)
         final client = this.client ?: RegistryClientFactory.forConfig(registryConfig)
         final pipeline = client.getPipeline(name)
         final release = version ? client.getPipelineRelease(name, version) : pipeline?.latest
         if( !pipeline || !release )
             throw new AbortOperationException("No release information available for ${name}")
 
-        final url = pipelineUrl(registryConfig.url, name, release.version)
+        final url = "${PipelineCmdSupport.pageUrl(registryConfig.url)}/pipelines/${name}".toString()
         final params = schemaParams(release.schema)
-        final usage = "nextflow run ${name} -r ${release.version}".toString()
+        final usage = "nextflow run ${name} -hub ${URI.create(registryConfig.url).authority} -r ${release.version}".toString()
 
         if( output == 'json' ) {
             final info = [
@@ -95,7 +105,8 @@ class CmdPipelineView extends CmdBase {
         println "Version:     ${release.version}"
         println "Repository:  ${pipeline.repositoryUrl}"
         println "Revision:    ${release.gitRevision}"
-        println "Commit:      ${release.commitId}"
+        if( release.commitId )
+            println "Commit:      ${release.commitId}"
         println "URL:         ${url}"
         if( pipeline.metadata?.description )
             println "Description: ${pipeline.metadata.description}"
@@ -140,11 +151,5 @@ class CmdPipelineView extends CmdBase {
             }
         }
         return result
-    }
-
-    private static String pipelineUrl(String registryUrl, String name, String version) {
-        // Strip /api suffix to get the base UI URL
-        final baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
-        return "${baseUrl}/pipelines/${name}@${version}"
     }
 }

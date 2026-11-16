@@ -16,6 +16,7 @@
 
 package nextflow.cli.pipeline
 
+import com.beust.jcommander.ParameterException
 import groovy.json.JsonSlurper
 import io.seqera.npr.api.schema.v1.ListPipelinesResponse
 import io.seqera.npr.api.schema.v1.PipelineMetadata
@@ -102,5 +103,14 @@ class CmdPipelineSearchTest extends Specification {
         capture.toString().contains('Top 150 matching pipeline(s):')
         capture.toString().contains('  acme/p149\n')
         !capture.toString().contains('  acme/p150\n')
+    }
+
+    def 'should reject the text output mode'() {
+        when:
+        new CmdPipelineSearch.OutputModeValidator().validate('-o', 'text')
+
+        then:
+        def e = thrown(ParameterException)
+        e.message == 'Output mode must be one of [simple, json] (found: text)'
     }
 }

@@ -297,6 +297,9 @@ class PluginUpdater extends UpdateManager {
     }
 
     protected boolean isAlreadyInstalled(PluginRef ref) {
+        // in dev mode, a locally built plugin is used regardless of the requested version
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && pluginManager.getPlugin(ref.id) )
+            return true
         // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
         // to resolve the latest release.
         if( !ref.version )
@@ -373,6 +376,9 @@ class PluginUpdater extends UpdateManager {
      */
     @Override
     boolean installPlugin(String id, String version) {
+        // in dev mode, core plugins must be built locally rather than downloaded
+        if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && defaultPlugins.hasPlugin(id) )
+            throw new UnsupportedOperationException("Core plugin $id is not available in dev mode -- make sure it is built locally (e.g. `make compile`)")
         if( !pluginsStore )
             throw new IllegalStateException("Missing pluginStore attribute")
 

@@ -78,7 +78,7 @@ class GroupByOp {
 
             // emit group when it is complete
             if( group.size() == size ) {
-                target << new ArrayTuple<>([key, group])
+                target.bind(new ArrayTuple<>([key, group]))
                 groups.remove(key)
                 emitted.add(key)
             }
@@ -89,10 +89,10 @@ class GroupByOp {
             groups.each { key, values ->
                 if( sizes[key] != -1 )
                     throw new ScriptRuntimeException("Operator `groupBy` received too few values for grouping keys: ${key}")
-                target << new ArrayTuple<>([key, values])
+                target.bind(new ArrayTuple<>([key, values]))
             }
 
-            target << CH.stop()
+            target.bind(CH.stop())
         }
 
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])

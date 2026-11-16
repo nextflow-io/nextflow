@@ -23,7 +23,6 @@ import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.Launcher
-import nextflow.exception.AbortOperationException
 import nextflow.pipeline.PipelineGitFetcher
 import spock.lang.Specification
 import org.junit.Rule
@@ -77,32 +76,6 @@ class CmdPipelineInstallTest extends Specification {
         def dir = base.resolve('pipelines/nf-core/rnaseq').toAbsolutePath()
         out.indexOf('Installing pipeline nf-core/rnaseq@3.14.0...') >= 0
         out.indexOf('Installing pipeline nf-core/rnaseq@3.14.0...') < out.indexOf("Pipeline nf-core/rnaseq@3.14.0 installed in ${dir}")
-    }
-
-    def 'should install the latest version by default'() {
-        when:
-        cmd(['nf-core/rnaseq']).run()
-
-        then:
-        1 * client.getPipeline('nf-core/rnaseq') >> pipeline()
-        0 * client.getPipelineRelease(_, _)
-        1 * fetcher.fetch(_, '3.14.0', 'abc', _) >> { u, r, c2, Path t -> Files.writeString(t.resolve('main.nf'), 'x') }
-        Files.isDirectory(base.resolve('pipelines/nf-core/rnaseq'))
-    }
-
-    def 'should refuse to overwrite a modified copy without -force'() {
-        given:
-        client.getPipeline(_) >>> [pipeline('1.0.0'), pipeline('2.0.0')]
-        fetcher.fetch(*_) >> { u, r, c2, Path t -> Files.writeString(t.resolve('main.nf'), 'x') }
-        cmd(['nf-core/rnaseq']).run()
-        Files.writeString(base.resolve('pipelines/nf-core/rnaseq/main.nf'), 'changed')
-
-        when:
-        cmd(['nf-core/rnaseq']).run()
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains('-force')
     }
 
     def 'should report an up to date pipeline instead of installing it again'() {

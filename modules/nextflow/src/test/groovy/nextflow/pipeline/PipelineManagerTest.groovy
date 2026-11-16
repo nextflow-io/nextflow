@@ -18,6 +18,7 @@ package nextflow.pipeline
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
@@ -62,6 +63,16 @@ class PipelineManagerTest extends Specification {
         info.commitId == 'abc'
         info.registryUrl == 'https://reg.io'
         info.checksum
+    }
+
+    def 'records the fetched commit when the release has no commit id'() {
+        when:
+        def info = manager().install('nf-core/rnaseq', null, false).info()
+        then:
+        1 * client.getPipeline(_) >> pipeline(release('1.0.0', null))
+        1 * fetcher.fetch(_, '1.0.0', null, _) >> { args -> args[3].resolve('main.nf').text = 'x'; 'def' }
+        info.commitId == 'def'
+        PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).commitId == 'def'
     }
 
     def 'null workflowPath defaults to main.nf'() {
@@ -179,20 +190,13 @@ class PipelineManagerTest extends Specification {
         Files.exists(base.resolve('pipelines/nf-core/rnaseq/main.nf'))
     }
 
-    def 'fails on no published release or revoked'() {
+    def 'fails on no published release or a revoked version'() {
         when:
         manager().install('nf-core/rnaseq', null, false)
         then:
         client.getPipeline(_) >> new Pipeline().repositoryUrl('u')
         def e = thrown(AbortOperationException)
         e.message.contains('has no published release')
-
-        when:
-        manager().install('nf-core/rnaseq', null, false)
-        then:
-        client.getPipeline(_) >> pipeline(release('1.0.0'), true)
-        e = thrown(AbortOperationException)
-        e.message.contains('is revoked')
 
         when:
         manager().install('nf-core/rnaseq', '1.0.0', false)
@@ -259,7 +263,14 @@ class PipelineManagerTest extends Specification {
 
     def 'resolve computes the checksum once per pipeline dir'() {
         given:
-        def m = Spy(PipelineManager, constructorArgs: [base, client, fetcher])
+        def calls = new AtomicInteger()
+        def m = new PipelineManager(base, client, fetcher) {
+            @Override
+            protected boolean computeModified(PipelineInfo info, Path dir) {
+                calls.incrementAndGet()
+                return super.computeModified(info, dir)
+            }
+        }
         client.getPipeline(_) >> pipeline(release('1.0.0'))
         fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
         m.resolve('nf-core/rnaseq')
@@ -268,7 +279,7 @@ class PipelineManagerTest extends Specification {
         m.resolve('nf-core/rnaseq')
         m.resolve('nf-core/rnaseq')
         then:
-        1 * m.computeModified(_, _)
+        calls.get() == 1
     }
 
     def 'remove and install -force delete a symlink without following it'() {
@@ -361,25 +372,13 @@ class PipelineManagerTest extends Specification {
         0 * fetcher._
         !Files.exists(manager().pipelineDir('nf-core/rnaseq'))
     }
-    def 'should look up the registry only for scope/name' () {
-        when:
-        def result = PipelineManager.lookupRelease(client, NAME, null)
-
-        then:
-        result == null
-        0 * client._
-
-        where:
-        NAME << ['hello', 'https://github.com/nf-core/rnaseq', 'nf-core/rnaseq/main.nf']
-    }
-
     def 'should resolve a registry release' () {
         given:
         def latest = new PipelineRelease().version('3.14.0').gitRevision('3.14.0').commitId('abc123')
         def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq').workflowPath('main.nf').latest(latest)
 
         when:
-        def result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', null)
+        def result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', null)
 
         then:
         1 * client.getPipeline('nf-core/rnaseq') >> pipeline
@@ -391,53 +390,35 @@ class PipelineManagerTest extends Specification {
         result.workflowPath == 'main.nf'
 
         when:
-        result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', '3.13.0')
+        result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', '3.13.0')
 
         then:
         1 * client.getPipeline('nf-core/rnaseq') >> pipeline
         1 * client.getPipelineRelease('nf-core/rnaseq', '3.13.0') >> new PipelineRelease().version('3.13.0').commitId('def456')
         result.commitId == 'def456'
-
-        when: 'the revision is the latest release'
-        result = PipelineManager.lookupRelease(client, 'nf-core/rnaseq', '3.14.0')
-
-        then:
-        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
-        0 * client.getPipelineRelease(_, _)
-        result.commitId == 'abc123'
     }
 
-    def 'should fall back to Git when the registry cannot resolve the release' () {
+    def 'should fail when the registry cannot resolve the release' () {
         given:
         def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq')
             .latest(new PipelineRelease().version('3.14.0').commitId('abc123').status(STATUS))
             .revoked(REVOKED)
         client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline }
-
-        expect:
-        PipelineManager.lookupRelease(client, 'nf-core/rnaseq', null) == null
-
-        where:
-        PIPELINE_ERROR                                         | STATUS                          | REVOKED
-        new RegistryException('Not found', 404)                | null                            | false
-        new RegistryException('Revoked', 410)                  | null                            | false
-        new RegistryException('Unable', new IOException('x'))  | null                            | false
-        null                                                   | PipelineReleaseStatus.REVOKED   | false
-        null                                                   | null                            | true
-    }
-
-    def 'should use the registry repository for a revision that is not a release' () {
-        given:
-        client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl('https://github.com/someone/hello')
-            .latest(new PipelineRelease().version('1.0.0').commitId('abc123'))
-        client.getPipelineRelease('acme/hello', 'dev') >> { throw new RegistryException('Not found', 404) }
+        client.getPipelineRelease('nf-core/rnaseq', 'dev') >> { throw new RegistryException('Not found', 404) }
 
         when:
-        def result = PipelineManager.lookupRelease(client, 'acme/hello', 'dev')
+        PipelineManager.resolveRelease(client, NAME, VERSION)
 
         then:
-        result.repositoryUrl == 'https://github.com/someone/hello'
-        result.revision == 'dev'
-        result.version == null
+        def e = thrown(AbortOperationException)
+        e.message.contains(MESSAGE)
+
+        where:
+        NAME              | VERSION | PIPELINE_ERROR                          | STATUS                        | REVOKED | MESSAGE
+        'hello'           | null    | null                                    | null                          | false   | 'Invalid pipeline name'
+        'nf-core/rnaseq'  | null    | new RegistryException('Not found', 404) | null                          | false   | 'nf-core/rnaseq not found in the registry'
+        'nf-core/rnaseq'  | 'dev'   | null                                    | null                          | false   | 'nf-core/rnaseq@dev not found in the registry'
+        'nf-core/rnaseq'  | null    | null                                    | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
+        'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
     }
 }

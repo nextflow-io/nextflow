@@ -40,9 +40,14 @@ class RegistryClientFactory {
         final cfg = config ?: new RegistryConfig()
         // the configured registries are authoritative: use exactly the URLs declared in the
         // `registry` scope (which falls back to the default registry when none are configured)
+        return forUrls(cfg.allUrls as List<String>, cfg.apiKey)
+    }
+
+    /** Client for the given registries; a null {@code apiKey} sends no credentials */
+    static RegistryClient forUrls(List<String> urls, String apiKey) {
         return new RegistryClient(
-            cfg.allUrls as List<String>,
-            cfg.apiKey,
+            urls,
+            apiKey,
             HxClient.newBuilder()
                 .withProxyConfig(ProxyConfig.proxyConfig())
                 .retryConfig(RetryConfig.config())

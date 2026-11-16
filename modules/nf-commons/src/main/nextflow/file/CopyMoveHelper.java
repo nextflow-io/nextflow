@@ -41,11 +41,6 @@ import org.slf4j.LoggerFactory;
  * Helper class to handle copy/move files and directories
  */
 public class CopyMoveHelper {
-    /**
-     * True if currently performing a copy of a foreign file.
-     */
-    public static final ThreadLocal<Boolean> IN_FOREIGN_COPY = new ThreadLocal<>();
-
     private static Logger log = LoggerFactory.getLogger(CopyMoveHelper.class);
 
     private CopyMoveHelper() { }
@@ -90,11 +85,8 @@ public class CopyMoveHelper {
             return;
         }
 
-        IN_FOREIGN_COPY.set(true);
         try (InputStream in = Files.newInputStream(source)) {
             Files.copy(in, target);
-        } finally {
-            IN_FOREIGN_COPY.set(false);
         }
     }
 

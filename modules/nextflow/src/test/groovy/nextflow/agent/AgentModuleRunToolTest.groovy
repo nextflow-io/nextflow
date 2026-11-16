@@ -41,6 +41,9 @@ import static test.ScriptHelper.runScript
 @Timeout(60)
 class AgentModuleRunToolTest extends Dsl2Spec {
 
+    // keep the registry retries short when the fetch fails
+    static final Map FAST_RETRY = [delay: '10ms', maxDelay: '50ms', maxAttempts: 2]
+
     def cleanup() {
         AgentRunnerProvider.testRunner = null
     }
@@ -56,7 +59,7 @@ class AgentModuleRunToolTest extends Dsl2Spec {
             assert req.toolSpecs[0].name == 'greet'
             assert req.toolSpecs*.name.every { it != 'module_run' }
             // the tool's parameters schema IS the module's flattened input schema
-            assert req.toolSpecs[0].inputSchema.get('properties').name != null
+            assert req.toolSpecs[0].inputSchema.properties.name != null
             // dispatch by the MODULE tool name (not 'module_run'): drives the REAL greet process
             dispatchResult = req.dispatch.call('greet', '{"name":"Ada"}')
             assert new JsonSlurper().parseText(dispatchResult) == [greeting: 'Hello Ada!']
@@ -257,7 +260,7 @@ class AgentModuleRunToolTest extends Dsl2Spec {
             //     `fastq` is a property, `required` includes the file input, and
             //     additionalProperties is false; `meta` is a nested object with the meta.id convention
             final schema = fooSpec.inputSchema
-            final props = schema.get('properties') as Map
+            final props = schema.properties as Map
             assert props.containsKey('fastq')
             assert props.containsKey('meta')
             // file input flattened to a string property
@@ -269,7 +272,7 @@ class AgentModuleRunToolTest extends Dsl2Spec {
             // nf-core meta.id convention: meta is a nested object carrying an `id`
             final meta = props.meta as Map
             assert meta.type == 'object'
-            assert (meta.get('properties') as Map).containsKey('id')
+            assert (meta.properties as Map).containsKey('id')
 
             // (c) dispatch by the module's OWN tool name runs the REAL process and returns output
             dispatchResult = req.dispatch.call('FOO', JsonOutput.toJson([meta: [id: 's1'], fastq: readsAbs]))
@@ -395,8 +398,8 @@ class AgentModuleRunToolTest extends Dsl2Spec {
             assert req.toolSpecs*.name.every { it != 'module_run' }
             // the meta.yml fallback still yields an ENFORCED flattened schema
             final schema = req.toolSpecs[0].inputSchema
-            assert (schema.get('properties') as Map).containsKey('fastq')
-            assert (schema.get('properties') as Map).containsKey('meta')
+            assert (schema.properties as Map).containsKey('fastq')
+            assert (schema.properties as Map).containsKey('meta')
             assert (schema.required as List).contains('fastq')
             assert schema.additionalProperties == false
             return 'done'
@@ -407,7 +410,8 @@ class AgentModuleRunToolTest extends Dsl2Spec {
         final runner = new ScriptRunner([
             process: [executor: 'local'],
             workDir: work.toString(),
-            registry: [url: 'http://localhost:0']   // guaranteed to fail immediately
+            registry: [url: 'http://localhost:0'],   // connection refused
+            nextflow: [retryPolicy: FAST_RETRY]
         ])
         runner.setScript(new ScriptFile(main))
         runner.execute()

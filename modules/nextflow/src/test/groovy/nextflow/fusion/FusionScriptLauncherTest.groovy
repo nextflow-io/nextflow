@@ -29,6 +29,10 @@ import spock.lang.Specification
  */
 class FusionScriptLauncherTest extends Specification {
 
+    def cleanup() {
+        Global.reset()
+    }
+
     def 'should get container mount' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }

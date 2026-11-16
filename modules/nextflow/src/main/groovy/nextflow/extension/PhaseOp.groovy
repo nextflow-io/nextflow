@@ -98,7 +98,7 @@ class PhaseOp {
                     if( stopCount.decrementAndGet()==0) {
                         if( remainder )
                             phaseRemainder(buffer,size, target)
-                        target << Channel.STOP
+                        target.bind(Channel.STOP)
                     }}
 
         )

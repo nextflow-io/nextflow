@@ -16,7 +16,7 @@
 
 package nextflow.processor
 
-import spock.lang.Ignore
+import spock.lang.PendingFeature
 import spock.lang.Specification
 
 import java.nio.file.FileSystems
@@ -151,21 +151,30 @@ class TaskPathTest extends Specification {
         new TaskPath(Paths.get('/foo')).size() == 0
     }
 
-    @Ignore
-    def 'should report error' () {
+    def 'should be equal to the target path' () {
 
         given:
         def folder = Files.createTempDirectory('test')
         def hello = folder.resolve('hello.txt')
         hello.text = 'Hello world'
 
-        when:
-        def path = new TaskPath(hello, 'ciao.txt')
+        expect:
+        new TaskPath(hello, 'ciao.txt') == hello
 
-        then:
-        // -- PROBLEMS
-        path == hello  // it fails because Path implements Comparable https://stackoverflow.com/questions/28355773/in-groovy-why-does-the-behaviour-of-change-for-interfaces-extending-compar#comment45123447_28387391
-        path.text == 'Hello world'
+        cleanup:
+        folder.deleteDir()
+    }
+
+    @PendingFeature(reason = 'TaskPath is not unwrapped by the default file system provider, so reading it throws ProviderMismatchException')
+    def 'should read the target file' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def hello = folder.resolve('hello.txt')
+        hello.text = 'Hello world'
+
+        expect:
+        new TaskPath(hello, 'ciao.txt').text == 'Hello world'
 
         cleanup:
         folder.deleteDir()

@@ -504,7 +504,7 @@ class DAG {
     static class ChannelHandler {
 
         /**
-         * The {@link groovyx.gpars.dataflow.DataflowChannel} that originated this graph edge
+         * The dataflow channel that originated this graph edge
          */
         Object channel
 

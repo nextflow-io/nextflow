@@ -18,7 +18,7 @@ package nextflow.dag
 
 import spock.lang.Specification
 
-import groovyx.gpars.dataflow.DataflowChannel
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowVariable
@@ -64,9 +64,9 @@ class DAGTest extends Specification {
     def 'should add new vertices' () {
 
         given:
-        def ch1 = Mock(DataflowChannel)
-        def ch2 = Mock(DataflowChannel)
-        def ch3 = Mock(DataflowChannel)
+        def ch1 = Mock(DataflowReadChannel)
+        def ch2 = Mock(DataflowReadChannel)
+        def ch3 = Mock(DataflowReadChannel)
 
         def v1
         def v2
@@ -195,9 +195,9 @@ class DAGTest extends Specification {
     def 'should add missing vertices' () {
 
         given:
-        def ch1 = Mock(DataflowChannel)
-        def ch2 = Mock(DataflowChannel)
-        def ch3 = Mock(DataflowChannel)
+        def ch1 = Mock(DataflowReadChannel)
+        def ch2 = Mock(DataflowReadChannel)
+        def ch3 = Mock(DataflowReadChannel)
 
         def dag = new DAG()
 
@@ -258,8 +258,8 @@ class DAGTest extends Specification {
 
     def 'should take edge names from variables name' () {
         given:
-        def ch1 = Mock(DataflowChannel)
-        def ch2 = Mock(DataflowChannel)
+        def ch1 = Mock(DataflowReadChannel)
+        def ch2 = Mock(DataflowReadChannel)
         def map = [channel_1: ch1, funnel_2: ch2]
 
         def dag = Spy(DAG)
@@ -286,8 +286,8 @@ class DAGTest extends Specification {
         given:
         def ch1 = new DataflowBroadcast()
         def ch2 = new DataflowBroadcast()
-        def ch1r = Mock(DataflowChannel)
-        def ch2r = Mock(DataflowChannel)
+        def ch1r = Mock(DataflowReadChannel)
+        def ch2r = Mock(DataflowReadChannel)
 
         def chC = new DataflowBroadcast()
         def chE = new DataflowBroadcast()
@@ -332,7 +332,7 @@ class DAGTest extends Specification {
 
         given:
         def source = new DataflowQueue()
-        def sourceR = Mock(DataflowChannel)
+        def sourceR = Mock(DataflowReadChannel)
         def output = new DataflowQueue()
 
         def dag = new DAG()

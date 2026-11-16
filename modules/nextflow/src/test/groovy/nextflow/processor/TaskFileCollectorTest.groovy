@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.exception.MissingFileException
+import nextflow.file.FileHelper
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -138,6 +139,23 @@ class TaskFileCollectorTest extends Specification {
         cleanup:
         folder?.deleteDir()
 
+    }
+
+    def 'should match a ./ glob once the pattern is normalized'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('a.vcf').text = 'a'
+        folder.resolve('b.vcf').text = 'b'
+        folder.resolve('.hidden.vcf').text = 'hidden'
+
+        expect:
+        // the raw pattern never matched: the glob is compared against relative names like `a.vcf`
+        fetchResultFiles('./*.vcf', folder) == []
+        and:
+        fetchResultFiles(FileHelper.stripCurrentDirSegments('./*.vcf'), folder) == ['a.vcf', 'b.vcf']
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def defaultCollector(Map opts) {

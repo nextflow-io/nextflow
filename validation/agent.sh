@@ -37,6 +37,9 @@ echo "Agent runner image: $image"
 # QEMU. The release still builds both architectures
 "$ROOT/plugins/nf-agent-pi/build-image.sh" push -r "$STAGE" -t "$tag" -P linux/amd64
 
+echo "Smoke test the runner image"
+"$ROOT/plugins/nf-agent-pi/smoke-test/smoke-test.sh" "$image"
+
 # validate.sh runs the development launcher, which needs the exported classpath
 make -C "$ROOT" compile
 
@@ -44,4 +47,4 @@ echo "Test agent examples on the local executor"
 AGENT_VALIDATION_DIR=$PWD/agent-validation \
   "$ROOT/examples/agents/validate.sh" -m local -r -i "$image" \
     01_structured-output 02_two-agents 03_skills \
-    04_tool 06_tool-structured 08_filesystem 17_agent-module
+    04_tool 06_tool-structured 08_filesystem 17_agent-module 19_shell-tools

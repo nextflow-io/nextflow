@@ -700,7 +700,7 @@ class PipelineCompositionTest extends Dsl2Spec {
 
         when:
         // the pipeline is already installed, so the unreachable registry must not be called
-        def result = runScript(script, config: [registry: [url: 'http://localhost:1/unreachable']])
+        def result = runScript(script, config: [registry: [url: 'http://localhost:0/unreachable']])
         then:
         result.val == 'Hello, World!'
     }
@@ -747,7 +747,7 @@ class PipelineCompositionTest extends Dsl2Spec {
         ])
 
         when:
-        def result = runScript(script, config: [registry: [url: 'http://localhost:1/unreachable']])
+        def result = runScript(script, config: [registry: [url: 'http://localhost:0/unreachable']])
         then:
         result.val == 'from pipeline'
     }

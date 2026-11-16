@@ -131,12 +131,12 @@ class Launcher {
 
         //Allow unknown options for module command
         jcommander.getCommands().get(CmdModule.NAME)?.setAcceptUnknownOptions(true)
+        jcommander.getCommands().get(CmdPipeline.NAME)?.setAcceptUnknownOptions(true)
         // accept leftover options so removed commands can report their removal
         for( CmdBase cmd : allCommands ) {
             if( cmd instanceof CmdRemoved )
                 jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
         }
-        jcommander.getCommands().get(CmdPipeline.NAME)?.setAcceptUnknownOptions(true)
     }
 
     private static final String[] EMPTY = new String[0]

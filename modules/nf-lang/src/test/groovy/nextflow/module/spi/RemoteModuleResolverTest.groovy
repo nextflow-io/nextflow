@@ -32,6 +32,20 @@ class RemoteModuleResolverTest extends Specification {
     @TempDir
     Path projectDir
 
+    def 'should find the pipeline root of a vendored module, bounded by the project dir'() {
+        given:
+        def pipeline = projectDir.resolve('pipelines/a/b')
+        def moduleDir = pipeline.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(moduleDir)
+        pipeline.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
+        projectDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=outer\n'
+
+        expect:
+        RemoteModuleResolver.findPipelineRoot(moduleDir, projectDir) == pipeline
+        and: 'a dir outside any pipeline falls back to the project dir'
+        RemoteModuleResolver.findPipelineRoot(projectDir.resolve('modules/x'), projectDir.resolve('pipelines')) == projectDir.resolve('pipelines')
+    }
+
     def 'should resolve an include in a module script against the module directory'() {
         given:
         def moduleDir = projectDir.resolve('modules/nf-core/my-workflow')
@@ -117,5 +131,35 @@ class RemoteModuleResolverTest extends Specification {
         RemoteModuleResolver.isPipelineInclude(['workflow'])
         RemoteModuleResolver.isPipelineInclude(['params'])
         !RemoteModuleResolver.isPipelineInclude(['FASTQC'])
+    }
+
+    def 'should resolve an installed pipeline to its workflow path'() {
+        given:
+        def resolver = new FallbackRemoteModuleResolver()
+        def dir = Files.createDirectories(projectDir.resolve('pipelines/acme/hello'))
+        if( INFO != null )
+            dir.resolve('.pipeline-info').text = INFO
+
+        expect:
+        resolver.resolvePipeline('acme/hello', projectDir) == dir.resolve(EXPECTED)
+
+        where:
+        INFO                            | EXPECTED
+        null                            | 'main.nf'
+        'name=acme/hello\n'             | 'main.nf'
+        'workflowPath=workflows/x.nf\n' | 'workflows/x.nf'
+    }
+
+    def 'should reject a workflow path outside the pipeline directory'() {
+        given:
+        def dir = Files.createDirectories(projectDir.resolve('pipelines/acme/hello'))
+        dir.resolve('.pipeline-info').text = 'workflowPath=../../other/main.nf\n'
+
+        when:
+        new FallbackRemoteModuleResolver().resolvePipeline('acme/hello', projectDir)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('must stay inside the pipeline directory')
     }
 }

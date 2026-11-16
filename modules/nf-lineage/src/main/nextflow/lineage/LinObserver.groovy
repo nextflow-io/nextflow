@@ -255,12 +255,17 @@ class LinObserver implements TraceObserverV2 {
         return mapPaths(value) { Path path ->
             getTaskRelative0(task, path.toAbsolutePath()) != null
                 ? asUriString(storeTaskOutput(task, path))
-                : manageInputPath(path, normalizer)
+                : manageInputPath(path, hashMode(task), normalizer)
         }
     }
 
-    private Object manageInputPath(Path path, PathNormalizer normalizer) {
-        return getSourceReference(path) ?: new DataPath(normalizer.normalizePath(path), Checksum.ofNextflow(path))
+    private Object manageInputPath(Path path, CacheHelper.HashMode mode, PathNormalizer normalizer) {
+        return getSourceReference(path) ?: new DataPath(normalizer.normalizePath(path), Checksum.ofNextflow(path, mode))
+    }
+
+    // same mode the task hash uses, so checksums of hash inputs match it
+    private static CacheHelper.HashMode hashMode(TaskRun task) {
+        return task.processor?.getConfig()?.getHashMode() ?: CacheHelper.HashMode.DEFAULT()
     }
 
     /**
@@ -313,7 +318,7 @@ class LinObserver implements TraceObserverV2 {
         // the checksum covers the canonical agent identity source - the same text that feeds the
         // resume cache key. NOTE: task.script is deliberately NOT recorded; on the RPC runner path
         // it embeds the per-invocation capability token, which must never be persisted.
-        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source, hashMode(task))
         return new AgentRun(
             session.uniqueId.toString(),
             task.getName(),
@@ -328,7 +333,7 @@ class LinObserver implements TraceObserverV2 {
             info.outputSchema,
             info.tools,
             info.skills,
-            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.inputs ? manageTaskInputParameters(task.inputs, hashMode(task), normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             asUriString(executionHash),
             getTaskModuleId(task)
@@ -336,14 +341,14 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected nextflow.lineage.model.v1beta1.TaskRun newTaskRun(TaskRun task, PathNormalizer normalizer) {
-        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source, hashMode(task))
         return new nextflow.lineage.model.v1beta1.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,
             task.script,
             getTaskOutputEvals(task),
-            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.inputs ? manageTaskInputParameters(task.inputs, hashMode(task), normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
@@ -351,7 +356,7 @@ class LinObserver implements TraceObserverV2 {
             getTaskGlobalVars(task),
             getTaskBinEntries(task).collect { Path p -> new DataPath(
                 normalizer.normalizePath(p.normalize()),
-                Checksum.ofNextflow(p) )
+                Checksum.ofNextflow(p, hashMode(task)) )
             },
             asUriString(executionHash),
             getTaskModuleId(task)
@@ -605,23 +610,23 @@ class LinObserver implements TraceObserverV2 {
         return path.normalize().toString()
     }
 
-    protected List<Parameter> manageTaskInputParameters(Map<InParam, Object> inputs, PathNormalizer normalizer) {
+    protected List<Parameter> manageTaskInputParameters(Map<InParam, Object> inputs, CacheHelper.HashMode mode, PathNormalizer normalizer) {
         List<Parameter> managedInputs = new LinkedList<Parameter>()
         inputs.forEach { param, value ->
             if( param instanceof FileInParam )
-                managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
+                managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , mode, normalizer) ) )
             else if( param instanceof ProcessInput )
-                managedInputs.add( new Parameter( getTypedParameterType(param.getType(), value), param.name, mapPaths(value) { Path p -> manageInputPath(p, normalizer) } ) )
+                managedInputs.add( new Parameter( getTypedParameterType(param.getType(), value), param.name, mapPaths(value) { Path p -> manageInputPath(p, mode, normalizer) } ) )
             else if( !(param instanceof DefaultInParam) )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, value) )
         }
         return managedInputs
     }
 
-    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer) {
+    private List<Object> manageFileInParam(List<FileHolder> files, CacheHelper.HashMode mode, PathNormalizer normalizer) {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
-            paths.add(manageInputPath(it.sourcePath ?: it.storePath, normalizer))
+            paths.add(manageInputPath(it.sourcePath ?: it.storePath, mode, normalizer))
         }
         return paths
     }

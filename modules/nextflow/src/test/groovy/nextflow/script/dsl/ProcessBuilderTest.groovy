@@ -286,6 +286,11 @@ class ProcessBuilderTest extends Specification {
         builder.accelerator 5, request: 1
         then:
         config.accelerator == [request: 1, limit:5]
+
+        when:
+        builder.accelerator 1, type: 'nvidia-l4', cuda: '12.2'
+        then:
+        config.accelerator == [limit: 1, type: 'nvidia-l4', cuda: '12.2']
     }
 
     def 'should apply disk config' () {

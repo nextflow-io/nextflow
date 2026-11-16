@@ -17,9 +17,10 @@
 package nextflow.cli.pipeline
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
+import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -34,8 +35,19 @@ import nextflow.util.TestOnly
 @Parameters(commandDescription = "List installed pipelines")
 class CmdPipelineList extends CmdBase {
 
-    @Parameter(names = ['-o', '-output'], description = PipelineCmdSupport.OUTPUT_MODE_HELP, validateWith = PipelineCmdSupport.OutputModeValidator)
+    @Parameter(names = ['-o', '-output'], description = 'Output mode: text, json', validateWith = OutputModeValidator)
     String output = 'text'
+
+    static class OutputModeValidator implements IParameterValidator {
+
+        private static final List<String> MODES = List.of('text', 'json')
+
+        @Override
+        void validate(String name, String value) {
+            if( !MODES.contains(value) )
+                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
+        }
+    }
 
     @TestOnly
     protected Path root
@@ -47,7 +59,7 @@ class CmdPipelineList extends CmdBase {
 
     @Override
     void run() {
-        final manager = new PipelineManager(root ?: Paths.get('.').toAbsolutePath().normalize(), null)
+        final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
         final rows = manager.list().collect { p ->
             [
                 name   : p.info().name,
