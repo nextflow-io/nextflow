@@ -17,7 +17,6 @@
 package nextflow.cli.pipeline
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -52,7 +51,7 @@ class CmdPipelineRemove extends CmdBase {
     void run() {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
-        final manager = new PipelineManager(root ?: Paths.get('.').toAbsolutePath().normalize(), null)
+        final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
         if( manager.remove(args[0], force) )
             println "Pipeline ${args[0]} removed"
         else

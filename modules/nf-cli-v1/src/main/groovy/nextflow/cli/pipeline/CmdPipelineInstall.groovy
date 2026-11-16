@@ -17,7 +17,6 @@
 package nextflow.cli.pipeline
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -65,9 +64,9 @@ class CmdPipelineInstall extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 
-        final baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
-        final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, baseDir))
-        final manager = fetcher ? new PipelineManager(baseDir, client, fetcher) : new PipelineManager(baseDir, client)
+        final baseDir = root ?: Path.of('.').toAbsolutePath().normalize()
+        final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, [], baseDir))
+        final manager = new PipelineManager(baseDir, client, fetcher ?: new PipelineGitFetcher())
         final result = manager.install(args[0], version, force)
         if( result.alreadyInstalled() )
             println "Pipeline ${result.info().name}@${result.info().version} is already installed and up to date"

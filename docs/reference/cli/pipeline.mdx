@@ -38,7 +38,7 @@ Print the command usage.
 ##### `install [options] <scope/name>` {#pipeline-install}
 
 Install a pipeline from the registry into `pipelines/<scope>/<name>/`.
-Nextflow fetches the Git commit pinned by the registry release, from the release's repository. The install fails if the release's Git revision no longer points to that commit, for example because a tag was moved after publishing.
+Nextflow fetches the Git commit pinned by the registry release, from the release's repository.
 
 If the same version is already installed and unmodified, Nextflow reports that it is already installed and up to date. An unmodified copy of another version is replaced.
 

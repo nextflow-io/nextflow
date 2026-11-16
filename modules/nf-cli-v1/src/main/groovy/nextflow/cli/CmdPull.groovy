@@ -15,8 +15,6 @@
  */
 
 package nextflow.cli
-import java.nio.file.Paths
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -102,7 +100,7 @@ class CmdPull extends CmdBase implements HubAware {
     }
 
     private void pullProject(String project, String revision) {
-        final address = PipelineCmdSupport.registryAddress(project, hubProvider) { PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize()) }
+        final address = PipelineCmdSupport.registryAddress(project, hubProvider) { PipelineCmdSupport.registryConfig(this) }
         if( address )
             pullRegistryRelease(address, revision)
         else

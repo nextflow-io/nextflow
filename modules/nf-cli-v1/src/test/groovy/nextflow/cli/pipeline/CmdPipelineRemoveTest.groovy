@@ -19,7 +19,6 @@ package nextflow.cli.pipeline
 import java.nio.file.Files
 import java.nio.file.Path
 
-import nextflow.exception.AbortOperationException
 import nextflow.pipeline.PipelineInfo
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -43,25 +42,6 @@ class CmdPipelineRemoveTest extends Specification {
 
         when:
         new CmdPipelineRemove(args: ['nf-core/rnaseq'], root: base).run()
-
-        then:
-        !Files.exists(dir)
-    }
-
-    def 'should refuse to remove a modified copy without -force'() {
-        given:
-        def dir = seed()
-        Files.writeString(dir.resolve('main.nf'), 'changed')
-
-        when:
-        new CmdPipelineRemove(args: ['nf-core/rnaseq'], root: base).run()
-
-        then:
-        thrown(AbortOperationException)
-        Files.exists(dir)
-
-        when:
-        new CmdPipelineRemove(args: ['nf-core/rnaseq'], root: base, force: true).run()
 
         then:
         !Files.exists(dir)

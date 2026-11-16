@@ -18,8 +18,6 @@ package nextflow.cli.pipeline
 
 import java.nio.file.Path
 
-import com.beust.jcommander.IParameterValidator
-import com.beust.jcommander.ParameterException
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -41,36 +39,16 @@ import nextflow.scm.ProviderConfig
 @CompileStatic
 class PipelineCmdSupport {
 
-    static final String TEXT_OUTPUT_HELP = 'Output mode: text, json'
-
-    static final String SIMPLE_OUTPUT_HELP = 'Output mode: simple, json'
-
-    /** Output modes of `list` and `view` */
-    static class TextOutputValidator implements IParameterValidator {
-        @Override
-        void validate(String name, String value) {
-            validateOutput(value, List.of('text', 'json'))
-        }
-    }
-
-    /** Output modes of `search` */
-    static class SimpleOutputValidator implements IParameterValidator {
-        @Override
-        void validate(String name, String value) {
-            validateOutput(value, List.of('simple', 'json'))
-        }
-    }
-
-    private static void validateOutput(String value, List<String> modes) {
-        if( !modes.contains(value) )
-            throw new ParameterException("Output mode must be one of $modes (found: $value)")
-    }
-
-    static RegistryConfig registryConfig(CmdBase cmd, Path baseDir, List<Path> configFiles = []) {
+    /**
+     * Registry config from the user config, the `nextflow.config` in the base directory, and the given config files
+     *
+     * @param baseDir The launch directory, the current directory by default
+     */
+    static RegistryConfig registryConfig(CmdBase cmd, List<Path> configFiles = [], Path baseDir = null) {
         final config = new ConfigCmdAdapter()
             .setOptions(cmd.launcher.options)
             .setUserConfigFiles(configFiles)
-            .setBaseDir(baseDir)
+            .setBaseDir(baseDir ?: Path.of('.').toAbsolutePath().normalize())
             .build()
         return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
     }

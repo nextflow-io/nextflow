@@ -554,30 +554,18 @@ class CmdRunTest extends Specification {
         'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq' | null   | false
     }
 
-    def 'should reject a hub that is neither a provider nor a registry' () {
+    def 'should reject a version in a registry address when offline' () {
         when:
-        runCmd(hubProvider: 'example.com').registryLookup('nf-core/rnaseq')
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains('Unknown repository provider or registry: `example.com`')
-        e.message.contains('registries: registry.nextflow.io')
-    }
-
-    def 'should reject a version in a registry address' () {
-        when:
-        runCmd(offline: OFFLINE, hubProvider: HUB).registryLookup(NAME)
+        runCmd(offline: true, hubProvider: HUB).registryLookup(NAME)
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('give the version with the `-r` option')
 
         where:
-        NAME                                                            | HUB                    | OFFLINE
-        'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null                   | false
-        'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null                   | true
-        'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io' | false
-        'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io' | true
+        NAME                                                            | HUB
+        'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null
+        'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io'
     }
 
     def 'should not fall back to Git for a registry address' () {

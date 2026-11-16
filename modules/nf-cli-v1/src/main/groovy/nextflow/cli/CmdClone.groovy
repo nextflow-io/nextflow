@@ -15,8 +15,6 @@
  */
 
 package nextflow.cli
-import java.nio.file.Paths
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -55,7 +53,7 @@ class CmdClone extends CmdBase implements HubAware {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        if( PipelineCmdSupport.registryAddress(pipeline, hubProvider) { PipelineCmdSupport.registryConfig(this, Paths.get('.').toAbsolutePath().normalize()) } )
+        if( PipelineCmdSupport.registryAddress(pipeline, hubProvider) { PipelineCmdSupport.registryConfig(this) } )
             throw new AbortOperationException("Registry pipelines are only supported by `nextflow run` and `nextflow pull` -- use the Git URL of the pipeline")
         try (final manager = new AssetManager(pipeline, toHubOptions())) {
             // the target directory is the second parameter

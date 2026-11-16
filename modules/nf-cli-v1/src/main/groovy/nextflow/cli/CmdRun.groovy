@@ -639,20 +639,11 @@ class CmdRun extends CmdBase implements HubAware {
          * try to look for a pipeline in the repository
          */
         final release = registryLookup(pipelineName)
-        String project = pipelineName
-        String rev = revision
-        String localName = null
-        if( release?.repositoryUrl ) {
-            // fetched from its Git repository and cached under its registry name
-            project = release.repositoryUrl
-            rev = release.commitId ?: release.revision
-            localName = release.name
-        }
-        else if( release ) {
-            // offline: the copy cached under the registry name
-            project = release.name
-            localName = release.name
-        }
+        // a registry release is fetched from its Git repository and cached under its registry name;
+        // offline, it has no repository and the cached copy is used
+        final project = release ? (release.repositoryUrl ?: release.name) : pipelineName
+        final rev = release?.repositoryUrl ? (release.commitId ?: release.revision) : revision
+        final localName = release?.name
         final main = mainScript ?: release?.workflowPath
         final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
         try( final manager = new AssetManager(project, rev, main, hubOpts, localName) ) {
@@ -662,7 +653,7 @@ class CmdRun extends CmdBase implements HubAware {
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
                 if( offline && remoteSource && release && rev )
-                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- pull it first with `nextflow pull`; offline, a registry version can be used only when it is also a Git tag, otherwise use the release commit (see `nextflow pipeline view ${release.name}`)")
+                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- pull it first, or use the release commit")
                 if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."
@@ -706,7 +697,7 @@ class CmdRun extends CmdBase implements HubAware {
         // read only for a registry address; the pipeline config is not fetched yet: read the launch folder config and the `-c` files
         final address = PipelineCmdSupport.registryAddress(name, hubProvider) {
             final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
-            PipelineCmdSupport.registryConfig(this, Path.of('.').toAbsolutePath().normalize(), configFiles)
+            PipelineCmdSupport.registryConfig(this, configFiles)
         }
         if( !address )
             return null

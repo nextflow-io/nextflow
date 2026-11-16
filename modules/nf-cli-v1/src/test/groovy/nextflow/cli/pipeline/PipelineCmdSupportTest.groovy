@@ -16,7 +16,6 @@
 
 package nextflow.cli.pipeline
 
-import com.beust.jcommander.ParameterException
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
@@ -120,34 +119,5 @@ class PipelineCmdSupportTest extends Specification {
         PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'
         PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api/') == 'https://registry.nextflow.io'
         PipelineCmdSupport.pageUrl('https://example.com/registry') == 'https://example.com/registry'
-    }
-
-    def 'should accept the output modes of each command' () {
-        when:
-        VALIDATOR.getDeclaredConstructor().newInstance().validate('-o', MODE)
-
-        then:
-        noExceptionThrown()
-
-        where:
-        VALIDATOR                                  | MODE
-        PipelineCmdSupport.TextOutputValidator     | 'text'
-        PipelineCmdSupport.TextOutputValidator     | 'json'
-        PipelineCmdSupport.SimpleOutputValidator   | 'simple'
-        PipelineCmdSupport.SimpleOutputValidator   | 'json'
-    }
-
-    def 'should reject the output modes of other commands' () {
-        when:
-        VALIDATOR.getDeclaredConstructor().newInstance().validate('-o', MODE)
-
-        then:
-        def e = thrown(ParameterException)
-        e.message == "Output mode must be one of $EXPECTED (found: $MODE)".toString()
-
-        where:
-        VALIDATOR                                  | MODE     | EXPECTED
-        PipelineCmdSupport.TextOutputValidator     | 'simple' | ['text', 'json']
-        PipelineCmdSupport.SimpleOutputValidator   | 'text'   | ['simple', 'json']
     }
 }
