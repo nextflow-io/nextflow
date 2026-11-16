@@ -522,6 +522,13 @@ class CmdRunTest extends Specification {
 
         then:
         scriptFile.main.text.contains("println 'v1'")
+
+        when: 'it runs offline with a registry version that is not a Git tag'
+        runCmd(hubProvider: 'registry.nextflow.io', offline: true, revision: '1.0.0').getScriptFile0('acme/hello')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Revision `1.0.0` of `acme/hello` is not in the local cache')
     }
 
     def 'should look up the registry only for a registry address' () {

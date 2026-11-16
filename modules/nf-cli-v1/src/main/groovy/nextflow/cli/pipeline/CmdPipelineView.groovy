@@ -95,7 +95,8 @@ class CmdPipelineView extends CmdBase {
         println "Version:     ${release.version}"
         println "Repository:  ${pipeline.repositoryUrl}"
         println "Revision:    ${release.gitRevision}"
-        println "Commit:      ${release.commitId}"
+        if( release.commitId )
+            println "Commit:      ${release.commitId}"
         println "URL:         ${url}"
         if( pipeline.metadata?.description )
             println "Description: ${pipeline.metadata.description}"

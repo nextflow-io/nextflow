@@ -174,9 +174,11 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 A registry release is fetched with `AssetManager` from its `repositoryUrl` at its `commitId`, and cached under its **registry name**: `~/.nextflow/assets/.repos/<scope>/<name>/`.
 
 - `AssetManager` keeps two names. The project name is the local name: the cache folder, `nextflow list`, and `workflow.projectName`. The remote project is the Git one, used only by the Git provider (API calls and clone URL), and so by `workflow.repository`.
-- When a cached multi-revision clone is used by its plain name, as in `pull`, `info`, `drop` or `run -offline`, the remote project is read from the clone's `origin` remote. So these commands work on a registry pipeline by its registry name, with no change in the commands.
-- For a URL or a registry address, a clone of a different repository under the same name is an error ("already downloaded from a different repository"). This extends today's check, which only compares the host.
-- For a plain name, the cached clone decides, as today: a plain `foo/bar` already uses a clone from another hub when one is cached under that name. When the clone's Git project differs from the name, Nextflow logs `Using <name> cached from <Git project>`.
+- For a registry address, a clone of a different repository under the registry name is an error ("already downloaded from a different repository").
+- For `run -offline` with a registry address, the remote project is read from the clone's `origin` remote, and Nextflow logs `Using <name> cached from <Git project>` when it differs from the registry name.
+- Plain Git names and URLs are not checked against the clone, as today. Comparing them is not reliable: some providers (Bitbucket Server) use a different path in the clone URL than in the project URL.
+
+**Registry names mirror Git names.** A registry pipeline is expected to have the same `<scope>/<name>` as its Git repository, as nf-core pipelines do. Then the registry run and a plain Git run of the same name share one cache entry and run the same code. When a registry name differs from its Git repository, the registry run still works, but a plain Git run of the registry name uses the cached clone, which comes from another repository, without a check. This is a registry best practice, not enforced by Nextflow.
 
 **Considered cache options.**
 - **Cache under the Git name.** Simplest: no `AssetManager` change. Rejected: the registry name is lost (`nextflow list` shows the Git name), and offline runs by registry name can't find the copy.
@@ -194,15 +196,15 @@ A registry release is fetched with `AssetManager` from its `repositoryUrl` at it
 - **Typed pipelines**: inclusion requires `nextflow.enable.types = true`, which most nf-core pipelines don't enable yet.
 - **Plugins** of an included pipeline must still be declared by the meta-pipeline (see the composition ADR).
 
-### To be decided: running a registry pipeline
+### Decided: running a registry pipeline
 
-These points come from the prototype of explicit registry addresses and must be settled before merging.
+These points came from the prototype of explicit registry addresses.
 
-- **Shape of a registry URL.** Recommended: keep the `/pipelines/` path and derive the page address from the API URL.
-  - The prototype requires `/pipelines/`: `https://registry.nextflow.io/pipelines/nf-core/rnaseq` is the address of the registry page, so it can be copied from the browser. The registry keeps modules and pipelines in separate namespaces (`nf-core/rnaseq` may be both), and the path says which one is meant, as `/modules/` does for modules.
+- **Shape of a registry URL.** Decided: keep the `/pipelines/` path and derive the page address from the API URL.
+  - `https://registry.nextflow.io/pipelines/nf-core/rnaseq` is the address of the registry page, so it can be copied from the browser. The registry keeps modules and pipelines in separate namespaces (`nf-core/rnaseq` may be both), and the path says which one is meant, as `/modules/` does for modules.
   - Without it (`https://registry.nextflow.io/nf-core/rnaseq`) the URL is shorter, but it is not a page address and it may clash with other registry paths.
   - The page address is the API URL without `/api`. This holds for every npr deployment, which serves pages and API from one host, and `pipeline view` builds its links the same way. A registry with another layout can still be used with its host as `-hub`, or a page URL option can be added to the `registry` scope later.
-- **`-r` offline.** Offline, the registry can't be asked, so `-r` is used as a Git revision: a commit, or a tag with the same name as the version. It works for nf-core, whose registry versions are their Git tags. It does not for releases whose version is not a tag name: tags with a `v` prefix (the web form takes `3.18.0` from `v3.18.0`), or releases registered from a branch or a commit. The same applies to a plain name with `-r <version>`. Deferred to M1. Options:
+- **`-r` offline.** Decided for M0: option E below. Offline, the registry can't be asked, so `-r` is used as a Git revision: a commit, or a tag with the same name as the version. It works for nf-core, whose registry versions are their Git tags. It does not for releases whose version is not a tag name: tags with a `v` prefix (the web form takes `3.18.0` from `v3.18.0`), or releases registered from a branch or a commit. The same applies to a plain name with `-r <version>`. When the revision is not in the clone, the error says so and suggests the commit. A version mapping (B) can be added in M1. Options:
   - A. A file next to the clone, `.repos/<scope>/<name>/.registry-releases`, with `version=commit` for each release run online. It sits beside `bare/` and `clones/`, outside any Git tree. The legacy layout would need multi-revision for registry runs.
   - B. The same mapping in the bare repository's Git config (`[registry "1.0.0"] commit = …`), which is never versioned and is removed with the clone. Recommended if this design is kept.
   - C. A local Git ref such as `refs/registry/1.0.0`. It needs extra code to resolve `-r`, and a local tag would look like a remote one in `nextflow info`.

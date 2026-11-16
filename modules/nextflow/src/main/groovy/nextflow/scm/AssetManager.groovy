@@ -162,7 +162,8 @@ class AssetManager implements Closeable {
 
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
-        checkRemoteProject(isUrl(pipelineName))
+        if( localName )
+            checkRemoteProject(isUrl(pipelineName))
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
@@ -384,10 +385,12 @@ class AssetManager implements Closeable {
     }
 
     /**
-     * Reconcile the Git project with the one of the local clone, when there is one.
-     * For a plain name the clone decides, so a project cached under a local name keeps
-     * using its own repository. For a URL or a local name, a clone of a different
-     * repository is an error.
+     * Reconcile the Git project of a project cached under a local name (i.e. a registry
+     * pipeline) with the one of its local clone. Given as a URL, a clone of a different
+     * repository is an error. Given as a plain name (offline), the clone decides.
+     *
+     * Plain Git runs are not checked: some providers (e.g. Bitbucket Server) use a
+     * different path in the clone URL than in the project URL.
      *
      * @param fromUrl Whether the Git project was given as a URL
      */
@@ -396,7 +399,7 @@ class AssetManager implements Closeable {
         // Git hosts match names ignoring the case, and the clone URL uses the host's spelling
         if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
             return
-        if( fromUrl || remoteProject != project )
+        if( fromUrl )
             throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow drop $project` to remove it")
         log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned

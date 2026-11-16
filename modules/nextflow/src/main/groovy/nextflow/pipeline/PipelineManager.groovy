@@ -177,7 +177,8 @@ class PipelineManager {
         Files.createDirectories(dir.parent)
         final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
         try {
-            fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+            final commit = fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+            info.commitId = info.commitId ?: commit
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)
             MODIFIED.remove(realPath(dir))

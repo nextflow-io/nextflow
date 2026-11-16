@@ -147,7 +147,7 @@ class PipelineCmdSupport {
      */
     static PipelineInfo resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
         final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
-        log.info "Using registry release ${address.name}@${release.version} (commit ${release.commitId?.take(10)})"
+        log.info "Using registry release ${address.name}@${release.version}" + (release.commitId ? " (commit ${release.commitId.take(10)})" : '')
         return release
     }
 

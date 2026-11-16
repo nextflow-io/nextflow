@@ -64,6 +64,16 @@ class PipelineManagerTest extends Specification {
         info.checksum
     }
 
+    def 'records the fetched commit when the release has no commit id'() {
+        when:
+        def info = manager().install('nf-core/rnaseq', null, false).info()
+        then:
+        1 * client.getPipeline(_) >> pipeline(release('1.0.0', null))
+        1 * fetcher.fetch(_, '1.0.0', null, _) >> { args -> args[3].resolve('main.nf').text = 'x'; 'def' }
+        info.commitId == 'def'
+        PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).commitId == 'def'
+    }
+
     def 'null workflowPath defaults to main.nf'() {
         when:
         def info = manager().install('nf-core/rnaseq', null, false).info()

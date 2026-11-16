@@ -37,27 +37,32 @@ import org.eclipse.jgit.transport.RefSpec
 @CompileStatic
 class PipelineGitFetcher {
 
-    void fetch(String repositoryUrl, String revision, String commitId, Path target) {
-        // a release may have no git revision: the pinned commit is then the only reference
-        final byCommit = !revision || revision.equalsIgnoreCase(commitId)
-        if( byCommit && !commitId )
+    /**
+     * Fetch the pinned commit, or the revision when the release has no commit id
+     *
+     * @return The commit that was fetched
+     */
+    String fetch(String repositoryUrl, String revision, String commitId, Path target) {
+        if( !revision && !commitId )
             throw new AbortOperationException("Cannot fetch $repositoryUrl: the release has neither a git revision nor a commit id")
         Git git = null
+        String head
         try {
-            git = byCommit
+            // the revision can be a branch that moved after the release, so the commit takes precedence
+            git = commitId
                 ? fetchCommit(repositoryUrl, commitId, target)
                 : Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).setBranch(revision).setDepth(1).call()
-            final head = git.repository.resolve('HEAD')?.name()
-            if( !commitId.equalsIgnoreCase(head) )
-                throw new AbortOperationException("Revision '$revision' of $repositoryUrl does not match the pinned commit $commitId")
+            head = git.repository.resolve('HEAD')?.name()
         }
         catch( GitAPIException | JGitInternalException e ) {
-            throw new AbortOperationException("Cannot fetch revision '${revision ?: commitId}' of $repositoryUrl: ${e.message}", e)
+            final ref = commitId ? "commit '${commitId}'" : "revision '${revision}'"
+            throw new AbortOperationException("Cannot fetch ${ref} of $repositoryUrl: ${e.message}", e)
         }
         finally {
             git?.close()
         }
         FileHelper.deletePath(target.resolve('.git'))
+        return head
     }
 
     /** Shallow-fetch the commit; servers that refuse unadvertised commits get a full clone */

@@ -273,7 +273,7 @@ Note the following:
 
 - The registry settings are read from `~/.nextflow/config`, the `nextflow.config` in the launch directory, and any `-c` config files. The API key is sent only to the primary registry, that is, the first entry of `registry.url`.
 
-- The pipeline is downloaded into the assets cache under its registry name, so the `list`, `info`, and `drop` commands show it by that name. Running a Git URL whose project name matches a registry pipeline already cached under that name is an error: remove the cached copy with `nextflow drop` first.
+- The pipeline is downloaded into the assets cache under its registry name, so the `list`, `info`, and `drop` commands show it by that name. A registry pipeline is expected to have the same name as its Git repository, as nf-core pipelines do, so that a registry run and a Git run of the same name share the cached copy. If the names differ, a Git run of the registry name uses the cached copy of the registry pipeline without a check.
 
 - With `-offline`, the registry is not contacted, and the copy cached under the registry name is used. In this case, `-r` must be a Git revision of the cached copy, such as a commit ID, or a tag that matches the release version. Use [`nextflow pull`][cli-pull] to download a registry pipeline ahead of time.
 

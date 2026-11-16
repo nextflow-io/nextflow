@@ -651,6 +651,7 @@ class CmdRun extends CmdBase implements HubAware {
         else if( release ) {
             // offline: the copy cached under the registry name
             project = release.name
+            localName = release.name
         }
         final main = mainScript ?: release?.workflowPath
         final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
@@ -660,6 +661,8 @@ class CmdRun extends CmdBase implements HubAware {
 
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
+                if( offline && remoteSource && release && rev )
+                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- pull it first with `nextflow pull`; offline, a registry version can be used only when it is also a Git tag, otherwise use the release commit (see `nextflow pipeline view ${release.name}`)")
                 if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."

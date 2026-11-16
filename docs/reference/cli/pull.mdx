@@ -69,6 +69,8 @@ The `pull` command accepts the same registry addresses as [`nextflow run`][cli-r
 
 Nextflow resolves the release with the registry, and downloads the Git commit pinned by the release into the assets cache under the registry name. Use it to prepare a run with `-offline`, for example on compute nodes without network access. The `-all` option updates the cached projects by name, as before.
 
+The `pull` command downloads only the pipeline repository. Registry modules and pipelines that the pipeline includes but does not commit are installed when the pipeline runs.
+
 ## Examples
 
 Download a project, or pull the latest revision if it is already downloaded:

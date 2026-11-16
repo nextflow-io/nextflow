@@ -89,19 +89,42 @@ class PipelineGitFetcherTest extends Specification {
         commitId << [null, '']
     }
 
-    def 'fails when the revision no longer points to the pinned commit'() {
+    def 'fetches the pinned commit when the revision has moved'() {
+        given:
+        def target = dir.resolve('target')
         when:
-        new PipelineGitFetcher().fetch(url, '1.0', sha2, dir.resolve('target'))
+        def commit = new PipelineGitFetcher().fetch(url, 'master', sha1, target)
         then:
-        def e = thrown(AbortOperationException)
-        e.message.contains('does not match the pinned commit')
+        commit == sha1
+        target.resolve('main.nf').text == 'one'
+    }
+
+    def 'fetches the revision when there is no commit id'() {
+        given:
+        def target = dir.resolve('target')
+        when:
+        def commit = new PipelineGitFetcher().fetch(url, '1.0', commitId, target)
+        then:
+        commit == sha1
+        target.resolve('main.nf').text == 'one'
+        !Files.exists(target.resolve('.git'))
+        where:
+        commitId << [null, '']
     }
 
     def 'fails on an unknown revision'() {
         when:
-        new PipelineGitFetcher().fetch(url, 'no-such-tag', sha1, dir.resolve('target'))
+        new PipelineGitFetcher().fetch(url, 'no-such-tag', null, dir.resolve('target'))
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('Cannot fetch revision')
+        e.message.contains("Cannot fetch revision 'no-such-tag'")
+    }
+
+    def 'fails on an unknown commit'() {
+        when:
+        new PipelineGitFetcher().fetch(url, '1.0', 'f' * 40, dir.resolve('target'))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains("Cannot fetch commit")
     }
 }
