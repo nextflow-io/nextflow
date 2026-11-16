@@ -11,7 +11,7 @@ This spec covers the Nextflow client side:
 - Include a registry pipeline with `include { workflow as X } from 'scope/name'`, and install it automatically when it is missing.
 - A `nextflow pipeline` command group: `install`, `list`, `remove`, `search` and `view`.
 - Install from the Git commit pinned by a registry release.
-- `nextflow run scope/name` runs a registry release, and falls back to Git.
+- `nextflow run` and `nextflow pull` run a registry release when the registry is addressed explicitly (a registry page URL, or a registry host as `-hub`/`NXF_HUB`), with no fallback to Git. A plain `scope/name` still runs from Git.
 
 It uses only the registry API that exists today, so it needs no server change. The client needs the `npr-client` read methods from seqeralabs/nextflow-registry#439. Publishing and installing from a registry bundle are specified separately in `docs/specs/261105-pipeline-registry-publish/spec.md`.
 

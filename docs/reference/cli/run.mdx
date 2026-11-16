@@ -79,6 +79,10 @@ Print the command usage.
 
 Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
+<ChangedInVersion version="27.04">
+The host of a registry, for example `registry.nextflow.io`, can be given to run a pipeline from the registry. See [Registry pipelines](#registry-pipelines).
+</ChangedInVersion>
+
 ##### `-latest`
 
 Pull the latest changes before the run.
@@ -92,6 +96,8 @@ Library extension path.
 The script file to execute when launching a project directory or repository. Should be a path relative to the project root. For example, `-main-script subproject/main.nf`.
 
 The project `nextflow.config` is always read from the project root regardless of the main script location.
+
+For a [registry pipeline](#registry-pipelines), the default is the main script declared by the registry release.
 
 ##### `-name`
 
@@ -142,6 +148,8 @@ Run the script using cached results. Use this to continue a run that stopped bec
 Project revision to run. Can be a git branch, tag, or commit SHA number.
 
 When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+
+For a [registry pipeline](#registry-pipelines), the revision must be a release version published in the registry. Defaults to the latest published release.
 
 ##### `-stub-run, -stub`
 
@@ -235,6 +243,42 @@ Send workflow status messages to the target URL over HTTP.
 
 Directory where intermediate result files are stored.
 
+## Registry pipelines
+
+<AddedInVersion version="27.04" />
+
+The `run` command can run a pipeline published in the [Nextflow registry](https://registry.nextflow.io). The registry is used only when it is addressed explicitly, in one of the following ways:
+
+- A registry page URL, for example `https://registry.nextflow.io/pipelines/nf-core/rnaseq`. The URL must be `<registry>/pipelines/<scope>/<name>`, where `<registry>` is a registry configured in [`registry.url`][config-registry] without the trailing `/api`, or the public registry `https://registry.nextflow.io`. The URL scheme is ignored. A URL on the host of a known Git provider is always treated as a Git URL.
+
+- The registry host as `-hub`, for example `-hub registry.nextflow.io`. Set the `NXF_HUB` environment variable to a registry host to use that registry by default for the `run` and `pull` commands.
+
+A plain project name such as `nf-core/rnaseq` is still resolved with Git, as before.
+
+A `-hub` or `NXF_HUB` value is resolved in the following order:
+
+1. A Git provider name, such as `github` or `gitlab`: the project is resolved with Git.
+2. The host (or `host:port`) of a configured `registry.url`, or of the public registry: the project is resolved with that registry only.
+3. Any other value is an error that lists the known providers and registries.
+
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. The version cannot be part of the address: use `-r` instead of `nf-core/rnaseq@3.14.0`. Before launching, Nextflow logs the release, for example:
+
+```console
+Using registry release nf-core/rnaseq@3.14.0 (commit 1a2b3c4d5e)
+```
+
+Note the following:
+
+- There is no fallback to Git. A pipeline that is not in the registry, a `-r` value that is not a published release, a revoked release, or an unreachable registry is an error.
+
+- The registry settings are read from `~/.nextflow/config`, the `nextflow.config` in the launch directory, and any `-c` config files. The API key is sent only to the primary registry, that is, the first entry of `registry.url`.
+
+- The pipeline is downloaded into the assets cache under its registry name, so the `list`, `info`, and `drop` commands show it by that name. Running a Git URL whose project name matches a registry pipeline already cached under that name is an error: remove the cached copy with `nextflow drop` first.
+
+- With `-offline`, the registry is not contacted, and the copy cached under the registry name is used. In this case, `-r` must be a Git revision of the cached copy, such as a commit ID, or a tag that matches the release version. Use [`nextflow pull`][cli-pull] to download a registry pipeline ahead of time.
+
+- When `NXF_HUB` is set to a registry host, commands without registry support (`info`, `drop`, `view`, and `config`) work only with projects that are already cached.
+
 ## Examples
 
 Run a specific revision of a remote pipeline:
@@ -244,6 +288,25 @@ $ nextflow run nextflow-io/hello -r v1.1
 
 N E X T F L O W  ~  version 20.07.1
 Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
+```
+
+Run the latest release of a registry pipeline from its registry page URL:
+
+```console
+$ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
+```
+
+Run a specific release of a registry pipeline, using the registry host as hub:
+
+```console
+$ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+```
+
+Use the registry by default for all `run` and `pull` commands:
+
+```console
+$ export NXF_HUB=registry.nextflow.io
+$ nextflow run nf-core/rnaseq -r 3.14.0
 ```
 
 Choose a profile for running the project. This example assumes a profile named `docker` is defined in the config file:
@@ -287,4 +350,6 @@ See [Pipeline parameters][cli-params] for more information about writing custom 
 [agent-page]: ../../agent
 [cache-compare-hashes]: ../../cache-and-resume#comparing-the-hashes-of-two-runs
 [cli-params]: ../../cli#pipeline-parameters
+[cli-pull]: ./pull
+[config-registry]: ../config/registry
 [tracing-page]: ../../reports

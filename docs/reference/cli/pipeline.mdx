@@ -1,0 +1,152 @@
+---
+title: nextflow pipeline
+description: Reference for the nextflow pipeline command. Manage registry pipelines.
+---
+
+# `nextflow pipeline`
+
+<AddedInVersion version="27.04" />
+
+Manage registry pipelines.
+
+## Usage
+
+```console
+$ nextflow pipeline <subcommand> [options]
+```
+
+## Description
+
+The `pipeline` command manages pipelines from the Nextflow registry that are [included by name][workflow-typed-registry] in another pipeline. Use it to search the registry, view a pipeline release, and install or remove pipelines in your project.
+
+Nextflow stores installed pipelines in the `pipelines/` directory of the current folder and writes a `.pipeline-info` file in each pipeline directory to record the installed version, the Git repository, revision and commit, and a checksum of the installed files. Commit installed pipelines to your project repository, as you would for vendored modules.
+
+The `install`, `search`, and `view` subcommands use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand (for example, `nextflow -c my.config pipeline search rnaseq`).
+
+:::note
+The `pipeline` subcommands manage pipelines included by other pipelines. To run a registry pipeline, use [`nextflow run`][cli-run-registry] with a registry address.
+:::
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Subcommands
+
+##### `install [options] <scope/name>` {#pipeline-install}
+
+Install a pipeline from the registry into `pipelines/<scope>/<name>/`.
+Nextflow fetches the Git commit pinned by the registry release, from the release's repository. The install fails if the release's Git revision no longer points to that commit, for example because a tag was moved after publishing.
+
+If the same version is already installed and unmodified, Nextflow reports that it is already installed and up to date. An unmodified copy of another version is replaced.
+
+The following options are available:
+
+###### `-force`
+
+Overwrite an installed pipeline that has local modifications, or a pipeline directory without a `.pipeline-info` file. Without this flag, Nextflow refuses to replace it.
+
+###### `-version`
+
+Pipeline version to install, for example `3.14.0`. Defaults to the latest published release.
+
+##### `list [options]` {#pipeline-list}
+
+List the pipelines installed in your project.
+Shows each pipeline's name, version, and status: `ok`, or `modified` if the files were changed after install. This subcommand reads only the local `pipelines/` directory and does not contact the registry.
+
+The following options are available:
+
+###### `-o, -output` (`text`)
+
+Output mode for list results. Options: `text` (default), `json`.
+
+##### `remove [options] <scope/name>` {#pipeline-remove}
+
+Remove a pipeline from your project by deleting its `pipelines/<scope>/<name>/` directory.
+
+The following options are available:
+
+###### `-force`
+
+Remove the pipeline even if it has local modifications, or has no `.pipeline-info` file because it was not installed from a registry.
+
+##### `search [options] <query>` {#pipeline-search}
+
+Search for pipelines in the registry by keyword or name.
+Returns the name, latest version, and description of each matching pipeline.
+
+The following options are available:
+
+###### `-limit` (`20`)
+
+Maximum number of results to return.
+
+###### `-o, -output` (`simple`)
+
+Output mode for search results. Options: `simple` (default), `json`.
+
+##### `view [options] <scope/name>` {#pipeline-view}
+
+Display detailed information about a pipeline release from the registry.
+Shows the name, version, Git repository, revision and commit, registry page URL, description, keywords, and the pipeline params when the release provides a parameter schema. It also prints a usage line to run the release, for example `nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0`.
+
+The following options are available:
+
+###### `-o, -output` (`text`)
+
+Output mode for view results. Options: `text` (default), `json`.
+
+###### `-version`
+
+Pipeline version to query, for example `3.14.0`. Defaults to the latest published release.
+
+## Examples
+
+Install the latest release of a pipeline:
+
+```console
+$ nextflow pipeline install nf-core/rnaseq
+```
+
+Install a specific version, replacing local modifications:
+
+```console
+$ nextflow pipeline install nf-core/rnaseq -version 3.14.0 -force
+```
+
+Display the installed pipelines:
+
+```console
+$ nextflow pipeline list
+```
+
+Remove a pipeline:
+
+```console
+$ nextflow pipeline remove nf-core/rnaseq
+```
+
+Search for RNA-seq pipelines:
+
+```console
+$ nextflow pipeline search rnaseq
+```
+
+Search a registry configured in a separate config file:
+
+```console
+$ nextflow -c registry.config pipeline search rnaseq
+```
+
+Display information for a specific version:
+
+```console
+$ nextflow pipeline view nf-core/rnaseq -version 3.14.0
+```
+
+[cli-run-registry]: ./run#registry-pipelines
+[config-registry]: ../config/registry
+[workflow-typed-registry]: ../../workflow-typed#including-a-pipeline-from-the-registry

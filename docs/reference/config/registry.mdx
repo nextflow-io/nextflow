@@ -9,6 +9,8 @@ description: Reference for the registry config scope, which configures the regis
 
 The `registry` scope configures the registries used to resolve [modules][module-registry-page] and [plugins][plugin-registry-page].
 
+It also configures the registries used to resolve [registry pipelines][cli-pipeline], both when [included by name][workflow-typed-registry] and when [run][cli-run-registry] with a registry address.
+
 By default, only the public Nextflow registry (`https://registry.nextflow.io/api`) is used. When one or more registries are configured, Nextflow uses only those registries in the order they are listed, and the public registry is *not* used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly.
 
 ##### `registry.apiKey`
@@ -19,5 +21,8 @@ The API key used to authenticate with the registry. When not set, the `NXF_REGIS
 
 A registry URL, or a list of registry URLs queried in the order they are listed. When set, these replace the default public registry.
 
+[cli-pipeline]: ../cli/pipeline
+[cli-run-registry]: ../cli/run#registry-pipelines
 [module-registry-page]: ../../modules/module-registry
 [plugin-registry-page]: ../../plugins/plugin-registry
+[workflow-typed-registry]: ../../workflow-typed#including-a-pipeline-from-the-registry
