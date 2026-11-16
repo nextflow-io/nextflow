@@ -20,8 +20,10 @@ permissions:
   contents: read
 
 jobs:
-  # the release job requires the bundles of every platform
+  # The caller decides whether to release. These jobs check their status explicitly, so that
+  # its `test` job, skipped on `[ci fast]` release commits, can't skip them too.
   bundle:
+    if: ${{ !cancelled() }}
     uses: ./.github/workflows/bundle.yml
     with:
       # empty for the latest Temurin release, which can be overridden without a commit, e.g. if it is not available for every platform
@@ -30,6 +32,7 @@ jobs:
       contents: read
 
   release:
+    if: ${{ !cancelled() && needs.bundle.result == 'success' }}
     needs: bundle
     runs-on: ubuntu-24.04
     # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
