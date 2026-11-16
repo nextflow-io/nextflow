@@ -27,7 +27,7 @@ class PipelineCmdSupportTest extends Specification {
         def config = new RegistryConfig(url: 'https://registry-dev.nextflow.io/api', apiKey: 'secret')
 
         when:
-        def address = PipelineCmdSupport.registryAddress(NAME, HUB, config)
+        def address = PipelineCmdSupport.registryAddress(NAME, HUB) { config }
 
         then:
         address?.url == API
@@ -51,12 +51,40 @@ class PipelineCmdSupportTest extends Specification {
 
     def 'should reject a hub that is neither a provider nor a registry' () {
         when:
-        PipelineCmdSupport.registryAddress('nf-core/rnaseq', 'example.com', new RegistryConfig())
+        PipelineCmdSupport.registryAddress('nf-core/rnaseq', 'example.com') { new RegistryConfig() }
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('Unknown repository provider or registry: `example.com`')
         e.message.contains('registries: registry.nextflow.io')
+    }
+
+    def 'should not read the config for a Git address' () {
+        expect:
+        PipelineCmdSupport.registryAddress(NAME, HUB) { throw new AssertionError('config must not be read') } == null
+
+        where:
+        NAME                                       | HUB
+        'nf-core/rnaseq'                           | null
+        'nf-core/rnaseq'                           | 'github'
+        'nf-core/rnaseq'                           | 'gitlab'
+        'https://github.com/nf-core/rnaseq'        | null
+        'https://github.com/nf-core/rnaseq'        | 'registry.nextflow.io'
+        'https://host/pipelines/a b'               | null
+    }
+
+    def 'should match a registry by host and port' () {
+        given:
+        def config = new RegistryConfig(url: 'http://localhost:8080/api')
+
+        expect:
+        PipelineCmdSupport.registryAddress(NAME, HUB) { config }?.url == 'http://localhost:8080/api'
+
+        where:
+        NAME                                                    | HUB
+        'acme/hello'                                            | 'localhost'
+        'acme/hello'                                            | 'localhost:8080'
+        'http://localhost:8080/pipelines/acme/hello'            | null
     }
 
     def 'should get the page URL of a registry' () {

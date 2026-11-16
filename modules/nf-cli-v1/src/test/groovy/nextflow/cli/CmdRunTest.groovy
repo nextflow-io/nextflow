@@ -462,7 +462,7 @@ class CmdRunTest extends Specification {
         AssetManager.root = folder.resolve('assets').toFile()
 
         when: 'running in offline mode with a file: URL'
-        def cmd = runCmd(offline: true)
+        def cmd = new CmdRun(offline: true)
         def scriptFile = cmd.getScriptFile0("file:${bareDir}")
 
         then: 'the pipeline is cloned and returned successfully'
@@ -476,7 +476,7 @@ class CmdRunTest extends Specification {
         AssetManager.root = folder.resolve('assets').toFile()
 
         when: 'running in offline mode with a remote repo name'
-        def cmd = runCmd(offline: true)
+        def cmd = new CmdRun(offline: true)
         cmd.getScriptFile0('nextflow-io/hello')
 
         then: 'an AbortOperationException is thrown'

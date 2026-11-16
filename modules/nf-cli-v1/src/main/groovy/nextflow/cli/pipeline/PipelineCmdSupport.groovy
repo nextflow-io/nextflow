@@ -72,19 +72,24 @@ class PipelineCmdSupport {
      *
      * @return the registry address, or {@code null} when {@code name} and {@code hub} address Git
      */
-    static RegistryAddress registryAddress(String name, String hub, RegistryConfig config) {
+    static RegistryAddress registryAddress(String name, String hub, Closure<RegistryConfig> registryConfig) {
         final isUrl = name.startsWith('http://') || name.startsWith('https://')
         hub = hub ?: SysEnv.get('NXF_HUB')
-        // cheap checks first, so that Git addresses don't read the config
-        if( isUrl ? !name.contains('/pipelines/') : !hub )
+        // cheap checks first, so that Git addresses never read the config
+        if( !isUrl && !hub )
+            return null
+        final uri = isUrl ? toUri(name) : null
+        // a registry URL is a pipeline page; a Git URL with `/pipelines/` in its path is ruled out by the config below
+        if( isUrl && !uri?.path?.contains('/pipelines/') )
             return null
         final providers = isUrl ? null : ProviderConfig.getDefaultProviderNames()
         if( !isUrl && hub in providers )
             return null
+        final config = registryConfig.call()
         // the default public registry is always recognized, even when not configured
         final registries = config.allUrls + [RegistryConfig.DEFAULT_REGISTRY_URL]
-        // a URL and a hub name a registry by its host
-        final api = registryOfHost(isUrl ? URI.create(name).host : hub, registries)
+        // a URL and a hub name a registry by its host, or host and port
+        final api = registryOfHost(isUrl ? uri.authority : hub, registries)
         // an address names one registry, and the API key belongs to the primary one
         final apiKey = api && api == config.url ? config.apiKey : null
         if( isUrl ) {
@@ -95,7 +100,7 @@ class PipelineCmdSupport {
             return new RegistryAddress(api, name.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey)
         }
         if( !api ) {
-            final hosts = registries.collect { URI.create(it).host }.unique()
+            final hosts = registries.collect { URI.create(it).authority }.unique()
             throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
         }
         return new RegistryAddress(api, name, apiKey)
@@ -107,6 +112,16 @@ class PipelineCmdSupport {
     }
 
     private static String registryOfHost(String host, Collection<String> registryUrls) {
-        return registryUrls.find { URI.create(it).host?.equalsIgnoreCase(host) }
+        return registryUrls.find { final uri = URI.create(it); uri.host?.equalsIgnoreCase(host) || uri.authority?.equalsIgnoreCase(host) }
+    }
+
+    /** A URL that {@link URI} can't parse is not a registry URL, so it is left to Git */
+    private static URI toUri(String url) {
+        try {
+            return URI.create(url)
+        }
+        catch( IllegalArgumentException e ) {
+            return null
+        }
     }
 }

@@ -145,7 +145,7 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 - A URL carries no version. A URL that ends with `@<version>` is an error: the version is given with `-r`.
 - A `-hub` (or `NXF_HUB`) value is read in this order:
   1. a Git provider name (`github`, `gitlab`, a name from the SCM file): Git, as today. This is checked first, so existing setups behave the same.
-  2. the host of a configured `registry.url`, or of the default public registry: that registry.
+  2. the host (or `host:port`) of a configured `registry.url`, or of the default public registry: that registry.
   3. anything else: an error that lists the known providers and registry hosts.
 - The legacy project commands (`clone`, `drop`, `list`, `pull`, `view`, `info`, `config`) don't get registry support: `run` manages its own cache, and these commands may be deprecated once the pipeline CLI exists.
 - `pull` and `clone`, the other commands with `-hub`, recognize registry addresses with the same check (`PipelineCmdSupport.registryAddress`) and stop with a clear error: registry pipelines are only supported by `nextflow run`. `info`, `config`, `view` and `drop` have no `-hub`; with `NXF_HUB` set to a registry host they only fail for a name that is not cached, with the usual "Unknown repository provider" error.
@@ -158,7 +158,7 @@ There is no `nextflow pipeline run`. `nextflow run` runs a registry release only
 
 **Offline.** With `-offline`, the registry is not called. The run uses the copy cached under the registry name, and `-r` is used as a Git revision (a commit, or a tag equal to the version).
 
-**Registry config.** `registry.url` and `registry.auth` are read as for the `pipeline` commands: `~/.nextflow/config`, `nextflow.config` in the launch folder, and `-c` files. The pipeline's own config can't be used, because it is not downloaded yet.
+**Registry config.** `registry.url` and `registry.auth` are read as for the `pipeline` commands: `~/.nextflow/config`, `nextflow.config` in the launch folder, and `-c` files. The pipeline's own config can't be used, because it is not downloaded yet. The registry config is read only for a possible registry address, never for a plain name, a Git URL or a Git provider hub, so Git runs read their config once, as before; a launch config may be readable only once (Seqera Platform).
 
 **Output.** Before the launch line, Nextflow logs `Using registry release nf-core/rnaseq@3.14.0 (commit 1a2b3c4d5e)`.
 
