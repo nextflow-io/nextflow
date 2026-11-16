@@ -26,7 +26,7 @@ jobs:
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/bundle.yml
     with:
-      # empty for the latest Temurin release, which can be overridden without a commit, e.g. if it is not available for every platform
+      # empty for the latest Temurin release
       jre-version: ${{ vars.NXF_BUNDLE_JRE_VERSION }}
     permissions:
       contents: read
@@ -35,25 +35,13 @@ jobs:
     if: ${{ !cancelled() && needs.bundle.result == 'success' }}
     needs: bundle
     runs-on: ubuntu-24.04
-    # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
-    # bootstrapping buildkit, pulling two base images and running an emulated arm64 `npm ci`
-    # and `apt-get` do not fit the old budget. Sized as a ceiling, not a budget - a timeout
-    # that fires mid-release.sh is the one failure the step-1 ordering does NOT make harmless,
-    # so erring high costs nothing on a run that succeeds. A cold `build-image.sh build` (both
-    # arches, --no-cache) measures ~15s on an arm64 developer Mac, but that number cannot be
-    # scaled: Docker Desktop runs the amd64 leg under Rosetta at near-native speed (emulated
-    # `npm ci` 5.9s vs 5.6s native), whereas this runner emulates arm64 through QEMU user-mode,
-    # which is slower by a large and unmeasured factor. Revisit once a real release reports its
-    # actual duration.
+    # a ceiling for the emulated arm64 nf-agent-pi image build: a timeout mid-release.sh is not harmless
     timeout-minutes: 45
     permissions:
       contents: write
       id-token: write  # OIDC token to assume the AWS release role
     steps:
-      # Intentionally persists credentials: the `release` task in
-      # packing.gradle runs `git push origin vX.Y.Z` against this repo,
-      # which relies on actions/checkout having written the token into
-      # .git/config as http.extraheader.
+      # persists credentials on purpose: the `release` task in packing.gradle pushes the version tag
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
         with:
@@ -90,10 +78,7 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Also authorizes the nf-agent-pi runner image push in release.sh step 1: it publishes to
-      # public.cr.seqera.io/nextflow, the same registry and namespace this release already pushes
-      # `nextflow/nextflow` to (docker/Makefile). No new credential, and this login runs before
-      # `Run release`, so build-image.sh needs none of its own.
+      # also authorizes the nf-agent-pi image push of release.sh
       - name: Docker Login to Seqera public CR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
         with:
@@ -101,29 +86,16 @@ jobs:
           username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
           password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
 
-      # The nf-agent-pi runner image is multi-arch, and the node stage of its Dockerfile is not
-      # pinned to $BUILDPLATFORM, so `apt-get` and `npm ci` execute on the target platform: the
-      # linux/arm64 leg needs binfmt emulation on this amd64 runner. Placed AFTER the Docker Hub
-      # login on purpose - the action does `docker run --privileged tonistiigi/binfmt`, and an
-      # anonymous Docker Hub pull from a shared runner IP hits `toomanyrequests`, which ahead of
-      # the login would abort every release, including ones whose image push would have skipped.
-      # No docker/setup-buildx-action: ensure_builder in build-image.sh creates and bootstraps
-      # the docker-container builder it then passes to --builder, so the action's builder would
-      # be created and never used.
+      # The arm64 leg of the nf-agent-pi image build runs under emulation. After the Docker Hub login,
+      # since anonymous pulls of the binfmt image are rate limited. build-image.sh creates its own builder.
       - name: Set up QEMU for the runner image build
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # ratchet:docker/setup-qemu-action@v4.4.0
         with:
-          # Digest-pinned like every action in this file. The input's default is a floating
-          # docker.io/tonistiigi/binfmt:latest, which would otherwise be the only unpinned
-          # thing the release newly depends on.
+          # pinned, the default is a floating `latest`
           image: docker.io/tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
 
-      # Short-lived credentials to publish nextflow assets to the nextflow bucket, obtained by
-      # assuming the release role via GitHub OIDC (no static keys). Exposed ONLY as step outputs:
-      # `output-env-credentials: false` keeps AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
-      # AWS_SESSION_TOKEN out of GITHUB_ENV. `Run release` also sets AWS_ACCESS_KEY_ID /
-      # AWS_SECRET_ACCESS_KEY to the (static) Maven credentials, and a stray AWS_SESSION_TOKEN
-      # from the role would be paired with them and break Maven authentication.
+      # Credentials to publish the release files, as step outputs only: in the environment, the
+      # session token would be paired with the static Maven keys of `Run release` and break them.
       - name: Assume AWS release role
         id: aws_release_role
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # ratchet:aws-actions/configure-aws-credentials@v6.3.0
@@ -154,9 +126,7 @@ jobs:
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
           # Java bundles of each platform, built by the `bundle` job
           NXF_RELEASE_BUNDLES: ${{ runner.temp }}/bundles
-          # nf-agent-pi runner image (step 1). The push itself is authorized by the
-          # `Docker Login to Seqera public CR` step above; these are passed so build-image.sh
-          # can name them when a push is refused.
+          # for the error messages of build-image.sh, the push uses the login above
           SEQERA_PUBLIC_CR_USERNAME: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
           SEQERA_PUBLIC_CR_PASSWORD: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
           # GitHub secrets

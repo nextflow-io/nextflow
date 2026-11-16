@@ -218,9 +218,7 @@ jobs:
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
-      # Random per-run value that looks like a secret, scanned for in test reports
-      # and artifacts before upload to detect tests that dump the environment.
-      # Generated in-job so it also works for fork PRs, which get no secrets.
+      # see the build job
       - name: Setup leak canary
         run: |
           canary="nxfcanary-$(openssl rand -hex 16)"
@@ -292,8 +290,8 @@ jobs:
       - name: Tar integration tests
         if: always()
         run: |
-          tar -czvf integration-tests.tar.gz tests/checks
-          tar -czvf validation-tests.tar.gz validation
+          tar -czf integration-tests.tar.gz tests/checks
+          tar -czf validation-tests.tar.gz validation
 
       - name: Scan integration tests for leaks
         id: leak_scan
