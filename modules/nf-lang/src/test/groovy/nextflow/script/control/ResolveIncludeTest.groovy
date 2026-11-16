@@ -381,14 +381,15 @@ class ResolveIncludeTest extends Specification {
         errors[0].getOriginalMessage().contains("Pipeline 'nf-core/rnaseq' not found in 'pipelines' directory")
     }
 
-    def 'should attempt a failing pipeline include only once' () {
+    def 'should attempt a failing pipeline include only once: #TYPE' () {
         given:
         def calls = 0
+        Class<? extends Exception> error = ERROR
         RemoteModuleResolverProvider.instance = new FallbackRemoteModuleResolver() {
             @Override
             Path resolvePipeline(String name, Path baseDir) {
                 calls++
-                throw new IllegalStateException("cannot install ${name}")
+                throw error.newInstance("cannot install ${name}".toString())
             }
         }
         def main = tempFile(root, 'main.nf',
@@ -404,6 +405,11 @@ class ResolveIncludeTest extends Specification {
         calls == 1
         errors.size() == 1
         errors[0].getOriginalMessage() == 'cannot install nf-core/rnaseq'
+
+        where:
+        // a checked exception, as thrown by the runtime resolver (IllegalModulePathException)
+        ERROR << [IllegalStateException, IOException]
+        TYPE = ERROR.simpleName
     }
 
     def 'should retry a failed pipeline include on a new analysis of the same compiler' () {

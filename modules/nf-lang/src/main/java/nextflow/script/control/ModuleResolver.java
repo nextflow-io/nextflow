@@ -45,7 +45,7 @@ public class ModuleResolver {
     private Compiler compiler;
     private Path projectDir;
 
-    private Map<String, RuntimeException> includeFailures = new HashMap<>();
+    private Map<String, Exception> includeFailures = new HashMap<>();
 
     public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
@@ -135,14 +135,20 @@ public class ModuleResolver {
         var key = uri + "|" + node.source.getText();
         var failure = includeFailures.get(key);
         if( failure != null )
-            throw failure;
+            throw sneakyThrow(failure);
         try {
             return getIncludeUri(uri, node, projectDir);
         }
-        catch( RuntimeException e ) {
+        catch( Exception e ) {
+            // the remote resolver may throw a checked exception (e.g. from Groovy), rethrown as-is
             includeFailures.put(key, e);
-            throw e;
+            throw sneakyThrow(e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends Exception> RuntimeException sneakyThrow(Exception e) throws T {
+        throw (T) e;
     }
 
     private SourceUnit resolveInclude(IncludeNode node, SourceUnit sourceUnit, Function<URI,SourceUnit> sourceResolver) {
