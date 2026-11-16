@@ -292,8 +292,8 @@ jobs:
       - name: Tar integration tests
         if: always()
         run: |
-          tar -cvf integration-tests.tar.gz tests/checks
-          tar -cvf validation-tests.tar.gz validation
+          tar -czvf integration-tests.tar.gz tests/checks
+          tar -czvf validation-tests.tar.gz validation
 
       - name: Scan integration tests for leaks
         id: leak_scan
@@ -317,7 +317,7 @@ jobs:
     if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') || (github.event_name == 'workflow_dispatch' && inputs.e2e != 'none')) && needs.build.outputs.docs_only != 'true' }}
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1

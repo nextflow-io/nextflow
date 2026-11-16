@@ -51,9 +51,6 @@ dependencies {
     testImplementation ("org.apache.groovy:groovy-test:${groovyVersion}") { exclude group: 'org.apache.groovy' }
     testImplementation "com.google.jimfs:jimfs:${jimfsVersion}"
     testImplementation "commons-codec:commons-codec:${commonsCodecVersion}"
-    // needed by Spock to mock classes
-    testRuntimeOnly "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
-    testRuntimeOnly "org.objenesis:objenesis:${objenesisVersion}"
     // provides the http(s) file system provider
     testRuntimeOnly(project(':nf-httpfs'))
     testImplementation "org.apache.groovy:groovy-json:${groovyVersion}" // needed by wiremock

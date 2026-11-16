@@ -465,7 +465,7 @@ class ModuleToolBridge implements ToolDispatcher {
      * <p><b>Task failure is fatal, not recoverable.</b> When the underlying tool <i>process task</i>
      * (the Nextflow task the tool runs as) hard-fails (exit ≠ 0), the session aborts the dataflow
      * network and interrupts the agent operator thread that is blocked on the tool's output channel
-     * {@code .val} ({@link groovyx.gpars.dataflow.expression.DataflowExpression#getVal} throws
+     * {@code .val} ({@link groovyx.gpars.dataflow.DataflowVariable#getVal} throws
      * {@link InterruptedException}). This is NOT recoverable by the LLM: the run is already being
      * torn down. Such an {@link InterruptedException} is caught here, the thread's interrupt flag is
      * restored, and it is re-thrown as an {@link AgentToolFatalError} (an {@link Error}, NOT an

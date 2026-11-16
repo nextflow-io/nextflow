@@ -209,6 +209,9 @@ class CacheHelperTest extends Specification {
         // this is not expecting to return the sha-256 of the file content BUT
         // the murmur hashing of the sha-256 string obtained by hashing the file
         CacheHelper.hasher(file, CacheHelper.HashMode.SHA256).hash().toString() == 'd29e7ba0fbcc617ab8e1e44e81381aed'
+
+        cleanup:
+        Global.session = null
     }
 
 }

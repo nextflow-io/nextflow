@@ -35,6 +35,10 @@ import spock.lang.Specification
  */
 class LocalTaskHandlerTest extends Specification {
 
+    def cleanup() {
+        Global.reset()
+    }
+
     def 'should create local process builder' () {
         given:
         def task = Mock(TaskRun) {

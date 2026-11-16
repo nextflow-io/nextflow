@@ -1,12 +1,22 @@
+nextflow.enable.types = true
+
 process COUNT {
-    tag "${meta.id}"
+    tag id
     label 'small'
 
     input:
-    tuple val(meta), path(part)
+    record(
+        id: String,
+        group: String,
+        part: Path
+    )
 
     output:
-    tuple val(meta), stdout
+    record(
+        id: id,
+        group: group,
+        count: stdout()
+    )
 
     script:
     """

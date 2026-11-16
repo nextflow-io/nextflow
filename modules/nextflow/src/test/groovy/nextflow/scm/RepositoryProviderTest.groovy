@@ -24,6 +24,8 @@ import java.net.http.HttpTimeoutException
 import java.nio.channels.UnresolvedAddressException
 import java.time.Duration
 import javax.net.ssl.SSLSession
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -258,9 +260,12 @@ class RepositoryProviderTest extends Specification {
 
     def 'should fail with a timeout error when the server does not reply' () {
         given:
-        def server = HttpServer.create(new InetSocketAddress(0), 0)
+        // the handler runs on the server dispatcher thread, so stop() waits for it
+        def release = new CountDownLatch(1)
+        def server = HttpServer.create(new InetSocketAddress(InetAddress.loopbackAddress, 0), 0)
+        def url = "http://${server.address.hostString}:${server.address.port}/stall"
         server.createContext('/stall', { exchange ->
-            sleep 5_000
+            release.await(10, TimeUnit.SECONDS)
             exchange.sendResponseHeaders(200, 0)
             exchange.close()
         } as HttpHandler)
@@ -270,15 +275,16 @@ class RepositoryProviderTest extends Specification {
         def provider = Spy(RepositoryProvider)
 
         when:
-        provider.invokeBytes("http://localhost:${server.address.port}/stall")
+        provider.invokeBytes(url)
         then:
         def e = thrown(IOException)
-        e.message.startsWith("No response received from 'http://localhost:${server.address.port}/stall'")
+        e.message.startsWith("No response received from '${url}'")
         e.message.contains('NXF_HTTPCLIENT_REQUEST_TIMEOUT')
         e.cause instanceof HttpTimeoutException
 
         cleanup:
         SysEnv.pop()
+        release.countDown()
         server.stop(0)
     }
 

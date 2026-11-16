@@ -19,7 +19,6 @@ package nextflow.container
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -222,7 +221,6 @@ class CharliecloudCacheTest extends Specification {
         dir.deleteDir()
     }
 
-    @Ignore
     @Timeout(1)
     def 'should pull a charliecloud image'() {
 
@@ -239,6 +237,9 @@ class CharliecloudCacheTest extends Specification {
         then:
         1 * cache.downloadCharliecloudImage(IMAGE) >> container
         file == container
+
+        cleanup:
+        CharliecloudCache.localImageNames.remove(IMAGE)
     }
 
     def 'should not render the environment' () {

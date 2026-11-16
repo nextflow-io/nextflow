@@ -22,6 +22,7 @@ import java.time.ZonedDateTime
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import nextflow.BuildInfo
+import nextflow.Global
 import org.junit.Rule
 import spock.lang.Specification
 
@@ -33,8 +34,18 @@ class HttpPluginRepositoryTest extends Specification {
 
     HttpPluginRepository unit
 
+    Map prevConfig
+
     def setup() {
+        prevConfig = Global.config
+        // use config, not NXF_RETRY_POLICY_* env vars, because RetryConfig.config() is memoized
+        // per config map; maxDelay also caps the Retry-After hint in the 429 test
+        Global.config = [nextflow: [retryPolicy: [delay: '10ms', maxDelay: '50ms', maxAttempts: 3]]]
         unit = new HttpPluginRepository("test-repo", new URI(wiremock.baseUrl()))
+    }
+
+    def cleanup() {
+        Global.config = prevConfig
     }
 
     // ------------------------------------------------------------------------

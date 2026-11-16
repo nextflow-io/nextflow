@@ -43,6 +43,14 @@ class HttpFilesTests extends Specification {
     @Rule
     WireMockRule wireMockRule = new WireMockRule(0)
 
+    def setup() {
+        XFileSystemConfig.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0']))
+    }
+
+    def cleanup() {
+        XFileSystemConfig.reset()
+    }
+
     static final String BODY = 'line 1\nline 2\nline 3\n'
 
     static final String LAST_MODIFIED = 'Fri, 04 Nov 2016 21:50:34 GMT'
@@ -78,6 +86,8 @@ class HttpFilesTests extends Specification {
 
     def 'should check file properties' () {
         given:
+        XFileSystemConfig.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0', NXF_HTTPFS_MAX_ATTEMPTS: '1']))
+        and:
         def url = stubFile('/index.txt')
         def path1 = Paths.get(new URI(url))
         def path2 = Paths.get(new URI(stubMissing('/missing.txt')))
@@ -97,6 +107,9 @@ class HttpFilesTests extends Specification {
         Files.isSameFile(path1, path3)
         !Files.isSameFile(path1, path2)
         !Files.exists(path2)
+        and:
+        // the initial request plus one retry
+        wireMockRule.verify(2, getRequestedFor(urlEqualTo('/missing.txt')))
     }
 
     def 'should copy a file' () {
@@ -129,6 +142,28 @@ class HttpFilesTests extends Specification {
         then:
         path.text == 'Hello world'
         and:
+        attempt == 3
+
+        cleanup:
+        server?.stop(0)
+    }
+
+    def 'should give up after max attempts' () {
+        given:
+        XFileSystemConfig.reset(new XFileSystemConfig([NXF_HTTPFS_DELAY: '0', NXF_HTTPFS_MAX_ATTEMPTS: '2']))
+        and:
+        def attempt = 0
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0)
+        server.createContext("/", new BasicHandler('Unavailable', { ++attempt; 503 } ))
+        server.start()
+
+        when:
+        Paths.get(new URI("http://localhost:${server.address.port}/foo/bar")).text
+        then:
+        def e = thrown(IOException)
+        e.message.contains('503')
+        and:
+        // the initial request plus two retries
         attempt == 3
 
         cleanup:

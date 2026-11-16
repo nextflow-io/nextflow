@@ -948,6 +948,12 @@ When specified, group rows into *chunks* with the given size (default: none).
 
 Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
 
+##### `comment`
+
+<AddedInVersion version="27.04" />
+
+The character used to denote comment lines (default: none). Lines that start with this character, ignoring leading whitespace, are skipped. The comment character is treated as regular text anywhere else in a line.
+
 ##### `decompress`
 
 When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
