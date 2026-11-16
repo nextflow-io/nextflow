@@ -108,7 +108,7 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
 
     @ConfigOption
     @Description("""
-        The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`).
+        The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`). Use the `scheduling.priority` hint to override it for individual processes.
     """)
     final Integer schedulingPriority
 

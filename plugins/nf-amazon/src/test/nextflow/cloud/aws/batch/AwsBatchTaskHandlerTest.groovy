@@ -184,6 +184,76 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.schedulingPriorityOverride() == 9999
     }
 
+    def 'should set scheduling priority from hints' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(HINTS)
+        def taskConfig = process.createTaskConfig()
+        and:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> taskConfig
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.maxSpotAttempts() >> 0
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'] + BATCH_OPTS)) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> []
+        and:
+        req.shareIdentifier() == SHARE
+        req.schedulingPriorityOverride() == PRIORITY
+
+        where:
+        HINTS                                                   | BATCH_OPTS                                         | SHARE      | PRIORITY
+        [:]                                                     | [shareIdentifier: 'share1']                        | 'share1'   | 0
+        [:]                                                     | [shareIdentifier: 'share1', schedulingPriority: 5] | 'share1'   | 5
+        ['scheduling.priority': 900]                            | [shareIdentifier: 'share1', schedulingPriority: 5] | 'share1'   | 900
+        ['awsbatch/scheduling.priority': 100]                   | [shareIdentifier: 'share1']                        | 'share1'   | 100
+        ['scheduling.priority': 0]                              | [shareIdentifier: 'share1', schedulingPriority: 5] | 'share1'   | 0
+        ['scheduling.priority': 900]                            | [:]                                                | null       | null
+    }
+
+    def 'should get scheduling priority from hints' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getSchedulingPriority(HINTS) == EXPECTED
+
+        where:
+        HINTS                                                                   | EXPECTED
+        null                                                                    | null
+        [:]                                                                     | null
+        [foo: 'bar']                                                            | null
+        ['scheduling.priority': null]                                           | null
+        ['scheduling.priority': 0]                                              | 0
+        ['scheduling.priority': 9999]                                           | 9999
+        ['scheduling.priority': 10L]                                            | 10
+        ['awsbatch/scheduling.priority': 50]                                    | 50
+        ['scheduling.priority': 10, 'awsbatch/scheduling.priority': 50]         | 50
+        ['scheduling.priority': 10, 'awsbatch/scheduling.priority': 0]          | 0
+    }
+
+    def 'should fail with a clear error on invalid scheduling priority hint' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        handler.getSchedulingPriority(['scheduling.priority': VALUE])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("expected an integer between 0 and 9999")
+
+        where:
+        VALUE << [-1, 10000, 1.5, 'high', '100', [1]]
+    }
+
     def 'should set accelerator' () {
         given:
         def task = Mock(TaskRun)

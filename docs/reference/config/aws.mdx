@@ -77,7 +77,7 @@ The [retry mode](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-
 
 ##### `aws.batch.schedulingPriority`
 
-The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`).
+The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`). Use the `scheduling.priority` [hint](../process/directives/hints) to override it for individual processes.
 
 ##### `aws.batch.shareIdentifier`
 

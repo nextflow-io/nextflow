@@ -30,6 +30,12 @@ The following [hints][process-hints] are supported:
   hints consumableResources: ['my-license-a': 1, 'my-license-b': 2]
   ```
 
+- `scheduling.priority`: Specify the job [scheduling priority](https://docs.aws.amazon.com/batch/latest/userguide/job_scheduling.html) as an integer between `0` and `9999`. Overrides [`aws.batch.schedulingPriority`][config-aws] for the process. Requires a fair-share job queue and [`aws.batch.shareIdentifier`][config-aws]. For example:
+
+  ```nextflow
+  hints 'scheduling.priority': 900
+  ```
+
 See [Amazon S3][amazons3-page] for how to configure AWS credentials and S3 access. See the [aws][config-aws] config scope for the full list of configuration options.
 
 :::tip
