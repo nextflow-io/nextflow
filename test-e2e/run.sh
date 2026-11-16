@@ -111,8 +111,8 @@ run_url=$(echo "$dispatch_out" | grep -o 'https://github.com/[^ ]*/actions/runs/
 echo "Showcase run: $run_url"
 
 # wait for the showcase launch job, which saves the Platform runs as an artifact,
-# and link them with a search on the run name suffix (<date>_<uuid>)
-platform_url=""
+# and link them with a search on the run name suffix (<date>_<uuid>), one link per workspace
+platform_urls=""
 run_id=${run_url##*/runs/}
 if [[ "$run_id" =~ ^[0-9]+$ ]]; then
   echo "Waiting for the showcase launch job..."
@@ -124,18 +124,20 @@ if [[ "$run_id" =~ ^[0-9]+$ ]]; then
   done
   artifact_dir=$(mktemp -d)
   if gh run download "$run_id" --repo "$showcase_repo" --pattern '*_launch_json' --dir "$artifact_dir" >/dev/null 2>&1; then
-    platform_url=$(jq -r '[.[] | select(.workflowUrl != null)][0] // empty
-      | (.workflowUrl | sub("/watch/.*"; "/watch")) + "?search=" + (.workflowName | capture("(?<s>[0-9]{8}_[0-9a-f]+)$").s)' \
+    platform_urls=$(jq -r '[.[] | select(.workflowUrl != null)
+      | (.workflowUrl | sub("/watch/.*"; "/watch")) + "?search=" + (.workflowName | capture("(?<s>[0-9]{8}_[0-9a-f]+)$").s)] | unique | .[]' \
       "$artifact_dir"/*/*.json 2>/dev/null)
   fi
 fi
-echo "Platform runs: ${platform_url:-not found}"
+echo "Platform runs:"
+echo "${platform_urls:-not found}" | sed 's/^/  /'
 
 if [ -n "$GITHUB_STEP_SUMMARY" ]; then
   {
     echo "### e2e showcase launched against \`${ENVIRONMENT}\`"
     echo "- Run: ${run_url}"
-    echo "- Platform runs: ${platform_url:-not found, see the showcase run}"
+    echo "- Platform runs:"
+    echo "${platform_urls:-not found, see the showcase run}" | sed 's/^/  - /'
     echo "- Launcher: \`${launcher}\`"
     echo "- Launcher (dind): \`${launcher_dind}\`"
     echo ""
