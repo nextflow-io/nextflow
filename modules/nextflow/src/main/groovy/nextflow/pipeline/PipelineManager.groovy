@@ -31,6 +31,7 @@ import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.file.FileMutex
 import nextflow.module.spi.RemoteModuleResolver
 
 /**
@@ -50,8 +51,10 @@ class PipelineManager {
     /** Outcome of {@link #install}: {@code alreadyInstalled} means nothing was fetched */
     static record InstallResult(PipelineInfo info, boolean alreadyInstalled) {}
 
-    // ponytail: never evicted, fine for a CLI/run lifetime; add a TTL if a long-lived process needs it
+    // never evicted: fine for a CLI or run lifetime, a long-lived process would need a TTL
     private static final Map<Path,Boolean> MODIFIED = new ConcurrentHashMap<>()
+
+    private static final Map<Path,Object> INSTALL_LOCKS = new ConcurrentHashMap<>()
 
     private final Path baseDir
     private final RegistryClient client
@@ -121,7 +124,11 @@ class PipelineManager {
         final info = resolveRelease(client, name, version)
         info.workflowPath = info.workflowPath ?: DEFAULT_WORKFLOW
         workflowFile(dir, name, info.workflowPath)
+        return withInstallLock(dir, name) { install0(dir, name, info, force) }
+    }
 
+    private InstallResult install0(Path dir, String name, PipelineInfo info, boolean force) {
+        // checked under the lock: a concurrent run may have just installed it
         final exists = Files.exists(dir)
         final existing = exists ? PipelineInfo.load(dir) : null
         final modified = exists && (existing == null || existing.isModified(dir))
@@ -134,6 +141,24 @@ class PipelineManager {
         fetchInto(dir, info)
         log.info "Pipeline ${name}@${info.version} installed in ${dir.toAbsolutePath()}"
         return new InstallResult(info, false)
+    }
+
+    // serializes installs of the same pipeline, e.g. concurrent runs that auto-install it; a file lock
+    // covers other processes, the monitor covers threads (a JVM can't wait on its own file lock)
+    private static <T> T withInstallLock(Path dir, String name, Closure<T> action) {
+        Files.createDirectories(dir.parent)
+        final lockPath = dir.parent.resolve(".${dir.fileName}.lock")
+        final monitor = INSTALL_LOCKS.computeIfAbsent(realPath(lockPath.parent).resolve(lockPath.fileName), { Path p -> new Object() })
+        synchronized( monitor ) {
+            final lockFile = lockPath.toFile()
+            final mutex = new FileMutex(target: lockFile, waitMessage: "Waiting for another process to install pipeline ${name}...")
+            try {
+                return mutex.lock(action)
+            }
+            finally {
+                lockFile.delete()
+            }
+        }
     }
 
     /** List installed pipelines, skipping in-flight '.tmp-' dirs; entries whose recorded name is invalid are skipped with a warning */

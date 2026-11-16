@@ -18,6 +18,10 @@ package nextflow.pipeline
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
@@ -409,5 +413,39 @@ class PipelineManagerTest extends Specification {
         'nf-core/rnaseq'  | 'dev'   | null                                    | null                          | false   | 'nf-core/rnaseq@dev not found in the registry'
         'nf-core/rnaseq'  | null    | null                                    | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
         'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
+    }
+
+    def 'concurrent installs of the same pipeline fetch it once'() {
+        given:
+        def fetches = new AtomicInteger()
+        def slowFetcher = new PipelineGitFetcher() {
+            @Override
+            void fetch(String repositoryUrl, String revision, String commitId, Path target) {
+                fetches.incrementAndGet()
+                sleep 300
+                target.resolve('main.nf').text = 'x'
+            }
+        }
+        def registry = Stub(RegistryClient) {
+            getPipeline(_) >> pipeline(release('1.0.0'))
+        }
+        def start = new CountDownLatch(1)
+        def pool = Executors.newFixedThreadPool(2)
+
+        when:
+        def futures = (1..2).collect {
+            pool.submit({ start.await(); new PipelineManager(base, registry, slowFetcher).install('nf-core/rnaseq', null, false) } as Callable<PipelineManager.InstallResult>)
+        }
+        start.countDown()
+        def results = futures*.get()
+
+        then:
+        fetches.get() == 1
+        results*.alreadyInstalled().sort() == [false, true]
+        PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).version == '1.0.0'
+        !Files.exists(base.resolve('pipelines/nf-core/.rnaseq.lock'))
+
+        cleanup:
+        pool?.shutdownNow()
     }
 }
