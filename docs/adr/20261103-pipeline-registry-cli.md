@@ -1,7 +1,7 @@
 # Pipeline registry CLI and remote pipeline inclusion
 
 - Authors: Jorge Ejarque
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-03
 - Tags: pipelines, registry, cli, modules
 
@@ -167,4 +167,3 @@ A registry release is cached under its **registry name**. `AssetManager` keeps t
 
 - Implements: [Pipeline composition](20260608-pipeline-composition.md), section "Pipeline registry and CLI"
 - Related: [Module system](20251114-module-system.md), [Workflow modules](20260608-workflow-modules.md)
-- Spec: [docs/specs/261103-pipeline-registry-cli](../specs/261103-pipeline-registry-cli/spec.md)
