@@ -68,6 +68,8 @@ public class HashBuilder {
 
     private static final int HASH_BYTES = HASH_BITS / 8;
 
+    private static final String SCRIPT_CLASS_PREFIX = "_nf_script_";
+
     private static final Map<String,Object> FIRST_ONLY;
 
     static {
@@ -183,7 +185,7 @@ public class HashBuilder {
             hasher.putInt( value.hashCode() );
 
         else if( value instanceof Enum )
-            hasher.putUnencodedChars( value.getClass().getName() + "." + value );
+            hasher.putUnencodedChars( enumTypeName((Enum)value) + "." + value );
 
         else {
             Bolts.debug1(log, FIRST_ONLY, "[WARN] Unknown hashing type: " + value.getClass());
@@ -220,6 +222,18 @@ public class HashBuilder {
      */
     public static HashCode hashPath(Path path, Path basePath, HashMode mode) {
         return new HashBuilder().withMode(mode).withBasePath(basePath).with(path).build();
+    }
+
+    /**
+     * Get the name of an enum type, excluding the package of types
+     * declared in a script module, since it is derived from the absolute
+     * script path and would break resume when the pipeline is moved.
+     */
+    static private String enumTypeName( Enum value ) {
+        final String name = value.getClass().getName();
+        return name.startsWith(SCRIPT_CLASS_PREFIX)
+            ? name.substring(name.indexOf('.') + 1)
+            : name;
     }
 
     /**

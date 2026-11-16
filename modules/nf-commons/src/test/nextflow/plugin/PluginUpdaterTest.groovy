@@ -30,7 +30,7 @@ import nextflow.BuildInfo
 import nextflow.config.RegistryConfig
 import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
-import org.pf4j.PluginDescriptor
+import org.pf4j.DefaultPluginDescriptor
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginState
 import org.pf4j.PluginWrapper
@@ -67,8 +67,10 @@ class PluginUpdaterTest extends Specification {
         DefaultUpdateRepository index
         Map<String, PluginInfo> plugins = [:]
         List<String> fetched = []
+        List<List<PluginRef>> prefetched = []
 
         void prefetch(List<PluginRef> refs) {
+            prefetched << refs
             refs.each { getPlugin(it.id) }
         }
 
@@ -560,42 +562,29 @@ class PluginUpdaterTest extends Specification {
 
     def 'should find matching plugin' () {
         given:
-        def r1 = new PluginInfo.PluginRelease(version: '1.4.0', url: 'http://xyz')
-        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz', requires: ">=${BuildInfo.version}")
-        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: ">=${BuildInfo.version}")
-        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: ">=${BuildInfo.version}")
-        def r5 = new PluginInfo.PluginRelease(version: '3.0.0', url: 'http://xyz', requires: '99.01.0')
-        def PLUGINS = [
-                'nf-foo': new PluginInfo(id:'nf-foo', releases: [r1, r2, r3, r4, r5]),
-                'nf-bar': new PluginInfo(id:'nf-bar', releases: [])
-        ]
-        def manager = Mock(CustomPluginManager)
-        PluginUpdater updater = Spy(PluginUpdater, constructorArgs: [manager])
-
-
-        when:
-        def ret = updater.findNewestMatchingRelease('nf-foo', '1.5.0')
-        then:
-        manager.getVersionManager() >> new CustomVersionManager()
-        updater.getPluginsMap() >> PLUGINS
+        def folder = Files.createTempDirectory('test')
+        def index = folder.resolve('plugins.json')
+        index.text = """
+            [
+              { "id": "nf-foo", "releases": [
+                  {"version": "1.4.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "http://xyz"},
+                  {"version": "1.5.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "http://xyz", "requires": ">=${BuildInfo.version}"},
+                  {"version": "1.5.1", "date": "Jun 25, 2020 9:58:35 PM", "url": "http://xyz", "requires": ">=${BuildInfo.version}"},
+                  {"version": "2.0.1", "date": "Jun 25, 2020 9:58:35 PM", "url": "http://xyz", "requires": ">=${BuildInfo.version}"},
+                  {"version": "3.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "http://xyz", "requires": "99.01.0"} ]},
+              { "id": "nf-bar", "releases": [] }
+            ]
+            """
         and:
-        ret == r2
+        def updater = new PluginUpdater(new CustomPluginManager(), folder, index.toUri().toURL(), false)
 
-        when:
-        ret = updater.findNewestMatchingRelease('nf-foo', '1.5.*')
-        then:
-        manager.getVersionManager() >> new CustomVersionManager()
-        updater.getPluginsMap() >> PLUGINS
-        and:
-        ret == r3
+        expect:
+        updater.findNewestMatchingRelease('nf-foo', '1.5.0').version == '1.5.0'
+        updater.findNewestMatchingRelease('nf-foo', '1.5.*').version == '1.5.1'
+        updater.findNewestMatchingRelease('nf-foo', '>=2.0').version == '2.0.1'
 
-        when:
-        ret = updater.findNewestMatchingRelease('nf-foo', '>=2.0')
-        then:
-        manager.getVersionManager() >> new CustomVersionManager()
-        updater.getPluginsMap() >> PLUGINS
-        and:
-        ret == r4
+        cleanup:
+        folder?.deleteDir()
     }
 
 
@@ -619,7 +608,7 @@ class PluginUpdaterTest extends Specification {
         Files.createDirectory(target)
         target.resolve('foo').text = 'some content'
         and:
-        def updater = new PluginUpdater(Mock(CustomPluginManager))
+        def updater = new PluginUpdater(new CustomPluginManager())
 
         when:
         updater.safeMove0(source, target)
@@ -657,7 +646,7 @@ class PluginUpdaterTest extends Specification {
         and:
         Files.createDirectory(target); target.resolve('foo').text = 'some content'
         and:
-        def updater = new PluginUpdater(Mock(CustomPluginManager))
+        def updater = new PluginUpdater(new CustomPluginManager())
 
         when:
         updater.safeMove(source, target)
@@ -679,18 +668,11 @@ class PluginUpdaterTest extends Specification {
     @Unroll
     def 'validate should update method' () {
         given:
-        def manager = Mock(CustomPluginManager) {
-            getVersionManager() >> new CustomVersionManager()
-        }
-        and:
+        def manager = new CustomPluginManager()
         def updater = new PluginUpdater(manager)
-
         and:
-        def wrapper = Mock(PluginWrapper) {
-            getDescriptor() >> Mock(PluginDescriptor) {
-                getVersion() >> CURRENT
-            }
-        }
+        def descriptor = new DefaultPluginDescriptor(ID, null, null, CURRENT, null, null, null)
+        def wrapper = new PluginWrapper(manager, descriptor, null, null)
 
         expect:
         updater.shouldUpdate(ID, REQUIRED, wrapper) == EXPECT
@@ -989,32 +971,30 @@ class PluginUpdaterTest extends Specification {
     def 'should prefetch plugin metadata when pulling plugins' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def mockRepo = Mock(PrefetchUpdateRepository)
-        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def one = createPlugin(repo, '1.0.0', 'my-plugin'); one.zip = zipDir(one.path)
+        def two = createPlugin(repo, '2.0.0', 'another-plugin'); two.zip = zipDir(two.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "my-plugin", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${one.zip}"} ]},
+             { "id": "another-plugin", "releases": [ {"version": "2.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${two.zip}"} ]}]
+            """
+        and:
         def local = localCache(folder.resolve('plugins'), [])
         def manager = new LocalPluginManager(local)
-        def updater = Spy(PluginUpdater, constructorArgs: [manager, local, remote, false])
-
-        // Replace repositories with our mock repo
-        updater.@repositories = [mockRepo]
-
-        and:
-        def pluginList = ['my-plugin@1.0.0', 'another-plugin@2.0.0']
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        def lazy = new LazyRepository(index: new DefaultUpdateRepository('test', index.toUri().toURL()))
+        updater.setRepositories([lazy])
 
         when:
-        updater.pullPlugins(pluginList)
+        updater.pullPlugins(['my-plugin@1.0.0', 'another-plugin@2.0.0'])
 
         then:
-        // Verify prefetch is called with the correct plugin specs
-        1 * mockRepo.prefetch({ List<PluginRef> specs ->
-            specs.size() == 2 &&
-            specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
-            specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'
-        })
-
+        lazy.prefetched == [[new PluginRef('my-plugin', '1.0.0'), new PluginRef('another-plugin', '2.0.0')]]
+        lazy.fetched == ['my-plugin', 'another-plugin']
         and:
-        // Mock pullPlugin0 to prevent real implementation calls
-        2 * updater.pullPlugin0(_, _) >> { }
+        local.resolve('my-plugin-1.0.0').isDirectory()
+        local.resolve('another-plugin-2.0.0').isDirectory()
 
         cleanup:
         folder?.deleteDir()

@@ -101,7 +101,6 @@ class DataflowHelper {
         }
     }
 
-    @PackageScope
     static DataflowEventAdapter stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
 
         new DataflowEventAdapter() {

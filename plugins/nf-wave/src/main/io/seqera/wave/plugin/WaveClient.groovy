@@ -62,6 +62,7 @@ import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
@@ -597,6 +598,12 @@ class WaveClient {
         else
             checkConflicts(attrs, task.lazyName())
 
+        // Wave cannot change a Singularity image URL, use it as is
+        // (unless Fusion needs Wave to add its layer)
+        final engine = task.getContainerConfig()?.getEngine()
+        if( engine in ['singularity','apptainer'] && FileHelper.getUrlProtocol(attrs.container) && !fusion.enabled() )
+            return null
+
         //  resolve the wave assets
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
     }
@@ -759,8 +766,11 @@ class WaveClient {
 
     boolean isContainerReady(String key) {
         final handle = responses.get(key)
-        if( !handle )
-            throw new IllegalStateException("Unable to find any container with key: $key")
+        if( !handle ) {
+            // image not handled by Wave (e.g. local or URL Singularity image)
+            log.trace "Container key not handled by Wave, assume ready: $key"
+            return true
+        }
         if( handle.ready )
             return true
         return handle.ready = checkContainerReady(handle)

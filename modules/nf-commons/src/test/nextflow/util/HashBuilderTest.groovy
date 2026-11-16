@@ -182,4 +182,23 @@ class HashBuilderTest extends Specification {
         then:
         hash1.hash() != hash2.hash()
     }
+
+    def 'should hash enums declared in scripts independently of the script location'() {
+        given:
+        def loader = new GroovyClassLoader()
+        def enum1 = loader.parseClass('package _nf_script_aaaa; enum SampleType { TUMOR }')
+        def enum2 = loader.parseClass('package _nf_script_bbbb; enum SampleType { TUMOR }')
+        def enum3 = loader.parseClass('package foo; enum SampleType { TUMOR }')
+
+        expect:
+        hash(enum1.TUMOR) == hash(enum2.TUMOR)
+        hash(enum1.TUMOR) == hash('SampleType.TUMOR')
+        hash(enum3.TUMOR) == hash('foo.SampleType.TUMOR')
+    }
+
+    private static String hash(Object value) {
+        value instanceof Enum
+            ? CacheHelper.hasher(value).hash().toString()
+            : Hashing.murmur3_128().newHasher().putUnencodedChars((String)value).hash().toString()
+    }
 }

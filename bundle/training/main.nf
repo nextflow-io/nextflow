@@ -1,44 +1,73 @@
 /*
  * Training workload for the AOT cache of the bundle (see bundle/train.sh).
- * It covers the common code paths of a run: config, includes, params, file
- * staging, operators, publishing and the local executor.
+ * It covers the common code paths of a run with static typing: config,
+ * includes, typed params and samplesheet loading, records, file staging,
+ * operators, exec tasks, publishing and the local executor.
  */
+nextflow.enable.types = true
 
 include { COUNT } from './modules/count'
 
-params.input = "${projectDir}/samplesheet.csv"
-params.outdir = 'results'
+params {
+    input: Channel<Sample>
+    outdir: String = 'results'
+}
+
+record Sample {
+    id: String
+    group: String
+    reads: Path
+}
 
 process SPLIT {
-    tag "${meta.id}"
+    tag id
 
     input:
-    tuple val(meta), path(reads)
+    record(
+        id: String,
+        group: String,
+        reads: Path
+    )
 
     output:
-    tuple val(meta), path('*.part'), emit: parts
+    record(
+        id: id,
+        group: group,
+        parts: files('*.part')
+    )
 
     script:
     """
-    awk 'NR % 2 == 1 { f = sprintf("${meta.id}_%d.part", ++n) } { print > f }' ${reads}
+    awk 'NR % 2 == 1 { f = sprintf("${id}_%d.part", ++n) } { print > f }' ${reads}
     """
+}
+
+process SUMMARY {
+    input:
+    name: String
+    lines: List<String>
+
+    output:
+    file(name)
+
+    exec:
+    def path = task.workDir.resolve(name)
+    path.text = lines.join('\n') + '\n'
 }
 
 workflow {
     main:
-    samples = channel.fromPath(params.input)
-        .splitCsv(header: true)
-        .map { row -> tuple([id: row.sample, group: row.group], file("${projectDir}/${row.reads}", checkIfExists: true)) }
+    parts = SPLIT(params.input)
+        .flatMap { s -> s.parts.collect { part -> record(id: s.id, group: s.group, part: part) } }
 
-    SPLIT(samples)
-    COUNT(SPLIT.out.parts.transpose())
-
-    counts = COUNT.out
-        .map { meta, n -> tuple(meta.group, n as int) }
-        .groupTuple()
+    lines = COUNT(parts)
+        .map { r -> tuple(r.group, r.count.trim().toInteger()) }
+        .groupBy()
         .map { group, ns -> "${group}\t${ns.sum()}" }
-        .collectFile(name: 'counts.tsv', newLine: true, sort: true)
+        .collect()
+        .map { ls -> ls.toSorted() }
 
+    counts = SUMMARY('counts.tsv', lines)
     counts.view { f -> f.text.trim() }
 
     publish:
@@ -46,7 +75,7 @@ workflow {
 }
 
 output {
-    counts {
+    counts: Path {
         path '.'
     }
 }

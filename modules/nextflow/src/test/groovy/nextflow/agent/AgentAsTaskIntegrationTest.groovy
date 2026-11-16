@@ -20,7 +20,6 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.json.JsonSlurper
-import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.processor.TaskConfig
@@ -38,7 +37,6 @@ import nextflow.trace.event.TaskEvent
 import spock.lang.TempDir
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockSession
 
 import static test.ScriptHelper.runScript
 import nextflow.agent.rpc.AgentRpcRegistration
@@ -1133,16 +1131,6 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
             @Override
             String run(AgentRunnerRequest request) { throw new UnsupportedOperationException('canonical task path') }
         }
-    }
-
-    /** Spin a MockSession (MockExecutorFactory) and make it the global session (white-box build path). */
-    private Session newSession(Map config = null) {
-        def session = config ? new MockSession(config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-        session.init(null, null, null, null)
-        session.start()
-        Global.session = session
-        return session
     }
 
     /**
