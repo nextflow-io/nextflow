@@ -239,7 +239,7 @@ which is out of model.
   the operator's intent. If a pipeline was obtained from an untrusted
   source without vetting, that is an operator decision with consequences
   outside this model. *(inferred)*
-- The plugin registry (`packages.seqera.io`) and the official Nextflow
+- The plugin registry (`registry.nextflow.io`) and the official Nextflow
   distribution are authentic. Official plugins ship with sha512 checksums
   verified at install time. Substituting a tampered plugin or Nextflow
   binary is a supply-chain compromise of the operator's environment —
@@ -257,7 +257,7 @@ which is out of model.
 
 | Knob | Default | Security effect |
 |------|---------|-----------------|
-| `NXF_PLUGINS_REGISTRY_URL` | `packages.seqera.io` API | Redirects the plugin registry to an arbitrary URL. Only the official URL is supported; any other value triggers a warning. Plugins from an unofficial registry are not a supported configuration. |
+| `NXF_PLUGINS_REGISTRY_URL` | `registry.nextflow.io` API | Redirects the plugin registry to an arbitrary URL. Only the official URL is supported; any other value triggers a warning. Plugins from an unofficial registry are not a supported configuration. |
 | `NXF_SECRETS_FILE` | `~/.nextflow/secrets/store.json` | Relocates the secrets store. The file is always created 0600 regardless of location; a non-POSIX filesystem cannot enforce this. |
 | `NXF_DEBUG` | `0` | Values `≥ 1` activate `bash -uex` tracing in task wrapper scripts, causing every command and its arguments to be printed to `.command.log`. Environment variables set via `withEnv {}` appear in the trace. Keep at `0` when tasks handle sensitive data. |
 | `allowInsecure` (K8s `ClientConfig`) | `false` | When `true`, disables TLS hostname verification for the Kubernetes API server. Must not be enabled in production. |
