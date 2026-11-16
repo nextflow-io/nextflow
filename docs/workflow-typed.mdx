@@ -139,6 +139,8 @@ Note the following:
 
 - Params and outputs are not inherited. The calling pipeline declares its own params and outputs and passes them explicitly to the included pipeline.
 
+- Plugins required by the included pipeline must be declared by the calling pipeline.
+
 ### Importing the params block
 
 Redeclaring every param of an included pipeline gets tedious. The `params` block can be imported as a record type instead:
@@ -191,9 +193,9 @@ include {
 
 An include of `<scope>/<name>` whose entries are `workflow` or `params` is a pipeline include. Any other `<scope>/<name>` include is a [module include][using-modules-including].
 
-A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. The main script is the one declared by the registry release (`main.nf` by default). If the directory is missing, Nextflow installs the latest published release: it fetches the Git commit pinned by the release from the release's repository, and records the version, repository, revision, commit, and a checksum of the files in a `.pipeline-info` file. Use [`nextflow pipeline install`][cli-pipeline] to install a specific version ahead of time.
+A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. The main script is the one declared by the registry release (`main.nf` by default). If the directory is missing, Nextflow installs the latest published release, as [`nextflow pipeline install`][cli-pipeline] does. Use that command to install a specific version.
 
-Commit installed pipelines to the calling pipeline's repository, as you would for vendored modules. Note the following:
+Note the following:
 
 - If the files of an installed pipeline were edited, Nextflow warns and uses the local files. It never overwrites them automatically.
 
@@ -201,17 +203,11 @@ Commit installed pipelines to the calling pipeline's repository, as you would fo
 
 - Registry includes in an included pipeline resolve against that pipeline's own directory, so it uses its own `modules/` and `pipelines/`, not those of the calling pipeline.
 
-- The registry is configured with the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the launch directory, and any `-c` config files.
+- The registry is configured with the [`registry`][config-registry] config scope of the run, as for registry modules.
 
-The following limitations apply:
-
-- Both the calling script and the included pipeline must enable static typing.
+- The language server does not install missing pipelines. Run `nextflow pipeline install` to resolve the include in your editor.
 
 - Only public Git repositories are supported.
-
-- `projectDir` in an included pipeline refers to the project directory of the calling pipeline.
-
-- Plugins required by an included pipeline must be declared by the calling pipeline.
 
 - To use `includeConfig` with the config files of an included pipeline, install the pipeline first with `nextflow pipeline install`.
 

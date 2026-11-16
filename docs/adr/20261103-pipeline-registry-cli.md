@@ -133,7 +133,7 @@ Modules that a pipeline commits without `.module-info` (nf-core `modules.json` s
 
 ### CLI
 
-`pipeline install`, `list`, `remove`, `search` and `view` follow their `nextflow module` counterparts, use `registry.url` and `registry.auth`, and call only existing read endpoints. They manage the vendored copies under the project's `pipelines/`, for `include`. The existing project commands (`pull`, `drop`, `list`, ...) keep managing the global run cache in `~/.nextflow/assets`.
+`pipeline install`, `list`, `remove`, `search` and `view` follow their `nextflow module` counterparts, use `registry.url` and `registry.apiKey`, and call only existing read endpoints. They manage the vendored copies under the project's `pipelines/`, for `include`. The existing project commands (`pull`, `drop`, `list`, ...) keep managing the global run cache in `~/.nextflow/assets`.
 
 ### Running a registry pipeline
 
@@ -147,7 +147,7 @@ Modules that a pipeline commits without `.module-info` (nf-core `modules.json` s
 
 **Offline.** With `-offline`, the registry is not called. The run uses the copy cached under the registry name, and `-r` is used as a Git revision (a commit, or a tag equal to the version). This works for nf-core, whose versions are their Git tags, and fails for versions that are not tag names (a `v` prefix, or a release registered from a branch or commit). A local version-to-commit map (in the bare repository's Git config, a file next to the clone, local refs, or one central file) was not added. The Git config variant is the candidate if one is needed.
 
-**Registry config.** `registry.url` and `registry.auth` are read as for the `pipeline` commands. The pipeline's own config can't be used, because it is not downloaded yet. The registry config is read only for a possible registry address, never for a plain name, a Git URL or a Git provider hub, because a launch config may be readable only once (Seqera Platform).
+**Registry config.** `registry.url` and `registry.apiKey` are read as for the `pipeline` commands. The pipeline's own config can't be used, because it is not downloaded yet. The registry config is read only for a possible registry address, never for a plain name, a Git URL or a Git provider hub, because a launch config may be readable only once (Seqera Platform).
 
 ### Run cache
 

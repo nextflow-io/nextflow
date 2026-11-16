@@ -1,17 +1,15 @@
 ---
 title: registry
-description: Reference for the registry config scope, which configures the registries used to resolve modules and plugins.
+description: Reference for the registry config scope, which configures the registries used to resolve modules, plugins, and pipelines.
 ---
 
 # `registry`
 
 <AddedInVersion version="26.04" />
 
-The `registry` scope configures the registries used to resolve [modules][module-registry-page] and [plugins][plugin-registry-page].
+The `registry` scope configures the registries used to resolve [modules][module-registry-page], [plugins][plugin-registry-page], and [pipelines][cli-pipeline].
 
-It also configures the registries used to resolve [registry pipelines][cli-pipeline], both when [included by name][workflow-typed-registry] and when [run][cli-run-registry] with a registry address.
-
-By default, only the public Nextflow registry (`https://registry.nextflow.io/api`) is used. When one or more registries are configured, Nextflow uses only those registries in the order they are listed, and the public registry is *not* used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly.
+By default, only the public Nextflow registry (`https://registry.nextflow.io/api`) is used. When one or more registries are configured, Nextflow uses only those registries in the order they are listed, and the public registry is *not* used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly. A [registry address][cli-run-registry] for `run` or `pull` can always name the public registry.
 
 ##### `registry.apiKey`
 
@@ -25,4 +23,3 @@ A registry URL, or a list of registry URLs queried in the order they are listed.
 [cli-run-registry]: ../cli/run#registry-pipelines
 [module-registry-page]: ../../modules/module-registry
 [plugin-registry-page]: ../../plugins/plugin-registry
-[workflow-typed-registry]: ../../workflow-typed#including-a-pipeline-from-the-registry
