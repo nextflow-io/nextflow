@@ -66,9 +66,14 @@ class TypesTest extends Specification {
     def 'should render the return type of a method' () {
         when:
         def cn = ClassHelper.makeCached(TaskConfig)
-        def returnType = cn.getDeclaredMethods('getExt')[0].getReturnType()
+        def returnType = cn.getDeclaredMethods(METHOD)[0].getReturnType()
         then:
-        Types.getName(returnType) == 'Map<String, String>'
+        Types.getName(returnType) == TYPE
+
+        where:
+        METHOD      | TYPE
+        'getExt'    | 'Map<String, String>'
+        'getLabel'  | 'List<String>'
     }
 
     def 'should render a functional type' () {

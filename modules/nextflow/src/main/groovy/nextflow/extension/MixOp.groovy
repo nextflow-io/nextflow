@@ -64,8 +64,8 @@ class MixOp {
             target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
         def handlers = [
-                onNext: { target << it },
-                onComplete: { if(count.decrementAndGet()==0) { target << Channel.STOP } }
+                onNext: { target.bind(it) },
+                onComplete: { if(count.decrementAndGet()==0) { target.bind(Channel.STOP) } }
         ]
 
         subscribeImpl(source, handlers)

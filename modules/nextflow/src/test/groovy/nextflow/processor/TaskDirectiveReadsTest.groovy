@@ -18,7 +18,7 @@ package nextflow.processor
 
 import java.nio.file.Files
 
-import ch.artecat.grengine.Grengine
+import ch.grengine.Grengine
 import nextflow.Session
 import nextflow.config.parser.v1.ConfigParserV1
 import nextflow.config.parser.v2.ConfigParserV2

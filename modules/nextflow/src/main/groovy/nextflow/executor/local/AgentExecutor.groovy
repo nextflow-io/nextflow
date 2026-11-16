@@ -54,7 +54,7 @@ import nextflow.script.ScriptType
  */
 @Slf4j
 @CompileStatic
-@SupportedScriptTypes( [ScriptType.GROOVY] )
+@SupportedScriptTypes( [ScriptType.PROMPT] )
 class AgentExecutor extends LocalExecutor {
 
     @Override
@@ -80,7 +80,7 @@ class AgentExecutor extends LocalExecutor {
         assert task
         assert task.workDir
 
-        if( task.type == ScriptType.GROOVY )
+        if( task.type == ScriptType.PROMPT )
             return new AgentTaskHandler(task, this)
         return super.createTaskHandler(task)
     }

@@ -19,6 +19,7 @@ package nextflow.cloud.google.batch
 import static nextflow.cloud.google.batch.GoogleBatchScriptLauncher.*
 
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 import com.google.api.gax.rpc.ResourceExhaustedException
@@ -71,7 +72,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
      */
     private ThrottlingExecutor reaper
 
-    private final Set<String> deletedJobs = new HashSet<>()
+    private final Set<String> deletedJobs = ConcurrentHashMap.<String>newKeySet()
 
     BatchClient getClient() { return client }
     GoogleOpts getGoogleOpts() { return googleOpts }
@@ -229,15 +230,9 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     boolean shouldDeleteJob(String jobId) {
-        if( jobId in deletedJobs ) {
-            // if the job is already in the list it has been already deleted
-            return false
-        }
-        synchronized (deletedJobs) {
-            // add the job id to the set of deleted jobs, if it's a new id, the `add` method
-            // returns true therefore the job should be deleted
-            return deletedJobs.add(jobId)
-        }
+        // add the job id to the set of deleted jobs, if it's a new id, the `add` method
+        // returns true therefore the job should be deleted
+        return deletedJobs.add(jobId)
     }
 
     @Override

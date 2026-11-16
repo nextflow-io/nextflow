@@ -19,7 +19,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
-import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.processor.TaskContext
@@ -38,13 +37,13 @@ import nextflow.script.ProcessDef
 import nextflow.script.PromptDef
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
+import nextflow.script.ScriptType
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.event.TaskEvent
 import nextflow.util.CacheHelper
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockSession
 import nextflow.agent.rpc.AgentRpcRegistration
 
 /**
@@ -76,16 +75,6 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         agentScope.container = agentScope.container ?: 'agent-image:test'
         result.agent = agentScope
         return result
-    }
-
-    /** Spin a MockSession (MockExecutorFactory) and make it the global session. */
-    private Session newSession(Map config = null) {
-        def session = config ? new MockSession(config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-        session.init(null, null, null, null)
-        session.start()
-        Global.session = session
-        return session
     }
 
     /** A probe observer counting cache-hit notifications. */
@@ -172,6 +161,23 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
             }
             @Override String run(AgentRunnerRequest req) { 'x' }
         }
+    }
+
+    def 'should use the #expected script type for #kind agents'() {
+        given:
+        AgentRunnerProvider.testRunner = runner
+        newSession(config)
+
+        when:
+        def processor = newAgent().buildAgentTask(['hello'])
+
+        then:
+        processor.getTaskBody().type == expected
+
+        where:
+        kind            | runner            | config            | expected
+        'in-JVM'        | namedRunner()     | null              | ScriptType.PROMPT
+        'containerized' | canonicalRunner() | containerized()   | ScriptType.SCRIPTLET
     }
 
     def 'canonical agents default to local independently of process executor'() {
@@ -506,10 +512,11 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         other != local
 
         when: 'the endpoint comes from the environment instead of the config'
+        // swap the environment in place, so the single pop in cleanup restores it
+        SysEnv.pop()
         SysEnv.push([NXF_AGENT_BASE_URL: 'http://localhost:8000/v1'])
         newSession()
         def fromEnv = newAgent().buildAgentTask(['hello']).getTaskBody().source
-        SysEnv.pop()
 
         then: 'the RESOLVED value is folded in, so the env tier keys identically to the config tier'
         fromEnv == local

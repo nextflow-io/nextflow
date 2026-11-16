@@ -224,7 +224,7 @@ public class ScriptAstBuilder {
         if( !commentsEnabled )
             return;
         tokenStream.fill();
-        var comments = Comments.collect(tokenStream.getTokens());
+        var comments = Comments.collect(tokenStream.getTokens(), ScriptLexer.NL);
         moduleNode.putNodeMetaData(ASTNodeMarker.COMMENTS, comments);
         if( comments.getShebang() != null )
             moduleNode.setShebang(comments.getShebang());
@@ -1051,14 +1051,14 @@ public class ScriptAstBuilder {
             return null;
         }
         var target = nameTypePair(ctx.nameTypePair());
-        Statement result;
-        if( ctx.expression() != null ) {
-            var source = expression(ctx.expression());
-            result = stmt(ast( new AssignmentExpression(target, source), ctx ));
+        if( ctx.expression() == null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow publish statement -- must be an assignment", target));
+            return null;
         }
-        else {
-            result = stmt(target);
-        }
+        if( ctx.nameTypePair().type() != null )
+            collectWarning("Workflow output type should be declared in the output block -- the type annotation in the publish statement is ignored", target.getText(), target);
+        var source = expression(ctx.expression());
+        var result = stmt(ast( new AssignmentExpression(target, source), ctx ));
         return ast( result, ctx );
     }
 
@@ -2240,7 +2240,11 @@ public class ScriptAstBuilder {
         return new ANTLRErrorListener() {
             @Override
             public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
-                collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
+                var startColumn = charPositionInLine + 1;
+                var endColumn = offendingSymbol instanceof Token t && t.getType() != Token.EOF && t.getText() != null
+                    ? startColumn + t.getText().length()
+                    : startColumn + 1;
+                collectSyntaxError(new SyntaxException(msg, line, startColumn, line, endColumn));
             }
         };
     }

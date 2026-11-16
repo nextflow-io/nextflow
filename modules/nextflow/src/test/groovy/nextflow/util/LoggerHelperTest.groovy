@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.extension.OpCall
@@ -144,6 +145,23 @@ class LoggerHelperTest extends Specification {
         ScriptBinding   | 'printx'      | 'Unknown method invocation `printx`'
         BaseScript      | 'printq'      | 'Unknown method invocation `printq` -- Did you mean?\n  print\n  printf'
         DataflowQueue   | 'view'        | 'Unknown method invocation `view` on channel type'
+    }
+
+    @Unroll
+    def 'should format missing property error' () {
+        given:
+        def event = Mock(ILoggingEvent)
+        def buffer = new StringBuilder()
+
+        when:
+        LoggerHelper.appendFormattedMessage(buffer, event, ERROR, null)
+        then:
+        buffer.toString().startsWith("ERROR ~ ${MSG}")
+
+        where:
+        ERROR                                                   | MSG
+        new MissingPropertyException('foo', ScriptBinding)      | 'No such variable: foo'
+        new MissingPropertyException('Unknown variable `bar`')  | 'No such variable: Unknown variable `bar`'
     }
 
     @Unroll

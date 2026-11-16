@@ -16,14 +16,14 @@
 
 package nextflow.script.parser
 
+import java.nio.file.Path
+
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -33,14 +33,11 @@ import static test.TestUtils.tempFile
  */
 class ScriptAstBuilderTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
+    @TempDir
+    Path root
 
     List<SyntaxException> check(String contents) {
+        final scriptParser = new ScriptParser()
         return TestUtils.check(scriptParser, contents)
     }
 
@@ -57,6 +54,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 14
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 15
         errors[0].getOriginalMessage() == "Unexpected input: '3'"
 
         when:
@@ -76,6 +75,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 16
+        errors[0].getEndLine() == 2
+        errors[0].getEndColumn() == 17
         errors[0].getOriginalMessage() == "Unexpected input: '\\n'"
 
         when:
@@ -96,6 +97,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 24
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 27
         errors[0].getOriginalMessage() == "Unexpected input: 'val'"
 
         when:
@@ -116,6 +119,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 40
+        errors[0].getEndLine() == 3
+        errors[0].getEndColumn() == 44
         errors[0].getOriginalMessage() == "Unexpected input: 'emit'"
 
         when:
@@ -136,6 +141,8 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 4
         errors[0].getStartColumn() == 6
+        errors[0].getEndLine() == 4
+        errors[0].getEndColumn() == 7
         errors[0].getOriginalMessage() == "Unexpected input: ','"
     }
 
@@ -150,9 +157,7 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+        TestUtils.errorList(errors) == [[5, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
 
         when:
         errors = check(
@@ -164,8 +169,7 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+        TestUtils.errorList(errors) == [[5, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
 
         when:
         errors = check(
@@ -176,8 +180,7 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+        TestUtils.errorList(errors) == [[4, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
     }
 
     def 'should report the syntax error in an invalid definition' () {
@@ -227,8 +230,7 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
+        TestUtils.errorList(errors) == [[5, 11, "Unexpected input: '\\n'"]]
     }
 
     def 'should report an error for mixing script declarations with statements' () {
@@ -402,6 +404,32 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
     }
 
+    def 'should report an error for invalid workflow publish statements' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                a = channel.of(1)
+
+                publish:
+                a
+            }
+
+            output {
+                a {
+                    path 'a'
+                }
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 6
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow publish statement -- must be an assignment"
+    }
+
     def 'should report an error for an invalid output assignment' () {
         when:
         def errors = check(
@@ -476,13 +504,11 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() >= 2
-        errors[0].getStartLine() == 3
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
-        errors[1].getStartLine() == 6
-        errors[1].getStartColumn() == 5
-        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
+        TestUtils.errorList(errors) == [
+            [3, 5, 'Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script'],
+            [6, 5, 'Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script'],
+            [9, 14, '`message` is not defined']
+        ]
 
         when:
         errors = check(
@@ -524,10 +550,11 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() >= 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Invalid input declaration in typed process"
+        TestUtils.errorList(errors) == [
+            [5, 5, 'Invalid input declaration in typed process'],
+            [8, 5, '`val` is not defined'],
+            [11, 14, '`message` is not defined']
+        ]
 
         when:
         errors = check(
@@ -587,7 +614,7 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 0
     }
 
-    def 'should report an error for invalid process record input' () {
+    def 'should parse a multiline record input with a trailing comma' () {
         when:
         def errors = check(
             '''\
@@ -756,8 +783,10 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 2
-        errors.every { it.getOriginalMessage() == "Invalid escape sequence: '\\u'" }
+        TestUtils.errorList(errors) == [
+            [1, 6, "Invalid escape sequence: '\\u'"],
+            [2, 6, "Invalid escape sequence: '\\u'"]
+        ]
 
         when:
         // an invalid escape in a gstring fragment that starts with a slash
@@ -794,11 +823,10 @@ class ScriptAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 2
-        errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 7
-        errors[1].getStartLine() == 2
-        errors[1].getStartColumn() == 7
+        TestUtils.errorList(errors) == [
+            [1, 7, "Invalid escape sequence: '\\.'"],
+            [2, 7, "Invalid escape sequence: '\\,'"]
+        ]
 
         when:
         // valid escapes and slashy strings should not be flagged
@@ -814,7 +842,6 @@ class ScriptAstBuilderTest extends Specification {
 
     def 'should report an invalid escape sequence after a line continuation' () {
         given:
-        def root = tempDir()
         // a line continuation followed by CRLF spans only one line
         def main = tempFile(root, 'main.nf', "x = \'\'\'a\\" + "\r\n" + "b\\.c\'\'\'" + "\r\n")
 
@@ -825,9 +852,6 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 2
         errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should allow escaped and interpolated gstring characters' () {

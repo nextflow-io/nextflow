@@ -18,7 +18,6 @@ package nextflow.config.formatter
 
 import nextflow.config.control.ConfigParser
 import nextflow.script.formatter.FormattingOptions
-import spock.lang.Shared
 import spock.lang.Specification
 
 /**
@@ -27,14 +26,8 @@ import spock.lang.Specification
  */
 class ConfigFormatterTest extends Specification {
 
-    @Shared
-    ConfigParser parser
-
-    def setupSpec() {
-        parser = new ConfigParser()
-    }
-
     String format(String contents) {
+        final parser = new ConfigParser()
         def source = parser.parse('main.nf', contents)
         assert !source.getErrorCollector().hasErrors()
         def formatter = new ConfigFormattingVisitor(source, new FormattingOptions(4, true))
@@ -126,6 +119,16 @@ class ConfigFormatterTest extends Specification {
             '''\
             // about the include
             includeConfig 'other.config' // over here
+            '''
+        )
+    }
+
+    def 'should not treat comment-like string text as a comment' () {
+        expect:
+        checkFormat(
+            '''\
+            params.pattern = "${params.dir}/*.vcf.gz"
+            params.url = "${params.host}//path"
             '''
         )
     }

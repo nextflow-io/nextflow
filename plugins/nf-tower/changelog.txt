@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.32.1 - 15 Oct 2026
+- Build plugin commands config in the CLI (#7834) [1f805db0d]
+
 1.32.0 - 12 Oct 2026
 - Write null for values that fail to serialize in TowerJsonGenerator (#7772) [644dcf1a1]
 

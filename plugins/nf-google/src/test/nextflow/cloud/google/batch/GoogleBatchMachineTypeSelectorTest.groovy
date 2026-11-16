@@ -16,9 +16,12 @@
 
 package nextflow.cloud.google.batch
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
+import io.seqera.cloudinfo.client.CloudInfoClient
 import nextflow.cloud.google.batch.GoogleBatchMachineTypeSelector.MachineType
+import nextflow.cloud.types.PriceModel
 import nextflow.util.MemoryUnit
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 class GoogleBatchMachineTypeSelectorTest extends Specification {
@@ -91,13 +94,84 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
 
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    // a trimmed response of the Seqera cloud info products API for google/europe-west2
+    static final String CLOUD_INFO_PRODUCTS = '''
+        {"products": [
+          {"category": "General purpose", "type": "e2-small", "family": "e2", "onDemandPrice": 0.06373944000000001,
+           "spotPrice": [{"zone": "europe-west2-a", "price": 0.025}, {"zone": "europe-west2-b", "price": 0.026}, {"zone": "europe-west2-c", "price": 0.027}],
+           "cpusPerVm": 2, "memPerVm": 2, "gpusPerVm": 0, "ntwPerf": "1 Gbit/s", "ntwPerfCategory": "low",
+           "zones": ["europe-west2-c", "europe-west2-b", "europe-west2-a"],
+           "attributes": {"cpu": "2", "instanceTypeCategory": "General purpose", "memory": "2", "networkPerfCategory": "low"},
+           "currentGen": false, "features": ["burst", "sched"], "maximumPersistentDisks": 16, "maximumPersistentDisksSizeGb": 3072,
+           "isSharedCpu": true, "bootDiskTypes": ["pd-balanced", "pd-ssd", "pd-standard"]},
+          {"category": "General purpose", "type": "n2-standard-4", "family": "n2", "onDemandPrice": 0.250248,
+           "spotPrice": [{"zone": "europe-west2-a", "price": 0.052256000000000004}, {"zone": "europe-west2-b", "price": 0.052256000000000004}],
+           "cpusPerVm": 4, "memPerVm": 16, "gpusPerVm": 0, "ntwPerf": "10 Gbit/s", "ntwPerfCategory": "high",
+           "zones": ["europe-west2-c", "europe-west2-b", "europe-west2-a"],
+           "attributes": {"cpu": "4", "instanceTypeCategory": "General purpose", "memory": "16", "networkPerfCategory": "high"},
+           "currentGen": false, "features": ["sched"], "attachableLocalSsdCounts": [1, 2, 4, 8, 16, 24],
+           "maximumPersistentDisks": 128, "maximumPersistentDisksSizeGb": 263168, "bootDiskTypes": ["pd-balanced", "pd-ssd", "pd-standard"]},
+          {"category": "General purpose", "type": "a3-edgegpu-8g", "family": "a3", "onDemandPrice": 100.91807079189041,
+           "spotPrice": [],
+           "cpusPerVm": 208, "memPerVm": 1872, "gpusPerVm": 8, "ntwPerf": "400 Gbit/s", "ntwPerfCategory": "extra",
+           "zones": ["europe-west2-c", "europe-west2-b", "europe-west2-a"],
+           "attributes": {"cpu": "208", "instanceTypeCategory": "General purpose", "memory": "1872", "networkPerfCategory": "extra"},
+           "currentGen": false, "features": ["gpu", "h100-80gb", "nvidia", "sched", "ssd", "x86"],
+           "gpuModel": "nvidia-h100", "acceleratorType": "nvidia-h100-80gb", "localSsdPartitions": 16, "localSsdGiB": 6000}
+        ],
+        "scrapingTime": 1794411332182}
+        '''
+
     def 'should parse Seqera cloud info API'() {
+        given: 'a local server replying with a recorded cloud info response'
+        def requestPath = null
+        def server = HttpServer.create(new InetSocketAddress(InetAddress.loopbackAddress, 0), 0)
+        server.createContext('/') { HttpExchange exchange ->
+            requestPath = exchange.requestURI.path
+            final body = CLOUD_INFO_PRODUCTS.getBytes('UTF-8')
+            exchange.responseHeaders.add('Content-Type', 'application/json')
+            exchange.sendResponseHeaders(200, body.length)
+            exchange.responseBody.withCloseable { it.write(body) }
+        }
+        server.start()
+        and:
+        def selector = new GoogleBatchMachineTypeSelector()
+        selector.@cloudInfo = CloudInfoClient.builder()
+            .endpoint("http://localhost:${server.address.port}")
+            .build()
+
         when:
-        GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2", true)
+        def types = selector.getAvailableMachineTypes('europe-west2', true)
 
         then:
-        noExceptionThrown()
+        requestPath == '/api/v1/providers/google/services/compute/regions/europe-west2/products'
+        types.size() == 3
+        and:
+        with(types[0]) {
+            type == 'e2-small'
+            family == 'e2'
+            location == 'europe-west2'
+            priceModel == PriceModel.spot
+            Math.abs(spotPrice - 0.026f) < 1e-6
+            Math.abs(onDemandPrice - 0.06373944f) < 1e-6
+            cpusPerVm == 2
+            memPerVm == 2
+            gpusPerVm == 0
+        }
+        and:
+        types[1].type == 'n2-standard-4'
+        types[1].family == 'n2'
+        Math.abs(types[1].spotPrice - 0.052256f) < 1e-6
+        types[1].memPerVm == 16
+        and:
+        types[2].type == 'a3-edgegpu-8g'
+        types[2].family == 'a3'
+        types[2].spotPrice == 0.0f
+        types[2].cpusPerVm == 208
+        types[2].gpusPerVm == 8
+
+        cleanup:
+        server?.stop(0)
     }
 
     def 'should find first valid disk size'() {

@@ -18,7 +18,7 @@ package nextflow.k8s
 
 import nextflow.k8s.client.K8sRetryConfig
 
-import javax.annotation.Nullable
+import org.jspecify.annotations.Nullable
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -82,7 +82,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+        The interval after which the Kubernetes client configuration is refreshed (default: `50.m`).
     """)
     final Duration clientRefreshInterval
 
@@ -114,13 +114,13 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
+        The Kubernetes HTTP client request connection timeout e.g. `60.s`.
     """)
     final Duration httpConnectTimeout
 
     @ConfigOption
     @Description("""
-        The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
+        The Kubernetes HTTP client request connection read timeout e.g. `60.s`.
     """)
     final Duration httpReadTimeout
 

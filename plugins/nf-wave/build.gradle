@@ -20,7 +20,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '26.09.0-edge'
+    nextflowVersion = '26.10.2'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'

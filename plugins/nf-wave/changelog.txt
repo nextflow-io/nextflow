@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.22.3 - 15 Oct 2026
+- Build plugin commands config in the CLI (#7834) [1f805db0d]
+
 1.22.2 - 6 Oct 2026
 - Add conda/micromamba:v2-fast and conda/pixi:v1-fast to the wave.build.template docs (#7727) [cbf790221]
 - Centralise shared dependency versions in gradle.properties (#7704) [ab2dfa037]

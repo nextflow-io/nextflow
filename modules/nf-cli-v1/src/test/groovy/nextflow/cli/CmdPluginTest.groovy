@@ -16,6 +16,9 @@
 
 package nextflow.cli
 
+import java.nio.file.Files
+
+import nextflow.exception.ConfigParseException
 import spock.lang.Specification
 /**
  *
@@ -77,6 +80,38 @@ class CmdPluginTest extends Specification {
         out.contains('Unknown plugin sub-command: instal')
         and: 'the reason is printed before the general usage'
         out.indexOf('Unknown plugin sub-command: instal') < out.indexOf('Usage: nextflow plugin <sub-command> [options]')
+    }
+
+    def 'should build the config honouring the config ignore includes option' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('nextflow.config')
+        configFile.text = """
+            workDir = 'my-work'
+            includeConfig 'http://localhost:1/not-found.config'
+            """
+        and:
+        def options = new CliOptions((OPTION): [configFile.toString()], ignoreConfigIncludes: true)
+        def cmd = new CmdPlugin(launcher: new Launcher(options: options))
+
+        when:
+        def config = cmd.buildConfig()
+        then:
+        config.workDir == 'my-work'
+
+        when:
+        options.ignoreConfigIncludes = false
+        cmd.buildConfig()
+        then:
+        thrown(ConfigParseException)
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        OPTION       | _
+        'config'     | _     // -C
+        'userConfig' | _     // -c
     }
 
 }

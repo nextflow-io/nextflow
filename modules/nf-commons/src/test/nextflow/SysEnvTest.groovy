@@ -63,6 +63,9 @@ class SysEnvTest extends Specification {
         expect:
         SysEnv.getBool('FOO', DEF) == EXPECTED
 
+        cleanup:
+        SysEnv.pop()
+
         where:
         STATE           | DEF       | EXPECTED
         [:]             | false     | false
@@ -81,6 +84,9 @@ class SysEnvTest extends Specification {
 
         expect:
         SysEnv.getInteger('FOO', DEF) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
 
         where:
         STATE           | DEF       | EXPECTED
@@ -104,6 +110,9 @@ class SysEnvTest extends Specification {
 
         expect:
         SysEnv.getLong('FOO', DEF) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
 
         where:
         STATE           | DEF       | EXPECTED

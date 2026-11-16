@@ -16,11 +16,12 @@
 
 package nextflow.script.control
 
+import java.nio.file.Path
+
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -54,20 +55,17 @@ class PipelineTypeCheckingTest extends Specification {
         }
         '''
 
+    @TempDir
+    Path root
+
     List<String> check(String main, Map<String,String> modules = [:]) {
-        def root = tempDir()
-        try {
-            def mainFile = tempFile(root, 'main.nf', "nextflow.enable.types = true\n" + main.stripIndent())
-            def pipelineFile = tempFile(root, 'rnaseq.nf', PIPELINE)
-            def moduleFiles = modules.collect { name, text -> tempFile(root, name, "nextflow.enable.types = true\n" + text.stripIndent()) }
-            def parser = new ScriptParser(root)
-            return TestUtils.check(parser, [mainFile, pipelineFile] + moduleFiles)
-                .findAll { e -> e.getSourceLocator().endsWith('main.nf') }
-                .collect { e -> e.getOriginalMessage() }
-        }
-        finally {
-            deleteDir(root)
-        }
+        def mainFile = tempFile(root, 'main.nf', "nextflow.enable.types = true\n" + main.stripIndent())
+        def pipelineFile = tempFile(root, 'rnaseq.nf', PIPELINE)
+        def moduleFiles = modules.collect { name, text -> tempFile(root, name, "nextflow.enable.types = true\n" + text.stripIndent()) }
+        def parser = new ScriptParser(root)
+        return TestUtils.check(parser, [mainFile, pipelineFile] + moduleFiles)
+            .findAll { e -> e.getSourceLocator().endsWith('main.nf') }
+            .collect { e -> e.getOriginalMessage() }
     }
 
     def 'should check an included params record with overrides' () {

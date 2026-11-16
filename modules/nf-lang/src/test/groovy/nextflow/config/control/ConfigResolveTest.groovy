@@ -19,12 +19,10 @@ package nextflow.config.control
 import java.nio.file.Path
 
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -34,18 +32,16 @@ import static test.TestUtils.tempFile
  */
 class ConfigResolveTest extends Specification {
 
-    @Shared
-    ConfigParser parser
-
-    def setupSpec() {
-        parser = new ConfigParser()
-    }
+    @TempDir
+    Path root
 
     List<SyntaxException> check(String contents) {
+        final parser = new ConfigParser()
         return TestUtils.check(parser, contents)
     }
 
     List<SyntaxException> check(List<Path> files) {
+        final parser = new ConfigParser()
         return TestUtils.check(parser, files)
     }
 
@@ -77,7 +73,6 @@ class ConfigResolveTest extends Specification {
 
     def 'should report an error for an invalid config include' () {
         given:
-        def root = tempDir()
         def config = tempFile(root, 'nextflow.config')
         def extra = tempFile(root, 'extra.config', '')
 
@@ -105,9 +100,6 @@ class ConfigResolveTest extends Specification {
         errors = check([config, extra])
         then:
         errors.size() == 0
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should check variables in a closure' () {

@@ -85,13 +85,13 @@ class TowerConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
+        The HTTP connection timeout for Seqera Platform API requests (default: `60.s`).
     """)
     final Duration httpConnectTimeout
 
     @ConfigOption
     @Description("""
-        The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
+        The HTTP read timeout for Seqera Platform API requests (default: `60.s`).
     """)
     final Duration httpReadTimeout
 

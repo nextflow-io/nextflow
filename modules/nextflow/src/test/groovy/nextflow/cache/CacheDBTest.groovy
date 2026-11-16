@@ -22,6 +22,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
+import com.esotericsoftware.kryo.KryoException
 import com.google.common.hash.HashCode
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
@@ -37,6 +38,9 @@ import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.KryoHelper
+import nextflow.util.KryoHelperCompatTest
+import java.nio.file.Paths
+import nextflow.util.HashBuilder
 import spock.lang.Specification
 /**
  *
@@ -104,6 +108,29 @@ class CacheDBTest extends Specification {
         folder?.deleteDir()
     }
 
+
+    def 'should fail to read an entry whose context holds a type that is no longer supported' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def hash = CacheHelper.hasher('x').hash()
+        def store = new DefaultCacheStore(UUID.randomUUID(), 'test_1', folder)
+        def cache = new CacheDB(store).open()
+        def proc = Mock(TaskProcessor)
+        and: 'a context written by a previous version, holding an AtomicInteger'
+        def context = KryoHelperCompatTest.golden().get('ALL')
+        def trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0])
+        store.putEntry(hash, KryoHelper.serialize([trace.serialize(), context, 1]))
+
+        when:
+        cache.getTaskEntry(hash, proc)
+        then:
+        def e = thrown(KryoException)
+        e.message.contains('java.util.concurrent.atomic.AtomicInteger')
+
+        cleanup:
+        cache?.close()
+        folder?.deleteDir()
+    }
 
     private makeTaskHandler(HashCode hash, Map record, Map context=null) {
 
@@ -240,10 +267,110 @@ class CacheDBTest extends Specification {
         logger.addAppender(appender)
 
         when:
-        cache.putIndexAsync(Mock(TaskHandler) { getTask() >> new TaskRun(hash: HashCode.fromInt(1)) })
+        cache.cacheTaskAsync(Mock(TaskHandler) { getTask() >> new TaskRun(hash: HashCode.fromInt(1)) })
         cache.close()   // close() awaits the writer agent, so the failing write has already run
 
         then: 'the failure surfaced as a WARN instead of being swallowed by the agent'
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Unable to persist cache record') }
+
+        cleanup:
+        logger.detachAppender(appender)
+    }
+
+    def 'records a completed attempt under the task hash, and a failed one under a key of its own' () {
+        given:
+        def hash = HashCode.fromInt(100)
+        def task = { String dir -> new TaskRun(hash: hash, workDir: Paths.get("/work/ab/$dir")) }
+        def failed = new TraceRecord([status: 'FAILED'])
+
+        expect:
+        CacheDB.entryKey(task('cdef-2'), new TraceRecord([status: 'COMPLETED'])) == hash
+        and: 'keyed by the attempt suffix of the work dir'
+        CacheDB.entryKey(task('cdef'), failed) == HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(-1).hash()
+        CacheDB.entryKey(task('cdef-3'), failed) == HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(-3).hash()
+    }
+
+    def 'writes the entry and the index row of an attempt under the same key, on completion' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        def proc = Mock(TaskProcessor) { getTaskBody() >> new BodyDef(null,'source'); getConfig() >> new ProcessConfig([:]) }
+        def task = new TaskRun(hash: HashCode.fromInt(100), workDir: Paths.get('/work/ab/cdef-2'), processor: proc)
+        def handler = Mock(TaskHandler) { getTask() >> task }
+        def trace = new TraceRecord([status: 'FAILED'])
+        def key = CacheDB.entryKey(task, trace)
+
+        when:
+        cache.putIndexAsync(handler)
+        cache.putTaskAsync(handler, trace)
+        cache.close()
+
+        then:
+        1 * store.putEntry(key, _)
+        1 * store.writeIndex(key, false)
+        0 * store.writeIndex(task.hash, _)
+    }
+
+    def 'a replaced entry keeps the references of the runs that listed it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cache = new CacheDB(new DefaultCacheStore(UUID.randomUUID(), 'test_1', folder)).open()
+        def hash = HashCode.fromInt(100)
+        def proc = Mock(TaskProcessor) { getConfig() >> new ProcessConfig([:]) }
+        def handler = { String dir -> new CachedTaskHandler(Mock(TaskRun) { getProcessor() >> proc; getHash() >> hash; getWorkDir() >> Paths.get(dir) }, new TraceRecord()) }
+
+        when: 'a completed task is re-executed, e.g. its outputs could not be resumed'
+        cache.writeTaskEntry0(handler('/work/ab/cdef'), new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef']))
+        cache.writeTaskEntry0(handler('/work/ab/cdef-2'), new TraceRecord([status: 'COMPLETED', workdir: '/work/ab/cdef-2']))
+        then:
+        cache.getTraceRecord(hash).workDir == '/work/ab/cdef-2'
+        and: 'cleaning one of the two runs keeps the entry'
+        !cache.removeTaskEntry(hash)
+        cache.removeTaskEntry(hash)
+
+        cleanup:
+        cache?.close()
+        folder?.deleteDir()
+    }
+
+    def 'reads the entry it replaces only for a later attempt' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        def proc = Mock(TaskProcessor) { getConfig() >> new ProcessConfig([:]) }
+        def task = new TaskRun(hash: HashCode.fromInt(100), workDir: Paths.get(DIR), processor: proc)
+
+        when:
+        cache.writeTaskEntry0(new CachedTaskHandler(task, new TraceRecord()), new TraceRecord([status: 'COMPLETED']))
+        then:
+        READS * store.getEntry(task.hash)
+        1 * store.putEntry(task.hash, _)
+
+        where:
+        DIR                 | READS
+        '/work/ab/cdef'     | 0
+        '/work/ab/cdef-2'   | 1
+    }
+
+    def 'a task without a trace record is logged, without failing the run' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        def handler = Mock(TaskHandler) { getTask() >> new TaskRun(hash: HashCode.fromInt(1), workDir: Paths.get('/work/ab/cdef')) }
+        and:
+        def logger = (Logger) org.slf4j.LoggerFactory.getLogger(CacheDB)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+
+        when: 'the trace record could not be built, see TaskHandler#safeTraceRecord'
+        cache.putTaskAsync(handler, null)
+        cache.close()
+
+        then:
+        noExceptionThrown()
+        0 * store.putEntry(_, _)
+        0 * store.writeIndex(_, _)
         appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Unable to persist cache record') }
 
         cleanup:

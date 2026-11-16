@@ -83,6 +83,18 @@ class WaveConfig implements ConfigScope {
 
     final WaveScanConfig scan
 
+    @ConfigOption
+    @Description("""
+        Enable SOCI lazy loading for Wave containers (default: `false`). Wave attaches a SOCI index to the containers, so that hosts running the SOCI snapshotter start them before the whole image is downloaded. Not applied to Singularity containers.
+    """)
+    final boolean soci
+
+    @ConfigOption
+    @Description("""
+        The number of downstream process levels whose containers are requested ahead (default: `0`, disabled). When the first task of a process is submitted, Wave is asked for the containers of the processes up to this many levels downstream, so that their provisioning (e.g. a SOCI index or a build) runs while the upstream tasks run. Only containers that do not depend on the task inputs are requested ahead.
+    """)
+    final int prefetchDepth
+
     @ConfigOption(types=[String])
     @Description("""
         The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
@@ -106,6 +118,8 @@ class WaveConfig implements ConfigScope {
         this.mirror = opts.mirror as boolean
         this.retryPolicy = retryOpts0(opts)
         this.scan = new WaveScanConfig(opts.scan as Map ?: Collections.emptyMap())
+        this.soci = opts.soci as boolean
+        this.prefetchDepth = opts.prefetchDepth ? opts.prefetchDepth as int : 0
         this.strategy = parseStrategy(opts.strategy)
 
         this.bundleProjectResources = opts.bundleProjectResources
@@ -132,6 +146,10 @@ class WaveConfig implements ConfigScope {
 
     boolean mirrorMode() { this.mirror }
 
+    boolean sociMode() { this.soci }
+
+    int prefetchDepth() { this.prefetchDepth }
+
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
@@ -150,6 +168,8 @@ class WaveConfig implements ConfigScope {
         def scheme= FileHelper.getUrlProtocol(endpoint)
         if( scheme !in ['http','https'] )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
+        if( prefetchDepth < 0 )
+            throw new IllegalArgumentException("Config setting 'wave.prefetchDepth' cannot be negative - offending value: $prefetchDepth")
         if( FileHelper.getUrlProtocol(build.repository) )
             throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$build.repository'")
         if( FileHelper.getUrlProtocol(build.cacheRepository) )
@@ -280,7 +300,7 @@ class WaveBuildConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/pixi:v1-fast` (like `conda/pixi:v1`, with the Conda environment split into multiple image layers, Docker only), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `conda/micromamba:v2-fast` (like `conda/micromamba:v2`, with the Conda environment split into multiple image layers, Docker only), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
+        The build template used to build Conda containers (default: `conda/micromamba:v2`). Can be `conda/micromamba:v1`, `conda/micromamba:v2`, `conda/micromamba:v2-fast`, `conda/pixi:v1`, or `conda/pixi:v1-fast`.
     """)
     final String template
 
@@ -329,7 +349,7 @@ class WaveBuildCondaConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when `wave.build.template` is set to `conda/micromamba:v2`, `conda/micromamba:v2-fast`, `conda/pixi:v1` or `conda/pixi:v1-fast`.
+        The base image of the Conda containers built with the `conda/micromamba:v2` and `conda/micromamba:v2-fast` templates (default: `ubuntu:24.04`). Ignored by the other templates.
     """)
     final String baseImage
 

@@ -83,7 +83,7 @@ You can include configuration files in other configuration files with the `inclu
 ```groovy
 process.executor = 'sge'
 process.queue = 'long'
-process.memory = '10G'
+process.memory = 10.GB
 
 includeConfig 'path/extra.config'
 ```
@@ -331,7 +331,7 @@ profiles {
     cluster {
         process.executor = 'sge'
         process.queue = 'long'
-        process.memory = '10GB'
+        process.memory = 10.GB
     }
 
     cloud {

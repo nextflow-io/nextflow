@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import dev.failsafe.function.CheckedPredicate
 
@@ -69,7 +70,6 @@ import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.credential.TokenCredential
 import com.azure.core.exception.ClientAuthenticationException
 import com.azure.core.exception.HttpResponseException
-import com.azure.core.exception.ResourceNotFoundException
 import com.azure.core.http.rest.PagedIterable
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
@@ -93,6 +93,7 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.platform.ResourceLabelPolicy
@@ -112,7 +113,7 @@ import reactor.core.publisher.Flux
 @CompileStatic
 class AzBatchService implements Closeable {
 
-    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy'
+    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.34.1/azcopy'
 
     static private final long _1GB = 1 << 30
 
@@ -121,6 +122,12 @@ class AzBatchService implements Closeable {
     AzConfig config
 
     Map<AzJobKey,String> allJobIds = new HashMap<>(50)
+
+    private final Map<String,String> jobPoolIds = new ConcurrentHashMap<>()
+
+    private final Map<String,Optional<String>> poolAllocationErrors = new ConcurrentHashMap<>()
+
+    private final Map<String,Long> poolAllocationChecks = new ConcurrentHashMap<>()
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -432,6 +439,7 @@ class AzBatchService implements Closeable {
         final jobId = createJob0(poolId,task)
         // add to the map
         allJobIds[mapKey] = jobId
+        jobPoolIds[jobId] = poolId
         return jobId
     }
 
@@ -534,7 +542,10 @@ class AzBatchService implements Closeable {
         final container = task.getContainer()
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
-        final taskId = "nf-${task.hash.toString()}"
+        // every attempt of a task shares its hash: the work dir's attempt suffix (`-N`) keeps their ids
+        // apart, since a failed task is kept in the job by default
+        final attempt = FileHelper.getAttemptFromPath(task.workDir)
+        final taskId = "nf-${task.hash.toString()}${attempt > 1 ? "-${attempt}" : ''}"
         // get the pool config
         final pool = getPoolSpec(poolId)
         if( !pool )
@@ -647,6 +658,7 @@ class AzBatchService implements Closeable {
     protected List<ResourceFile> resourceFileUrls(TaskRun task, String sas) {
         final cmdRun = (AzPath) task.workDir.resolve(TaskRun.CMD_RUN)
         final cmdScript = (AzPath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
+        final cmdInfile = (AzPath) task.workDir.resolve(TaskRun.CMD_INFILE)
 
         final resFiles = new ArrayList(10)
 
@@ -667,7 +679,7 @@ class AzBatchService implements Closeable {
 
         if( task.stdin ) {
             resFiles << new ResourceFile()
-                    .setHttpUrl(AzHelper.toHttpUrl(cmdScript, sas))
+                    .setHttpUrl(AzHelper.toHttpUrl(cmdInfile, sas))
                     .setFilePath(TaskRun.CMD_INFILE)
         }
 
@@ -775,23 +787,89 @@ class AzBatchService implements Closeable {
      */
     private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
 
+    private static final Duration POOL_ALLOCATION_CHECK_INTERVAL = Duration.ofMinutes(1)
+
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
         }
-        else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 && pool.currentLowPriorityNodes==0 ) {
-            // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
-            // For a steady autoscale pool carrying only transient errors, submitting the task is what triggers
-            // a fresh resize (which clears the stale error), so warn and proceed instead of blocking recovery.
-            if( isRecoverableResizeError(pool) ) {
-                log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; submitting task to trigger a fresh resize - ${pool.resizeErrors*.code}"
-            }
-            else {
-                throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
-            }
+        final resizeError = resizeError(pool)
+        if( resizeError ) {
+            throw new IllegalStateException(resizeError)
         }
         if( pool.taskSlotsPerNode != spec.vmType.numberOfCores ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' slots per node does not match the VM num cores (slots: ${pool.taskSlotsPerNode}, cores: ${spec.vmType.numberOfCores})")
+        }
+    }
+
+    /**
+     * @return A message describing the pool resize errors when they leave the pool without
+     *      any node and cannot be recovered, or {@code null} otherwise
+     */
+    protected String resizeError(BatchPool pool) {
+        if( !pool.resizeErrors || pool.currentDedicatedNodes!=0 || pool.currentLowPriorityNodes!=0 )
+            return null
+        // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
+        // For a steady autoscale pool carrying only transient errors, a pending task is what triggers
+        // a fresh resize (which clears the stale error), so do not block recovery.
+        // Only reachable from checkPool, since queued task checks skip autoscale pools.
+        if( isRecoverableResizeError(pool) ) {
+            log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; waiting for a fresh resize - ${pool.resizeErrors*.code}"
+            return null
+        }
+        final errors = pool.resizeErrors.collect { it.message ? "${it.code}: ${it.message}".toString() : it.code }
+        return "Azure Batch pool '${pool.id}' has resize errors and no agents are available - ${errors.join('; ')}"
+    }
+
+    /**
+     * Check whether the pool of a queued task failed to allocate any node.
+     *
+     * Only fixed-size pools are checked, because they never retry a failed resize, while an
+     * autoscale pool can still grow once quota or capacity frees up. The pool is looked up at
+     * most once per {@link #POOL_ALLOCATION_CHECK_INTERVAL} until its allocation is steady,
+     * then the outcome is kept for the rest of the run and shared by all tasks on that pool.
+     *
+     * @return The pool resize error message, or {@code null} when the task can keep waiting
+     */
+    String poolAllocationError(AzTaskKey key) {
+        final poolId = jobPoolIds.get(key.jobId)
+        if( !poolId )
+            return null
+        final known = poolAllocationErrors.get(poolId)
+        if( known != null )
+            return known.orElse(null)
+        final now = System.currentTimeMillis()
+        final last = poolAllocationChecks.get(poolId)
+        if( last!=null && now - last < getPoolAllocationCheckInterval().toMillis() )
+            return null
+        poolAllocationChecks.put(poolId, now)
+        final pool = fetchPoolQuietly(poolId)
+        if( !pool )
+            return null
+        // an autoscale pool can still grow once quota or capacity frees up, so its tasks keep waiting
+        if( pool.isEnableAutoScale() ) {
+            poolAllocationErrors.put(poolId, Optional.empty())
+            return null
+        }
+        // a pool just created is still resizing, check it again later
+        if( pool.allocationState != AllocationState.STEADY )
+            return null
+        final error = resizeError(pool)
+        poolAllocationErrors.put(poolId, Optional.ofNullable(error))
+        return error
+    }
+
+    protected Duration getPoolAllocationCheckInterval() {
+        return POOL_ALLOCATION_CHECK_INTERVAL
+    }
+
+    protected BatchPool fetchPoolQuietly(String poolId) {
+        try {
+            return getPool(poolId)
+        }
+        catch( Exception e ) {
+            log.debug "[AZURE BATCH] Unable to fetch pool '$poolId' - ${e.message}"
+            return null
         }
     }
 
@@ -868,8 +946,10 @@ class AzBatchService implements Closeable {
         catch (IllegalArgumentException | ClientAuthenticationException e) {
             throw e
         }
-        catch (ResourceNotFoundException ignored) {
-            return null
+        catch (HttpResponseException e) {
+            if( e.response?.statusCode == 404 )
+                return null
+            throw e
         }
     }
 
@@ -913,29 +993,28 @@ class AzBatchService implements Closeable {
 
     protected BatchStartTask createStartTask(AzStartTaskOpts opts) {
         log.trace "AzStartTaskOpts: ${opts}"
-        final startCmd = new ArrayList<String>(5)
         final resourceFiles = new ArrayList<ResourceFile>()
+        String script = opts.script
 
-        // If enabled, append azcopy installer to start task command
+        // If enabled, prepend the azcopy installer to the start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
-            startCmd << 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+            final install = 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
+            // Group the user script so a failed install skips all of it, not just its first line.
+            // The newline before } keeps trailing comments and heredocs in the user script safe.
+            script = script ? "${install} && {\n${script}\n}".toString() : install
             resourceFiles << new ResourceFile()
                 .setHttpUrl(AZCOPY_URL)
                 .setFilePath('azcopy')
         }
 
-        // Get any custom start task command
-        if ( opts.script ) {
-            startCmd << "bash -c '${opts.script.replace(/'/,/''/)}'".toString()
-        }
-
         // If there is no start task contents we return a null to indicate no start task
-        if( !startCmd ) {
+        if( !script ) {
             return null
         }
 
-        // otherwise return a StartTask object with the start task command and resource files
-        return new BatchStartTask(startCmd.join(' && '))
+        // Batch doesn't run the command line in a shell, so wrap everything in a single bash -c
+        final combinedScript = script.replace(/'/, /'\''/)
+        return new BatchStartTask("bash -c '${combinedScript}'".toString())
             .setResourceFiles(resourceFiles)
             .setUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }
@@ -981,7 +1060,7 @@ class AzBatchService implements Closeable {
                     final String accountName = config.storage().accountName
                     final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
                     final accountKey = config.storage().accountKey
-                    final shareConfig = new AzureFileShareConfiguration( accountName, endpoint, accountKey, it.key )
+                    final shareConfig = new AzureFileShareConfiguration( accountName, accountKey, endpoint, it.key )
                             .setMountOptions(it.value.mountOptions)
 
                     mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(shareConfig)

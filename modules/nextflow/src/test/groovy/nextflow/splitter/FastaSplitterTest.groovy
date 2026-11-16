@@ -16,7 +16,13 @@
 
 package nextflow.splitter
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
 
@@ -416,6 +422,29 @@ class FastaSplitterTest extends Specification {
         splitter.counter.increment == 31
         splitter.counter.size == 1024 * 1024
 
+    }
+
+    def 'should split the same file concurrently' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def session = new Session()
+        session.workDir = folder.resolve('work')
+        def fasta = folder.resolve('sample.fa')
+        fasta.text = (1..1000).collect { ">seq$it\nACDEFGHIKLMNPQRSTVWY\n" }.join()
+        def pool = Executors.newFixedThreadPool(100)
+
+        when:
+        // stagger the calls so that some of them start while another one is writing the chunks
+        def futures = (1..100).collect { int i ->
+            pool.submit({ sleep(i * 5); new FastaSplitter().options(by: 10, file: true).target(fasta).list() } as Callable<List<Path>>)
+        }
+        def counts = futures.collect { f -> f.get().sum { Path it -> it.text.count('>') } }
+        then:
+        counts.every { it == 1000 }
+
+        cleanup:
+        pool?.shutdown()
+        folder?.deleteDir()
     }
 
 }

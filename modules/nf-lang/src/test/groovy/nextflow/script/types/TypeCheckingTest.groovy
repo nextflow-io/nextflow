@@ -35,6 +35,7 @@ import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TestUtils
 
 import static nextflow.script.types.TypeCheckingUtils.*
 
@@ -479,9 +480,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 2
-        errors[0].getOriginalMessage() == "Missing return statement"
+        TestUtils.errorList(errors) == [[2, 5, 'Missing return statement']]
 
         when:
         errors = getErrors(
@@ -496,9 +495,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 3
-        errors[0].getOriginalMessage() == "Missing return statement"
+        TestUtils.errorList(errors) == [[3, 9, 'Missing return statement']]
 
         when: 'the body is empty'
         errors = getErrors(
@@ -511,12 +508,10 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then: 'the error is reported against the function or closure'
-        errors.size() == 2
-        errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 1
-        errors[1].getStartLine() == 4
-        errors[1].getStartColumn() == 23
-        errors.every { it.getOriginalMessage() == "Missing return statement" }
+        TestUtils.errorList(errors) == [
+            [1, 1, 'Missing return statement'],
+            [4, 23, 'Missing return statement']
+        ]
     }
 
     @Unroll
@@ -655,6 +650,37 @@ class TypeCheckingTest extends Specification {
     }
 
     @Unroll
+    def 'should check a function call with default params' () {
+        expect:
+        check(
+            """\
+            def greet(name: String, greeting: String = 'Hello') -> String {
+                "\${greeting}, \${name}!"
+            }
+
+            def pad(prefix: String = '>', s: String) -> String {
+                prefix + s
+            }
+
+            workflow {
+                ${SOURCE}
+            }
+            """,
+            ERROR
+        )
+
+        where:
+        SOURCE                          | ERROR
+        "greet('world')"                | null
+        "greet('world', 'Hi')"          | null
+        "greet()"                       | "Function `greet` expects 1 to 2 argument(s) but received 0"
+        "greet('world', 'Hi', 'x')"     | "Function `greet` expects 1 to 2 argument(s) but received 3"
+        "greet(42)"                     | "Argument with type Integer is not compatible with parameter of type String"
+        "pad('x')"                      | null
+        "pad(42)"                       | "Argument with type Integer is not compatible with parameter of type String"
+    }
+
+    @Unroll
     def 'should check a function call with overloads' () {
         expect:
         check(SOURCE, ERROR)
@@ -677,6 +703,18 @@ class TypeCheckingTest extends Specification {
         "file('input.txt', checkIfExist: true)"     | "Named param `checkIfExist` is not defined"
         "file('input.txt', checkIfExists: 'true')"  | "Named param `checkIfExists` expects a Boolean but received a String"
         "file('input.txt', checkIfExists: true)"    | null
+    }
+
+    @Unroll
+    def 'should accept a boolean or a list of columns for splitCsv header' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                  | ERROR
+        "file('input.csv').splitCsv(header: true)"              | null
+        "file('input.csv').splitCsv(header: ['id', 'fastq'])"   | null
+        "file('input.csv').splitCsv(header: true, skip: 'x')"   | "Named param `skip` expects a Integer but received a String"
     }
 
     def 'should check a function call with record parameters' () {
@@ -844,10 +882,30 @@ class TypeCheckingTest extends Specification {
         "2 in [2]"      | null
         "[2] == ['2']"  | "The `==` operator is not defined for operands with types List<Integer> and List<String>"
         "[2] == [2]"    | null
+        "[[1]] == [['a']]"              | "The `==` operator is not defined for operands with types List<List<Integer>> and List<List<String>>"
+        "[1] == [1.0]"                  | null
+        "[a: 1] == [a: 'x']"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<String, String>"
+        "[a: 1] == [(1): 1]"            | "The `==` operator is not defined for operands with types Map<String, Integer> and Map<Integer, Integer>"
+        "[a: 1] == [a: 1.0]"            | null
+        "tuple(1, 2) == tuple('a', 2)"  | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<String, Integer>"
+        "tuple(1, 2) == tuple(1, 2, 3)" | "The `==` operator is not defined for operands with types Tuple<Integer, Integer> and Tuple<Integer, Integer, Integer>"
+        "tuple(1, 2) == tuple(1.0, 2)"  | null
+        "record(id: 'a') == record(name: 'b')"  | null
+        "record(id: 'a') == record(id: 1)"      | null
+        "record(id: 'a') == [id: 'a']"          | "The `==` operator is not defined for operands with types Record {\n    id: String\n} and Map<String, String>"
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a') }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { record(id: 'a') != s }"             | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(name: 'a') }"           | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 'a', extra: 1) }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: A, b: B) { a == b }"   | null
+        "record A { id: String }\nrecord B { name: String }\ndef f(a: List<A>, b: List<B>) { a == b }"   | null
+        "record Sample { id: String }\ndef f(s: Sample) { s == record(id: 1) }"               | null
+        "record A { id: String }\ndef f(a: A, m: Map<String,String>) { a == m }"              | "The `==` operator is not defined for operands with types A and Map<String, String>"
         "['a', 'b', 'c'][0]"        | null
         "['a', 'b', 'c'][0..-2]"    | null
         "['a', 'b', 'c'][0..1]"     | null
         "['a', 'b', 'c'][1..<3]"    | null
+        "file('ab.txt') << 'a' << 'b'"  | null
     }
 
     @Unroll
@@ -862,6 +920,7 @@ class TypeCheckingTest extends Specification {
         '1 <=> 2'       | 'Integer'
         "'a' <=> 'b'"   | 'Integer'
         '1 < 2'         | 'Boolean'
+        "file('a.txt') << 'a'" | 'Path'
     }
 
     @Unroll
@@ -907,6 +966,8 @@ class TypeCheckingTest extends Specification {
         "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
         "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map<K, V>"
         "true ? 42 : null"      | null
+        "(true ? [1] : 'a').size()"                 | "Conditional expression has inconsistent types -- true branch has type List<Integer> but false branch has type String"
+        "def f(d) { (true ? d : 'a').size() }"      | null
     }
 
     def 'should resolve a ternary expression' () {
@@ -947,6 +1008,7 @@ class TypeCheckingTest extends Specification {
         SOURCE          | ERROR
         "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
         "[1, 2, 3]"     | null
+        "[1, 'a'].collect { v -> v.size() }"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
     }
 
     @Unroll
@@ -1017,6 +1079,36 @@ class TypeCheckingTest extends Specification {
         then:
         Types.getName(method.getParameters().last().getType()) == '(Integer, Integer) -> Integer'
         Types.getName(getType(exp)) == 'List<Integer>'
+    }
+
+    @Unroll
+    def 'should prefer the comparator variant over tuple destructuring' () {
+        when:
+        def exp = parseExpression(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """
+        )
+        def method = exp.getNodeMetaData(ASTNodeMarker.METHOD_TARGET)
+        then:
+        Types.getName(method.getParameters().last().getType()) == '(Tuple<String, Integer>, Tuple<String, Integer>) -> Integer'
+        Types.getName(getType(exp)) == TYPE
+
+        and:
+        check(
+            """\
+            def pairs = [tuple('b', 2), tuple('a', 3), tuple('c', 1)]
+            pairs.${METHOD} { a, b -> a[1] <=> b[1] }
+            """,
+            null
+        )
+
+        where:
+        METHOD      | TYPE
+        'toSorted'  | 'List<Tuple<String, Integer>>'
+        'max'       | 'Tuple<String, Integer>'
+        'min'       | 'Tuple<String, Integer>'
     }
 
     @Unroll
@@ -1157,6 +1249,20 @@ class TypeCheckingTest extends Specification {
         )
         then:
         checkType(exp, Object)
+    }
+
+    @Unroll
+    def 'should resolve a getter property with generic type' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                                          | ERROR
+        "[a: 1].entrySet().each { e -> def k: String = e.key }"         | null
+        "[a: 1].entrySet().each { e -> def v: Integer = e.value }"      | null
+        "[a: 1].entrySet().each { e -> e.key.nope }"                    | "Unrecognized property `nope` for type String"
+        "[a: 1].entrySet().each { e -> e.value.nope }"                  | "Unrecognized property `nope` for type Integer"
+        "[a: 1].entrySet().each { e -> e.nope }"                        | "Unrecognized property `nope` for type Entry<String, Integer>"
     }
 
     def 'should check a workflow call' () {
@@ -1935,8 +2041,7 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage() == 'Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value'
+        TestUtils.errorList(errors) == [[3, 25, 'Named argument of a `combine` operation cannot be a channel -- it must be a dataflow value or plain value']]
     }
 
     def 'should resolve a `groupBy` operation' () {
@@ -1987,9 +2092,10 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 2
-        errors[0].getOriginalMessage() == 'Join field `sample_id` is not present in left-hand side'
-        errors[1].getOriginalMessage() == 'Join field `sample_id` is not present in right-hand side'
+        TestUtils.errorList(errors) == [
+            [3, 22, 'Join field `sample_id` is not present in left-hand side'],
+            [3, 22, 'Join field `sample_id` is not present in right-hand side']
+        ]
     }
 
     def 'should report a soft error for a `join` that overwrites left-hand fields' () {
@@ -2002,9 +2108,8 @@ class TypeCheckingTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
+        TestUtils.errorList(errors) == [[3, 22, 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values']]
         errors[0].isSoftError()
-        errors[0].getOriginalMessage() == 'Join fields [alive] are present in both records -- the left-hand values will be overwritten by the right-hand values'
     }
 
 }

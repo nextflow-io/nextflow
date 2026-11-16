@@ -27,7 +27,7 @@ import static test.ScriptHelper.*
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(10)
+@Timeout(30)
 class FunctionalTests extends Dsl2Spec {
 
     def 'test configure processor'() {

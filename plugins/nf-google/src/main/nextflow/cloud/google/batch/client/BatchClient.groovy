@@ -26,12 +26,14 @@ import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.InternalException
 import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceClient.ListTasksPage
 import com.google.cloud.batch.v1.BatchServiceSettings
+import com.google.cloud.batch.v1.DeleteJobRequest
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
@@ -58,8 +60,9 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class BatchClient {
-    private final static long TASK_STATE_INVALID_TIME = 1_000
     private final static int LIST_TASKS_PAGE_SIZE = 500
+    /** Time in milliseconds a cached array task status is considered valid */
+    protected long taskStateInvalidTime = 1_000
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
@@ -162,8 +165,20 @@ class BatchClient {
     }
 
     void deleteJob(String jobId) {
-        final name = JobName.of(projectId, location, jobId).toString()
-        apply(()-> batchServiceClient.deleteJobAsync(name))
+        final request = DeleteJobRequest.newBuilder()
+            .setName(JobName.of(projectId, location, jobId).toString())
+            .build()
+        // wait for the deletion request to be accepted, but not for the deletion to complete
+        apply(()-> {
+            try {
+                return batchServiceClient.deleteJobCallable().call(request)
+            }
+            catch( NotFoundException e ) {
+                // the job no longer exists, there is nothing to delete or retry
+                log.debug "[GOOGLE BATCH] Job $jobId not found -- skipping deletion"
+                return null
+            }
+        })
     }
 
     TaskStatus getTaskStatus(String jobId, String taskId) {
@@ -232,6 +247,8 @@ class BatchClient {
                     return true
                 if( t instanceof DeadlineExceededException )
                     return true
+                if( t instanceof InternalException )
+                    return true
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
@@ -251,7 +268,7 @@ class BatchClient {
     TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
         final key = arrayTaskKey(jobId, taskId)
         TaskStatusRecord record = arrayTaskStatus.get(key)
-        if( !record || System.currentTimeMillis() - record.timestamp > TASK_STATE_INVALID_TIME ){
+        if( !record || System.currentTimeMillis() - record.timestamp > taskStateInvalidTime ){
             log.trace("[GOOGLE BATCH] Updating tasks status for job $jobId")
             updateArrayTasks(jobId)
             record = arrayTaskStatus.get(key)
@@ -261,7 +278,7 @@ class BatchClient {
 
     private void updateArrayTasks(String jobId){
         final tasks = listTasks(jobId)
-        // take the timestamp after the listing, which can take longer than TASK_STATE_INVALID_TIME for large arrays
+        // take the timestamp after the listing, which can take longer than taskStateInvalidTime for large arrays
         final now = System.currentTimeMillis()
         for( Task t: tasks ){
             final name = TaskName.parse(t.name)

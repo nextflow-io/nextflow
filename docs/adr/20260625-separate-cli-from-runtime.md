@@ -1,0 +1,114 @@
+# Separate CLI from Runtime
+
+- Authors: Ben Sherman
+- Status: accepted
+- Deciders: Ben Sherman, Paolo Di Tommaso
+- Date: 2026-06-25
+- Tags: cli, modularization, build, architecture
+
+## Updates
+
+### 2026-11-02
+- **Removed `kuberun`**: `CmdKubeRun` and `K8sDriverLauncher` moved to the external [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, which depends on `nf-k8s` as a plugin. `nf-cli-v1` no longer depends on `nf-k8s`, so `nf-k8s` is no longer bundled in the distribution, and the split package and `ConfigValidator` workaround it required are gone. The `kuberun` command remains as a stub that reports its removal. The non-goals, module structure, and plugin sections were updated in place.
+- **Removed `nf-console`**: the `nf-console` plugin was removed. The `console` command remains as a stub that reports its removal.
+
+## Summary
+
+Move the CLI code into a new `nf-cli-v1` module, leaving `nextflow` as a pure runtime that knows nothing about the CLI. The split untangles circular dependencies, speeds up builds, lets library consumers depend on the runtime without dragging in the CLI, and makes room for a future CLI v2.
+
+## Problem Statement
+
+The `nextflow` module mixed two distinct concerns:
+
+1. **The CLI**: the `Launcher` entry point, argument parsing (JCommander), and the `Cmd*` command classes (`CmdRun`, `CmdConfig`, `CmdLog`, the `module` subcommands, etc.).
+2. **The runtime**: the dataflow engine, session, executors, config model, SCM/asset management, and everything required to execute a workflow.
+
+Bundling them together caused several problems:
+
+- **Circular dependencies**: CLI code reached into the runtime and runtime code reached back into CLI concerns (e.g. `ConfigBuilder` carried CLI-specific logic), which made the dependency graph hard to reason about.
+- **Slow builds**: editing a CLI class forced a rebuild of the entire module, including the runtime.
+- **Unwanted coupling for consumers**: library consumers such as Seqera Platform and plugins, which only need the runtime, were forced to depend on the whole CLI.
+- **No room for a CLI v2**: a redesigned CLI could not be introduced cleanly while the existing CLI was fused to the runtime.
+
+In addition, several plugins (`nf-console`, `nf-k8s`, `nf-tower`, `nf-wave`) contribute CLI commands, so naively moving the CLI out risked coupling those plugins to the new CLI module instead of to the runtime.
+
+## Goals or Decision Drivers
+
+- **Separation of concerns**: the CLI should depend on the runtime, never the reverse.
+- **Faster, more incremental builds**: changing CLI code should not rebuild the runtime.
+- **Runtime reusable as a library**: consumers (Platform, plugins) can depend on `nextflow` alone, without the CLI.
+- **Break circular dependencies**: produce a clean, acyclic module graph.
+- **Keep plugins decoupled from the CLI**: plugins that add commands should depend on the runtime, not on `nf-cli-v1`, wherever feasible.
+- **Enable a future CLI v2**: make it possible to add an alternative CLI implementation alongside v1.
+- **Preserve user-facing behavior**: the Nextflow CLI should continue to behave the same way.
+
+## Non-goals
+
+- **Redesigning the CLI**: this is a structural move only; CLI v2 is explicitly future work. The module is named `nf-cli-v1` to leave that door open.
+- **Changing the packaging/distribution format**: the produced `nextflow` binary is unchanged from the user's perspective.
+
+## Solution
+
+Extract the CLI into a new `nf-cli-v1` module that depends on the `nextflow` runtime, and relocate the shared interfaces and adapter classes needed to keep the dependency graph acyclic and plugins decoupled from the CLI.
+
+## Rationale & discussion
+
+### New module structure
+
+```
+nf-cli-v1 ──► nextflow (runtime) ──► nf-commons, nf-httpfs, nf-lang
+   │
+   └──► nf-lineage (via CmdLineage) ──► nextflow
+```
+
+- `nf-cli-v1` contains the `Launcher` entry point, `CliOptions`/`HubAware`, and all `Cmd*` classes (including the `module` subcommands). Its `application` main class is `nextflow.cli.Launcher`, and it produces the shadow jar that becomes the `nextflow` distribution.
+- `nextflow` contains the runtime only: no CLI entry point, no `Cmd*` classes.
+- `settings.gradle` registers the new `nf-cli-v1` module.
+- `packing.gradle` now packs from `:nf-cli-v1:shadowJar` instead of `:nextflow:shadowJar`; the produced `nextflow-<version>-one.jar` / `-dist` artifacts are unchanged in name and behavior.
+
+### Breaking the circular dependencies
+
+Several deliberate moves were required so that the runtime never depends on the CLI:
+
+1. **`ConfigBuilder` → `ConfigCmdAdapter`**: the CLI-specific portions of `ConfigBuilder` were extracted into a new `ConfigCmdAdapter` class in `nf-cli-v1`, leaving the core config builder in the runtime. This also yields a cleaner separation of concerns.
+
+2. **Command interfaces → runtime**: `AuthCommand` and `LaunchCommand` interfaces were moved into the runtime. This lets `nf-tower` implement these commands while depending only on the runtime and not the CLI. `nf-lineage` was similarly reworked to depend on `nextflow` and be required by `nf-cli-v1`, removing the need for the `LinCommand` interface (the lineage command uses `LinCommandImpl` directly).
+
+   One consequence is that prior versions of `nf-tower` will not load `auth`/`launch` correctly if they are used with a newer Nextflow version. This is acceptable because there is no reason to do this, since core plugins are rebuilt at release.
+
+3. **`PluginExecAware` → runtime**: `PluginExecAware` and `PluginAbstractExec` were moved into the runtime module, keeping their `nextflow.cli` package, so that plugins can declare CLI commands without depending on `nf-cli-v1`. Only the `exec()` method signature was changed, to remove the dependency on `nextflow.cli.Launcher`.
+
+### Plugins that contribute CLI commands
+
+`nf-console`, `nf-k8s`, `nf-tower`, and `nf-wave` add CLI commands. The goal was to keep them depending on the runtime rather than the CLI:
+
+- `nf-console` depended on `:nf-cli-v1`, as its GUI console drove `CmdRun` directly. It was removed rather than decoupled. The `console` command remains as a stub that reports its removal.
+
+- `nf-k8s` compiles against `nextflow` only and references no CLI classes. To get there, `K8sDriverLauncher` (which uses `CmdRun`), the driver behind the `kuberun` command, was moved out of `nf-k8s`. Keeping it in `nf-cli-v1` would have made the CLI depend on `nf-k8s` at build time and bundled `nf-k8s` into the distribution fat jar alongside the plugin, making `nextflow.k8s` a split package loaded by both the application and plugin classloaders. Instead, the deprecated `kuberun` command was removed, and `CmdKubeRun` and `K8sDriverLauncher` moved to the external [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, which depends on `nf-k8s` as a plugin and provides the command as `nextflow plugin nf-kuberun:run`. The `kuberun` command remains as a stub that reports its removal. `nf-k8s` remains a core plugin, loaded at runtime when using the `k8s` executor.
+
+- `nf-tower` and `nf-wave` were decoupled by moving the relevant command interfaces into the runtime; both now compile against `nextflow` only.
+
+### Breaking change: plugin commands
+
+`PluginExecAware` keeps its `nextflow.cli` package (see above), so already-published plugins still load. Only its `exec()` method signature changed, to remove the dependency on the CLI. Because the package is preserved, an old implementer loads fine and fails only if someone invokes `nextflow plugin <id>:<cmd>`. That produces a `NoSuchMethodError` at invocation, because old `PluginAbstractExec` trait subclasses carry a baked-in helper call with the previous descriptor, rather than a load-time `NoClassDefFoundError` that would take down every command. The failure is narrow and loud. Third-party plugins that implement it should update the method signature:
+
+```groovy
+// before
+int exec(Launcher launcher, String pluginId, String cmd, List<String> args)
+
+// after
+int exec(String pluginId, String cmd, List<String> args)
+```
+
+As a result, `PluginAbstractExec` (the base class used by most plugin commands) no longer loads the Nextflow configuration the way it used to. Previously it ran `ConfigBuilder` over the launcher options and config files. It now creates the `Session` from a **minimal config** derived from environment variables only:
+
+- `workDir` from `NXF_WORK` (default `work`)
+- `cloudcache` from `NXF_CLOUDCACHE_PATH` (when set)
+
+There are two plugin commands among the core plugins that are affected:
+
+- **`CacheCommand`** (`nf-tower`, the `cache-backup`/`cache-restore` commands) is adapted to read `NXF_CLOUDCACHE_PATH` from the environment directly. The `cloudcache` entry in the minimal config exists specifically for this purpose. The `cache-backup` command is used by Seqera Platform to upload logs to the cloudcache on exit.
+
+- **`WaveCmdEntry`** (`nf-wave`) is not adapted. These commands construct a `WaveClient` from `session.config.wave`, `session.config.fusion`, and `session.config.tower`, which the minimal config no longer populates. As a result they now honor only environment variables and defaults, **not** settings from `nextflow.config`. These commands are used only for debugging, so they are not critical, but may warrant further review.
+
+Plugin commands that need configuration should load it explicitly rather than relying on `PluginAbstractExec`. This change is acceptable because plugin commands are rare in practice.

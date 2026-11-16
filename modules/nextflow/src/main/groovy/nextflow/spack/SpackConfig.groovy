@@ -55,7 +55,7 @@ class SpackConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The amount of time to wait for the Spack environment to be created before failing (default: `60 min`).
+        The amount of time to wait for the Spack environment to be created before failing (default: `60.m`).
     """)
     final Duration createTimeout
 

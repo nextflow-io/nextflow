@@ -21,7 +21,7 @@ For example:
 ```groovy
 process {
   executor = 'tcs'
-  time = '00:30:00'
+  time = 30.m
   clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
 }
 ```

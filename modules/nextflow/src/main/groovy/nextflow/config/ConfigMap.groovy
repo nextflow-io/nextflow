@@ -76,4 +76,16 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
         workDir = opts.workDir
     }
 
+    // the config option fields above only describe the config spec -- under
+    // Groovy 5 they would shadow the map entries on dynamic property access
+    @Override
+    Object getProperty(String name) {
+        return get(name)
+    }
+
+    @Override
+    void setProperty(String name, Object value) {
+        put(name, value)
+    }
+
 }

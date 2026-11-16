@@ -274,7 +274,7 @@ public interface Path {
             @NamedParam(value = "by", type = Integer.class),
             @NamedParam(value = "charset", type = String.class),
             @NamedParam(value = "decompress", type = Boolean.class),
-            @NamedParam(value = "header", type = Boolean.class),
+            @NamedParam(value = "header", type = Object.class),
             @NamedParam(value = "limit", type = Integer.class),
             @NamedParam(value = "quote", type = String.class),
             @NamedParam(value = "sep", type = String.class),
@@ -326,6 +326,6 @@ interface PathOps {
 
     Path div(Path a, String b);
 
-    void leftShift(Path a, String b);
+    Path leftShift(Path a, String b);
 
 }

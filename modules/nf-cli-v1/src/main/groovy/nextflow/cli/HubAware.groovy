@@ -25,7 +25,7 @@ import nextflow.scm.HubOptions
   * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
   */
 @CompileStatic
-interface HubAware {
+trait HubAware {
 
     @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
     String hubProvider
@@ -33,7 +33,7 @@ interface HubAware {
     @Parameter(names='-user', description = 'Private repository user name')
     String hubUser
 
-    default HubOptions toHubOptions() {
+    HubOptions toHubOptions() {
         return new HubOptions(hubProvider, hubUser)
     }
 }

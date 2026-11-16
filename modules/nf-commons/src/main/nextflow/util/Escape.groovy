@@ -33,6 +33,9 @@ class Escape {
 
     final private static List<String> VAR_CHARS = ['$']
 
+    // a task data file name is literal, so `$` is escaped too
+    final private static List<String> DATA_PATH_CHARS = SPECIAL_CHARS + ['$']
+
     final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false) {
@@ -62,6 +65,36 @@ class Escape {
 
     static String path(Path val) {
         path(val.toString())
+    }
+
+    /**
+     * Escape a path that comes from the task data, e.g. an input file name, so that it is used literally
+     */
+    static String dataPath(String val) {
+        checkNewline(val)
+        replace(DATA_PATH_CHARS, val, true)
+    }
+
+    static String dataPath(Path val) {
+        dataPath(val.toString())
+    }
+
+    /**
+     * Escape a task data file name used in a task script, where `$` is kept as is so the name also
+     * works in quoted strings and non-Bash scripts
+     */
+    static String scriptPath(String val) {
+        checkNewline(val)
+        // `${...}` and `$[...]` are expanded by Bash even when the name is escaped by `path`, so they are not supported
+        if( val.contains('${') || val.contains('$[') )
+            throw new IllegalArgumentException("File name cannot contain '\${' or '\$[': $val")
+        path(val)
+    }
+
+    // a newline cannot be kept in a single shell word in every context, so such names are not supported
+    private static void checkNewline(String val) {
+        if( val.contains('\n') )
+            throw new IllegalArgumentException("File name cannot contain a newline character: ${val.replace('\n','\\n')}")
     }
 
     static String path(File val) {
@@ -108,5 +141,12 @@ class Escape {
 
     static String variable(String val) {
         replace(VAR_CHARS, val, false)
+    }
+
+    /**
+     * Escape the characters that are special inside a bash double-quoted string, e.g. the argument of `eval "..."`
+     */
+    static String doubleQuoted(String val) {
+        val.replaceAll('[\\\\"$`]', '\\\\$0')
     }
 }

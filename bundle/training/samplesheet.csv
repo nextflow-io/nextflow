@@ -1,0 +1,5 @@
+sample,group,reads
+A,ctrl,data/A.txt
+B,ctrl,data/B.txt
+C,treat,data/C.txt
+D,treat,data/D.txt
