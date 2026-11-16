@@ -3,16 +3,13 @@ name: Bundle
 # runner, since the AOT cache can only be created by the target runtime, and tests it.
 # The release (build.yml) calls this workflow and uploads the bundles with the other release
 # files, from the artifacts `bundle-<platform>` (`.tar.gz` and `.tar.gz.sha256`).
+# On pull requests, bundle-check.yml calls it when the bundle changes, and bundle-pr.yml when
+# the PR has the `preview/bundle` label.
+# No Gradle cache: on a PR, it would be saved first, without the test dependencies, under the
+# key that the CI build (build.yml) of the PR restores.
 
 # Not run on pushes to master: the release builds the bundles of every release commit.
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths:
-      - 'nextflow'
-      - 'bundle/**'
-      - 'gradle/bundle.gradle'
-      - '.github/workflows/bundle.yml'
   workflow_dispatch:
     inputs:
       jre-version:
@@ -28,11 +25,6 @@ on:
 
 permissions:
   contents: read
-
-# runs called by the release are never cancelled, nor queued behind other runs
-concurrency:
-  group: bundle-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -57,7 +49,6 @@ jobs:
         with:
           java-version: '25'
           distribution: 'corretto'
-          cache: gradle
 
       - name: Resolve the Temurin JRE
         id: resolve
@@ -98,7 +89,6 @@ jobs:
         with:
           java-version: '25'
           distribution: 'corretto'
-          cache: gradle
 
       # the build info of the jar, as in the jar of the release (`make assemble`)
       - name: Build bundle
@@ -143,3 +133,4 @@ jobs:
           name: bundle-${{ matrix.target }}
           path: build/bundle/*.tar.gz*
           if-no-files-found: error
+          retention-days: 30
