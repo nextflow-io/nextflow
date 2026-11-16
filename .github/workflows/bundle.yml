@@ -1,7 +1,7 @@
 name: Bundle
 # Builds the standalone bundle (Java runtime, jar and AOT cache) of each platform on a native
 # runner, since the AOT cache can only be created by the target runtime, and tests it.
-# The release (build.yml) calls this workflow and uploads the bundles with the other release
+# The release (release.yml) calls this workflow and uploads the bundles with the other release
 # files, from the artifacts `bundle-<platform>` (`.tar.gz` and `.tar.gz.sha256`).
 # On pull requests, bundle-check.yml calls it when the bundle changes, and bundle-pr.yml when
 # the PR has the `preview/bundle` label.
