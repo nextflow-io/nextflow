@@ -63,7 +63,7 @@ installed=$NXF_HOME/framework/$version/nextflow-$version-$platform
 # the AOT cache is only passed to the JVM by the launcher of the bundle, with its runtime
 grep -qF -- "-XX:AOTCache=$(cd "$installed" && pwd -P)/lib/nextflow.aot" <<< "$info" \
     || die "The launcher did not hand off to the bundle in $installed"
-"$root/nextflow" run main.nf
+"$root/nextflow" run main.nf -profile test
 
 if [[ $# -gt 2 ]]; then
     cd "$cwd"
