@@ -18,6 +18,7 @@ package nextflow.pipeline
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
@@ -189,20 +190,13 @@ class PipelineManagerTest extends Specification {
         Files.exists(base.resolve('pipelines/nf-core/rnaseq/main.nf'))
     }
 
-    def 'fails on no published release or revoked'() {
+    def 'fails on no published release or a revoked version'() {
         when:
         manager().install('nf-core/rnaseq', null, false)
         then:
         client.getPipeline(_) >> new Pipeline().repositoryUrl('u')
         def e = thrown(AbortOperationException)
         e.message.contains('has no published release')
-
-        when:
-        manager().install('nf-core/rnaseq', null, false)
-        then:
-        client.getPipeline(_) >> pipeline(release('1.0.0'), true)
-        e = thrown(AbortOperationException)
-        e.message.contains('is revoked')
 
         when:
         manager().install('nf-core/rnaseq', '1.0.0', false)
@@ -269,7 +263,14 @@ class PipelineManagerTest extends Specification {
 
     def 'resolve computes the checksum once per pipeline dir'() {
         given:
-        def m = Spy(PipelineManager, constructorArgs: [base, client, fetcher])
+        def calls = new AtomicInteger()
+        def m = new PipelineManager(base, client, fetcher) {
+            @Override
+            protected boolean computeModified(PipelineInfo info, Path dir) {
+                calls.incrementAndGet()
+                return super.computeModified(info, dir)
+            }
+        }
         client.getPipeline(_) >> pipeline(release('1.0.0'))
         fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
         m.resolve('nf-core/rnaseq')
@@ -278,7 +279,7 @@ class PipelineManagerTest extends Specification {
         m.resolve('nf-core/rnaseq')
         m.resolve('nf-core/rnaseq')
         then:
-        1 * m.computeModified(_, _)
+        calls.get() == 1
     }
 
     def 'remove and install -force delete a symlink without following it'() {

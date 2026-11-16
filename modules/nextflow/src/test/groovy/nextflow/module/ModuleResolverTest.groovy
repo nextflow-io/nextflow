@@ -215,21 +215,6 @@ class ModuleResolverTest extends Specification {
         ModuleResolver.pinnedVersion(tempDir, new ModuleReference('nf-core', 'fastqc')) == null
     }
 
-
-    def 'finds the pipeline root of a vendored module, bounded by the project dir'() {
-        given:
-        def pipeline = tempDir.resolve('pipelines/a/b')
-        def moduleDir = pipeline.resolve('modules/nf-core/fastqc')
-        Files.createDirectories(moduleDir)
-        pipeline.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
-        tempDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=outer\n'
-
-        expect:
-        RemoteModuleResolver.findPipelineRoot(moduleDir, tempDir) == pipeline
-        and: 'a dir outside any pipeline falls back to the project dir'
-        RemoteModuleResolver.findPipelineRoot(tempDir.resolve('modules/x'), tempDir.resolve('pipelines')) == tempDir.resolve('pipelines')
-    }
-
     def 'resolves a module without .module-info inside a pipeline root'() {
         given:
         def reference = new ModuleReference('nf-core', 'fastqc')

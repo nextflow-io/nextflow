@@ -23,6 +23,7 @@ import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
 import org.eclipse.jgit.api.Git
 import spock.lang.IgnoreIf
 
@@ -34,13 +35,20 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@IgnoreIf({System.getenv('NXF_SMOKE')})
 class CmdPullTest extends Specification {
 
+    private File savedRoot
+
+    def setup() {
+        savedRoot = AssetManager.root
+    }
+
     def cleanup() {
+        AssetManager.root = savedRoot
         Plugins.stop()
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
     def 'should pull the github repository in the local folder'() {
 

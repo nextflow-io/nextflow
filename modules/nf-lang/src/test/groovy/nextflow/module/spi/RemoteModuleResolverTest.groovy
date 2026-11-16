@@ -32,6 +32,20 @@ class RemoteModuleResolverTest extends Specification {
     @TempDir
     Path projectDir
 
+    def 'should find the pipeline root of a vendored module, bounded by the project dir'() {
+        given:
+        def pipeline = projectDir.resolve('pipelines/a/b')
+        def moduleDir = pipeline.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(moduleDir)
+        pipeline.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
+        projectDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=outer\n'
+
+        expect:
+        RemoteModuleResolver.findPipelineRoot(moduleDir, projectDir) == pipeline
+        and: 'a dir outside any pipeline falls back to the project dir'
+        RemoteModuleResolver.findPipelineRoot(projectDir.resolve('modules/x'), projectDir.resolve('pipelines')) == projectDir.resolve('pipelines')
+    }
+
     def 'should resolve an include in a module script against the module directory'() {
         given:
         def moduleDir = projectDir.resolve('modules/nf-core/my-workflow')

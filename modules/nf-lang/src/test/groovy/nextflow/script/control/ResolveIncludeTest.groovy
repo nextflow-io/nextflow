@@ -377,8 +377,7 @@ class ResolveIncludeTest extends Specification {
         when:
         def errors = check(root, [main])
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage().contains("Pipeline 'nf-core/rnaseq' not found in 'pipelines' directory")
+        TestUtils.errorList(errors) == [[3, 13, "Pipeline 'nf-core/rnaseq' not found in 'pipelines' directory -- use 'nextflow pipeline install' to install it first"]]
     }
 
     def 'should attempt a failing pipeline include only once: #TYPE' () {
@@ -403,8 +402,7 @@ class ResolveIncludeTest extends Specification {
         def errors = check(root, [main])
         then:
         calls == 1
-        errors.size() == 1
-        errors[0].getOriginalMessage() == 'cannot install nf-core/rnaseq'
+        TestUtils.errorList(errors) == [[3, 13, 'cannot install nf-core/rnaseq']]
 
         where:
         // a checked exception, as thrown by the runtime resolver (IllegalModulePathException)
@@ -449,8 +447,7 @@ class ResolveIncludeTest extends Specification {
         when:
         def errors = check(root, [main])
         then:
-        errors.size() == 1
-        errors[0].getOriginalMessage().contains("not found in 'modules' directory")
+        TestUtils.errorList(errors) == [[1, 13, "Module 'nf-core/fastqc' not found in 'modules' directory -- use 'nextflow module install' to install module first"]]
     }
 
     def 'should resolve a local and a module include by source string' () {

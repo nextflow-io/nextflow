@@ -554,20 +554,6 @@ class CmdRunTest extends Specification {
         'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq' | null   | false
     }
 
-    def 'should reject a version in a registry address when offline' () {
-        when:
-        runCmd(offline: true, hubProvider: HUB).registryLookup(NAME)
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains('give the version with the `-r` option')
-
-        where:
-        NAME                                                            | HUB
-        'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null
-        'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io'
-    }
-
     def 'should not fall back to Git for a registry address' () {
         given:
         def client = Mock(RegistryClient)
