@@ -76,6 +76,12 @@ class AssetManager implements Closeable {
      */
     private String project
 
+    /**
+     * The project on the Git host. It differs from {@link #project} when the local
+     * name is not the Git one, e.g. a registry pipeline cached under its registry name
+     */
+    private String remoteProject
+
     private Git _git
 
     private String mainScript
@@ -122,12 +128,12 @@ class AssetManager implements Closeable {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null ) {
+    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null, String localName = null ) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, hubOpts, revision, mainScript)
+        build(pipelineName, config, hubOpts, revision, mainScript, localName)
     }
 
     /**
@@ -139,12 +145,15 @@ class AssetManager implements Closeable {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null, String localName = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
         this.httpClientOpts = RepositoryProvider.httpClientOpts(config)
 
         this.project = resolveName(pipelineName)
+        this.remoteProject = project
+        if( localName )
+            this.project = localName
         if( mainScript )
             this.mainScript = mainScript
 
@@ -153,6 +162,7 @@ class AssetManager implements Closeable {
 
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
+        checkRemoteProject(isUrl(pipelineName))
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
@@ -317,6 +327,7 @@ class AssetManager implements Closeable {
     @PackageScope
     AssetManager setProject(String name) {
         this.project = name
+        this.remoteProject = name
         if( !strategy )
             initStrategy(getRevision())
         strategy.setProject(name)
@@ -370,6 +381,52 @@ class AssetManager implements Closeable {
             throw new AbortOperationException("A project with name: `$localPath` has already been downloaded from a different provider: `$configProvider`")
         }
 
+    }
+
+    /**
+     * Reconcile the Git project with the one of the local clone, when there is one.
+     * For a plain name the clone decides, so a project cached under a local name keeps
+     * using its own repository. For a URL or a local name, a clone of a different
+     * repository is an error.
+     *
+     * @param fromUrl Whether the Git project was given as a URL
+     */
+    private void checkRemoteProject(boolean fromUrl) {
+        final cloned = getClonedProject()
+        // Git hosts match names ignoring the case, and the clone URL uses the host's spelling
+        if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
+            return
+        if( fromUrl || remoteProject != project )
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned`")
+        log.info "Using `$project` cached from `$cloned`"
+        this.remoteProject = cloned
+    }
+
+    /** The Git project of the local multi-revision clone, read from its `origin` remote, or {@code null} */
+    private String getClonedProject() {
+        // legacy clones keep using their folder name; local names are only used with multi-revision clones
+        if( !(strategy instanceof MultiRevisionRepositoryStrategy) )
+            return null
+        final file = getLocalGitConfig()
+        if( !file?.exists() )
+            return null
+        final str = new IniFile().load(file).getString('remote "origin"', 'url')
+        if( !str )
+            return null
+        try {
+            final url = new GitUrl(str)
+            if( url.protocol == 'file' )
+                return null
+            return RepositoryFactory.getProviderConfig(providerConfigs, url).resolveProjectName(url.path.stripStart('/'))
+        }
+        catch( Exception e ) {
+            log.debug "Cannot parse Git remote URL: ${redactUrlPassword(str)} -- cause: ${e.message}"
+            return null
+        }
+    }
+
+    private static boolean isUrl(String name) {
+        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:/')
     }
 
     /**
@@ -472,8 +529,7 @@ class AssetManager implements Closeable {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
-        if( !isUrl )
+        if( !isUrl(repository) )
             return null
 
         if( repository.endsWith('.nf') )
@@ -526,7 +582,7 @@ class AssetManager implements Closeable {
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
         return RepositoryFactory
-            .newRepositoryProvider(config, project)
+            .newRepositoryProvider(config, remoteProject)
             .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 

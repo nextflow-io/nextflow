@@ -82,7 +82,7 @@ class CmdPipelineViewTest extends Specification {
         out.contains('Samplesheet. CSV.')
         out.contains('--outdir\n')
         out.contains('--flag (boolean)')
-        out.contains('Usage:\n  nextflow run nf-core/rnaseq -r 3.14.0')
+        out.contains('Usage:\n  nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0')
     }
 
     def 'should fetch a given version'() {
@@ -112,7 +112,7 @@ class CmdPipelineViewTest extends Specification {
         json.commitId == 'abc123'
         json.repositoryUrl == 'https://github.com/nf-core/rnaseq'
         json.params*.name == ['input', 'outdir', 'flag']
-        json.usage == 'nextflow run nf-core/rnaseq -r 3.14.0'
+        json.usage == 'nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0'
     }
 
 }

@@ -1299,5 +1299,32 @@ class AssetManagerTest extends Specification {
         manager.getLocalPath().toString().contains('1c3e9e7404127514d69369cd87f8036830f5cf64')
     }
 
+    def 'should use the repository of a clone cached under a local name' () {
+        given: 'a clone of other/hello cached under the name acme/hello'
+        def bare = tempDir.root.resolve("$REPOS_SUBDIR/acme/hello/$BARE_REPO").toFile()
+        bare.mkdirs()
+        Git.init().setBare(true).setDirectory(bare).call().close()
+        new File(bare, 'config') << '[remote "origin"]\n\turl = https://github.com/other/hello.git\n'
 
+        when: 'it is used by its local name'
+        def manager = new AssetManager('acme/hello')
+
+        then: 'the Git calls go to the cloned repository'
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/other/hello'
+
+        when: 'the same name is given with an explicit Git address of another repository'
+        new AssetManager('https://github.com/acme/hello')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('downloaded from a different repository: `other/hello`')
+
+        when: 'it is given with its own Git address and local name'
+        manager = new AssetManager('https://github.com/other/hello', null, null, null, 'acme/hello')
+
+        then:
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/other/hello'
+    }
 }

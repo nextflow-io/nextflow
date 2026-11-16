@@ -328,6 +328,11 @@ class ProviderConfig {
         }
     }
 
+    /** Names of the providers of the default SCM config file, plus the built-in ones */
+    static List<String> getDefaultProviderNames() {
+        return createFromMap(getDefault())*.name
+    }
+
     static Map getDefault() {
         final file = getScmConfigPath()
         return getFromFile(file)

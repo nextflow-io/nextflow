@@ -118,35 +118,21 @@ class PipelineManager {
 
     InstallResult install(String name, String version, boolean force) {
         final dir = pipelineDir(name)
-        final pipeline = client.getPipeline(name)
-        final release = version ? client.getPipelineRelease(name, version) : pipeline.latest
-        if( release == null )
-            throw new AbortOperationException("Pipeline ${name} has no published release")
-        if( pipeline.revoked || release.status == PipelineReleaseStatus.REVOKED )
-            throw new AbortOperationException("Pipeline ${name}@${release.version} is revoked")
-
-        final workflowPath = pipeline.workflowPath ?: DEFAULT_WORKFLOW
-        workflowFile(dir, name, workflowPath)
+        final info = resolveRelease(client, name, version)
+        info.workflowPath = info.workflowPath ?: DEFAULT_WORKFLOW
+        workflowFile(dir, name, info.workflowPath)
 
         final exists = Files.exists(dir)
         final existing = exists ? PipelineInfo.load(dir) : null
         final modified = exists && (existing == null || existing.isModified(dir))
-        if( !modified && existing?.version == release.version )
+        if( !modified && existing?.version == info.version )
             return new InstallResult(existing, true)
         if( modified && !force )
             throw new AbortOperationException("Pipeline ${name} has local modifications -- use -force to overwrite")
 
-        log.info "Installing pipeline ${name}@${release.version}..."
-        final info = new PipelineInfo(
-            name: name,
-            version: release.version,
-            workflowPath: workflowPath,
-            repositoryUrl: pipeline.repositoryUrl,
-            revision: release.gitRevision,
-            commitId: release.commitId,
-            registryUrl: client.primaryUrl())
+        log.info "Installing pipeline ${name}@${info.version}..."
         fetchInto(dir, info)
-        log.info "Pipeline ${name}@${release.version} installed in ${dir.toAbsolutePath()}"
+        log.info "Pipeline ${name}@${info.version} installed in ${dir.toAbsolutePath()}"
         return new InstallResult(info, false)
     }
 
@@ -209,66 +195,32 @@ class PipelineManager {
         }
     }
 
-    /**
-     * Release to run for {@code nextflow run scope/name}.
-     *
-     * @return the release, or {@code null} to run from Git as before
-     */
-    static PipelineInfo lookupRelease(RegistryClient client, String name, String revision) {
+    /** Release of a registry pipeline, the latest when no version is given; fails when it is missing or revoked */
+    static PipelineInfo resolveRelease(RegistryClient client, String name, String version) {
         if( !isValidName(name) )
-            return null
+            throw new AbortOperationException("Invalid pipeline name '$name' -- expected <scope>/<name>, e.g. nf-core/rnaseq")
         final Pipeline pipeline
+        final PipelineRelease release
         try {
             pipeline = client.getPipeline(name)
+            release = version ? client.getPipelineRelease(name, version) : pipeline.latest
         }
         catch( RegistryException e ) {
             if( e.statusCode == 404 )
-                log.debug "Pipeline ${name} not found in the registry -- running from Git"
-            else
-                warnRegistryError(name, e)
-            return null
+                throw new AbortOperationException("Pipeline ${name}${version ? '@' + version : ''} not found in the registry", e)
+            throw e
         }
-        if( pipeline.revoked ) {
-            log.warn "Pipeline ${name} is revoked in the registry -- running from Git"
-            return null
-        }
-        final PipelineRelease release
-        try {
-            release = revision && revision != pipeline.latest?.version
-                ? client.getPipelineRelease(name, revision)
-                : pipeline.latest
-        }
-        catch( RegistryException e ) {
-            if( e.statusCode != 404 ) {
-                warnRegistryError(name, e)
-                return null
-            }
-            // the registry knows the repository even when the revision is not a release
-            log.warn "`${revision}` is not a release of ${name} in the registry -- using the Git revision"
-            return new PipelineInfo(repositoryUrl: pipeline.repositoryUrl, revision: revision, workflowPath: pipeline.workflowPath)
-        }
-        if( !release ) {
-            log.debug "Pipeline ${name} has no published release in the registry -- running from Git"
-            return null
-        }
-        if( release.status == PipelineReleaseStatus.REVOKED ) {
-            log.warn "Pipeline ${name}@${release.version} is revoked in the registry -- running from Git"
-            return null
-        }
-        log.info "Using registry release ${name}@${release.version} (commit ${release.commitId?.take(10)})"
+        if( release == null )
+            throw new AbortOperationException("Pipeline ${name} has no published release")
+        if( pipeline.revoked || release.status == PipelineReleaseStatus.REVOKED )
+            throw new AbortOperationException("Pipeline ${name}@${release.version} is revoked")
         return new PipelineInfo(
             name: name,
             version: release.version,
+            workflowPath: pipeline.workflowPath,
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
             commitId: release.commitId,
-            workflowPath: pipeline.workflowPath )
-    }
-
-    private static void warnRegistryError(String name, RegistryException e) {
-        if( e.statusCode == 410 )
-            log.warn "Pipeline ${name} is revoked in the registry -- running from Git"
-        else
-            log.warn "Cannot reach the registry for ${name} -- running from Git (${e.message})"
+            registryUrl: client.primaryUrl())
     }
 }

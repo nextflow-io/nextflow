@@ -44,11 +44,10 @@ import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineInfo
-import nextflow.pipeline.PipelineManager
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.EmptySecretProvider
@@ -640,10 +639,22 @@ class CmdRun extends CmdBase implements HubAware {
          * try to look for a pipeline in the repository
          */
         final release = registryLookup(pipelineName)
-        final project = release?.repositoryUrl ?: pipelineName
-        final rev = release ? (release.commitId ?: release.revision) : revision
+        String project = pipelineName
+        String rev = revision
+        String localName = null
+        if( release?.repositoryUrl ) {
+            // fetched from its Git repository and cached under its registry name
+            project = release.repositoryUrl
+            rev = release.commitId ?: release.revision
+            localName = release.name
+        }
+        else if( release ) {
+            // offline: the copy cached under the registry name
+            project = release.name
+        }
         final main = mainScript ?: release?.workflowPath
-        try( final manager = new AssetManager(project, rev, main, toHubOptions()) ) {
+        final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
+        try( final manager = new AssetManager(project, rev, main, hubOpts, localName) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 
@@ -682,14 +693,24 @@ class CmdRun extends CmdBase implements HubAware {
 
     }
 
-    /** Registry release to run for {@code scope/name}, or {@code null} to run from Git as before */
+    /**
+     * Registry release for a registry address: a registry page URL, or {@code scope/name}
+     * with a registry host as {@code -hub} (or {@code NXF_HUB}), e.g. {@code -hub registry.nextflow.io}.
+     *
+     * @return the release, or {@code null} when the name is not a registry address
+     */
     protected PipelineInfo registryLookup(String name) {
-        if( offline || hubProvider )
+        // read only for a registry address; the pipeline config is not fetched yet: read the launch folder config and the `-c` files
+        final address = PipelineCmdSupport.registryAddress(name, hubProvider) {
+            final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
+            PipelineCmdSupport.registryConfig(this, Path.of('.').toAbsolutePath().normalize(), configFiles)
+        }
+        if( !address )
             return null
-        // the pipeline config is not fetched yet: read the launch folder config and the `-c` files
-        final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
-        final client = registryClient ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, Path.of('.').toAbsolutePath().normalize(), configFiles))
-        return PipelineManager.lookupRelease(client, name, revision)
+        // the release can't be resolved offline: use the copy cached under the registry name
+        if( offline )
+            return new PipelineInfo(name: address.name)
+        return PipelineCmdSupport.resolveRelease(address, revision, registryClient)
     }
 
     static protected File tryReadFromStdin() {
