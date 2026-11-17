@@ -22,7 +22,7 @@ nextflowPlugin {
     // by BasePlugin.start(), so it must never exceed the root VERSION or the plugin cannot load
     // from this checkout. Bumping it to the release this plugin ships in is a release-phase step,
     // as the release process in .agents/docs/release.md requires.
-    nextflowVersion = '26.10.0'
+    nextflowVersion = '26.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides a Pi-backed external agent runner for Nextflow agents'

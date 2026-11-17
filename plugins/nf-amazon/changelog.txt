@@ -1,5 +1,15 @@
 nf-amazon changelog
 ===================
+3.13.0 - 17 Nov 2026
+- Fix typo in nf-amazon S3 copy error message (#8081) [4329763b5]
+- Stop array children from writing control files into array work dir (#8030) [87d8b4314]
+- Remove Netty from nf-amazon and nf-codecommit (#8022) [1fdb6a704]
+- Preserve special characters in file names in task wrapper scripts (#7948) [f44532885]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+- Bump Guava to 33.7.2-jre to fix GHSA-xxph-c9ww-hj94 (#7957) [17a68a26e]
+- Fix transfer retries: return the failure status, cap the backoff, retry Azure downloads (#7909) [e99793ccc]
+- Use duration and memory literals in docs and config descriptions (#7955) [eeff98cbb]
+
 3.12.1 - 15 Oct 2026
 - Skip Fusion .fusion dirs when publishing directories (#7811) [d69ed57a8]
 

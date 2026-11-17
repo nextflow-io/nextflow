@@ -20,7 +20,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '26.09.2-edge'
+    nextflowVersion = '26.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
@@ -62,7 +62,7 @@ dependencies {
     api "io.seqera:lib-httpx:${libHttpxVersion}"
     // jackson-databind is pulled transitively (sched-client); an api-scoped constraint raises it
     // across every configuration - including testFixtures* - without a redundant dependency edge.
-    // 2.21.7 addresses GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm and later deserialization advisories.
+    // jacksonVersion addresses GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm and later deserialization advisories.
     constraints {
         api("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}") { because 'jackson-databind deserialization CVEs' }
     }
