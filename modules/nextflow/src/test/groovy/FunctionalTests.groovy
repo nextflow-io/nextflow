@@ -676,7 +676,7 @@ class FunctionalTests extends Dsl2Spec {
                 val x
 
                 script:
-                "${thisMethodExpectsOnlyOneString(1)}"
+                "${thisMethodExpectsOnlyOneString(1, 2)}"
             }
 
             workflow {
@@ -709,7 +709,7 @@ class FunctionalTests extends Dsl2Spec {
                 val x
 
                 script:
-                "${thisMethodExpectsOnlyOneString(1)}"
+                "${thisMethodExpectsOnlyOneString(1, 2)}"
             }
             '''
 
