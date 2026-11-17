@@ -1,5 +1,12 @@
 nf-agent-pi changelog
 =====================
+0.7.0 - 17 Nov 2026
+- Compile the pi agent harness into a Bun executable (#8026) [b6ee0914a]
+- Remove Bouncy Castle from nf-k8s (#8007) [9093cce81]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+- Remove remaining vulnerable Guava versions (GHSA-xxph-c9ww-hj94) (#7972) [e7672a002]
+- Override undici to 8.12.3 in nf-agent-pi to fix npm advisories (#7943) [9d1a60f8e]
+
 0.6.0 - 12 Oct 2026
 - Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
 
