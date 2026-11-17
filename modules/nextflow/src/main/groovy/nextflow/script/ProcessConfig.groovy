@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -32,12 +33,12 @@ import static nextflow.util.CacheHelper.HashMode
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ProcessConfig implements Map<String,Object>, Cloneable {
 
     /**
      * Default directives values
      */
-    @PackageScope
     static final Map<String,Object> DEFAULT_CONFIG = [
             debug: false,
             cacheable: true,
@@ -175,7 +176,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value instanceof Boolean )
             return value
 
-        if( value instanceof String && value in Const.BOOL_NO )
+        if( value instanceof String && value in (List) Const.BOOL_NO )
             return false
 
         return true
