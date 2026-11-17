@@ -43,11 +43,11 @@ class PluginRef implements Comparable<PluginRef> {
      */
     static PluginRef parse(String fqid, DefaultPlugins defaultPlugins=null) {
         final tokens = fqid.tokenize('@') as List<String>
-        final id = tokens[0] ?: ''
+        final id = tokens[0]
         final ver = tokens[1]
-        // the id becomes a file path, so refuse empty and relative parts
-        final parts = id.split('/', -1)
-        if( parts.size() > 2 || parts.any { it in ['', '.', '..'] } )
+        // a namespaced id becomes a nested file path, so refuse extra, empty and relative parts
+        final parts = id?.contains('/') ? id.split('/', -1) : null
+        if( parts && (parts.size() > 2 || parts.any { it in ['', '.', '..'] }) )
             throw new IllegalArgumentException("Invalid plugin ID '$id' -- expected format: [<namespace>/]<name>")
         if( ver || defaultPlugins==null )
             return new PluginRef(id, ver)
