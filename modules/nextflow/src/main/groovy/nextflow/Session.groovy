@@ -1526,16 +1526,16 @@ class Session implements ISession {
         new HashMap<String, String>(System.getenv())
     }
 
-    @CompileDynamic
     def fetchContainers() {
 
         def result = [:]
         if( config.process instanceof Map ) {
+            final process = (Map<String,?>) config.process
 
             /*
              * look for `container` definition at process level
              */
-            config.process.each { String name, value ->
+            process.each { String name, value ->
                 if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
                 }
@@ -1548,7 +1548,7 @@ class Session implements ISession {
             /*
              * default container definition
              */
-            def container = config.process.container
+            def container = process.container
             if( container ) {
                 if( result ) {
                     result['default'] = resolveClosure(container)

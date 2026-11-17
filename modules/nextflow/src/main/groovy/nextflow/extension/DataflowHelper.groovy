@@ -18,6 +18,7 @@ package nextflow.extension
 
 import java.lang.reflect.InvocationTargetException
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -43,6 +44,7 @@ import static java.util.Arrays.asList
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class DataflowHelper {
 
     private static Session getSession() { Global.getSession() as Session }
@@ -91,11 +93,11 @@ class DataflowHelper {
      * The default operators listener when no other else is specified
      */
     @PackageScope
-    static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
+    static DataflowEventListener DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable t) {
             final e = t instanceof InvocationTargetException ? t.cause : t
-            OperatorImpl.log.error("@unknown", e)
+            org.slf4j.LoggerFactory.getLogger(OperatorImpl).error("@unknown", e)
             session?.abort(e)
             return true;
         }
@@ -214,7 +216,7 @@ class DataflowHelper {
     /*
      * the list of valid subscription handlers
      */
-    static private VALID_HANDLERS = [ 'onNext', 'onComplete', 'onError' ]
+    static private List<String> VALID_HANDLERS = [ 'onNext', 'onComplete', 'onError' ]
 
     /**
      * Verify that the map contains only valid names of subscribe handlers.
@@ -242,6 +244,7 @@ class DataflowHelper {
      * @param closure
      * @return
      */
+    @CompileDynamic
     static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final Map<String,Closure> events ) {
         checkSubscribeHandlers(events)
 
