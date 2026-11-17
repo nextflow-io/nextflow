@@ -807,17 +807,17 @@ class SeqeraTaskHandlerTest extends Specification {
         result == [FUSION_KEY: 'fusion_val']
     }
 
-    def 'should replace the Azure SAS token with the managed identity'() {
+    def 'should drop the generated Azure SAS token when a managed identity is configured'() {
         expect:
         SeqeraTaskHandler.withAzureIdentity(ENV, CONFIG) == EXPECTED
 
         where:
-        ENV                                                                  | CONFIG                                                              | EXPECTED
-        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']      | [azure: [managedIdentity: [clientId: 'cid']]]                       | [AZURE_STORAGE_ACCOUNT: 'acct', FUSION_AZ_MSI_CLIENT_ID: 'cid']
-        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']      | [azure: [managedIdentity: [system: true]]]                          | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
-        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']      | null                                                                | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
-        [AZURE_STORAGE_ACCOUNT: 'acct', FUSION_AZ_MSI_CLIENT_ID: 'pool']     | [azure: [managedIdentity: [clientId: 'cid']]]                       | [AZURE_STORAGE_ACCOUNT: 'acct', FUSION_AZ_MSI_CLIENT_ID: 'pool']
-        [AWS_ACCESS_KEY_ID: 'key']                                           | [azure: [managedIdentity: [clientId: 'cid']]]                       | [AWS_ACCESS_KEY_ID: 'key']
+        ENV                                                              | CONFIG                                                                       | EXPECTED
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']  | [azure: [managedIdentity: [clientId: 'cid']]]                                | [AZURE_STORAGE_ACCOUNT: 'acct']
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']  | [azure: [managedIdentity: [clientId: 'cid'], storage: [sasToken: 'sas']]]    | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']  | [azure: [managedIdentity: [system: true]]]                                   | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
+        [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']  | null                                                                         | [AZURE_STORAGE_ACCOUNT: 'acct', AZURE_STORAGE_SAS_TOKEN: 'sas']
+        [AWS_ACCESS_KEY_ID: 'key']                                       | [azure: [managedIdentity: [clientId: 'cid']]]                                | [AWS_ACCESS_KEY_ID: 'key']
     }
 
     def 'should merge config environment with fusion env'() {

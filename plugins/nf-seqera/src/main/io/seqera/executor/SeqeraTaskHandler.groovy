@@ -267,27 +267,26 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
-     * On Azure, the scheduler runs the task VMs as the managed identity in
-     * {@code azure.managedIdentity.clientId}. Fusion authenticates as that identity
-     * instead of the SAS token, which only covers the work-dir container. The identity
-     * takes precedence over any SAS token, as with {@code azure.batch.poolIdentityClientId}.
+     * On Azure, when {@code azure.managedIdentity.clientId} is set, drop the SAS token that
+     * Nextflow generates for the work-dir container, so that Fusion authenticates as the managed
+     * identity of the task VM. The scheduler agent selects that identity, since only it knows
+     * which identity the VM runs as, so no client id is passed to the task.
      *
-     * <p>This relies on the VMs carrying that identity: it does not hold when the scheduler
-     * overrides the VM identity ({@code sched.azure.vm-managed-identity}).
+     * <p>A SAS token set explicitly with {@code azure.storage.sasToken} is kept.
      *
      * @param fusionEnv The Fusion environment
      * @param config The session config
-     * @return The Fusion environment, with the SAS token replaced by the managed identity client id
+     * @return The Fusion environment, without the generated SAS token when a managed identity is configured
      */
     static protected Map<String, String> withAzureIdentity(Map<String, String> fusionEnv, Map config) {
-        if( !fusionEnv.containsKey('AZURE_STORAGE_SAS_TOKEN') )
+        if( !fusionEnv.containsKey('AZURE_STORAGE_SAS_TOKEN') || !config )
             return fusionEnv
-        final clientId = config ? Bolts.navigate(config, 'azure.managedIdentity.clientId') : null
-        if( !clientId )
+        if( !Bolts.navigate(config, 'azure.managedIdentity.clientId') )
+            return fusionEnv
+        if( Bolts.navigate(config, 'azure.storage.sasToken') )
             return fusionEnv
         final result = new LinkedHashMap<String, String>(fusionEnv)
         result.remove('AZURE_STORAGE_SAS_TOKEN')
-        result.put('FUSION_AZ_MSI_CLIENT_ID', clientId.toString())
         return result
     }
 
