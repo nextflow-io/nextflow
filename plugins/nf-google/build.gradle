@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '26.10.0'
+    nextflowVersion = '26.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Enables Google Cloud Platform execution through Batch service with native Cloud Storage access and intelligent machine type selection'
