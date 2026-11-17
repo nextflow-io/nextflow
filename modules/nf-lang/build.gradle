@@ -26,9 +26,13 @@ dependencies {
   api "org.apache.groovy:groovy:${groovyVersion}"
   api "org.pf4j:pf4j:${pf4jVersion}"
 
-  testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
-  testImplementation ("org.spockframework:spock-core:${spockVersion}") { exclude group: 'org.apache.groovy' }
+  // the BOM also aligns the root build's junit-platform-launcher (1.10.5) to JUnit 6
+  testImplementation platform("org.junit:junit-bom:${junitVersion}")
+  testImplementation 'org.junit.jupiter:junit-jupiter'
+  testImplementation "org.assertj:assertj-core:${assertjVersion}"
+  // resolved by name from test scripts (e.g. groovy.json.JsonSlurper)
   testRuntimeOnly "org.apache.groovy:groovy-json:${groovyVersion}"
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
 
 generateGrammarSource {
