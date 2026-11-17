@@ -1,5 +1,15 @@
 nf-wave changelog
 ==================
+1.23.0 - 17 Nov 2026
+- Skip Wave for URL-style Singularity images (#7791) [35ff4a8c7]
+- feat(wave): request downstream containers ahead with wave.prefetchDepth (#8003) [f8256d219]
+- Retry Wave connection failures longer and report their cause (#8005) [739e2953c]
+- feat(wave): add wave.soci option for SOCI lazy loading (#7991) [a6a4d916c]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+- Use duration and memory literals in docs and config descriptions (#7955) [eeff98cbb]
+- Fix and simplify Wave build templates docs (#7951) [0cdf2bd44]
+- Make Wave optional for the Seqera executor and skip the Wave Fusion layer (#7744) [68ce7a483]
+
 1.22.3 - 15 Oct 2026
 - Build plugin commands config in the CLI (#7834) [1f805db0d]
 
