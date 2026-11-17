@@ -39,14 +39,14 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     /**
      * Default directives values
      */
-    static final Map<String,Object> DEFAULT_CONFIG = [
+    static final Map<String,Object> DEFAULT_CONFIG = Collections.unmodifiableMap([
             debug: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
             maxRetries: 1,
             maxErrors: -1,
             errorStrategy: ErrorStrategy.TERMINATE
-    ]
+    ] as Map<String,Object>)
 
     /**
      * Map instance that holds the process configuration

@@ -820,8 +820,8 @@ class TaskRun implements Cloneable {
                 = sess.getContainerConfig(eng)
                 ?: new DockerConfig([:])
         // if a configuration is found is expected to enabled by default
-        if( exe.isContainerNative() ) {
-            ((GroovyObject) result).setProperty('enabled', true)
+        if( exe.isContainerNative() && !result.isEnabled() && result instanceof DockerConfig ) {
+            result.setEnabled(true)
         }
         return result
     }

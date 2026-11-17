@@ -37,6 +37,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import org.slf4j.LoggerFactory
 import static java.util.Arrays.asList
 /**
  * This class provides helper methods to implement nextflow operators
@@ -97,7 +98,7 @@ class DataflowHelper {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable t) {
             final e = t instanceof InvocationTargetException ? t.cause : t
-            org.slf4j.LoggerFactory.getLogger(OperatorImpl).error("@unknown", e)
+            LoggerFactory.getLogger(OperatorImpl).error("@unknown", e)
             session?.abort(e)
             return true;
         }

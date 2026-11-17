@@ -320,7 +320,8 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks && (config.maxForks as int)>0 ? config.maxForks as int : 0
+        final maxForks0 = config.maxForks as Integer
+        this.maxForks = maxForks0 != null && maxForks0 > 0 ? maxForks0 : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
