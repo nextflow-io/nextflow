@@ -1396,9 +1396,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         (result != null) == EXPECTED_NOT_NULL
         if (result) {
-            result.getNetworkInterfaces(0).getNetwork() == (NETWORK ?: '')
-            result.getNetworkInterfaces(0).getSubnetwork() == (SUBNET ?: '')
-            result.getNetworkInterfaces(0).getNoExternalIpAddress() == PRIVATE
+            assert result.getNetworkInterfaces(0).getNetwork() == (NETWORK ?: '')
+            assert result.getNetworkInterfaces(0).getSubnetwork() == (SUBNET ?: '')
+            assert result.getNetworkInterfaces(0).getNoExternalIpAddress() == PRIVATE
         }
 
         where:
