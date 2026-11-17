@@ -83,7 +83,7 @@ Option 3.
 
 ### Nextflow
 
-Nextflow does not check the naming rules. It only checks the structure of the ID, because it turns the ID into file paths, and some sources (offline mode, test repositories, local plugins) never call the registry.
+Nextflow does not check the naming rules. It only checks the structure of a namespaced ID, because it turns the ID into file paths, and some sources (offline mode, test repositories, local plugins) never call the registry.
 
 - **ID check:** `PluginRef.parse()` refuses an ID with more than one `/`, an empty part, or a part equal to `.` or `..`.
 - **Plugins store:** `$NXF_HOME/plugins/<namespace>/<name>-<version>`. Unscoped plugins stay at `$NXF_HOME/plugins/<name>-<version>`. This is the same layout as modules and pipelines. The current code `pluginsStore.resolve("$id-$version")` already builds this path. Nextflow must create the parent directory before the atomic move.
@@ -92,7 +92,7 @@ Nextflow does not check the naming rules. It only checks the structure of the ID
 - **Offline mode** (`LocalUpdateRepository`): scan one level deeper, into namespace directories. The ID still comes from the MANIFEST.
 - **Download** (`PluginUpdater.download0`): no change. The unzipped directory is named after the zip file (`<name>-<version>.zip`), and the check compares only the last path element.
 - **Embedded mode** (`EmbeddedPluginManager`): it loads every directory of the store root as a plugin. It must treat a directory without a MANIFEST as a namespace directory, the same as offline mode.
-- **Registry refuses a namespaced ID:** an old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows a clear message with the registry response. Today metadata errors are only logged as warnings, and the run fails later with "Cannot find version". Nextflow adds the metadata error to that final error.
+- **Registry refuses a namespaced ID:** an old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows a clear message with the registry response as a warning. The run then fails with "Cannot find version", as today.
 
 ### Registry (summary)
 
@@ -107,7 +107,7 @@ A new optional `nextflowPlugin { namespace = 'myorg' }` setting. The ID becomes 
 | Nextflow | Registry | Unscoped plugin | Namespaced plugin |
 |---|---|---|---|
 | old | old | works | not possible |
-| new | old | works | fails: clear message from Nextflow |
+| new | old | works | fails: clear message from Nextflow, shown as a warning, then "Cannot find version" |
 | old | new | works | fails: the registry message (`nextflowVersion` check) is shown as a warning, then "Cannot find version" |
 | new | new | works | works |
 
@@ -135,6 +135,6 @@ Nextflow versions that read the legacy `plugins.json` index never see namespaced
 
 - Pipelines that use namespaced plugins need a minimum Nextflow version. They should set `manifest.nextflowVersion`.
 - With an old registry, only the namespaced plugin fails. Nextflow asks again one plugin per request, so unscoped plugins of the same run still resolve.
-- Old Nextflow versions show the registry message only as a warning. This cannot be fixed in versions already released.
+- Nextflow shows the registry message as a warning, followed by the "Cannot find version" error.
 - Unscoped plugins, their store paths and older Nextflow versions are not affected.
 
