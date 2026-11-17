@@ -317,7 +317,7 @@ class LauncherTest extends Specification {
         then:
         launcher.command instanceof CmdHelp
         (launcher.command as CmdHelp).args == TARGET
-        launcher.allCommands*.name.toSet() == Launcher.COMMAND_NAMES.toSet()
+        launcher.allCommands*.name.toSet() == Launcher.COMMANDS.keySet()
 
         where:
         ARGS            | TARGET
@@ -372,10 +372,11 @@ class LauncherTest extends Specification {
         def launcher = new Launcher()
         launcher.registerAll()
         then:
-        launcher.allCommands*.name == Launcher.COMMAND_NAMES
+        launcher.allCommands*.name == Launcher.COMMANDS.keySet() as List
         launcher.allCommands.every { cmd -> Launcher.createCommand(cmd.name).class == cmd.class }
         launcher.allCommands.every { cmd -> Launcher.aliases(cmd).every { alias -> Launcher.createCommand(alias).class == cmd.class } }
-        launcher.jcommander.commands.keySet() == Launcher.COMMAND_NAMES.toSet()
+        launcher.allCommands.collectMany { cmd -> Launcher.aliases(cmd) as List }.toSet() == Launcher.ALIASES.keySet()
+        launcher.jcommander.commands.keySet() == Launcher.COMMANDS.keySet()
         and:
         Launcher.createCommand('foo') == null
     }

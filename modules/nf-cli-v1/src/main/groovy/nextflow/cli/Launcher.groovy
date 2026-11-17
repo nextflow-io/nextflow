@@ -97,52 +97,57 @@ class Launcher {
         jcommander.setProgramName( APP_NAME )
     }
 
-    // command names, in the order of the `help` listing
+    /**
+     * Command factories by name, in the order of the `help` listing.
+     * Commands are created on demand, because creating all of them adds
+     * significant startup time.
+     */
     @PackageScope
-    static final List<String> COMMAND_NAMES = List.of(
-        'auth', 'clean', 'clone', 'console', 'fs', 'info', 'launch', 'list', 'log', 'logfile', 'pull', 'run', 'kuberun',
-        'drop', 'config', 'node', 'view', 'help', 'self-update', 'plugin', 'inspect', 'lint', 'lineage', 'module', 'secrets' )
+    static final Map<String,Closure<CmdBase>> COMMANDS = Collections.unmodifiableMap([
+        'auth':         { -> new CmdAuth() },
+        'clean':        { -> new CmdClean() },
+        'clone':        { -> new CmdClone() },
+        'console':      { -> new CmdConsole() },
+        'fs':           { -> new CmdFs() },
+        'info':         { -> new CmdInfo() },
+        'launch':       { -> new CmdLaunch() },
+        'list':         { -> new CmdList() },
+        'log':          { -> new CmdLog() },
+        'logfile':      { -> new CmdLogFile() },
+        'pull':         { -> new CmdPull() },
+        'run':          { -> new CmdRun() },
+        'kuberun':      { -> new CmdKubeRun() },
+        'drop':         { -> new CmdDrop() },
+        'config':       { -> new CmdConfig() },
+        'node':         { -> new CmdNode() },
+        'view':         { -> new CmdView() },
+        'help':         { -> new CmdHelp() },
+        'self-update':  { -> new CmdSelfUpdate() },
+        'plugin':       { -> new CmdPlugin() },
+        'inspect':      { -> new CmdInspect() },
+        'lint':         { -> new CmdLint() },
+        'lineage':      { -> new CmdLineage() },
+        'module':       { -> new CmdModule() },
+        'secrets':      { -> SecretsLoader.isEnabled() ? new CmdSecret() : null },
+    ] as LinkedHashMap<String,Closure<CmdBase>>)
+
+    // command aliases (see the command `@Parameters` annotation)
+    @PackageScope
+    static final Map<String,String> ALIASES = Map.of('plugins', 'plugin', 'li', 'lineage', 'modules', 'module', 'secret', 'secrets')
 
     // global options (see CliOptions) that take a value
     @PackageScope
     static final Set<String> GLOBAL_OPTS_WITH_VALUE = Set.of('-debug', '-log', '-c', '-config', '-C', '-trace', '-syslog', '-D')
 
     /**
-     * Create a command by name or alias. Commands are created on demand,
-     * because creating all of them adds significant startup time.
+     * Create a command by name or alias.
      *
      * @return The command instance or {@code null} if the name is not a command
      */
     @PackageScope
     static CmdBase createCommand(String name) {
-        switch( name ) {
-            case 'auth': return new CmdAuth()
-            case 'clean': return new CmdClean()
-            case 'clone': return new CmdClone()
-            case 'console': return new CmdConsole()
-            case 'fs': return new CmdFs()
-            case 'info': return new CmdInfo()
-            case 'launch': return new CmdLaunch()
-            case 'list': return new CmdList()
-            case 'log': return new CmdLog()
-            case 'logfile': return new CmdLogFile()
-            case 'pull': return new CmdPull()
-            case 'run': return new CmdRun()
-            case 'kuberun': return new CmdKubeRun()
-            case 'drop': return new CmdDrop()
-            case 'config': return new CmdConfig()
-            case 'node': return new CmdNode()
-            case 'view': return new CmdView()
-            case 'help': return new CmdHelp()
-            case 'self-update': return new CmdSelfUpdate()
-            case 'plugin': case 'plugins': return new CmdPlugin()
-            case 'inspect': return new CmdInspect()
-            case 'lint': return new CmdLint()
-            case 'lineage': case 'li': return new CmdLineage()
-            case 'module': case 'modules': return new CmdModule()
-            case 'secrets': case 'secret': return SecretsLoader.isEnabled() ? new CmdSecret() : null
-            default: return null
-        }
+        final factory = COMMANDS.get(ALIASES.getOrDefault(name, name))
+        return factory?.call()
     }
 
     private boolean allRegistered
@@ -163,7 +168,7 @@ class Launcher {
         if( allRegistered )
             return
         allRegistered = true
-        for( String name : COMMAND_NAMES ) {
+        for( String name : COMMANDS.keySet() ) {
             if( allCommands.any { CmdBase it -> it.name == name } )
                 continue
             final cmd = createCommand(name)
@@ -319,7 +324,7 @@ class Launcher {
             normalized << current
 
             // when the first argument is a file, it's supposed to be a script to be executed
-            if( i==1 && current !in COMMAND_NAMES && new File(current).isFile()  ) {
+            if( i==1 && !COMMANDS.containsKey(current) && new File(current).isFile()  ) {
                 normalized.add(0,CmdRun.NAME)
             }
 
@@ -415,7 +420,7 @@ class Launcher {
                 normalized << 'true'
             }
 
-            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || args[i] in COMMAND_NAMES )) {
+            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || COMMANDS.containsKey(args[i]) )) {
                 normalized << 'localhost'
             }
 
