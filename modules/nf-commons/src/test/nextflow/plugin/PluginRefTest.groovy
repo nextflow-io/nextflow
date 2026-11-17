@@ -75,7 +75,18 @@ class PluginRefTest extends Specification {
         def e = thrown(IllegalArgumentException)
         e.message == "Invalid plugin ID '${FQID.tokenize('@')[0]}' -- expected format: [<namespace>/]<name>"
         where:
-        FQID << ['a/b/c', '/nf-foo', 'myorg/', '../nf-foo', 'myorg/..', './nf-foo', 'a/b/c@1.0.0']
+        FQID << ['a/b/c', '/nf-foo', 'myorg/', '../nf-foo', 'myorg/..', './nf-foo', 'a/b/c@1.0.0', 'my~org/nf-foo', 'myorg/nf~foo']
+    }
+
+    def 'should build a flat file name from the plugin id' () {
+        expect:
+        PluginRef.dirName('myorg/nf-foo') == 'myorg~nf-foo'
+        PluginRef.dirName('nf-foo') == 'nf-foo'
+    }
+
+    def 'should keep a tilde in an unscoped plugin id' () {
+        expect:
+        PluginRef.parse('nf~foo@1.0.0').id == 'nf~foo'
     }
 
 }
