@@ -1,5 +1,9 @@
 nf-agent changelog
 ===================
+0.3.0 - 17 Nov 2026
+- Restore map.properties as a map entry under Groovy 5 (#8012) [149e0f81e]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+
 0.2.0 - 12 Oct 2026
 - Address limitations in agent inputs and outputs (#7750) [1c62dbf4d]
 
