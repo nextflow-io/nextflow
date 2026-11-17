@@ -1,5 +1,11 @@
 nf-tower changelog
 ===================
+1.33.0 - 17 Nov 2026
+- Prepare Kryo and nf-tower to run without `--add-opens` flags (#7997) [8afe98205]
+- Use duration and memory literals in docs and config descriptions (#7955) [eeff98cbb]
+- Prevent leaking environment secrets in CI (#7873) [1260714d4]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+
 1.32.1 - 15 Oct 2026
 - Build plugin commands config in the CLI (#7834) [1f805db0d]
 

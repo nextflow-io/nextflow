@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '26.10.0'
+    nextflowVersion = '26.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides a langchain4j-backed agent runner to execute Nextflow agents against an LLM'
