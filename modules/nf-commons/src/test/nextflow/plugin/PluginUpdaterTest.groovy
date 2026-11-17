@@ -36,13 +36,20 @@ import org.pf4j.PluginState
 import org.pf4j.PluginWrapper
 import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PluginUpdaterTest extends Specification {
+
+    @Rule
+    WireMockRule wiremock = new WireMockRule(0)
 
     private static final String PLUGIN_ID = 'my-plugin'
 
@@ -995,6 +1002,123 @@ class PluginUpdaterTest extends Specification {
         and:
         local.resolve('my-plugin-1.0.0').isDirectory()
         local.resolve('another-plugin-2.0.0').isDirectory()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should show the registry error when a plugin cannot be resolved' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def bar = createPlugin(repo, '1.0.0'); bar.zip = zipDir(bar.path)
+        def query = { String ids -> "/v1/plugins/dependencies?plugins=${URLEncoder.encode(ids, 'UTF-8')}&nextflowVersion=${URLEncoder.encode(BuildInfo.version, 'UTF-8')}".toString() }
+        wiremock.stubFor(get(urlEqualTo(query("${PLUGIN_ID}@1.0.0,nfx@1.0.0"))).willReturn(aResponse().withStatus(400)))
+        wiremock.stubFor(get(urlEqualTo(query('nfx'))).willReturn(aResponse().withStatus(400).withBody("Plugin id 'nfx' is invalid")))
+        wiremock.stubFor(get(urlEqualTo(query(PLUGIN_ID))).willReturn(aResponse().withStatus(200).withBody("""
+            { "plugins": [ { "id": "${PLUGIN_ID}", "releases": [ { "version": "1.0.0", "url": "file:${bar.zip}", "date": "2025-03-21T10:40:36Z" } ] } ] }
+            """)))
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, new URL("http://localhost:${wiremock.port()}/"), false)
+        updater.prefetchMetadata([new PluginRef(PLUGIN_ID, '1.0.0'), new PluginRef('nfx', '1.0.0')])
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+        then:
+        manager.getPlugin(PLUGIN_ID) != null
+
+        when: 'a pinned version fails in the download'
+        updater.installPlugin('nfx', '1.0.0')
+        then:
+        def e1 = thrown(IllegalStateException)
+        e1.message.startsWith('Plugin with id nfx not found in any repository -- cause: Invalid response while fetching plugin metadata')
+        e1.message.contains("Plugin id 'nfx' is invalid")
+
+        when: 'a version range fails in the release lookup'
+        updater.installPlugin('nfx', '>=1.0.0')
+        then:
+        def e2 = thrown(IllegalStateException)
+        e2.message.startsWith('Unknown plugin id: nfx -- cause: Invalid response while fetching plugin metadata')
+
+        when: 'no version fails in the latest version lookup'
+        updater.installPlugin('nfx', null)
+        then:
+        def e3 = thrown(IllegalStateException)
+        e3.message.startsWith('Cannot find latest version of nfx plugin -- cause: Invalid response while fetching plugin metadata')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not give the registry error as cause when another repository has the plugin' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "${PLUGIN_ID}", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${repo.resolve('missing.zip')}"} ]}]
+            """
+        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).willReturn(aResponse().withStatus(500).withBody('Server error')))
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def updater = new PluginUpdater(new LocalPluginManager(local), local, new URL("http://localhost:${wiremock.port()}/"), false)
+        updater.addRepository(new DefaultUpdateRepository('extra', index.toUri().toURL()))
+        updater.prefetchMetadata([new PluginRef(PLUGIN_ID, '1.0.0')])
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '>=2.0.0')
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Cannot find version of ${PLUGIN_ID} plugin matching >=2.0.0"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should keep the download error when the plugin metadata is available' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "${PLUGIN_ID}", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${repo.resolve('missing.zip')}"} ]}]
+            """
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def updater = new PluginUpdater(new LocalPluginManager(local), local, index.toUri().toURL(), false)
+        updater.@metadataErrors.put(PLUGIN_ID, new PluginRuntimeException('stale metadata error'))
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        !e.message.contains('stale metadata error')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should show the metadata error when a plugin to update is not in any repository' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def index = repo.resolve('plugins.json')
+        index.text = '[]'
+        def local = localCache(folder.resolve('plugins'), ['1.0.0'])
+        def manager = new LocalPluginManager(local)
+        manager.loadPluginFromPath(local.resolve("${PLUGIN_ID}-1.0.0"))
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+        updater.@metadataErrors.put(PLUGIN_ID, new PluginRuntimeException('registry refused'))
+
+        when:
+        updater.updatePlugin(PLUGIN_ID, '2.0.0')
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Plugin ${PLUGIN_ID} does not exist in any repository -- cause: registry refused"
 
         cleanup:
         folder?.deleteDir()
