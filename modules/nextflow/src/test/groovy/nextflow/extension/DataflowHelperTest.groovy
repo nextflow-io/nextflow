@@ -16,6 +16,8 @@
 
 package nextflow.extension
 
+import java.lang.reflect.InvocationTargetException
+
 import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -69,5 +71,15 @@ class DataflowHelperTest extends Specification {
         [0,2]           | ['A','B','C','D','E','F']     | ['A','C']     | ['B','D','E','F']
         [0,1,4]         | ['A','B','C','D','E','F']     | ['A','B','E'] | ['C','D','F']
         [0]             | 'A'                           | ['A']         | []
+    }
+
+    def 'should unwrap invocation target exception' () {
+        given:
+        def cause = new IllegalArgumentException('bad value')
+
+        expect:
+        DataflowHelper.unwrap(cause).is(cause)
+        DataflowHelper.unwrap(new InvocationTargetException(cause)).is(cause)
+        DataflowHelper.unwrap(new InvocationTargetException(new InvocationTargetException(cause))).is(cause)
     }
 }
