@@ -90,51 +90,103 @@ class Launcher {
     }
 
     protected void init() {
-        allCommands = (List<CmdBase>)[
-                new CmdAuth(),
-                new CmdClean(),
-                new CmdClone(),
-                new CmdConsole(),
-                new CmdFs(),
-                new CmdInfo(),
-                new CmdLaunch(),
-                new CmdList(),
-                new CmdLog(),
-                new CmdLogFile(),
-                new CmdPull(),
-                new CmdRun(),
-                new CmdKubeRun(),
-                new CmdDrop(),
-                new CmdConfig(),
-                new CmdNode(),
-                new CmdView(),
-                new CmdHelp(),
-                new CmdSelfUpdate(),
-                new CmdPlugin(),
-                new CmdInspect(),
-                new CmdLint(),
-                new CmdLineage(),
-                new CmdModule()
-        ]
-
-        if(SecretsLoader.isEnabled())
-            allCommands.add(new CmdSecret())
-
+        allCommands = new ArrayList<CmdBase>()
+        allRegistered = false
         options = new CliOptions()
         jcommander = new JCommander(options)
-        for( CmdBase cmd : allCommands ) {
-            cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
-        }
         jcommander.setProgramName( APP_NAME )
+    }
 
-        //Allow unknown options for module command
-        jcommander.getCommands().get(CmdModule.NAME)?.setAcceptUnknownOptions(true)
-        // accept leftover options so removed commands can report their removal
-        for( CmdBase cmd : allCommands ) {
-            if( cmd instanceof CmdRemoved )
-                jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
+    // command names, in the order of the `help` listing
+    @PackageScope
+    static final List<String> COMMAND_NAMES = List.of(
+        'auth', 'clean', 'clone', 'console', 'fs', 'info', 'launch', 'list', 'log', 'logfile', 'pull', 'run', 'kuberun',
+        'drop', 'config', 'node', 'view', 'help', 'self-update', 'plugin', 'inspect', 'lint', 'lineage', 'module', 'secrets' )
+
+    // global options (see CliOptions) that take a value
+    @PackageScope
+    static final Set<String> GLOBAL_OPTS_WITH_VALUE = Set.of('-debug', '-log', '-c', '-config', '-C', '-trace', '-syslog', '-D')
+
+    /**
+     * Create a command by name or alias. Commands are created on demand,
+     * because creating all of them adds significant startup time.
+     *
+     * @return The command instance or {@code null} if the name is not a command
+     */
+    @PackageScope
+    static CmdBase createCommand(String name) {
+        switch( name ) {
+            case 'auth': return new CmdAuth()
+            case 'clean': return new CmdClean()
+            case 'clone': return new CmdClone()
+            case 'console': return new CmdConsole()
+            case 'fs': return new CmdFs()
+            case 'info': return new CmdInfo()
+            case 'launch': return new CmdLaunch()
+            case 'list': return new CmdList()
+            case 'log': return new CmdLog()
+            case 'logfile': return new CmdLogFile()
+            case 'pull': return new CmdPull()
+            case 'run': return new CmdRun()
+            case 'kuberun': return new CmdKubeRun()
+            case 'drop': return new CmdDrop()
+            case 'config': return new CmdConfig()
+            case 'node': return new CmdNode()
+            case 'view': return new CmdView()
+            case 'help': return new CmdHelp()
+            case 'self-update': return new CmdSelfUpdate()
+            case 'plugin': case 'plugins': return new CmdPlugin()
+            case 'inspect': return new CmdInspect()
+            case 'lint': return new CmdLint()
+            case 'lineage': case 'li': return new CmdLineage()
+            case 'module': case 'modules': return new CmdModule()
+            case 'secrets': case 'secret': return SecretsLoader.isEnabled() ? new CmdSecret() : null
+            default: return null
         }
+    }
+
+    private boolean allRegistered
+
+    private void register(CmdBase cmd) {
+        cmd.launcher = this
+        allCommands.add(cmd)
+        jcommander.addCommand(cmd.name, cmd, aliases(cmd))
+        // allow unknown options for the module command, and for removed commands so they can report their removal
+        if( cmd instanceof CmdModule || cmd instanceof CmdRemoved )
+            jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
+    }
+
+    /**
+     * Register all commands that are not registered yet, e.g. to print the usage
+     */
+    protected void registerAll() {
+        if( allRegistered )
+            return
+        allRegistered = true
+        for( String name : COMMAND_NAMES ) {
+            if( allCommands.any { CmdBase it -> it.name == name } )
+                continue
+            final cmd = createCommand(name)
+            if( cmd != null )
+                register(cmd)
+        }
+    }
+
+    /**
+     * Find the command name in the (normalized) arguments, i.e. the first
+     * argument that is neither a global option nor the value of one.
+     */
+    @PackageScope
+    static String findCommandName(List<String> args) {
+        int i = 0
+        while( i < args.size() ) {
+            final arg = args[i++]
+            if( !arg.startsWith('-') )
+                return arg
+            if( arg in GLOBAL_OPTS_WITH_VALUE )
+                i++
+        }
+        return null
     }
 
     private static final String[] EMPTY = new String[0]
@@ -152,12 +204,13 @@ class Launcher {
         this.cliString = makeCli(System.getenv('NXF_CLI'), args)
         this.colsString = System.getenv('COLUMNS')
 
-        def cols = getColumns()
-        if( cols )
-            jcommander.setColumnSize(cols)
-
         normalizedArgs = normalizeArgs(args)
-        jcommander.parse( normalizedArgs as String[] )
+        if( !parseLazily() ) {
+            // parse again with all commands, so that errors are reported as usual
+            init()
+            registerAll()
+            parse0()
+        }
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         //Attach unknown options to command in case of needed
@@ -171,6 +224,36 @@ class Launcher {
         checkLogFileName()
 
         return this
+    }
+
+    /**
+     * Parse the arguments with only the requested command registered.
+     *
+     * @return {@code false} if the arguments must be parsed with all commands
+     */
+    private boolean parseLazily() {
+        final name = findCommandName(normalizedArgs)
+        CmdBase cmd = null
+        if( name != null ) {
+            cmd = createCommand(name)
+            if( cmd == null )
+                return false
+            register(cmd)
+        }
+        try {
+            parse0()
+        }
+        catch( ParameterException e ) {
+            return false
+        }
+        return jcommander.getParsedCommand() == cmd?.name
+    }
+
+    private void parse0() {
+        final cols = getColumns()
+        if( cols )
+            jcommander.setColumnSize(cols)
+        jcommander.parse( normalizedArgs as String[] )
     }
 
     protected String makeCli(String cli, String... args) {
@@ -236,7 +319,7 @@ class Launcher {
             normalized << current
 
             // when the first argument is a file, it's supposed to be a script to be executed
-            if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
+            if( i==1 && current !in COMMAND_NAMES && new File(current).isFile()  ) {
                 normalized.add(0,CmdRun.NAME)
             }
 
@@ -332,7 +415,7 @@ class Launcher {
                 normalized << 'true'
             }
 
-            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
+            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || args[i] in COMMAND_NAMES )) {
                 normalized << 'localhost'
             }
 
@@ -380,6 +463,7 @@ class Launcher {
     }
 
     CmdBase findCommand( String cmdName ) {
+        registerAll()
         allCommands.find { it.name == cmdName }
     }
 
@@ -392,6 +476,7 @@ class Launcher {
      */
     void usage(String command = null ) {
 
+        registerAll()
         if( command ) {
             def exists = allCommands.find { it.name == command } != null
             if( !exists ) {
@@ -503,6 +588,7 @@ class Launcher {
 
             // replace the current command with the `help` command
             def target = command?.name
+            registerAll()
             command = allCommands.find { it instanceof CmdHelp }
             if( target ) {
                 (command as CmdHelp).args = [target]
@@ -660,7 +746,7 @@ class Launcher {
     static String getVersion(boolean full = false) {
 
         if ( full ) {
-            SPLASH
+            getSplash()
         }
         else {
             "${APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
@@ -668,14 +754,11 @@ class Launcher {
 
     }
 
-    /*
-     * The application 'logo'
+    /**
+     * The application 'logo'. Built on demand because formatting the build
+     * timestamp has a noticeable startup cost.
      */
-    /*
-     * The application 'logo'
-     */
-    static public final String SPLASH =
-
+    static String getSplash() {
 """
       N E X T F L O W
       version ${BuildInfo.version} build ${BuildInfo.buildNum}
@@ -683,5 +766,6 @@ class Launcher {
       cite doi:10.1038/nbt.3820
       http://nextflow.io
 """
+    }
 
 }
