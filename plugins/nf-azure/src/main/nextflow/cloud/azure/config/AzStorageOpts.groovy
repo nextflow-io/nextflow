@@ -59,7 +59,7 @@ class AzStorageOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The managed identity Fusion uses on the compute nodes to authenticate to Azure storage, instead of a SAS token. Either the client ID of a managed identity attached to the nodes, or `'auto'` to use the identity the nodes run as. When set, Nextflow does not generate a SAS token for Fusion.
+        The managed identity Fusion uses on the compute nodes to authenticate to Azure storage, instead of a SAS token. Either the client ID of a managed identity attached to the nodes, or `'auto'` to use the identity the nodes run as. When set, Nextflow does not generate a SAS token for Fusion. Alias of `azure.batch.poolIdentityClientId` for any executor; takes precedence when both are set.
     """)
     final String nodeIdentity
 
