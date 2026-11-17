@@ -38,7 +38,6 @@ import io.seqera.util.HintHelper
 import io.seqera.util.SchemaMapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
-import nextflow.extension.Bolts
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -258,35 +257,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     protected Map<String, String> getTaskEnvironment() {
         final configEnv = executor.getSeqeraConfig()?.taskEnvironment
-        final fusionEnv = withAzureIdentity(fusionLauncher().fusionEnv(), executor.session?.config)
+        final fusionEnv = fusionLauncher().fusionEnv()
         if( !configEnv )
             return fusionEnv
         final result = new LinkedHashMap<String, String>(configEnv)
         result.putAll(fusionEnv)
-        return result
-    }
-
-    /**
-     * On Azure, when {@code azure.managedIdentity.clientId} is set, drop the SAS token that
-     * Nextflow generates for the work-dir container, so that Fusion authenticates as the managed
-     * identity of the task VM. The scheduler agent selects that identity, since only it knows
-     * which identity the VM runs as, so no client id is passed to the task.
-     *
-     * <p>A SAS token set explicitly with {@code azure.storage.sasToken} is kept.
-     *
-     * @param fusionEnv The Fusion environment
-     * @param config The session config
-     * @return The Fusion environment, without the generated SAS token when a managed identity is configured
-     */
-    static protected Map<String, String> withAzureIdentity(Map<String, String> fusionEnv, Map config) {
-        if( !fusionEnv.containsKey('AZURE_STORAGE_SAS_TOKEN') || !config )
-            return fusionEnv
-        if( !Bolts.navigate(config, 'azure.managedIdentity.clientId') )
-            return fusionEnv
-        if( Bolts.navigate(config, 'azure.storage.sasToken') )
-            return fusionEnv
-        final result = new LinkedHashMap<String, String>(fusionEnv)
-        result.remove('AZURE_STORAGE_SAS_TOKEN')
         return result
     }
 
