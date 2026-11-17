@@ -25,6 +25,7 @@ With remote pipeline inclusion, a release is installed from the Git commit it pi
 - Building bundles for nf-core releases (registry side).
 - Private Git repositories.
 - A spec file for pipelines (like a module's `meta.yml`).
+- Running a release published only as a bundle with `nextflow run` or `nextflow pull`. Their run cache is a Git clone, so they stop with a clear error and point to includes and `nextflow pipeline install`. A release with both a bundle and Git provenance runs from Git. A bundle run cache, such as the separate registry folder considered in the pipeline registry CLI ADR, is future work.
 
 ## Considered Options
 

@@ -16,6 +16,10 @@
 
 package nextflow.cli.pipeline
 
+import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineArtifact
+import io.seqera.npr.api.schema.v1.PipelineRelease
+import io.seqera.npr.client.RegistryClient
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
@@ -119,5 +123,20 @@ class PipelineCmdSupportTest extends Specification {
         PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'
         PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api/') == 'https://registry.nextflow.io'
         PipelineCmdSupport.pageUrl('https://example.com/registry') == 'https://example.com/registry'
+    }
+
+    def 'should reject running a release published only as a bundle' () {
+        given:
+        def client = Mock(RegistryClient)
+        client.getPipeline('acme/hello') >> new Pipeline().latest(new PipelineRelease().version('1.0.0')
+            .artifact(new PipelineArtifact().url('https://registry.nextflow.io/b.tgz').checksum('sha256:x')))
+        def address = new PipelineCmdSupport.RegistryAddress('https://registry.nextflow.io/api', 'acme/hello', null)
+
+        when:
+        PipelineCmdSupport.resolveRelease(address, null, client)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('acme/hello@1.0.0 is published only as a bundle')
     }
 }

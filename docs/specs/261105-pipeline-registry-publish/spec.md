@@ -3,7 +3,7 @@
 **Created**: 2026-11-05
 **Status**: Draft
 **ADR**: [20261105-pipeline-registry-publish](../../adr/20261105-pipeline-registry-publish.md)
-**Builds on**: [docs/specs/261103-pipeline-registry-cli](../261103-pipeline-registry-cli/spec.md)
+**Builds on**: [Pipeline registry CLI ADR](../../adr/20261103-pipeline-registry-cli.md)
 **Server side**: seqeralabs/nextflow-registry #440 (ADR and spec), #441 (implementation)
 
 ## Overview
@@ -57,7 +57,7 @@ A pipeline author with a registry token publishes a version from a local folder.
 
 ## Out of scope
 
-Bundles for nf-core releases; private Git repositories; a pipeline spec file; `pipeline run`.
+Bundles for nf-core releases; private Git repositories; a pipeline spec file; `pipeline run`; running a bundle-only release with `nextflow run` or `nextflow pull` (they stop with a clear error).
 
 ## Open questions
 
