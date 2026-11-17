@@ -154,8 +154,10 @@ class PluginUpdaterTest extends Specification {
         ok1 && ok2 && ok3
         manager.getPlugin('org1/nf-foo').pluginState == PluginState.STARTED
         manager.getPlugin('org2/nf-foo').pluginState == PluginState.STARTED
-        local.resolve('org1/nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
-        local.resolve('org2/nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        local.resolve('org1~nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        local.resolve('org2~nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        manager.localRoot.resolve('org1~nf-foo-1.0.0').isLink()
+        manager.localRoot.resolve('org2~nf-foo-1.0.0').isLink()
         local.resolve("${PLUGIN_ID}-1.0.0").isDirectory()
         manager.getPlugin('org1/nf-foo').descriptor.pluginId == 'org1/nf-foo'
         manager.getPlugin('org2/nf-foo').descriptor.pluginId == 'org2/nf-foo'
@@ -198,7 +200,7 @@ class PluginUpdaterTest extends Specification {
         then:
         installed
         manager.getPlugin('myorg/nf-foo').pluginState == PluginState.STARTED
-        local.resolve('myorg/nf-foo-1.0.0').isDirectory()
+        local.resolve('myorg~nf-foo-1.0.0').isDirectory()
 
         when: 'the other repository has the plugin but not the version'
         updater.installPlugin('myorg/nf-foo', '>=2.0.0')
@@ -232,7 +234,7 @@ class PluginUpdaterTest extends Specification {
         then:
         installed
         manager.getPlugin('myorg/nf-foo').pluginState == PluginState.STARTED
-        local.resolve('myorg/nf-foo-1.0.0').isDirectory()
+        local.resolve('myorg~nf-foo-1.0.0').isDirectory()
 
         cleanup:
         folder?.deleteDir()

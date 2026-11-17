@@ -85,13 +85,13 @@ Option 3.
 
 Nextflow does not check the naming rules. It only checks the structure of a namespaced ID, because it turns the ID into file paths, and some sources (offline mode, test repositories, local plugins) never call the registry.
 
-- **ID check:** `PluginRef.parse()` refuses an ID with more than one `/`, an empty part, or a part equal to `.` or `..`.
-- **Plugins store:** `$NXF_HOME/plugins/<namespace>/<name>-<version>`. Unscoped plugins stay at `$NXF_HOME/plugins/<name>-<version>`. This is the same layout as modules and pipelines. The current code `pluginsStore.resolve("$id-$version")` already builds this path. Nextflow must create the parent directory before the atomic move.
-- **Lock file:** use a flat name: `nextflow-plugin-<namespace>~<name>-<version>.lock`.
-- **Local plugin root** (`LocalPluginManager.createLinkFromPath`): the symlink name must be flat and unique, e.g. `<namespace>~<name>-<version>`. Today it uses only the directory name, so `org1/nf-foo` and `org2/nf-foo` would overwrite each other.
-- **Offline mode** (`LocalUpdateRepository`): scan one level deeper, into namespace directories. The ID still comes from the MANIFEST.
-- **Download** (`PluginUpdater.download0`): no change. The unzipped directory is named after the zip file (`<name>-<version>.zip`), and the check compares only the last path element.
-- **Embedded mode** (`EmbeddedPluginManager`): it loads every directory of the store root as a plugin. It must treat a directory without a MANIFEST as a namespace directory, the same as offline mode.
+- **ID check:** for a namespaced ID, `PluginRef.parse()` refuses more than one `/`, an empty part, a part equal to `.` or `..`, and a `~` (see below). Unscoped IDs are not checked, as today.
+- **File names:** every file name built from the ID uses a flat name, with `~` in place of `/` (`PluginRef.dirName`): `myorg/nf-foo` becomes `myorg~nf-foo`.
+  - **Plugins store:** `$NXF_HOME/plugins/<namespace>~<name>-<version>`. Unscoped plugins stay at `$NXF_HOME/plugins/<name>-<version>`.
+  - **Lock file:** `nextflow-plugin-<namespace>~<name>-<version>.lock`.
+  - The local plugin root symlink, offline mode (`LocalUpdateRepository`) and embedded mode (`EmbeddedPluginManager`) need no change: the store stays one level deep, and the plugin ID comes from the MANIFEST, not from the folder name.
+- **Why a flat store and not `<namespace>/<name>-<version>`:** a nested store, the layout of modules and pipelines, needs extra code in offline mode, embedded mode and the symlink name, plus creating the namespace folder. The flat store reuses the lock file scheme and keeps all of that code unchanged.
+- **Download** (`PluginUpdater.download0`): the unzipped directory is named after the zip file (`<name>-<version>.zip`), so for a namespaced plugin it does not match the store folder name. The move renames it.
 - **Registry refuses a namespaced ID:** an old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows a clear message with the registry response as a warning. The run then fails with "Cannot find version", as today.
 
 ### Registry (summary)

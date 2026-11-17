@@ -310,7 +310,7 @@ class PluginUpdater extends UpdateManager {
         // reuses the cached copy whenever the store directory exists (it only downloads when
         // missing), so its presence is the authoritative signal that no remote metadata is
         // required to start the plugin.
-        return pluginsStore != null && FilesEx.exists(pluginsStore.resolve("${ref.id}-${ref.version}"))
+        return pluginsStore != null && FilesEx.exists(pluginsStore.resolve("${PluginRef.dirName(ref.id)}-${ref.version}"))
     }
 
     /**
@@ -392,7 +392,7 @@ class PluginUpdater extends UpdateManager {
         log.info "Downloading plugin ${id}@${version}"
 
         // 1. check if already exists
-        final pluginPath = pluginsStore.resolve("$id-$version")
+        final pluginPath = pluginsStore.resolve("${PluginRef.dirName(id)}-$version")
         if( FilesEx.exists(pluginPath) ) {
             return pluginPath
         }
@@ -405,10 +405,9 @@ class PluginUpdater extends UpdateManager {
         FileHelper.deletePath(downloaded)
 
         // 4. move the final destination the plugin directory
-        assert pluginPath.getFileName() == dir.getFileName()
+        // the zip of a namespaced plugin is named <name>-<version>; safeMove renames it
+        assert id.contains('/') || pluginPath.getFileName() == dir.getFileName()
         try {
-            // a namespaced plugin goes in a namespace folder that may not exist yet
-            Files.createDirectories(pluginPath.parent)
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
@@ -498,7 +497,7 @@ class PluginUpdater extends UpdateManager {
      */
     private File lockFile(String id, String version) {
         def tmp = System.getProperty('java.io.tmpdir')
-        new File(tmp, "nextflow-plugin-${id.replace('/', '~')}-${version}.lock")
+        new File(tmp, "nextflow-plugin-${PluginRef.dirName(id)}-${version}.lock")
     }
 
     private boolean load0(String id, String requestedVersion) {
@@ -532,7 +531,7 @@ class PluginUpdater extends UpdateManager {
             log.debug "Plugin $id version $requestedVersion resolved to: $version"
         }
 
-        def pluginPath = pluginsStore.resolve("$id-$version")
+        def pluginPath = pluginsStore.resolve("${PluginRef.dirName(id)}-$version")
         if( !FilesEx.exists(pluginPath) ) {
             pluginPath = safeDownload(id, version)
         }
