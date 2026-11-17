@@ -18,11 +18,16 @@ package nextflow
 
 import java.nio.file.Path
 import java.nio.file.Paths
+
+import groovy.transform.CompileStatic
+import nextflow.extension.FilesEx
+
 /**
  * Application main constants
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class Const {
 
     static final public String ISO_8601_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'"
@@ -59,7 +64,7 @@ class Const {
         final home = SysEnv.get('NXF_HOME')
         final result = home ? Paths.get(home) : sysHome().resolve(".$appname")
 
-        if( !result.exists() && !result.mkdir() ) {
+        if( !FilesEx.exists(result) && !FilesEx.mkdir(result) ) {
             throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")
         }
 
