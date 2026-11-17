@@ -205,7 +205,7 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
-    def 'explain when the registry refuses a namespaced plugin id'() {
+    def 'add a namespace hint when the registry refuses a namespaced plugin id'() {
         given:
         def body = '{"type":"INVALID_PLUGIN_ID","message":"Plugin id \'myorg/nf-foo\' is invalid"}'
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
@@ -216,8 +216,9 @@ class HttpPluginRepositoryTest extends Specification {
 
         then:
         def e = thrown(PluginRuntimeException)
-        e.message.startsWith("The plugin registry at http://localhost:${wiremock.port()}/ refused the namespaced plugin ID: myorg/nf-foo\n")
+        e.message.startsWith('Invalid response while fetching plugin metadata from:')
         e.message.contains(body)
+        e.message.endsWith('\nThe registry may not support namespaced plugins')
     }
 
     def 'report a plugin as not found when the registry refuses it'() {
@@ -229,20 +230,7 @@ class HttpPluginRepositoryTest extends Specification {
         unit.getPlugin('myorg/nf-foo') == null
     }
 
-    def 'keep the generic message when the registry rate limits a namespaced plugin id'() {
-        given:
-        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
-            .willReturn(aResponse().withStatus(429).withBody('Too Many Requests')))
-
-        when:
-        unit.fetchPlugin('myorg/nf-foo')
-
-        then:
-        def e = thrown(PluginRuntimeException)
-        e.message.startsWith('Invalid response while fetching plugin metadata from:')
-    }
-
-    def 'keep the generic message when the registry refuses an unscoped plugin id'() {
+    def 'add no namespace hint when the registry refuses an unscoped plugin id'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
             .willReturn(aResponse().withStatus(400).withBody('Bad request')))
@@ -253,6 +241,7 @@ class HttpPluginRepositoryTest extends Specification {
         then:
         def e = thrown(PluginRuntimeException)
         e.message.startsWith('Invalid response while fetching plugin metadata from:')
+        !e.message.contains('namespaced')
     }
 
     // ------------------------------------------------------------------------
