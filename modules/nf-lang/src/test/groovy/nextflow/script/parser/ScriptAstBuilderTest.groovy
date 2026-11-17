@@ -146,6 +146,32 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Unexpected input: ','"
     }
 
+    def 'should report an error for an unmatched closing bracket' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                println 'hello'
+            }
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[4, 1, "Unexpected input: '}'"]]
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+                println 'hello'
+            }
+            )
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[4, 1, "Unexpected input: ')'"]]
+    }
+
     def 'should report an error for unexpected end of file' () {
         when:
         def errors = check(
