@@ -47,6 +47,12 @@ class AzStorageOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The client ID of the Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that Fusion uses to authenticate to Azure Storage. The identity must be attached to the VMs that run the tasks. If set to `'auto'`, Fusion uses the first available managed identity. When set, Nextflow does not pass a SAS token to tasks. This is separate from `azure.managedIdentity`, which authenticates Nextflow itself.
+    """)
+    final String fusionIdentityClientId
+
+    @ConfigOption
+    @Description("""
         The blob storage shared access signature (SAS) token, which can be provided instead of an account key. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
     """)
     String sasToken
@@ -65,6 +71,7 @@ class AzStorageOpts implements ConfigScope {
         assert config!=null
         this.accountKey = config.accountKey ?: env.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: env.get('AZURE_STORAGE_ACCOUNT_NAME')
+        this.fusionIdentityClientId = config.fusionIdentityClientId
         this.sasToken = config.sasToken ?: env.get('AZURE_STORAGE_SAS_TOKEN')
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('48h')
         this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
