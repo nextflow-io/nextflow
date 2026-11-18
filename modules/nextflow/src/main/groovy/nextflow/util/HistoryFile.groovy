@@ -21,6 +21,7 @@ import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -33,6 +34,7 @@ import nextflow.exception.AbortOperationException
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class HistoryFile extends File {
 
     static String defaultFileName() { Const.appCacheDir.resolve('history').toString() }
@@ -44,10 +46,10 @@ class HistoryFile extends File {
 
     private static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 
-    private static final VAL_A = (int)('a' as char)
-    private static final VAL_F = (int)('f' as char)
-    private static final VAL_0 = (int)('0' as char)
-    private static final VAL_9 = (int)('9' as char)
+    private static final int VAL_A = (int)('a' as char)
+    private static final int VAL_F = (int)('f' as char)
+    private static final int VAL_0 = (int)('0' as char)
+    private static final int VAL_9 = (int)('9' as char)
 
     private HistoryFile() {
         super(defaultFileName())
@@ -272,7 +274,7 @@ class HistoryFile extends File {
             }
         }
 
-        return results.unique()
+        return (List<Record>) results.unique()
     }
 
     List<Record> findBefore(String idOrName) {
@@ -282,7 +284,7 @@ class HistoryFile extends File {
 
         def firstMatch = false
 
-        return findAll().findResults {
+        return (List<Record>) findAll().findResults {
             if( it==matching[0] ) {
                 firstMatch = true
                 return null
@@ -298,7 +300,7 @@ class HistoryFile extends File {
             return Collections.emptyList()
 
         def firstMatch = false
-        return findAll().findResults {
+        return (List<Record>) findAll().findResults {
             if( it==matching[-1] ) {
                 firstMatch = true
                 return null
@@ -458,7 +460,7 @@ class HistoryFile extends File {
     }
 
     Set<String> findAllRunNames() {
-        findAll().findResults{ it.runName }
+        new LinkedHashSet<String>(findAll().findResults{ it.runName })
     }
 
     String generateNextName() {

@@ -45,6 +45,7 @@ import org.pf4j.Extension
  * Helper class to get a {@code Kryo} object ready to be used
  */
 @Slf4j
+@CompileStatic
 class KryoHelper {
 
     static final Map<Class,Object> serializers
@@ -108,7 +109,7 @@ class KryoHelper {
                 kryo.register(k,(Serializer)v.newInstance())
 
             else if( v instanceof Closure )
-                kryo.register(k, v.call(kryo))
+                kryo.register(k, (Serializer) v.call(kryo))
 
             else
                 kryo.register(k)

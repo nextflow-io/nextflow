@@ -886,6 +886,27 @@ class TaskRunTest extends Specification {
         session.getContainerConfig(null) >> new PodmanConfig(registry:'xyz')
         and:
         config == new PodmanConfig(registry:'xyz')
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> true
+        and:
+        session.getContainerConfig(null) >> null
+        and:
+        config instanceof DockerConfig
+        config.isEnabled()
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> true
+        and:
+        session.getContainerConfig(null) >> new PodmanConfig(enabled: true)
+        and:
+        config == new PodmanConfig(enabled: true)
     }
 
     def 'should get container info' () {

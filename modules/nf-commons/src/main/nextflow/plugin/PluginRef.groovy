@@ -17,12 +17,14 @@
 package nextflow.plugin
 
 import groovy.transform.Canonical
+import groovy.transform.CompileStatic
 /**
  * Model a plugin Id and version
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
+@CompileStatic
 class PluginRef implements Comparable<PluginRef> {
 
     /**
