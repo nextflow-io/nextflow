@@ -308,6 +308,21 @@ class LauncherTest extends Specification {
         ['console', '-foo']                                     | 'console' | ['console']
         ['-version']                                            | null      | []
         []                                                      | null      | []
+        ['-trace', 'run', 'run', 'main.nf']                     | 'run'     | ['run']
+    }
+
+    def 'should register all commands when the command guess is wrong' () {
+        when:
+        def launcher = new Launcher().parseMainArgs(ARGS as String[])
+        then:
+        launcher.command?.name == COMMAND
+        launcher.allCommands*.name.toSet() == Launcher.COMMANDS.keySet()
+
+        where:
+        ARGS                                | COMMAND
+        ['-log', 'info', 'run', 'main.nf']  | 'run'
+        ['-log', 'info', '-version']        | null
+        ['-c', 'lint', 'info']              | 'info'
     }
 
     def 'should register all commands when printing the help' () {
@@ -372,22 +387,13 @@ class LauncherTest extends Specification {
         def launcher = new Launcher()
         launcher.registerAll()
         then:
-        launcher.allCommands*.name == Launcher.COMMANDS.keySet() as List
+        launcher.allCommands*.name.toSet() == Launcher.COMMANDS.keySet()
         launcher.allCommands.every { cmd -> Launcher.createCommand(cmd.name).class == cmd.class }
         launcher.allCommands.every { cmd -> Launcher.aliases(cmd).every { alias -> Launcher.createCommand(alias).class == cmd.class } }
         launcher.allCommands.collectMany { cmd -> Launcher.aliases(cmd) as List }.toSet() == Launcher.ALIASES.keySet()
         launcher.jcommander.commands.keySet() == Launcher.COMMANDS.keySet()
         and:
         Launcher.createCommand('foo') == null
-    }
-
-    def 'should list all global options with a value' () {
-        given:
-        def expected = CliOptions.declaredFields
-            .findAll { f -> f.type != boolean && (f.getAnnotation(Parameter) || f.getAnnotation(DynamicParameter)) }
-            .collectMany { f -> (f.getAnnotation(Parameter)?.names() ?: f.getAnnotation(DynamicParameter).names()) as List }
-        expect:
-        Launcher.GLOBAL_OPTS_WITH_VALUE == expected.toSet()
     }
 
     def 'should build the splash on demand' () {

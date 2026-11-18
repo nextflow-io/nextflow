@@ -91,19 +91,17 @@ class Launcher {
 
     protected void init() {
         allCommands = new ArrayList<CmdBase>()
-        allRegistered = false
         options = new CliOptions()
         jcommander = new JCommander(options)
         jcommander.setProgramName( APP_NAME )
     }
 
     /**
-     * Command factories by name, in the order of the `help` listing.
-     * Commands are created on demand, because creating all of them adds
-     * significant startup time.
+     * Command factories by name. Commands are created on demand, because
+     * creating all of them adds significant startup time.
      */
     @PackageScope
-    static final Map<String,Closure<CmdBase>> COMMANDS = Collections.unmodifiableMap([
+    static final Map<String,Closure<? extends CmdBase>> COMMANDS = Collections.unmodifiableMap([
         'auth':         { -> new CmdAuth() },
         'clean':        { -> new CmdClean() },
         'clone':        { -> new CmdClone() },
@@ -129,15 +127,16 @@ class Launcher {
         'lineage':      { -> new CmdLineage() },
         'module':       { -> new CmdModule() },
         'secrets':      { -> SecretsLoader.isEnabled() ? new CmdSecret() : null },
-    ] as LinkedHashMap<String,Closure<CmdBase>>)
+    ])
 
     // command aliases (see the command `@Parameters` annotation)
     @PackageScope
-    static final Map<String,String> ALIASES = Map.of('plugins', 'plugin', 'li', 'lineage', 'modules', 'module', 'secret', 'secrets')
-
-    // global options (see CliOptions) that take a value
-    @PackageScope
-    static final Set<String> GLOBAL_OPTS_WITH_VALUE = Set.of('-debug', '-log', '-c', '-config', '-C', '-trace', '-syslog', '-D')
+    static final Map<String,String> ALIASES = Map.of(
+        'plugins',  'plugin',
+        'li',       'lineage',
+        'modules',  'module',
+        'secret',   'secrets'
+    )
 
     /**
      * Create a command by name or alias.
@@ -149,8 +148,6 @@ class Launcher {
         final factory = COMMANDS.get(ALIASES.getOrDefault(name, name))
         return factory?.call()
     }
-
-    private boolean allRegistered
 
     private void register(CmdBase cmd) {
         cmd.launcher = this
@@ -165,11 +162,9 @@ class Launcher {
      * Register all commands that are not registered yet, e.g. to print the usage
      */
     protected void registerAll() {
-        if( allRegistered )
-            return
-        allRegistered = true
+        final registered = jcommander.getCommands().keySet()
         for( String name : COMMANDS.keySet() ) {
-            if( allCommands.any { CmdBase it -> it.name == name } )
+            if( name in registered )
                 continue
             final cmd = createCommand(name)
             if( cmd != null )
@@ -178,20 +173,14 @@ class Launcher {
     }
 
     /**
-     * Find the command name in the (normalized) arguments, i.e. the first
-     * argument that is neither a global option nor the value of one.
+     * Guess the command name in the (normalized) arguments, i.e. the first
+     * argument that is a command name or alias. It may be the value of a
+     * global option instead, in which case the lazy parse falls back to all
+     * commands (see {@link #parseLazily}).
      */
     @PackageScope
     static String findCommandName(List<String> args) {
-        int i = 0
-        while( i < args.size() ) {
-            final arg = args[i++]
-            if( !arg.startsWith('-') )
-                return arg
-            if( arg in GLOBAL_OPTS_WITH_VALUE )
-                i++
-        }
-        return null
+        return args.find { String arg -> COMMANDS.containsKey(arg) || ALIASES.containsKey(arg) }
     }
 
     private static final String[] EMPTY = new String[0]
