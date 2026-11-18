@@ -56,10 +56,10 @@ class ResourceLabelPolicyTest extends Specification {
 
         where:
         KEY                             | EXPECTED
-        'nextflow.io/runName'           | 'nextflow.io/runName'
-        'seqera.io/platform/workflowId' | 'seqera.io/platform/workflowId'
+        'nextflow.io/runName'           | 'nextflow.io:runName'
+        'seqera.io/platform/workflowId' | 'seqera.io:platform:workflowId'
         'cost centre'                   | 'cost centre'
-        'a+b-c=d.e_f:g/h@i'             | 'a+b-c=d.e_f:g/h@i'
+        'a+b-c=d.e_f:g/h@i'             | 'a+b-c=d.e_f:g:h@i'
         'foo#bar'                       | 'foo_bar'
         'foo(bar)'                      | 'foo_bar_'
         ''                              | ''
@@ -88,7 +88,7 @@ class ResourceLabelPolicyTest extends Specification {
 
     def 'should keep an empty aws value'() {
         expect:
-        ResourceLabelPolicy.AWS.sanitize(['nextflow.io/revision': '']) == ['nextflow.io/revision': '']
+        ResourceLabelPolicy.AWS.sanitize(['nextflow.io/revision': '']) == ['nextflow.io:revision': '']
     }
 
     // -- google
@@ -100,8 +100,8 @@ class ResourceLabelPolicyTest extends Specification {
 
         where:
         KEY                             | EXPECTED
-        'nextflow.io/runName'           | 'nextflow_io_runname'
-        'seqera.io/platform/workflowId' | 'seqera_io_platform_workflowid'
+        'nextflow.io/runName'           | 'nextflow-io-runname'
+        'seqera.io/platform/workflowId' | 'seqera-io-platform-workflowid'
         'foo-bar_baz'                   | 'foo-bar_baz'
         '1foo'                          | 'foo'
         '123'                           | ''
@@ -118,9 +118,9 @@ class ResourceLabelPolicyTest extends Specification {
         where:
         VALUE                                   | EXPECTED
         'crazy_darwin'                          | 'crazy_darwin'
-        'https://github.com/foo/bar'            | 'https___github_com_foo_bar'
-        'nf-core/rnaseq'                        | 'nf-core_rnaseq'
-        '3.12.0'                                | '3_12_0'
+        'https://github.com/foo/bar'            | 'https---github-com-foo-bar'
+        'nf-core/rnaseq'                        | 'nf-core-rnaseq'
+        '3.12.0'                                | '3-12-0'
         ''                                      | ''
         null                                    | ''
     }
@@ -136,7 +136,7 @@ class ResourceLabelPolicyTest extends Specification {
         ResourceLabelPolicy.GOOGLE.sanitize([
             'nextflow.io/runName': 'crazy_darwin',
             '123': 'dropped-no-key',
-            'nextflow.io/revision': '' ]) == ['nextflow_io_runname': 'crazy_darwin']
+            'nextflow.io/revision': '' ]) == ['nextflow-io-runname': 'crazy_darwin']
     }
 
     // -- kubernetes
@@ -245,7 +245,7 @@ class ResourceLabelPolicyTest extends Specification {
         Locale.setDefault(Locale.forLanguageTag('tr-TR'))
 
         expect: 'the google and k8s policies still fold I to the ASCII i'
-        ResourceLabelPolicy.GOOGLE.sanitizeKey('seqera.io/platform/workflowId') == 'seqera_io_platform_workflowid'
+        ResourceLabelPolicy.GOOGLE.sanitizeKey('seqera.io/platform/workflowId') == 'seqera-io-platform-workflowid'
         ResourceLabelPolicy.GOOGLE.sanitizeValue('WorkflowId') == 'workflowid'
         ResourceLabelPolicy.K8S.sanitizeKey('NEXTFLOW.IO/runName') == 'nextflow.io/runName'
 

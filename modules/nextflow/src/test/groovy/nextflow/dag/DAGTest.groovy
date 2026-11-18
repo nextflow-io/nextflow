@@ -325,7 +325,7 @@ class DAGTest extends Specification {
         dag.edges.size() == 5
 
         // All channels converted back to DataflowBroadcast.
-        dag.edges.each{ it.channel instanceof DataflowBroadcast }
+        dag.edges.every { it.channel instanceof DataflowBroadcast }
     }
 
     def 'should connect source channel to typed process' () {
