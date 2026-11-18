@@ -16,7 +16,7 @@
 
 package nextflow.script.dsl
 
-import groovy.transform.TypeChecked
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ConfigParseException
 import nextflow.script.ProcessConfig
@@ -27,7 +27,7 @@ import nextflow.script.ProcessConfig
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
-@TypeChecked
+@CompileStatic
 class ProcessConfigBuilder extends ProcessBuilder {
 
     /**

@@ -16,12 +16,14 @@
 
 package nextflow.plugin.extension
 
+import groovy.transform.CompileStatic
 import groovy.transform.MapConstructor
 
 /**
  * Hold a reference to a extension method provided by a Nextflow plugin
  */
 @MapConstructor
+@CompileStatic
 class PluginExtensionMethod {
     /**
      * The name of the method that needs to be invoked

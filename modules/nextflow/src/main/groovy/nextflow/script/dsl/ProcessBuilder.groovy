@@ -18,7 +18,7 @@ package nextflow.script.dsl
 
 import java.util.regex.Pattern
 
-import groovy.transform.TypeChecked
+import groovy.transform.CompileStatic
 import nextflow.NF
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
@@ -38,7 +38,7 @@ import nextflow.script.ProcessDef
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@TypeChecked
+@CompileStatic
 class ProcessBuilder {
 
     static final List<String> DIRECTIVES = [
@@ -128,8 +128,11 @@ class ProcessBuilder {
     }
 
     private void applyDirective(String name, def args) {
-        if( args instanceof Object[] )
-            config.put(name, args.size()==1 ? args[0] : args.toList())
+        if( args instanceof Object[] ) {
+            // explicit cast, otherwise the static compiler wraps `args` in a varargs array
+            final arr = (Object[]) args
+            config.put(name, arr.size()==1 ? arr[0] : arr.toList())
+        }
         else
             config.put(name, args)
     }
