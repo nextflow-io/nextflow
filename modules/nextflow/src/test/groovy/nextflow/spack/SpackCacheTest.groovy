@@ -17,8 +17,12 @@
 package nextflow.spack
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
 
+import nextflow.dataflow.DataflowThreads
+import org.apache.commons.lang3.exception.ExceptionUtils
 import spock.lang.Specification
 /**
  *
@@ -294,5 +298,64 @@ class SpackCacheTest extends Specification {
         noArch == Paths.get('/spack/no-arch')
         withArch == Paths.get('/spack/x86_64')
         noArchAgain == noArch
+    }
+
+    // reads on dataflow threads, and on the loop thread when run with NXF_DATAFLOW_POOL_SIZE=1
+    def 'should create the environment once for concurrent readers on dataflow threads' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def count = new AtomicInteger()
+        def cache = new SpackCache(new SpackConfig([cacheDir: folder.toString()], [:])) {
+            @Override
+            Path createLocalSpackEnv(String spackEnv, String arch) {
+                count.incrementAndGet()
+                Thread.sleep(100)
+                return folder.resolve(spackEnv)
+            }
+        }
+        def env = 'foo@' + UUID.randomUUID()
+
+        when:
+        def paths = DataflowThreads.call(8) { cache.getCachePathFor(env, null) }
+
+        then:
+        paths.size() == 8
+        paths.every { it == folder.resolve(env) }
+        count.get() == 1
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should propagate the creation error on dataflow threads' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def count = new AtomicInteger()
+        def cache = new SpackCache(new SpackConfig([cacheDir: folder.toString()], [:])) {
+            @Override
+            Path createLocalSpackEnv(String spackEnv, String arch) {
+                count.incrementAndGet()
+                throw new IllegalArgumentException('spack boom')
+            }
+        }
+        def env = 'foo@' + UUID.randomUUID()
+
+        when:
+        DataflowThreads.call(1) { cache.getCachePathFor(env, null) }
+        then:
+        def e = thrown(IllegalStateException)
+        e.cause instanceof IllegalArgumentException
+        ExceptionUtils.getRootCause(e).message == 'spack boom'
+
+        when:
+        DataflowThreads.call(1) { cache.getCachePathFor(env, null) }
+        then:
+        e = thrown(IllegalStateException)
+        e.cause instanceof IllegalArgumentException
+        ExceptionUtils.getRootCause(e).message == 'spack boom'
+        count.get() == 1
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

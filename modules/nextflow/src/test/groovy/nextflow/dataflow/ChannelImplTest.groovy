@@ -16,8 +16,6 @@
 
 package nextflow.dataflow
 
-import java.util.concurrent.TimeUnit
-
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.dataflow.ChannelNamespace as channel
 import nextflow.exception.ScriptRuntimeException
@@ -128,8 +126,9 @@ class ChannelImplTest extends Specification {
                 ch.combine(b: new ValueImpl(value), c: 'bar')
             }
         }
+        sleep 100
         then:
-        results.every { result -> result.getVal(100, TimeUnit.MILLISECONDS) == null }
+        results.every { result -> result.length() == 0 }
         // no thread is held waiting for the value
         Thread.allStackTraces.values().every { stack -> !stack.any { it.className.contains('CombineOpV2') } }
 

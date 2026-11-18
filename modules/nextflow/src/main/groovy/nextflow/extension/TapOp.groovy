@@ -20,8 +20,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import nextflow.NF
 import static nextflow.extension.DataflowHelper.newOperator
 /**

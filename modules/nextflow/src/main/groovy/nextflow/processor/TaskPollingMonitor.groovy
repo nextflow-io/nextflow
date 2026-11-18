@@ -31,6 +31,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.CloudSpotTerminationException
+import nextflow.dataflow.engine.ProcessBacklog
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
@@ -100,6 +101,17 @@ class TaskPollingMonitor implements TaskMonitor {
      * Condition to signal a new processing slot may be available in the {@link #runningQueue}
      */
     private Condition slotAvail
+
+    /**
+     * Count the slots freed and the tasks completed, so that a wake-up signalled while the
+     * submitter or the poller is busy is not missed. Only used with dataflow backpressure,
+     * which keeps the pending queue short
+     */
+    private boolean countWakeups
+
+    private long slotsFreed
+
+    private long completions
 
     /**
      * A condition that signal when at least a complete task is available
@@ -325,6 +337,7 @@ class TaskPollingMonitor implements TaskMonitor {
     void schedule(TaskHandler handler) {
         pendingLock.lock()
         try{
+            backlogOf(handler)?.taskPending()
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
             notifyTaskPending(handler)
@@ -353,6 +366,7 @@ class TaskPollingMonitor implements TaskMonitor {
         if( remove(handler) ) {
             pendingLock.lock()
             try {
+                slotsFreed++
                 slotAvail.signal()
                 return true
             }
@@ -381,6 +395,7 @@ class TaskPollingMonitor implements TaskMonitor {
         this.pendingLock = new ReentrantLock()
         this.taskAvail = pendingLock.newCondition()
         this.slotAvail = pendingLock.newCondition()
+        this.countWakeups = session.getBackpressure() != null
 
         //
         this.submitRateLimit = createSubmitRateLimit()
@@ -469,10 +484,23 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
-    private void awaitSlots() {
+    private long slotsFreed() {
+        if( !countWakeups )
+            return 0
         pendingLock.lock()
         try {
-            slotAvail.await(1, TimeUnit.SECONDS)
+            return slotsFreed
+        }
+        finally {
+            pendingLock.unlock()
+        }
+    }
+
+    private void awaitSlots(long freed) {
+        pendingLock.lock()
+        try {
+            if( !countWakeups || slotsFreed == freed )
+                slotAvail.await(1, TimeUnit.SECONDS)
         }
         finally {
             pendingLock.unlock()
@@ -488,12 +516,13 @@ class TaskPollingMonitor implements TaskMonitor {
             awaitTasks()
 
             // try to submit all pending tasks
+            final freed = slotsFreed()
             int processed = submitPendingTasks()
 
             // if no task has been submitted wait for a new slot to be available
             if( !processed ) {
                 Throttle.after(dumpInterval) { dumpSubmitQueue() }
-                awaitSlots()
+                awaitSlots(freed)
             }
         }
     }
@@ -507,6 +536,7 @@ class TaskPollingMonitor implements TaskMonitor {
         int previous=-1
         while( true ) {
             final long time = System.currentTimeMillis()
+            final signals = completions()
             final tasks = new ArrayList(runningQueue)
             final sz = tasks.size()
             ++iteration
@@ -526,7 +556,11 @@ class TaskPollingMonitor implements TaskMonitor {
                 break
             }
 
-            await(time)
+            // the flag-off path keeps calling await(), which subclasses may override
+            if( countWakeups )
+                awaitCompletion(time, signals)
+            else
+                await(time)
 
             if( session.isAborted() ) {
                 break
@@ -597,12 +631,25 @@ class TaskPollingMonitor implements TaskMonitor {
      *      The wait timeout in millis
      */
     protected void await( long time ) {
+        awaitCompletion(time, -1)
+    }
+
+    private void awaitCompletion( long time, long signals ) {
         def delta = this.pollIntervalMillis - (System.currentTimeMillis() - time)
         if( delta <= 0 )
             return
 
         taskCompleteLock.withLock {
-            taskComplete.await( delta, TimeUnit.MILLISECONDS )
+            if( signals < 0 || completions == signals )
+                taskComplete.await( delta, TimeUnit.MILLISECONDS )
+        }
+    }
+
+    private long completions() {
+        if( !countWakeups )
+            return -1
+        taskCompleteLock.withLock {
+            return completions
         }
     }
 
@@ -612,6 +659,7 @@ class TaskPollingMonitor implements TaskMonitor {
     @Override
     void signal() {
         taskCompleteLock.withLock {
+            completions++
             taskComplete.signal()
         }
     }
@@ -688,9 +736,14 @@ class TaskPollingMonitor implements TaskMonitor {
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
             itr.remove()
+            backlogOf(handler)?.taskSubmitted()
         }
 
         return count
+    }
+
+    static private ProcessBacklog backlogOf(TaskHandler handler) {
+        return handler.task?.processor?.getBacklog()
     }
 
 

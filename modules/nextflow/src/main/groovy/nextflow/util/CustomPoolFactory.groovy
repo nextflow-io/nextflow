@@ -16,14 +16,14 @@
 
 package nextflow.util
 
+import java.util.concurrent.ExecutorService
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import groovyx.gpars.scheduler.Pool
-import groovyx.gpars.scheduler.ResizeablePool
-import groovyx.gpars.util.PoolFactory
 /**
- * A configurable thread pool factory
+ * A configurable factory of the dataflow thread pool
  *
  * See http://niklasschlimm.blogspot.com.es/2012/03/threading-stories-about-robust-thread.html
  *
@@ -31,7 +31,7 @@ import groovyx.gpars.util.PoolFactory
  */
 @Slf4j
 @CompileStatic
-class CustomPoolFactory implements PoolFactory {
+class CustomPoolFactory implements Supplier<ExecutorService> {
 
     public final String NXF_POOL_TYPE = 'nxf.pool.type'
 
@@ -41,7 +41,7 @@ class CustomPoolFactory implements PoolFactory {
 
     @Memoized
     @Override
-    synchronized Pool createPool() {
+    synchronized ExecutorService get() {
 
         final defType = Threads.useVirtual() ? 'virtual' : 'default'
         final type = property(NXF_POOL_TYPE, defType)
@@ -52,7 +52,7 @@ class CustomPoolFactory implements PoolFactory {
                 return CustomThreadPool.defaultPool(poolSize, maxThreads)
 
             case 'legacy':
-                return new ResizeablePool(true, 1)
+                return CustomThreadPool.legacyPool()
 
             case 'sync':
                 int cpus = Runtime.runtime.availableProcessors()
@@ -78,21 +78,6 @@ class CustomPoolFactory implements PoolFactory {
                 throw new IllegalAccessException("Unknown thread pool type: `$type`")
         }
 
-    }
-
-    @Override
-    Pool createPool(boolean daemon) {
-        throw new UnsupportedOperationException()
-    }
-
-    @Override
-    Pool createPool(int numberOfThreads) {
-        throw new UnsupportedOperationException()
-    }
-
-    @Override
-    Pool createPool(boolean daemon, int numberOfThreads) {
-        throw new UnsupportedOperationException()
     }
 
     def property( String name, defValue ) {

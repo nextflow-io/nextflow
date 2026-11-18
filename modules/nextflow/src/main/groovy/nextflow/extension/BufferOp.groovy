@@ -21,8 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
@@ -154,10 +154,10 @@ class BufferOp {
 
         // the list holding temporary collected elements
         def buffer = []
-        final stopOnFirst = source instanceof DataflowExpression
+        final stopOnFirst = source instanceof DataflowVariable
 
         // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        final listener = new DataflowEventAdapter() {
+        final listener = new DataflowEventListener() {
 
             @Override
             Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {

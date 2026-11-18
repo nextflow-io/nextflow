@@ -19,7 +19,7 @@ package nextflow.extension
 
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 /**
@@ -50,7 +50,7 @@ class MapOp {
         if( target == null )
             target = CH.createBy(source)
 
-        final stopOnFirst = source instanceof DataflowExpression
+        final stopOnFirst = source instanceof DataflowVariable
         DataflowHelper.newOperator(source, target) { it ->
 
             def result = mapper.call(it)

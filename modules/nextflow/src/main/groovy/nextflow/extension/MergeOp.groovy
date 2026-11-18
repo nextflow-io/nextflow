@@ -23,7 +23,6 @@ import static nextflow.extension.DataflowHelper.stopErrorListener
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.ChainWithClosure
 
 /**
  * Implements merge operator

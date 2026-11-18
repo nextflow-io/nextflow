@@ -53,9 +53,13 @@ This software includes source code and libraries developed by:
     Copyright Jonathan Halterman and friends
     Released under the Apache 2.0 license
            
-    Gpars
-    Copyright (c) 2008-2011, The Gpars authors
+    GPars -- Groovy Parallel Systems
+    https://github.com/GPars/GPars
+    Copyright 2008-2013 Vaclav Pech and the original author or authors
+    This product includes software developed by Vaclav Pech
     Licensed under the Apache License, Version 2.0
+    Source code from GPars 1.2.1 is included, with modifications, in modules/nf-dataflow
+    and in modules/nextflow (ChainWithClosure and CopyChannelsClosure in nextflow.extension)
 
     Grengine
     https://gitlab.com/jexler/grengine

@@ -277,7 +277,7 @@ class ScriptHelper {
         return result
     }
 
-    private static Object normalizeResult(value) {
+    static Object normalizeResult(value) {
         if( value instanceof ChannelOut ) {
             def result = new ArrayList<>(value.size())
             for( def el : value )

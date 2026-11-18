@@ -79,8 +79,10 @@ class NodeMarker {
      * @param source Either a dataflow channel or a list of channel.
      */
     static void addSourceNode( String name, source )  {
-        if( session && session.dag && !session.aborted )
+        if( session && session.dag && !session.aborted ) {
             session.dag.addSourceNode(name, source)
+            session.backpressure?.markSource(name, source)
+        }
     }
 
     /**

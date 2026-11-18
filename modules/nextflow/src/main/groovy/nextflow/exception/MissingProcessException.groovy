@@ -18,6 +18,9 @@ package nextflow.exception
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.script.ScriptMeta
 
 /**
@@ -29,7 +32,21 @@ import nextflow.script.ScriptMeta
 class MissingProcessException extends ProcessException {
 
     MissingProcessException(ScriptMeta meta, MissingMethodException e) {
-        super(message(meta, e.method, e.arguments), e)
+        super(isChannel(e.type) ? channelMessage(e.type, e.method) : message(meta, e.method, e.arguments), e)
+    }
+
+    static boolean isChannel(Class type) {
+        return type != null && (DataflowReadChannel.isAssignableFrom(type) || DataflowWriteChannel.isAssignableFrom(type))
+    }
+
+    static boolean isValue(Class type) {
+        return type != null && DataflowVariable.isAssignableFrom(type)
+    }
+
+    static String channelMessage(Class type, String name) {
+        return isValue(type)
+            ? "Unknown method invocation `$name` on dataflow value -- use an operator such as `map` to transform the value"
+            : "Unknown method invocation `$name` on channel type -- use an operator such as `map` to transform channel values"
     }
 
     @PackageScope

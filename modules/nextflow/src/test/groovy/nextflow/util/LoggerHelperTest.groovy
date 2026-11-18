@@ -21,6 +21,7 @@ import java.nio.file.Paths
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.extension.OpCall
@@ -144,7 +145,10 @@ class LoggerHelperTest extends Specification {
         CLAZZ           | METHOD        | MSG
         ScriptBinding   | 'printx'      | 'Unknown method invocation `printx`'
         BaseScript      | 'printq'      | 'Unknown method invocation `printq` -- Did you mean?\n  print\n  printf'
-        DataflowQueue   | 'view'        | 'Unknown method invocation `view` on channel type'
+        DataflowQueue   | 'view'        | 'Unknown method invocation `view` on channel type -- use an operator such as `map` to transform channel values'
+        DataflowBroadcast | 'sort'      | 'Unknown method invocation `sort` on channel type -- use an operator such as `map` to transform channel values'
+        DataflowVariable | 'view'       | 'Unknown method invocation `view` on dataflow value -- use an operator such as `map` to transform the value'
+        DataflowVariable | 'sort'       | 'Unknown method invocation `sort` on dataflow value -- use an operator such as `map` to transform the value'
     }
 
     @Unroll
@@ -162,6 +166,8 @@ class LoggerHelperTest extends Specification {
         ERROR                                                   | MSG
         new MissingPropertyException('foo', ScriptBinding)      | 'No such variable: foo'
         new MissingPropertyException('Unknown variable `bar`')  | 'No such variable: Unknown variable `bar`'
+        new MissingPropertyException('bytes', DataflowVariable) | 'Unknown property `bytes` on dataflow value -- use an operator such as `map` to access the value'
+        new MissingPropertyException('bytes', DataflowQueue)    | 'Unknown property `bytes` on channel type -- use an operator such as `map` to access channel values'
     }
 
     @Unroll
@@ -172,10 +178,11 @@ class LoggerHelperTest extends Specification {
         where:
         TYPE             | MSG
         DataflowQueue    | 'channel type'
-        DataflowVariable | 'channel type'
+        DataflowVariable | 'dataflow value'
         OpCall           | 'operator type'
         String           | 'String type'
         new DataflowQueue() | 'channel object'
+        new DataflowVariable() | 'dataflow value object'
         'abc'           | 'String object'
     }
 }

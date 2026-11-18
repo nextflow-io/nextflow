@@ -30,7 +30,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import groovyx.gpars.GParsConfig
+import groovyx.gpars.scheduler.Scheduler
 import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
@@ -73,8 +73,8 @@ class CmdRun extends CmdBase implements HubAware {
     static final public String DSL1 = '1'
 
     static {
-        // install the custom pool factory for GPars threads
-        GParsConfig.poolFactory = new CustomPoolFactory()
+        // install the factory of the dataflow thread pool
+        Scheduler.setExecutorFactory(new CustomPoolFactory())
     }
 
     static class DurationConverter implements IStringConverter<Long> {

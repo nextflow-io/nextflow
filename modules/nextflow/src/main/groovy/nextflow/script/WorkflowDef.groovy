@@ -182,7 +182,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             return (DataflowWriteChannel)output
         // otherwise the output should be forwarded into the feedback channel
         final feedback = feedbackChannels[index]
-        CH.getReadChannel(output).into( feedback )
+        CH.forward(CH.getReadChannel(output), feedback)
         return feedback
     }
 
