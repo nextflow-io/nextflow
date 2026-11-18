@@ -16,6 +16,8 @@
 
 package nextflow.script.parser;
 
+import java.util.EmptyStackException;
+
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.Lexer;
 import org.apache.groovy.parser.antlr4.SyntaxErrorReportable;
@@ -27,5 +29,19 @@ import org.apache.groovy.parser.antlr4.SyntaxErrorReportable;
 public abstract class AbstractLexer extends Lexer implements SyntaxErrorReportable {
     public AbstractLexer(CharStream input) {
         super(input);
+    }
+
+    /**
+     * Ignore unmatched closing brackets (too many ), ], or }) so that the
+     * token is still emitted and reported by the parser, as in Groovy.
+     */
+    @Override
+    public int popMode() {
+        try {
+            return super.popMode();
+        }
+        catch( EmptyStackException e ) {
+            return Integer.MIN_VALUE;
+        }
     }
 }

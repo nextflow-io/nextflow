@@ -37,6 +37,7 @@ import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
 import nextflow.executor.CachedTaskHandler
+import nextflow.executor.ExecutorFactory
 import nextflow.file.FileHelper
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -1077,5 +1078,18 @@ class SessionTest extends Specification {
 
         cleanup:
         session.getArrayLauncherPool().shutdown()
+    }
+
+    def 'should signal the executors once the session is terminated' () {
+        given:
+        def factory = Mock(ExecutorFactory)
+        def session = new Session()
+        session.executorFactory = factory
+
+        when:
+        session.await()
+
+        then:
+        1 * factory.signalExecutors() >> { assert session.isTerminated() }
     }
 }
