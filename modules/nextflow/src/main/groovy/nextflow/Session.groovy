@@ -852,6 +852,8 @@ class Session implements ISession {
         processesBarrier.awaitCompletion()
         log.debug "Session await > all processes finished"
         terminated = true
+        // wake up the task monitors so they don't wait for the next poll to notice the termination
+        executorFactory?.signalExecutors()
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
