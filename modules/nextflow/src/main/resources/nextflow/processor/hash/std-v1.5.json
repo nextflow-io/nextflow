@@ -1,0 +1,72 @@
+{
+  "id": "std/v1.5",
+  "note": "From 26.04.2 until #6914 (029e52eef, 2026-07-17): record-types encoding, no module-bundle key.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true,
+    "assetRootDetection": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "contributor": "sessionId",
+      "lineage": ["sessionId"]
+    },
+    {
+      "key": "PROCESS_NAME",
+      "contributor": "processName",
+      "lineage": ["name"]
+    },
+    {
+      "key": "TASK_SOURCE",
+      "contributor": "taskSource",
+      "lineage": ["codeChecksum"]
+    },
+    {
+      "key": "CONTAINER",
+      "contributor": "containerFingerprint",
+      "lineage": ["container"]
+    },
+    {
+      "key": "INPUTS",
+      "contributor": "inputs.raw",
+      "lineage": ["input"]
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "contributor": "evalOutputs.derivedString",
+      "lineage": ["eval"]
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "contributor": "scriptVars",
+      "lineage": ["globalVars"]
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "contributor": "binEntries",
+      "lineage": ["binEntries"]
+    },
+    {
+      "key": "ENV_MODULES",
+      "contributor": "envModules",
+      "lineage": ["envModules"]
+    },
+    {
+      "key": "CONDA",
+      "contributor": "condaEnv",
+      "lineage": ["conda"]
+    },
+    {
+      "key": "SPACK",
+      "contributor": "spackEnvAndArch",
+      "lineage": ["spack", "architecture"]
+    },
+    {
+      "key": "STUB_MARKER",
+      "contributor": "stubMarker",
+      "lineage": ["codeChecksum"]
+    }
+  ]
+}

@@ -122,4 +122,8 @@ class AgentRun implements LinSerializable {
      * {@code name@version}. Null when the agent is not defined in a remote module.
      */
     String moduleId
+    /**
+     * Id of the task hash version used to compute the task hash, e.g. {@code std/v1.7}.
+     */
+    String hashVersion
 }

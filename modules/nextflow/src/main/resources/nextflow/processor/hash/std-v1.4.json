@@ -1,0 +1,72 @@
+{
+  "id": "std/v1.4",
+  "note": "From 26.03.0-edge until #7165 (785e801ad, 2026-05-21): as v1.5, but params.* refs are not yet folded into the task global vars.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true,
+    "assetRootDetection": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "contributor": "sessionId",
+      "lineage": ["sessionId"]
+    },
+    {
+      "key": "PROCESS_NAME",
+      "contributor": "processName",
+      "lineage": ["name"]
+    },
+    {
+      "key": "TASK_SOURCE",
+      "contributor": "taskSource",
+      "lineage": ["codeChecksum"]
+    },
+    {
+      "key": "CONTAINER",
+      "contributor": "containerFingerprint",
+      "lineage": ["container"]
+    },
+    {
+      "key": "INPUTS",
+      "contributor": "inputs.raw",
+      "lineage": ["input"]
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "contributor": "evalOutputs.derivedString",
+      "lineage": ["eval"]
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "contributor": "scriptVars.noParams",
+      "lineage": ["globalVars"]
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "contributor": "binEntries",
+      "lineage": ["binEntries"]
+    },
+    {
+      "key": "ENV_MODULES",
+      "contributor": "envModules",
+      "lineage": ["envModules"]
+    },
+    {
+      "key": "CONDA",
+      "contributor": "condaEnv",
+      "lineage": ["conda"]
+    },
+    {
+      "key": "SPACK",
+      "contributor": "spackEnvAndArch",
+      "lineage": ["spack", "architecture"]
+    },
+    {
+      "key": "STUB_MARKER",
+      "contributor": "stubMarker",
+      "lineage": ["codeChecksum"]
+    }
+  ]
+}
