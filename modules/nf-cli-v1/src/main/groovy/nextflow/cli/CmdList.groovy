@@ -26,7 +26,8 @@ import nextflow.cli.project.CmdProjectList
  */
 @Slf4j
 @CompileStatic
-@Parameters
+@Deprecated
+@Parameters(commandDescription = "List all downloaded projects (deprecated -- use `nextflow project list`)")
 class CmdList extends CmdProjectList {
 
     @Override

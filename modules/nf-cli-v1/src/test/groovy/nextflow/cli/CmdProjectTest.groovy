@@ -123,4 +123,17 @@ class CmdProjectTest extends Specification {
                 '''
                 .stripIndent()
     }
+
+    def 'should point to the new command in the help of a deprecated command'() {
+        when:
+        new Launcher().usage(NAME)
+        then:
+        capture.toString().contains("(deprecated -- use `nextflow project ${REPLACEMENT}`)")
+
+        where:
+        NAME    | REPLACEMENT
+        'drop'  | 'remove'
+        'list'  | 'list'
+        'view'  | 'view'
+    }
 }

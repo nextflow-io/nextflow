@@ -26,7 +26,8 @@ import nextflow.cli.project.CmdProjectView
  */
 @Slf4j
 @CompileStatic
-@Parameters
+@Deprecated
+@Parameters(commandDescription = "View project script file(s) (deprecated -- use `nextflow project view`)")
 class CmdView extends CmdProjectView {
 
     @Override

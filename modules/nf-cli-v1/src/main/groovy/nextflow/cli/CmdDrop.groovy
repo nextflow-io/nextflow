@@ -26,7 +26,8 @@ import nextflow.cli.project.CmdProjectRemove
  */
 @Slf4j
 @CompileStatic
-@Parameters
+@Deprecated
+@Parameters(commandDescription = "Delete the local copy of a project (deprecated -- use `nextflow project remove`)")
 class CmdDrop extends CmdProjectRemove {
 
     static final public String NAME = 'drop'
