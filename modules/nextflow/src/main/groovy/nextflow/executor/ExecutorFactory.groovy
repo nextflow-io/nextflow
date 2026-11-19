@@ -245,13 +245,13 @@ class ExecutorFactory {
      *
      * @param taskConfig
      */
-    @CompileDynamic
     protected String getExecutorName(ProcessConfig taskConfig, Session session) {
         // create the processor object
-        def result = taskConfig.executor?.toString()
+        def result = taskConfig.getProperty('executor')?.toString()
 
-        if( !result && session.config.executor?.name instanceof String ) {
-            result = session.config.executor.name
+        final executor = session.config.executor
+        if( !result && executor instanceof Map && executor.name instanceof String ) {
+            result = executor.name
         }
 
         log.debug "<< taskConfig executor: $result"

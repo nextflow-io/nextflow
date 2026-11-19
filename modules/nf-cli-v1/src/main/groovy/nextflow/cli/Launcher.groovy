@@ -90,51 +90,97 @@ class Launcher {
     }
 
     protected void init() {
-        allCommands = (List<CmdBase>)[
-                new CmdAuth(),
-                new CmdClean(),
-                new CmdClone(),
-                new CmdConsole(),
-                new CmdFs(),
-                new CmdInfo(),
-                new CmdLaunch(),
-                new CmdList(),
-                new CmdLog(),
-                new CmdLogFile(),
-                new CmdPull(),
-                new CmdRun(),
-                new CmdKubeRun(),
-                new CmdDrop(),
-                new CmdConfig(),
-                new CmdNode(),
-                new CmdView(),
-                new CmdHelp(),
-                new CmdSelfUpdate(),
-                new CmdPlugin(),
-                new CmdInspect(),
-                new CmdLint(),
-                new CmdLineage(),
-                new CmdModule()
-        ]
-
-        if(SecretsLoader.isEnabled())
-            allCommands.add(new CmdSecret())
-
+        allCommands = new ArrayList<CmdBase>()
         options = new CliOptions()
         jcommander = new JCommander(options)
-        for( CmdBase cmd : allCommands ) {
-            cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
-        }
         jcommander.setProgramName( APP_NAME )
+    }
 
-        //Allow unknown options for module command
-        jcommander.getCommands().get(CmdModule.NAME)?.setAcceptUnknownOptions(true)
-        // accept leftover options so removed commands can report their removal
-        for( CmdBase cmd : allCommands ) {
-            if( cmd instanceof CmdRemoved )
-                jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
+    /**
+     * Command factories by name. Commands are created on demand, because
+     * creating all of them adds significant startup time.
+     */
+    @PackageScope
+    static final Map<String,Closure<? extends CmdBase>> COMMANDS = Collections.unmodifiableMap([
+        'auth':         { -> new CmdAuth() },
+        'clean':        { -> new CmdClean() },
+        'clone':        { -> new CmdClone() },
+        'console':      { -> new CmdConsole() },
+        'fs':           { -> new CmdFs() },
+        'info':         { -> new CmdInfo() },
+        'launch':       { -> new CmdLaunch() },
+        'list':         { -> new CmdList() },
+        'log':          { -> new CmdLog() },
+        'logfile':      { -> new CmdLogFile() },
+        'pull':         { -> new CmdPull() },
+        'run':          { -> new CmdRun() },
+        'kuberun':      { -> new CmdKubeRun() },
+        'drop':         { -> new CmdDrop() },
+        'config':       { -> new CmdConfig() },
+        'node':         { -> new CmdNode() },
+        'view':         { -> new CmdView() },
+        'help':         { -> new CmdHelp() },
+        'self-update':  { -> new CmdSelfUpdate() },
+        'plugin':       { -> new CmdPlugin() },
+        'inspect':      { -> new CmdInspect() },
+        'lint':         { -> new CmdLint() },
+        'lineage':      { -> new CmdLineage() },
+        'module':       { -> new CmdModule() },
+        'secrets':      { -> SecretsLoader.isEnabled() ? new CmdSecret() : null },
+    ])
+
+    // command aliases (see the command `@Parameters` annotation)
+    @PackageScope
+    static final Map<String,String> ALIASES = Map.of(
+        'plugins',  'plugin',
+        'li',       'lineage',
+        'modules',  'module',
+        'secret',   'secrets'
+    )
+
+    /**
+     * Create a command by name or alias.
+     *
+     * @return The command instance or {@code null} if the name is not a command
+     */
+    @PackageScope
+    static CmdBase createCommand(String name) {
+        final factory = COMMANDS.get(ALIASES.getOrDefault(name, name))
+        return factory?.call()
+    }
+
+    private void register(CmdBase cmd) {
+        cmd.launcher = this
+        allCommands.add(cmd)
+        jcommander.addCommand(cmd.name, cmd, aliases(cmd))
+        // allow unknown options for the module command, and for removed commands so they can report their removal
+        if( cmd instanceof CmdModule || cmd instanceof CmdRemoved )
+            jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
+    }
+
+    /**
+     * Register all commands that are not registered yet, e.g. to print the usage
+     */
+    protected void registerAll() {
+        final registered = jcommander.getCommands().keySet()
+        for( String name : COMMANDS.keySet() ) {
+            if( name in registered )
+                continue
+            final cmd = createCommand(name)
+            if( cmd != null )
+                register(cmd)
         }
+    }
+
+    /**
+     * Guess the command name in the (normalized) arguments, i.e. the first
+     * argument that is a command name or alias. It may be the value of a
+     * global option instead, in which case the lazy parse falls back to all
+     * commands (see {@link #parseLazily}).
+     */
+    @PackageScope
+    static String findCommandName(List<String> args) {
+        return args.find { String arg -> COMMANDS.containsKey(arg) || ALIASES.containsKey(arg) }
     }
 
     private static final String[] EMPTY = new String[0]
@@ -152,12 +198,13 @@ class Launcher {
         this.cliString = makeCli(System.getenv('NXF_CLI'), args)
         this.colsString = System.getenv('COLUMNS')
 
-        def cols = getColumns()
-        if( cols )
-            jcommander.setColumnSize(cols)
-
         normalizedArgs = normalizeArgs(args)
-        jcommander.parse( normalizedArgs as String[] )
+        if( !parseLazily() ) {
+            // parse again with all commands, so that errors are reported as usual
+            init()
+            registerAll()
+            parse0()
+        }
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         //Attach unknown options to command in case of needed
@@ -171,6 +218,36 @@ class Launcher {
         checkLogFileName()
 
         return this
+    }
+
+    /**
+     * Parse the arguments with only the requested command registered.
+     *
+     * @return {@code false} if the arguments must be parsed with all commands
+     */
+    private boolean parseLazily() {
+        final name = findCommandName(normalizedArgs)
+        CmdBase cmd = null
+        if( name != null ) {
+            cmd = createCommand(name)
+            if( cmd == null )
+                return false
+            register(cmd)
+        }
+        try {
+            parse0()
+        }
+        catch( ParameterException e ) {
+            return false
+        }
+        return jcommander.getParsedCommand() == cmd?.name
+    }
+
+    private void parse0() {
+        final cols = getColumns()
+        if( cols )
+            jcommander.setColumnSize(cols)
+        jcommander.parse( normalizedArgs as String[] )
     }
 
     protected String makeCli(String cli, String... args) {
@@ -236,7 +313,7 @@ class Launcher {
             normalized << current
 
             // when the first argument is a file, it's supposed to be a script to be executed
-            if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
+            if( i==1 && !COMMANDS.containsKey(current) && new File(current).isFile()  ) {
                 normalized.add(0,CmdRun.NAME)
             }
 
@@ -332,7 +409,7 @@ class Launcher {
                 normalized << 'true'
             }
 
-            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
+            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || COMMANDS.containsKey(args[i]) )) {
                 normalized << 'localhost'
             }
 
@@ -380,6 +457,7 @@ class Launcher {
     }
 
     CmdBase findCommand( String cmdName ) {
+        registerAll()
         allCommands.find { it.name == cmdName }
     }
 
@@ -392,6 +470,7 @@ class Launcher {
      */
     void usage(String command = null ) {
 
+        registerAll()
         if( command ) {
             def exists = allCommands.find { it.name == command } != null
             if( !exists ) {
@@ -503,6 +582,7 @@ class Launcher {
 
             // replace the current command with the `help` command
             def target = command?.name
+            registerAll()
             command = allCommands.find { it instanceof CmdHelp }
             if( target ) {
                 (command as CmdHelp).args = [target]
@@ -660,7 +740,7 @@ class Launcher {
     static String getVersion(boolean full = false) {
 
         if ( full ) {
-            SPLASH
+            getSplash()
         }
         else {
             "${APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
@@ -668,14 +748,11 @@ class Launcher {
 
     }
 
-    /*
-     * The application 'logo'
+    /**
+     * The application 'logo'. Built on demand because formatting the build
+     * timestamp has a noticeable startup cost.
      */
-    /*
-     * The application 'logo'
-     */
-    static public final String SPLASH =
-
+    static String getSplash() {
 """
       N E X T F L O W
       version ${BuildInfo.version} build ${BuildInfo.buildNum}
@@ -683,5 +760,6 @@ class Launcher {
       cite doi:10.1038/nbt.3820
       http://nextflow.io
 """
+    }
 
 }

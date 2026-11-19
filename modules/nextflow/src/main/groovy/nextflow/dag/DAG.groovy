@@ -16,6 +16,8 @@
 
 package nextflow.dag
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.transform.MapConstructor
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -51,6 +53,7 @@ import java.util.concurrent.atomic.AtomicLong
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class DAG {
 
     @PackageScope
@@ -99,6 +102,7 @@ class DAG {
      * @param inputs The list of inputs entering in the process
      * @param outputs the list of outputs leaving the process
      */
+    @CompileDynamic
     void addProcessNode( String label, InputsList inputs, OutputsList outputs, TaskProcessor process=null ) {
         assert label
         assert inputs
@@ -183,7 +187,7 @@ class DAG {
             result.operators = [ extra.operator ]
         }
         else if( extra instanceof List ) {
-            result.operators = (List)extra.clone()
+            result.operators = new ArrayList((List) extra)
         }
         else if( extra != null )
             throw new IllegalArgumentException("Not a valid DAG vertex parameter: [${extra.class.name}] $extra")
@@ -253,6 +257,7 @@ class DAG {
 
     }
 
+    @CompileDynamic
     private List<ChannelHandler> normalizeInputs( InputsList inputs ) {
 
         inputs
@@ -267,6 +272,7 @@ class DAG {
         return param.name
     }
 
+    @CompileDynamic
     private List<ChannelHandler> normalizeOutputs( OutputsList outputs ) {
 
         def result = []
@@ -331,7 +337,7 @@ class DAG {
 
     @PackageScope
     void resolveEdgeNames() {
-        for( Edge edge : new ArrayList<>(edges) ) {
+        for( Edge edge : new ArrayList<Edge>(edges) ) {
             final name = lookupVariable(edge.channel)
             if( name )
                 edge.label = name

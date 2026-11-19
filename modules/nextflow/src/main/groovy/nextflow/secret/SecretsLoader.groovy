@@ -16,6 +16,7 @@
 
 package nextflow.secret
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
@@ -28,6 +29,7 @@ import nextflow.plugin.Plugins
  */
 @Slf4j
 @Singleton
+@CompileStatic
 class SecretsLoader {
 
     private SecretsProvider provider

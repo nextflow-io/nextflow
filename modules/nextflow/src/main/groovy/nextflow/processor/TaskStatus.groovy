@@ -16,11 +16,14 @@
 
 package nextflow.processor
 
+import groovy.transform.CompileStatic
+
 /**
  * Defines possible task statuses
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 enum TaskStatus {
     NEW,        // task has just been created and not yet submitted for execution
     SUBMITTED,  // task has been submitted for execution

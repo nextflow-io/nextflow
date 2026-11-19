@@ -200,16 +200,17 @@ class TaskProcessorTest extends Specification {
         def processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
         processor.getOwnerScript() >> script
 
+        and:
+        ScriptMeta.REGISTRY.put(script, meta)
+
         when:
-        ResourcesBundle bundle
-        GroovyMock(ScriptMeta, global: true)
-        ScriptMeta.get(script) >> meta
-        bundle = processor.getModuleBundle()
+        def bundle = processor.getModuleBundle()
 
         then:
         (bundle != null) == EXPECTED
 
         cleanup:
+        ScriptMeta.reset()
         folder?.deleteDir()
 
         where:
