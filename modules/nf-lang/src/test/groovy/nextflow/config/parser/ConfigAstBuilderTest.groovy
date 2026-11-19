@@ -132,6 +132,18 @@ class ConfigAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Variable declarations cannot be mixed with config statements"
     }
 
+    def 'should report an error for an unmatched closing bracket' () {
+        when:
+        def errors = check(
+            '''\
+            process.cpus = 2
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[2, 1, "Unexpected input: '}'"]]
+    }
+
     def 'should report an error for unexpected end of file' () {
         when:
         def errors = check(

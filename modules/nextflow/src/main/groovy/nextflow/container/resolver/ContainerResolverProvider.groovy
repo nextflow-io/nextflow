@@ -17,12 +17,14 @@
 package nextflow.container.resolver
 
 
+import groovy.transform.CompileStatic
 import nextflow.plugin.Plugins
 /**
  * Load an instance of {@link ContainerResolver}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class ContainerResolverProvider {
 
     /**

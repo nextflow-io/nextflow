@@ -19,6 +19,7 @@ package nextflow
 
 import java.util.function.Consumer
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.util.Duration
 import nextflow.util.IniFile
@@ -32,6 +33,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class Global {
 
     /**

@@ -27,6 +27,7 @@ import java.util.regex.Pattern
 
 import ch.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -65,6 +66,7 @@ import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
 import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
+import nextflow.extension.ChannelEx
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -111,6 +113,7 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TaskProcessor {
 
     static enum RunType {
@@ -317,7 +320,8 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
+        final maxForks0 = config.maxForks as Integer
+        this.maxForks = maxForks0 != null && maxForks0 > 0 ? maxForks0 : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
@@ -326,8 +330,9 @@ class TaskProcessor {
     }
 
     private TaskArrayCollector createArrayCollector(int arraySize) {
-        if( arraySize > 0 && executor instanceof TaskArrayExecutor )
-            return new TaskArrayCollector(this, executor, arraySize, executor.config?.getArrayTimeout(executor.name))
+        final exec = executor
+        if( arraySize > 0 && exec instanceof TaskArrayExecutor )
+            return new TaskArrayCollector(this, exec, arraySize, executor.config?.getArrayTimeout(executor.name))
         if( arraySize > 0 )
             log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
         return null
@@ -343,9 +348,9 @@ class TaskProcessor {
      */
     ProcessConfig getConfig() { config }
 
-    private ProcessConfigV1 configV1() { config as ProcessConfigV1 }
+    private ProcessConfigV1 configV1() { (ProcessConfigV1) config }
 
-    private ProcessConfigV2 configV2() { config as ProcessConfigV2 }
+    private ProcessConfigV2 configV2() { (ProcessConfigV2) config }
 
     /**
      * @return The current {@code Session} instance
@@ -449,6 +454,7 @@ class TaskProcessor {
             runV2()
     }
 
+    @CompileDynamic
     def runV1() {
         final config = configV1()
 
@@ -632,14 +638,15 @@ class TaskProcessor {
         session.processRegister(this)
 
         // determine whether the process is executed only once
-        final inputs = config.getInputs().getChannels()
-        this.singleton = config.getInputs().isSingleton()
+        final inputs = configV2().getInputs().getChannels()
+        this.singleton = configV2().getInputs().isSingleton()
 
         // create inputs with control channel
         final control = CH.queue()
         control.bind(Boolean.TRUE)
 
-        final opInputs = inputs + [control]
+        final List<DataflowReadChannel> opInputs = new ArrayList<DataflowReadChannel>(inputs)
+        opInputs.add(control)
         this.openPorts = createPortsArray(opInputs.size())
 
         // The thread pool used by GPars. The thread pool to be used is set in the static
@@ -818,6 +825,7 @@ class TaskProcessor {
         return task
     }
 
+    @CompileDynamic
     private void initializeTaskRunV1(TaskRun task) {
         /*
          * initialize the inputs/outputs for this task instance
@@ -931,7 +939,7 @@ class TaskProcessor {
      *      {@code false} otherwise
      */
     final boolean checkStoredOutput( TaskRun task ) {
-        if( !task.config.storeDir ) {
+        if( !task.config.getStoreDir() ) {
             log.trace "[${safeTaskName(task)}] storeDir not set -- return false"
             return false
         }
@@ -943,7 +951,7 @@ class TaskProcessor {
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.getStoreDir()} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -965,7 +973,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.getStoreDir()}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -1152,8 +1160,8 @@ class TaskProcessor {
             if( task && error instanceof ProcessException ) {
                 // expose current task exit status
                 task.config.exitStatus = task.exitStatus
-                task.config.errorCount = procErrCount
-                task.config.retryCount = taskErrCount
+                task.config.put('errorCount', procErrCount)
+                task.config.put('retryCount', taskErrCount)
                 //Add trace of the previous execution in the task context for next execution
                 if ( traceRecord )
                     task.config.previousTrace = traceRecord
@@ -1187,14 +1195,14 @@ class TaskProcessor {
 
             def dumpStackTrace = log.isTraceEnabled()
             def errorFormatter = new TaskErrorFormatter()
-            message << "Error executing process > '${safeTaskName(task)}'"
+            message << "Error executing process > '${safeTaskName(task)}'".toString()
             switch( error ) {
                 case ProcessException:
                     errorFormatter.formatTaskError( message, error, task )
                     break
 
                 case ProcessEvalException:
-                    errorFormatter.formatCommandError( message, error, task )
+                    errorFormatter.formatCommandError( message, (ProcessEvalException) error, task )
                     break
 
                 case FailedGuardException:
@@ -1225,7 +1233,7 @@ class TaskProcessor {
                 : name
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final int submitRetries ) {
 
         final action = task.config.getErrorStrategy()
 
@@ -1248,8 +1256,8 @@ class TaskProcessor {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
-                        taskCopy.config.attempt = taskErrCount+1
-                        taskCopy.config.submitAttempt = submitRetries+1
+                        taskCopy.config.put('attempt', taskErrCount+1)
+                        taskCopy.config.put('submitAttempt', submitRetries+1)
                         taskCopy.runType = RunType.RETRY
                         taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
@@ -1365,7 +1373,7 @@ class TaskProcessor {
         }
 
         // -- finally prints out the task output when 'debug' is true
-        if( task.config.debug ) {
+        if( task.config.getDebug() ) {
             task.echoStdout(session)
         }
     }
@@ -1409,6 +1417,7 @@ class TaskProcessor {
         }
     }
 
+    @CompileDynamic
     protected void bindOutputsV1(TaskRun task) {
 
         // -- creates the map of all tuple values to bind
@@ -1461,6 +1470,7 @@ class TaskProcessor {
         }
     }
 
+    @CompileDynamic
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
         final x = values.size() == 1 ? values[0] : values
@@ -1564,7 +1574,7 @@ class TaskProcessor {
                 // host environment variable that is not set) instead of exporting
                 // them as an empty string with a spurious warning -- see #5722
                 if( value != null )
-                    result.put( name, value.toString() )
+                    result.put( (String) name, value.toString() )
             }
         }
         else {
@@ -1625,6 +1635,7 @@ class TaskProcessor {
             resolveTaskInputsV2(task, values, foreignFiles)
     }
 
+    @CompileDynamic
     private void resolveTaskInputsV1(TaskRun task, List values, FilePorter.Batch foreignFiles) {
 
         // -- validate input lengths
@@ -2002,7 +2013,7 @@ class TaskProcessor {
      * Whenever the process can be cached
      */
     boolean isCacheable() {
-        session.cacheable && config.cacheable
+        session.cacheable && config.isCacheable()
     }
 
     @PackageScope boolean isResumable() {
@@ -2026,7 +2037,7 @@ class TaskProcessor {
         }
 
         // increment the number of processes executed
-        state.update { StateObj it -> it.incCompleted() }
+        ChannelEx.update(state) { StateObj it -> it.incCompleted() }
     }
 
     protected void closeProcess() {
@@ -2133,7 +2144,7 @@ class TaskProcessor {
             if( log.isTraceEnabled() )
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
-            state.update { StateObj it -> it.incSubmitted() }
+            ChannelEx.update(state) { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
@@ -2180,7 +2191,7 @@ class TaskProcessor {
                 if( log.isTraceEnabled() )
                     log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
-                state.update { StateObj it -> it.poison() }
+                ChannelEx.update(state) { StateObj it -> it.poison() }
             }
 
             return message

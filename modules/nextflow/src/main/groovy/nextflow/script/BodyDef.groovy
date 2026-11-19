@@ -16,12 +16,14 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
 
 /**
  * Holds process script meta-data
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class BodyDef implements Cloneable {
 
     /** The actual task code */
@@ -117,6 +119,6 @@ class BodyDef implements Cloneable {
      *      NOTE: it includes properties in the form {@code object.propertyName}
      */
     Set<String> getValNames() {
-        valRefs *. name
+        new LinkedHashSet<String>(valRefs *. name)
     }
 }
