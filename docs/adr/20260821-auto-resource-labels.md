@@ -100,8 +100,8 @@ The overload exists because the two requirements meet here: sanitization is per-
 
 | Executor | Policy | `nextflow.io/runName` becomes |
 | --- | --- | --- |
-| AWS Batch | permissive charset (`+ - = . _ : / @`), key <= 128, value <= 256 | unchanged |
-| Google Batch | lowercase, `[a-z0-9_-]`, leading letter, <= 63 | `nextflow_io_runname` |
+| AWS Batch | permissive charset (`+ - = . _ : / @`), `/` in keys rewritten to `:`, key <= 128, value <= 256 | `nextflow.io:runName` |
+| Google Batch | lowercase, `[a-z0-9_-]`, other chars rewritten to `-`, leading letter, <= 63 | `nextflow-io-runname` |
 | Kubernetes | key prefix kept, any `/` after the first replaced with `_`; values stripped of scheme and slashes, <= 63 | unchanged (value fixed) |
 | Azure Batch | near-identity, minus the reserved `microsoft` name prefix | unchanged |
 | Seqera | identity | unchanged |

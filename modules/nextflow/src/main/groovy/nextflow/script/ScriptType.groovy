@@ -16,11 +16,14 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
+
 /**
  * The type of script declared by a process
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 enum ScriptType {
 
     /** the process executed a piece of native groovy code */

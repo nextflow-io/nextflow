@@ -102,6 +102,18 @@ class AzureConfigTest extends Specification {
         cfg.batch().poolIdentityClientId == POOL_IDENTITY_CLIENT_ID
     }
 
+    def 'should get azure storage node identity' () {
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [ azure: [storage: [nodeIdentity: 'auto']] ]
+        }
+
+        when:
+        def cfg = AzConfig.getConfig(session)
+        then:
+        cfg.storage().nodeIdentity == 'auto'
+    }
+
     def 'should get azure batch options' () {
 
         given:

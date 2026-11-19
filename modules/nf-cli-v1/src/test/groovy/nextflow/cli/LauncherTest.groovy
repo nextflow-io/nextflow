@@ -20,6 +20,8 @@ import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
+import nextflow.BuildInfo
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -148,7 +150,6 @@ class LauncherTest extends Specification {
         given:
         def script = Files.createTempFile('file',null)
         def launcher = [:] as Launcher
-        launcher.allCommands = [ new CmdRun(), new CmdInfo() ]
 
         expect:
         launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
@@ -272,6 +273,121 @@ class LauncherTest extends Specification {
 
         cleanup:
         script?.delete()
+    }
+
+    def 'should register only the requested command' () {
+        when:
+        def launcher = new Launcher().parseMainArgs(ARGS as String[])
+        then:
+        launcher.command?.name == COMMAND
+        launcher.allCommands*.name == REGISTERED
+
+        where:
+        ARGS                                                    | COMMAND   | REGISTERED
+        ['info']                                                | 'info'    | ['info']
+        ['-q', '-bg', 'info']                                   | 'info'    | ['info']
+        ['-C', 'x.config', '-c', 'y.config', 'info']            | 'info'    | ['info']
+        ['-log', 'x.log', '-trace', 'foo', '-debug', 'bar', 'info'] | 'info' | ['info']
+        ['-syslog', 'info']                                     | 'info'    | ['info']
+        ['-D', 'foo=bar', '-Dx=y', 'info']                      | 'info'    | ['info']
+        ['run', 'main.nf', '--foo', 'bar', '-profile', 'info']  | 'run'     | ['run']
+        ['plugins', 'install', 'nf-foo']                        | 'plugin'  | ['plugin']
+        ['li', 'list']                                          | 'lineage' | ['lineage']
+        ['console', '-foo']                                     | 'console' | ['console']
+        ['-version']                                            | null      | []
+        []                                                      | null      | []
+        ['-trace', 'run', 'run', 'main.nf']                     | 'run'     | ['run']
+    }
+
+    def 'should register all commands when the command guess is wrong' () {
+        when:
+        def launcher = new Launcher().parseMainArgs(ARGS as String[])
+        then:
+        launcher.command?.name == COMMAND
+        launcher.allCommands*.name.toSet() == Launcher.COMMANDS.keySet()
+
+        where:
+        ARGS                                | COMMAND
+        ['-log', 'info', 'run', 'main.nf']  | 'run'
+        ['-log', 'info', '-version']        | null
+        ['-c', 'lint', 'info']              | 'info'
+    }
+
+    def 'should register all commands when printing the help' () {
+        when:
+        def launcher = new Launcher().parseMainArgs(ARGS as String[])
+        launcher.checkForHelp()
+        then:
+        launcher.command instanceof CmdHelp
+        (launcher.command as CmdHelp).args == TARGET
+        launcher.allCommands*.name.toSet() == Launcher.COMMANDS.keySet()
+
+        where:
+        ARGS            | TARGET
+        []              | null
+        ['-h']          | null
+        ['run', '-h']   | ['run']
+        ['info', '-h']  | ['info']
+    }
+
+    def 'should find command when asking help for it' () {
+        when:
+        def launcher = new Launcher().parseMainArgs('help', 'run')
+        then:
+        launcher.command instanceof CmdHelp
+        launcher.findCommand('run') instanceof CmdRun
+        launcher.findCommand('lint') instanceof CmdLint
+        launcher.findCommand('foo') == null
+    }
+
+    def 'should report unknown commands and invalid options as when all commands are registered' () {
+        when:
+        new Launcher().parseMainArgs(ARGS as String[])
+        then:
+        def e = thrown(ParameterException)
+        e.message == eagerError(ARGS)
+
+        where:
+        ARGS << [
+            ['foo'],
+            ['-c', 'x.config', 'foo'],
+            ['info', '-foo'],
+            ['-foo', 'info'],
+            ['-foo'],
+            ['run', 'main.nf', '-c'],
+        ]
+    }
+
+    private static String eagerError(List<String> args) {
+        def launcher = new Launcher()
+        launcher.registerAll()
+        try {
+            launcher.jcommander.parse(launcher.normalizeArgs(args as String[]) as String[])
+            return null
+        }
+        catch( ParameterException e ) {
+            return e.message
+        }
+    }
+
+    def 'should create every command by name and alias' () {
+        when:
+        def launcher = new Launcher()
+        launcher.registerAll()
+        then:
+        launcher.allCommands*.name.toSet() == Launcher.COMMANDS.keySet()
+        launcher.allCommands.every { cmd -> Launcher.createCommand(cmd.name).class == cmd.class }
+        launcher.allCommands.every { cmd -> Launcher.aliases(cmd).every { alias -> Launcher.createCommand(alias).class == cmd.class } }
+        launcher.allCommands.collectMany { cmd -> Launcher.aliases(cmd) as List }.toSet() == Launcher.ALIASES.keySet()
+        launcher.jcommander.commands.keySet() == Launcher.COMMANDS.keySet()
+        and:
+        Launcher.createCommand('foo') == null
+    }
+
+    def 'should build the splash on demand' () {
+        expect:
+        Launcher.getVersion(true).contains('N E X T F L O W')
+        Launcher.getVersion(true).contains("version ${BuildInfo.version} build ${BuildInfo.buildNum}")
     }
 
     def 'should validate isValue' () {

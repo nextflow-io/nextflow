@@ -17,6 +17,7 @@
 package nextflow
 
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
+import groovy.transform.CompileStatic
 import nextflow.extension.CH
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.ExecutionStack
@@ -26,6 +27,7 @@ import nextflow.script.WorkflowBinding
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class NF {
 
     static String getSyntaxParserVersion() {

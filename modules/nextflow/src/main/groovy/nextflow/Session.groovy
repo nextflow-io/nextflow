@@ -852,6 +852,8 @@ class Session implements ISession {
         processesBarrier.awaitCompletion()
         log.debug "Session await > all processes finished"
         terminated = true
+        // wake up the task monitors so they don't wait for the next poll to notice the termination
+        executorFactory?.signalExecutors()
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
@@ -1526,16 +1528,16 @@ class Session implements ISession {
         new HashMap<String, String>(System.getenv())
     }
 
-    @CompileDynamic
     def fetchContainers() {
 
         def result = [:]
         if( config.process instanceof Map ) {
+            final process = (Map<String,?>) config.process
 
             /*
              * look for `container` definition at process level
              */
-            config.process.each { String name, value ->
+            process.each { String name, value ->
                 if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
                 }
@@ -1548,7 +1550,7 @@ class Session implements ISession {
             /*
              * default container definition
              */
-            def container = config.process.container
+            def container = process.container
             if( container ) {
                 if( result ) {
                     result['default'] = resolveClosure(container)

@@ -93,6 +93,7 @@ class SysEnv {
 }
 
 @PackageScope
+@CompileStatic
 class Holder implements Map<String,String> {
     @Delegate Map<String,String> target
     Holder(Map<String,String> target) { this.target = target }
