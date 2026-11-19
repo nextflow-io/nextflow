@@ -21,10 +21,6 @@ The `project` command manages the projects that `run` and `project pull` downloa
 
 To manage the registry pipelines installed in a project for inclusion, use [`nextflow pipeline`][cli-pipeline] instead.
 
-<ChangedInVersion version="27.04">
-The top-level `list`, `info <project>`, `view`, and `drop` commands are deprecated. Use `project list`, `project info`, `project view`, and `project remove` instead. The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone`.
-</ChangedInVersion>
-
 ## Options
 
 ##### `-h, -help`
@@ -57,11 +53,7 @@ List the downloaded projects.
 
 ##### `pull [options] [project]` {#project-pull}
 
-Download a project from a Git-hosting platform into the global cache, or update it if it is already downloaded. To download a pipeline into a local directory, use `git clone`.
-
-<AddedInVersion version="27.04">
-A [registry pipeline](#registry-pipelines) can also be downloaded.
-</AddedInVersion>
+Download a project from a Git-hosting platform into the global cache, or update it if it is already downloaded. It can also download a [registry pipeline](#registry-pipelines). To download a pipeline into a local directory, use `git clone`.
 
 The following options are available:
 
@@ -69,25 +61,11 @@ The following options are available:
 
 Update all downloaded projects.
 
-###### `-d, -deep`
-
-<DeprecatedInVersion version="26.04">
-Ignored for new multi-revision asset management strategy. Still used in legacy assets.
-</DeprecatedInVersion>
-
-Create a shallow clone of the specified depth.
-
 ###### `-hub` (`github`)
 
-Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
-
-<ChangedInVersion version="27.04">
-The host of a registry, for example `registry.nextflow.io`, can be given to download a pipeline from the registry. See [Registry pipelines](#registry-pipelines).
-</ChangedInVersion>
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`. Can also be the host of a registry, for example `registry.nextflow.io`, to download a [registry pipeline](#registry-pipelines).
 
 ###### `-m, -migrate`
-
-<AddedInVersion version="26.04" />
 
 Update the project asset to the new multi-revision strategy.
 
@@ -134,8 +112,6 @@ Hide the header line.
 Project revision. Can be a git branch, tag, or commit SHA number.
 
 ## Registry pipelines
-
-<AddedInVersion version="27.04" />
 
 The `pull` subcommand accepts the same registry addresses as [`nextflow run`][cli-run-registry]: a registry page URL, or a registry host given with `-hub` or the `NXF_HUB` environment variable. A plain project name is resolved with Git.
 
@@ -216,5 +192,4 @@ $ nextflow project remove nextflow-io/hello -f
 ```
 
 [cli-pipeline]: ./pipeline
-[cli-pipeline-install]: ./pipeline#pipeline-install
 [cli-run-registry]: ./run#registry-pipelines
