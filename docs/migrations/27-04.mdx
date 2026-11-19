@@ -26,11 +26,17 @@ export NXF_OPTS="-XX:TieredStopAtLevel=4 -XX:+UseG1GC"
 
 Use `nextflow self-update -clean` to delete every installed Nextflow version except the current one. Plugins are not removed. See [`self-update`][cli-self-update-clean] for details.
 
+### `project` command group
+
+The new `nextflow project` command manages the projects that `run` and `pull` download into the global cache. It has the subcommands `info`, `list`, `pull`, `remove`, and `view`. See [`project`][cli-project] for details.
+
 ## Breaking changes
 
 - The `console` command and the `nf-console` plugin were removed.
 
 - The `kuberun` command was removed. Use the [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin (`nextflow plugin nf-kuberun:run`) or launch the pipeline in a pod with Fusion instead.
+
+- The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone` for any other pipeline.
 
 - The Nextflow launcher can no longer run Nextflow versions older than 24.07.0-edge, e.g. with `NXF_VER`. To run an older version, use the launcher script from that version.
 
@@ -50,6 +56,10 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
 
+## Deprecations
+
+- The `drop`, `list`, and `view` commands, and the `info` command with a project name, are deprecated. Use [`project remove`][cli-project], `project list`, `project view`, and `project info` instead. The old commands still work but print a warning. The `pull` command remains a supported top-level command.
+
 ## Miscellaneous
 
 - Upgrade to Groovy 5
@@ -57,6 +67,8 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - New config option: [`mail.smtp.timeout`][config-mail-smtp-timeout]
 - New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
 
+[cli-pipeline-install]: ../reference/cli/pipeline#pipeline-install
+[cli-project]: ../reference/cli/project
 [cli-self-update-clean]: ../reference/cli/self-update#-clean
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout
 [config-mail-smtp-timeout]: ../reference/config/mail#mailsmtptimeout
