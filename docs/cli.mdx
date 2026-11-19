@@ -151,7 +151,7 @@ Project management commands interact with Git-hosted pipelines. Nextflow integra
 The `project` command manages this cache. Use it to download projects, inspect their code, and delete them. See [project][cli-project] for more information.
 
 <ChangedInVersion version="27.04">
-The `list`, `info <project>`, `view`, and `drop` commands were moved to `project list`, `project info`, `project view`, and `project remove`. The old commands still work but are deprecated. `pull` remains available as a top-level command.
+The `list`, `info <project>`, `view`, and `drop` commands were moved to `project list`, `project info`, `project view`, and `project remove`. The old commands still work but are deprecated.
 </ChangedInVersion>
 
 ### Listing downloaded projects
@@ -196,21 +196,21 @@ This shows:
 
 ### Pulling or updating projects
 
-The `pull` command (or `project pull`) downloads a pipeline or updates an existing one to the latest version from its Git repository.
+The `project pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
 
 Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use:
 
 ```bash
-nextflow pull nextflow-io/hello
+nextflow project pull nextflow-io/hello
 ```
 
 You can specify a particular revision to download:
 
 ```bash
-nextflow pull nextflow-io/hello -r mybranch
+nextflow project pull nextflow-io/hello -r mybranch
 ```
 
-See [pull][cli-pull] for more information.
+See [project pull][cli-pull] for more information.
 
 ### Viewing project code
 

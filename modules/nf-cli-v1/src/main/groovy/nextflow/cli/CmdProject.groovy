@@ -25,7 +25,7 @@ import nextflow.cli.project.CmdProjectView
 
 /**
  * Implements `project` command, which manages the projects downloaded
- * by `run` and `pull` in the global asset cache
+ * by `run` and `project pull` in the global asset cache
  */
 @CompileStatic
 @Parameters(commandDescription = "Manage downloaded projects")

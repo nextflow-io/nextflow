@@ -60,7 +60,7 @@ class CmdProjectView extends CmdBase {
                 throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
             if( revision && manager.isUsingLegacyStrategy()){
                 log.warn("The local asset ${args[0]} does not support multi-revision - 'revision' option is ignored\n" +
-                    "Consider updating the asset using 'nextflow pull ${args[0]} -r $revision -migrate'")
+                    "Consider updating the asset using 'nextflow project pull ${args[0]} -r $revision -migrate'")
             }
             if( all ) {
                 if( !quiet )

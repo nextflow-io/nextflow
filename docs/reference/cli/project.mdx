@@ -17,7 +17,7 @@ $ nextflow project <subcommand> [options]
 
 ## Description
 
-The `project` command manages the projects that `run` and `pull` download into the global cache, `$NXF_ASSETS` (default: `$HOME/.nextflow/assets`). Use it to download, list, inspect, and delete cached projects.
+The `project` command manages the projects that `run` and `project pull` download into the global cache, `$NXF_ASSETS` (default: `$HOME/.nextflow/assets`). Use it to download, list, inspect, and delete cached projects.
 
 To manage the registry pipelines installed in a project for inclusion, use [`nextflow pipeline`][cli-pipeline] instead.
 
@@ -57,7 +57,7 @@ List the downloaded projects.
 
 ##### `pull [options] [project]` {#project-pull}
 
-Download a project from a Git-hosting platform into the global cache, or update it if it is already downloaded. Also available as the top-level `nextflow pull` command. To download a pipeline into a local directory, use `git clone`.
+Download a project from a Git-hosting platform into the global cache, or update it if it is already downloaded. To download a pipeline into a local directory, use `git clone`.
 
 <AddedInVersion version="27.04">
 A [registry pipeline](#registry-pipelines) can also be downloaded.

@@ -21,7 +21,7 @@ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
 nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 ```
 
-Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address to download a registry pipeline ahead of an `-offline` run.
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow project pull` with the same address to download a registry pipeline ahead of an `-offline` run.
 
 See [Registry pipelines][cli-run-registry] for details.
 
@@ -61,15 +61,15 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 ### `project` command group
 
-The new `nextflow project` command manages the projects that `run` and `pull` download into the global cache. It has the subcommands `info`, `list`, `pull`, `remove`, and `view`. See [`project`][cli-project] for details.
+The new `nextflow project` command manages the projects that `run` downloads into the global cache. It has the subcommands `info`, `list`, `pull`, `remove`, and `view`. See [`project`][cli-project] for details.
 
 ## Breaking changes
+
+- The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone` for any other pipeline.
 
 - The `console` command and the `nf-console` plugin were removed.
 
 - The `kuberun` command was removed. Use the [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin (`nextflow plugin nf-kuberun:run`) or launch the pipeline in a pod with Fusion instead.
-
-- The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone` for any other pipeline.
 
 - The Nextflow launcher can no longer run Nextflow versions older than 24.07.0-edge, e.g. with `NXF_VER`. To run an older version, use the launcher script from that version.
 
@@ -91,7 +91,7 @@ The new `nextflow project` command manages the projects that `run` and `pull` do
 
 ## Deprecations
 
-- The `drop`, `list`, and `view` commands, and the `info` command with a project name, are deprecated. Use [`project remove`][cli-project], `project list`, `project view`, and `project info` instead. The old commands still work but print a warning. The `pull` command remains a supported top-level command.
+- The `drop`, `list`, and `view` commands, and the `info` command with a project name, are deprecated. Use [`project remove`][cli-project], `project list`, `project view`, and `project info` instead.
 
 ## Miscellaneous
 
