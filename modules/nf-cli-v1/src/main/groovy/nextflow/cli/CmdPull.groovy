@@ -47,7 +47,7 @@ class CmdPull extends CmdBase implements HubAware {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth', hidden = true)
     Integer deep
 
     @Parameter(names=['-m','-migrate'], description = 'Migrate projects to multi-revision strategy', arity = 0)
