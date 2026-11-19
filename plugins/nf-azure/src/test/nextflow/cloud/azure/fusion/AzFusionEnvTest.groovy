@@ -264,4 +264,23 @@ class AzFusionEnvTest extends Specification {
         env.size() == 1  // Only account name
     }
 
+    def 'should use the node identity instead of a SAS token'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [storage: [accountName: 'myaccount', nodeIdentity: NODE], batch: [poolIdentityClientId: POOL]]]
+        }
+
+        when:
+        def env = new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
+
+        then:
+        env == EXPECTED
+
+        where:
+        NODE    | POOL      | EXPECTED
+        'auto'  | null      | [AZURE_STORAGE_ACCOUNT: 'myaccount']
+        'cid'   | null      | [AZURE_STORAGE_ACCOUNT: 'myaccount', FUSION_AZ_MSI_CLIENT_ID: 'cid']
+        'auto'  | 'pool-id' | [AZURE_STORAGE_ACCOUNT: 'myaccount']
+    }
+
 }
