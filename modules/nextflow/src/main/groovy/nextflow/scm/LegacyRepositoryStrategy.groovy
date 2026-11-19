@@ -312,6 +312,23 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     @Override
+    void drop(String revision, boolean force) {
+        if( !localPath.exists() )
+            throw new AbortOperationException("No match found for: ${project}")
+
+        if( revision )
+            throw new AbortOperationException("Not able to remove a revision for a Legacy Repo. Use all option to remove the local repository.")
+
+        if( force || isClean() ) {
+            close()
+            if( !localPath.deleteDir() )
+                throw new AbortOperationException("Unable to delete project `${project}` -- Check access permissions for path: ${localPath}")
+            return
+        }
+        throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
+    }
+
+    @Override
     void close() {
         if( _git ) {
             _git.close()

@@ -58,6 +58,10 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | Feature | Deprecated | Replacement |
 |---|---|---|
 | Named workflow entry (`-entry`) | 24.10 | Params in the entry workflow |
+| `drop` command | 27.04 | [`project remove`][cli-project] |
+| `info` command with a project name | 27.04 | [`project info`][cli-project] |
+| `list` command | 27.04 | [`project list`][cli-project] |
+| `view` command | 27.04 | [`project view`][cli-project] |
 
 ### Feature flags and environment variables
 
@@ -84,7 +88,10 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `-with-weblog` option of `run` | 25.04 | 26.10 | [nf-weblog](https://github.com/nextflow-io/nf-weblog) plugin |
 | `echo` directive | 22.04 | 26.10 | `debug` |
 | `kuberun` command | | 27.04 | [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin or [launch with Fusion][k8s-fusion] |
+| `clone` command | | 27.04 | [`pipeline install`][cli-pipeline] or `git clone` |
 
+[cli-pipeline]: ./reference/cli/pipeline#pipeline-install
+[cli-project]: ./reference/cli/project
 [config-manifest]: ./reference/config/manifest
 [config-process-when]: ./config#disabling-processes
 [config-seqera-executor-autoLabels]: ./reference/config/seqera#seqeraexecutorautolabels

@@ -18,21 +18,20 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.cli.project.CmdProjectView
 
 /**
- * Stub for the removed `view` command.
+ * Deprecated alias of `project view`, hidden from the command listing
  */
+@Slf4j
 @CompileStatic
 @Parameters
-class CmdView extends CmdRemoved {
-
-    static final public String NAME = 'view'
+class CmdView extends CmdProjectView {
 
     @Override
-    String getName() { NAME }
-
-    @Override
-    String getMessage() {
-        "The `view` command has been removed -- use `nextflow pipeline view` to view a registry pipeline, or `nextflow info` to find the local path of a downloaded project"
+    void run() {
+        log.warn "The `view` command is deprecated -- use `nextflow project view` instead"
+        super.run()
     }
 }

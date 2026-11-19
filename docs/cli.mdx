@@ -148,16 +148,28 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects and maintains a local cache in `$HOME/.nextflow/assets/`.
 
-Use these commands to inspect and download projects in your cache.
+The `project` command manages this cache. Use it to download projects, inspect their code, and delete them. See [project][cli-project] for more information.
+
+<ChangedInVersion version="27.04">
+The `list`, `info <project>`, `view`, and `drop` commands were moved to `project list`, `project info`, `project view`, and `project remove`. The old commands still work but are deprecated. `pull` remains available as a top-level command.
+</ChangedInVersion>
+
+### Listing downloaded projects
+
+The `project list` command shows all pipelines currently downloaded to your local cache. This helps you track which projects are available offline and manage your cache directory. Pipelines are stored in `$HOME/.nextflow/assets/` by default:
+
+```bash
+nextflow project list
+```
 
 ### Showing project information
 
-The `info` command displays detailed metadata about a downloaded project, including its repository location, local path, main script, and available revisions.
+The `project info` command displays detailed metadata about a downloaded project, including its repository location, local path, main script, and available revisions.
 
 Use this to understand a project's structure, see available versions, or verify which revision is currently checked out:
 
 ```bash
-nextflow info hello
+nextflow project info hello
 ```
 
 This prints an output similar to the following:
@@ -184,7 +196,7 @@ This shows:
 
 ### Pulling or updating projects
 
-The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
+The `pull` command (or `project pull`) downloads a pipeline or updates an existing one to the latest version from its Git repository.
 
 Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use:
 
@@ -200,12 +212,25 @@ nextflow pull nextflow-io/hello -r mybranch
 
 See [pull][cli-pull] for more information.
 
-### Deleting cached projects
+### Viewing project code
 
-To remove a downloaded project from the cache, delete its directory. Use the `info` command to find the local path of a project:
+The `project view` command displays the contents of a pipeline's main script or lists all files in the repository.
+
+Use this to quickly inspect pipeline code without opening files or explore the project structure. Specify `-l` option lists all repository files instead of showing script contents:
 
 ```bash
-rm -rf $HOME/.nextflow/assets/.repos/nextflow-io/hello
+nextflow project view nextflow-io/hello
+nextflow project view nextflow-io/hello -l
+```
+
+### Deleting cached projects
+
+The `project remove` command removes a downloaded pipeline from the local cache.
+
+Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
+
+```bash
+nextflow project remove nextflow-io/hello
 ```
 
 ## Module management
@@ -511,6 +536,7 @@ http://nextflow.io
 [cli-log]: ./reference/cli/log
 [cli-module]: ./reference/cli/module
 [cli-plugin]: ./reference/cli/plugin
+[cli-project]: ./reference/cli/project
 [cli-pull]: ./reference/cli/pull
 [cli-reference]: ./reference/cli
 [cli-run]: ./reference/cli/run

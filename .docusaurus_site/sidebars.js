@@ -255,6 +255,7 @@ module.exports = {
                         "reference/cli/module",
                         "reference/cli/pipeline",
                         "reference/cli/plugin",
+                        "reference/cli/project",
                         "reference/cli/pull",
                         "reference/cli/run",
                         "reference/cli/secrets",

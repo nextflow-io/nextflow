@@ -6,12 +6,11 @@ description: Reference for the nextflow view command. View a project's script fi
 # `nextflow view`
 
 <DeprecatedInVersion version="27.04">
-The `view` command has been removed. Use `nextflow pipeline view` instead.
+Use [`nextflow project view`][cli-project-view] instead.
 </DeprecatedInVersion>
 
-The `view` command printed the main script, or listed the files, of a project in the asset cache.
+View a project's script files.
 
-## Migrating from `view`
+The `view` command is an alias of [`nextflow project view`][cli-project-view] and accepts the same options.
 
-- Use [`nextflow pipeline view`](./pipeline#pipeline-view) to view the details of a registry pipeline.
-- Use `nextflow info <project>` to print the local path of a downloaded project, then browse its files directly.
+[cli-project-view]: ./project#project-view

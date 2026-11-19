@@ -6,14 +6,24 @@ description: Reference for the nextflow clone command. Clone a remote project in
 # `nextflow clone`
 
 <DeprecatedInVersion version="27.04">
-The `clone` command has been removed. Use `git clone` instead.
+The `clone` command has been removed. Use [`nextflow pipeline install`][cli-pipeline-install] or `git clone` instead.
 </DeprecatedInVersion>
 
 The `clone` command downloaded a pipeline from a Git-hosting platform into a local directory.
 
-## Migrating to `git clone`
+## Migrating from `clone`
 
-Clone the pipeline repository with Git. Use `--branch` to check out a branch or tag, and `--depth` for a shallow clone:
+To add a registry pipeline to your project, so that you can include it in another pipeline, use [`nextflow pipeline install`][cli-pipeline-install]:
+
+```bash
+# before
+nextflow clone nf-core/rnaseq pipelines/nf-core/rnaseq
+
+# after
+nextflow pipeline install nf-core/rnaseq
+```
+
+For any other pipeline, clone the repository with Git. Use `--branch` to check out a branch or tag:
 
 ```bash
 # before
@@ -23,4 +33,4 @@ nextflow clone nextflow-io/hello -r v1.1
 git clone --branch v1.1 https://github.com/nextflow-io/hello
 ```
 
-To run a registry pipeline, use [`nextflow run`](./run#registry-pipelines) with a registry address. To include one in another pipeline, use [`nextflow pipeline install`](./pipeline#pipeline-install).
+[cli-pipeline-install]: ./pipeline#pipeline-install

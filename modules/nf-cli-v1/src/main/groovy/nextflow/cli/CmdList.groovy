@@ -18,21 +18,20 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.cli.project.CmdProjectList
 
 /**
- * Stub for the removed `list` command.
+ * Deprecated alias of `project list`, hidden from the command listing
  */
+@Slf4j
 @CompileStatic
 @Parameters
-class CmdList extends CmdRemoved {
-
-    static final public String NAME = 'list'
+class CmdList extends CmdProjectList {
 
     @Override
-    String getName() { NAME }
-
-    @Override
-    String getMessage() {
-        "The `list` command has been removed -- use `nextflow pipeline search` to find pipelines in the registry, or `nextflow pipeline list` to list installed pipelines"
+    void run() {
+        log.warn "The `list` command is deprecated -- use `nextflow project list` instead"
+        super.run()
     }
 }

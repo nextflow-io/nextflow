@@ -126,6 +126,12 @@ interface RepositoryStrategy {
     AssetManager.RevisionInfo getCurrentRevisionAndName()
 
     /**
+     * Drop local copy of a repository. If revision is specified, only removes the specified revision
+     * @param revision
+     */
+    void drop(String revision, boolean force)
+
+    /**
      * Close any open resources (e.g., Git objects)
      */
     void close()

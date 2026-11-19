@@ -1,0 +1,140 @@
+---
+title: nextflow project
+description: Reference for the nextflow project command. Manage downloaded projects.
+---
+
+# `nextflow project`
+
+<AddedInVersion version="27.04" />
+
+Manage downloaded projects.
+
+## Usage
+
+```console
+$ nextflow project <subcommand> [options]
+```
+
+## Description
+
+The `project` command manages the projects that `run` and `pull` download into the global cache, `$NXF_ASSETS` (default: `$HOME/.nextflow/assets`). Use it to download, list, inspect, and delete cached projects.
+
+To manage the registry pipelines installed in a project for inclusion, use [`nextflow pipeline`][cli-pipeline] instead.
+
+<ChangedInVersion version="27.04">
+These subcommands replace the top-level `list`, `info <project>`, `view`, and `drop` commands, which are deprecated.
+</ChangedInVersion>
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Subcommands
+
+##### `info [options] <project>` {#project-info}
+
+Print information about a downloaded project: its repository, local path, main script, and revisions. Checked-out revisions are marked with `>`, and tags with `[t]`.
+
+The following options are available:
+
+###### `-d`
+
+Show detailed information.
+
+###### `-o` (`text`)
+
+Output format, either `text`, `json`, or `yaml`.
+
+###### `-u, -check-updates`
+
+Check for remote updates.
+
+##### `list` {#project-list}
+
+List the downloaded projects.
+
+##### `pull [options] <project>` {#project-pull}
+
+Download or update a project. Same as [`nextflow pull`][cli-pull].
+
+##### `remove [options] <project>` {#project-remove}
+
+Delete a downloaded project. The next `run` downloads it again if needed.
+
+The following options are available:
+
+###### `-f, -force`
+
+Delete the project even if it has local changes.
+
+###### `-r, -revision`
+
+Project revision to delete. Can be a git branch, tag, or commit SHA number.
+
+##### `view [options] <project>` {#project-view}
+
+Print the main script of a downloaded project.
+
+The following options are available:
+
+###### `-l`
+
+List the files of the project instead.
+
+###### `-q`
+
+Hide the header line.
+
+###### `-r, -revision`
+
+Project revision. Can be a git branch, tag, or commit SHA number.
+
+## Examples
+
+Download a project and list the downloaded projects:
+
+```console
+$ nextflow project pull nextflow-io/hello
+$ nextflow project list
+
+nextflow-io/hello
+```
+
+Display information about a project:
+
+```console
+$ nextflow project info nextflow-io/hello
+
+ project name: nextflow-io/hello
+ repository  : https://github.com/nextflow-io/hello
+ local path  : /home/user/.nextflow/assets/.repos/nextflow-io/hello
+ main script : main.nf
+ revisions   :
+ > master (default)
+   mybranch
+   testing
+   v1.1 [t]
+```
+
+List the files of a project:
+
+```console
+$ nextflow project view -l nextflow-io/hello
+
+== content of path: /home/user/.nextflow/assets/.repos/nextflow-io/hello/clones/3c2cdc9823c2b4636e5e3e73e223878099ff5dc9
+LICENSE
+README.md
+main.nf
+nextflow.config
+```
+
+Delete a project, ignoring any local changes:
+
+```console
+$ nextflow project remove nextflow-io/hello -f
+```
+
+[cli-pipeline]: ./pipeline
+[cli-pull]: ./pull

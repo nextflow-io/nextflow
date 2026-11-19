@@ -18,13 +18,16 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.cli.project.CmdProjectRemove
 
 /**
- * Stub for the removed `drop` command.
+ * Deprecated alias of `project remove`, hidden from the command listing
  */
+@Slf4j
 @CompileStatic
 @Parameters
-class CmdDrop extends CmdRemoved {
+class CmdDrop extends CmdProjectRemove {
 
     static final public String NAME = 'drop'
 
@@ -32,7 +35,8 @@ class CmdDrop extends CmdRemoved {
     String getName() { NAME }
 
     @Override
-    String getMessage() {
-        "The `drop` command has been removed -- delete the project directory from the asset cache instead (\$NXF_ASSETS, default: ~/.nextflow/assets)"
+    void run() {
+        log.warn "The `drop` command is deprecated -- use `nextflow project remove` instead"
+        super.run()
     }
 }

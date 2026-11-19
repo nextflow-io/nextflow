@@ -6,13 +6,11 @@ description: Reference for the nextflow list command. List all downloaded projec
 # `nextflow list`
 
 <DeprecatedInVersion version="27.04">
-The `list` command has been removed. Use `nextflow pipeline search` or `nextflow pipeline list` instead.
+Use [`nextflow project list`][cli-project-list] instead.
 </DeprecatedInVersion>
 
-The `list` command printed the projects downloaded into the asset cache.
+List all downloaded projects.
 
-## Migrating from `list`
+The `list` command is an alias of [`nextflow project list`][cli-project-list].
 
-- Use [`nextflow pipeline search`](./pipeline#pipeline-search) to find pipelines in the registry.
-- Use [`nextflow pipeline list`](./pipeline#pipeline-list) to list the pipelines installed with `nextflow pipeline install`.
-- To see the projects in the asset cache, list the contents of `$NXF_ASSETS/.repos` (default: `$HOME/.nextflow/assets/.repos`).
+[cli-project-list]: ./project#project-list

@@ -400,7 +400,7 @@ class AssetManager implements Closeable {
         if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
             return
         if( fromUrl )
-            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- delete it from the asset cache (\$NXF_ASSETS, default: ~/.nextflow/assets) and try again")
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow project remove $project` to remove it")
         log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned
     }
@@ -1147,6 +1147,17 @@ class AssetManager implements Closeable {
         }
 
     }
+
+    /**
+     * Drop local copy of a repository. If revision is specified, only removes the specified revision
+     * @param revision
+     */
+    void drop(String revision = null, boolean force = false) {
+        if( isNotInitialized() )
+            throw new AbortOperationException("No match found for: ${getProjectWithRevision()}")
+        strategy.drop(revision, force)
+    }
+
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath

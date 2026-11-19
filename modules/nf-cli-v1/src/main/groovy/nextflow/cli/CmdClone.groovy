@@ -33,6 +33,6 @@ class CmdClone extends CmdRemoved {
 
     @Override
     String getMessage() {
-        "The `clone` command has been removed -- use `git clone` instead"
+        "The `clone` command has been removed -- use `nextflow pipeline install` to add a registry pipeline to a project, or `git clone`"
     }
 }

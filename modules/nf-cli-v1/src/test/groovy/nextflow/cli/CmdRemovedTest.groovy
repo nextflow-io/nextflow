@@ -42,10 +42,7 @@ class CmdRemovedTest extends Specification {
         cmd                 | MESSAGE
         new CmdConsole()    | 'The `console` command has been removed'
         new CmdKubeRun()    | 'The `kuberun` command has been removed -- use `nextflow plugin nf-kuberun:run`'
-        new CmdClone()      | 'The `clone` command has been removed -- use `git clone`'
-        new CmdDrop()       | 'The `drop` command has been removed'
-        new CmdList()       | 'The `list` command has been removed -- use `nextflow pipeline search`'
-        new CmdView()       | 'The `view` command has been removed -- use `nextflow pipeline view`'
+        new CmdClone()      | 'The `clone` command has been removed -- use `nextflow pipeline install`'
     }
 
     def 'should parse leftover arguments of removed commands'() {
@@ -66,8 +63,5 @@ class CmdRemovedTest extends Specification {
         ['kuberun', 'nextflow-io/hello', '-v', 'pvc:/mnt']  | CmdKubeRun
         ['clone', 'nextflow-io/hello', '-r', 'v1.1']        | CmdClone
         ['clone', 'xxx', '-hub', 'bitbucket', '-user', 'xx'] | CmdClone
-        ['drop', 'nextflow-io/hello', '-f']                 | CmdDrop
-        ['list']                                            | CmdList
-        ['view', '-l', 'nextflow-io/hello']                 | CmdView
     }
 }

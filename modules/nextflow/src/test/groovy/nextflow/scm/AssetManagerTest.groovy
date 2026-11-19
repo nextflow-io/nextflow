@@ -1107,6 +1107,123 @@ class AssetManagerTest extends Specification {
     }
 
     // ============================================
+    // DROP OPERATIONS TESTS
+    // ============================================
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should drop a specific revision with multi-revision strategy'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def folder = tempDir.getRoot()
+        def pipelineName = 'nextflow-io/hello'
+        def revision1 = 'v1.2'
+        def revision2 = 'mybranch'
+
+        and: 'download two revisions'
+        def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+        manager.download(revision1)
+        manager.download(revision2)
+
+        and: 'verify both revisions exist'
+        def commit1Path = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
+        def commit2Path = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64')
+        commit1Path.exists()
+        commit2Path.exists()
+
+        when: 'drop the first revision'
+        manager.drop(revision1)
+
+        then: 'first revision is deleted but second remains'
+        !commit1Path.exists()
+        commit2Path.exists()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).exists()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should drop all revisions with multi-revision strategy'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def folder = tempDir.getRoot()
+        def pipelineName = 'nextflow-io/hello'
+        def revision1 = 'v1.2'
+        def revision2 = 'mybranch'
+
+        and: 'download two revisions'
+        def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+        manager.download(revision1)
+        manager.download(revision2)
+
+        and: 'verify both revisions and bare repo exist'
+        def projectPath = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello')
+        def commit1Path = projectPath.resolve(REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
+        def commit2Path = projectPath.resolve(REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64')
+        def barePath = projectPath.resolve(BARE_REPO)
+        commit1Path.exists()
+        commit2Path.exists()
+        barePath.exists()
+
+        when: 'drop all revisions (no revision specified)'
+        manager.drop(null)
+
+        then: 'everything is deleted including bare repo'
+        !commit1Path.exists()
+        !commit2Path.exists()
+        !barePath.exists()
+        !projectPath.exists()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should not drop revision with uncommitted changes unless forced'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def folder = tempDir.getRoot()
+        def pipelineName = 'nextflow-io/hello'
+        def revision = 'v1.2'
+
+        and: 'download a revision'
+        def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+        manager.download(revision)
+
+        and: 'make local changes'
+        def commitPath = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
+        commitPath.resolve('test-file.txt').text = 'uncommitted change'
+
+        when: 'try to drop without force'
+        manager.drop(revision, false)
+
+        then: 'operation fails'
+        thrown(AbortOperationException)
+        commitPath.exists()
+
+        when: 'drop with force flag'
+        manager.drop(revision, true)
+
+        then: 'revision is deleted'
+        !commitPath.exists()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should handle drop of non-existent revision gracefully'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def pipelineName = 'nextflow-io/hello'
+
+        and: 'create manager downloading a revision'
+        def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+        manager.download("v1.2")
+
+        when: 'try to drop a revision that was never downloaded'
+        manager.drop('nonexistent-revision')
+
+        then: 'no exception is thrown'
+        noExceptionThrown()
+    }
+
+    // ============================================
     // REVISION SWITCHING TESTS
     // ============================================
 
@@ -1186,7 +1303,7 @@ class AssetManagerTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('downloaded from a different repository: `other/hello` -- delete it from the asset cache')
+        e.message.contains('downloaded from a different repository: `other/hello` -- use `nextflow project remove acme/hello` to remove it')
 
         when: 'it is given with its own Git address and local name'
         manager = new AssetManager('https://github.com/other/hello', null, null, null, 'acme/hello')
