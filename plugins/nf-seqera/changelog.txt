@@ -1,5 +1,9 @@
 nf-seqera changelog
 ====================
+0.26.3 - 20 Nov 2026
+- Add `cuda` option to the accelerator directive (#8032) [cfcbe7326]
+- Report the configured provider in the Seqera executor trace name (#8110) [b5873c84e]
+
 0.26.2 - 2 Nov 2026
 - Bump sched-client to 0.113.0 in nf-seqera (idempotent task submit) (#7952) [c937ef96d]
 
