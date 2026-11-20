@@ -51,7 +51,7 @@ class AzFusionEnv implements FusionEnv {
         }
 
         final cfg = AzConfig.config
-        final managedIdentityId = cfg.batch().poolIdentityClientId
+        final managedIdentityId = cfg.storage().nodeIdentity ?: cfg.batch().poolIdentityClientId
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {
