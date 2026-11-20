@@ -702,6 +702,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( target == null )
             return;
         var variable = vsc.findVariableDeclaration(target.getName(), target);
+        // `params` is not declared outside the entry workflow, but still refers to the pipeline params
+        if( paramsType != null && "params".equals(target.getName()) && (variable == null || isDslVariable(variable)) ) {
+            vsc.addError("Params cannot be assigned when using a params block", target);
+            return;
+        }
         if( isDslVariable(variable) ) {
             if( "params".equals(variable.getName()) )
                 vsc.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target.getName(), target);

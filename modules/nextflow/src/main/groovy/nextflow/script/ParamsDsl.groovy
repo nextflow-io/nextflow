@@ -60,9 +60,11 @@ class ParamsDsl {
                 continue
             final script = ScriptMeta.getScriptByPath(scriptPath)
             script.binding.setParams(params, true)
+            script.binding.getParams().freeze()
         }
 
         session.getParams().setPlainValues(ParamsHelper.resolvePlainParams(declarations.values(), cliParams, configParams))
+        session.getParams().freeze()
     }
 
 }

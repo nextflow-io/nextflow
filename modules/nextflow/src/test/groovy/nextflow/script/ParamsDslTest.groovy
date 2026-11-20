@@ -67,6 +67,57 @@ class ParamsDslTest extends Specification {
         inputFile?.delete()
     }
 
+    def 'should not allow params to be modified with a params block'() {
+        when:
+        runScript(
+            '''\
+            params {
+                tag: String = 'orig'
+            }
+
+            workflow {
+                def p = params
+                p.tag = 'aliased'
+            }
+            '''
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Param `tag` cannot be assigned when using a params block'
+
+        when:
+        runScript(
+            '''\
+            params {
+                tag: String = 'orig'
+            }
+
+            workflow {
+                params.put('extra', 'x')
+            }
+            '''
+        )
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Param `extra` cannot be assigned when using a params block'
+    }
+
+    def 'should allow params to be modified without a params block'() {
+        when:
+        def result = runScript(
+            '''\
+            params.tag = 'orig'
+
+            workflow {
+                params.put('extra', 'x')
+                params
+            }
+            '''
+        )
+        then:
+        result == [tag: 'orig', extra: 'x']
+    }
+
     def 'should allow optional param'() {
         when:
         runScript(

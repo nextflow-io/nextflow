@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
 /**
  *
@@ -135,6 +136,44 @@ class ScriptBindingTest extends Specification {
         map.gamma == 3
         !map.containsKey('omega')
 
+    }
+
+    def 'should not modify the params map once frozen' () {
+        given:
+        def map = new ScriptBinding.ParamsMap(alpha: 1)
+        map.freeze()
+
+        when:
+        map.alpha = 2
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Param `alpha` cannot be assigned when using a params block'
+
+        when:
+        map.putAll(beta: 2)
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Param `beta` cannot be assigned when using a params block'
+
+        when:
+        map.remove('alpha')
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Param `alpha` cannot be removed when using a params block'
+
+        when:
+        map.clear()
+        then:
+        thrown(ScriptRuntimeException)
+
+        when:
+        map.putIfAbsent('gamma', 3)
+        then:
+        thrown(UnsupportedOperationException)
+
+        expect:
+        map == [alpha: 1]
+        map.copyWith(alpha: 2) == [alpha: 2]
     }
 
     def 'should get the variable name giving the value'() {

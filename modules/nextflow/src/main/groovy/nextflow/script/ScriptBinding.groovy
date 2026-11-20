@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.exception.ScriptRuntimeException
 import nextflow.script.types.Record
 /**
  * Defines the script execution context. By default provided the following variables
@@ -219,6 +220,8 @@ class ScriptBinding extends WorkflowBinding {
 
         private Map<String,Object> plainValues
 
+        private boolean frozen
+
         @Delegate
         private Map<String,Object> target
 
@@ -285,6 +288,7 @@ class ScriptBinding extends WorkflowBinding {
         @Override
         String put(String name, Object value) {
             assert name
+            checkWritable(name)
             if( name in scriptAssignment )
                 log.warn("`params.$name` is defined multiple times -- Assignments following the first are ignored")
             else
@@ -298,8 +302,38 @@ class ScriptBinding extends WorkflowBinding {
                 : null
         }
 
+        /**
+         * Make the params read-only once they are resolved by the params block.
+         */
+        void freeze() {
+            if( !frozen )
+                target = Collections.unmodifiableMap(target)
+            frozen = true
+        }
+
+        private void checkWritable(String name) {
+            if( frozen )
+                throw new ScriptRuntimeException("Param `$name` cannot be assigned when using a params block")
+        }
+
+        @Override
+        Object remove(Object key) {
+            if( frozen )
+                throw new ScriptRuntimeException("Param `$key` cannot be removed when using a params block")
+            return target.remove(key)
+        }
+
+        @Override
+        void clear() {
+            if( frozen )
+                throw new ScriptRuntimeException("Params cannot be cleared when using a params block")
+            target.clear()
+        }
+
         @Override
         void putAll(Map<? extends String,? extends Object> other) {
+            if( other )
+                checkWritable(other.keySet().first())
             for( def entry : other.entrySet() ) {
                 put0(entry.getKey(), entry.getValue())
             }
