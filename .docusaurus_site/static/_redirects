@@ -23,3 +23,4 @@
 /nextflow/azure                    /nextflow/reference/executor/azure-batch         301
 /nextflow/google                   /nextflow/reference/executor/google-batch        301
 /nextflow/kubernetes               /nextflow/reference/executor/kubernetes          301
+/nextflow/reference/cli/clone      /nextflow/reference/cli/pipeline#pipeline-install 301

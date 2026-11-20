@@ -516,7 +516,12 @@ class CmdRunTest extends Specification {
         scriptFile.projectName == 'acme/hello'
         folder.resolve('assets/.repos/acme/hello/bare').exists()
 
-        when: 'it runs offline by its registry name'
+        when: 'it runs offline by its registry name, from a remote repository'
+        // the provider is read from the bare repository, and a `file:` remote is a local source that can be fetched offline
+        try( final bare = Git.open(folder.resolve('assets/.repos/acme/hello/bare').toFile()) ) {
+            bare.repository.config.setString('remote', 'origin', 'url', 'https://github.com/acme/hello.git')
+            bare.repository.config.save()
+        }
         cmd = runCmd(hubProvider: 'registry.nextflow.io', offline: true, revision: v1)
         scriptFile = cmd.getScriptFile0('acme/hello')
 

@@ -400,7 +400,7 @@ class AssetManager implements Closeable {
         if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
             return
         if( fromUrl )
-            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow drop $project` to remove it")
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow pipeline remove -g $project` to remove it")
         log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned
     }
@@ -843,35 +843,6 @@ class AssetManager implements Closeable {
     }
 
     /**
-     * Clone a pipeline from a remote pipeline repository to the specified folder
-     *
-     * @param directory The folder when the pipeline will be cloned
-     * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
-     */
-    void clone(File directory, String revision = null, Integer deep=null) {
-
-        def clone = Git.cloneRepository()
-        def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
-
-        if( !uri )
-            throw new AbortOperationException("Cannot find the specified project: $project")
-
-        clone.setURI(uri)
-        clone.setDirectory(directory)
-        clone.setDepth(1)
-        clone.setCloneSubmodules(manifest.recurseSubmodules)
-        if( provider.hasCredentials() )
-            clone.setCredentialsProvider( provider.getGitCredentials() )
-
-        if( revision )
-            clone.setBranch(revision)
-        if( deep )
-            clone.setDepth(deep)
-        clone.call().close()
-    }
-
-    /**
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
@@ -1140,18 +1111,16 @@ class AssetManager implements Closeable {
     }
 
     protected String getGitConfigRemoteUrl() {
-        if( !isLocal() ) {
-            return null
-        }
-
+        // a multi-revision project has the config of its bare repository, even when the default branch is not checked out
         final gitConfig = localGitConfig
-        if( !gitConfig.exists() ) {
+        if( !gitConfig?.exists() ) {
             return null
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = manifest.getDefaultBranch()
-        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
+        // the manifest is read from the default branch, so only when it is checked out
+        final branch = isLocal() ? manifest.getDefaultBranch() : null
+        final remote = branch ? iniFile.getString("branch \"${branch}\"", "remote", "origin") : "origin"
         final url = iniFile.getString("remote \"${remote}\"", "url")
         log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url

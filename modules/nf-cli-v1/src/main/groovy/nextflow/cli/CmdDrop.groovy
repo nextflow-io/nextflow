@@ -30,7 +30,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete the local copy of a project")
+@Parameters(commandDescription = "Delete the local copy of a project (deprecated -- use `nextflow pipeline remove -g`)")
 class CmdDrop extends CmdBase {
 
     static final public NAME = 'drop'
@@ -48,7 +48,11 @@ class CmdDrop extends CmdBase {
     final String getName() { NAME }
 
     @Override
+    boolean isHidden() { true }
+
+    @Override
     void run() {
+        log.warn "The `drop` command is deprecated -- use `nextflow pipeline remove -g` instead"
         Plugins.init()
         try (final manager = new AssetManager(args[0])) {
             manager.drop(revision, force)

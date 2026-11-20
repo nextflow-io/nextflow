@@ -31,13 +31,16 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View project script file(s)")
+@Parameters(commandDescription = "View project script file(s) (deprecated)")
 class CmdView extends CmdBase {
 
     static final public NAME = 'view'
 
     @Override
     String getName() { NAME }
+
+    @Override
+    boolean isHidden() { true }
 
     @Parameter(description = 'project name', required = true)
     List<String> args = []
@@ -53,6 +56,7 @@ class CmdView extends CmdBase {
 
     @Override
     void run() {
+        log.warn "The `view` command is deprecated -- use `nextflow pipeline view -g` to find the local path of a pipeline"
         Plugins.init()
         try (final manager = new AssetManager(args[0], revision)) {
             if( !manager.isLocal() )

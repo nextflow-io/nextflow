@@ -5,6 +5,10 @@ description: Reference for the nextflow drop command. Delete the local copy of a
 
 # `nextflow drop`
 
+<DeprecatedInVersion version="27.04">
+The `drop` command is deprecated. Use [`nextflow pipeline remove -g`][cli-pipeline-remove] instead.
+</DeprecatedInVersion>
+
 Delete the local copy of a project.
 
 ## Usage
@@ -15,7 +19,7 @@ $ nextflow drop [options] [project]
 
 ## Description
 
-The `drop` command removes a project that was downloaded into the global cache. Use the `list` command to list the downloaded pipelines.
+The `drop` command removes a project that was downloaded into the user-level store. Use [`nextflow pipeline list -g`][cli-pipeline-list] to list the downloaded pipelines.
 
 ## Options
 
@@ -46,3 +50,6 @@ Drop the `nextflow-io/hello` project, ignoring any local changes:
 ```console
 $ nextflow drop nextflow-io/hello -f
 ```
+
+[cli-pipeline-list]: ./pipeline#pipeline-list
+[cli-pipeline-remove]: ./pipeline#pipeline-remove

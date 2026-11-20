@@ -24,8 +24,11 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
+import nextflow.cli.CmdInfo
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
+import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
 import nextflow.util.TestOnly
 
 /**
@@ -56,6 +59,9 @@ class CmdPipelineView extends CmdBase {
         }
     }
 
+    @Parameter(names = ['-g', '-global'], description = 'Show the pipeline in the user-level store used by `nextflow run`', arity = 0)
+    boolean global
+
     @Parameter(description = "<scope/name>", required = true)
     List<String> args
 
@@ -71,6 +77,13 @@ class CmdPipelineView extends CmdBase {
     void run() {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
+
+        if( global ) {
+            if( version )
+                throw new AbortOperationException("Option `-version` is not supported with `-global`")
+            viewUserLevel(PipelineCmdSupport.userLevelName(this, args[0]))
+            return
+        }
 
         final name = args[0]
         final registryConfig = PipelineCmdSupport.registryConfig(this)
@@ -124,6 +137,26 @@ class CmdPipelineView extends CmdBase {
         println ""
         println "Usage:"
         println "  ${usage}"
+    }
+
+    private void viewUserLevel(String name) {
+        Plugins.init()
+        try (final manager = new AssetManager(name)) {
+            if( manager.isNotInitialized() )
+                throw new AbortOperationException("Pipeline ${name} is not installed in the user-level store")
+            if( output == 'json' ) {
+                final info = [
+                    name         : manager.project,
+                    repositoryUrl: manager.repositoryUrl,
+                    localPath    : manager.projectPath?.toString(),
+                    mainScript   : manager.mainScriptName,
+                    revisions    : manager.getBranchesAndTags(false)
+                ]
+                println JsonOutput.prettyPrint(JsonOutput.toJson(info))
+                return
+            }
+            new CmdInfo().printText(manager, 0)
+        }
     }
 
     /** Lists params from `$defs`/`definitions` groups and top-level `properties`; types may be missing. */
