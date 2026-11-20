@@ -84,6 +84,27 @@ class WaveContainerResolverTest extends Specification {
         result == ORAS_CONTAINER
     }
 
+    def 'should keep wave request key for singularity containers' () {
+        given:
+        def CONTAINER_NAME = "ubuntu:latest"
+        def WAVE_CONTAINER = new ContainerInfo(CONTAINER_NAME, "wave.io/ubuntu:latest", "hash-key", "request-key")
+        and:
+        def defaultResolver = Spy(DefaultContainerResolver)
+        def resolver = Spy(new WaveContainerResolver(defaultResolver: defaultResolver))
+        def task = Mock(TaskRun)
+
+        when:
+        def result = resolver.resolveImage(task, CONTAINER_NAME)
+        then:
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
+        and:
+        1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
+        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target, WAVE_CONTAINER.hashKey) >> new ContainerInfo(WAVE_CONTAINER.target, '/some/singularity/ubuntu.img', 'hash-key')
+        and:
+        result == new ContainerInfo(WAVE_CONTAINER.target, '/some/singularity/ubuntu.img', 'hash-key', 'request-key')
+    }
+
     def 'should return container meta' () {
         given:
         def containerKey = 'abc'

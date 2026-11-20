@@ -57,10 +57,23 @@ class WaveAssets {
 
     @Memoized
     String fingerprint() {
+        return fingerprint0(this.containerConfig?.fingerprint())
+    }
+
+    /**
+     * Same as {@link #fingerprint()} using {@link ContainerConfig#taskHashKey()}.
+     * Used as the container term of the task hash.
+     */
+    @Memoized
+    String taskHashKey() {
+        return fingerprint0(this.containerConfig?.taskHashKey())
+    }
+
+    private String fingerprint0(String configFingerprint) {
         final allMeta = new ArrayList(10)
         allMeta.add( this.containerImage )
         allMeta.add( this.moduleResources?.fingerprint() )
-        allMeta.add( this.containerConfig?.fingerprint() )
+        allMeta.add( configFingerprint )
         allMeta.add( this.containerFile )
         allMeta.add( this.packagesSpec ? fingerprint(this.packagesSpec) : null )
         allMeta.add( this.projectResources?.fingerprint() )

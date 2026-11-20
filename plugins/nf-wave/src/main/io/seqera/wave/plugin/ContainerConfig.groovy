@@ -31,6 +31,17 @@ import nextflow.util.CacheHelper
 @ToString(includePackage = false, includeNames = true, ignoreNulls = true)
 class ContainerConfig {
 
+    /**
+     * Prefixes of env variables configuring the Fusion driver operation (logging,
+     * tracing, snapshots) that do not change what a task computes, therefore
+     * excluded from the task fingerprint. See {@link #taskHashKey()}
+     */
+    private static final List<String> SKIP_HASHING_ENV = List.of(
+        'FUSION_SHOW_GLOBAL_INFO',
+        'FUSION_TRACER_',
+        'FUSION_SNAPSHOT_',
+        'FUSION_LOG_' )
+
     List<String> entrypoint
     List<String> cmd
     List<String> env
@@ -94,6 +105,18 @@ class ContainerConfig {
     }
 
     String fingerprint() {
+        return fingerprint0(env)
+    }
+
+    /**
+     * Same as {@link #fingerprint()} ignoring the env variables in {@link #SKIP_HASHING_ENV}.
+     * Used as the container term of the task hash.
+     */
+    String taskHashKey() {
+        return fingerprint0(env?.findAll { String it -> !SKIP_HASHING_ENV.any { String p -> it.startsWith(p) } })
+    }
+
+    private String fingerprint0(List<String> env) {
         final allMeta = new ArrayList()
         allMeta.add( entrypoint ?: 'no-entry' )
         allMeta.add( cmd ?: 'no-cmd' )
