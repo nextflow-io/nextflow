@@ -268,6 +268,23 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getExecutorName() == 'seqera/aws'
     }
 
+    def 'should report the configured provider in the trace executor name: #provider'() {
+        given:
+        def handler = createHandlerForTraceTest(provider)
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+
+        expect:
+        handler.getTraceRecord().getExecutorName() == expected
+
+        where:
+        provider | expected
+        'aws'    | 'seqera/aws'
+        'azure'  | 'seqera/azure'
+        'gcp'    | 'seqera/gcp'
+        null     | 'seqera/aws'
+    }
+
     def 'should anchor the trace start on the last attempt and report the retry time: #desc'() {
         given: 'Nextflow saw the task RUNNING at t=100s and complete at t=1000s'
         def handler = createHandlerForTraceTest()
@@ -1746,10 +1763,11 @@ class SeqeraTaskHandlerTest extends Specification {
     /**
      * Creates a test handler with mocks sufficient for getTraceRecord()
      */
-    private SeqeraTaskHandler createHandlerForTraceTest() {
+    private SeqeraTaskHandler createHandlerForTraceTest(String provider=null) {
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
             getName() >> 'seqera'
+            getSeqeraConfig() >> new ExecutorOpts(endpoint: 'https://sched.example.com', provider: provider)
             getRunResourceLabels() >> [:]
         }
         def processor = Mock(TaskProcessor) {
