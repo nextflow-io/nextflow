@@ -49,6 +49,49 @@ class AzStorageOptsTest extends Specification {
         opts3.accountKey == 'env-key'
     }
 
+    def 'should get storage endpoint'() {
+        expect:
+        new AzStorageOpts([:], [:]).endpoint == null
+        new AzStorageOpts([accountName: 'xyz'], [:]).endpoint == 'https://xyz.blob.core.windows.net'
+        and:
+        def opts = new AzStorageOpts([accountName: 'onelake', endpoint: 'https://onelake.blob.fabric.microsoft.com'], [:])
+        opts.endpoint == 'https://onelake.blob.fabric.microsoft.com'
+        opts.getEnv().AZURE_STORAGE_ENDPOINT == 'https://onelake.blob.fabric.microsoft.com'
+    }
+
+    def 'should validate storage endpoint'() {
+        expect:
+        AzStorageOpts.parseEndpoint(ENDPOINT, 'xyz') == ENDPOINT
+
+        where:
+        ENDPOINT << [
+            'https://xyz.blob.core.usgovcloudapi.net',
+            'https://xyz.blob.core.usgovcloudapi.net/',
+            'http://127.0.0.1:10000/devstoreaccount1',
+        ]
+    }
+
+    def 'should reject invalid storage endpoint'() {
+        when:
+        AzStorageOpts.parseEndpoint(ENDPOINT, 'xyz')
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        ENDPOINT << [
+            'xyz.blob.core.windows.net',
+            '//xyz.blob.core.windows.net',
+            'ftp://xyz.blob.core.windows.net',
+            'https:///container',
+            'https://:10000',
+            'https://%',
+            'https://xyz.blob.core.windows.net/?sv=test&sig=test',
+            'https://xyz.blob.core.windows.net/?',
+            'https://xyz.blob.core.windows.net/#container',
+            'https://user:password@xyz.blob.core.windows.net',
+        ]
+    }
+
     def 'should get azure files name, root path & options'() {
 
         given:
