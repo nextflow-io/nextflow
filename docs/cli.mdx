@@ -146,9 +146,9 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ## Project management
 
-Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines automatically into a user-level cache, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
+Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` and `pull` commands download remote pipelines into a user-level store, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
 
-The [`pipeline`][cli-pipeline] command manages this cache when given the `-g` (`-global`) option, similar to `npm install -g`. Without `-g`, it manages the project-level registry pipelines installed in the current project. Use these commands to download pipelines, inspect them, and maintain your cache.
+The `list`, `view`, and `remove` subcommands of the [`pipeline`][cli-pipeline] command manage the user-level store when given the `-g` (`-global`) option, similar to `npm list -g`. Without `-g`, they manage the project-level registry pipelines installed in the current project. Use these commands to inspect downloaded pipelines and maintain the user-level store.
 
 <ChangedInVersion version="27.04">
 The `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline list -g`, `pipeline view -g`, and `pipeline remove -g`. The `clone` command was removed. See [Deprecations][deprecations-page] for details.
@@ -156,7 +156,7 @@ The `list`, `view`, and `drop` commands, and the `info` command with a project n
 
 ### Listing downloaded projects
 
-The `pipeline list -g` command shows all pipelines currently downloaded to your user-level cache. This helps you track which projects are available offline and manage your cache directory:
+The `pipeline list -g` command shows all pipelines currently downloaded to the user-level store. This helps you track which projects are available offline and manage the user-level store:
 
 ```bash
 nextflow pipeline list -g
@@ -175,37 +175,30 @@ nextflow pipeline view -g nextflow-io/hello
 This prints an output similar to the following:
 
 ```bash
-project name: nextflow-io/hello
-repository  : https://github.com/nextflow-io/hello
-local path  : $HOME/.nextflow/assets/.repos/nextflow-io/hello
-main script : main.nf
-revisions   :
-> master (default)
-  mybranch
-> v1.1 [t]
-  v1.2 [t]
+ project name: nextflow-io/hello
+ repository  : https://github.com/nextflow-io/hello
+ local path  : $HOME/.nextflow/assets/.repos/nextflow-io/hello
+ main script : main.nf
+ revisions   :
+ > master (default)
+   mybranch
+ > v1.1 [t]
+   v1.2 [t]
 ```
 
 This shows:
 
 - The full project name and repository URL
-- Where it's cached locally
+- Where it's stored locally
 - Which script runs by default
 - Available revisions (branches and tags marked with `[t]`)
-- Which revisions are currently checked out (marked with `>`)
+- Which revisions are downloaded (marked with `>`)
 
 ### Pulling or updating projects
 
-The `pipeline install -g` command downloads a pipeline from the [Nextflow registry](https://registry.nextflow.io) into the cache, at the Git commit pinned by the release.
+The `pull` command downloads a pipeline into the user-level store, or updates an existing one to the latest version from its Git repository.
 
-Use this to manually download pipelines before running them, or download pipelines for offline use:
-
-```bash
-nextflow pipeline install -g nf-core/rnaseq
-nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
-```
-
-The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository. Use it for pipelines that are not in the registry:
+Use this to manually download pipelines before running them, update downloaded pipelines, or download pipelines for offline use:
 
 ```bash
 nextflow pull nextflow-io/hello
@@ -217,11 +210,17 @@ You can specify a particular revision to download:
 nextflow pull nextflow-io/hello -r mybranch
 ```
 
-See [pipeline][cli-pipeline-install] and [pull][cli-pull] for more information.
+To download a release from the [Nextflow registry](https://registry.nextflow.io), give the registry host with `-hub`, or set `NXF_HUB`:
 
-### Deleting cached projects
+```bash
+nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+```
 
-The `pipeline remove -g` command removes a downloaded pipeline from the user-level cache.
+See [pull][cli-pull] for more information.
+
+### Deleting downloaded projects
+
+The `pipeline remove -g` command removes a downloaded pipeline from the user-level store.
 
 Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
 
@@ -534,7 +533,6 @@ http://nextflow.io
 [cli-log]: ./reference/cli/log
 [cli-module]: ./reference/cli/module
 [cli-pipeline]: ./reference/cli/pipeline
-[cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
 [cli-pipeline-remove]: ./reference/cli/pipeline#pipeline-remove
 [cli-plugin]: ./reference/cli/plugin
 [cli-pull]: ./reference/cli/pull

@@ -1,0 +1,41 @@
+---
+title: nextflow list
+description: Reference for the nextflow list command. List all downloaded projects.
+---
+
+# `nextflow list`
+
+<DeprecatedInVersion version="27.04">
+The `list` command is deprecated. Use [`nextflow pipeline list -g`][cli-pipeline-list] instead.
+</DeprecatedInVersion>
+
+List all downloaded projects.
+
+## Usage
+
+```console
+$ nextflow list [options]
+```
+
+## Description
+
+The `list` command prints the projects already downloaded into the user-level store `~/.nextflow/assets`.
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Examples
+
+List the downloaded projects:
+
+```console
+$ nextflow list
+
+nextflow-io/hello
+nextflow-hub/fastqc
+```
+
+[cli-pipeline-list]: ./pipeline#pipeline-list
