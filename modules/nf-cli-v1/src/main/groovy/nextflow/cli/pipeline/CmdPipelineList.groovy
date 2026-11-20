@@ -50,7 +50,7 @@ class CmdPipelineList extends CmdBase {
         }
     }
 
-    @Parameter(names = ['-g', '-global'], description = 'List globally installed pipelines', arity = 0)
+    @Parameter(names = ['-g', '-global'], description = 'List the pipelines in the user-level store used by `nextflow run`', arity = 0)
     boolean global
 
     @TestOnly
@@ -64,7 +64,7 @@ class CmdPipelineList extends CmdBase {
     @Override
     void run() {
         if( global ) {
-            listGlobal()
+            listUserLevel()
             return
         }
         final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
@@ -83,7 +83,7 @@ class CmdPipelineList extends CmdBase {
             println "No pipelines installed"
             final count = AssetManager.list().size()
             if( count )
-                println "${count} ${count == 1 ? 'pipeline is' : 'pipelines are'} installed globally -- use `nextflow pipeline list -g` to list them"
+                println "${count} ${count == 1 ? 'pipeline is' : 'pipelines are'} installed in the user-level store -- use `nextflow pipeline list -g` to list them"
             return
         }
         println "Pipeline".padRight(40) + "Version".padRight(15) + "Status"
@@ -93,14 +93,14 @@ class CmdPipelineList extends CmdBase {
         }
     }
 
-    private void listGlobal() {
+    private void listUserLevel() {
         final names = AssetManager.list()
         if( output == 'json' ) {
             println JsonOutput.prettyPrint(JsonOutput.toJson(pipelines: names.collect { String it -> [name: it] }))
             return
         }
         if( !names ) {
-            println "No pipelines installed globally"
+            println "No pipelines installed in the user-level store"
             return
         }
         names.each { String it -> println it }

@@ -1111,18 +1111,16 @@ class AssetManager implements Closeable {
     }
 
     protected String getGitConfigRemoteUrl() {
-        if( !isLocal() ) {
-            return null
-        }
-
+        // a multi-revision project has the config of its bare repository, even when the default branch is not checked out
         final gitConfig = localGitConfig
-        if( !gitConfig.exists() ) {
+        if( !gitConfig?.exists() ) {
             return null
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = manifest.getDefaultBranch()
-        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
+        // the manifest is read from the default branch, so only when it is checked out
+        final branch = isLocal() ? manifest.getDefaultBranch() : null
+        final remote = branch ? iniFile.getString("branch \"${branch}\"", "remote", "origin") : "origin"
         final url = iniFile.getString("remote \"${remote}\"", "url")
         log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
