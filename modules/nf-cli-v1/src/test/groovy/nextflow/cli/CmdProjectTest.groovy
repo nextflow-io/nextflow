@@ -124,6 +124,18 @@ class CmdProjectTest extends Specification {
                 .stripIndent()
     }
 
+    def 'should forward the options of info with a project to project info'() {
+        when:
+        def cmd = new Launcher().parseMainArgs('info', 'acme/hello', '-d', '-o', 'json', '-u').command as CmdInfo
+        def info = cmd.projectInfo()
+        then:
+        info.args == ['acme/hello']
+        info.detailed
+        info.format == 'json'
+        info.checkForUpdates
+        info.launcher == cmd.launcher
+    }
+
     def 'should point to the new command in the help of a deprecated command'() {
         when:
         new Launcher().usage(NAME)

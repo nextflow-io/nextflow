@@ -66,12 +66,16 @@ class CmdInfo extends CmdBase {
     void run() {
         if( args ) {
             log.warn "The `info <project>` command is deprecated -- use `nextflow project info` instead"
-            final cmd = new CmdProjectInfo(args: args, detailed: detailed, moreDetailed: moreDetailed, format: format, checkForUpdates: checkForUpdates)
-            cmd.launcher = launcher
-            cmd.run()
+            projectInfo().run()
             return
         }
         println getInfo(moreDetailed ? 2 : ( detailed ? 1 : 0 ))
+    }
+
+    protected CmdProjectInfo projectInfo() {
+        final cmd = new CmdProjectInfo(args: args, detailed: detailed, moreDetailed: moreDetailed, format: format, checkForUpdates: checkForUpdates)
+        cmd.launcher = launcher
+        return cmd
     }
 
     final static private BLANK = '  '

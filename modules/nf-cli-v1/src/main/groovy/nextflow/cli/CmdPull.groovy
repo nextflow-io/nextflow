@@ -64,6 +64,8 @@ class CmdPull extends CmdBase implements HubAware {
 
     @Override
     void run() {
+        if( deep )
+            log.warn "The `-deep` option is deprecated -- it only applies to projects downloaded with the legacy asset strategy"
 
         if( !all && !args )
             throw new AbortOperationException('Missing argument')

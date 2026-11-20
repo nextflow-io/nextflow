@@ -316,6 +316,9 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Override
     void run() {
+        if( deep )
+            log.warn "The `-deep` option is deprecated -- it only applies to projects downloaded with the legacy asset strategy"
+
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
