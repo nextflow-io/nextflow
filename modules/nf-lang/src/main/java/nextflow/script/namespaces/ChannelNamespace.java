@@ -92,6 +92,7 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces/channel#of)
     """)
+    @SuppressWarnings("unchecked")
     <E> Channel<E> of(E... values);
 
     @Description("""

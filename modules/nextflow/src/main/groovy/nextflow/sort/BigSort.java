@@ -391,7 +391,7 @@ abstract public class BigSort<V> implements Closeable {
      * Custom comparator to sort the entries in each slice by using the
      * {@link BigSort#comparator} object
      */
-    static class SliceComparator implements Comparator {
+    static class SliceComparator implements Comparator<Object> {
 
         private long offset;
 

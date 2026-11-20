@@ -52,7 +52,6 @@ import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
@@ -134,8 +133,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             return;
 
         var names = node.name.split("\\.");
-        Expression target = varX(DefaultGroovyMethods.head(names));
-        for( var name : DefaultGroovyMethods.tail(names) )
+        Expression target = varX(names[0]);
+        for( var name : Arrays.copyOfRange(names, 1, names.length) )
             target = propX(target, name);
 
         var result = stmt(assignX(target, node.value));

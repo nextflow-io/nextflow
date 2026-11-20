@@ -673,7 +673,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         S3Path s3Path = (S3Path) path;
         if (type.isAssignableFrom(BasicFileAttributeView.class)) {
             try {
-                return (V) new S3FileAttributesView(readAttr0(s3Path));
+                return type.cast(new S3FileAttributesView(readAttr0(s3Path)));
             }
             catch (IOException e) {
                 throw new RuntimeException("Unable read attributes for file: " + FilesEx.toUriString(s3Path), e);
@@ -690,7 +690,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                 "path must be an instance of %s", S3Path.class.getName());
         S3Path s3Path = (S3Path) path;
         if (type.isAssignableFrom(BasicFileAttributes.class)) {
-            return (A) ("".equals(s3Path.getKey())
+            return type.cast("".equals(s3Path.getKey())
                     // the root bucket is implicitly a directory
                     ? new S3FileAttributes("/", null, 0, true, false)
                     // read the target path attributes

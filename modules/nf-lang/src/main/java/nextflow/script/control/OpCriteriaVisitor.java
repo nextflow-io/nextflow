@@ -151,7 +151,8 @@ public class OpCriteriaVisitor extends ClassCodeExpressionTransformer {
             String currentLabel = null;
 
             for( var stmt : code.getStatements() ) {
-                var label = stmt.getStatementLabel();
+                var labels = stmt.getStatementLabels();
+                var label = labels != null ? labels.get(0) : null;
                 if( label != null ) {
                     if( !allLabels.add(label) ) {
                         syntaxError("Branch label already declared: " + label, stmt);
@@ -199,7 +200,7 @@ public class OpCriteriaVisitor extends ClassCodeExpressionTransformer {
 
             // construct branch criteria
             var main = closureX(body.getParameters(), block(body.getVariableScope(), statements));
-            var newTokenBranchDef = createX("nextflow.script.TokenBranchDef", main, list2args(new ArrayList(allLabels)));
+            var newTokenBranchDef = createX("nextflow.script.TokenBranchDef", main, list2args(new ArrayList<>(allLabels)));
             return closureX(null, block(body.getVariableScope(), stmt(newTokenBranchDef)));
         }
 
@@ -335,7 +336,7 @@ public class OpCriteriaVisitor extends ClassCodeExpressionTransformer {
 
             // construct multiMap criteria
             var main = closureX(body.getParameters(), block(body.getVariableScope(), statements));
-            var newTokenMultiMapDef = createX("nextflow.script.TokenMultiMapDef", main, list2args(new ArrayList(allLabels)));
+            var newTokenMultiMapDef = createX("nextflow.script.TokenMultiMapDef", main, list2args(new ArrayList<>(allLabels)));
             return closureX(null, block(body.getVariableScope(), stmt(newTokenMultiMapDef)));
         }
 

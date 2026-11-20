@@ -131,7 +131,7 @@ public class Types {
             && isAssignableFrom(target.getTypeClass(), source.getTypeClass());
     }
 
-    public static boolean isAssignableFrom(Class target, Class source) {
+    public static boolean isAssignableFrom(Class<?> target, Class<?> source) {
         target = normalize(target);
         source = normalize(source);
         if( target == Float_TYPE && source == Integer_TYPE )

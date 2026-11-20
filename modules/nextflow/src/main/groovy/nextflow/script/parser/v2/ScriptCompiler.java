@@ -157,14 +157,11 @@ public class ScriptCompiler {
         reportTypeErrors();
 
         // collect script classes
-        var classes = (List<Class>) collector.getLoadedClasses().stream()
-            .map((o) ->
-                o instanceof Class c && BASE_CLASS_NAME.equals(c.getSuperclass().getName())
-                    ? c
-                    : null
-            )
-            .filter(c -> c != null)
-            .toList();
+        var classes = new ArrayList<Class>();
+        for( var o : collector.getLoadedClasses() ) {
+            if( o instanceof Class c && BASE_CLASS_NAME.equals(c.getSuperclass().getName()) )
+                classes.add(c);
+        }
 
         // extract main script class
         var main = classes.stream()

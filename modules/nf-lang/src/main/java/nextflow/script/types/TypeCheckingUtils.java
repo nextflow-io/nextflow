@@ -229,6 +229,7 @@ public class TypeCheckingUtils {
         if( node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET) instanceof MethodNode mn )
             return List.of(mn);
 
+        @SuppressWarnings("unchecked")
         var methods = (List<MethodNode>) node.getNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS);
         if( methods != null )
             return methods;
@@ -845,8 +846,8 @@ public class TypeCheckingUtils {
     public static ClassNode resolveOpsType(ClassNode cn) {
         if( cn == null || !cn.isResolved() )
             return null;
-        var type = Types.normalize(cn.getTypeClass());
-        var annot = (Ops) type.getAnnotation(Ops.class);
+        Class<?> type = Types.normalize(cn.getTypeClass());
+        var annot = type.getAnnotation(Ops.class);
         if( annot == null )
             return null;
         var opsType = ClassHelper.makeCached(annot.value());

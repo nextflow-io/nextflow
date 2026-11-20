@@ -150,11 +150,11 @@ public sealed interface SpecNode {
         return result;
     }
 
-    private static Class rawType(Type type) {
-        if( type instanceof Class c )
+    private static Class<?> rawType(Type type) {
+        if( type instanceof Class<?> c )
             return c;
         if( type instanceof ParameterizedType pt )
-            return (Class) pt.getRawType();
+            return (Class<?>) pt.getRawType();
         throw new IllegalStateException();
     }
 
@@ -261,11 +261,11 @@ public sealed interface SpecNode {
                 }
                 // fields of rawType ConfigScope are nested config scopes
                 else if( ConfigScope.class.isAssignableFrom(rawType) ) {
-                    children.put(name, Scope.of((Class<? extends ConfigScope>) rawType, desc));
+                    children.put(name, Scope.of(rawType.asSubclass(ConfigScope.class), desc));
                 }
                 // fields of type Map<String, ConfigScope> are placeholder scopes
                 else if( Map.class.isAssignableFrom(rawType) && type instanceof ParameterizedType pt && placeholderName != null ) {
-                    var valueType = (Class<? extends ConfigScope>)pt.getActualTypeArguments()[1];
+                    var valueType = ((Class<?>) pt.getActualTypeArguments()[1]).asSubclass(ConfigScope.class);
                     children.put(name, new Placeholder(desc, placeholderName.value(), Scope.of(valueType, desc)));
                 }
             }
