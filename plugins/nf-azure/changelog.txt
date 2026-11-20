@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.24.5 - 20 Nov 2026
+- Add azure.storage.nodeIdentity (#8107) [e857655da]
+
 1.24.4 - 12 Nov 2026
 - Fix Azure file share mount argument order in pool creation (#8042) [474f2f6c7]
 
