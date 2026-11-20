@@ -36,3 +36,11 @@ Enable the use of previously cached task executions. Equivalent to the `-resume`
 ##### `workDir`
 
 The pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.
+
+##### `osc7501`
+
+<AddedInVersion version="26.10" />
+
+Emit [OSC 7501](../osc-7501.mdx) program-status reports while a run is in progress (default: `true` when ANSI logging is enabled and standard output is a terminal).
+
+Set to `false` to opt out. `NXF_OSC7501=false` also opts out.
