@@ -72,7 +72,7 @@ class AzPathFactory extends FileSystemPathFactory {
         // NOTE: setting the context classloader to allow loading azure deps via java ServiceLoader
         // see
         //  com.azure.core.http.HttpClientProvider
-        //  com.azure.core.http.netty.implementation.ReactorNettyClientProvider
+        //  com.azure.core.http.jdk.httpclient.JdkHttpClientProvider
         //
         try {
             final loader = AzurePlugin.class.getClassLoader()

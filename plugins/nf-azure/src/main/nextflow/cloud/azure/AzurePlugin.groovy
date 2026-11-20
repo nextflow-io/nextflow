@@ -15,11 +15,14 @@
  */
 package nextflow.cloud.azure
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
+import org.slf4j.LoggerFactory
 
 /**
  * Azure cloud plugin for Nextflow
@@ -38,5 +41,17 @@ class AzurePlugin extends BasePlugin {
         super.start()
         // register Azure file system
         FileHelper.getOrInstallProvider(AzFileSystemProvider)
+        quietJdkHttpClientLogger()
+    }
+
+    /**
+     * The Azure JDK http client logs a warning on every request because
+     * the Content-Length header is restricted by the JDK, which sets it
+     * from the request body instead.
+     */
+    static protected void quietJdkHttpClientLogger() {
+        final logger = LoggerFactory.getLogger('com.azure.core.http.jdk.httpclient')
+        if( logger instanceof Logger && logger.getLevel() == null )
+            logger.setLevel(Level.ERROR)
     }
 }

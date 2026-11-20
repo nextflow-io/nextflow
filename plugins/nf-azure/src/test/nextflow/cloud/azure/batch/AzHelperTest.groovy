@@ -18,6 +18,11 @@ package nextflow.cloud.azure.batch
 
 import java.time.Duration
 
+import com.azure.compute.batch.BatchClientBuilder
+import com.azure.core.credential.AzureNamedKeyCredential
+import com.azure.core.http.HttpClient
+import com.azure.storage.blob.BlobServiceClientBuilder
+import com.azure.storage.common.StorageSharedKeyCredential
 import com.azure.storage.common.policy.RetryPolicyType
 import nextflow.cloud.azure.config.AzRetryConfig
 import spock.lang.Specification
@@ -46,6 +51,30 @@ class AzHelperTest extends Specification {
         _ | CONFIG
         _ | new AzRetryConfig()
         _ | new AzRetryConfig([delay: '10s', maxAttempts: 20, maxDelay: '200s'])
+    }
+
+    def 'should create clients with the JDK http client' () {
+        given:
+        def JDK_CLIENT = 'com.azure.core.http.jdk.httpclient.JdkHttpClient'
+
+        when:
+        def blob = new BlobServiceClientBuilder()
+            .endpoint('https://foo.blob.core.windows.net')
+            .credential(new StorageSharedKeyCredential('foo', Base64.encoder.encodeToString('bar'.bytes)))
+            .buildClient()
+        def batch = new BatchClientBuilder()
+            .endpoint('https://foo.eastus.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('foo', 'bar'))
+            .buildClient()
+        then:
+        HttpClient.createDefault().class.name == JDK_CLIENT
+        blob.getHttpPipeline().getHttpClient().class.name == JDK_CLIENT
+        batch != null
+
+        when:
+        Class.forName('io.netty.channel.Channel')
+        then:
+        thrown(ClassNotFoundException)
     }
 
 }
