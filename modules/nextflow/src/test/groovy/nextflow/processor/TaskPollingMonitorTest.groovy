@@ -383,6 +383,74 @@ class TaskPollingMonitorTest extends Specification {
         children.every { it.task.errorAction == ErrorStrategy.IGNORE }
         processor.state.val.completed == 3
     }
+
+    def 'should report a failed submission before faulting the session' () {
+        given:
+        // a static one-shot: only the first failure since a reset is returned as a TaskFault
+        TaskProcessor.reset()
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> it.incSubmitted() }
+        and:
+        def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'terminate'))
+        def handler = Mock(TaskHandler, constructorArgs: [task]) {
+            getTask() >> task
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Failed to submit process to grid scheduler for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        then: 'the task is reported first: the fault ends the run, and observers send nothing after that'
+        1 * session.notifyTaskComplete(handler)
+        then:
+        1 * session.fault(_ as TaskFault, handler)
+    }
+
+    def 'should report every child of a failed task array submission before faulting the session' () {
+        given:
+        // a static one-shot: only the first failure since a reset is returned as a TaskFault
+        TaskProcessor.reset()
+        def session = Mock(Session) {
+            canSubmitTasks() >> true
+            getExecService() >> Mock(ExecutorService)
+        }
+        def processor = new TaskProcessorTest.DummyProcessor('foo', session, Mock(BaseScript), new ProcessConfig([:]))
+        processor.createStateObj()
+        processor.state.update { StateObj it -> 3.times { n -> it.incSubmitted() } }
+        and:
+        def children = (1..3).collect {
+            def task = new TaskRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'terminate'))
+            Mock(TaskHandler, constructorArgs: [task]) { getTask() >> task }
+        }
+        def array = new TaskArrayRun(processor: processor, context: new TaskContext(processor), config: new TaskConfig(errorStrategy: 'terminate'), children: children)
+        def handler = Mock(TaskHandler, constructorArgs: [array]) {
+            getTask() >> array
+            canForkProcess() >> true
+            isReady() >> true
+            submit() >> { throw new ProcessFailedException("Failed to submit process to grid scheduler for execution") }
+        }
+        and:
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min'))
+        monitor.@pendingQueue << handler
+
+        when:
+        monitor.submitPendingTasks()
+        then:
+        1 * session.notifyTaskComplete(children[0])
+        1 * session.notifyTaskComplete(children[1])
+        1 * session.notifyTaskComplete(children[2])
+        then: 'one fault, once every child is reported'
+        1 * session.fault(_ as TaskFault, children[0])
+    }
     @Unroll
     def 'should release fork slot when submission fails [errorStrategy: #STRATEGY]' () {
         given:

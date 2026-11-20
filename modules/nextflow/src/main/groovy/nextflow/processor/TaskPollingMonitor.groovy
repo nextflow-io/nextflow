@@ -683,7 +683,6 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleSubmitException(handler, e, forked)
-                notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -712,11 +711,20 @@ class TaskPollingMonitor implements TaskMonitor {
         final handlers = handler.task instanceof TaskArrayRun
             ? (handler.task as TaskArrayRun).children
             : List.of(handler)
+        // report every task as completed before the fault: it aborts the session, which
+        // completes the flow, and observers don't send task events after that
+        TaskFault fault = null
+        TaskHandler faulted = null
         for( TaskHandler it : handlers ) {
-            final fault = it.task.processor.finalizeFailedTask(it, error)
-            if( fault instanceof TaskFault )
-                session.fault(fault, it)
+            final result = it.task.processor.finalizeFailedTask(it, error)
+            session.notifyTaskComplete(it)
+            if( fault == null && result instanceof TaskFault ) {
+                fault = result as TaskFault
+                faulted = it
+            }
         }
+        if( fault )
+            session.fault(fault, faulted)
     }
 
     /**
@@ -870,17 +878,6 @@ class TaskPollingMonitor implements TaskMonitor {
         }
         else {
             session.notifyTaskPending(handler)
-        }
-    }
-
-    protected void notifyTaskComplete(TaskHandler handler) {
-        if( handler.task instanceof TaskArrayRun ) {
-            final task = handler.task as TaskArrayRun
-            for( TaskHandler it : task.children )
-                session.notifyTaskComplete(it)
-        }
-        else {
-            session.notifyTaskComplete(handler)
         }
     }
 
