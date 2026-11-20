@@ -1,5 +1,16 @@
 # Nextflow change-log
 
+## [Version 26.10.7](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.7) - 20 Nov 2026
+
+- Add `cuda` option to the accelerator directive (#8032) [cfcbe7326]
+- Add azure.storage.nodeIdentity (#8107) [e857655da]
+- Align tower.autoLabels tag keys with the Seqera scheduler (#8106) [2f0bc5a68]
+- Bump nf-azure@1.24.5 [6d2e3a159]
+- Bump nf-seqera@0.26.3 [6de089458]
+- Bump nf-wave@1.22.7 [4091b6808]
+- Report the configured provider in the Seqera executor trace name (#8110) [b5873c84e]
+- Request downstream containers ahead with wave.prefetchDepth (#8003) [387d42c1e]
+
 ## [Version 26.10.6](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.6) - 12 Nov 2026
 
 - Bump nf-azure@1.24.4 [8a27bfe0d]
