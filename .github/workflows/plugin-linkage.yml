@@ -1,0 +1,51 @@
+name: Plugin linkage
+# Warns when a change breaks released plugins at run time. Not a required check: a break can be
+# intended, and then the plugin owner releases a fix.
+
+on:
+  push:
+    branches:
+      - 'master'
+    paths: &paths
+      - 'modules/**'
+      - 'plugins/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - '.github/scripts/Linkage.java'
+      - '.github/scripts/plugin-linkage.sh'
+      - '.github/workflows/plugin-linkage.yml'
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  linkage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      # Linkage.java uses the java.lang.classfile API of Java 25.
+      - name: Setup Java 25
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
+        with:
+          java-version: 25
+          distribution: 'corretto'
+          cache: gradle
+
+      - name: Build
+        run: ./gradlew -q exportClasspath
+
+      - name: Check plugins
+        run: .github/scripts/plugin-linkage.sh xpack-amzn xpack-google xpack-platform
