@@ -36,13 +36,20 @@ import org.pf4j.PluginState
 import org.pf4j.PluginWrapper
 import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PluginUpdaterTest extends Specification {
+
+    @Rule
+    WireMockRule wiremock = new WireMockRule(0)
 
     private static final String PLUGIN_ID = 'my-plugin'
 
@@ -115,6 +122,119 @@ class PluginUpdaterTest extends Specification {
         manager.localRoot.resolve(PLUGIN).exists()
         manager.localRoot.resolve(PLUGIN).isLink()
         manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == local.resolve(PLUGIN).resolve('MANIFEST.MF').text
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should install namespaced plugins next to unscoped ones' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def foo1 = createPlugin(repo, '1.0.0', 'org1/nf-foo'); foo1.zip = zipDir(foo1.path)
+        def foo2 = createPlugin(repo, '1.0.0', 'org2/nf-foo'); foo2.zip = zipDir(foo2.path)
+        def bar = createPlugin(repo, '1.0.0'); bar.zip = zipDir(bar.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "org1/nf-foo", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${foo1.zip}"} ]},
+             { "id": "org2/nf-foo", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${foo2.zip}"} ]},
+             { "id": "${PLUGIN_ID}", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${bar.zip}"} ]}]
+            """
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, index.toUri().toURL(), false)
+
+        when:
+        def ok1 = updater.installPlugin('org1/nf-foo', '1.0.0')
+        def ok2 = updater.installPlugin('org2/nf-foo', '1.0.0')
+        def ok3 = updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        ok1 && ok2 && ok3
+        manager.getPlugin('org1/nf-foo').pluginState == PluginState.STARTED
+        manager.getPlugin('org2/nf-foo').pluginState == PluginState.STARTED
+        local.resolve('org1~nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        local.resolve('org2~nf-foo-1.0.0').resolve('MANIFEST.MF').isFile()
+        manager.localRoot.resolve('org1~nf-foo-1.0.0').isLink()
+        manager.localRoot.resolve('org2~nf-foo-1.0.0').isLink()
+        local.resolve("${PLUGIN_ID}-1.0.0").isDirectory()
+        manager.getPlugin('org1/nf-foo').descriptor.pluginId == 'org1/nf-foo'
+        manager.getPlugin('org2/nf-foo').descriptor.pluginId == 'org2/nf-foo'
+        manager.localRoot.resolve("${PLUGIN_ID}-1.0.0").isLink()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should use a flat lock file name' () {
+        expect:
+        new PluginUpdater(new CustomPluginManager()).lockFile(ID, '1.0.0').name == EXPECTED
+        where:
+        ID              | EXPECTED
+        'myorg/nf-foo'  | 'nextflow-plugin-myorg~nf-foo-1.0.0.lock'
+        'nf-foo'        | 'nextflow-plugin-nf-foo-1.0.0.lock'
+    }
+
+    def 'should install a namespaced plugin from another repository when the registry refuses it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def plugin = createPlugin(repo, '1.0.0', 'myorg/nf-foo'); plugin.zip = zipDir(plugin.path)
+        def index = repo.resolve('plugins.json')
+        index.text = """
+            [{ "id": "myorg/nf-foo", "releases": [ {"version": "1.0.0", "date": "Jun 25, 2020 9:58:35 PM", "url": "file:${plugin.zip}"} ]}]
+            """
+        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).willReturn(aResponse().withStatus(400).withBody("Plugin id 'myorg/nf-foo' is invalid")))
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, new URL("http://localhost:${wiremock.port()}/"), false)
+        updater.addRepository(new DefaultUpdateRepository('extra', index.toUri().toURL()))
+        updater.prefetchMetadata([new PluginRef('myorg/nf-foo', '1.0.0')])
+
+        when:
+        def installed = updater.installPlugin('myorg/nf-foo', '1.0.0')
+
+        then:
+        installed
+        manager.getPlugin('myorg/nf-foo').pluginState == PluginState.STARTED
+        local.resolve('myorg~nf-foo-1.0.0').isDirectory()
+
+        when: 'the other repository has the plugin but not the version'
+        updater.installPlugin('myorg/nf-foo', '>=2.0.0')
+        then: 'the registry refusal is not given as the reason'
+        def e = thrown(IllegalStateException)
+        e.message == 'Cannot find version of myorg/nf-foo plugin matching >=2.0.0'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should install a namespaced plugin from the second registry when the first refuses it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def repo = Files.createDirectory(folder.resolve('repo'))
+        def plugin = createPlugin(repo, '1.0.0', 'myorg/nf-foo'); plugin.zip = zipDir(plugin.path)
+        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).willReturn(aResponse().withStatus(400).withBody("Plugin id 'myorg/nf-foo' is invalid")))
+        wiremock.stubFor(get(urlPathEqualTo('/new/v1/plugins/dependencies')).willReturn(aResponse().withStatus(200).withBody("""
+            { "plugins": [ { "id": "myorg/nf-foo", "releases": [ { "version": "1.0.0", "url": "file:${plugin.zip}", "date": "2025-03-21T10:40:36Z" } ] } ] }
+            """)))
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, new URL("http://localhost:${wiremock.port()}/"), false)
+        updater.addRepository(new HttpPluginRepository('new', URI.create("http://localhost:${wiremock.port()}/new/")))
+        updater.prefetchMetadata([new PluginRef('myorg/nf-foo', '1.0.0')])
+
+        when:
+        def installed = updater.installPlugin('myorg/nf-foo', '1.0.0')
+
+        then:
+        installed
+        manager.getPlugin('myorg/nf-foo').pluginState == PluginState.STARTED
+        local.resolve('myorg~nf-foo-1.0.0').isDirectory()
 
         cleanup:
         folder?.deleteDir()

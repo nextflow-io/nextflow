@@ -24,6 +24,7 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule
 import nextflow.BuildInfo
 import nextflow.Global
 import org.junit.Rule
+import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -200,6 +201,47 @@ class HttpPluginRepositoryTest extends Specification {
         then:
         noExceptionThrown()
         unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'add a namespace hint when the registry refuses a namespaced plugin id'() {
+        given:
+        def body = '{"type":"INVALID_PLUGIN_ID","message":"Plugin id \'myorg/nf-foo\' is invalid"}'
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody(body)))
+
+        when:
+        unit.fetchPlugin('myorg/nf-foo')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.startsWith('Invalid response while fetching plugin metadata from:')
+        e.message.contains(body)
+        e.message.endsWith('\nThe registry may not support namespaced plugins')
+    }
+
+    def 'report a plugin as not found when the registry refuses it'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody('Bad request')))
+
+        expect:
+        unit.getPlugin('myorg/nf-foo') == null
+    }
+
+    def 'add no namespace hint when the registry refuses an unscoped plugin id'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody('Bad request')))
+
+        when:
+        unit.fetchPlugin('nf-fake')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.startsWith('Invalid response while fetching plugin metadata from:')
+        !e.message.contains('namespaced')
     }
 
     // ------------------------------------------------------------------------

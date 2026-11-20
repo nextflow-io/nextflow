@@ -117,6 +117,20 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     PluginInfo getPlugin(String id) {
+        try {
+            return fetchPlugin(id)
+        }
+        catch( PluginRuntimeException e ) {
+            // pf4j asks each repository in turn: report "not found" so the next repository is still asked
+            log.debug "Failed to fetch metadata for plugin ${id} from ${url} - cause: ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Like {@link #getPlugin(String)}, but throws the registry error instead of returning null.
+     */
+    PluginInfo fetchPlugin(String id) {
         return plugins.computeIfAbsent(id) { key -> fetchMetadataByIds([key]).get(key) }
     }
 
@@ -160,7 +174,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             .GET()
             .build()
         try {
-            return sendAndParse(req)
+            return sendAndParse(req, specs)
         }
         catch (PluginRuntimeException e) {
             throw e
@@ -170,13 +184,16 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
     }
 
-    private Map<String, PluginInfo> sendAndParse(HttpRequest req) {
+    private Map<String, PluginInfo> sendAndParse(HttpRequest req, List<PluginRef> specs) {
         final encoder = new GsonEncoder<ListDependenciesResponse>() {}
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         final body = resp.body()
         log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
         if( resp.statusCode() != 200 ) {
-            final msg = "Invalid response while fetching plugin metadata from: ${req.uri()}\n- http status: ${resp.statusCode()}\n- response   : ${body}"
+            def msg = "Invalid response while fetching plugin metadata from: ${req.uri()}\n- http status: ${resp.statusCode()}\n- response   : ${body}"
+            // a registry without namespace support refuses any id with a `/`
+            if( specs.any { it.id.contains('/') } )
+                msg += "\nThe registry may not support namespaced plugins"
             throw new PluginRuntimeException(msg)
         }
         try {
