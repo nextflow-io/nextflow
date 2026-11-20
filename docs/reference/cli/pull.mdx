@@ -15,21 +15,13 @@ $ nextflow pull [options] [project]
 
 ## Description
 
-The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets` and modifies it accordingly. To download a pipeline into a local directory, use the `nextflow clone` command.
+The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets` and modifies it accordingly. Use [`nextflow pipeline list -g`][cli-pipeline-list] to list the downloaded pipelines.
 
 ## Options
 
 ##### `-a, -all`
 
 Update all downloaded projects.
-
-##### `-d, -deep`
-
-<DeprecatedInVersion version="26.04">
-Ignored for new multi-revision asset management strategy. Still used in legacy assets.
-</DeprecatedInVersion>
-
-Create a shallow clone of the specified depth.
 
 ##### `-h, -help`
 
@@ -68,6 +60,8 @@ Private repository user name.
 The `pull` command accepts the same registry addresses as [`nextflow run`][cli-run-registry]: a registry page URL, or a registry host given with `-hub` or the `NXF_HUB` environment variable. A plain project name is resolved with Git.
 
 Nextflow resolves the release with the registry, and downloads the Git commit pinned by the release into the assets cache under the registry name. Use it to prepare a run with `-offline`, for example on compute nodes without network access.
+
+[`nextflow pipeline install -g`][cli-pipeline-install] does the same for a pipeline in the primary registry, without the `-hub` option.
 
 The `pull` command downloads only the pipeline repository. Registry modules and pipelines that the pipeline includes but does not commit are installed when the pipeline runs, so they must be committed in the pipeline for an `-offline` run.
 
@@ -109,4 +103,6 @@ $ nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 $ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
 ```
 
+[cli-pipeline-install]: ./pipeline#pipeline-install
+[cli-pipeline-list]: ./pipeline#pipeline-list
 [cli-run-registry]: ./run#registry-pipelines
