@@ -881,6 +881,8 @@ workflow {
 
 In the above example, the `random_number` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding process output. A downstream process or operator with a compatible input will be able to receive it.
 
+Output file names and glob patterns are relative to the task work directory and cannot refer to files outside of it, such as `../result.txt`.
+
 Refer to the [process reference][process-reference-outputs] for the list of available options for `path` outputs.
 
 ### Multiple output files

@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import ch.grengine.Grengine
@@ -27,6 +28,7 @@ import nextflow.container.PodmanConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
+import nextflow.exception.IllegalFileException
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -158,6 +160,42 @@ class TaskRunTest extends Specification {
 
         then:
         task.getOutputFilesNames() == ['file_out.alpha', 'file_out.beta']
+    }
+
+    @Unroll
+    def 'should accept output file pattern inside the work dir: #PATTERN'() {
+        given:
+        def task = new TaskRun(workDir: Path.of('/work/dir'))
+        task.processor = Mock(TaskProcessor)
+        task.setOutput(new FileOutParam(new Binding(), []).bind(PATTERN))
+
+        expect:
+        task.getOutputFilesNames() == [PATTERN]
+
+        where:
+        PATTERN << ['x.txt', 'sub/x.txt', 'sub/../x.txt', '*.txt', '**/*.txt']
+    }
+
+    @Unroll
+    def 'should reject output file pattern outside the work dir: #PATTERN'() {
+        given:
+        def task = new TaskRun(workDir: Path.of('/work/dir'))
+        task.processor = Mock(TaskProcessor)
+        task.setOutput(new FileOutParam(new Binding(), []).bind(PATTERN))
+
+        when:
+        task.getOutputFilesNames()
+        then:
+        def e = thrown(IllegalFileException)
+        e.message == "File `$EXPECTED` is outside the scope of the task work directory: /work/dir"
+
+        where:
+        PATTERN                     | EXPECTED
+        '../x.txt'                  | '../x.txt'
+        '../../../../outside.txt'   | '../../../../outside.txt'
+        'sub/../../x.txt'           | 'sub/../../x.txt'
+        '../*.txt'                  | '../*.txt'
+        '/work/dir/../x.txt'        | '../x.txt'
     }
 
     def testHasCacheableValues() {

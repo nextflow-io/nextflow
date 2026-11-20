@@ -25,6 +25,6 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class IllegalFileException extends ProcessException {
+class IllegalFileException extends ProcessUnrecoverableException {
 
 }
