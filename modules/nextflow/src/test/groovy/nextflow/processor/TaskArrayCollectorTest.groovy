@@ -178,7 +178,7 @@ class TaskArrayCollectorTest extends Specification {
         taskArray.config.getResourceLabels() == ['nextflow.io/runName': 'crazy_frog', 'My.Label': 'Foo/Bar']
         and:
         // and the executor policy applies to the auto entries only
-        taskArray.config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow_io_runname': 'crazy_frog', 'My.Label': 'Foo/Bar']
+        taskArray.config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow-io-runname': 'crazy_frog', 'My.Label': 'Foo/Bar']
     }
 
     def 'should get array ref' () {

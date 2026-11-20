@@ -300,9 +300,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         and:
         def expected = [
-            nextflow_io_runname: 'crazy_darwin',
-            nextflow_io_repository: 'https___github_com_foo_bar',
-            seqera_io_platform_workflowid: '4kz8xy',
+            'nextflow-io-runname': 'crazy_darwin',
+            'nextflow-io-repository': 'https---github-com-foo-bar',
+            'seqera-io-platform-workflowid': '4kz8xy',
             'My.Label': 'Foo/Bar' ]
         and:
         // the allocation policy and the job carry the very same labels

@@ -1160,8 +1160,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         // the auto labels are normalised to the Batch tag syntax, the declared one is untouched
         req.tags() == [
-                'nextflow.io/runName': 'crazy_frog',
-                'seqera.io/platform/workflowId': '4a_bcd',
+                'nextflow.io:runName': 'crazy_frog',
+                'seqera.io:platform:workflowId': '4a_bcd',
                 'my!label': 'a,b#c' ]
         req.propagateTags() == true
     }
