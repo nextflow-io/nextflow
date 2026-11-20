@@ -19,6 +19,7 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import io.seqera.wave.plugin.config.WaveConfig
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
@@ -39,8 +40,13 @@ class WaveFactory implements TraceObserverFactoryV2 {
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        shouldEnable(session)
-        return Collections.<TraceObserverV2>emptyList()
+        if( !shouldEnable(session) )
+            return List.<TraceObserverV2>of()
+        final config = new WaveConfig((Map)session.config.wave ?: Collections.emptyMap())
+        final depth = config.prefetchDepth()
+        return depth > 0
+                ? List.<TraceObserverV2>of(new WavePrefetchObserver(session.dag, depth))
+                : List.<TraceObserverV2>of()
     }
 
     @Memoized // <-- declare as memoized to make it's invoked only once
