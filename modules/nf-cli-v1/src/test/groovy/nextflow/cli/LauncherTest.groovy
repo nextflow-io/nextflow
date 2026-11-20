@@ -118,18 +118,6 @@ class LauncherTest extends Specification {
 
     }
 
-    def 'should return `clone` command'() {
-        when:
-        def launcher = new Launcher().parseMainArgs('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy')
-        then:
-        launcher.command instanceof CmdClone
-        launcher.command.args == ['xxx']
-        launcher.command.hubProvider == 'bitbucket'
-        launcher.command.toHubOptions().getUser() == 'xx'
-        launcher.command.toHubOptions().getPassword() == 'yy'
-    }
-
-
     def 'should return `run` command'() {
         when:
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
@@ -473,12 +461,12 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdList()] )
+        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdPull(), new CmdList()] )
         then:
         capture.toString() == '''
                 Commands:
-                  info   Print project and system runtime information
-                  list   List all downloaded projects
+                  info   Print system runtime information
+                  pull   Download or update a project
                   run    Execute a pipeline project
 
                 '''

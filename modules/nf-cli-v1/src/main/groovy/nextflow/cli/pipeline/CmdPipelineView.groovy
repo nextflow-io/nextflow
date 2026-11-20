@@ -24,6 +24,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
+import nextflow.cli.CmdInfo
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
@@ -56,6 +57,9 @@ class CmdPipelineView extends CmdBase {
         }
     }
 
+    @Parameter(names = ['-g', '-global'], description = 'Show a globally installed pipeline', arity = 0)
+    boolean global
+
     @Parameter(description = "<scope/name>", required = true)
     List<String> args
 
@@ -71,6 +75,13 @@ class CmdPipelineView extends CmdBase {
     void run() {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
+
+        if( global ) {
+            if( version )
+                throw new AbortOperationException("Option `-version` is not supported with `-global`")
+            new CmdInfo(format: output).printProject(args[0])
+            return
+        }
 
         final name = args[0]
         final registryConfig = PipelineCmdSupport.registryConfig(this)

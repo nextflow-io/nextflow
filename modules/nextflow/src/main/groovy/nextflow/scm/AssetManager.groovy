@@ -400,7 +400,7 @@ class AssetManager implements Closeable {
         if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
             return
         if( fromUrl )
-            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow drop $project` to remove it")
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow pipeline remove -g $project` to remove it")
         log.info "Using `$project` cached from `$cloned`"
         this.remoteProject = cloned
     }
@@ -840,35 +840,6 @@ class AssetManager implements Closeable {
             checkValidRemoteRepo(revision)
         }
         return strategy.download(revision, deep, manifest)
-    }
-
-    /**
-     * Clone a pipeline from a remote pipeline repository to the specified folder
-     *
-     * @param directory The folder when the pipeline will be cloned
-     * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
-     */
-    void clone(File directory, String revision = null, Integer deep=null) {
-
-        def clone = Git.cloneRepository()
-        def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
-
-        if( !uri )
-            throw new AbortOperationException("Cannot find the specified project: $project")
-
-        clone.setURI(uri)
-        clone.setDirectory(directory)
-        clone.setDepth(1)
-        clone.setCloneSubmodules(manifest.recurseSubmodules)
-        if( provider.hasCredentials() )
-            clone.setCredentialsProvider( provider.getGitCredentials() )
-
-        if( revision )
-            clone.setBranch(revision)
-        if( deep )
-            clone.setDepth(deep)
-        clone.call().close()
     }
 
     /**
