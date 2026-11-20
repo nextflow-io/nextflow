@@ -25,6 +25,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.IllegalModulePathException
 import nextflow.module.spi.RemoteModuleResolver
+import nextflow.pipeline.PipelineManager
 
 import java.nio.file.Path
 
@@ -70,6 +71,19 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             return mainFile
         } catch (Exception e) {
             throw new IllegalModulePathException("Failed to resolve remote module ${moduleName}: ${e.message}", e)
+        }
+    }
+
+    @Override
+    Path resolvePipeline(String name, Path baseDir0) {
+        final baseDir = baseDir0 ?: Path.of('.').toAbsolutePath()
+        final config = Global.config ?: buildConfig(baseDir)
+        final registryConfig = config.navigate('registry') as RegistryConfig
+        try {
+            log.debug "Resolving remote pipeline: ${name}"
+            return new PipelineManager(baseDir, RegistryClientFactory.forConfig(registryConfig)).resolve(name)
+        } catch (Exception e) {
+            throw new IllegalModulePathException("Failed to resolve remote pipeline ${name}: ${e.message}", e)
         }
     }
 

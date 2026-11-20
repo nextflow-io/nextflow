@@ -39,6 +39,10 @@ Print the command usage.
 
 Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
+<ChangedInVersion version="27.04">
+The host of a registry, for example `registry.nextflow.io`, can be given to download a pipeline from the registry. See [Registry pipelines](#registry-pipelines).
+</ChangedInVersion>
+
 ##### `-m, -migrate`
 
 <AddedInVersion version="26.04" />
@@ -51,9 +55,21 @@ Project revision to run. Can be a git branch, tag, or commit SHA number.
 
 When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
+For a [registry pipeline](#registry-pipelines), the revision must be a release version published in the registry. Defaults to the latest published release.
+
 ##### `-user`
 
 Private repository user name.
+
+## Registry pipelines
+
+<AddedInVersion version="27.04" />
+
+The `pull` command accepts the same registry addresses as [`nextflow run`][cli-run-registry]: a registry page URL, or a registry host given with `-hub` or the `NXF_HUB` environment variable. A plain project name is resolved with Git.
+
+Nextflow resolves the release with the registry, and downloads the Git commit pinned by the release into the assets cache under the registry name. Use it to prepare a run with `-offline`, for example on compute nodes without network access.
+
+The `pull` command downloads only the pipeline repository. Registry modules and pipelines that the pipeline includes but does not commit are installed when the pipeline runs, so they must be committed in the pipeline for an `-offline` run.
 
 ## Examples
 
@@ -85,3 +101,12 @@ $ nextflow pull nextflow-io/hello -r v1.1
 Checking nextflow-io/hello ...
 checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
 ```
+
+Download a release of a registry pipeline, then run it offline:
+
+```console
+$ nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+$ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
+```
+
+[cli-run-registry]: ./run#registry-pipelines

@@ -16,6 +16,8 @@
 
 package nextflow.scm
 
+import java.nio.file.Files
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -251,6 +253,26 @@ class ProviderConfigTest extends Specification {
         'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
         'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
         'paolo0758/nf-azure-repo/_git/another-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/another-azure-repo'
+    }
+
+
+    def 'should list the domains of the default providers' () {
+        given:
+        def scm = Files.createTempFile('scm', '.config')
+        scm.text = "providers { acme { server = 'https://git.acme.org:8443'; platform = 'gitlab' } }"
+        def env = ProviderConfig.env
+        ProviderConfig.env = [NXF_SCM_FILE: scm.toString()]
+
+        when:
+        def domains = ProviderConfig.getDefaultProviderDomains()
+
+        then:
+        domains.containsAll(['github.com', 'gitlab.com', 'bitbucket.org', 'git.acme.org:8443'])
+        !domains.contains(null)
+
+        cleanup:
+        ProviderConfig.env = env
+        Files.deleteIfExists(scm)
     }
 
 }

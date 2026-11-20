@@ -31,10 +31,12 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import io.seqera.npr.client.RegistryClient
 import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
+import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
@@ -42,8 +44,10 @@ import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.pipeline.PipelineInfo
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.EmptySecretProvider
@@ -51,6 +55,7 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.TestOnly
 import nextflow.util.VersionNumber
 import org.apache.commons.lang3.StringUtils
 import org.fusesource.jansi.AnsiConsole
@@ -269,6 +274,9 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
+
+    @TestOnly
+    protected RegistryClient registryClient
 
     @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
@@ -630,16 +638,26 @@ class CmdRun extends CmdBase implements HubAware {
         /*
          * try to look for a pipeline in the repository
          */
-        try( final manager = new AssetManager(pipelineName, revision, mainScript, toHubOptions()) ) {
+        final release = registryLookup(pipelineName)
+        // a registry release is fetched from its Git repository and cached under its registry name;
+        // offline, it has no repository and the cached copy is used
+        final project = release ? (release.repositoryUrl ?: release.name) : pipelineName
+        final rev = release?.repositoryUrl ? (release.commitId ?: release.revision) : revision
+        final localName = release?.name
+        final main = mainScript ?: release?.workflowPath
+        final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
+        try( final manager = new AssetManager(project, rev, main, hubOpts, localName) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
+                if( offline && remoteSource && release && rev )
+                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- pull it first, or use the release commit")
                 if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."
-                final result = manager.download(revision,deep)
+                final result = manager.download(rev,deep)
                 if( result )
                     log.info " $result"
                 checkForUpdate = false
@@ -651,9 +669,9 @@ class CmdRun extends CmdBase implements HubAware {
             }
             // post download operations
             try {
-                manager.checkout(revision)
+                manager.checkout(rev)
                 manager.updateModules()
-                final scriptFile = manager.getScriptFile(mainScript)
+                final scriptFile = manager.getScriptFile(main)
                 if( checkForUpdate && !(offline && remoteSource) )
                     manager.checkRemoteStatus(scriptFile.revisionInfo)
                 // return the script file
@@ -667,6 +685,26 @@ class CmdRun extends CmdBase implements HubAware {
             }
         }
 
+    }
+
+    /**
+     * Registry release for a registry address: a registry page URL, or {@code scope/name}
+     * with a registry host as {@code -hub} (or {@code NXF_HUB}), e.g. {@code -hub registry.nextflow.io}.
+     *
+     * @return the release, or {@code null} when the name is not a registry address
+     */
+    protected PipelineInfo registryLookup(String name) {
+        // read only for a registry address; the pipeline config is not fetched yet: read the launch folder config and the `-c` files
+        final address = PipelineCmdSupport.registryAddress(name, hubProvider) {
+            final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
+            PipelineCmdSupport.registryConfig(this, configFiles)
+        }
+        if( !address )
+            return null
+        // the release can't be resolved offline: use the copy cached under the registry name
+        if( offline )
+            return new PipelineInfo(name: address.name)
+        return PipelineCmdSupport.resolveRelease(address, revision, registryClient)
     }
 
     static protected File tryReadFromStdin() {

@@ -139,6 +139,8 @@ Note the following:
 
 - Params and outputs are not inherited. The calling pipeline declares its own params and outputs and passes them explicitly to the included pipeline.
 
+- Plugins required by the included pipeline must be declared by the calling pipeline.
+
 ### Importing the params block
 
 Redeclaring every param of an included pipeline gets tedious. The `params` block can be imported as a record type instead:
@@ -174,6 +176,37 @@ Note the following:
 
 A pipeline receives its params when it is called, so `params` refers to a single execution of the pipeline. A pipeline can be included under any number of aliases, and each alias resolves its own params. As with a named workflow, a pipeline can be called only once per alias -- include it again under a different alias to call it again.
 
+### Including a pipeline from the registry
+
+<AddedInVersion version="27.04" />
+
+A pipeline published in the [Nextflow registry](https://registry.nextflow.io) can be included by its registry name instead of a local path:
+
+```nextflow
+nextflow.enable.types = true
+
+include {
+    params as RnaseqParams ;
+    workflow as NFCORE_RNASEQ
+} from 'nf-core/rnaseq'
+```
+
+An include of `<scope>/<name>` whose entries are `workflow` or `params` is a pipeline include. Any other `<scope>/<name>` include is a [module include][using-modules-including].
+
+A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. If the directory is missing, Nextflow installs the latest published release, as [`nextflow pipeline install`][cli-pipeline] does. Use that command to install a specific version.
+
+Note the following:
+
+- If the files of an installed pipeline were edited, Nextflow warns and uses the local files. It never overwrites them automatically.
+
+- Registry includes in an included pipeline resolve against that pipeline's own directory, so it uses its own `modules/` and `pipelines/`, not those of the calling pipeline.
+
+- The registry is configured with the [`registry`][config-registry] config scope of the run, as for registry modules.
+
+- Only public Git repositories are supported.
+
+- To use `includeConfig` with the config files of an included pipeline, install the pipeline first with `nextflow pipeline install`.
+
 ### Best practices
 
 Pipeline inclusion only captures the pipeline script and the modules it includes. It does not capture external context such as the config or the `lib` directory. As a result, an included pipeline should be written so that it works when included by another pipeline:
@@ -201,8 +234,11 @@ Nextflow validates each workflow input and output against its declared type. Cal
 - [Operators][channel-type]: The core operators recommended for static typing.
 
 [channel-type]: ./reference/stdlib-types/channel
+[cli-pipeline]: ./reference/cli/pipeline
+[config-registry]: ./reference/config/registry
 [migrating-static-types-operators]: ./tutorials/static-types-operators
 [preparing-static-types]: ./static-typing-prep
 [static-typing-page]: ./static-typing
 [stdlib-types]: ./reference/stdlib-types
 [syntax-workflow-typed]: ./reference/syntax#workflow-typed
+[using-modules-including]: ./modules/using-modules#including-modules
