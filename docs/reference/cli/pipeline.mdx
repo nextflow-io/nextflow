@@ -19,11 +19,11 @@ $ nextflow pipeline <subcommand> [options]
 
 The `pipeline` command manages pipelines from the Nextflow registry. Use it to search the registry, view a pipeline release, and install or remove pipelines. To run a registry pipeline, use [`nextflow run`][cli-run-registry] with a registry address.
 
-The `install`, `list`, `remove`, and `view` subcommands work on one of two stores, similar to the local and global packages of npm:
+The `install`, `list`, `remove`, and `view` subcommands work on one of two stores, similar to `npm install` and `npm install -g`:
 
-- **Project** (default): the `pipelines/` directory of the current folder (run it from the project root). Use it for pipelines that are [included by name][workflow-typed-registry] in another pipeline. Nextflow stores each pipeline with a `.pipeline-info` file that records the installed release. Commit installed pipelines to your project repository, as you would for vendored modules.
+- **Project-level** (default): the `pipelines/` directory of the current folder (run it from the project root). Use it for pipelines that are [included by name][workflow-typed-registry] in another pipeline. Nextflow stores each pipeline with a `.pipeline-info` file that records the installed release. Commit installed pipelines to your project repository, as you would for vendored modules.
 
-- **Global** (`-g`): the directory where `nextflow run` downloads pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to download a pipeline ahead of a run, for example an `-offline` run, and to inspect or delete downloaded pipelines.
+- **User-level** (`-g`): the directory where `nextflow run` downloads pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to download a pipeline ahead of a run, for example an `-offline` run, and to inspect or delete downloaded pipelines.
 
 The `install`, `search`, and `view` subcommands use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
 
@@ -48,7 +48,7 @@ Overwrite an installed pipeline that has local modifications, or a pipeline dire
 
 ###### `-g, -global`
 
-Install the pipeline into the global store, where `nextflow run` finds it. Nextflow resolves the release with the primary registry and downloads the Git commit pinned by the release, the same as [`nextflow pull`][cli-pull] with `-hub` set to the registry host. Use `nextflow pull` to download a pipeline that is not in the registry.
+Install the pipeline into the user-level store, where `nextflow run` finds it. Nextflow resolves the release with the primary registry and downloads the Git commit pinned by the release, the same as [`nextflow pull`][cli-pull] with `-hub` set to the registry host. Use `nextflow pull` to download a pipeline that is not in the registry.
 
 ###### `-version`
 
@@ -59,13 +59,13 @@ Pipeline version to install, for example `3.14.0`. Defaults to the latest publis
 List the pipelines installed from a registry in your project.
 Shows each pipeline's name, version, and status: `ok`, or `modified` if the files were changed after install.
 
-When no pipeline is installed in the project but some are installed globally, Nextflow prints a hint to use `nextflow pipeline list -g`.
+When no pipeline is installed in the project but some are installed at the user level, Nextflow prints a hint to use `nextflow pipeline list -g`.
 
 The following options are available:
 
 ###### `-g, -global`
 
-List the pipelines in the global store, including pipelines downloaded by `nextflow run` and `nextflow pull`.
+List the pipelines in the user-level store, including pipelines downloaded by `nextflow run` and `nextflow pull`.
 
 ###### `-o, -output` (`text`)
 
@@ -83,7 +83,7 @@ Remove the pipeline even if it has local modifications, or has no `.pipeline-inf
 
 ###### `-g, -global`
 
-Remove the pipeline, with all of its downloaded revisions, from the global store. With `-force`, Nextflow removes it even if it has local modifications.
+Remove the pipeline, with all of its downloaded revisions, from the user-level store. With `-force`, Nextflow removes it even if it has local modifications.
 
 ##### `search [options] <query>` {#pipeline-search}
 
@@ -109,7 +109,7 @@ The following options are available:
 
 ###### `-g, -global`
 
-Display the pipeline in the global store instead of the registry: its project name, repository, local path, main script, and downloaded revisions. Not supported with `-version`.
+Display the pipeline in the user-level store instead of the registry: its project name, repository, local path, main script, and downloaded revisions. Not supported with `-version`.
 
 ###### `-o, -output` (`text`)
 
@@ -163,14 +163,14 @@ Display information for a specific version:
 $ nextflow pipeline view nf-core/rnaseq -version 3.14.0
 ```
 
-Download a release into the global store, then run it offline:
+Download a release into the user-level store, then run it offline:
 
 ```console
 $ nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
 $ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
 ```
 
-List the globally installed pipelines:
+List the pipelines in the user-level store:
 
 ```console
 $ nextflow pipeline list -g
@@ -179,7 +179,7 @@ nextflow-io/hello
 nf-core/rnaseq
 ```
 
-Display the global copy of a pipeline:
+Display the user-level copy of a pipeline:
 
 ```console
 $ nextflow pipeline view -g nextflow-io/hello
@@ -196,7 +196,7 @@ $ nextflow pipeline view -g nextflow-io/hello
     v1.2 [t]
 ```
 
-Remove a pipeline from the global store:
+Remove a pipeline from the user-level store:
 
 ```console
 $ nextflow pipeline remove -g nextflow-io/hello

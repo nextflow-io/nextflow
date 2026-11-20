@@ -43,7 +43,7 @@ See [Including a pipeline from the registry][workflow-typed-registry] for detail
 
 The new `nextflow pipeline` command manages the registry pipelines installed in a project, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command.
 
-With the `-g` (`-global`) option, the `install`, `list`, `remove`, and `view` subcommands manage the pipelines that `nextflow run` downloads into `$NXF_ASSETS` (default: `$NXF_HOME/assets`), instead of the pipelines installed in the project, like `npm -g`:
+With the `-g` (`-global`) option, the `install`, `list`, `remove`, and `view` subcommands manage the pipelines that `nextflow run` downloads into `$NXF_ASSETS` (default: `$NXF_HOME/assets`), instead of the project-level pipelines installed in the current project, like `npm -g`:
 
 ```bash
 nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
@@ -101,8 +101,6 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - The `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. Use `pipeline remove -g`, `pipeline list -g`, and `pipeline view -g` instead.
 
 - The `info` command with a project name is deprecated. Use `pipeline view -g` instead. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
-
-- The `-deep` option of `run` and `pull` is hidden and prints a warning. It only applies to projects downloaded with the legacy asset strategy.
 
 ## Miscellaneous
 

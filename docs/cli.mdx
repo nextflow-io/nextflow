@@ -146,9 +146,9 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ## Project management
 
-Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines automatically into a global cache, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
+Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines automatically into a user-level cache, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
 
-The [`pipeline`][cli-pipeline] command manages this cache when given the `-g` (`-global`) option, similar to the global packages of npm. Without `-g`, it manages the registry pipelines installed in the current project. Use these commands to download pipelines, inspect them, and maintain your cache.
+The [`pipeline`][cli-pipeline] command manages this cache when given the `-g` (`-global`) option, similar to `npm install -g`. Without `-g`, it manages the project-level registry pipelines installed in the current project. Use these commands to download pipelines, inspect them, and maintain your cache.
 
 <ChangedInVersion version="27.04">
 The `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline list -g`, `pipeline view -g`, and `pipeline remove -g`. The `clone` command was removed. See [Deprecations][deprecations-page] for details.
@@ -156,7 +156,7 @@ The `list`, `view`, and `drop` commands, and the `info` command with a project n
 
 ### Listing downloaded projects
 
-The `pipeline list -g` command shows all pipelines currently downloaded to your local cache. This helps you track which projects are available offline and manage your cache directory:
+The `pipeline list -g` command shows all pipelines currently downloaded to your user-level cache. This helps you track which projects are available offline and manage your cache directory:
 
 ```bash
 nextflow pipeline list -g
@@ -221,7 +221,7 @@ See [pipeline][cli-pipeline-install] and [pull][cli-pull] for more information.
 
 ### Deleting cached projects
 
-The `pipeline remove -g` command removes a downloaded pipeline from the local cache.
+The `pipeline remove -g` command removes a downloaded pipeline from the user-level cache.
 
 Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
 
