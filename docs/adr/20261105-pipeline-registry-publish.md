@@ -7,7 +7,7 @@
 
 ## Summary
 
-Add `nextflow pipeline publish`, which publishes a pipeline folder to the Nextflow registry as a `.tar.gz` bundle with optional Git provenance. Let `nextflow pipeline install` and auto-install from an include install a release from its registry bundle when it has one, and fall back to the Git commit otherwise. This builds on [Pipeline registry CLI and remote pipeline inclusion](20261103-pipeline-registry-cli.md).
+Add `nextflow pipeline publish`. It validates a pipeline folder and publishes it to the Nextflow registry as a `.tar.gz` bundle. The metadata comes from the manifest. A release with a bundle uses it for install, include, run and pull. A release without one (nf-core imports, web-form releases) keeps using its Git commit. This builds on [Pipeline registry CLI and remote pipeline inclusion](20261103-pipeline-registry-cli.md).
 
 ## Problem Statement
 
@@ -16,16 +16,17 @@ With remote pipeline inclusion, a release is installed from the Git commit it pi
 ## Goals
 
 - **No hard dependency on Git**: a release can be installed from a bundle stored in the registry.
-- **Publish from the CLI**: from a local pipeline folder, with a registry token.
-- **Optional provenance**: when the folder is a Git checkout, the release records where the code came from.
-- **Keep Git-only releases working**: nf-core and web-form releases have no bundle and still install from Git.
+- **Publish from the CLI**: from a local pipeline folder, with a registry token. It also works in CI, with no prompts.
+- **Publish only what can be run**: the folder is validated before anything is uploaded.
+- **Bundle releases work everywhere**: `pipeline install`, includes, `nextflow run` and `nextflow pull`.
+- **Keep Git-only releases working**: nf-core and web-form releases have no bundle and still use Git.
 
 ## Non-goals
 
 - Building bundles for nf-core releases (registry side).
-- Private Git repositories.
+- Git provenance for CLI releases (see [Git provenance](#git-provenance)).
 - A spec file for pipelines (like a module's `meta.yml`).
-- Running a release published only as a bundle with `nextflow run` or `nextflow pull`. Their run cache is a Git clone, so they stop with a clear error and point to includes and `nextflow pipeline install`. A release with both a bundle and Git provenance runs from Git. A bundle run cache, such as the separate registry folder considered in the pipeline registry CLI ADR, is future work.
+- Interactive questions during publish. Publish runs in CI too. It prints what it does. `-dry-run` shows the same without uploading.
 
 ## Considered Options
 
@@ -39,6 +40,16 @@ How the bundle is uploaded:
 
 1. **One JSON request with the bundle base64-encoded inside**, as module publish does.
 2. **Two steps, as for plugins**: a JSON draft, then a streamed multipart upload.
+
+Whether a CLI release records Git provenance (repository URL, revision, commit):
+
+1. **From the checkout**, when it is clean and its origin is a public URL.
+2. **Never**: a CLI release is identified by its bundle and checksum only.
+
+How `nextflow run` and `nextflow pull` cache a bundle release:
+
+1. **A local Git repository built from the bundle**, used by `AssetManager` as a `file:` repository.
+2. **A separate bundle folder**, `~/.nextflow/assets/.registry/<scope>/<name>/<version>/`, filled like `pipeline install`.
 
 ## Pros and Cons of the Options
 
@@ -67,47 +78,99 @@ How the bundle is uploaded:
 - Good, because memory use stays flat, and the size and checksum are checked before and during the upload.
 - Bad, because publishing takes two calls, and a failed upload leaves a draft that expires after 1 hour.
 
+### Provenance: from the checkout
+
+- Good, because the registry page links to the source.
+- Bad, because the client can't make it reliable:
+  - a tag or branch can move
+  - a local commit may never have been pushed
+  - a clone can have several remotes
+- Bad, because the registry checks (public repository, commit exists) catch only some cases. They also block valid ones, such as private or unpushed repositories.
+
+### Provenance: never
+
+- Good, because the release is exactly its bundle, checked by its checksum, and nothing else can change. No clean-tree check, `-force` or `-no-git` is needed.
+- Bad, because the registry page has no repository link. The manifest `homePage` can still point to the source.
+
+### Run cache: local Git repository from the bundle
+
+- Good, because most of the run-cache path is reused: offline runs, `list`, `drop` and `info`.
+- Good, because each version can be a tag, so `-offline -r <version>` works for bundle releases.
+- Bad, because Nextflow creates Git commits in a repository that exists only locally.
+- Bad, because one registry name can have both Git releases (web form) and bundle releases (CLI). `AssetManager` checks that a cached name keeps its provider and its repository, so mixing both needs changes there.
+- Bad, because `pull -all` fetches from the clone's `origin`, which would be the local repository, so it never gets new versions from the registry.
+
+### Run cache: separate bundle folder
+
+- Good, because no Git is involved, and the extraction is the same as `pipeline install`.
+- Good, because Git and bundle releases of the same name never share a cache entry.
+- Bad, because `nextflow run` has to build the script file from that folder, outside `AssetManager`.
+- Bad, because `list`, `drop` and `info` don't see these copies.
+- Bad, because offline `-r <version>` needs its own lookup.
+
 ## Solution or decision outcome
 
-**Both sources, and a two-step upload.** A release may have `artifact: { url, checksum }`. The client installs from it when present, and from Git otherwise. Publishing creates a draft with the metadata, the bundle checksum and its size, then streams the bundle. The server design is the registry ADR `adr/20261104-pipeline-publish-and-download.md` (seqeralabs/nextflow-registry#440).
+**Both sources, a two-step upload, no provenance, and a local Git repository as the run cache for bundles.** A release may have `artifact: { url, checksum }`. When present, the client uses it for install, includes, run and pull. Otherwise it uses Git. Publishing validates the folder, creates a draft with the metadata, the bundle checksum and its size, then streams the bundle. A CLI release never records Git provenance. For `run` and `pull`, a bundle release is kept in a local Git repository built from the bundle. A prototype must show that it meets the requirements in [Run and pull from bundle](#run-and-pull-from-bundle); if it can't, the separate bundle folder is the fallback. The server design is the registry ADR `adr/20261104-pipeline-publish-and-download.md` (seqeralabs/nextflow-registry#440).
 
 ## Rationale & discussion
 
 ### Publish
 
-- **Name and version** come from `manifest.name` and `manifest.version` in the pipeline's `nextflow.config`. `-version` overrides the version. The name must match the same `scope/name` pattern as install. The version must be semver, as the registry requires.
-- **Bundle contents**:
-  - In a Git checkout, the files Git tracks under the pipeline folder, read from the working tree. A pipeline in a subfolder of a repo bundles only its own files.
-  - Outside Git, every file except `.git/`, the paths matching the root `.gitignore`, and folders that hold their own `.module-info` (registry-installed modules).
-  - Always without `.pipeline-info`. Symlinks and submodules are skipped, with a warning.
+- **Metadata comes from the manifest** in the pipeline's `nextflow.config`. The manifest is in the bundle, so the registry metadata must match it:
+  - **name**: `manifest.name`, which must match the `scope/name` pattern. `-name` publishes under another registry name (for example a fork), with a warning that it differs from `manifest.name`.
+  - **version**: `manifest.version`, semver as the registry requires. `-version` is accepted only when the manifest has no version; a different value is an error.
+  - **main script**: `manifest.mainScript`, default `main.nf`. It is sent as the release's `workflowPath`, which install, includes and run use.
+  - **description, homePage, keywords**: from the manifest.
+- **Validation**, before anything is uploaded:
+  - Errors, which stop the publish:
+    - the main script is missing, does not parse with the same parser as `nextflow lint`, or has no entry workflow
+    - the name or version is not valid, or conflicts with the options
+    - the bundle is empty, or larger than 50 MB
+  - Warnings:
+    - no `README.md` or `nextflow_schema.json`, which the registry page shows
+    - the pipeline does not enable static types, so it can be run but not included, as the [pipeline composition ADR](20260608-pipeline-composition.md) requires for included pipelines
+  - Not checked: resolving includes or modules. That needs the network and belongs to `run` and `lint`.
+- **Summary instead of questions**: publish prints what it will publish: the files, the size, and where each metadata field comes from. In a Git checkout, it also says that `.git` and the files Git ignores are excluded, and that no Git metadata is sent. `-dry-run` prints the same without uploading.
+- **Bundle contents**: everything under the pipeline folder except `.git/`, files ignored by Git, `.pipeline-info`, and folders that hold their own `.module-info` (registry-installed modules). In a Git checkout, "ignored" follows Git's rules: nested `.gitignore` files and `.git/info/exclude`. Outside Git, the root `.gitignore` applies. Untracked files that are not ignored are included. Symlinks and submodules are skipped, with a warning.
 - **Bundle format**: `.tar.gz` with POSIX long names, exec bits kept, a fixed timestamp and no owner names, so the same files always give the same `sha256:` checksum.
-- **Limits**: an empty bundle is refused. A bundle over 50 MB is refused before any upload.
-- **Git provenance** (repository URL, tag at HEAD or else the branch, commit) is sent only when the folder is a Git checkout, the origin can be turned into a public `https://host/org/repo` URL, and the tree has no uncommitted changes. With uncommitted changes, publish is refused unless `-force` is given; then the pipeline is published as a bundle only, because its files don't match the commit.
 - **Upload failures**: a failed upload is retried once with the same draft. If it fails again, the version can be published again after the draft expires (1 hour).
+
+### Git provenance
+
+A CLI release records no repository, revision or commit. The client installs the bundle and checks its checksum. Provenance would only add a link, and that link can't be made reliable (see the options above). Git-only releases (nf-core imports, web form) keep their pinned commit, which the registry resolves itself.
 
 ### Install from bundle
 
 - When the release has `artifact`, the client downloads the bundle, checks it against `artifact.checksum`, and extracts it, keeping `modules/` and exec bits and refusing paths that escape the folder.
-- `.pipeline-info` records `source=artifact`, `artifactUrl` and `artifactChecksum`, plus the Git provenance when the release has it.
+- `.pipeline-info` records `source=artifact`, `artifactUrl` and `artifactChecksum`.
 - Everything else stays as in remote pipeline inclusion: temporary folder, atomic move, checksum, local edits never overwritten.
+
+### Run and pull from bundle
+
+- For a release with `artifact`, `nextflow run` and `nextflow pull` download the bundle and check its checksum, as install does. They commit its files to a local Git repository built from the bundle, which `AssetManager` uses as the run cache.
+- The cache must:
+  - keep Git and bundle releases of the same registry name apart, or handle both in one entry
+  - pin each version to the bundle that was checked, not to a name that can move
+  - let `-offline -r <version>` find a version that was run or pulled before
+  - let `pull -all` get new versions from the registry, not only from the local copy
+  - define what `drop` removes
+- A release without `artifact` runs from its Git commit, as in the pipeline registry CLI ADR.
 
 ### Registry contract
 
 The client relies on:
 
-- `POST /api/v1/pipelines/{name}/releases` (draft, JSON: version, checksum, size, optional repositoryUrl/gitRevision/commitId, description, homePage, keywords), then `POST /api/v1/pipelines/releases/{releaseId}/upload` (multipart, part `payload`).
+- `POST /api/v1/pipelines/{name}/releases` (draft, JSON: version, checksum, size, workflowPath, description, homePage, keywords). The CLI does not send the optional repositoryUrl, gitRevision and commitId. Then `POST /api/v1/pipelines/releases/{releaseId}/upload` (multipart, part `payload`).
 - `GET /api/v1/pipelines/{name}/{version}/download` with the `X-NF-Module-Checksum` header, as module downloads.
 - The optional `artifact` field on releases; nullable `gitRevision` and `repositoryUrl`.
 - The `npr-client` methods `createPipelineRelease`, `uploadPipelineRelease` and `downloadPipelineRelease`.
 
 ## Open questions
 
-- **Bundle rule in a Git checkout.** Today it is "tracked files", which with `-force` drops new untracked files. The alternative is one rule everywhere: the working tree minus everything Git ignores, with Git used only for provenance.
-- **Private or unpushed repositories.** When the origin is a public-host URL, the registry checks that the repository is public and that the commit exists there, so a private repo or an unpushed commit cannot be published. Options: a `-no-git` flag (bundle only), or documenting it with a "push first" hint.
 - **New releases for pipelines registered from Git** with the web form (see the registry ADR).
+- **Run cache for bundle releases**: how the local Git repository meets the requirements in [Run and pull from bundle](#run-and-pull-from-bundle), in particular Git and bundle releases of the same name, and `pull -all`. To be settled by the prototype.
 
 ## Links
 
 - Builds on: [Pipeline registry CLI and remote pipeline inclusion](20261103-pipeline-registry-cli.md)
-- Spec: [docs/specs/261105-pipeline-registry-publish](../specs/261105-pipeline-registry-publish/spec.md)
 - Registry: seqeralabs/nextflow-registry #440 (ADR and spec), #441 (implementation)
