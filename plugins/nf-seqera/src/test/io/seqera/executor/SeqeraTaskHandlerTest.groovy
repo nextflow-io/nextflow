@@ -282,6 +282,9 @@ class SeqeraTaskHandlerTest extends Specification {
         'aws'    | 'seqera/aws'
         'azure'  | 'seqera/azure'
         'gcp'    | 'seqera/gcp'
+        'AZURE'  | 'seqera/azure'
+        ' Gcp '  | 'seqera/gcp'
+        ''       | 'seqera/aws'
         null     | 'seqera/aws'
     }
 

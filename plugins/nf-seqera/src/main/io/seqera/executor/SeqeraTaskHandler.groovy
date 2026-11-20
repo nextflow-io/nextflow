@@ -606,8 +606,9 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.resourceAllocation = getResourceAllocation()
         applyAttemptTiming(result)
         // Override executor name to include the cloud provider for cost tracking. The scheduler
-        // does not report the provider it picks, so use the configured one, defaulting to aws
-        final provider = executor.getSeqeraConfig()?.provider ?: 'aws'
+        // does not report the provider it picks, so use the configured one, defaulting to aws.
+        // Normalise it so the name is consistent regardless of how the provider was written
+        final provider = executor.getSeqeraConfig()?.provider?.trim()?.toLowerCase() ?: 'aws'
         result.executorName = "${SeqeraExecutor.SEQERA}/${provider}".toString()
         return result
     }
