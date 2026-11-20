@@ -21,20 +21,16 @@ import java.lang.management.ManagementFactory
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.sun.management.OperatingSystemMXBean
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
-import nextflow.exception.AbortOperationException
+import nextflow.cli.project.CmdProjectInfo
 import nextflow.file.FileHelper
 import nextflow.plugin.DefaultPlugins
-import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
 import nextflow.util.StringUtils
 import nextflow.util.Threads
-import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command INFO
  *
@@ -42,14 +38,13 @@ import org.yaml.snakeyaml.Yaml
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print project and system runtime information")
+@Parameters(commandDescription = "Print system runtime information")
 class CmdInfo extends CmdBase {
 
     static final public NAME = 'info'
 
-    private PrintStream out = System.out
-
-    @Parameter(description = 'project name')
+    // a project name is deprecated: use `nextflow project info`
+    @Parameter(hidden = true)
     List<String> args
 
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
@@ -58,10 +53,10 @@ class CmdInfo extends CmdBase {
     @Parameter(names='-dd', hidden = true, arity = 0)
     boolean moreDetailed
 
-    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
+    @Parameter(names='-o', hidden = true)
     String format
 
-    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
+    @Parameter(names=['-u','-check-updates'], hidden = true)
     boolean checkForUpdates
 
     @Override
@@ -69,93 +64,18 @@ class CmdInfo extends CmdBase {
 
     @Override
     void run() {
-
-        int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
-        if( !args ) {
-            println getInfo(level)
+        if( args ) {
+            log.warn "The `info <project>` command is deprecated -- use `nextflow project info` instead"
+            projectInfo().run()
             return
         }
-
-        Plugins.init()
-        try (final manager = new AssetManager(args[0])) {
-            if( manager.isNotInitialized() ) {
-                throw new AbortOperationException("Unknown project `${args[0]}`")
-            }
-
-            if( !format || format == 'text' ) {
-                printText(manager,level)
-                return
-            }
-
-            def map = createMap(manager)
-            if( format == 'json' ) {
-                printJson(map)
-            }
-            else if( format == 'yaml' ) {
-                printYaml(map)
-            }
-            else
-                throw new AbortOperationException("Unknown output format: $format");
-        }
-
+        println getInfo(moreDetailed ? 2 : ( detailed ? 1 : 0 ))
     }
 
-    protected printText(AssetManager manager, int level) {
-        final manifest = manager.getManifest()
-
-        out.println " project name: ${manager.project}"
-        out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.projectPath}"
-        out.println " main script : ${manager.mainScriptName}"
-        if( manager.homePage && manager.homePage != manager.repositoryUrl )
-            out.println " home page   : ${manager.homePage}"
-        if( manifest.description )
-            out.println " description : ${manifest.description}"
-        if( manifest.author )
-            out.println " author      : ${manifest.author}"
-
-        def revs = manager.getRevisions(level)
-        if( revs.size() == 1 )
-            out.println " revision    : ${revs[0]}"
-        else {
-            out.println " revisions   : "
-            revs.each { out.println " $it" }
-        }
-
-        if( !checkForUpdates )
-            return
-
-        def updates = manager.getUpdates(level)
-        if( updates ) {
-            if( updates.size() == 1 && revs.size() == 1 )
-                out.println " updates     : ${updates[0]}"
-            else {
-                out.println " updates     : "
-                updates.each { out.println " $it" }
-            }
-        }
-
-        out.flush()
-    }
-
-    protected Map createMap(AssetManager manager) {
-        def result = [:]
-        result.projectName = manager.project
-        result.repository = manager.repositoryUrl
-        result.localPath = manager.projectPath?.toString()
-        result.manifest = manager.manifest.toMap()
-        result.revisions = manager.getBranchesAndTags(checkForUpdates)
-        return result
-    }
-
-    protected printJson(Map map) {
-        out.println JsonOutput.prettyPrint(JsonOutput.toJson(map))
-        out.flush()
-    }
-
-    protected printYaml(Map map) {
-        out.println new Yaml().dump(map).toString()
-        out.flush()
+    protected CmdProjectInfo projectInfo() {
+        final cmd = new CmdProjectInfo(args: args, detailed: detailed, moreDetailed: moreDetailed, format: format, checkForUpdates: checkForUpdates)
+        cmd.launcher = launcher
+        return cmd
     }
 
     final static private BLANK = '  '

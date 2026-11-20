@@ -21,7 +21,7 @@ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
 nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 ```
 
-Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address to download a registry pipeline ahead of an `-offline` run.
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow project pull` with the same address to download a registry pipeline ahead of an `-offline` run.
 
 See [Registry pipelines][cli-run-registry] for details.
 
@@ -59,7 +59,13 @@ export NXF_OPTS="-XX:TieredStopAtLevel=4 -XX:+UseG1GC"
 
 Use `nextflow self-update -clean` to delete every installed Nextflow version except the current one. Plugins are not removed. See [`self-update`][cli-self-update-clean] for details.
 
+### `project` command group
+
+The new `nextflow project` command manages the projects that `run` downloads into the global cache. It has the subcommands `info`, `list`, `pull`, `remove`, and `view`. See [`project`][cli-project] for details.
+
 ## Breaking changes
+
+- The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone` for any other pipeline.
 
 - The `console` command and the `nf-console` plugin were removed.
 
@@ -83,6 +89,10 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
 
+## Deprecations
+
+- The `drop`, `list`, and `view` commands, and the `info` command with a project name, are deprecated. Use [`project remove`][cli-project], `project list`, `project view`, and `project info` instead.
+
 ## Miscellaneous
 
 - Upgrade to Groovy 5
@@ -91,6 +101,8 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
 
 [cli-pipeline]: ../reference/cli/pipeline
+[cli-pipeline-install]: ../reference/cli/pipeline#pipeline-install
+[cli-project]: ../reference/cli/project
 [cli-run-registry]: ../reference/cli/run#registry-pipelines
 [cli-self-update-clean]: ../reference/cli/self-update#-clean
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout

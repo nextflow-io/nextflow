@@ -58,6 +58,10 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | Feature | Deprecated | Replacement |
 |---|---|---|
 | Named workflow entry (`-entry`) | 24.10 | Params in the entry workflow |
+| `drop` command | 27.04 | [`project remove`][cli-project-remove] |
+| `info` command with a project name | 27.04 | [`project info`][cli-project-info] |
+| `list` command | 27.04 | [`project list`][cli-project-list] |
+| `view` command | 27.04 | [`project view`][cli-project-view] |
 
 ### Feature flags and environment variables
 
@@ -84,7 +88,13 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `-with-weblog` option of `run` | 25.04 | 26.10 | [nf-weblog](https://github.com/nextflow-io/nf-weblog) plugin |
 | `echo` directive | 22.04 | 26.10 | `debug` |
 | `kuberun` command | | 27.04 | [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin or [launch with Fusion][k8s-fusion] |
+| `clone` command | | 27.04 | [`pipeline install`][cli-pipeline-install] or `git clone` |
 
+[cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
+[cli-project-info]: ./reference/cli/project#project-info
+[cli-project-list]: ./reference/cli/project#project-list
+[cli-project-remove]: ./reference/cli/project#project-remove
+[cli-project-view]: ./reference/cli/project#project-view
 [config-manifest]: ./reference/config/manifest
 [config-process-when]: ./config#disabling-processes
 [config-seqera-executor-autoLabels]: ./reference/config/seqera#seqeraexecutorautolabels

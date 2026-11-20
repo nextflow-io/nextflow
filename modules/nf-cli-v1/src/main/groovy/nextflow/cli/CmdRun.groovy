@@ -161,7 +161,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth', hidden = true)
     Integer deep
 
     @Parameter(names=['-latest'], description = 'Pull latest changes before run')
@@ -316,6 +316,9 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Override
     void run() {
+        if( deep )
+            log.warn "The `-deep` option is deprecated -- it only applies to projects downloaded with the legacy asset strategy"
+
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
@@ -665,7 +668,7 @@ class CmdRun extends CmdBase implements HubAware {
             // Warn if using legacy
             if( manager.isUsingLegacyStrategy() ) {
                 log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
-                    "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
+                    "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow project pull -migrate' command."
             }
             // post download operations
             try {

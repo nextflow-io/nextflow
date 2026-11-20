@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.cli.project
 
 import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
 
@@ -36,7 +36,7 @@ import org.yaml.snakeyaml.Yaml
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-class CmdInfoTest extends Specification {
+class CmdProjectInfoTest extends Specification {
 
     @Shared Path tempDir
 
@@ -64,7 +64,7 @@ class CmdInfoTest extends Specification {
         def buffer = new ByteArrayOutputStream()
 
         when:
-        new CmdInfo(args: ['hello'], out: new PrintStream(buffer)).run()
+        new CmdProjectInfo(args: ['hello'], out: new PrintStream(buffer)).run()
         def screen = buffer.toString()
 
         then:
@@ -81,7 +81,7 @@ class CmdInfoTest extends Specification {
 
         given:
         def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdInfo(args: ['hello'], format: 'json', out: new PrintStream(buffer))
+        def cmd = new CmdProjectInfo(args: ['hello'], format: 'json', out: new PrintStream(buffer))
 
         when:
         cmd.run()
@@ -109,7 +109,7 @@ class CmdInfoTest extends Specification {
 
         given:
         def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdInfo(args: ['hello'], format: 'yaml', out: new PrintStream(buffer))
+        def cmd = new CmdProjectInfo(args: ['hello'], format: 'yaml', out: new PrintStream(buffer))
 
         when:
         cmd.run()

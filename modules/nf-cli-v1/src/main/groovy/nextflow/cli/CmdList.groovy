@@ -19,33 +19,22 @@ package nextflow.cli
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
+import nextflow.cli.project.CmdProjectList
 
 /**
- * CLI sub-command LIST. Prints a list of locally installed pipelines
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Deprecated alias of `project list`, hidden from the command listing
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded projects")
-class CmdList extends CmdBase {
-
-    static final public NAME = 'list'
+@Parameters(commandDescription = "List all downloaded projects (deprecated -- use `nextflow project list`)")
+class CmdList extends CmdProjectList {
 
     @Override
-    final String getName() { NAME }
+    boolean isHidden() { true }
 
     @Override
     void run() {
-
-        def all = AssetManager.list()
-        if( !all ) {
-            log.info '(none)'
-            return
-        }
-
-        all.each { println it }
+        log.warn "The `list` command is deprecated -- use `nextflow project list` instead"
+        super.run()
     }
-
 }

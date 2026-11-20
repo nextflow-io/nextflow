@@ -1,0 +1,195 @@
+---
+title: nextflow project
+description: Reference for the nextflow project command. Manage downloaded projects.
+---
+
+# `nextflow project`
+
+<AddedInVersion version="27.04" />
+
+Manage downloaded projects.
+
+## Usage
+
+```console
+$ nextflow project <subcommand> [options]
+```
+
+## Description
+
+The `project` command manages the projects that `run` and `project pull` download into the global cache, `$NXF_ASSETS` (default: `$HOME/.nextflow/assets`). Use it to download, list, inspect, and delete cached projects.
+
+To manage the registry pipelines installed in a project for inclusion, use [`nextflow pipeline`][cli-pipeline] instead.
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Subcommands
+
+##### `info [options] <project>` {#project-info}
+
+Print information about a downloaded project: its repository, local path, main script, and revisions. Checked-out revisions are marked with `>`, and tags with `[t]`.
+
+The following options are available:
+
+###### `-d`
+
+Show detailed information.
+
+###### `-o` (`text`)
+
+Output format, either `text`, `json`, or `yaml`.
+
+###### `-u, -check-updates`
+
+Check for remote updates.
+
+##### `list` {#project-list}
+
+List the downloaded projects.
+
+##### `pull [options] [project]` {#project-pull}
+
+Download a project from a Git-hosting platform into the global cache, or update it if it is already downloaded. It can also download a [registry pipeline](#registry-pipelines). To download a pipeline into a local directory, use `git clone`.
+
+The following options are available:
+
+###### `-a, -all`
+
+Update all downloaded projects.
+
+###### `-hub` (`github`)
+
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`. Can also be the host of a registry, for example `registry.nextflow.io`, to download a [registry pipeline](#registry-pipelines).
+
+###### `-m, -migrate`
+
+Update the project asset to the new multi-revision strategy.
+
+###### `-r, -revision`
+
+Project revision to download. Can be a git branch, tag, or commit SHA number.
+
+For a [registry pipeline](#registry-pipelines), the revision must be a release version published in the registry. Defaults to the latest published release.
+
+###### `-user`
+
+Private repository user name.
+
+##### `remove [options] <project>` {#project-remove}
+
+Delete a downloaded project. The next `run` downloads it again if needed.
+
+The following options are available:
+
+###### `-f, -force`
+
+Delete the project even if it has local changes.
+
+###### `-r, -revision`
+
+Project revision to delete. Can be a git branch, tag, or commit SHA number.
+
+##### `view [options] <project>` {#project-view}
+
+Print the main script of a downloaded project.
+
+The following options are available:
+
+###### `-l`
+
+List the files of the project instead.
+
+###### `-q`
+
+Hide the header line.
+
+###### `-r, -revision`
+
+Project revision. Can be a git branch, tag, or commit SHA number.
+
+## Registry pipelines
+
+The `pull` subcommand accepts the same registry addresses as [`nextflow run`][cli-run-registry]: a registry page URL, or a registry host given with `-hub` or the `NXF_HUB` environment variable. A plain project name is resolved with Git.
+
+Nextflow resolves the release with the registry, and downloads the Git commit pinned by the release into the global cache under the registry name. Use it to prepare a run with `-offline`, for example on compute nodes without network access.
+
+The `pull` subcommand downloads only the pipeline repository. Registry modules and pipelines that the pipeline includes but does not commit are installed when the pipeline runs, so they must be committed in the pipeline for an `-offline` run.
+
+## Examples
+
+Download a project, or pull the latest revision if it is already downloaded:
+
+```console
+$ nextflow project pull nextflow-io/hello
+
+Checking nextflow-io/hello ...
+ downloaded from https://github.com/nextflow-io/hello.git - revision: 3c2cdc9823 [master]
+```
+
+Pull a specific revision of a project:
+
+```console
+$ nextflow project pull nextflow-io/hello -r v1.1
+```
+
+Pull the latest revision for all downloaded projects:
+
+```console
+$ nextflow project pull -all
+```
+
+Download a release of a registry pipeline, then run it offline:
+
+```console
+$ nextflow project pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+$ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
+```
+
+List the downloaded projects:
+
+```console
+$ nextflow project list
+
+nextflow-io/hello
+```
+
+Display information about a project:
+
+```console
+$ nextflow project info nextflow-io/hello
+
+ project name: nextflow-io/hello
+ repository  : https://github.com/nextflow-io/hello
+ local path  : /home/user/.nextflow/assets/.repos/nextflow-io/hello
+ main script : main.nf
+ revisions   :
+ > master (default)
+   mybranch
+   testing
+   v1.1 [t]
+```
+
+List the files of a project:
+
+```console
+$ nextflow project view -l nextflow-io/hello
+
+== content of path: /home/user/.nextflow/assets/.repos/nextflow-io/hello/clones/3c2cdc9823c2b4636e5e3e73e223878099ff5dc9
+LICENSE
+README.md
+main.nf
+nextflow.config
+```
+
+Delete a project, ignoring any local changes:
+
+```console
+$ nextflow project remove nextflow-io/hello -f
+```
+
+[cli-pipeline]: ./pipeline
+[cli-run-registry]: ./run#registry-pipelines

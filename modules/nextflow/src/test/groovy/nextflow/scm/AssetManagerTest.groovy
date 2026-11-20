@@ -397,23 +397,6 @@ class AssetManagerTest extends Specification {
     }
 
 
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testClone() {
-
-        given:
-        def dir = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers:[github: [auth: token]]])
-
-        when:
-        manager.clone(dir.toFile())
-
-        then:
-        dir.resolve('README.md').exists()
-        dir.resolve('.git').isDirectory()
-
-    }
-
     def testGetScriptName() {
 
         given:
@@ -1320,7 +1303,7 @@ class AssetManagerTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('downloaded from a different repository: `other/hello` -- use `nextflow drop acme/hello` to remove it')
+        e.message.contains('downloaded from a different repository: `other/hello` -- use `nextflow project remove acme/hello` to remove it')
 
         when: 'it is given with its own Git address and local name'
         manager = new AssetManager('https://github.com/other/hello', null, null, null, 'acme/hello')

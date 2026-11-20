@@ -23,3 +23,7 @@
 /nextflow/azure                    /nextflow/reference/executor/azure-batch         301
 /nextflow/google                   /nextflow/reference/executor/google-batch        301
 /nextflow/kubernetes               /nextflow/reference/executor/kubernetes          301
+/nextflow/reference/cli/clone      /nextflow/reference/cli/pipeline#pipeline-install 301
+/nextflow/reference/cli/drop       /nextflow/reference/cli/project#project-remove    301
+/nextflow/reference/cli/list       /nextflow/reference/cli/project#project-list      301
+/nextflow/reference/cli/view       /nextflow/reference/cli/project#project-view      301
