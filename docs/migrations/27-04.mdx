@@ -21,7 +21,7 @@ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
 nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 ```
 
-Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address, or `nextflow pipeline install -g`, to download a registry pipeline ahead of an `-offline` run.
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address to download a registry pipeline ahead of an `-offline` run.
 
 See [Registry pipelines][cli-run-registry] for details.
 
@@ -43,10 +43,9 @@ See [Including a pipeline from the registry][workflow-typed-registry] for detail
 
 The new `nextflow pipeline` command manages the registry pipelines installed in a project, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command.
 
-With the `-g` (`-global`) option, the `install`, `list`, `remove`, and `view` subcommands manage the pipelines that `nextflow run` downloads into `$NXF_ASSETS` (default: `$NXF_HOME/assets`), instead of the project-level pipelines installed in the current project, like `npm -g`:
+With the `-g` (`-global`) option, the `list`, `remove`, and `view` subcommands manage the user-level store, where `nextflow run` and `nextflow pull` download pipelines (`$NXF_ASSETS`, default: `$NXF_HOME/assets`), instead of the project-level pipelines installed in the current project, like `npm -g`:
 
 ```bash
-nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
 nextflow pipeline list -g
 nextflow pipeline view -g nf-core/rnaseq
 nextflow pipeline remove -g nf-core/rnaseq
@@ -100,7 +99,7 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - The `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. Use `pipeline remove -g`, `pipeline list -g`, and `pipeline view -g` instead.
 
-- The `info` command with a project name is deprecated. Use `pipeline view -g` instead. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
+- The `info` command with a project name is deprecated. Use `pipeline view -g` instead. `pipeline view -g` has no equivalent of the `-check-updates` (`-u`) option, the `-d` detail level, or the `yaml` output of `info`. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
 
 ## Miscellaneous
 

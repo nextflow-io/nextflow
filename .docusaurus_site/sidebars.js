@@ -239,6 +239,7 @@ module.exports = {
                         "reference/cli/clean",
                         "reference/cli/config",
                         "reference/cli/console",
+                        "reference/cli/drop",
                         "reference/cli/fs",
                         "reference/cli/help",
                         "reference/cli/info",
@@ -247,6 +248,7 @@ module.exports = {
                         "reference/cli/launch",
                         "reference/cli/lineage",
                         "reference/cli/lint",
+                        "reference/cli/list",
                         "reference/cli/log",
                         "reference/cli/logfile",
                         "reference/cli/module",
@@ -255,7 +257,8 @@ module.exports = {
                         "reference/cli/pull",
                         "reference/cli/run",
                         "reference/cli/secrets",
-                        "reference/cli/self-update"
+                        "reference/cli/self-update",
+                        "reference/cli/view"
                     ]
                 },
                 {

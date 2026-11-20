@@ -19,13 +19,13 @@ $ nextflow pipeline <subcommand> [options]
 
 The `pipeline` command manages pipelines from the Nextflow registry. Use it to search the registry, view a pipeline release, and install or remove pipelines. To run a registry pipeline, use [`nextflow run`][cli-run-registry] with a registry address.
 
-The `install`, `list`, `remove`, and `view` subcommands work on one of two stores, similar to `npm install` and `npm install -g`:
+The `list`, `remove`, and `view` subcommands work on one of two stores, similar to `npm list` and `npm list -g`:
 
 - **Project-level** (default): the `pipelines/` directory of the current folder (run it from the project root). Use it for pipelines that are [included by name][workflow-typed-registry] in another pipeline. Nextflow stores each pipeline with a `.pipeline-info` file that records the installed release. Commit installed pipelines to your project repository, as you would for vendored modules.
 
-- **User-level** (`-g`): the directory where `nextflow run` downloads pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to download a pipeline ahead of a run, for example an `-offline` run, and to inspect or delete downloaded pipelines.
+- **User-level** (`-g`): the directory where [`nextflow run`][cli-run] and [`nextflow pull`][cli-pull] download pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to inspect or delete downloaded pipelines. To download a pipeline ahead of a run, for example an `-offline` run, use `nextflow pull`.
 
-The `install`, `search`, and `view` subcommands use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
+The `install` and `search` subcommands, and `view` without `-g`, use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
 
 ## Options
 
@@ -44,11 +44,7 @@ The following options are available:
 
 ###### `-force`
 
-Overwrite an installed pipeline that has local modifications, or a pipeline directory without a `.pipeline-info` file. Without this flag, Nextflow refuses to replace it. Not supported with `-g`.
-
-###### `-g, -global`
-
-Install the pipeline into the user-level store, where `nextflow run` finds it. Nextflow resolves the release with the primary registry and downloads the Git commit pinned by the release, the same as [`nextflow pull`][cli-pull] with `-hub` set to the registry host. Use `nextflow pull` to download a pipeline that is not in the registry.
+Overwrite an installed pipeline that has local modifications, or a pipeline directory without a `.pipeline-info` file. Without this flag, Nextflow refuses to replace it.
 
 ###### `-version`
 
@@ -69,7 +65,7 @@ List the pipelines in the user-level store, including pipelines downloaded by `n
 
 ###### `-o, -output` (`text`)
 
-Output mode for list results. Options: `text` (default), `json`.
+Output mode for list results. Options: `text` (default), `json`. With `-g`, the JSON output is `{"pipelines": [{"name": "..."}]}`.
 
 ##### `remove [options] <scope/name>` {#pipeline-remove}
 
@@ -83,7 +79,7 @@ Remove the pipeline even if it has local modifications, or has no `.pipeline-inf
 
 ###### `-g, -global`
 
-Remove the pipeline, with all of its downloaded revisions, from the user-level store. With `-force`, Nextflow removes it even if it has local modifications.
+Remove the pipeline, with all of its downloaded revisions, from the user-level store. The pipeline can also be given as a registry page URL. With `-force`, Nextflow removes it even if it has local modifications.
 
 ##### `search [options] <query>` {#pipeline-search}
 
@@ -109,11 +105,11 @@ The following options are available:
 
 ###### `-g, -global`
 
-Display the pipeline in the user-level store instead of the registry: its project name, repository, local path, main script, and downloaded revisions. Not supported with `-version`.
+Display the pipeline in the user-level store instead of the registry: its project name, repository, local path, main script, and revisions. The pipeline can also be given as a registry page URL. Not supported with `-version`.
 
 ###### `-o, -output` (`text`)
 
-Output mode for view results. Options: `text` (default), `json`.
+Output mode for view results. Options: `text` (default), `json`. With `-g`, the JSON output has the keys `name`, `repositoryUrl`, `localPath`, `mainScript`, and `revisions` (the branches and tags).
 
 ###### `-version`
 
@@ -163,10 +159,10 @@ Display information for a specific version:
 $ nextflow pipeline view nf-core/rnaseq -version 3.14.0
 ```
 
-Download a release into the user-level store, then run it offline:
+Download a release into the user-level store with [`nextflow pull`][cli-pull], then run it offline:
 
 ```console
-$ nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
+$ nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 $ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
 ```
 
@@ -182,19 +178,20 @@ nf-core/rnaseq
 Display the user-level copy of a pipeline:
 
 ```console
-$ nextflow pipeline view -g nextflow-io/hello
+$ nextflow pipeline view -g nf-core/demo
 
-  project name: nextflow-io/hello
-  repository  : https://github.com/nextflow-io/hello
-  local path  : /home/user/.nextflow/assets/.repos/nextflow-io/hello
-  main script : main.nf
-  revisions   :
-  * master (default)
-    mybranch
-    testing
-  * v1.1 [t]
-    v1.2 [t]
+ project name: nf-core/demo
+ repository  : https://github.com/nf-core/demo
+ local path  : /home/user/.nextflow/assets/.repos/nf-core/demo
+ main script : main.nf
+ description : An nf-core demo pipeline
+ revisions   :
+   dev
+   master (default)
+ > 1.2.0 [t]
 ```
+
+Revisions marked with `>` are downloaded.
 
 Remove a pipeline from the user-level store:
 
@@ -203,6 +200,7 @@ $ nextflow pipeline remove -g nextflow-io/hello
 ```
 
 [cli-pull]: ./pull
+[cli-run]: ./run
 [cli-run-registry]: ./run#registry-pipelines
 [config-registry]: ../config/registry
 [env-vars-nxf-assets]: ../env-vars#nxf_assets
