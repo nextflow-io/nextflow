@@ -342,6 +342,8 @@ class TaskPollingMonitorTest extends Specification {
         monitor.submitPendingTasks()
         processor.state.await()
         then:
+        1 * session.notifyTaskComplete(handler)
+        and:
         task.errorAction == ErrorStrategy.valueOf(STRATEGY.toUpperCase())
         processor.state.val.completed == COMPLETED
 
@@ -380,6 +382,10 @@ class TaskPollingMonitorTest extends Specification {
         monitor.submitPendingTasks()
         processor.state.await()
         then:
+        1 * session.notifyTaskComplete(children[0])
+        1 * session.notifyTaskComplete(children[1])
+        1 * session.notifyTaskComplete(children[2])
+        and:
         children.every { it.task.errorAction == ErrorStrategy.IGNORE }
         processor.state.val.completed == 3
     }
@@ -413,6 +419,7 @@ class TaskPollingMonitorTest extends Specification {
         1 * session.notifyTaskComplete(handler)
         then:
         1 * session.fault(_ as TaskFault, handler)
+        0 * session.fault(*_)
     }
 
     def 'should report every child of a failed task array submission before faulting the session' () {
@@ -450,7 +457,9 @@ class TaskPollingMonitorTest extends Specification {
         1 * session.notifyTaskComplete(children[2])
         then: 'one fault, once every child is reported'
         1 * session.fault(_ as TaskFault, children[0])
+        0 * session.fault(*_)
     }
+
     @Unroll
     def 'should release fork slot when submission fails [errorStrategy: #STRATEGY]' () {
         given:

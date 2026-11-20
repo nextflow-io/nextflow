@@ -698,6 +698,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * never ran, it is finalized here unless it is retried.
      *
      * A task array is handled as the failure of each of its child tasks.
+     * Each failed task is reported to the observers before the session is faulted.
      *
      * @param forked Whether a fork slot was acquired for the task, i.e. the
      *      error was raised after the task was accepted for submission
@@ -711,20 +712,24 @@ class TaskPollingMonitor implements TaskMonitor {
         final handlers = handler.task instanceof TaskArrayRun
             ? (handler.task as TaskArrayRun).children
             : List.of(handler)
-        // report every task as completed before the fault: it aborts the session, which
-        // completes the flow, and observers don't send task events after that
+        // report every task before the fault: a fault that aborts the session completes
+        // the flow, after which observers such as the Platform one drop task events
         TaskFault fault = null
         TaskHandler faulted = null
-        for( TaskHandler it : handlers ) {
-            final result = it.task.processor.finalizeFailedTask(it, error)
-            session.notifyTaskComplete(it)
-            if( fault == null && result instanceof TaskFault ) {
-                fault = result as TaskFault
-                faulted = it
+        try {
+            for( TaskHandler it : handlers ) {
+                final result = it.task.processor.finalizeFailedTask(it, error)
+                if( fault == null && result instanceof TaskFault ) {
+                    fault = result as TaskFault
+                    faulted = it
+                }
+                session.notifyTaskComplete(it)
             }
         }
-        if( fault )
-            session.fault(fault, faulted)
+        finally {
+            if( fault )
+                session.fault(fault, faulted)
+        }
     }
 
     /**
