@@ -683,7 +683,6 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleSubmitException(handler, e, forked)
-                notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -699,6 +698,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * never ran, it is finalized here unless it is retried.
      *
      * A task array is handled as the failure of each of its child tasks.
+     * Each failed task is reported to the observers before the session is faulted.
      *
      * @param forked Whether a fork slot was acquired for the task, i.e. the
      *      error was raised after the task was accepted for submission
@@ -712,10 +712,23 @@ class TaskPollingMonitor implements TaskMonitor {
         final handlers = handler.task instanceof TaskArrayRun
             ? (handler.task as TaskArrayRun).children
             : List.of(handler)
-        for( TaskHandler it : handlers ) {
-            final fault = it.task.processor.finalizeFailedTask(it, error)
-            if( fault instanceof TaskFault )
-                session.fault(fault, it)
+        // report every task before the fault: a fault that aborts the session completes
+        // the flow, after which observers such as the Platform one drop task events
+        TaskFault fault = null
+        TaskHandler faulted = null
+        try {
+            for( TaskHandler it : handlers ) {
+                final result = it.task.processor.finalizeFailedTask(it, error)
+                if( fault == null && result instanceof TaskFault ) {
+                    fault = result as TaskFault
+                    faulted = it
+                }
+                session.notifyTaskComplete(it)
+            }
+        }
+        finally {
+            if( fault )
+                session.fault(fault, faulted)
         }
     }
 
@@ -870,17 +883,6 @@ class TaskPollingMonitor implements TaskMonitor {
         }
         else {
             session.notifyTaskPending(handler)
-        }
-    }
-
-    protected void notifyTaskComplete(TaskHandler handler) {
-        if( handler.task instanceof TaskArrayRun ) {
-            final task = handler.task as TaskArrayRun
-            for( TaskHandler it : task.children )
-                session.notifyTaskComplete(it)
-        }
-        else {
-            session.notifyTaskComplete(handler)
         }
     }
 

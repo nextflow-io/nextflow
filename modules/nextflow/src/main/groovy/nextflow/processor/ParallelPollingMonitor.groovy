@@ -95,7 +95,6 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
                 if( !session.canSubmitTasks() )
                     return // ignore error when the session has been aborted or cancelled
                 handleSubmitException(handler, e, true)
-                notifyTaskComplete(handler)
             }
         }
 
