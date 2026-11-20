@@ -41,7 +41,7 @@ class CmdPipelineRemove extends CmdBase {
     @Parameter(names = ["-force"], description = "Remove even with local modifications", arity = 0)
     boolean force = false
 
-    @Parameter(names = ['-g', '-global'], description = 'Remove a globally installed pipeline', arity = 0)
+    @Parameter(names = ['-g', '-global'], description = 'Remove the pipeline from the user-level store used by `nextflow run`', arity = 0)
     boolean global
 
     @TestOnly
@@ -57,7 +57,7 @@ class CmdPipelineRemove extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
         if( global ) {
-            removeGlobal(args[0])
+            removeUserLevel(PipelineCmdSupport.userLevelName(this, args[0]))
             return
         }
         final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
@@ -67,15 +67,15 @@ class CmdPipelineRemove extends CmdBase {
             println "Pipeline ${args[0]} is not installed"
     }
 
-    private void removeGlobal(String name) {
+    private void removeUserLevel(String name) {
         Plugins.init()
         try (final manager = new AssetManager(name)) {
             if( manager.isNotInitialized() ) {
-                println "Pipeline ${name} is not installed globally"
+                println "Pipeline ${name} is not installed in the user-level store"
                 return
             }
             manager.drop(null, force)
+            println "Pipeline ${manager.project} removed"
         }
-        println "Pipeline ${name} removed"
     }
 }

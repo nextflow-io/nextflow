@@ -23,7 +23,6 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
-import nextflow.cli.CmdPull
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineGitFetcher
@@ -46,9 +45,6 @@ class CmdPipelineInstall extends CmdBase {
     @Parameter(names = ["-force"], description = "Overwrite local modifications", arity = 0)
     boolean force = false
 
-    @Parameter(names = ['-g', '-global'], description = 'Install globally, where `nextflow run` finds it', arity = 0)
-    boolean global
-
     @TestOnly
     protected RegistryClient client
 
@@ -68,28 +64,11 @@ class CmdPipelineInstall extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 
-        if( global ) {
-            if( force )
-                throw new AbortOperationException("Option `-force` is not supported with `-global`")
-            pullCommand().run()
-            return
-        }
-
         final baseDir = root ?: Path.of('.').toAbsolutePath().normalize()
         final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, [], baseDir))
         final manager = new PipelineManager(baseDir, client, fetcher ?: new PipelineGitFetcher())
         final result = manager.install(args[0], version, force)
         if( result.alreadyInstalled() )
             println "Pipeline ${result.info().name}@${result.info().version} is already installed and up to date"
-    }
-
-    /**
-     * The `pull` command that installs the pipeline globally, resolved against the primary registry
-     */
-    protected CmdPull pullCommand() {
-        final hub = URI.create(PipelineCmdSupport.registryConfig(this).url).authority
-        final cmd = new CmdPull(args: args, revision: version, hubProvider: hub)
-        cmd.launcher = launcher
-        return cmd
     }
 }

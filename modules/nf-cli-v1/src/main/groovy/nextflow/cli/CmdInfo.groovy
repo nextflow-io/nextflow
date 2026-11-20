@@ -49,7 +49,7 @@ class CmdInfo extends CmdBase {
 
     private PrintStream out = System.out
 
-    @Parameter(description = 'project name')
+    @Parameter(hidden = true)
     List<String> args
 
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
@@ -58,10 +58,10 @@ class CmdInfo extends CmdBase {
     @Parameter(names='-dd', hidden = true, arity = 0)
     boolean moreDetailed
 
-    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
+    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml', hidden = true)
     String format
 
-    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
+    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates', hidden = true)
     boolean checkForUpdates
 
     @Override
@@ -77,17 +77,10 @@ class CmdInfo extends CmdBase {
         }
 
         log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline view -g <project>` instead"
-        printProject(args[0], level)
-    }
-
-    /**
-     * Print the information of a globally installed project
-     */
-    void printProject(String name, int level = 0) {
         Plugins.init()
-        try (final manager = new AssetManager(name)) {
+        try (final manager = new AssetManager(args[0])) {
             if( manager.isNotInitialized() ) {
-                throw new AbortOperationException("Unknown project `${name}`")
+                throw new AbortOperationException("Unknown project `${args[0]}`")
             }
 
             if( !format || format == 'text' ) {
@@ -108,7 +101,7 @@ class CmdInfo extends CmdBase {
 
     }
 
-    protected printText(AssetManager manager, int level) {
+    void printText(AssetManager manager, int level) {
         final manifest = manager.getManifest()
 
         out.println " project name: ${manager.project}"

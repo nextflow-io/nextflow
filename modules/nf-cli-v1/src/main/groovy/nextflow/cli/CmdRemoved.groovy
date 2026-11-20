@@ -22,8 +22,7 @@ import nextflow.exception.AbortOperationException
 
 /**
  * Base class for the stub of a removed command, which accepts any
- * arguments and reports the removal. Subclasses should omit the command
- * description, so that the command is hidden from the command listing.
+ * arguments, reports the removal, and is hidden from the command listing.
  */
 @CompileStatic
 abstract class CmdRemoved extends CmdBase implements UsageAware {
@@ -32,6 +31,9 @@ abstract class CmdRemoved extends CmdBase implements UsageAware {
     List<String> args
 
     abstract String getMessage()
+
+    @Override
+    boolean isHidden() { true }
 
     @Override
     void run() {

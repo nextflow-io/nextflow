@@ -53,6 +53,16 @@ class PipelineCmdSupport {
         return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
     }
 
+    /**
+     * The name of a pipeline in the user-level store, where a registry pipeline is cached under its registry name
+     *
+     * @param name A pipeline name or a registry page URL
+     */
+    static String userLevelName(CmdBase cmd, String name) {
+        final address = registryAddress(name, null) { registryConfig(cmd) }
+        return address ? address.name : name
+    }
+
     /** A registry pipeline address: the registry API URL, the pipeline name, and the API key to send */
     @Canonical
     static class RegistryAddress {
