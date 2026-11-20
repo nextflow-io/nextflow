@@ -34,6 +34,11 @@ abstract class CmdBase implements Runnable {
 
     List<String> getAliases() { Collections.emptyList() }
 
+    /**
+     * Whether the command is hidden from the command listing
+     */
+    boolean isHidden() { false }
+
     protected List<String> getUnknownOptions(){ return this.unknownOptions }
 
     void setUnknownOptions(List<String> options){ this.unknownOptions = options }

@@ -516,6 +516,8 @@ class Launcher {
         int len = 0
         def all = new TreeMap<String,String>()
         new ArrayList<CmdBase>(commands).each {
+            if( it.hidden )
+                return
             def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
             if( description ) {
                 all[it.name] = description

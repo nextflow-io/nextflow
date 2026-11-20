@@ -42,7 +42,7 @@ import org.yaml.snakeyaml.Yaml
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print project and system runtime information")
+@Parameters(commandDescription = "Print system runtime information")
 class CmdInfo extends CmdBase {
 
     static final public NAME = 'info'
@@ -76,10 +76,18 @@ class CmdInfo extends CmdBase {
             return
         }
 
+        log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline view -g <project>` instead"
+        printProject(args[0], level)
+    }
+
+    /**
+     * Print the information of a globally installed project
+     */
+    void printProject(String name, int level = 0) {
         Plugins.init()
-        try (final manager = new AssetManager(args[0])) {
+        try (final manager = new AssetManager(name)) {
             if( manager.isNotInitialized() ) {
-                throw new AbortOperationException("Unknown project `${args[0]}`")
+                throw new AbortOperationException("Unknown project `${name}`")
             }
 
             if( !format || format == 'text' ) {

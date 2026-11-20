@@ -28,7 +28,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded projects")
+@Parameters(commandDescription = "List all downloaded projects (deprecated -- use `nextflow pipeline list -g`)")
 class CmdList extends CmdBase {
 
     static final public NAME = 'list'
@@ -37,7 +37,11 @@ class CmdList extends CmdBase {
     final String getName() { NAME }
 
     @Override
+    boolean isHidden() { true }
+
+    @Override
     void run() {
+        log.warn "The `list` command is deprecated -- use `nextflow pipeline list -g` instead"
 
         def all = AssetManager.list()
         if( !all ) {

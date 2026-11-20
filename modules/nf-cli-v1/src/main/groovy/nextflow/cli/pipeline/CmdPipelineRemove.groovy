@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.pipeline.PipelineManager
+import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
 import nextflow.util.TestOnly
 
 /**
@@ -39,6 +41,9 @@ class CmdPipelineRemove extends CmdBase {
     @Parameter(names = ["-force"], description = "Remove even with local modifications", arity = 0)
     boolean force = false
 
+    @Parameter(names = ['-g', '-global'], description = 'Remove a globally installed pipeline', arity = 0)
+    boolean global
+
     @TestOnly
     protected Path root
 
@@ -51,10 +56,26 @@ class CmdPipelineRemove extends CmdBase {
     void run() {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
+        if( global ) {
+            removeGlobal(args[0])
+            return
+        }
         final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
         if( manager.remove(args[0], force) )
             println "Pipeline ${args[0]} removed"
         else
             println "Pipeline ${args[0]} is not installed"
+    }
+
+    private void removeGlobal(String name) {
+        Plugins.init()
+        try (final manager = new AssetManager(name)) {
+            if( manager.isNotInitialized() ) {
+                println "Pipeline ${name} is not installed globally"
+                return
+            }
+            manager.drop(null, force)
+        }
+        println "Pipeline ${name} removed"
     }
 }
