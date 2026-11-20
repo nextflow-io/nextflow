@@ -342,7 +342,7 @@ class TaskPollingMonitorTest extends Specification {
         monitor.submitPendingTasks()
         processor.state.await()
         then:
-        1 * session.notifyTaskComplete(handler)
+        1 * session.notifyTaskComplete({ it == handler && it.task.failed })
         and:
         task.errorAction == ErrorStrategy.valueOf(STRATEGY.toUpperCase())
         processor.state.val.completed == COMPLETED
@@ -382,9 +382,9 @@ class TaskPollingMonitorTest extends Specification {
         monitor.submitPendingTasks()
         processor.state.await()
         then:
-        1 * session.notifyTaskComplete(children[0])
-        1 * session.notifyTaskComplete(children[1])
-        1 * session.notifyTaskComplete(children[2])
+        1 * session.notifyTaskComplete({ it == children[0] && it.task.failed })
+        1 * session.notifyTaskComplete({ it == children[1] && it.task.failed })
+        1 * session.notifyTaskComplete({ it == children[2] && it.task.failed })
         and:
         children.every { it.task.errorAction == ErrorStrategy.IGNORE }
         processor.state.val.completed == 3
@@ -416,7 +416,7 @@ class TaskPollingMonitorTest extends Specification {
         when:
         monitor.submitPendingTasks()
         then: 'the task is reported first: the fault ends the run, and observers send nothing after that'
-        1 * session.notifyTaskComplete(handler)
+        1 * session.notifyTaskComplete({ it == handler && it.task.failed })
         then:
         1 * session.fault(_ as TaskFault, handler)
         0 * session.fault(*_)
@@ -452,9 +452,9 @@ class TaskPollingMonitorTest extends Specification {
         when:
         monitor.submitPendingTasks()
         then:
-        1 * session.notifyTaskComplete(children[0])
-        1 * session.notifyTaskComplete(children[1])
-        1 * session.notifyTaskComplete(children[2])
+        1 * session.notifyTaskComplete({ it == children[0] && it.task.failed })
+        1 * session.notifyTaskComplete({ it == children[1] && it.task.failed })
+        1 * session.notifyTaskComplete({ it == children[2] && it.task.failed })
         then: 'one fault, once every child is reported'
         1 * session.fault(_ as TaskFault, children[0])
         0 * session.fault(*_)

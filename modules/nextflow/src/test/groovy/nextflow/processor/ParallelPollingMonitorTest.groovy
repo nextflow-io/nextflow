@@ -224,6 +224,8 @@ class ParallelPollingMonitorTest extends Specification {
         exec.awaitTermination(1, TimeUnit.MINUTES)
         processor.state.await()
         then:
+        1 * session.notifyTaskComplete({ it == handler && it.task.failed })
+        and:
         task.errorAction == ErrorStrategy.IGNORE
         processor.state.val.completed == 1
         processor.forksCount.sum() == 0
