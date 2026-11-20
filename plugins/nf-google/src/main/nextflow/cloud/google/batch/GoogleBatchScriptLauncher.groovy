@@ -27,6 +27,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.GoogleOpts
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -80,10 +81,15 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         }
 
         // remap input files to container mounted paths; a local one was accepted by a ForeignFileFilter and is linked where it is
+        final localInputs = new HashSet<Path>()
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
             if( entry.value.fileSystem != FileSystems.default )
                 bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
+            else
+                localInputs.add(entry.value)
         }
+        // every input below is a container path, so the copy strategy can't tell these inputs apart
+        ((SimpleFileCopyStrategy) copyStrategy).localInputs = localInputs
 
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
