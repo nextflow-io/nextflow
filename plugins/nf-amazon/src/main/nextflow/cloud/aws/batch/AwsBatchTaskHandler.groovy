@@ -688,7 +688,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     private static final String HINT_PREFIX = 'awsbatch/'
-    private static final Set<String> KNOWN_HINTS = Set.of('consumableResources')
+    private static final Set<String> KNOWN_HINTS = Set.of('consumableResources', 'scheduling.priority')
     private static final String SUPPORTED_HINTS_MSG =
         KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
 
@@ -721,6 +721,20 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return ConsumableResourceProperties.builder()
             .consumableResourceList(resourceList)
             .build()
+    }
+
+    @CompileStatic
+    protected Integer getSchedulingPriority(Map<String,Object> hints) {
+        if( !hints )
+            return null
+        final prefixed = hints.get(HINT_PREFIX + 'scheduling.priority')
+        final raw = prefixed != null ? prefixed : hints.get('scheduling.priority')
+        if( raw == null )
+            return null
+        final isInteger = raw instanceof Integer || raw instanceof Long
+        if( !isInteger || ((Number)raw).longValue() < 0 || ((Number)raw).longValue() > 9999 )
+            throw new IllegalArgumentException("Invalid 'scheduling.priority' hint: expected an integer between 0 and 9999 -- offending value: ${raw}")
+        return ((Number)raw).intValue()
     }
 
     @CompileStatic
@@ -845,10 +859,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             builder.tags(labels)
             builder.propagateTags(true)
         }
-        // set the share identifier
+        // set the share identifier and scheduling priority
+        final priority = getSchedulingPriority(task.config.getHints())
         if( opts.shareIdentifier ) {
             builder.shareIdentifier(opts.shareIdentifier)
-            builder.schedulingPriorityOverride(opts.schedulingPriority)
+            builder.schedulingPriorityOverride(priority != null ? priority : opts.schedulingPriority)
+        }
+        else if( priority != null ) {
+            log.warn1 "Ignoring AWS Batch 'scheduling.priority' hint -- scheduling priority requires a fair-share job queue and the 'aws.batch.shareIdentifier' config option"
         }
 
         /*
