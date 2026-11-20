@@ -21,7 +21,7 @@ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
 nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 ```
 
-Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address to download a registry pipeline ahead of an `-offline` run.
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address, or `nextflow pipeline install -g`, to download a registry pipeline ahead of an `-offline` run.
 
 See [Registry pipelines][cli-run-registry] for details.
 
@@ -41,7 +41,18 @@ See [Including a pipeline from the registry][workflow-typed-registry] for detail
 
 ### `pipeline` command
 
-The new `nextflow pipeline` command manages the registry pipelines installed in a project, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command. See [`pipeline`][cli-pipeline] for details.
+The new `nextflow pipeline` command manages the registry pipelines installed in a project, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command.
+
+With the `-g` (`-global`) option, the `install`, `list`, `remove`, and `view` subcommands manage the pipelines that `nextflow run` downloads into `$NXF_ASSETS` (default: `$NXF_HOME/assets`), instead of the pipelines installed in the project, like `npm -g`:
+
+```bash
+nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
+nextflow pipeline list -g
+nextflow pipeline view -g nf-core/rnaseq
+nextflow pipeline remove -g nf-core/rnaseq
+```
+
+See [`pipeline`][cli-pipeline] for details.
 
 ## Enhancements
 
@@ -60,6 +71,8 @@ export NXF_OPTS="-XX:TieredStopAtLevel=4 -XX:+UseG1GC"
 Use `nextflow self-update -clean` to delete every installed Nextflow version except the current one. Plugins are not removed. See [`self-update`][cli-self-update-clean] for details.
 
 ## Breaking changes
+
+- The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone` for any other pipeline.
 
 - The `console` command and the `nf-console` plugin were removed.
 
@@ -83,6 +96,14 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Every attempt of a retried task uses the same task hash, and attempt N runs in `<hash>-N`. A retried task that previously could not be resumed re-executes once when you resume. Examples are retries that followed a work directory left over from an earlier run, and retries whose failed attempt was removed with `nextflow clean`.
 
+## Deprecations
+
+- The `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. Use `pipeline remove -g`, `pipeline list -g`, and `pipeline view -g` instead.
+
+- The `info` command with a project name is deprecated. Use `pipeline view -g` instead. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
+
+- The `-deep` option of `run` and `pull` is hidden and prints a warning. It only applies to projects downloaded with the legacy asset strategy.
+
 ## Miscellaneous
 
 - Upgrade to Groovy 5
@@ -91,11 +112,13 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
 
 [cli-pipeline]: ../reference/cli/pipeline
+[cli-pipeline-install]: ../reference/cli/pipeline#pipeline-install
 [cli-run-registry]: ../reference/cli/run#registry-pipelines
 [cli-self-update-clean]: ../reference/cli/self-update#-clean
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout
 [config-mail-smtp-timeout]: ../reference/config/mail#mailsmtptimeout
 [config-mail-smtp-writetimeout]: ../reference/config/mail#mailsmtpwritetimeout
+[deprecations-page]: ../deprecations
 [env-vars-NXF_OPTS]: ../reference/env-vars#nxf_opts
 [pipeline-composition]: ../workflow-typed#pipeline-composition
 [process-env-inputs]: ../process#input-environment-variables-env

@@ -7,7 +7,7 @@
 
 ## Summary
 
-Add a `nextflow pipeline` command group, remote pipeline inclusion (`include { workflow as X } from 'nf-core/rnaseq'`), and running a registry pipeline with `nextflow run` and an explicit registry address. Pipelines are installed from the Git commit pinned by the registry release.
+Add a `nextflow pipeline` command group, remote pipeline inclusion (`include { workflow as X } from 'nf-core/rnaseq'`), and running a registry pipeline with `nextflow run` and an explicit registry address. Pipelines are installed from the Git commit pinned by the registry release. With `-g`, the `pipeline` commands also manage the global run cache, replacing the legacy `drop`, `info <project>`, `list` and `view` commands.
 
 ## Problem Statement
 
@@ -27,7 +27,7 @@ The registry now has a read-only pipeline catalog, filled from nf-core and from 
 
 - `nextflow pipeline publish` and installing from a registry bundle (see [Future work](#future-work)).
 - `nextflow pipeline run`, `create`, `spec`, `validate`. `nextflow run` runs a pipeline.
-- Registry addresses in `clone`, `config`, `info`, `view` and `drop`. These commands may be deprecated once the pipeline CLI exists. They work by registry name once the pipeline is cached, and `clone` rejects registry addresses.
+- Registry addresses in `config` and `pipeline view -g`. They work by registry name once the pipeline is cached.
 - A bare `github.com/nf-core/rnaseq` address (without `https://`). It is not supported today.
 - A version in the include statement or in config.
 - Loading the included pipeline's config or plugins, and changing its `projectDir`. The composition ADR covers these.
@@ -82,23 +82,24 @@ This ADR makes three decisions:
 **Cache under the Git name.**
 
 - Good, because it is the simplest: no `AssetManager` change.
-- Bad, because the registry name is lost (`nextflow list` shows the Git name), and offline runs by registry name can't find the copy.
+- Bad, because the registry name is lost (`nextflow pipeline list -g` shows the Git name), and offline runs by registry name can't find the copy.
 
 **Cache under the registry name, with a local name in `AssetManager`.**
 
-- Good, because it is a small change, and `list`, `pull` and `drop` keep working.
+- Good, because it is a small change, and `pull`, `pipeline list -g` and `pipeline remove -g` keep working.
 - Bad, because when a registry name differs from its Git repository, a plain Git run of the registry name uses the cached clone without a check.
 
 **A separate registry folder** (`~/.nextflow/assets/.registry/<scope>/<name>/<version>/`) with `.pipeline-info`.
 
 - Good, because it also fits bundle releases, which have no Git.
-- Bad, because `list`, `pull` and `drop` would not see it, and `run` would have to build the script path itself.
+- Bad, because `pull`, `pipeline list -g` and `pipeline remove -g` would not see it, and `run` would have to build the script path itself.
 
 ## Solution or decision outcome
 
 - **Install source: Git now.** Install from the Git commit pinned by the release. The install code chooses the source in one place, so a bundle source can be added later.
 - **Run addressing: an explicit registry address**, with no fallback to Git. A plain `scope/name` still runs from Git.
 - **Run cache: the registry name**, through a local name in `AssetManager`. Bundle releases need a separate registry folder or a similar cache; their ADR decides.
+- **Global pipelines: a `-g` option on the `pipeline` commands.** See [Global pipelines](#global-pipelines).
 
 ## Rationale & discussion
 
@@ -133,7 +134,23 @@ Modules that a pipeline commits without `.module-info` (nf-core `modules.json` s
 
 ### CLI
 
-`pipeline install`, `list`, `remove`, `search` and `view` follow their `nextflow module` counterparts, use `registry.url` and `registry.apiKey`, and call only existing read endpoints. They manage the vendored copies under the project's `pipelines/`, for `include`. The existing project commands (`pull`, `drop`, `list`, ...) keep managing the global run cache in `~/.nextflow/assets`.
+`pipeline install`, `list`, `remove`, `search` and `view` follow their `nextflow module` counterparts, use `registry.url` and `registry.apiKey`, and call only existing read endpoints. They manage the vendored copies under the project's `pipelines/`, for `include`. With `-g`, `install`, `list`, `remove` and `view` manage the global run cache in `$NXF_ASSETS` (`~/.nextflow/assets`) instead. See [Global pipelines](#global-pipelines).
+
+### Global pipelines
+
+The legacy commands `clone`, `drop`, `info <project>`, `list` and `view` manage the global run cache, and `list` and `view` clash with the `pipeline` subcommands of the same name. The options were:
+
+- **A `-g, -global` option on the `pipeline` commands**, as `npm install -g` does for packages. Without `-g`, a command acts on the project (`./pipelines/`); with `-g`, on the global store that `nextflow run` uses. Users learn one set of commands for both stores.
+- **A separate `project` command group** (`project list`, `project view`, ...) for the global cache. It keeps each group to one meaning, but `project` and `pipeline` would have near-identical subcommands acting on different stores, and "project" vs "pipeline" is easy to confuse.
+- **Extend the top-level commands** to registry pipelines and the project's `pipelines/` folder. Each command would change meaning with the address or a flag, and a command like `list` would silently change behavior across versions.
+- **Remove the legacy commands** with stubs. Scripts and training material that call them would break with no deprecation period.
+
+The `-g` option was chosen:
+
+- `pipeline install -g` resolves the release against the primary registry and downloads it like `pull -hub <registry host>`. `pull` stays a top-level command, for Git projects and `-all`.
+- `pipeline list -g`, `pipeline remove -g` and `pipeline view -g` replace `list`, `drop` and `info <project>`. `pipeline list` without `-g` hints at `-g` when the project has no pipelines but the global store does.
+- `drop`, `list` and `view` keep working but are hidden from `nextflow -h` and warn, pointing to the `-g` commands. `info <project>` warns; `info` without a project still prints the system information.
+- `clone` is removed, with a stub that points to `pipeline install` or `git clone`.
 
 ### Running a registry pipeline
 
@@ -151,7 +168,7 @@ Modules that a pipeline commits without `.module-info` (nf-core `modules.json` s
 
 ### Run cache
 
-A registry release is cached under its **registry name**. `AssetManager` keeps two names: the local name (cache folder, `nextflow list`, `workflow.projectName`) and the remote Git project (Git provider, `workflow.repository`).
+A registry release is cached under its **registry name**. `AssetManager` keeps two names: the local name (cache folder, `nextflow pipeline list -g`, `workflow.projectName`) and the remote Git project (Git provider, `workflow.repository`).
 
 - A registry run is checked against the clone: a clone of a different repository under the registry name is an error, and offline the Git project is read from the clone.
 - Plain Git names and URLs are not checked, as today. Comparing them is not reliable: some providers (Bitbucket Server) use a different path in the clone URL than in the project URL.
