@@ -125,6 +125,9 @@ class PipelineCmdSupport {
      */
     static PipelineInfo resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
         final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
+        // the run cache is a Git clone, so a release published only as a bundle can't be run from it
+        if( !release.repositoryUrl )
+            throw new AbortOperationException("Pipeline ${address.name}@${release.version} is published only as a bundle, which `nextflow run` and `nextflow pull` can't use yet -- include it in a pipeline instead, or install it with `nextflow pipeline install`")
         log.info "Using registry release ${address.name}@${release.version}" + (release.commitId ? " (commit ${release.commitId.take(10)})" : '')
         return release
     }

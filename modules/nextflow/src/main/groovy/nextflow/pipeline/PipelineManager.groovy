@@ -31,6 +31,7 @@ import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.module.ModuleStorage
 import nextflow.module.spi.RemoteModuleResolver
 
 /**
@@ -40,7 +41,7 @@ import nextflow.module.spi.RemoteModuleResolver
 @CompileStatic
 class PipelineManager {
 
-    private static final Pattern NAME_PATTERN = ~/^[a-z0-9][a-z0-9._-]*\/[a-z][a-z0-9._-]*$/
+    static final Pattern NAME_PATTERN = ~/^[a-z0-9][a-z0-9._-]*\/[a-z][a-z0-9._-]*$/
 
     private static final String DEFAULT_WORKFLOW = 'main.nf'
 
@@ -177,8 +178,20 @@ class PipelineManager {
         Files.createDirectories(dir.parent)
         final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
         try {
-            final commit = fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
-            info.commitId = info.commitId ?: commit
+            if( info.source == 'artifact' ) {
+                // the archive lives in tmp only until extracted, so it never enters the checksum
+                final bundle = tmp.resolve('.bundle.tar.gz')
+                client.downloadPipelineRelease(info.name, info.version, bundle)
+                final expected = info.artifactChecksum?.replaceFirst(/(?i)^sha256:/, '')
+                if( !expected || !expected.equalsIgnoreCase(ModuleStorage.computeBundleChecksum(bundle)) )
+                    throw new AbortOperationException("Checksum mismatch for pipeline ${info.name}@${info.version} -- the downloaded bundle does not match the registry checksum")
+                PipelineBundle.extract(bundle, tmp)
+                Files.delete(bundle)
+            }
+            else {
+                final commit = fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+                info.commitId = info.commitId ?: commit
+            }
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)
             MODIFIED.remove(realPath(dir))
@@ -192,6 +205,8 @@ class PipelineManager {
             catch( IOException ex ) {
                 log.warn "Cannot delete temporary directory ${tmp}: ${ex.message}"
             }
+            if( e instanceof RegistryException )
+                throw new AbortOperationException("Cannot download pipeline ${info.name}@${info.version} -- ${e.message}", e)
             throw e
         }
     }
@@ -219,9 +234,12 @@ class PipelineManager {
             name: name,
             version: release.version,
             workflowPath: pipeline.workflowPath,
+            source: release.artifact ? 'artifact' : 'git',
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
             commitId: release.commitId,
-            registryUrl: client.primaryUrl())
+            registryUrl: client.primaryUrl(),
+            artifactUrl: release.artifact?.url,
+            artifactChecksum: release.artifact?.checksum)
     }
 }
