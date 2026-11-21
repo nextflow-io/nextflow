@@ -64,6 +64,10 @@ class ConfigDsl extends Script {
 
     private Map<String,Object> declaredParams = [:]
 
+    private Map<String,Map> profileTargets = [:]
+
+    private Map profileTarget
+
     void setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
     }
@@ -118,6 +122,24 @@ class ConfigDsl extends Script {
         return target
     }
 
+    Map<String,Map> getProfileTargets() {
+        return profileTargets
+    }
+
+    /**
+     * Apply the selected profiles on top of the rest of the config,
+     * in the order they were specified.
+     */
+    void applyProfiles() {
+        if( profiles == null )
+            return
+        for( final name : profiles ) {
+            final config = profileTargets[name]
+            if( config )
+                target = Bolts.deepMerge(target, config)
+        }
+    }
+
     Object run() {}
 
     @Override
@@ -152,6 +174,9 @@ class ConfigDsl extends Script {
         if( isParam )
             value = withCliOverride(names.tail(), value)
         navigate(names.init()).put(names.last(), value)
+        // profile params are also applied in place so that they can be referenced later in the config
+        if( isParam && profileTarget != null )
+            navigate(target, names.init()).put(names.last(), value)
         if( isParam )
             declareParam(names[1], (target.params as Map).get(names[1]))
     }
@@ -211,7 +236,10 @@ class ConfigDsl extends Script {
     }
 
     private Map navigate(List<String> names) {
-        Map ctx = target
+        return navigate(profileTarget != null ? profileTarget : target, names)
+    }
+
+    private static Map navigate(Map ctx, List<String> names) {
         for( final name : names ) {
             if( name !in ctx ) ctx[name] = [:]
             ctx = ctx[name] as Map
@@ -230,6 +258,24 @@ class ConfigDsl extends Script {
         cl.setDelegate(dsl)
         cl.call()
         dsl.apply()
+    }
+
+    /**
+     * Evaluate a profile block into a separate config map, which
+     * is applied after the rest of the config (see {@link #applyProfiles}).
+     *
+     * @param name
+     * @param closure
+     */
+    void applyProfile(String name, Closure closure) {
+        final prev = profileTarget
+        profileTarget = profileTargets[name] ?: (profileTargets[name] = [:])
+        try {
+            block([], closure)
+        }
+        finally {
+            profileTarget = prev
+        }
     }
 
     private ConfigBlockDsl blockDsl(List<String> names) {
@@ -284,12 +330,25 @@ class ConfigDsl extends Script {
                 .setParams(cliParams)
                 .setConfigParams(target.params as Map)
                 .setProfiles(profiles)
+                .setDeferProfiles(true)
         final config = parser.parse(configText, includePath)
         declaredProfiles.addAll(parser.getDeclaredProfiles())
         declaredParams.putAll(parser.getDeclaredParams())
 
+        if( profileTarget != null && config.containsKey('params') ) {
+            // the included params contain all parent params, keep only those declared by the include
+            final params = (config.get('params') as Map).subMap(parser.getDeclaredParams().keySet())
+            config.put('params', params)
+            (target.params as Map).putAll(Bolts.deepMerge(target.params as Map, params))
+        }
+
         final ctx = navigate(names)
         ctx.putAll(Bolts.deepMerge(ctx, config))
+
+        for( final entry : parser.getProfileConfigs().entrySet() ) {
+            final profileCtx = navigate(profileTargets[entry.key] ?: (profileTargets[entry.key] = [:]), names)
+            profileCtx.putAll(Bolts.deepMerge(profileCtx, entry.value))
+        }
     }
 
     /**
@@ -415,7 +474,7 @@ class ConfigDsl extends Script {
                 for( final name : profiles ) {
                     final closure = blocks[name]
                     if( closure )
-                        dsl.block(scope, closure)
+                        dsl.applyProfile(name, closure)
                 }
             }
             else {
