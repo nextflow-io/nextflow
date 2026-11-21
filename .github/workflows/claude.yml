@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Claude PR Review
-        uses: anthropics/claude-code-action@a5a423f75c251dcbff8a74e99f83b2cb03c72bfa # ratchet:anthropics/claude-code-action@v1.0.256
+        uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
         timeout-minutes: 60
         with:
           anthropic_api_key: ${{ secrets.NEXTFLOW_ANTHROPIC_API_KEY }}
