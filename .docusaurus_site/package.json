@@ -40,7 +40,7 @@
         "tailwindcss": "4.3.3"
     },
     "devDependencies": {
-        "@docusaurus/module-type-aliases": "3.9.2",
+        "@docusaurus/module-type-aliases": "3.10.2",
         "@docusaurus/types": "3.9.2"
     },
     "overrides": {
