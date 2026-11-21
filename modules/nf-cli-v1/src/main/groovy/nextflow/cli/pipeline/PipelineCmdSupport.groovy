@@ -29,7 +29,10 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineInfo
+import nextflow.pipeline.PipelineBundleRepository
 import nextflow.pipeline.PipelineManager
+import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionRepositoryStrategy
 import nextflow.scm.ProviderConfig
 
 /**
@@ -124,10 +127,17 @@ class PipelineCmdSupport {
      * @param revision The registry version, or {@code null} for the latest release
      */
     static PipelineInfo resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
-        final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
-        // the run cache is a Git clone, so a release published only as a bundle can't be run from it
-        if( !release.repositoryUrl )
-            throw new AbortOperationException("Pipeline ${address.name}@${release.version} is published only as a bundle, which `nextflow run` and `nextflow pull` can't use yet -- include it in a pipeline instead, or install it with `nextflow pipeline install`")
+        client ?= RegistryClientFactory.forUrls([address.url], address.apiKey)
+        final release = PipelineManager.resolveRelease(client, address.name, revision)
+        if( release.source == 'artifact' ) {
+            // the run cache needs a Git clone; kept next to it so that `drop` removes both
+            final repo = AssetManager.getRoot().toPath().resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR).resolve(address.name).resolve('bundles.git')
+            PipelineBundleRepository.add(repo, client, release)
+            // `file://` because GitUrl reads an `@` in a `file:` path as user@host
+            release.repositoryUrl = "file://${repo}".toString()
+            release.revision = release.version
+            release.commitId = null
+        }
         log.info "Using registry release ${address.name}@${release.version}" + (release.commitId ? " (commit ${release.commitId.take(10)})" : '')
         return release
     }

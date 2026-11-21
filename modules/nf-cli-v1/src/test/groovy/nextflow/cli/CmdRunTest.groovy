@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineArtifact
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
@@ -28,6 +29,7 @@ import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
+import nextflow.pipeline.PipelineBundle
 import nextflow.scm.AssetManager
 import nextflow.util.VersionNumber
 import org.eclipse.jgit.api.Git
@@ -572,6 +574,44 @@ class CmdRunTest extends Specification {
         final cmd = new CmdRun(opts)
         cmd.launcher = Mock(Launcher) { getOptions() >> null }
         return cmd
+    }
+
+    def 'should run a bundle release from the local bundle repository' () {
+        given: 'two bundle releases'
+        def folder = tempDir.getRoot()
+        AssetManager.root = folder.resolve('assets').toFile()
+        def bundles = ['1.0.0', '2.0.0'].collectEntries { v ->
+            def src = Files.createDirectories(folder.resolve("src-$v"))
+            src.resolve('main.nf').text = "println '$v'"
+            def target = folder.resolve("b-${v}.tar.gz")
+            [(v): [path: target, checksum: PipelineBundle.create(src, target)]]
+        }
+        def artifact = { String v -> new PipelineArtifact().url("https://registry.nextflow.io/b-${v}.tgz".toString()).checksum(bundles[v].checksum as String) }
+        def client = Mock(RegistryClient)
+        client.getPipeline('acme/hello') >> new Pipeline().latest(new PipelineRelease().version('2.0.0').artifact(artifact('2.0.0')))
+        client.getPipelineRelease('acme/hello', '1.0.0') >> new PipelineRelease().version('1.0.0').artifact(artifact('1.0.0'))
+        client.downloadPipelineRelease('acme/hello', _, _) >> { args -> Files.copy(bundles[args[1]].path as Path, args[2] as Path); null }
+
+        when: 'the latest release runs'
+        def scriptFile = runCmd(registryClient: client, hubProvider: 'registry.nextflow.io').getScriptFile0('acme/hello')
+
+        then: 'it is cached under the registry name, from the bundle repository'
+        scriptFile.main.text == "println '2.0.0'"
+        scriptFile.projectName == 'acme/hello'
+        folder.resolve('assets/.repos/acme/hello/bundles.git').exists()
+
+        when: 'an older release runs'
+        scriptFile = runCmd(registryClient: client, hubProvider: 'registry.nextflow.io', revision: '1.0.0').getScriptFile0('acme/hello')
+
+        then:
+        scriptFile.main.text == "println '1.0.0'"
+
+        when: 'a version runs offline by the registry name'
+        scriptFile = runCmd(hubProvider: 'registry.nextflow.io', offline: true, revision: '2.0.0').getScriptFile0('acme/hello')
+
+        then:
+        scriptFile.main.text == "println '2.0.0'"
+
     }
 
     private static <T extends CmdRun> T withFakeEnv(T cmd) {

@@ -181,10 +181,7 @@ class PipelineManager {
             if( info.source == 'artifact' ) {
                 // the archive lives in tmp only until extracted, so it never enters the checksum
                 final bundle = tmp.resolve('.bundle.tar.gz')
-                client.downloadPipelineRelease(info.name, info.version, bundle)
-                final expected = info.artifactChecksum?.replaceFirst(/(?i)^sha256:/, '')
-                if( !expected || !expected.equalsIgnoreCase(ModuleStorage.computeBundleChecksum(bundle)) )
-                    throw new AbortOperationException("Checksum mismatch for pipeline ${info.name}@${info.version} -- the downloaded bundle does not match the registry checksum")
+                downloadBundle(client, info, bundle)
                 PipelineBundle.extract(bundle, tmp)
                 Files.delete(bundle)
             }
@@ -241,5 +238,15 @@ class PipelineManager {
             registryUrl: client.primaryUrl(),
             artifactUrl: release.artifact?.url,
             artifactChecksum: release.artifact?.checksum)
+    }
+
+    /** Download the bundle of a release and check it against the registry checksum */
+    static void downloadBundle(RegistryClient client, PipelineInfo info, Path bundle) {
+        client.downloadPipelineRelease(info.name, info.version, bundle)
+        final expected = info.artifactChecksum?.replaceFirst(/(?i)^sha256:/, '')
+        if( !expected )
+            throw new AbortOperationException("The registry has no checksum for pipeline ${info.name}@${info.version}")
+        if( !expected.equalsIgnoreCase(ModuleStorage.computeBundleChecksum(bundle)) )
+            throw new AbortOperationException("Checksum mismatch for pipeline ${info.name}@${info.version}")
     }
 }
