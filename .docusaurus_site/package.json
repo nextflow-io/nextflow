@@ -41,7 +41,7 @@
     },
     "devDependencies": {
         "@docusaurus/module-type-aliases": "3.9.2",
-        "@docusaurus/types": "3.9.2"
+        "@docusaurus/types": "3.10.2"
     },
     "overrides": {
         "form-data": "4.0.6",
