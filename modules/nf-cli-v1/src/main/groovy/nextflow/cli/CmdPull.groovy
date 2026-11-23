@@ -33,7 +33,7 @@ import nextflow.util.TestOnly
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or update a project")
+@Parameters(commandDescription = "Download or update a project (deprecated -- use `nextflow pipeline install -g`)")
 class CmdPull extends CmdBase implements HubAware {
 
     static final public NAME = 'pull'
@@ -63,7 +63,12 @@ class CmdPull extends CmdBase implements HubAware {
     protected RegistryClient registryClient
 
     @Override
+    boolean isHidden() { true }
+
+    @Override
     void run() {
+        log.warn "The `pull` command is deprecated -- use `nextflow pipeline install -g` instead"
+
         if( deep )
             log.warn "The `-deep` option is deprecated -- it only applies to projects downloaded with the legacy asset strategy"
 
@@ -109,43 +114,15 @@ class CmdPull extends CmdBase implements HubAware {
             pullProjectRevision(project, revision)
     }
 
-    /** Download a registry release at its pinned commit, cached under its registry name as `run` does */
     private void pullRegistryRelease(PipelineCmdSupport.RegistryAddress address, String revision) {
         final release = PipelineCmdSupport.resolveRelease(address, revision, registryClient)
-        final rev = release.commitId ?: release.revision
-        try (final manager = new AssetManager(release.repositoryUrl, rev, null, new HubOptions(null, hubUser), release.name)) {
-            log.info "Checking ${release.name}@${release.version} ..."
-            final result = manager.download(rev, deep)
-            manager.updateModules()
-            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile(release.workflowPath).revisionInfo}"
-        }
+        final result = PipelineCmdSupport.downloadRelease(release, new HubOptions(null, hubUser), deep)
+        log.info "${result.message ? ' ' + result.message : ' done'} - revision: ${result.script.revisionInfo}"
     }
 
-    private pullProjectRevision(String project, String revision) {
-        try (final manager = new AssetManager(project, toHubOptions())) {
-            if( manager.isUsingLegacyStrategy() ) {
-                if( migrate ) {
-                    log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
-                    manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
-                } else {
-                    log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
-                        "Consider updating the project ${project} using '-migrate' option"
-                }
-            }
-
-            if( revision )
-                manager.setRevision(revision)
-
-            log.info "Checking ${manager.getProjectWithRevision()} ..."
-
-            def result = manager.download(revision, deep)
-            manager.updateModules()
-
-            def scriptFile = manager.getScriptFile()
-            String message = !result ? " done" : " $result"
-            message += " - revision: ${scriptFile.revisionInfo}"
-            log.info message
-        }
+    private void pullProjectRevision(String project, String revision) {
+        final result = PipelineCmdSupport.downloadRevision(project, revision, toHubOptions(), deep, migrate)
+        log.info "${result.message ? ' ' + result.message : ' done'} - revision: ${result.script.revisionInfo}"
     }
 
 }

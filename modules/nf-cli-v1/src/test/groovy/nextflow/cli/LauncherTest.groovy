@@ -466,7 +466,6 @@ class LauncherTest extends Specification {
         capture.toString() == '''
                 Commands:
                   info   Print system runtime information
-                  pull   Download or update a project
                   run    Execute a pipeline project
 
                 '''
