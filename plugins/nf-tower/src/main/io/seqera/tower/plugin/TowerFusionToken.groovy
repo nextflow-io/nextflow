@@ -85,6 +85,8 @@ class TowerFusionToken implements FusionToken {
         this.accessToken = PlatformHelper.getAccessToken(config, env)
         this.refreshToken = PlatformHelper.getRefreshToken(config, env)
         this.workflowId = env.get('TOWER_WORKFLOW_ID')
+        // note: the workspace may have been resolved during session init -- see the
+        // PlatformHelper.getWorkspaceId javadoc
         this.workspaceId = PlatformHelper.getWorkspaceId(config, env)
         this.client = TowerFactory.client()
     }
