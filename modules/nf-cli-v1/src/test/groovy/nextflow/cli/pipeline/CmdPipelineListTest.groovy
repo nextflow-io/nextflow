@@ -35,11 +35,13 @@ class CmdPipelineListTest extends Specification {
     @TempDir
     Path base
 
+    static final String COMMIT = '0123456789abcdef0123456789abcdef01234567'
+
     Path seed() {
         def dir = base.resolve('pipelines/nf-core/rnaseq')
         Files.createDirectories(dir)
         Files.writeString(dir.resolve('main.nf'), 'x')
-        new PipelineInfo(name: 'nf-core/rnaseq', version: '3.14.0', checksum: PipelineInfo.checksum(dir)).save(dir)
+        new PipelineInfo(name: 'nf-core/rnaseq', version: '3.14.0', commitId: COMMIT, repositoryUrl: 'https://github.com/nf-core/rnaseq', checksum: PipelineInfo.checksum(dir)).save(dir)
         return dir
     }
 
@@ -52,15 +54,16 @@ class CmdPipelineListTest extends Specification {
         cmd.run()
 
         then:
-        def lines = capture.toString().readLines()
-        lines[0] == 'Pipeline'.padRight(40) + 'Version'.padRight(15) + 'Status'
-        lines[1] == '-' * 65
-        lines[2] == 'nf-core/rnaseq'.padRight(40) + '3.14.0'.padRight(15) + 'ok'
+        capture.toString().readLines() == [
+            'NAME            VERSION  COMMIT      STATUS',
+            'nf-core/rnaseq  3.14.0   0123456789  ok'
+        ]
     }
 
     def 'should flag modified pipelines in json'() {
         given:
-        Files.writeString(seed().resolve('main.nf'), 'changed')
+        def dir = seed()
+        Files.writeString(dir.resolve('main.nf'), 'changed')
         def cmd = new CmdPipelineList(root: base, output: 'json')
 
         when:
@@ -68,7 +71,7 @@ class CmdPipelineListTest extends Specification {
         def json = new JsonSlurper().parseText(capture.toString()) as Map
 
         then:
-        json.pipelines == [[name: 'nf-core/rnaseq', version: '3.14.0', status: 'modified']]
+        json.pipelines == [[name: 'nf-core/rnaseq', version: '3.14.0', commit: COMMIT, status: 'modified', path: dir.toString(), repositoryUrl: 'https://github.com/nf-core/rnaseq']]
     }
 
     def 'should list a pipeline with a damaged .pipeline-info'() {
@@ -82,7 +85,16 @@ class CmdPipelineListTest extends Specification {
         cmd.run()
 
         then:
-        capture.toString().readLines()[2] == '-'.padRight(40) + '-'.padRight(15) + 'modified'
+        capture.toString().readLines() == [
+            'NAME  VERSION  COMMIT  STATUS',
+            '-     -        -       modified'
+        ]
+
+        when:
+        def mark = capture.toString().length()
+        new CmdPipelineList(root: base, output: 'json').run()
+        then:
+        (new JsonSlurper().parseText(capture.toString().substring(mark)) as Map).pipelines == [[name: null, version: null, commit: null, status: 'modified', path: dir.toString(), repositoryUrl: null]]
     }
 
     def 'should reject the simple output mode'() {

@@ -24,14 +24,17 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.cli.CmdBase
 import nextflow.pipeline.PipelineManager
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.TestOnly
 
 /**
  * Pipeline list subcommand
  */
+@Slf4j
 @CompileStatic
 @Parameters(commandDescription = "List installed pipelines")
 class CmdPipelineList extends CmdBase {
@@ -69,14 +72,10 @@ class CmdPipelineList extends CmdBase {
         }
         final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
         final rows = manager.list().collect { p ->
-            [
-                name   : p.info().name,
-                version: p.info().version,
-                status : p.info().isModified(p.dir()) ? 'modified' : 'ok'
-            ]
+            row(p.info().name, p.info().version, p.info().commitId, p.info().isModified(p.dir()), p.dir(), p.info().repositoryUrl)
         }
         if( output == 'json' ) {
-            println JsonOutput.prettyPrint(JsonOutput.toJson(pipelines: rows))
+            printJson(rows)
             return
         }
         if( !rows ) {
@@ -86,24 +85,66 @@ class CmdPipelineList extends CmdBase {
                 println "${count} ${count == 1 ? 'pipeline is' : 'pipelines are'} installed in the user-level store -- use `nextflow pipeline list -g` to list them"
             return
         }
-        println "Pipeline".padRight(40) + "Version".padRight(15) + "Status"
-        println "-" * 65
-        rows.each { r ->
-            println "${cell(r.name).padRight(40)}${cell(r.version).padRight(15)}${r.status}"
-        }
+        printTable(rows)
     }
 
     private void listUserLevel() {
-        final names = AssetManager.list()
+        Plugins.init()
+        final rows = new ArrayList<Map<String,Object>>()
+        for( final String name : AssetManager.list() ) {
+            try (final manager = new AssetManager(name)) {
+                for( final rev : manager.listDownloadedRevisions() )
+                    rows << row(manager.project, rev.name, rev.commitId, !rev.clean, rev.localPath.toPath(), manager.repositoryUrl)
+            }
+            catch( Exception e ) {
+                log.warn "Unable to read pipeline ${name} in the user-level store -- cause: ${e.message ?: e}"
+            }
+        }
+        rows.sort { Map a, Map b -> (a.name as String) <=> (b.name as String) ?: compareVersions(a.version as String, b.version as String) }
         if( output == 'json' ) {
-            println JsonOutput.prettyPrint(JsonOutput.toJson(pipelines: names.collect { String it -> [name: it] }))
+            printJson(rows)
             return
         }
-        if( !names ) {
+        if( !rows ) {
             println "No pipelines installed in the user-level store"
             return
         }
-        names.each { String it -> println it }
+        printTable(rows)
+    }
+
+    // a revision without a version comes last
+    private static int compareVersions(String a, String b) {
+        if( a == b )
+            return 0
+        if( a == null )
+            return 1
+        if( b == null )
+            return -1
+        return a <=> b
+    }
+
+    private static Map<String,Object> row(String name, String version, String commit, boolean modified, Path path, String repositoryUrl) {
+        return [
+            name         : name,
+            version      : version,
+            commit       : commit,
+            status       : modified ? 'modified' : 'ok',
+            path         : path?.toString(),
+            repositoryUrl: repositoryUrl
+        ] as Map<String,Object>
+    }
+
+    private static void printJson(List<Map<String,Object>> rows) {
+        println JsonOutput.prettyPrint(JsonOutput.toJson(pipelines: rows))
+    }
+
+    private static void printTable(List<Map<String,Object>> rows) {
+        final table = [['NAME', 'VERSION', 'COMMIT', 'STATUS']]
+        rows.each { Map r -> table << [cell(r.name), cell(r.version), cell((r.commit as String)?.take(10)), cell(r.status)] }
+        final widths = (0..<3).collect { int i -> table.collect { List<String> it -> it[i].length() }.max() }
+        table.each { List<String> cols ->
+            println((0..<3).collect { int i -> cols[i].padRight(widths[i] + 2) }.join('') + cols[3])
+        }
     }
 
     // a damaged .pipeline-info may lack any field

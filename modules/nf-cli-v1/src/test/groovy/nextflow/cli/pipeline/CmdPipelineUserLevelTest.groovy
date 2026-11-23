@@ -20,11 +20,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import com.beust.jcommander.JCommander
+import com.beust.jcommander.ParameterException
 import groovy.json.JsonSlurper
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
+import nextflow.cli.CmdBase
 import nextflow.cli.CmdDrop
 import nextflow.cli.CmdInfo
 import nextflow.cli.CmdList
@@ -95,33 +97,19 @@ class CmdPipelineUserLevelTest extends Specification {
         mark = capture.toString().length()
     }
 
-    // the printed lines, without the log
+    // the printed lines, without the log; the jgit log may end a message with a lone quote on its own line
     private List<String> stdout() {
-        return capture.toString().substring(mark).readLines().findAll { String it -> it && !(it =~ /^\d\d:\d\d:\d\d\.\d+ \[/) }
+        return capture.toString().substring(mark).readLines().findAll { String it -> it && it != "'" && !(it =~ /^\d\d:\d\d:\d\d\.\d+ \[/) }
+    }
+
+    // each command initializes the plugins, as on the command line
+    private static void exec(CmdBase cmd) {
+        Plugins.stop()
+        cmd.run()
     }
 
     private static <T> T parse(String... args) {
         return new Launcher().parseMainArgs(args).command as T
-    }
-
-    def 'should list the pipelines in the user-level store'() {
-        given:
-        seedDirs('nextflow-io/hello', 'acme/foo')
-
-        when:
-        new CmdPipelineList(global: true).run()
-        then:
-        stdout() == ['acme/foo', 'nextflow-io/hello']
-    }
-
-    def 'should list the pipelines in the user-level store as json'() {
-        given:
-        seedDirs('nextflow-io/hello', 'acme/foo')
-
-        when:
-        new CmdPipelineList(global: true, output: 'json').run()
-        then:
-        (new JsonSlurper().parseText(stdout().join('\n')) as Map).pipelines == [[name: 'acme/foo'], [name: 'nextflow-io/hello']]
     }
 
     def 'should report an empty user-level store'() {
@@ -147,46 +135,11 @@ class CmdPipelineUserLevelTest extends Specification {
         ['acme/foo', 'nextflow-io/hello']   | ['No pipelines installed', '2 pipelines are installed in the user-level store -- use `nextflow pipeline list -g` to list them']
     }
 
-    def 'should view a pipeline in the user-level store'() {
-        given:
-        final dir = seedRepo('acme/hello', 'https://github.com/acme/hello.git')
-
+    def 'should not accept -g when viewing a pipeline'() {
         when:
-        new CmdPipelineView(args: ['acme/hello'], global: true).run()
+        new JCommander(new CmdPipelineView()).parse('-g', 'acme/hello')
         then:
-        final out = stdout()
-        out.contains(' project name: acme/hello')
-        out.contains(" local path  : ${dir}".toString())
-        out.contains(' main script : main.nf')
-    }
-
-    def 'should view a pipeline in the user-level store as json'() {
-        given:
-        final dir = seedRepo('acme/hello', 'https://github.com/acme/hello.git')
-
-        when:
-        new CmdPipelineView(args: ['acme/hello'], global: true, output: 'json').run()
-        final json = new JsonSlurper().parseText(stdout().join('\n')) as Map
-        then:
-        json.name == 'acme/hello'
-        json.repositoryUrl == 'https://github.com/acme/hello'
-        json.localPath == dir.toString()
-        json.mainScript == 'main.nf'
-        json.revisions instanceof Map
-    }
-
-    def 'should reject an unknown pipeline or a version when viewing the user-level store'() {
-        when:
-        new CmdPipelineView(args: ['acme/hello'], global: true).run()
-        then:
-        def e = thrown(AbortOperationException)
-        e.message == 'Pipeline acme/hello is not installed in the user-level store'
-
-        when:
-        new CmdPipelineView(args: ['acme/hello'], global: true, version: '1.0').run()
-        then:
-        e = thrown(AbortOperationException)
-        e.message == 'Option `-version` is not supported with `-global`'
+        thrown(ParameterException)
     }
 
     def 'should map a registry page URL to the registry name in the user-level store'() {
@@ -295,8 +248,8 @@ class CmdPipelineUserLevelTest extends Specification {
         where:
         ARGS                                | WARNING
         ['list']                            | 'The `list` command is deprecated -- use `nextflow pipeline list -g` instead'
-        ['info', 'acme/hello']              | 'The `info <project>` command is deprecated -- use `nextflow pipeline view -g <project>` instead'
-        ['view', 'acme/hello']              | 'The `view` command is deprecated -- use `nextflow pipeline view -g` to find the local path of a pipeline'
+        ['info', 'acme/hello']              | 'The `info <project>` command is deprecated -- use `nextflow pipeline list -g` instead'
+        ['view', 'acme/hello']              | 'The `view` command is deprecated -- use `nextflow pipeline list -g` to find the local path of a pipeline'
         ['drop', 'acme/hello']              | 'The `drop` command is deprecated -- use `nextflow pipeline remove -g` instead'
     }
 
@@ -482,6 +435,203 @@ class CmdPipelineUserLevelTest extends Specification {
         !usage(new CmdPipelineInstall()).contains('-r')
         usage(new CmdPipelineInstall()).contains('-version')
         !usage(new CmdPipelineView()).contains('-r')
+    }
+
+    /**
+     * A repository with lightweight tags v1.0.0 and v2.0.0 on master, and a `dev` branch from v2.0.0
+     * with an annotated tag v3.0.0 and an untagged head
+     */
+    private Map<String,String> branchedRepo() {
+        final repo = gitRepo('hello')
+        final dir = base.resolve('remote/hello')
+        try (final git = Git.open(dir.toFile())) {
+            git.checkout().setCreateBranch(true).setName('dev').call()
+            Files.writeString(dir.resolve('main.nf'), "println 'v3'")
+            git.add().addFilepattern('main.nf').call()
+            repo.v3 = git.commit().setMessage('v3').setSign(false).call().name()
+            repo.v3tag = git.tag().setName('v3.0.0').setAnnotated(true).setMessage('v3').setSigned(false).call().objectId.name()
+            Files.writeString(dir.resolve('main.nf'), "println 'v4'")
+            git.add().addFilepattern('main.nf').call()
+            repo.v4 = git.commit().setMessage('v4').setSign(false).call().name()
+            git.checkout().setName('master').call()
+        }
+        return repo
+    }
+
+    /** Install the default branch, a tag, an annotated tag and a branch of the {@link #branchedRepo} */
+    private Map<String,String> installRevisions() {
+        final repo = branchedRepo()
+        installCmd(args: [repo.url]).run()
+        installCmd(args: [repo.url], version: 'v1.0.0').run()
+        installCmd(args: [repo.url], version: 'v3.0.0').run()
+        installCmd(args: [repo.url], version: 'dev').run()
+        resetOutput()
+        return repo
+    }
+
+    private static String line(String name, String version, String commit, String status) {
+        return name.padRight(13) + version.padRight(9) + commit.padRight(12) + status
+    }
+
+    def 'should list each downloaded revision in the user-level store'() {
+        given:
+        final repo = installRevisions()
+
+        when:
+        exec(new CmdPipelineList(global: true))
+        then: 'a tag is preferred to a branch, and an annotated tag shows its commit'
+        stdout() == [
+            line('NAME', 'VERSION', 'COMMIT', 'STATUS'),
+            line('local/hello', 'dev', repo.v4.take(10), 'ok'),
+            line('local/hello', 'v1.0.0', repo.v1.take(10), 'ok'),
+            line('local/hello', 'v2.0.0', repo.v2.take(10), 'ok'),
+            line('local/hello', 'v3.0.0', repo.v3.take(10), 'ok'),
+        ]
+
+        when: 'a clone is changed'
+        resetOutput()
+        Files.writeString(clone('local/hello', repo.v1).resolve('main.nf'), 'changed')
+        exec(new CmdPipelineList(global: true))
+        then:
+        stdout()[2] == line('local/hello', 'v1.0.0', repo.v1.take(10), 'modified')
+    }
+
+    def 'should list each downloaded revision in the user-level store as json'() {
+        given:
+        final repo = installRevisions()
+        Files.writeString(clone('local/hello', repo.v4).resolve('main.nf'), 'changed')
+
+        when:
+        exec(new CmdPipelineList(global: true, output: 'json'))
+        final json = new JsonSlurper().parseText(stdout().join('\n')) as Map
+        final url = new AssetManager('local/hello').withCloseable { it.repositoryUrl }
+        then:
+        json.pipelines == [
+            [name: 'local/hello', version: 'dev', commit: repo.v4, status: 'modified', path: clone('local/hello', repo.v4).toString(), repositoryUrl: url],
+            [name: 'local/hello', version: 'v1.0.0', commit: repo.v1, status: 'ok', path: clone('local/hello', repo.v1).toString(), repositoryUrl: url],
+            [name: 'local/hello', version: 'v2.0.0', commit: repo.v2, status: 'ok', path: clone('local/hello', repo.v2).toString(), repositoryUrl: url],
+            [name: 'local/hello', version: 'v3.0.0', commit: repo.v3, status: 'ok', path: clone('local/hello', repo.v3tag).toString(), repositoryUrl: url],
+        ]
+    }
+
+    def 'should list a legacy download in the user-level store, skipping a broken one'() {
+        given:
+        final dir = seedRepo('acme/hello', 'https://github.com/acme/hello.git')
+        final commit = Git.open(dir.toFile()).withCloseable { it.repository.resolve('HEAD').name() }
+        and: 'a multi-revision download whose bare repository is broken'
+        Files.createDirectories(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/acme/broken/${MultiRevisionRepositoryStrategy.BARE_REPO}"))
+        Files.createDirectories(clone('acme/broken', 'a' * 40))
+
+        when:
+        exec(new CmdPipelineList(global: true))
+        then:
+        stdout() == [
+            'NAME        VERSION  COMMIT      STATUS',
+            "acme/hello  master   ${commit.take(10)}  ok".toString()
+        ]
+        capture.toString().contains('Unable to read pipeline acme/broken in the user-level store')
+
+        when:
+        resetOutput()
+        exec(new CmdPipelineList(global: true, output: 'json'))
+        then:
+        (new JsonSlurper().parseText(stdout().join('\n')) as Map).pipelines == [
+            [name: 'acme/hello', version: 'master', commit: commit, status: 'ok', path: dir.toString(), repositoryUrl: 'https://github.com/acme/hello']
+        ]
+    }
+
+    def 'should remove one revision from the user-level store'() {
+        given:
+        final repo = installRevisions()
+
+        when: 'by tag'
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0'))
+        then:
+        !Files.exists(clone('local/hello', repo.v1))
+        Files.exists(clone('local/hello', repo.v2))
+        stdout() == ['Pipeline local/hello@v1.0.0 removed']
+
+        when: 'by annotated tag'
+        resetOutput()
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v3.0.0'))
+        then:
+        !Files.exists(clone('local/hello', repo.v3tag))
+        stdout() == ['Pipeline local/hello@v3.0.0 removed']
+
+        when: 'by short commit, with the -r alias'
+        resetOutput()
+        final cmd = new CmdPipelineRemove()
+        new JCommander(cmd).parse('-g', '-r', repo.v4.take(7), 'local/hello')
+        exec(cmd)
+        then:
+        !Files.exists(clone('local/hello', repo.v4))
+        stdout() == ["Pipeline local/hello@${repo.v4.take(7)} removed".toString()]
+
+        when: 'the last revision, by branch'
+        resetOutput()
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'master'))
+        then: 'removes the pipeline'
+        !Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/local/hello"))
+        stdout() == ['Pipeline local/hello@master removed']
+    }
+
+    def 'should not remove an unknown or modified revision from the user-level store'() {
+        given:
+        final repo = installRevisions()
+
+        when:
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: '9.9.9'))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline local/hello@9.9.9 is not installed in the user-level store -- installed revisions: dev, v1.0.0, v2.0.0, v3.0.0'
+
+        when:
+        Files.writeString(clone('local/hello', repo.v1).resolve('main.nf'), 'changed')
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0'))
+        then:
+        e = thrown(AbortOperationException)
+        e.message == 'Pipeline local/hello@v1.0.0 has local modifications -- use -force to remove it'
+        Files.exists(clone('local/hello', repo.v1))
+
+        when:
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0', force: true))
+        then:
+        !Files.exists(clone('local/hello', repo.v1))
+        Files.exists(clone('local/hello', repo.v2))
+    }
+
+    def 'should remove a legacy download by its version'() {
+        given:
+        final dir = seedRepo('acme/hello', 'https://github.com/acme/hello.git')
+
+        when:
+        exec(new CmdPipelineRemove(args: ['acme/hello'], global: true, version: 'master'))
+        then:
+        !Files.exists(dir)
+        stdout() == ['Pipeline acme/hello@master removed']
+    }
+
+    def 'should reject -version when removing from the project'() {
+        when:
+        exec(new CmdPipelineRemove(args: ['acme/hello'], version: '1.0.0', root: base.resolve('project')))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Option `-version` requires `-global` -- the project-level store holds a single version of each pipeline'
+    }
+
+    def 'should hint at the user-level store when removing a pipeline that is not in the project'() {
+        given:
+        seedRepo('acme/hello', 'https://github.com/acme/hello.git')
+
+        when:
+        exec(new CmdPipelineRemove(args: [NAME], root: base.resolve('project')))
+        then:
+        stdout() == EXPECTED
+
+        where:
+        NAME            | EXPECTED
+        'acme/hello'    | ['Pipeline acme/hello is not installed', 'Pipeline acme/hello is installed in the user-level store -- use `nextflow pipeline remove -g acme/hello` to remove it']
+        'acme/other'    | ['Pipeline acme/other is not installed']
     }
 
     private static String usage(Object cmd) {
