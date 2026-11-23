@@ -11,7 +11,7 @@ Add `nextflow pipeline publish`. It validates a pipeline folder and publishes it
 
 ## Problem Statement
 
-With remote pipeline inclusion, a release is installed from the Git commit it pins. So installing depends on the Git host, and on the repository still existing and being public. There is also no way to publish a pipeline from the CLI: the registry's catalog is filled by the nf-core import and a web form, and the web form can only create a pipeline's first release.
+With remote pipeline inclusion, a release is installed from the Git commit it pins. So installing depends on the Git host, and on the repository still existing and being public. There is also no way to publish a pipeline from the CLI: the registry's catalog is filled by the nf-core import and a web form, and the web form can only create a pipeline's first release (seqeralabs/nextflow-registry#442 adds later Git releases from the UI).
 
 ## Goals
 
@@ -97,7 +97,7 @@ How `nextflow run` and `nextflow pull` cache a bundle release:
 - Good, because most of the run-cache path is reused: offline runs, `list`, `drop` and `info`.
 - Good, because each version can be a tag, so `-offline -r <version>` works for bundle releases.
 - Bad, because Nextflow creates Git commits in a repository that exists only locally.
-- Bad, because one registry name can have both Git releases (web form) and bundle releases (CLI). `AssetManager` checks that a cached name keeps its provider and its repository, so mixing both needs changes there.
+- Bad, because one registry name can have both Git releases and bundle releases. Git releases come from the web form, and later releases from seqeralabs/nextflow-registry#442. Bundle releases come from the CLI. `AssetManager` checks that a cached name keeps its provider and its repository, so mixing both needs changes there.
 - Bad, because `pull -all` fetches from the clone's `origin`, which would be the local repository, so it never gets new versions from the registry.
 
 ### Run cache: separate bundle folder
@@ -167,7 +167,6 @@ The client relies on:
 
 ## Open questions
 
-- **New releases for pipelines registered from Git** with the web form (see the registry ADR).
 - **Run cache for bundle releases**: how the local Git repository meets the requirements in [Run and pull from bundle](#run-and-pull-from-bundle), in particular Git and bundle releases of the same name, and `pull -all`. To be settled by the prototype.
 
 ## Links
