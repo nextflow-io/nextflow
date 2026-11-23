@@ -56,7 +56,7 @@ class CmdView extends CmdBase {
 
     @Override
     void run() {
-        log.warn "The `view` command is deprecated -- use `nextflow pipeline view -g` to find the local path of a pipeline"
+        log.warn "The `view` command is deprecated -- use `nextflow pipeline list -g` to find the local path of a pipeline"
         Plugins.init()
         try (final manager = new AssetManager(args[0], revision)) {
             if( !manager.isLocal() )

@@ -76,7 +76,7 @@ class CmdInfo extends CmdBase {
             return
         }
 
-        log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline view -g <project>` instead"
+        log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline list -g` instead"
         Plugins.init()
         try (final manager = new AssetManager(args[0])) {
             if( manager.isNotInitialized() ) {
@@ -101,7 +101,7 @@ class CmdInfo extends CmdBase {
 
     }
 
-    void printText(AssetManager manager, int level) {
+    protected printText(AssetManager manager, int level) {
         final manifest = manager.getManifest()
 
         out.println " project name: ${manager.project}"

@@ -1156,6 +1156,76 @@ class AssetManager implements Closeable {
         strategy.drop(revision, force)
     }
 
+    /**
+     * A downloaded revision of a project
+     */
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
+    static class DownloadedRevision {
+        /** The checked-out commit */
+        String commitId
+        /** The tags, then the branches, at the commit */
+        List<String> names
+        /** The clone holding the revision, whose name identifies the revision for {@link #drop} */
+        File localPath
+        /** Whether the clone has no local changes */
+        boolean clean
+
+        String getName() { names ? names[0] : null }
+    }
+
+    /**
+     * List the downloaded revisions: one per clone for the multi-revision strategy, the checked-out commit for the legacy one.
+     * A clone that can't be read is skipped with a warning.
+     */
+    List<DownloadedRevision> listDownloadedRevisions() {
+        if( isNotInitialized() )
+            return []
+        final List<File> dirs = strategy instanceof MultiRevisionRepositoryStrategy
+            ? strategy.listDownloadedCommits().sort().collect { String it -> new File(((MultiRevisionRepositoryStrategy) strategy).getRevisionSubdir(), it) }
+            : [localPath]
+        if( !dirs )
+            return []
+        final tags = getTagList().findAll { Ref it -> it.name.startsWith('refs/tags/') }.collect { Ref it -> strategy.peel(it) }
+        final branches = getBranchList().findAll { Ref it -> it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
+        String defaultBranch = null
+        try { defaultBranch = strategy.getRemoteDefaultBranch() }
+        catch( Exception e ) { log.debug "Unable to find the default branch of ${project} -- cause: ${e.message ?: e}" }
+
+        final result = new ArrayList<DownloadedRevision>()
+        for( final dir : dirs ) {
+            try (final git = Git.open(dir)) {
+                final commit = git.repository.resolve('HEAD^{commit}')?.name()
+                if( !commit )
+                    throw new IllegalStateException("no checked-out commit")
+                result << new DownloadedRevision(commit, refNamesAt(commit, dir.name, tags, branches, defaultBranch), dir, git.status().call().isClean())
+            }
+            catch( Exception e ) {
+                log.warn "Unable to read the revision of ${project} in ${dir} -- cause: ${e.message ?: e}"
+            }
+        }
+        return result
+    }
+
+    /**
+     * The tags, then the branches, at a commit. The multi-revision strategy names the clone of an annotated tag after the tag object,
+     * so that tag comes first. Tags named after a commit, created when downloading a commit, are skipped.
+     */
+    private static List<String> refNamesAt(String commit, String cloneName, List<Ref> tags, List<Ref> branches, String defaultBranch) {
+        final tagNames = tags
+            .findAll { Ref it -> (it.peeledObjectId ?: it.objectId)?.name() == commit }
+            .sort { Ref a, Ref b -> (a.objectId?.name() == cloneName ? 0 : 1) <=> (b.objectId?.name() == cloneName ? 0 : 1) ?: a.name <=> b.name }
+            .collect { Ref it -> shortenRefName(it.name) }
+            .findAll { String it -> !(it ==~ /[0-9a-f]{40}/) }
+        final branchNames = branches
+            .findAll { Ref it -> it.objectId?.name() == commit }
+            .collect { Ref it -> shortenRefName(it.name) }
+            .unique()
+            .sort { String a, String b -> (a == defaultBranch ? 0 : 1) <=> (b == defaultBranch ? 0 : 1) ?: a <=> b }
+        return (tagNames + branchNames) as List<String>
+    }
+
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath
