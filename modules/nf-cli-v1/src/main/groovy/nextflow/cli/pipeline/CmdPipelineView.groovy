@@ -41,6 +41,10 @@ class CmdPipelineView extends CmdBase {
     @Parameter(names = ["-version"], description = "Pipeline version (default: latest)")
     String version
 
+    // hidden alias of -version, as JCommander can't hide one name of a parameter
+    @Parameter(names = ["-r"], hidden = true)
+    String revision
+
     @Parameter(
         names = ['-o', '-output'],
         description = 'Output mode: text, json',
@@ -78,6 +82,7 @@ class CmdPipelineView extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 
+        version = version ?: revision
         if( global ) {
             if( version )
                 throw new AbortOperationException("Option `-version` is not supported with `-global`")

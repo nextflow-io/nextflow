@@ -28,7 +28,7 @@ import nextflow.cli.pipeline.CmdPipelineView
  * Implements `pipeline` command
  */
 @CompileStatic
-@Parameters(commandDescription = "Manage registry pipelines")
+@Parameters(commandDescription = "Manage pipelines")
 class CmdPipeline extends CmdGroup {
 
     static final public String NAME = 'pipeline'

@@ -22,28 +22,38 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineGitFetcher
+import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
+import nextflow.plugin.Plugins
 import nextflow.util.TestOnly
 
 /**
  * Pipeline install subcommand
  */
 @CompileStatic
-@Parameters(commandDescription = "Install a pipeline from the registry")
+@Parameters(commandDescription = "Install a pipeline from the registry, or from a Git repository with `-g`")
 class CmdPipelineInstall extends CmdBase {
 
     @Parameter(description = "<pipeline>", required = true)
     List<String> args
 
-    @Parameter(names = ["-version"], description = "Pipeline version (default: latest)")
+    @Parameter(names = ["-version"], description = "Pipeline version (default: latest), or the Git revision when installing a repository URL with `-g`")
     String version
 
-    @Parameter(names = ["-force"], description = "Overwrite local modifications", arity = 0)
+    // hidden alias of -version, as JCommander can't hide one name of a parameter
+    @Parameter(names = ["-r"], hidden = true)
+    String revision
+
+    @Parameter(names = ["-force"], description = "Overwrite local modifications (not supported with `-g`)", arity = 0)
     boolean force = false
+
+    @Parameter(names = ['-g', '-global'], description = 'Install the pipeline in the user-level store used by `nextflow run`', arity = 0)
+    boolean global
 
     @TestOnly
     protected RegistryClient client
@@ -64,11 +74,79 @@ class CmdPipelineInstall extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 
+        version = version ?: revision
+        if( global ) {
+            installUserLevel(args[0], version)
+            return
+        }
+
         final baseDir = root ?: Path.of('.').toAbsolutePath().normalize()
         final client = this.client ?: RegistryClientFactory.forConfig(PipelineCmdSupport.registryConfig(this, [], baseDir))
         final manager = new PipelineManager(baseDir, client, fetcher ?: new PipelineGitFetcher())
         final result = manager.install(args[0], version, force)
         if( result.alreadyInstalled() )
             println "Pipeline ${result.info().name}@${result.info().version} is already installed and up to date"
+    }
+
+    private void installUserLevel(String name, String version) {
+        if( force )
+            throw new AbortOperationException("Option `-force` is not supported with `-global` -- the user-level store keeps each downloaded revision and never overwrites it")
+        Plugins.init()
+        final address = registryAddress(name)
+        final PipelineCmdSupport.UserLevelDownload result
+        final String label
+        if( address ) {
+            final release = resolveRelease(address, version)
+            result = PipelineCmdSupport.downloadRelease(release, null)
+            label = "${release.name}@${release.version}"
+        }
+        else {
+            result = PipelineCmdSupport.downloadRevision(name, version, null)
+            label = "${result.script.projectName}@${version ?: result.script.revisionInfo.name ?: result.script.revisionInfo.commitId}"
+        }
+        if( result.upToDate )
+            println "Pipeline ${label} is already installed"
+        else
+            println "Pipeline ${label} installed in ${result.script.localPath}"
+    }
+
+    /** The registry address of a registry name or page URL, or {@code null} for a Git repository URL */
+    private PipelineCmdSupport.RegistryAddress registryAddress(String name) {
+        final config = PipelineCmdSupport.registryConfig(this)
+        if( isGitUrl(name) )
+            return PipelineCmdSupport.registryAddress(name, null) { config }
+        // a name always addresses the primary registry
+        return PipelineCmdSupport.registryAddress(name, URI.create(config.url).authority) { config }
+    }
+
+    private static boolean isGitUrl(String name) {
+        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:')
+    }
+
+    private PipelineInfo resolveRelease(PipelineCmdSupport.RegistryAddress address, String version) {
+        final client = this.client ?: RegistryClientFactory.forUrls([address.url], address.apiKey)
+        try {
+            return PipelineCmdSupport.resolveRelease(address, version, client)
+        }
+        catch( AbortOperationException e ) {
+            if( isNotFound(e.cause) && (!version || !hasPipeline(client, address.name)) )
+                throw new AbortOperationException("Pipeline ${address.name} is not in the registry -- a Git pipeline is installed by its repository URL, e.g. `nextflow pipeline install -g https://github.com/${address.name}`", e)
+            throw e
+        }
+    }
+
+    private static boolean hasPipeline(RegistryClient client, String name) {
+        try {
+            return client.getPipeline(name) != null
+        }
+        catch( RegistryException e ) {
+            if( isNotFound(e) )
+                return false
+            throw e
+        }
+    }
+
+    private static boolean isNotFound(Throwable e) {
+        return e instanceof RegistryException && (e as RegistryException).statusCode == 404
     }
 }

@@ -30,7 +30,10 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
+import nextflow.scm.AssetManager
+import nextflow.scm.HubOptions
 import nextflow.scm.ProviderConfig
+import nextflow.script.ScriptFile
 
 /**
  * Helpers shared by the pipeline subcommands
@@ -137,6 +140,61 @@ class PipelineCmdSupport {
         final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
         log.info "Using registry release ${address.name}@${release.version}" + (release.commitId ? " (commit ${release.commitId.take(10)})" : '')
         return release
+    }
+
+    /** A revision downloaded into the user-level store */
+    @Canonical
+    static class UserLevelDownload {
+        /** The download result, e.g. {@code Already-up-to-date} when the revision was already downloaded */
+        String message
+        ScriptFile script
+
+        boolean isUpToDate() {
+            return message == 'Already-up-to-date'
+        }
+    }
+
+    /**
+     * Download a registry release into the user-level store at its pinned commit, cached under its registry name as `run` does
+     */
+    static UserLevelDownload downloadRelease(PipelineInfo release, HubOptions hubOpts, Integer deep = null) {
+        final rev = release.commitId ?: release.revision
+        try (final manager = new AssetManager(release.repositoryUrl, rev, null, hubOpts, release.name)) {
+            log.info "Checking ${release.name}@${release.version} ..."
+            final result = manager.download(rev, deep)
+            manager.updateModules()
+            return new UserLevelDownload(result, manager.getScriptFile(release.workflowPath))
+        }
+    }
+
+    /**
+     * Download a Git revision of a project into the user-level store
+     *
+     * @param project A project name or a Git repository URL
+     * @param revision A branch, tag or commit, or {@code null} for the default branch
+     * @param migrate Whether to migrate a legacy download to the multi-revision strategy
+     */
+    static UserLevelDownload downloadRevision(String project, String revision, HubOptions hubOpts, Integer deep = null, boolean migrate = false) {
+        try (final manager = new AssetManager(project, hubOpts)) {
+            if( manager.isUsingLegacyStrategy() ) {
+                if( migrate ) {
+                    log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
+                    manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+                } else {
+                    log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
+                        "Consider updating the project ${project} using '-migrate' option"
+                }
+            }
+
+            if( revision )
+                manager.setRevision(revision)
+
+            log.info "Checking ${manager.getProjectWithRevision()} ..."
+
+            final result = manager.download(revision, deep)
+            manager.updateModules()
+            return new UserLevelDownload(result, manager.getScriptFile())
+        }
     }
 
     /** Base URL of the registry web pages: the API URL without {@code /api} */
