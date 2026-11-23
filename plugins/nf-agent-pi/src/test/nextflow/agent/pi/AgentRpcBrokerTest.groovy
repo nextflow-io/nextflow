@@ -368,7 +368,7 @@ class AgentRpcBrokerTest extends Specification {
         def registration = broker.register(new AgentRunnerRequest(model: 'openai/test', requestTimeoutSeconds: 3600), false)
 
         when:
-        sleep(500)
+        awaitDrained()
         def frames = connect(registration.endpoint)
         frames.send([type: 'connect', invocationId: registration.invocationId, token: registration.token])
 
@@ -385,7 +385,7 @@ class AgentRpcBrokerTest extends Specification {
         def registration = broker.register(new AgentRunnerRequest(model: 'openai/test', requestTimeoutSeconds: 3600), false)
 
         when:
-        sleep(1_500)
+        awaitDrained()
         def frames = connect(registration.endpoint)
         frames.send([type: 'connect', invocationId: registration.invocationId, token: registration.token])
 
@@ -395,6 +395,7 @@ class AgentRpcBrokerTest extends Specification {
 
     def 'should not put a connected stream on the capability clock'() {
         given: 'a capability that expires in a second, consumed immediately'
+        // long enough for the connect (channel, TLS handshake, start frame) on a busy runner
         broker = rebuild([capabilityTimeout: '1s'])
         def request = new AgentRunnerRequest(
             model: 'openai/test',
@@ -408,7 +409,7 @@ class AgentRpcBrokerTest extends Specification {
         frames.next()
 
         when: 'the live stream outlives the capability timeout'
-        sleep(1_500)
+        sleep(1_200)
         frames.send([
             type: 'tool_call',
             invocationId: registration.invocationId,
@@ -473,7 +474,7 @@ class AgentRpcBrokerTest extends Specification {
         def registration = broker.register(new AgentRunnerRequest(model: 'openai/test', requestTimeoutSeconds: 3600), false)
 
         when: 'the proxy finally dials back'
-        sleep(1_500)
+        awaitDrained()
         def frames = connect(registration.endpoint)
         frames.send([type: 'connect', invocationId: registration.invocationId, token: registration.token])
         def expired = frames.error()
@@ -552,7 +553,7 @@ class AgentRpcBrokerTest extends Specification {
 
     def 'should still name the consumed cause after a mass lapse of other capabilities'() {
         given: 'a budget long enough to connect within, and short enough that later capabilities lapse'
-        broker = rebuild([capabilityTimeout: '2s'])
+        broker = rebuild([capabilityTimeout: '1s'])
         def registration = broker.register(new AgentRunnerRequest(model: 'openai/test', requestTimeoutSeconds: 30), false)
         def first = connect(registration.endpoint)
         first.send([type: 'connect', invocationId: registration.invocationId, token: registration.token])

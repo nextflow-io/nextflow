@@ -18,10 +18,13 @@ package nextflow.scm
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 
+@Timeout(60)
 class GitReferenceHelperTest extends Specification {
 
     @Rule
@@ -31,6 +34,7 @@ class GitReferenceHelperTest extends Specification {
         AssetManager.root = tempDir.root.toFile()
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'can filter remote branches'() {
         given:

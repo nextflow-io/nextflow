@@ -612,6 +612,10 @@ bonjour world!
 hola world!
 ```
 
+:::note
+The variable is set to the input value verbatim. Shell syntax in the value, such as `$VAR` or `$(command)`, is not evaluated.
+:::
+
 ### Standard input (`stdin`)
 
 The `stdin` qualifier allows you to forward the input value to the [standard input](http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29) of the process script. For example:

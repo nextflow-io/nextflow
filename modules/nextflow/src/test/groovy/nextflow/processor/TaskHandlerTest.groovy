@@ -18,6 +18,7 @@ package nextflow.processor
 
 import java.util.concurrent.atomic.LongAdder
 
+import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.agent.AgentTaskInfo
@@ -59,7 +60,7 @@ class TaskHandlerTest extends Specification {
                 accelerator: [request: 3, type: 'v100']
         ]
         def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config  )
-        task.metaClass.getHashLog = { "5d5d7ds" }
+        task.hash = HashCode.fromString('5d5d7d5f0000000000000000000000')
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'TheProcessName'
@@ -79,7 +80,7 @@ class TaskHandlerTest extends Specification {
         then:
         trace.task_id == 100
         trace.status == 'COMPLETED'
-        trace.hash == '5d5d7ds'
+        trace.hash == '5d/5d7d5f'
         trace.name == 'task1'
         trace.exit == 127
         trace.submit == 1000
@@ -157,7 +158,9 @@ class TaskHandlerTest extends Specification {
         def handler = Spy(TaskHandler)
         handler.task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) {
-                getMaxForks() >> MAX
+                // getMaxForks() returns a primitive int; a null stub cannot be
+                // cast to int under Groovy 5, so map the `null` (unset) case to 0
+                getMaxForks() >> (MAX ?: 0)
                 getForksCount() >> { COUNT ? _adder(COUNT) : null }
             }
         }

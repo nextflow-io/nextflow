@@ -161,7 +161,7 @@ class ConfigCmdAdapter {
      * @param files
      * @return
      */
-    @CompileDynamic
+    @CompileDynamic // required to support ProviderPath::exists() over NioExtensions::exists()
     protected List<Path> resolveConfigFiles(List<String> files) {
 
         if( files ) {
@@ -324,7 +324,6 @@ class ConfigCmdAdapter {
      * @param env
      * @param cmdRun
      */
-    @CompileDynamic
     protected void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
 
         // -- set config options
@@ -355,7 +354,7 @@ class ConfigCmdAdapter {
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir
 
-        else if( !config.workDir )
+        else if( !config.getProperty('workDir') )
             config.workDir = env.get('NXF_WORK') ?: 'work'
 
         if( cmdRun.bucketDir )
@@ -370,33 +369,33 @@ class ConfigCmdAdapter {
 
         // -- override 'process' parameters defined on the cmd line
         cmdRun.process.each { name, value ->
-            config.process[name] = parseValue(value)
+            scope(config, 'process').put(name, parseValue(value))
         }
 
-        if( cmdRun.withoutConda && config.conda instanceof Map ) {
+        if( cmdRun.withoutConda && config.getProperty('conda') instanceof Map ) {
             // disable conda execution
             log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
-            config.conda.enabled = false
+            scope(config, 'conda').put('enabled', false)
         }
 
         // -- apply the conda environment
         if( cmdRun.withConda ) {
             if( cmdRun.withConda != '-' )
-                config.process.conda = cmdRun.withConda
-            config.conda.enabled = true
+                scope(config, 'process').put('conda', cmdRun.withConda)
+            scope(config, 'conda').put('enabled', true)
         }
 
-        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+        if( cmdRun.withoutSpack && config.getProperty('spack') instanceof Map ) {
             // disable spack execution
             log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
-            config.spack.enabled = false
+            scope(config, 'spack').put('enabled', false)
         }
 
         // -- apply the spack environment
         if( cmdRun.withSpack ) {
             if( cmdRun.withSpack != '-' )
-                config.process.spack = cmdRun.withSpack
-            config.spack.enabled = true
+                scope(config, 'process').put('spack', cmdRun.withSpack)
+            scope(config, 'spack').put('enabled', true)
         }
 
         // -- sets the resume option
@@ -416,64 +415,64 @@ class ConfigCmdAdapter {
             config.poolSize = cmdRun.poolSize
         }
         if( cmdRun.queueSize ) {
-            config.executor.queueSize = cmdRun.queueSize
+            scope(config, 'executor').put('queueSize', cmdRun.queueSize)
         }
         if( cmdRun.pollInterval ) {
-            config.executor.pollInterval = cmdRun.pollInterval
+            scope(config, 'executor').put('pollInterval', cmdRun.pollInterval)
         }
 
         // -- sets trace file options
         if( cmdRun.withTrace ) {
-            if( !(config.trace instanceof Map) )
+            if( !(config.getProperty('trace') instanceof Map) )
                 config.trace = [:]
-            config.trace.enabled = true
+            scope(config, 'trace').put('enabled', true)
             if( cmdRun.withTrace != '-' )
-                config.trace.file = cmdRun.withTrace
+                scope(config, 'trace').put('file', cmdRun.withTrace)
         }
 
         // -- sets agent execution trace option
         if( cmdRun.withAgentTrace ) {
-            if( !(config.agent instanceof Map) )
+            if( !(config.getProperty('agent') instanceof Map) )
                 config.agent = [:]
-            config.agent.trace = true
+            scope(config, 'agent').put('trace', true)
         }
 
         // -- sets report report options
         if( cmdRun.withReport ) {
-            if( !(config.report instanceof Map) )
+            if( !(config.getProperty('report') instanceof Map) )
                 config.report = [:]
-            config.report.enabled = true
+            scope(config, 'report').put('enabled', true)
             if( cmdRun.withReport != '-' )
-                config.report.file = cmdRun.withReport
+                scope(config, 'report').put('file', cmdRun.withReport)
         }
 
         // -- sets timeline report options
         if( cmdRun.withTimeline ) {
-            if( !(config.timeline instanceof Map) )
+            if( !(config.getProperty('timeline') instanceof Map) )
                 config.timeline = [:]
-            config.timeline.enabled = true
+            scope(config, 'timeline').put('enabled', true)
             if( cmdRun.withTimeline != '-' )
-                config.timeline.file = cmdRun.withTimeline
+                scope(config, 'timeline').put('file', cmdRun.withTimeline)
         }
 
         // -- sets DAG report options
         if( cmdRun.withDag ) {
-            if( !(config.dag instanceof Map) )
+            if( !(config.getProperty('dag') instanceof Map) )
                 config.dag = [:]
-            config.dag.enabled = true
+            scope(config, 'dag').put('enabled', true)
             if( cmdRun.withDag != '-' )
-                config.dag.file = cmdRun.withDag
+                scope(config, 'dag').put('file', cmdRun.withDag)
         }
 
         if( cmdRun.withNotification ) {
-            if( !(config.notification instanceof Map) )
+            if( !(config.getProperty('notification') instanceof Map) )
                 config.notification = [:]
             if( cmdRun.withNotification in ['true','false']) {
-                config.notification.enabled = cmdRun.withNotification == 'true'
+                scope(config, 'notification').put('enabled', cmdRun.withNotification == 'true')
             }
             else {
-                config.notification.enabled = true
-                config.notification.to = cmdRun.withNotification
+                scope(config, 'notification').put('enabled', true)
+                scope(config, 'notification').put('to', cmdRun.withNotification)
             }
         }
 
@@ -483,51 +482,51 @@ class ConfigCmdAdapter {
 
         // -- sets tower options
         if( cmdRun.withTower ) {
-            if( !(config.tower instanceof Map) )
+            if( !(config.getProperty('tower') instanceof Map) )
                 config.tower = [:]
-            config.tower.enabled = true
+            scope(config, 'tower').put('enabled', true)
             if( cmdRun.withTower != '-' )
-                config.tower.endpoint = cmdRun.withTower
+                scope(config, 'tower').put('endpoint', cmdRun.withTower)
         }
 
         // -- set wave options
         if( cmdRun.withWave ) {
-            if( !(config.wave instanceof Map) )
+            if( !(config.getProperty('wave') instanceof Map) )
                 config.wave = [:]
-            config.wave.enabled = true
+            scope(config, 'wave').put('enabled', true)
             if( cmdRun.withWave != '-' )
-                config.wave.endpoint = cmdRun.withWave
+                scope(config, 'wave').put('endpoint', cmdRun.withWave)
         }
 
         // -- set fusion options
         if( cmdRun.withFusion ) {
-            if( !(config.fusion instanceof Map) )
+            if( !(config.getProperty('fusion') instanceof Map) )
                 config.fusion = [:]
-            config.fusion.enabled = cmdRun.withFusion == 'true'
+            scope(config, 'fusion').put('enabled', cmdRun.withFusion == 'true')
         }
 
         // -- set cloudcache options
         final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
         if( cmdRun.cloudCachePath || envCloudPath ) {
-            if( !(config.cloudcache instanceof Map) )
+            if( !(config.getProperty('cloudcache') instanceof Map) )
                 config.cloudcache = [:]
-            if( !config.cloudcache.isSet('enabled') )
-                config.cloudcache.enabled = true
+            if( !((ConfigObject) config.getProperty('cloudcache')).isSet('enabled') )
+                scope(config, 'cloudcache').put('enabled', true)
             if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
-                config.cloudcache.path = cmdRun.cloudCachePath
-            else if( !config.cloudcache.isSet('path') && envCloudPath )
-                config.cloudcache.path = envCloudPath
+                scope(config, 'cloudcache').put('path', cmdRun.cloudCachePath)
+            else if( !((ConfigObject) config.getProperty('cloudcache')).isSet('path') && envCloudPath )
+                scope(config, 'cloudcache').put('path', envCloudPath)
         }
 
         // -- add the command line parameters to the config
         final cliParams = builder.getCliParams()
         if( cliParams )
-            config.params = mergeMaps( (Map)config.params, cliParams, NF.strictMode )
+            config.params = mergeMaps( (Map)config.getProperty('params'), cliParams, NF.strictMode )
 
-        if( cmdRun.withoutDocker && config.docker instanceof Map ) {
+        if( cmdRun.withoutDocker && config.getProperty('docker') instanceof Map ) {
             // disable docker execution
             log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
-            config.docker.enabled = false
+            scope(config, 'docker').put('enabled', false)
         }
 
         if( cmdRun.withDocker ) {
@@ -549,6 +548,13 @@ class ConfigCmdAdapter {
         if( cmdRun.withCharliecloud ) {
             configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
+    }
+
+    /**
+     * Get a config scope, creating it if missing (same as the dynamic property access).
+     */
+    private static Map scope(ConfigObject config, String name) {
+        return (Map) config.getProperty(name)
     }
 
     private String normalizeResumeId( String uniqueId ) {

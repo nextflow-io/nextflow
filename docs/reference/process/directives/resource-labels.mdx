@@ -93,13 +93,13 @@ The executor normalizes automatic labels to meet the requirements of its API. De
 
 | Executor           | Normalization                                                                                                                               | `nextflow.io/runName` becomes |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| AWS Batch          | Letters, digits, spaces, and `+ - = . _ : / @`. Key up to 128 characters, value up to 256.                                                   | unchanged                     |
+| AWS Batch          | Letters, digits, spaces, and `+ - = . _ : / @`. Any `/` in a key becomes `:`. Key up to 128 characters, value up to 256.                     | `nextflow.io:runName`         |
 | Azure Batch        | None, apart from the reserved `microsoft` name prefix.                                                                                       | unchanged                     |
-| Google Cloud Batch | Lowercase letters, digits, `_`, and `-`. The key must start with a letter. Key and value up to 63 characters.                                | `nextflow_io_runname`         |
+| Google Cloud Batch | Lowercase letters, digits, `_`, and `-`. Any other character becomes `-`. The key must start with a letter. Key and value up to 63 characters. | `nextflow-io-runname`         |
 | Kubernetes         | The key prefix up to the first `/` is preserved, and any further `/` becomes `_`. Values are stripped of their URL scheme and slashes, up to 63 characters. | unchanged      |
 | Seqera executor    | None.                                                                                                                                        | unchanged                     |
 
-The same rules apply to label values. For example, the `repository` value `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https___github_com_foo_bar` on Google Cloud Batch.
+The same rules apply to label values. For example, the `repository` value `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https---github-com-foo-bar` on Google Cloud Batch.
 
 The two-segment `seqera.io/platform/*` keys are not valid Kubernetes label keys. The Kubernetes executor applies them as `seqera.io/platform_workflowId`, `seqera.io/platform_workspaceId`, and `seqera.io/platform_computeEnvId`.
 

@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -32,20 +33,20 @@ import static nextflow.util.CacheHelper.HashMode
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ProcessConfig implements Map<String,Object>, Cloneable {
 
     /**
      * Default directives values
      */
-    @PackageScope
-    static final Map<String,Object> DEFAULT_CONFIG = [
+    static final Map<String,Object> DEFAULT_CONFIG = Collections.unmodifiableMap([
             debug: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
             maxRetries: 1,
             maxErrors: -1,
             errorStrategy: ErrorStrategy.TERMINATE
-    ]
+    ] as Map<String,Object>)
 
     /**
      * Map instance that holds the process configuration
@@ -147,6 +148,18 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     }
 
+    @Override
+    void setProperty( String name, Object value ) {
+        // use the declared setter if any (e.g. `processName`), otherwise store the value
+        // as a directive -- Groovy 5 no longer falls back to the map for read-only
+        // properties (e.g. `fair`) and throws ReadOnlyPropertyException instead
+        final meta = metaClass.getMetaProperty(name)
+        if( meta instanceof MetaBeanProperty && meta.setter )
+            meta.setProperty(this, value)
+        else
+            put(name, value)
+    }
+
     BaseScript getOwnerScript() { ownerScript }
 
     String getProcessName() { processName }
@@ -163,7 +176,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value instanceof Boolean )
             return value
 
-        if( value instanceof String && value in Const.BOOL_NO )
+        if( value instanceof String && value in (List) Const.BOOL_NO )
             return false
 
         return true

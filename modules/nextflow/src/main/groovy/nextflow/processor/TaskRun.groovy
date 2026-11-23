@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
 import com.google.common.hash.HashCode
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -60,9 +62,10 @@ import nextflow.util.ArrayBag
  */
 
 @Slf4j
+@CompileStatic
 class TaskRun implements Cloneable {
 
-    final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
+    final private ConcurrentHashMap<String,Object> cache0 = new ConcurrentHashMap<String,Object>()
 
     /**
      * Task unique id
@@ -123,6 +126,14 @@ class TaskRun implements Cloneable {
      * @see TaskProcessor#resolveTaskInputs()
      */
     List<FileHolder> inputFiles = new ArrayBag()
+
+    /**
+     * The files staged by `stageAs` directives in the `stage:` block
+     * of a typed process that are not part of any task input
+     *
+     * @see TaskProcessor#resolveTaskInputsV2()
+     */
+    List<FileHolder> stageAsFiles
 
     /**
      * The value to be piped to the process stdin
@@ -409,7 +420,7 @@ class TaskRun implements Cloneable {
             try {
                 // -- look-up the 'sampleId' property, and if everything is fine
                 //    cache this value in the 'name' attribute
-                return name = "$baseName (${String.valueOf(config.tag).trim()})"
+                return name = "$baseName (${String.valueOf(config.get('tag')).trim()})"
             }
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
@@ -514,12 +525,13 @@ class TaskRun implements Cloneable {
     private List<String> getOutputFilesNamesV2() {
         final config = processor.config as ProcessConfigV2
         final declaredOutputs = config.getOutputs()
-        final result = []
+        final List<String> result = []
         for( final param : declaredOutputs.files.values() )
             result.add( param.getFilePattern(context) )
         return result.unique()
     }
 
+    @CompileDynamic
     private List<String> getOutputFilesNamesV1() {
         def result = []
 
@@ -536,6 +548,7 @@ class TaskRun implements Cloneable {
      * @param types One or more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
+    @CompileDynamic
     def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
         def result = [:]
         for( def it : outputs ) {
@@ -571,7 +584,7 @@ class TaskRun implements Cloneable {
     }
 
     def getScratch() {
-        config.scratch
+        config.get('scratch')
     }
 
     String getWorkDirStr() {
@@ -635,6 +648,7 @@ class TaskRun implements Cloneable {
         return new ArrayList(declaredOutputs.getEnv())
     }
 
+    @CompileDynamic
     private List<String> getOutputEnvNamesV1() {
         final items = getOutputsByType(EnvOutParam)
         if( !items )
@@ -674,6 +688,7 @@ class TaskRun implements Cloneable {
         return result
     }
 
+    @CompileDynamic
     private Map<String,String> getOutputEvalsV1() {
         final items = getOutputsByType(CmdEvalParam)
         final result = new LinkedHashMap(items.size())
@@ -688,7 +703,7 @@ class TaskRun implements Cloneable {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
         // when calling this method from a subclass it will result into a MissingMethodExeception
         // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('condaEnv', new Function<String,Path>() {
+        (Path) cache0.computeIfAbsent('condaEnv', new Function<String,Path>() {
             @Override
             Path apply(String it) {
                 return getCondaEnv0()
@@ -696,18 +711,18 @@ class TaskRun implements Cloneable {
     }
 
     private Path getCondaEnv0() {
-        if( !config.conda || !getCondaConfig().isEnabled() )
+        if( !config.get('conda') || !getCondaConfig().isEnabled() )
             return null
 
         final cache = new CondaCache(getCondaConfig())
-        cache.getCachePathFor(config.conda as String)
+        cache.getCachePathFor(config.get('conda') as String)
     }
 
     Path getSpackEnv() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
         // when calling this method from a subclass it will result into a MissingMethodExeception
         // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('spackEnv', new Function<String,Path>() {
+        (Path) cache0.computeIfAbsent('spackEnv', new Function<String,Path>() {
             @Override
             Path apply(String it) {
                 return getSpackEnv0()
@@ -715,20 +730,20 @@ class TaskRun implements Cloneable {
     }
 
     private Path getSpackEnv0() {
-        if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
+        if( !config.get('spack') || !processor.session.getSpackConfig().isEnabled() )
             return null
 
         final String arch = config.getArchitecture()?.spackArch
 
         final cache = new SpackCache(processor.session.getSpackConfig())
-        cache.getCachePathFor(config.spack as String, arch)
+        cache.getCachePathFor(config.get('spack') as String, arch)
     }
 
     protected ContainerInfo containerInfo() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
         // when calling this method from a subclass it will result into a MissingMethodException
         // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
+        (ContainerInfo) cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
             @Override
             ContainerInfo apply(String s) {
                 return containerInfo0()
@@ -805,7 +820,7 @@ class TaskRun implements Cloneable {
                 = sess.getContainerConfig(eng)
                 ?: new DockerConfig([:])
         // if a configuration is found is expected to enabled by default
-        if( exe.isContainerNative() ) {
+        if( exe.isContainerNative() && !result.isEnabled() && result instanceof DockerConfig ) {
             result.setEnabled(true)
         }
         return result
@@ -1021,7 +1036,7 @@ class TaskRun implements Cloneable {
     }
 
     protected char placeholderChar() {
-        (config.placeholder ?: '!') as char
+        (config.get('placeholder') ?: '!') as char
     }
 
     protected Set<String> getVariableNames() {

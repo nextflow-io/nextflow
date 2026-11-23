@@ -16,7 +16,7 @@
 
 package nextflow.script.dsl
 
-import groovy.transform.TypeChecked
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ConfigParseException
 import nextflow.script.ProcessConfig
@@ -27,7 +27,7 @@ import nextflow.script.ProcessConfig
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
-@TypeChecked
+@CompileStatic
 class ProcessConfigBuilder extends ProcessBuilder {
 
     /**
@@ -184,10 +184,10 @@ class ProcessConfigBuilder extends ProcessBuilder {
                 continue
 
             if( entry.key == 'ext' ) {
-                if( config.getProperty('ext') instanceof Map ) {
+                final ext = config.getProperty('ext')
+                if( ext instanceof Map ) {
                     // update missing 'ext' properties found in 'process' scope
-                    final ext = config.getProperty('ext') as Map
-                    entry.value.each { String k, v -> ext[k] = v }
+                    ext.putAll(entry.value as Map)
                 }
                 continue
             }

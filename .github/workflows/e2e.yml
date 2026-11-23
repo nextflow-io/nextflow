@@ -1,0 +1,77 @@
+name: e2e
+# Builds the Seqera Platform launcher images of this commit with Wave and launches the showcase
+# tests (seqeralabs/showcase-automation) with them, see test-e2e/run.sh.
+# build.yml calls it for the [e2e stage] / [e2e prod] commit tags and its `e2e` dispatch input.
+
+on:
+  workflow_call:
+    inputs:
+      commit-message:
+        description: 'Commit message of the build, which selects production with the [e2e prod] tag'
+        type: string
+        required: false
+      environment:
+        description: 'staging or production (default: from the commit message)'
+        type: string
+        required: false
+    secrets:
+      SEQERA_PUBLIC_CR_PASSWORD:
+        required: true
+      AUTOMATION_GITHUB_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Showcase
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: true
+          persist-credentials: false
+
+      - name: Setup Java 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # ratchet:actions/setup-java@v6.1.0
+        with:
+          java-version: 17
+          distribution: 'corretto'
+          architecture: x64
+          cache: gradle
+
+      - name: Setup env
+        env:
+          INPUT_COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        run: |
+          wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+          chmod +x wave
+          mv wave /usr/local/bin/
+          # Use heredoc-style delimiter so multi-line / quote-containing
+          # commit messages survive intact (run.sh greps for `[e2e prod]`).
+          {
+            echo "COMMIT_MESSAGE<<NXF_EOF"
+            echo "$INPUT_COMMIT_MESSAGE"
+            echo "NXF_EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Docker Login to Seqera public CR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # ratchet:docker/login-action@v4.6.0
+        with:
+          registry: "public.cr.seqera.io"
+          username: "public-cr-admin"
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      - name: Launch tests
+        run: |
+          cd test-e2e
+          bash run.sh
+        env:
+          # empty means use the commit tag
+          E2E_ENVIRONMENT: ${{ inputs.environment }}
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'

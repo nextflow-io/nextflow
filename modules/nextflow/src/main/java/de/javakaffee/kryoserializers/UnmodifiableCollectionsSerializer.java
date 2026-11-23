@@ -15,13 +15,14 @@
  */
 package de.javakaffee.kryoserializers;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -40,30 +41,14 @@ import com.esotericsoftware.kryo.io.Output;
  * A kryo {@link Serializer} for unmodifiable {@link Collection}s and {@link Map}s
  * created via {@link Collections}.
  *
+ * The wrapped collection is written as a copy, instead of reading the private
+ * field of the wrapper, so that no reflective access to {@code java.util} is required.
+ *
  * @author Martin Grotzke <martin.grotzke@javakaffee.de>
  *
  * @link https://github.com/magro/kryo-serializers
  */
 public class UnmodifiableCollectionsSerializer extends Serializer<Object> {
-
-    private static final Field SOURCE_COLLECTION_FIELD;
-    private static final Field SOURCE_MAP_FIELD;
-
-    static {
-        try {
-            SOURCE_COLLECTION_FIELD = Class.forName("java.util.Collections$UnmodifiableCollection" )
-                    .getDeclaredField( "c" );
-            SOURCE_COLLECTION_FIELD.setAccessible( true );
-
-
-            SOURCE_MAP_FIELD = Class.forName("java.util.Collections$UnmodifiableMap" )
-                    .getDeclaredField( "m" );
-            SOURCE_MAP_FIELD.setAccessible( true );
-        } catch ( final Exception e ) {
-            throw new RuntimeException( "Could not access source collection" +
-                    " field in java.util.Collections$UnmodifiableCollection.", e );
-        }
-    }
 
     @Override
     public Object read(final Kryo kryo, final Input input, final Class<Object> clazz) {
@@ -75,92 +60,100 @@ public class UnmodifiableCollectionsSerializer extends Serializer<Object> {
 
     @Override
     public void write(final Kryo kryo, final Output output, final Object object) {
-        try {
-            final UnmodifiableCollection unmodifiableCollection = UnmodifiableCollection.valueOfType( object.getClass() );
-            // the ordinal could be replaced by s.th. else (e.g. a explicitly managed "id")
-            output.writeInt( unmodifiableCollection.ordinal(), true );
-            kryo.writeClassAndObject( output, unmodifiableCollection.sourceCollectionField.get( object ) );
-        } catch ( final RuntimeException e ) {
-            // Don't eat and wrap RuntimeExceptions because the ObjectBuffer.write...
-            // handles SerializationException specifically (resizing the buffer)...
-            throw e;
-        } catch ( final Exception e ) {
-            throw new RuntimeException( e );
-        }
-    }
-
-    @Override
-    public Object copy(Kryo kryo, Object original) {
-        try {
-            final UnmodifiableCollection unmodifiableCollection = UnmodifiableCollection.valueOfType( original.getClass() );
-            Object sourceCollectionCopy = kryo.copy(unmodifiableCollection.sourceCollectionField.get(original));
-            return unmodifiableCollection.create( sourceCollectionCopy );
-        } catch ( final RuntimeException e ) {
-            // Don't eat and wrap RuntimeExceptions
-            throw e;
-        } catch ( final Exception e ) {
-            throw new RuntimeException( e );
-        }
+        final UnmodifiableCollection unmodifiableCollection = UnmodifiableCollection.valueOfType( object.getClass() );
+        // the ordinal could be replaced by s.th. else (e.g. a explicitly managed "id")
+        output.writeInt( unmodifiableCollection.ordinal(), true );
+        kryo.writeClassAndObject( output, unmodifiableCollection.copy( object ) );
     }
 
     private static enum UnmodifiableCollection {
-        COLLECTION( Collections.unmodifiableCollection( Arrays.asList( "" ) ).getClass(), SOURCE_COLLECTION_FIELD ){
+        COLLECTION( Collections.unmodifiableCollection( Arrays.asList( "" ) ).getClass() ){
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableCollection( (Collection<?>) sourceCollection );
             }
+            @Override
+            public Object copy( final Object collection ) {
+                return new ArrayList<>( (Collection<?>) collection );
+            }
         },
-        RANDOM_ACCESS_LIST( Collections.unmodifiableList( new ArrayList<Void>() ).getClass(), SOURCE_COLLECTION_FIELD ){
+        RANDOM_ACCESS_LIST( Collections.unmodifiableList( new ArrayList<Void>() ).getClass() ){
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableList( (List<?>) sourceCollection );
             }
+            @Override
+            public Object copy( final Object collection ) {
+                return new ArrayList<>( (Collection<?>) collection );
+            }
         },
-        LIST( Collections.unmodifiableList( new LinkedList<Void>() ).getClass(), SOURCE_COLLECTION_FIELD ){
+        LIST( Collections.unmodifiableList( new LinkedList<Void>() ).getClass() ){
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableList( (List<?>) sourceCollection );
             }
+            @Override
+            public Object copy( final Object collection ) {
+                return new ArrayList<>( (Collection<?>) collection );
+            }
         },
-        SET( Collections.unmodifiableSet( new HashSet<Void>() ).getClass(), SOURCE_COLLECTION_FIELD ){
+        SET( Collections.unmodifiableSet( new HashSet<Void>() ).getClass() ){
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableSet( (Set<?>) sourceCollection );
             }
+            @Override
+            public Object copy( final Object collection ) {
+                return new LinkedHashSet<>( (Collection<?>) collection );
+            }
         },
-        SORTED_SET( Collections.unmodifiableSortedSet( new TreeSet<Void>() ).getClass(), SOURCE_COLLECTION_FIELD ){
+        SORTED_SET( Collections.unmodifiableSortedSet( new TreeSet<Void>() ).getClass() ){
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableSortedSet( (SortedSet<?>) sourceCollection );
             }
+            @Override
+            public Object copy( final Object collection ) {
+                return new TreeSet<>( (SortedSet<?>) collection );
+            }
         },
-        MAP( Collections.unmodifiableMap( new HashMap<Void, Void>() ).getClass(), SOURCE_MAP_FIELD ) {
-
+        MAP( Collections.unmodifiableMap( new HashMap<Void, Void>() ).getClass() ) {
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableMap( (Map<?, ?>) sourceCollection );
             }
-
+            @Override
+            public Object copy( final Object collection ) {
+                return new LinkedHashMap<>( (Map<?, ?>) collection );
+            }
         },
-        SORTED_MAP( Collections.unmodifiableSortedMap( new TreeMap<Void, Void>() ).getClass(), SOURCE_MAP_FIELD ) {
+        SORTED_MAP( Collections.unmodifiableSortedMap( new TreeMap<Void, Void>() ).getClass() ) {
             @Override
             public Object create( final Object sourceCollection ) {
                 return Collections.unmodifiableSortedMap( (SortedMap<?, ?>) sourceCollection );
             }
+            @Override
+            public Object copy( final Object collection ) {
+                return new TreeMap<>( (SortedMap<?, ?>) collection );
+            }
         };
 
         private final Class<?> type;
-        private final Field sourceCollectionField;
 
-        private UnmodifiableCollection( final Class<?> type, final Field sourceCollectionField ) {
+        private UnmodifiableCollection( final Class<?> type ) {
             this.type = type;
-            this.sourceCollectionField = sourceCollectionField;
         }
 
         /**
          * @param sourceCollection
          */
         public abstract Object create( Object sourceCollection );
+
+        /**
+         * @param collection the unmodifiable collection
+         * @return a modifiable copy of the given collection
+         */
+        public abstract Object copy( Object collection );
 
         static UnmodifiableCollection valueOfType( final Class<?> type ) {
             for( final UnmodifiableCollection item : values() ) {
@@ -178,6 +171,8 @@ public class UnmodifiableCollectionsSerializer extends Serializer<Object> {
      * for the several unmodifiable Collections that can be created via {@link Collections},
      * including {@link Map}s.
      *
+     * NOTE: the registration order determines the class IDs written in the cache, so it must not change.
+     *
      * @param kryo the {@link Kryo} instance to set the serializer on.
      *
      * @see Collections#unmodifiableCollection(Collection)
@@ -189,7 +184,6 @@ public class UnmodifiableCollectionsSerializer extends Serializer<Object> {
      */
     public static void registerSerializers( final Kryo kryo ) {
         final UnmodifiableCollectionsSerializer serializer = new UnmodifiableCollectionsSerializer();
-        UnmodifiableCollection.values();
         for ( final UnmodifiableCollection item : UnmodifiableCollection.values() ) {
             kryo.register( item.type, serializer );
         }

@@ -30,7 +30,7 @@ public interface Float {
 
 interface FloatOps {
 
-    Float and(Float a, Float b);
+    Float add(Float a, Float b);
 
     Integer compareTo(Float a, Float b);
 

@@ -76,7 +76,7 @@ class OpXformTest extends Specification {
 
         then:
         result instanceof TokenBranchDef
-        result.closure instanceof Closure<TokenBranchChoice>
+        result.closure instanceof Closure
         result.branches == ['x','y']
         and:
         result.closure.call(0).value == 'hello'

@@ -20,9 +20,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import spock.lang.Specification
+import spock.lang.TempDir
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDirInMem
 import static test.TestUtils.tempFile
 
 /**
@@ -31,9 +30,11 @@ import static test.TestUtils.tempFile
  */
 class PathUtilsTest extends Specification {
 
+    @TempDir
+    Path root
+
     def 'should visit all files in a directory that satisfy a condition' () {
         given:
-        def root = tempDirInMem()
         def files = [
             'main.nf',
             'nextflow.config',
@@ -55,9 +56,6 @@ class PathUtilsTest extends Specification {
             path -> result.add(root.relativize(path).toString()) )
         then:
         result == files.findAll { filename -> filename.endsWith('.nf') }.toSet()
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should determine whether a path is excluded' () {

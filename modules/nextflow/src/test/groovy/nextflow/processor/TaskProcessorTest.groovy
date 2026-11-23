@@ -27,6 +27,8 @@ import nextflow.Session
 import nextflow.cache.CacheDB
 import nextflow.trace.TraceRecord
 import nextflow.exception.IllegalArityException
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -37,13 +39,19 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessConfigV1
+import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
+import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.types.Tuple
+import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.RecordMap
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -192,16 +200,17 @@ class TaskProcessorTest extends Specification {
         def processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
         processor.getOwnerScript() >> script
 
+        and:
+        ScriptMeta.REGISTRY.put(script, meta)
+
         when:
-        ResourcesBundle bundle
-        GroovyMock(ScriptMeta, global: true)
-        ScriptMeta.get(script) >> meta
-        bundle = processor.getModuleBundle()
+        def bundle = processor.getModuleBundle()
 
         then:
         (bundle != null) == EXPECTED
 
         cleanup:
+        ScriptMeta.reset()
         folder?.deleteDir()
 
         where:
@@ -308,8 +317,8 @@ class TaskProcessorTest extends Specification {
         int i = 0
         agent.addListener { a, b -> println ">>: $a -- $b"; i++ }
 
-        agent << { it.add(1); (this as Agent).updateValue(it) }
-        agent << { it.add(2); (this as Agent).updateValue(it) }
+        agent.send { it.add(1); (this as Agent).updateValue(it) }
+        agent.send { it.add(2); (this as Agent).updateValue(it) }
         agent.await()
         then:
         agent.val == [1,2]
@@ -411,6 +420,28 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    def 'should rerun a task failed with a retryable error regardless the error strategy' () {
+        given:
+        def executor = Mock(ExecutorService)
+        def session = Mock(Session) { getExecService() >> executor }
+        def proc = [:] as TaskProcessor
+        proc.session = session
+        and:
+        def task = new TaskRun(name: 'foo', context: new TaskContext(holder: [:]))
+        task.config = new TaskConfig(errorStrategy: 'terminate')
+        def error = new ProcessFailedException('Process `foo` failed', new NodeTerminationException('Node terminated'))
+
+        when:
+        def result = proc.resumeOrDie(task, error)
+
+        then:
+        1 * executor.submit(_)
+        result == ErrorStrategy.RETRY
+        task.failCount == 1
+        task.failed
+        task.errorAction == ErrorStrategy.RETRY
+    }
+
     def 'should export env vars' () {
 
         given:
@@ -424,15 +455,6 @@ class TaskProcessorTest extends Specification {
                 export BAR="ciao mondo"
                 '''
                 .stripIndent().leftTrim()
-
-        when:
-        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH', HOLA: 'one|two'], true)
-        then:
-        env == '''\
-            export PATH="foo:\\$PATH"
-            export HOLA="one|two"
-            '''.stripIndent()
-        env.charAt(env.size()-1) == '\n' as char
 
         when:
         env = TaskProcessor.bashEnvironmentScript([FOO:null, BAR:''])
@@ -638,6 +660,141 @@ class TaskProcessorTest extends Specification {
         'f*'            | ['/a','/b']                               | '3'       | 'Incorrect number of input files for process `foo` -- expected 3, found 2'
     }
 
+    @Unroll
+    def 'should allow the same input file to be staged by multiple inputs in typed process' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Y, true], Mock(FilePorter.Batch))
+        then:
+        task.inputFilesMap == EXPECTED
+
+        where:
+        Y                                                   | EXPECTED
+        Path.of('/b/other.fq')                              | ['reads.fq': Path.of('/a/reads.fq'), 'other.fq': Path.of('/b/other.fq')]
+        [Path.of('/a/reads.fq')]                            | ['reads.fq': Path.of('/a/reads.fq')]
+        [Path.of('/a/reads.fq'), Path.of('/b/other.fq')]    | ['reads.fq': Path.of('/a/reads.fq'), 'other.fq': Path.of('/b/other.fq')]
+    }
+
+    @Unroll
+    def 'should report input file name collision for typed process' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(PATTERN, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Y, true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/reads.fq)'
+
+        where:
+        Y                                                   | PATTERN
+        Path.of('/b/reads.fq')                              | null
+        [Path.of('/b/reads.fq')] as Set                     | null
+        [Path.of('/a/reads.fq'), Path.of('/b/reads.fq')]    | null
+        Path.of('/b/reads.fq')                              | '*'
+        [Path.of('/b/reads.fq')]                            | '*'
+    }
+
+    def 'should truncate input file name collision message' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('xs', Object, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> xs }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+        and:
+        def files = (1..12).collectMany { i -> (1..5).collect { j -> Path.of("/work/${j}/file${i}.txt") } }
+
+        when:
+        processor.resolveTaskInputs(task, [files, true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        def names = (1..10).collect { i -> "file${i}.txt (/work/1/file${i}.txt, /work/2/file${i}.txt, /work/3/file${i}.txt, ... 2 more)" }
+        e.message == "Process `foo` input file name collision -- There are multiple input files for each of the following file names: ${names.join(', ')}, ... 2 more"
+    }
+
+    def 'should report input file name collision for typed process with explicit stage name' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Path, false)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput('reads.fq', { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [Path.of('/a/reads.fq'), Path.of('/b/other.fq'), true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/other.fq)'
+    }
+
+    def 'should report input file name collision for typed process with tuple input' () {
+        given:
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addTupleParam([new ProcessInput('x', Path, false), new ProcessInput('y', Path, false)], Tuple)
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, [[Path.of('/a/reads.fq'), Path.of('/b/reads.fq')], true], Mock(FilePorter.Batch))
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == 'Process `foo` input file name collision -- There are multiple input files for each of the following file names: reads.fq (/a/reads.fq, /b/reads.fq)'
+    }
+
     def 'should submit a task' () {
         given:
         def exec = Mock(Executor)
@@ -765,5 +922,55 @@ class TaskProcessorTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should collect the paths nested in task inputs' () {
+        given:
+        def a = Path.of('/data/a.txt')
+        def r1 = Path.of('/data/r1.fq')
+        def r2 = Path.of('/data/r2.fq')
+        def bam = Path.of('/data/s1.bam')
+        def inputs = [a, 'sample1', [r1, r2] as Set, new ArrayBag([r2]), new RecordMap(id: 's1', bam: bam), [[r1]], null]
+
+        expect:
+        TaskProcessor.collectPaths(inputs, new HashSet<Path>()) == [a, r1, r2, bam] as Set
+        TaskProcessor.collectPaths('sample1', new HashSet<Path>()).isEmpty()
+    }
+
+    def 'should resolve the stage directives of a typed process' () {
+        given:
+        def x = Path.of('/data/x.fa')
+        def y = Path.of('/data/y.fq')
+        def helper = Path.of('/data/helper.sh')
+        def executor = Mock(Executor)
+        executor.isForeignFile(_) >> false
+        def config = new ProcessConfigV2(Mock(BaseScript), 'foo')
+        config.getInputs().addParam('id', String, false)
+        config.getInputs().addParam('x', Path, false)
+        config.getInputs().addParam('y', Path, false)
+        config.getInputs().addEnv('GREETING', { -> "hello ${id}" })
+        config.getInputs().setStdin({ -> "${id}: one" })
+        and: 'user-defined stagers'
+        config.getInputs().addFile(new ProcessFileInput('q.fa', { -> x }))
+        config.getInputs().addFile(new ProcessFileInput('h.sh', { -> helper }))
+        and: 'default stagers'
+        config.getInputs().addFile(new ProcessFileInput(null, { -> x }))
+        config.getInputs().addFile(new ProcessFileInput(null, { -> y }))
+        def processor = new TaskProcessor(name: 'foo', session: Mock(Session), executor: executor, config: config)
+        and:
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: new TaskContext(holder: new HashMap<String, Object>()),
+                config: new TaskConfig())
+
+        when:
+        processor.resolveTaskInputs(task, ['s1', x, y, true], Mock(FilePorter.Batch))
+        then:
+        task.inputFilesMap == ['q.fa': x, 'y.fq': y, 'h.sh': helper]
+        task.inputEnv == [GREETING: 'hello s1']
+        task.stdin.toString() == 's1: one'
+        and: 'only the staged files that are not task inputs are hashed'
+        task.stageAsFiles*.sourcePath == [helper]
     }
 }

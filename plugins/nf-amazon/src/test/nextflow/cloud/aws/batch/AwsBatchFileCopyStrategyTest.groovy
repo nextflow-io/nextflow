@@ -42,13 +42,45 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         copy.getUnstageOutputFilesScript(OUTPUTS,TARGET) == '''
                                         uploads=()
                                         IFS=$'\\n'
-                                        for name in $(eval "ls -1d outputs_* final_folder" | sort | uniq); do
-                                            uploads+=("nxf_s3_upload '$name' s3://data/results")
+                                        set -f
+                                        for name in $(set +f; eval "ls -1d outputs_* final_folder" | sort | uniq); do
+                                            printf -v qname %q "$name"
+                                            uploads+=("nxf_s3_upload $qname s3://data/results")
                                         done
+                                        set +f
                                         unset IFS
                                         nxf_parallel "${uploads[@]}"
                                         '''
                                         .stripIndent().leftTrim()
+    }
+
+    def 'should preserve special characters in download and upload file names' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def name = 'a\'b $(c) `d` "e" $x;f.txt'
+        folder.resolve(name).text = 'x'
+        def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
+        // stub the transfer functions, and run the commands with `eval` as `nxf_parallel` does
+        def script = '''
+            nxf_s3_download() { printf '%s\\n' "$1" "$2" >> downloads.log; }
+            nxf_s3_upload() { printf '%s\\n' "$1" >> uploads.log; }
+            nxf_parallel() { for cmd in "$@"; do eval "$cmd"; done; }
+            downloads=()
+            '''.stripIndent()
+        script += copy.stageInputFile(Paths.get('/bucket', name), name) + '\n'
+        script += 'nxf_parallel "${downloads[@]}"\n'
+        script += copy.getUnstageOutputFilesScript(['*.txt'], Paths.get('/bucket/out'))
+
+        when:
+        def proc = new ProcessBuilder('bash', '-c', script).directory(folder.toFile()).start()
+        proc.waitFor()
+
+        then:
+        folder.resolve('downloads.log').text == 's3://bucket/' + name + '\n' + name + '\n'
+        folder.resolve('uploads.log').text == name + '\n'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should return unstage script' () {
@@ -62,9 +94,12 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script.trim() == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d file.txt" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    set -f
+                    for name in $(set +f; eval "ls -1d file.txt" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://foo/bar")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''
@@ -76,9 +111,12 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script.trim() == '''
                         uploads=()
                         IFS=$'\\n'
-                        for name in $(eval "ls -1d file-*.txt" | sort | uniq); do
-                            uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                        set -f
+                        for name in $(set +f; eval "ls -1d file-*.txt" | sort | uniq); do
+                            printf -v qname %q "$name"
+                            uploads+=("nxf_s3_upload $qname s3://foo/bar")
                         done
+                        set +f
                         unset IFS
                         nxf_parallel "${uploads[@]}"
                         '''
@@ -90,9 +128,12 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script.trim() == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d file-[a,b].txt" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    set -f
+                    for name in $(set +f; eval "ls -1d file-[a,b].txt" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://foo/bar")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''
@@ -104,9 +145,12 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script.trim() == '''
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d file-01\\(A\\).txt f\\ o\\ o.txt" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    set -f
+                    for name in $(set +f; eval "ls -1d file-01\\\\(A\\\\).txt f\\\\ o\\\\ o.txt" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://foo/bar")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''
@@ -132,6 +176,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
+                        local max_timeout=300
                         local attempt=0
                         local exitCode=0
                         while (( \$attempt < \$max_attempts ))
@@ -142,14 +187,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          if [[ \$exitCode == 0 ]]
+                          attempt=\$(( attempt + 1 ))
+                          if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                           then
                             break
                           fi
                           nxf_sleep \$timeout
-                          attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 ))
+                          timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                         done
+                        return \$exitCode
                     }
 
                     nxf_parallel() {
@@ -223,6 +269,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
+                    local max_timeout=300
                     local attempt=0
                     local exitCode=0
                     while (( \$attempt < \$max_attempts ))
@@ -233,14 +280,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                       else
                         exitCode=\$?
                       fi
-                      if [[ \$exitCode == 0 ]]
+                      attempt=\$(( attempt + 1 ))
+                      if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                       then
                         break
                       fi
                       nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
+                      timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                     done
+                    return \$exitCode
                 }
 
                 nxf_parallel() {
@@ -378,6 +426,18 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         script == "downloads+=(\"nxf_s3_download s3:/$file bar.txt\")" as String
 
+    }
+
+    def 'should link a local input and download the others'() {
+        given:
+        def remote = TestHelper.createInMemTempFile('foo.txt')
+        def copy = new AwsBatchFileCopyStrategy(new TaskBean(workDir: remote.parent), new AwsOptions())
+
+        when:
+        def script = copy.getStageInputFilesScript(['ref.fa': Paths.get('/mnt/shared/ref.fa'), 'foo.txt': remote])
+        then:
+        script.contains('ln -sfn /mnt/shared/ref.fa ref.fa')
+        script.contains("downloads+=(\"nxf_s3_download s3:/$remote foo.txt\")")
     }
 
 }

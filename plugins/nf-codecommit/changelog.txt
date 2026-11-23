@@ -1,5 +1,9 @@
 nf-codecommit changelog
 =======================
+0.7.0 - 17 Nov 2026
+- Remove Netty from nf-amazon and nf-codecommit (#8022) [1fdb6a704]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+
 0.6.1 - 20 Aug 2026
 - Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
 - Bump Groovy 4.0.33 (#7429) [c8800d84a]

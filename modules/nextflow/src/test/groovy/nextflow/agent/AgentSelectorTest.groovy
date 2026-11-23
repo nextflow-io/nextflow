@@ -15,8 +15,6 @@
  */
 package nextflow.agent
 
-import nextflow.Global
-import nextflow.Session
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
 import nextflow.script.AgentDef
@@ -26,7 +24,6 @@ import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockSession
 
 /**
  * Aliasing side of the agent config-selector story (module-include design §6.1/§6.2, as amended by
@@ -50,15 +47,6 @@ class AgentSelectorTest extends Dsl2Spec {
     def cleanup() {
         AgentRunnerProvider.testRunner = null
         AgentCallInfo.clear()
-    }
-
-    private Session newSession(Map config = null) {
-        final session = config ? new MockSession(config) : new MockSession()
-        session.setBinding(new ScriptBinding())
-        session.init(null, null, null, null)
-        session.start()
-        Global.session = session
-        return session
     }
 
     /** An agent DECLARED as `qa`, as an agent module would declare it. */

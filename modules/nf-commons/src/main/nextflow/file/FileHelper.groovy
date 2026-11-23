@@ -16,7 +16,6 @@
 
 package nextflow.file
 
-import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.DirectoryStream
 import java.nio.file.FileSystem
@@ -114,6 +113,35 @@ class FileHelper {
 
 
         return path
+    }
+
+    /**
+     * Remove current-directory segments from a relative path or glob pattern,
+     * e.g. {@code ./results/x.vcf} becomes {@code results/x.vcf} and
+     * {@code a/./b} becomes {@code a/b}.
+     *
+     * A task output declared as {@code ./results/x.vcf} must name the same object
+     * whether the task uploads it itself or a filesystem mount (e.g. Fusion) writes it.
+     * A filesystem resolves {@code .} before the file is stored, so the object key never
+     * contains {@code /./}; object stores such as S3 treat {@code a/./b} and {@code a/b}
+     * as different keys.
+     *
+     * Repeated slashes are collapsed first, so {@code .//x} becomes {@code x}, not the
+     * absolute {@code /x}. Absolute paths, {@code ..} segments, and a bare {@code .} or
+     * {@code ./} are left unchanged.
+     *
+     * @param path A relative path or glob pattern
+     * @return The same path without {@code .} segments and repeated slashes
+     */
+    static String stripCurrentDirSegments( String path ) {
+        if( !path || path.startsWith('/') )
+            return path
+        String result = path.replaceAll('/{2,}', '/')
+        while( result.startsWith('./') && result.length() > 2 )
+            result = result.substring(2)
+        while( result.contains('/./') )
+            result = result.replace('/./', '/')
+        return result
     }
 
 
@@ -677,32 +705,44 @@ class FileHelper {
     }
 
     /**
+     * Get the schemes of all available file system providers, including
+     * those registered with {@link #getOrInstallProvider(java.lang.Class)}
+     */
+    static Set<String> getProviderSchemes() {
+        final result = new LinkedHashSet<String>()
+        for( final provider : FileSystemProvider.installedProviders() )
+            result.add(provider.scheme)
+        synchronized (providersMap) {
+            result.addAll(providersMap.keySet())
+        }
+        return result
+    }
+
+    /**
      * Get the instance of the specified {@code FileSystemProvider} class. If the provider is not
-     * in the list of installed provided, it creates a new instance and add it to the list
+     * known, it creates a new instance and registers it so that it can be resolved by
+     * {@link #getProviderFor(java.lang.String)}.
      * <p>
-     * This method has been deprecated use {@link #getOrCreateFileSystemFor(java.lang.String)} instead
-     *
-     * @see {@code FileSystemProvider#installedProviders}
+     * Providers registered this way are not visible to {@code Paths.get(URI)}, use
+     * {@link #asPath(java.lang.String)} instead.
      *
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
-    synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+    static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+        synchronized (providersMap) {
+            FileSystemProvider result = providersMap.values().find { it.class == clazz }
+            if( result )
+                return (T)result
 
-        FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
-        if( result )
+            result = FileSystemProvider.installedProviders().find { it.class == clazz }
+            if( !result ) {
+                result = clazz.getDeclaredConstructor().newInstance()
+                log.debug "> Registered '${clazz.simpleName}' file system provider [${result.scheme}]"
+            }
+            providersMap[result.scheme] = result
             return (T)result
-
-        result = (T)clazz.newInstance()
-
-        // add it manually
-        Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
-        field.setAccessible(true)
-        List installedProviders = new ArrayList((List)field.get(null))
-        installedProviders.add( result )
-        field.set(this, Collections.unmodifiableList(installedProviders))
-        log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
-        return (T)result
+        }
     }
 
     private static Lock _fs_lock = new ReentrantLock()
@@ -898,7 +938,7 @@ class FileHelper {
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
-                    def result = relative ? path : fullPath
+                    def result = relative ? path : stripTrailingSlash(fullPath)
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
@@ -938,6 +978,20 @@ class FileHelper {
             }
       })
 
+    }
+
+    /**
+     * Strip the trailing slash that some cloud storage providers (e.g. GCS)
+     * preserve in the path of a directory
+     *
+     * @param dir A directory path, possibly with a trailing slash
+     * @return The directory path without the trailing slash
+     */
+    static protected Path stripTrailingSlash(Path dir) {
+        // the file name of a GCS path does not include the trailing slash
+        return dir.toString().endsWith('/')
+            ? dir.resolveSibling(dir.getFileName())
+            : dir
     }
 
     static protected Path relativize0(Path folder, Path fullPath) {
@@ -1296,6 +1350,18 @@ class FileHelper {
             log.debug("String '${strHash}' is not a valid hash", e)
             return null
         }
+    }
+
+    /**
+     * The attempt of the task run in the given work directory: {@code N} for {@code <30hex>-N},
+     * 1 when the leaf has no attempt suffix.
+     */
+    static int getAttemptFromPath(Path workDir) {
+        final leaf = workDir?.getFileName()?.toString()
+        if( !leaf )
+            return 1
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        return suffix.find() ? Integer.parseInt(leaf.substring(suffix.start() + 1)) : 1
     }
 
     /**

@@ -30,7 +30,6 @@ import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.ast.tools.GenericsUtils
 import org.codehaus.groovy.control.SourceUnit
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -42,14 +41,8 @@ import static nextflow.script.types.TypeCheckingUtils.*
  */
 class TypeCheckingUtilsTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
     SourceUnit parse(String contents) {
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents)
         scriptParser.analyze()
         return source

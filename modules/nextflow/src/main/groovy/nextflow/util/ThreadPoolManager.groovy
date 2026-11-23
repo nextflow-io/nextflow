@@ -19,6 +19,7 @@ package nextflow.util
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -53,6 +54,7 @@ class ThreadPoolManager {
     private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
     private ExecutorService executorService
+    private final AtomicInteger runningTasks = new AtomicInteger()
     private String name
     private String waitMsg = "Waiting for file transfers to complete (%d files)"
     private String exitMsg = "Exiting before file transfers were completed -- Some files may be lost"
@@ -98,8 +100,17 @@ class ThreadPoolManager {
 
     protected ExecutorService virtualThreadService() {
         final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
-        final pool = VirtualThreadFactoryBuilder.create(poolName)
-        return Executors.newThreadPerTaskExecutor(pool)
+        final factory = VirtualThreadFactoryBuilder.create(poolName)
+        final ThreadFactory countingFactory = (Runnable task) -> factory.newThread(() -> {
+            runningTasks.incrementAndGet()
+            try {
+                task.run()
+            }
+            finally {
+                runningTasks.decrementAndGet()
+            }
+        })
+        return Executors.newThreadPerTaskExecutor(countingFactory)
     }
 
     // this class is required to avoid failures when using Java version < 21
@@ -118,6 +129,12 @@ class ThreadPoolManager {
                 .withKeepAliveTime(keepAlive)
                 .withAllowCoreThreadTimeout(allowThreadTimeout)
                 .build()
+    }
+
+    protected int pending() {
+        return executorService instanceof ThreadPoolExecutor
+            ? ThreadPoolHelper.pending(executorService)
+            : runningTasks.get()
     }
 
     ExecutorService createAndRegisterShutdownCallback(Session session) {
@@ -143,7 +160,7 @@ class ThreadPoolManager {
 
         executorService.shutdown()
         // wait for remaining threads to complete
-        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
+        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg, () -> pending())
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
     }
 

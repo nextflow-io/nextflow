@@ -80,13 +80,18 @@ refresh:
 
 #
 # Run all tests or selected ones
+# When no AWS credentials are set, use the temporary keys of the `aws_profile` SSO session
+# (if any) so the S3 integration tests run instead of being skipped
 #
+aws_profile ?= nextflow-oss
+
 test:
-ifndef class
-	$(gradle) ${mm}test
-else
-	$(gradle) ${mm}test --tests ${class}
-endif
+	@if [ -z "$$AWS_ACCESS_KEY_ID" ] && creds=$$(aws configure export-credentials --profile $(aws_profile) --format env 2>/dev/null); then \
+	  eval "$$creds"; unset AWS_PROFILE; echo "Using AWS profile '$(aws_profile)' for S3 tests"; \
+	elif [ -z "$$AWS_ACCESS_KEY_ID" ]; then \
+	  echo "No AWS credentials for profile '$(aws_profile)' -- S3 tests will be skipped"; \
+	fi; \
+	$(gradle) ${mm}test $(if $(class),--tests $(class))
 
 #
 # Run smoke tests
@@ -107,10 +112,21 @@ pack:
 	BUILD_PACK=1 $(gradle) pack
 
 #
-# Upload NF launcher to nextflow.io web site
+# Create the standalone bundle (Java runtime + jar + AOT cache) for the current platform
+#
+.PHONY: bundle
+bundle:
+	$(gradle) bundle
+
+#
+# Upload NF launcher to nextflow.io web site, with the Java bundles in the directory
+# NXF_RELEASE_BUNDLES (or NXF_RELEASE_BUNDLES=none to deploy a release without them)
 #
 deploy:
 	BUILD_PACK=1 $(gradle) deploy
+
+check-release-bundles:
+	$(gradle) checkReleaseBundles
 
 #
 # Close artifacts uploaded to Maven central
@@ -134,7 +150,7 @@ dockerImage:
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 $(gradle) publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
+	BUILD_PACK=1 $(gradle) dockerPack installPlugin
 
 release-plugins:
 	$(gradle) releasePluginToRegistryIfNotExists

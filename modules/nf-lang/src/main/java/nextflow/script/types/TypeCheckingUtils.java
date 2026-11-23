@@ -16,6 +16,7 @@
 package nextflow.script.types;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -166,13 +167,13 @@ public class TypeCheckingUtils {
     }
 
     public static FieldNode resolveProperty(ClassNode receiverType, String property) {
-        receiverType = Types.normalize(receiverType);
-        if( receiverType == null )
+        var cn = Types.normalize(receiverType);
+        if( cn == null )
             return null;
-        var result = receiverType.getField(property);
+        var result = cn.getField(property);
         if( result != null )
             return result;
-        return receiverType.getMethods().stream()
+        return cn.getMethods().stream()
             .filter((mn) -> {
                 if( !mn.isPublic() )
                     return false;
@@ -182,13 +183,14 @@ public class TypeCheckingUtils {
                 return property.equals(an.get().getMember("value").getText());
             })
             .map((mn) -> {
-                var fn = new FieldNode(property, 0xF, mn.getReturnType(), mn.getDeclaringClass(), null);
+                var type = resolveGenericType(mn.getReturnType(), cn);
+                var fn = new FieldNode(property, 0xF, type, mn.getDeclaringClass(), null);
                 findAnnotation(mn, Description.class).ifPresent((an) -> {
                     fn.addAnnotation(an);
                 });
                 return fn;
             })
-            .findFirst().orElse(resolveMapProperty(receiverType, property));
+            .findFirst().orElse(resolveMapProperty(cn, property));
     }
 
     private static FieldNode resolveMapProperty(ClassNode cn, String name) {
@@ -215,8 +217,11 @@ public class TypeCheckingUtils {
         var methods = methodOverloads(node);
         var arguments = asMethodCallArguments(node);
         return methods.stream()
-            .filter((mn) -> isCompatibleMethod(mn, arguments, resolvedPlaceholders))
+            .filter((mn) -> isCompatibleMethod(mn, arguments, resolvedPlaceholders, false))
             .findFirst()
+            .or(() -> methods.stream()
+                .filter((mn) -> isCompatibleMethod(mn, arguments, resolvedPlaceholders, true))
+                .findFirst())
             .orElse(null);
     }
 
@@ -264,14 +269,17 @@ public class TypeCheckingUtils {
      * functional type accepts one parameter, the closure can instead accept
      * multiple parameters if the target parameter type is a tuple with the same
      * number of components. The Groovy runtime will automatically destructure
-     * tuple arguments when calling this closure.
+     * tuple arguments when calling this closure. Destructuring is only
+     * considered when no overload matches the closure arity exactly, which
+     * is consistent with Groovy runtime dispatch (e.g. `toSorted`).
      *
      * @param mn
      * @param arguments
      * @param resolvedPlaceholders
+     * @param allowDestructure
      */
-    private static boolean isCompatibleMethod(MethodNode mn, List<Expression> arguments, Map<GenericsTypeName, GenericsType> resolvedPlaceholders) {
-        var parameters = expandVargs(mn.getParameters(), arguments.size());
+    private static boolean isCompatibleMethod(MethodNode mn, List<Expression> arguments, Map<GenericsTypeName, GenericsType> resolvedPlaceholders, boolean allowDestructure) {
+        var parameters = parametersForArguments(expandVargs(mn.getParameters(), arguments.size()), arguments.size());
         if( parameters.length != arguments.size() ) {
             return false;
         }
@@ -283,7 +291,7 @@ public class TypeCheckingUtils {
                 var samParameterTypes = GenericsUtils.parameterizeSAM(paramType).getV1();
                 var closureParams = ce.getParameters();
                 if( samParameterTypes.length == 1 && closureParams.length > 1 ) {
-                    if( !isTupleDestructure(samParameterTypes[0], closureParams) )
+                    if( !allowDestructure || !isTupleDestructure(samParameterTypes[0], closureParams) )
                         return false;
                 }
                 else if( samParameterTypes.length != closureParams.length ) {
@@ -301,6 +309,41 @@ public class TypeCheckingUtils {
             }
         }
         return true;
+    }
+
+    /**
+     * Get the parameters that correspond to the given number of call
+     * arguments, omitting parameters with default values as needed.
+     *
+     * Like Groovy, defaulted parameters are omitted from right to left.
+     *
+     * @param params
+     * @param argCount
+     */
+    public static Parameter[] parametersForArguments(Parameter[] params, int argCount) {
+        int omitted = params.length - argCount;
+        if( omitted <= 0 )
+            return params;
+        var result = new ArrayList<Parameter>(Arrays.asList(params));
+        for( int i = result.size() - 1; i >= 0 && omitted > 0; i-- ) {
+            if( result.get(i).hasInitialExpression() ) {
+                result.remove(i);
+                omitted--;
+            }
+        }
+        return result.toArray(Parameter[]::new);
+    }
+
+    /**
+     * Get the number of parameters that must be supplied by a call,
+     * i.e. parameters without a default value.
+     *
+     * @param params
+     */
+    public static int requiredParameterCount(Parameter[] params) {
+        return (int) Arrays.stream(params)
+            .filter(p -> !p.hasInitialExpression())
+            .count();
     }
 
     private static Parameter[] expandVargs(Parameter[] params, int argCount) {

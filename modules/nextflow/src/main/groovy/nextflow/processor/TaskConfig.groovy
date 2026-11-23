@@ -123,15 +123,18 @@ class TaskConfig extends LazyMap implements Cloneable {
     TaskConfig setContext( Map context ) {
         assert context != null
 
-        // set the binding context for this map
-        this.binding = context
+        // call the setter explicitly -- the static compiler would treat
+        // `this.binding = context` as a map entry
+        setBinding(context)
 
         // clear cache to force re-compute dynamic entries
         this.cache.clear()
 
-        // set the binding context for 'ext' map
-        if( target.ext instanceof LazyMap )
-            (target.ext as LazyMap).binding = context
+        // set the binding context for 'ext' map -- call the setter explicitly:
+        // a bare `ext.binding = context` is not routed to the protected
+        // `setBinding` under Groovy 5 and would be stored as a map entry
+        if( getTarget().ext instanceof LazyMap ext )
+            ext.setBinding(context)
 
         // set the this object in the task context in order to allow task properties to be resolved in process script
         context.put(TASK_CONTEXT_PROPERTY_NAME, this)
@@ -182,8 +185,19 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get(name)
     }
 
+    void setProperty(String name, Object value) {
+        // use the declared setter if any (e.g. `context`), otherwise store the value
+        // as a directive -- Groovy 5 no longer falls back to the map for read-only
+        // properties (e.g. `shell`) and throws ReadOnlyPropertyException instead
+        final meta = metaClass.getMetaProperty(name)
+        if( meta instanceof MetaBeanProperty && meta.setter )
+            meta.setProperty(this, value)
+        else
+            put(name, value)
+    }
+
     final getRawValue(String key) {
-        return target.get(key)
+        return getTarget().get(key)
     }
 
     def get( String key ) {
@@ -200,11 +214,11 @@ class TaskConfig extends LazyMap implements Cloneable {
 
         def result
         if( key == 'ext' ) {
-            if( target.containsKey(key) )
-                result = target.get(key)
+            if( getTarget().containsKey(key) )
+                result = getTarget().get(key)
             else {
                 result = new LazyMap()
-                target.put(key, result)
+                getTarget().put(key, result)
             }
         }
         else
@@ -228,7 +242,7 @@ class TaskConfig extends LazyMap implements Cloneable {
                     super.setDynamic(flag)
                 }
             }
-            target.put(key, value)
+            getTarget().put(key, value)
         }
         else if( key == 'ext' && value instanceof Map ) {
             super.put( key, new LazyMap(value) )
@@ -242,8 +256,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( super.isDynamic() )
             return true
 
-        if( target.ext instanceof LazyMap )
-            return (target.ext as LazyMap).isDynamic()
+        if( getTarget().ext instanceof LazyMap ext )
+            return ext.isDynamic()
 
         return false
     }
@@ -654,7 +668,7 @@ class TaskConfig extends LazyMap implements Cloneable {
      */
     protected boolean getWhenGuard(boolean defValue=true) throws FailedGuardException {
 
-        final code = target.get(NextflowDSLImpl.PROCESS_WHEN)
+        final code = getTarget().get(NextflowDSLImpl.PROCESS_WHEN)
         if( code == null )
             return defValue
 
@@ -674,7 +688,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
 
     protected TaskClosure getStubBlock() {
-        final code = target.get(NextflowDSLImpl.PROCESS_STUB)
+        final code = getTarget().get(NextflowDSLImpl.PROCESS_STUB)
         if( !code )
             return null
         if( code instanceof TaskClosure )

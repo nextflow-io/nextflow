@@ -44,6 +44,7 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.StringUtils
 import nextflow.util.TestOnly
 import nextflow.util.Throttle
 /**
@@ -182,7 +183,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             // -- forward the job launcher script to the command stdin if required
             if( pipeScript ) {
-                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
+                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${StringUtils.stripSecrets(pipeScript).indent()}"
                 process.out << pipeScript
                 process.out.close()
             }

@@ -25,7 +25,6 @@ import nextflow.exception.ConfigParseException
 import nextflow.extension.FilesEx
 import nextflow.secret.SecretsLoader
 import nextflow.util.ConfigHelper
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -615,11 +614,11 @@ class ConfigBuilderTest extends Specification {
     }
 
     // issue 2422 - https://github.com/nextflow-io/nextflow/issues/2422
-    // ideally this should behave as the previous test
-    @Ignore
     def 'should resolve ext config with properties' () {
 
         given:
+        // the v1 parser is still affected by #2422
+        SysEnv.push('NXF_SYNTAX_PARSER': 'v2')
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('test.conf')
         file1.text = '''
@@ -643,6 +642,7 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+        SysEnv.pop()
     }
 
     def 'should access top params from profile' () {

@@ -520,4 +520,8 @@ class AzFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("Operation 'setAttribute' is not supported by AzFileSystem")
     }
 
+    /** Must not render the environment */
+    @Override
+    String toString() { getClass().getSimpleName() }
+
 }

@@ -99,7 +99,7 @@ class ColorUtilTest extends Specification {
         then:
         result.contains('test')
         if (ColorUtil.isAnsiEnabled()) {
-            result.contains('\u001B[31m')  // Red color code
+            assert result.contains('\u001B[31m')  // Red color code
         }
     }
 
@@ -110,8 +110,7 @@ class ColorUtilTest extends Specification {
         then:
         result.contains('test')
         if (ColorUtil.isAnsiEnabled()) {
-            result.contains('\u001B[31m')  // Red foreground
-            result.contains('\u001B[43m')  // Yellow background
+            assert result.contains('\u001B[31;43m')  // Red foreground, yellow background
         }
     }
 
@@ -122,9 +121,7 @@ class ColorUtilTest extends Specification {
         then:
         result.contains('test')
         if (ColorUtil.isAnsiEnabled()) {
-            result.contains('\u001B[36m')  // Cyan color
-            result.contains('\u001B[1m')   // Bold
-            result.contains('\u001B[2m')   // Dim
+            assert result.contains('\u001B[36;1;2m')  // Cyan color, bold, dim
         }
     }
 
@@ -156,7 +153,7 @@ class ColorUtilTest extends Specification {
 
         then:
         if (ColorUtil.isAnsiEnabled()) {
-            result.endsWith('\u001B[0m')  // Full reset code
+            assert result.endsWith('\u001B[m')  // Full reset code
         }
     }
 
@@ -166,9 +163,8 @@ class ColorUtilTest extends Specification {
 
         then:
         if (ColorUtil.isAnsiEnabled()) {
-            !result.endsWith('\u001B[0m')  // Should not end with full reset
-            result.contains('\u001B[22m')  // Bold off
-            result.contains('\u001B[39m')  // Default foreground
+            assert !result.endsWith('\u001B[m')  // Should not end with full reset
+            assert result.endsWith('\u001B[22;39m')  // Bold off, default foreground
         }
     }
 
@@ -180,8 +176,8 @@ class ColorUtilTest extends Specification {
         def output = capture.toString()
         output.contains('test message')
         if (ColorUtil.isAnsiEnabled()) {
-            output.contains('\u001B[32m')  // Green color
-            output.contains('\u001B[0m')   // Reset at end
+            assert output.contains('\u001B[32m')  // Green color
+            assert output.contains('\u001B[m')   // Reset at end
         }
     }
 
@@ -192,7 +188,7 @@ class ColorUtilTest extends Specification {
         expect:
         colors.each { color ->
             def result = ColorUtil.colorize('test', color)
-            result.contains('test')
+            assert result.contains('test')
         }
     }
 
@@ -203,10 +199,7 @@ class ColorUtilTest extends Specification {
         then:
         result.contains('complex')
         if (ColorUtil.isAnsiEnabled()) {
-            result.contains('\u001B[31m')  // Red foreground
-            result.contains('\u001B[44m')  // Blue background
-            result.contains('\u001B[1m')   // Bold
-            result.contains('\u001B[2m')   // Dim
+            assert result.contains('\u001B[31;44;1;2m')  // Red foreground, blue background, bold, dim
         }
     }
 
@@ -217,10 +210,10 @@ class ColorUtilTest extends Specification {
 
         then:
         if (ColorUtil.isAnsiEnabled()) {
-            result1 == result2
+            assert result1 == result2
         } else {
-            result1 == 'test'
-            result2 == 'test'
+            assert result1 == 'test'
+            assert result2 == 'test'
         }
     }
 

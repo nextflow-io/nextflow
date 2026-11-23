@@ -211,7 +211,7 @@ class TaskErrorFormatter {
         }
 
         if( err instanceof MissingPropertyException ) {
-            def name = err.property ?: LoggerHelper.getDetailMessage(err)
+            def name = err.property ?: err.messageWithoutLocationText
             def result = "No such variable: ${name}"
             def details = LoggerHelper.findErrorLine(err)
             if( details )

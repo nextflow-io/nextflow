@@ -17,23 +17,33 @@
 package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.time.Duration as JavaDuration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import dev.failsafe.function.CheckedPredicate
 
+import com.azure.compute.batch.BatchClientBuilder
 import com.azure.compute.batch.models.AllocationState
+import com.azure.compute.batch.models.BatchErrorException
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchJobCreateParameters
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.ResizeError
+import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.exception.HttpResponseException
+import com.azure.core.http.HttpClient
+import com.azure.core.http.HttpHeaders
+import com.azure.core.http.HttpRequest
 import com.azure.core.http.HttpResponse
 import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
+import groovy.json.JsonSlurper
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -50,6 +60,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -315,7 +326,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'"
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
     }
@@ -329,10 +340,62 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/" && bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && {\necho hello-world\n}'"
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should configure custom startTask with quoted script when azcopy is enabled' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
+        then:
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir -p \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && {\necho '\\''hello-world'\\''\n}'"
+        and:
+        configuredStartTask.resourceFiles.size()==1
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should skip the whole multi-line startTask script when the azcopy install fails' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+        and:
+        def workDir = Files.createTempDirectory('test')
+        def sharedDir = Files.createTempDirectory('shared')
+        // bin dir already present, as when the start task re-runs on a rebooted node
+        Files.createDirectory(sharedDir.resolve('bin'))
+        if( AZCOPY ) workDir.resolve('azcopy').text = '#!/bin/sh'
+
+        when:
+        def commandLine = svc.createStartTask( new AzStartTaskOpts(script: SCRIPT) ).commandLine
+        and:
+        // run the command line through a shell to mimic the Batch agent splitting it into argv
+        def builder = new ProcessBuilder('bash', '-c', commandLine).directory(workDir.toFile()).redirectErrorStream(true)
+        builder.environment().put('AZ_BATCH_NODE_SHARED_DIR', sharedDir.toString())
+        def proc = builder.start()
+        def output = proc.inputStream.text
+        def exitCode = proc.waitFor()
+
+        then:
+        exitCode == EXIT
+        output.readLines().findAll { !it.contains('azcopy') } == OUTPUT
+
+        cleanup:
+        workDir?.deleteDir()
+        sharedDir?.deleteDir()
+
+        where:
+        AZCOPY | SCRIPT                                        | EXIT | OUTPUT
+        false  | 'echo line1\necho line2'                      | 1    | []
+        false  | 'false || echo fallback'                      | 1    | []
+        true   | "echo 'line1'\necho line2 # trailing comment" | 0    | ['line1', 'line2']
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
@@ -357,7 +420,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.commandLine == "bash -c 'echo '\\''hello-world'\\'''"
         configuredStartTask.resourceFiles.isEmpty()
     }
 
@@ -594,7 +657,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.terminateJobs() >> null
+        1 * svc.terminateJobs() >> { }
     }
 
     def 'should not cleanup jobs by default' () {
@@ -605,7 +668,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupJobs() >> null
+        0 * svc.cleanupJobs() >> { }
     }
 
     def 'should cleanup jobs if specified' () {
@@ -616,7 +679,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupJobs() >> null
+        1 * svc.cleanupJobs() >> { }
     }
 
     def 'should not cleanup pools by default' () {
@@ -627,7 +690,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupPools() >> null
+        0 * svc.cleanupPools() >> { }
     }
 
     def 'should cleanup pools with autoPoolMode' () {
@@ -638,7 +701,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupPools() >> null
+        1 * svc.cleanupPools() >> { }
     }
 
     def 'should cleanup pools with allowPoolCreation' () {
@@ -649,7 +712,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupPools() >> null
+        1 * svc.cleanupPools() >> { }
     }
 
 
@@ -661,7 +724,7 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        0 * svc.cleanupPools() >> null
+        0 * svc.cleanupPools() >> { }
     }
 
     def 'should get spec from pool config' () {
@@ -895,6 +958,32 @@ class AzBatchServiceTest extends Specification {
     }
 
     @Unroll
+    def 'should create task resource files' () {
+        given:
+        // the SAS token must be at least 100 chars to create the az file system
+        def SAS = '1234567890' * 10
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account'], batch: [copyToolInstallMode: 'node']]
+        Global.session = Mock(Session) { getConfig()>>[azure: AZURE] }
+        def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
+        def svc = new AzBatchService(createExecutor(new AzConfig(AZURE)))
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> WORKDIR
+            getStdin() >> STDIN
+        }
+
+        when:
+        def result = svc.resourceFileUrls(TASK, SAS)
+        then:
+        result.collect { [it.filePath, it.httpUrl] } == FILES.collect { [it, "https://my-account.blob.core.windows.net/foo/work/dir/${it}?${SAS}".toString()] }
+
+        where:
+        STDIN        | FILES
+        null         | ['.command.run', '.command.sh']
+        'some input' | ['.command.run', '.command.sh', '.command.in']
+    }
+
+    @Unroll
     def 'should create user-assigned managed identity credentials token' () {
         given:
         def config = Mock(AzConfig)
@@ -1004,7 +1093,7 @@ class AzBatchServiceTest extends Specification {
         service.safeCreatePool(spec)
 
         then: 'createPool is called once'
-        1 * service.createPool(spec) >> null
+        1 * service.createPool(spec) >> { }
         and:
         noExceptionThrown()
 
@@ -1045,6 +1134,89 @@ class AzBatchServiceTest extends Specification {
         then: 'exception is not caught'
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
+    }
+
+    def 'should mount file shares with the account key and file url in the right fields' () {
+        given:
+        def CONFIG = new AzConfig([storage: [accountName: 'mystorage', accountKey: 'my-key', fileShares: [myshare: [mountOptions: '-o vers=3.0']]]])
+        def service = Spy(new AzBatchService(createExecutor(CONFIG)))
+        def spec = new AzVmPoolSpec(poolId: 'my-pool', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        and: 'capture the pool create request sent to Azure Batch'
+        String requestBody = null
+        def httpClient = { HttpRequest request ->
+            requestBody = request.bodyAsBinaryData.toString()
+            Mono.just(new HttpResponse(request) {
+                int getStatusCode() { 201 }
+                String getHeaderValue(String name) { null }
+                HttpHeaders getHeaders() { new HttpHeaders() }
+                Flux<ByteBuffer> getBody() { Flux.empty() }
+                Mono<byte[]> getBodyAsByteArray() { Mono.empty() }
+                Mono<String> getBodyAsString() { Mono.empty() }
+                Mono<String> getBodyAsString(Charset charset) { Mono.empty() }
+            } as HttpResponse)
+        } as HttpClient
+        service.getClient() >> new BatchClientBuilder()
+            .endpoint('https://acct.westeurope.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('acct', Base64.encoder.encodeToString('key'.bytes)))
+            .httpClient(httpClient)
+            .buildClient()
+        service.poolVmConfig(_) >> null
+
+        when:
+        service.createPool(spec)
+        def share = new JsonSlurper().parseText(requestBody).mountConfiguration[0].azureFileShareConfiguration
+
+        then:
+        share.accountName == 'mystorage'
+        share.accountKey == 'my-key'
+        share.azureFileUrl == 'https://mystorage.file.core.windows.net/myshare'
+        share.relativeMountPath == 'myshare'
+        share.mountOptions == '-o vers=3.0'
+    }
+
+    private static HttpClient stubHttpClient(int statusCode, String errorCode) {
+        final body = """{"odata.metadata":"x","code":"${errorCode}","message":{"lang":"en-US","value":"error"}}""".getBytes(StandardCharsets.UTF_8)
+        final headers = new HttpHeaders().set('Content-Type', 'application/json;odata=minimalmetadata')
+        return { HttpRequest request ->
+            Mono.just(new HttpResponse(request) {
+                int getStatusCode() { statusCode }
+                String getHeaderValue(String name) { headers.getValue(name) }
+                HttpHeaders getHeaders() { headers }
+                Flux<ByteBuffer> getBody() { Flux.just(ByteBuffer.wrap(body)) }
+                Mono<byte[]> getBodyAsByteArray() { Mono.just(body) }
+                Mono<String> getBodyAsString() { Mono.just(new String(body, StandardCharsets.UTF_8)) }
+                Mono<String> getBodyAsString(Charset charset) { Mono.just(new String(body, charset)) }
+            } as HttpResponse)
+        } as HttpClient
+    }
+
+    @Unroll
+    def 'should handle pool lookup response with status #STATUS' () {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def client = new BatchClientBuilder()
+            .endpoint('https://acct.westeurope.batch.azure.com')
+            .credential(new AzureNamedKeyCredential('acct', Base64.encoder.encodeToString('key'.bytes)))
+            .httpClient(stubHttpClient(STATUS, CODE))
+            .buildClient()
+        service.getClient() >> client
+
+        when:
+        def result = null
+        Throwable error = null
+        try { result = service.getPool('test-pool') }
+        catch (Throwable t) { error = t }
+
+        then:
+        result == null
+        error?.class == ERROR
+
+        where:
+        STATUS | CODE                   | ERROR
+        404    | 'PoolNotFound'         | null
+        403    | 'AuthorizationFailure' | BatchErrorException
+        401    | 'AuthenticationFailed' | BatchErrorException
     }
 
     def 'should test createJobConstraints method with Duration input' () {
@@ -1108,7 +1280,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should create job successfully on first try'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1128,7 +1300,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should retry on ActiveJobAndScheduleQuotaReached and then succeed'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1154,7 +1326,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should throw after exceeding max job quota retries'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1181,7 +1353,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should fail immediately when maxJobQuotaRetries is 0'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1207,7 +1379,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should not retry on non-quota 409 error'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1232,7 +1404,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should not retry on non-HttpResponseException'() {
         given:
-        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '10 ms']])
         def exec = createExecutor(config)
         int createCalls = 0
         def service = new AzBatchService(exec) {
@@ -1354,5 +1526,121 @@ class AzBatchServiceTest extends Specification {
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationTimedout'), new ResizeError(code: 'AccountCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
+    }
+
+    def 'should include resize error codes in the pool check error' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached', message: 'Core quota reached') ])
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
+    }
+
+    private AzBatchService serviceWithJob(Map config, String jobId, String poolId) {
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[createExecutor(config)]) {
+            createJob0(poolId, _) >> jobId
+        }
+        svc.getOrCreateJob(poolId, Mock(TaskRun) { getProcessor() >> Mock(TaskProcessor) })
+        return svc
+    }
+
+    def 'should fail queued tasks on a fixed pool that cannot allocate nodes' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        def KEY = new AzTaskKey('job-1', 'task-1')
+        def POOL = poolWithResizeError(enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached', message: 'Core quota reached') ])
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def retried = svc.poolAllocationError(new AzTaskKey('job-1', 'task-2'))
+
+        then:
+        1 * svc.getPool('pool-1') >> POOL
+        first == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AccountVMSeriesCoreQuotaReached: Core quota reached"
+        retried == first
+    }
+
+    def 'should stop checking a fixed pool once it is allocated' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def second = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> POOL
+        first == null
+        second == null
+
+        where:
+        POOL << [
+            poolWithResizeError(enableAutoScale: false, resizeErrors: null, currentDedicatedNodes: 1),
+            poolWithResizeError(enableAutoScale: false, currentDedicatedNodes: 1),
+        ]
+    }
+
+    def 'should keep tasks waiting on an autoscale pool with resize errors' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def second = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ])
+        first == null
+        second == null
+    }
+
+    def 'should wait until a fixed pool allocation is steady' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+        def KEY = new AzTaskKey('job-1', 'task-1')
+
+        when:
+        def first = svc.poolAllocationError(KEY)
+        def throttled = svc.poolAllocationError(KEY)
+
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(enableAutoScale: false, allocationState: AllocationState.RESIZING, resizeErrors: null)
+        first == null
+        throttled == null
+
+        when:
+        def failedLookup = svc.poolAllocationError(KEY)
+        def steady = svc.poolAllocationError(KEY)
+
+        then:
+        svc.getPoolAllocationCheckInterval() >> JavaDuration.ZERO
+        1 * svc.getPool('pool-1') >> { throw new IllegalStateException('Service unavailable') }
+        then:
+        1 * svc.getPool('pool-1') >> poolWithResizeError(enableAutoScale: false, resizeErrors: [ new ResizeError(code: 'AllocationFailed') ])
+        failedLookup == null
+        steady == "Azure Batch pool 'pool-1' has resize errors and no agents are available - AllocationFailed"
+    }
+
+    def 'should not check the pool of an unknown job' () {
+        given:
+        def svc = serviceWithJob([batch:[location: 'northeurope']], 'job-1', 'pool-1')
+
+        when:
+        def result = svc.poolAllocationError(new AzTaskKey('job-2', 'task-1'))
+
+        then:
+        0 * svc.getPool(_)
+        result == null
     }
 }

@@ -57,9 +57,11 @@ class BashWrapperBuilderWithS3Test extends Specification {
         then:
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai bla\\ nk.txt" | sort | uniq); do
+                    set -f
+                    for name in $(set +f; eval "ls -1d test.bam test.bai bla\\\\ nk.txt" | sort | uniq); do
                         nxf_s3_upload $name s3://some/buck\\ et
                     done
+                    set +f
                     unset IFS
                     '''.stripIndent().rightTrim()
 
@@ -122,9 +124,12 @@ class BashWrapperBuilderWithS3Test extends Specification {
         binding.unstage_outputs == '''\
                     uploads=()
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_s3_upload '$name' s3://some/bucket")
+                    set -f
+                    for name in $(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        printf -v qname %q "$name"
+                        uploads+=("nxf_s3_upload $qname s3://some/bucket")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent()
@@ -134,6 +139,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
             nxf_cp_retry() {
                 local max_attempts=1
                 local timeout=10
+                local max_timeout=300
                 local attempt=0
                 local exitCode=0
                 while (( \$attempt < \$max_attempts ))
@@ -144,14 +150,15 @@ class BashWrapperBuilderWithS3Test extends Specification {
                   else
                     exitCode=\$?
                   fi
-                  if [[ \$exitCode == 0 ]]
+                  attempt=\$(( attempt + 1 ))
+                  if (( \$attempt >= \$max_attempts || \$exitCode > 128 ))
                   then
                     break
                   fi
                   nxf_sleep \$timeout
-                  attempt=\$(( attempt + 1 ))
-                  timeout=\$(( timeout * 2 ))
+                  timeout=\$(( timeout * 2 > max_timeout ? max_timeout : timeout * 2 ))
                 done
+                return \$exitCode
             }
 
             nxf_parallel() {

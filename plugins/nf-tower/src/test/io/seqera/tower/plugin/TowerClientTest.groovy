@@ -249,12 +249,13 @@ class TowerClientTest extends Specification {
                     .withBody('{}'))
         )
 
-        and: 'a TowerClient whose requests carry a 200ms timeout'
+        and: 'a TowerClient whose requests carry a 200ms timeout and retry once'
         TowerConfig config = Mock(TowerConfig) {
             getHttpReadTimeout() >> Duration.of('200 ms')
             getHttpConnectTimeout() >> Duration.of('5 s')
             getEndpoint() >> wireMock.baseUrl()
             getAccessToken() >> 'token'
+            getRetryPolicy() >> new TowerRetryPolicy([maxAttempts: 2, delay: '10ms'])
         }
         TowerClient client = new TowerClient(config)
 

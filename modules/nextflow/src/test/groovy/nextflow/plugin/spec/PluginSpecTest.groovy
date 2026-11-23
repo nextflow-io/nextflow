@@ -45,7 +45,7 @@ class PluginSpecTest extends Specification {
         def definitions = spec.definitions.sort { d -> d.spec.name }
 
         expect:
-        definitions.size() == 4
+        definitions.size() == 5
         and:
         definitions[0].type == 'ConfigScope'
         definitions[0].spec.name == 'hello'
@@ -110,6 +110,25 @@ class PluginSpecTest extends Specification {
                 ]
             ]
         ]
+        and:
+        definitions[4].type == 'Function'
+        definitions[4].spec == [
+            name: 'toGreetings',
+            description: null,
+            returnType: [
+                name: 'Map',
+                typeArguments: [ 'String', 'String' ]
+            ],
+            parameters: [
+                [
+                    name: 'arg0',
+                    type: [
+                        name: 'List',
+                        typeArguments: [ 'String' ]
+                    ]
+                ]
+            ]
+        ]
     }
 }
 
@@ -145,6 +164,10 @@ class TestExtension extends PluginExtensionPoint {
     @Function
     @Description("Say hello to the given targets")
     void sayHello(List<String> targets) {
+    }
+
+    @Function
+    Map<String,String> toGreetings(List<String> targets) {
     }
 
     @Operator

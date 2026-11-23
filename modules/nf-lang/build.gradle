@@ -26,8 +26,9 @@ dependencies {
   api "org.apache.groovy:groovy:${groovyVersion}"
   api "org.pf4j:pf4j:${pf4jVersion}"
 
-  testFixturesApi "com.google.jimfs:jimfs:${jimfsVersion}"
-  testImplementation(testFixtures(project(":nextflow")))
+  testImplementation "org.apache.groovy:groovy-nio:${groovyVersion}"
+  testImplementation ("org.spockframework:spock-core:${spockVersion}") { exclude group: 'org.apache.groovy' }
+  testRuntimeOnly "org.apache.groovy:groovy-json:${groovyVersion}"
 }
 
 generateGrammarSource {

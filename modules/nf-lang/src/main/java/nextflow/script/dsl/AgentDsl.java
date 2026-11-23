@@ -16,6 +16,7 @@
 package nextflow.script.dsl;
 
 import groovy.transform.NamedParam;
+import nextflow.script.types.TaskConfig;
 
 /**
  * DSL scope for agent definitions.
@@ -27,6 +28,12 @@ import groovy.transform.NamedParam;
  * available in the `output:` section.
  */
 public interface AgentDsl extends DslScope {
+
+    @Constant("task")
+    @Description("""
+        Map of task properties, including directive values.
+    """)
+    TaskConfig getTask();
 
     interface DirectiveDsl extends DslScope {
 

@@ -16,6 +16,8 @@
 
 package nextflow.scm
 
+import static nextflow.util.StringUtils.redactUrlPassword
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -73,7 +75,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             getLocalPath().parentFile.mkdirs()
 
             final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling ${project} -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling ${project} -- Using remote clone url: ${redactUrlPassword(cloneURL)}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
@@ -101,7 +103,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
                     .newUpdate(REMOTE_DEFAULT_HEAD, true)
                     .link(REMOTE_REFS_ROOT + headName)
             } else {
-                log.debug "Unable to determine default branch of repo ${cloneURL}, symbolic ref not created"
+                log.debug "Unable to determine default branch of repo ${redactUrlPassword(cloneURL)}, symbolic ref not created"
             }
 
             // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
@@ -116,7 +118,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             }
 
             // return status message
-            return "downloaded from ${cloneURL}"
+            return "downloaded from ${redactUrlPassword(cloneURL)}"
         }
 
         log.debug "Pull pipeline ${project}  -- Using local path: ${getLocalPath()}"
@@ -244,6 +246,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
     Git getGit() {
         if( !_git ) {
             _git = Git.open(localPath)
+            removeBitbucketToken(_git, provider)
         }
         return _git
     }

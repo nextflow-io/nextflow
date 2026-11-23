@@ -16,7 +16,7 @@
 
 package nextflow.dag
 
-import groovyx.gpars.dataflow.DataflowChannel
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Session
 import spock.lang.Specification
 /**
@@ -42,9 +42,9 @@ class DagSerializerTest extends Specification {
 
     def 'should faithfully serialize vertices and edges' () {
         given:
-        def ch1 = Mock(DataflowChannel)
-        def ch2 = Mock(DataflowChannel)
-        def ch3 = Mock(DataflowChannel)
+        def ch1 = Mock(DataflowReadChannel)
+        def ch2 = Mock(DataflowReadChannel)
+        def ch3 = Mock(DataflowReadChannel)
         and:
         def dag = new DAG()
         // PROCESS --ch2--> OPERATOR --ch3--> PROCESS
@@ -110,8 +110,8 @@ class DagSerializerTest extends Specification {
 
     def 'should fill in boundary vertices for dangling edges' () {
         given:
-        def ch1 = Mock(DataflowChannel)
-        def ch2 = Mock(DataflowChannel)
+        def ch1 = Mock(DataflowReadChannel)
+        def ch2 = Mock(DataflowReadChannel)
         and:
         def dag = new DAG()
         // a single process with one dangling input and one dangling output:

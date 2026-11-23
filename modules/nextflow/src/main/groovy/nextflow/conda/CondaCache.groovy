@@ -26,14 +26,13 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.LazyValue
 import nextflow.util.TestOnly
 /**
  * Handle Conda environment creation and caching
@@ -48,7 +47,7 @@ class CondaCache {
     /**
      * Cache the prefix path for each Conda environment
      */
-    static final private Map<String,DataflowVariable<Path>> condaPrefixPaths = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> condaPrefixPaths = new ConcurrentHashMap<>()
 
     /**
      * The Conda settings defined in the nextflow config file
@@ -378,7 +377,7 @@ class CondaCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
@@ -387,28 +386,13 @@ class CondaCache {
      * @param condaEnv
      *      Conda environment string
      * @return
-     *      The {@link DataflowVariable} which hold (and pull) the local image file
+     *      The {@link LazyValue} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String condaEnv) {
+    LazyValue<Path> getLazyImagePath(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         final condaEnvPath = prefixPath.toString()
-        if( condaEnvPath in condaPrefixPaths ) {
-            log.trace "${binaryName} found local environment `$condaEnv`"
-            return condaPrefixPaths[condaEnvPath]
-        }
-
-        synchronized (condaPrefixPaths) {
-            def result = condaPrefixPaths[condaEnvPath]
-            if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, prefixPath) })
-                condaPrefixPaths[condaEnvPath] = result
-            }
-            else {
-                log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"
-            }
-            return result
-        }
+        return condaPrefixPaths.computeIfAbsent(condaEnvPath, (String key) -> new LazyValue<Path>({ createLocalCondaEnv(condaEnv, prefixPath) }))
     }
 
     /**
@@ -421,10 +405,7 @@ class CondaCache {
      * @return the local environment path prefix {@link Path}
      */
     Path getCachePathFor(String condaEnv) {
-        def promise = getLazyImagePath(condaEnv)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(condaEnv).get()
         if( !result )
             throw new IllegalStateException("Cannot create Conda environment `$condaEnv`")
         log.trace "Conda cache for env `$condaEnv` path=$result"
