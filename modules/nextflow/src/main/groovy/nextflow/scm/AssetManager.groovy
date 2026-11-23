@@ -69,6 +69,9 @@ class AssetManager implements Closeable {
     @PackageScope
     static File root = DEFAULT_ROOT
 
+    /** The folder all pipelines are cached in */
+    static File getRoot() { root }
+
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organization account, while 'repo' is the repository name
