@@ -1,13 +1,13 @@
 ---
 title: nextflow pipeline
-description: Reference for the nextflow pipeline command. Manage registry pipelines.
+description: Reference for the nextflow pipeline command. Manage pipelines.
 ---
 
 # `nextflow pipeline`
 
 <AddedInVersion version="27.04" />
 
-Manage registry pipelines.
+Manage pipelines.
 
 ## Usage
 
@@ -17,15 +17,17 @@ $ nextflow pipeline <subcommand> [options]
 
 ## Description
 
-The `pipeline` command manages pipelines from the Nextflow registry. Use it to search the registry, view a pipeline release, and install or remove pipelines. To run a registry pipeline, use [`nextflow run`][cli-run-registry] with a registry address.
+The `pipeline` command manages pipelines from the Nextflow registry and the pipelines downloaded by Nextflow. Use it to search the registry, view a pipeline release, and install, list, or remove pipelines. To run a registry pipeline, use [`nextflow run`][cli-run-registry] with a registry address.
 
-The `list`, `remove`, and `view` subcommands work on one of two stores, similar to `npm list` and `npm list -g`:
+The `install`, `list`, and `remove` subcommands work on one of two stores, similar to `npm install` and `npm install -g`:
 
 - **Project-level** (default): the `pipelines/` directory of the current folder (run it from the project root). Use it for pipelines that are [included by name][workflow-typed-registry] in another pipeline. Nextflow stores each pipeline with a `.pipeline-info` file that records the installed release. Commit installed pipelines to your project repository, as you would for vendored modules.
 
-- **User-level** (`-g`): the directory where [`nextflow run`][cli-run] and [`nextflow pull`][cli-pull] download pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to inspect or delete downloaded pipelines. To download a pipeline ahead of a run, for example an `-offline` run, use `nextflow pull`.
+- **User-level** (`-g`): the directory where [`nextflow run`][cli-run] downloads pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to download a pipeline ahead of a run, for example an `-offline` run, and to inspect or delete downloaded pipelines. The user-level store can hold several revisions of the same pipeline.
 
-The `install` and `search` subcommands, and `view` without `-g`, use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
+The `pipeline` subcommands use the registry by default: a name such as `nf-core/rnaseq` is a registry name. Only `install -g` also accepts a Git repository URL. In contrast, `nextflow run` resolves a plain name with Git (GitHub by default).
+
+The `install`, `search`, and `view` subcommands use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
 
 ## Options
 
@@ -35,41 +37,64 @@ Print the command usage.
 
 ## Subcommands
 
-##### `install [options] <scope/name>` {#pipeline-install}
+##### `install [options] <pipeline>` {#pipeline-install}
 
 Install a pipeline from the registry into `pipelines/<scope>/<name>/`.
 Nextflow fetches the Git commit pinned by the registry release, from the release's repository.
+
+With `-g`, Nextflow installs the pipeline into the user-level store instead. The pipeline can be:
+
+- A registry name, such as `nf-core/demo`, or a registry page URL. Nextflow downloads the Git commit pinned by the release.
+- A Git repository URL, such as `https://github.com/nextflow-io/hello`. Nextflow downloads the revision given with `-version`, or the default branch. Use the URL form for a pipeline that is not in the registry.
+
+Nextflow adds the revision next to the revisions already downloaded, so older revisions can still be run with `nextflow run -r`. If the revision is already downloaded, Nextflow prints that it is already installed. For a branch, Nextflow downloads its latest commit. Use `pipeline remove -g -version` to remove a revision.
+
+The `install -g` subcommand downloads only the pipeline repository. Registry modules and pipelines that the pipeline includes but does not commit are installed when the pipeline runs, so they must be committed in the pipeline for an `-offline` run.
 
 The following options are available:
 
 ###### `-force`
 
-Overwrite an installed pipeline that has local modifications, or a pipeline directory without a `.pipeline-info` file. Without this flag, Nextflow refuses to replace it.
+Overwrite an installed pipeline that has local modifications, or a pipeline directory without a `.pipeline-info` file. Without this flag, Nextflow refuses to replace it. Not supported with `-g`.
+
+###### `-g, -global`
+
+Install the pipeline into the user-level store used by `nextflow run`.
 
 ###### `-version`
 
-Pipeline version to install, for example `3.14.0`. Defaults to the latest published release.
+Pipeline version to install, for example `3.14.0`. Defaults to the latest published release. With `-g` and a Git repository URL, the Git revision to download: a branch, tag, or commit.
 
 ##### `list [options]` {#pipeline-list}
 
 List the pipelines installed from a registry in your project.
-Shows each pipeline's name, version, and status: `ok`, or `modified` if the files were changed after install.
 
 When no pipeline is installed in the project but some are installed at the user level, Nextflow prints a hint to use `nextflow pipeline list -g`.
+
+Both stores print the same columns:
+
+- `NAME`: the pipeline name.
+- `VERSION`: the installed release. At the user level, the tag at the downloaded commit, or else the branch.
+- `COMMIT`: the installed Git commit, shortened to 10 characters.
+- `STATUS`: `ok`, or `modified` if the files were changed after install.
+
+A missing value is shown as `-`. At the user level, Nextflow prints one row for each downloaded revision.
 
 The following options are available:
 
 ###### `-g, -global`
 
-List the pipelines in the user-level store, including pipelines downloaded by `nextflow run` and `nextflow pull`.
+List the pipelines in the user-level store, including pipelines downloaded by `nextflow run`.
 
 ###### `-o, -output` (`text`)
 
-Output mode for list results. Options: `text` (default), `json`. With `-g`, the JSON output is `{"pipelines": [{"name": "..."}]}`.
+Output mode for list results. Options: `text` (default), `json`. The JSON output is an object with a `pipelines` array. Each entry has the same keys for both stores: `name`, `version`, `commit`, `status`, `path`, and `repositoryUrl`. The `path` is the directory that holds the main script: `pipelines/<scope>/<name>` in the project, or the clone of the revision in the user-level store. A missing value is `null`.
 
-##### `remove [options] <scope/name>` {#pipeline-remove}
+##### `remove [options] <pipeline>` {#pipeline-remove}
 
 Remove a pipeline from your project by deleting its `pipelines/<scope>/<name>/` directory.
+
+When the pipeline is not installed in the project but is installed at the user level, Nextflow prints a hint to use `nextflow pipeline remove -g`.
 
 The following options are available:
 
@@ -79,7 +104,11 @@ Remove the pipeline even if it has local modifications, or has no `.pipeline-inf
 
 ###### `-g, -global`
 
-Remove the pipeline, with all of its downloaded revisions, from the user-level store. The pipeline can also be given as a registry page URL. With `-force`, Nextflow removes it even if it has local modifications.
+Remove the pipeline from the user-level store, with all of its downloaded revisions. The pipeline can also be given as a registry page URL.
+
+###### `-version`
+
+Remove only one revision from the user-level store: a version, branch, or commit. Requires `-g`. Removing the last revision removes the pipeline.
 
 ##### `search [options] <query>` {#pipeline-search}
 
@@ -101,15 +130,13 @@ Output mode for search results. Options: `simple` (default), `json`.
 Display detailed information about a pipeline release from the registry.
 Shows the release details, the pipeline params when available, and a usage line to run it, for example `nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0`.
 
+To find the downloaded revisions of a pipeline and their local paths, use `nextflow pipeline list -g`.
+
 The following options are available:
-
-###### `-g, -global`
-
-Display the pipeline in the user-level store instead of the registry: its project name, repository, local path, main script, and revisions. The pipeline can also be given as a registry page URL. Not supported with `-version`.
 
 ###### `-o, -output` (`text`)
 
-Output mode for view results. Options: `text` (default), `json`. With `-g`, the JSON output has the keys `name`, `repositoryUrl`, `localPath`, `mainScript`, and `revisions` (the branches and tags).
+Output mode for view results. Options: `text` (default), `json`.
 
 ###### `-version`
 
@@ -133,6 +160,26 @@ Display the installed pipelines:
 
 ```console
 $ nextflow pipeline list
+NAME          VERSION  COMMIT      STATUS
+nf-core/demo  1.2.0    32893afef8  ok
+```
+
+Display the installed pipelines as JSON:
+
+```console
+$ nextflow pipeline list -o json
+{
+    "pipelines": [
+        {
+            "name": "nf-core/demo",
+            "version": "1.2.0",
+            "commit": "32893afef8076a03a2767a020b3f0cab2e0b40b2",
+            "status": "ok",
+            "path": "/home/user/project/pipelines/nf-core/demo",
+            "repositoryUrl": "https://github.com/nf-core/demo"
+        }
+    ]
+}
 ```
 
 Remove a pipeline:
@@ -159,47 +206,49 @@ Display information for a specific version:
 $ nextflow pipeline view nf-core/rnaseq -version 3.14.0
 ```
 
-Download a release into the user-level store with [`nextflow pull`][cli-pull], then run it offline:
+Install the latest release of a registry pipeline into the user-level store:
 
 ```console
-$ nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+$ nextflow pipeline install -g nf-core/demo
+Pipeline nf-core/demo@1.2.0 installed in /home/user/.nextflow/assets/.repos/nf-core/demo/clones/32893afef8076a03a2767a020b3f0cab2e0b40b2
+```
+
+Install a release into the user-level store, then run it offline:
+
+```console
+$ nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
 $ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
 ```
 
-List the pipelines in the user-level store:
+Install a branch of a Git repository into the user-level store:
+
+```console
+$ nextflow pipeline install -g https://github.com/nextflow-io/hello -version master
+```
+
+List the pipelines in the user-level store, one row for each downloaded revision:
 
 ```console
 $ nextflow pipeline list -g
-
-nextflow-io/hello
-nf-core/rnaseq
+NAME               VERSION  COMMIT      STATUS
+nextflow-io/hello  master   3c2cdc9823  ok
+nf-core/demo       1.0.0    705f18e4b1  ok
+nf-core/demo       1.2.0    32893afef8  ok
 ```
 
-Display the user-level copy of a pipeline:
+Remove one revision of a pipeline from the user-level store:
 
 ```console
-$ nextflow pipeline view -g nf-core/demo
-
- project name: nf-core/demo
- repository  : https://github.com/nf-core/demo
- local path  : /home/user/.nextflow/assets/.repos/nf-core/demo
- main script : main.nf
- description : An nf-core demo pipeline
- revisions   :
-   dev
-   master (default)
- > 1.2.0 [t]
+$ nextflow pipeline remove -g nf-core/demo -version 1.0.0
+Pipeline nf-core/demo@1.0.0 removed
 ```
 
-Revisions marked with `>` are downloaded.
-
-Remove a pipeline from the user-level store:
+Remove a pipeline, with all of its revisions, from the user-level store:
 
 ```console
 $ nextflow pipeline remove -g nextflow-io/hello
 ```
 
-[cli-pull]: ./pull
 [cli-run]: ./run
 [cli-run-registry]: ./run#registry-pipelines
 [config-registry]: ../config/registry

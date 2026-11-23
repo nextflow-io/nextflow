@@ -6,7 +6,7 @@ description: Reference for the nextflow view command. View a project's script fi
 # `nextflow view`
 
 <DeprecatedInVersion version="27.04">
-The `view` command is deprecated. Use [`nextflow pipeline view -g`][cli-pipeline-view] to find the local copy of a pipeline instead.
+The `view` command is deprecated. Use [`nextflow pipeline list -g -o json`][cli-pipeline-list] to find the local copy of a pipeline instead.
 </DeprecatedInVersion>
 
 View a project's script files.
@@ -19,7 +19,7 @@ $ nextflow view [options] [project]
 
 ## Description
 
-The `view` command inspects a pipeline already stored in the user-level store. To download a pipeline into the user-level store `~/.nextflow/assets`, use the `pull` command.
+The `view` command inspects a pipeline already stored in the user-level store. To download a pipeline into the user-level store `~/.nextflow/assets`, use [`nextflow pipeline install -g`][cli-pipeline-install].
 
 ## Options
 
@@ -104,4 +104,5 @@ workflow {
 }
 ```
 
-[cli-pipeline-view]: ./pipeline#pipeline-view
+[cli-pipeline-install]: ./pipeline#pipeline-install
+[cli-pipeline-list]: ./pipeline#pipeline-list

@@ -7,7 +7,7 @@
 
 ## Summary
 
-Add a `nextflow pipeline` command group, remote pipeline inclusion (`include { workflow as X } from 'nf-core/rnaseq'`), and running a registry pipeline with `nextflow run` and an explicit registry address. Pipelines are installed from the Git commit pinned by the registry release. With `-g`, the `pipeline list`, `remove` and `view` commands also manage the user-level store, replacing the legacy `drop`, `info <project>`, `list` and `view` commands.
+Add a `nextflow pipeline` command group, remote pipeline inclusion (`include { workflow as X } from 'nf-core/rnaseq'`), and running a registry pipeline with `nextflow run` and an explicit registry address. Pipelines are installed from the Git commit pinned by the registry release. With `-g`, the `pipeline install`, `list` and `remove` commands also manage the user-level store, replacing the legacy `pull`, `drop`, `info <project>`, `list` and `view` commands.
 
 ## Problem Statement
 
@@ -134,11 +134,11 @@ Modules that a pipeline commits without `.module-info` (nf-core `modules.json` s
 
 ### CLI
 
-`pipeline install`, `list`, `remove`, `search` and `view` follow their `nextflow module` counterparts, use `registry.url` and `registry.apiKey`, and call only existing read endpoints. They manage the vendored copies under the project's `pipelines/`, for `include`. With `-g`, `list`, `remove` and `view` manage the user-level store in `$NXF_ASSETS` (`~/.nextflow/assets`) instead. See [User-level pipelines](#user-level-pipelines).
+`pipeline install`, `list`, `remove`, `search` and `view` follow their `nextflow module` counterparts, use `registry.url` and `registry.apiKey`, and call only existing read endpoints. They manage the vendored copies under the project's `pipelines/`, for `include`. With `-g`, `install`, `list` and `remove` manage the user-level store in `$NXF_ASSETS` (`~/.nextflow/assets`) instead. See [User-level pipelines](#user-level-pipelines).
 
 ### User-level pipelines
 
-The legacy commands `drop`, `info <project>`, `list` and `view` manage the user-level store (`clone` copied a project into a folder), and `list` and `view` clash with the `pipeline` subcommands of the same name. The options were:
+The legacy commands `pull`, `drop`, `info <project>`, `list` and `view` manage the user-level store (`clone` copied a project into a folder), and `list` and `view` clash with the `pipeline` subcommands of the same name. The options were:
 
 - **A `-g, -global` option on the `pipeline` commands**, as `npm list -g` does for packages. Without `-g`, a command acts on the project (`./pipelines/`); with `-g`, on the user-level store that `nextflow run` uses. Users learn one set of commands for both stores.
 - **A separate `project` command group** (`project list`, `project view`, ...) for the user-level store. It keeps each group to one meaning, but `project` and `pipeline` would have near-identical subcommands acting on different stores, and "project" vs "pipeline" is easy to confuse.
@@ -147,14 +147,17 @@ The legacy commands `drop`, `info <project>`, `list` and `view` manage the user-
 
 The `-g` option was chosen:
 
-- There is no `pipeline install -g`. It was considered, to resolve a release against the primary registry and download it like `pull -hub <registry host>`, and dropped because `pull` already downloads registry and Git pipelines into the user-level store. `pull` stays a top-level command.
-- `pipeline list -g`, `pipeline remove -g` and `pipeline view -g` replace `list`, `drop` and `info <project>`. `pipeline list` without `-g` hints at `-g` when the project has no pipelines but the user-level store does. `pipeline view -g` and `pipeline remove -g` map a registry page URL to the registry name. `pipeline view -g` has no equivalent of the `-check-updates` option, the `-d` detail level or the `yaml` output of `info`.
-- `drop`, `list` and `view` keep working but are hidden from `nextflow -h` and warn, pointing to the `-g` commands. `info <project>` warns; `info` without a project still prints the system information.
+- **Source.** The `pipeline` commands use the registry by default, while `run` keeps GitHub as its default. A plain `scope/name` is a registry name for `pipeline install -g` and a Git name for `run`. Only a Git URL selects Git, and only `install -g` accepts one. The `pipeline` commands have no `-hub` option. A registry pipeline is assumed to have the same name as its Git repository, as described in the run cache section below, so both share one cache entry.
+- **`pipeline install -g` replaces `pull`.** It downloads a registry release (a name or a registry page URL) at its pinned commit, or a Git URL at the revision given with `-version` (default: the default branch). It adds the revision next to the ones already downloaded and never overwrites one, so `-force` is not supported. A name that is not in the registry is an error that points to installing by Git URL. `pull` keeps working, but is hidden from `nextflow -h` and warns. An earlier version of this ADR kept `pull` as the user-level install command, to avoid a second one. It was reversed so that each store has the same set of `pipeline` subcommands.
+- **One list format for both stores.** `pipeline list` and `pipeline list -g` print the same `NAME`, `VERSION`, `COMMIT` and `STATUS` columns and the same JSON keys (`name`, `version`, `commit`, `status`, `path`, `repositoryUrl`), with `-` or `null` for a missing value. At the user level there is one row for each downloaded revision, and `VERSION` is the tag at the commit, else the branch. A registry release maps to its tag, assuming the release version matches the Git tag.
+- **`pipeline view -g` was removed.** `view` shows registry releases only. The local path, downloaded revisions and repository that `view -g` showed are in `pipeline list -g -o json`, so `info <project>` and `view` point to `pipeline list -g`. There is no equivalent of the `-check-updates` option, the `-d` detail level or the `yaml` output of `info`.
+- `pipeline install -g`, `pipeline list -g` and `pipeline remove -g` replace `pull`, `list` and `drop`. `pipeline remove -g -version` removes one revision (a version, branch or commit); without `-version` it removes all of them. The project-level store holds one version of each pipeline, so `remove -version` without `-g` is an error. `pipeline list` without `-g` hints at `-g` when the project has no pipelines but the user-level store does, and `pipeline remove` does the same when the pipeline is only in the user-level store. `pipeline remove -g` maps a registry page URL to the registry name.
+- `pull`, `drop`, `list` and `view` keep working but are hidden from `nextflow -h` and warn, pointing to the `-g` commands. `info <project>` warns; `info` without a project still prints the system information.
 - `clone` is removed, with a stub that points to `pipeline install` or `git clone`.
 
 ### Running a registry pipeline
 
-`nextflow run` and `nextflow pull` resolve a registry address to the release's repository and pinned commit. `pull` supports it so that a node with network can prepare offline runs.
+`nextflow run` and the deprecated `nextflow pull` resolve a registry address to the release's repository and pinned commit. `pull` supports it so that a node with network can prepare offline runs. `nextflow pipeline install -g` does the same for a registry name.
 
 - **Registry URL**: a configured `registry.url` without `/api`, followed by `/pipelines/<scope>/<name>`. `/pipelines/` keeps it apart from modules and other registry paths. The default public registry is always recognized, because the user typed its address. A URL on the host of a known Git provider stays a Git URL.
 - **`-hub` / `NXF_HUB`**: a Git provider name is checked first, so existing setups behave the same, then a registry host. A hostname can't be confused with Git, because `-hub` only takes provider names.

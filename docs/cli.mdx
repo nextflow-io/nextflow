@@ -146,77 +146,64 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ## Project management
 
-Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` and `pull` commands download remote pipelines into a user-level store, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
+Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines into a user-level store, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
 
-The `list`, `view`, and `remove` subcommands of the [`pipeline`][cli-pipeline] command manage the user-level store when given the `-g` (`-global`) option, similar to `npm list -g`. Without `-g`, they manage the project-level registry pipelines installed in the current project. Use these commands to inspect downloaded pipelines and maintain the user-level store.
+The `install`, `list`, and `remove` subcommands of the [`pipeline`][cli-pipeline] command manage the user-level store when given the `-g` (`-global`) option, similar to `npm install -g`. Without `-g`, they manage the project-level registry pipelines installed in the current project. Use these commands to download pipelines ahead of a run, inspect downloaded pipelines, and maintain the user-level store.
 
 <ChangedInVersion version="27.04">
-The `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline list -g`, `pipeline view -g`, and `pipeline remove -g`. The `clone` command was removed. See [Deprecations][deprecations-page] for details.
+The `pull`, `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline install -g`, `pipeline list -g`, and `pipeline remove -g`. The `clone` command was removed. See [Deprecations][deprecations-page] for details.
 </ChangedInVersion>
+
+### Downloading or updating projects
+
+The `pipeline install -g` command downloads a pipeline into the user-level store. Use it to download pipelines before running them, for example for offline use.
+
+The `pipeline` command uses the [Nextflow registry](https://registry.nextflow.io) by default. Give a registry name to download the latest release:
+
+```bash
+nextflow pipeline install -g nf-core/demo
+```
+
+This prints the path of the downloaded copy:
+
+```
+Pipeline nf-core/demo@1.2.0 installed in /home/user/.nextflow/assets/.repos/nf-core/demo/clones/32893afef8076a03a2767a020b3f0cab2e0b40b2
+```
+
+Use `-version` to download a specific release:
+
+```bash
+nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
+```
+
+To download a pipeline that is not in the registry, give its Git repository URL. Use `-version` to download a branch, tag, or commit:
+
+```bash
+nextflow pipeline install -g https://github.com/nextflow-io/hello -version mybranch
+```
+
+Each downloaded revision is kept next to the others, so older revisions can still be run. To update a branch, install it again.
+
+See [pipeline][cli-pipeline-install] for more information.
 
 ### Listing downloaded projects
 
-The `pipeline list -g` command shows all pipelines currently downloaded to the user-level store. This helps you track which projects are available offline and manage the user-level store:
+The `pipeline list -g` command shows the pipelines downloaded to the user-level store, with one row for each downloaded revision. This helps you track which projects are available offline and manage the user-level store:
 
 ```bash
 nextflow pipeline list -g
 ```
 
-### Showing project information
-
-The `pipeline view -g` command displays detailed metadata about a downloaded project, including its repository location, local path, main script, and available revisions.
-
-Use this to understand a project's structure, see available versions, verify which revision is currently checked out, or find the local copy to inspect its code:
-
-```bash
-nextflow pipeline view -g nextflow-io/hello
-```
-
 This prints an output similar to the following:
 
-```bash
- project name: nextflow-io/hello
- repository  : https://github.com/nextflow-io/hello
- local path  : $HOME/.nextflow/assets/.repos/nextflow-io/hello
- main script : main.nf
- revisions   :
- > master (default)
-   mybranch
- > v1.1 [t]
-   v1.2 [t]
+```
+NAME               VERSION  COMMIT      STATUS
+nextflow-io/hello  master   3c2cdc9823  ok
+nf-core/demo       1.0.0    705f18e4b1  ok
+nf-core/demo       1.2.0    32893afef8  ok
 ```
 
-This shows:
-
-- The full project name and repository URL
-- Where it's stored locally
-- Which script runs by default
-- Available revisions (branches and tags marked with `[t]`)
-- Which revisions are downloaded (marked with `>`)
-
-### Pulling or updating projects
-
-The `pull` command downloads a pipeline into the user-level store, or updates an existing one to the latest version from its Git repository.
-
-Use this to manually download pipelines before running them, update downloaded pipelines, or download pipelines for offline use:
-
-```bash
-nextflow pull nextflow-io/hello
-```
-
-You can specify a particular revision to download:
-
-```bash
-nextflow pull nextflow-io/hello -r mybranch
-```
-
-To download a release from the [Nextflow registry](https://registry.nextflow.io), give the registry host with `-hub`, or set `NXF_HUB`:
-
-```bash
-nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
-```
-
-See [pull][cli-pull] for more information.
+The `STATUS` column is `modified` when the downloaded files were changed. Use `-o json` to also print the local path and the repository URL of each revision.
 
 ### Deleting downloaded projects
 
@@ -226,6 +213,12 @@ Use this to free disk space by removing pipelines you no longer need. The projec
 
 ```bash
 nextflow pipeline remove -g nextflow-io/hello
+```
+
+Use `-version` to remove only one revision:
+
+```bash
+nextflow pipeline remove -g nf-core/demo -version 1.0.0
 ```
 
 See [pipeline][cli-pipeline-remove] for more information.
@@ -533,9 +526,9 @@ http://nextflow.io
 [cli-log]: ./reference/cli/log
 [cli-module]: ./reference/cli/module
 [cli-pipeline]: ./reference/cli/pipeline
+[cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
 [cli-pipeline-remove]: ./reference/cli/pipeline#pipeline-remove
 [cli-plugin]: ./reference/cli/plugin
-[cli-pull]: ./reference/cli/pull
 [cli-reference]: ./reference/cli
 [cli-run]: ./reference/cli/run
 [cli-secrets]: ./reference/cli/secrets

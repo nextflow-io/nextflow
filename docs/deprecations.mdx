@@ -60,9 +60,10 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | Named workflow entry (`-entry`) | 24.10 | Params in the entry workflow |
 | `-deep` option of `run` and `pull` | 26.04 | None (only applies to the legacy asset strategy) |
 | `drop` command | 27.04 | [`pipeline remove -g`][cli-pipeline-remove] |
-| `info` command with a project name | 27.04 | [`pipeline view -g`][cli-pipeline-view] (no equivalent of the `-check-updates` option, the `-d` detail level, or `yaml` output) |
+| `info` command with a project name | 27.04 | [`pipeline list -g`][cli-pipeline-list] (no equivalent of the `-check-updates` option, the `-d` detail level, or `yaml` output) |
 | `list` command | 27.04 | [`pipeline list -g`][cli-pipeline-list] |
-| `view` command | 27.04 | [`pipeline view -g`][cli-pipeline-view] to find the local copy of a pipeline |
+| `pull` command | 27.04 | [`pipeline install -g`][cli-pipeline-install] (a pipeline that is not in the registry is given by its Git repository URL; no equivalent of the `-all` option) |
+| `view` command | 27.04 | [`pipeline list -g`][cli-pipeline-list] to find the local copy of a pipeline |
 
 ### Feature flags and environment variables
 
@@ -94,7 +95,6 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 [cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
 [cli-pipeline-list]: ./reference/cli/pipeline#pipeline-list
 [cli-pipeline-remove]: ./reference/cli/pipeline#pipeline-remove
-[cli-pipeline-view]: ./reference/cli/pipeline#pipeline-view
 [config-manifest]: ./reference/config/manifest
 [config-process-when]: ./config#disabling-processes
 [config-seqera-executor-autoLabels]: ./reference/config/seqera#seqeraexecutorautolabels
