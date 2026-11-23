@@ -18,7 +18,7 @@ $ nextflow info [options]
 The `info` command prints runtime information about the hardware and software: the Nextflow version and build, the operating system, and the Groovy and Java runtimes.
 
 <ChangedInVersion version="27.04">
-Project information moved to [`nextflow pipeline view -g`][cli-pipeline-view].
+The `info` command with a project name is deprecated. Use [`nextflow pipeline list -g`][cli-pipeline-list] to find the downloaded revisions of a pipeline.
 </ChangedInVersion>
 
 ## Options
@@ -45,4 +45,4 @@ $ nextflow info
   Encoding: UTF-8 (UTF-8)
 ```
 
-[cli-pipeline-view]: ./pipeline#pipeline-view
+[cli-pipeline-list]: ./pipeline#pipeline-list

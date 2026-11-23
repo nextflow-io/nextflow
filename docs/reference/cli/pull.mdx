@@ -5,6 +5,10 @@ description: Reference for the nextflow pull command. Download or update a proje
 
 # `nextflow pull`
 
+<DeprecatedInVersion version="27.04">
+The `pull` command is deprecated. Use [`nextflow pipeline install -g`][cli-pipeline-install] instead, with `-version` in place of `-r`. The `pipeline` command uses the registry by default, so give a pipeline that is not in the registry by its Git repository URL, for example `nextflow pipeline install -g https://github.com/nextflow-io/hello`.
+</DeprecatedInVersion>
+
 Download or update a project.
 
 ## Usage
@@ -101,5 +105,6 @@ $ nextflow pull nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 $ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0 -offline
 ```
 
+[cli-pipeline-install]: ./pipeline#pipeline-install
 [cli-pipeline-list]: ./pipeline#pipeline-list
 [cli-run-registry]: ./run#registry-pipelines

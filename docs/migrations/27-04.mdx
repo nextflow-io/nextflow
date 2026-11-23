@@ -21,7 +21,7 @@ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
 nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
 ```
 
-Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pull` with the same address to download a registry pipeline ahead of an `-offline` run.
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git. Set `NXF_HUB` to a registry host to use the registry by default. Use `nextflow pipeline install -g` to download a registry pipeline ahead of an `-offline` run.
 
 See [Registry pipelines][cli-run-registry] for details.
 
@@ -41,15 +41,18 @@ See [Including a pipeline from the registry][workflow-typed-registry] for detail
 
 ### `pipeline` command
 
-The new `nextflow pipeline` command manages the registry pipelines installed in a project, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command.
+The new `nextflow pipeline` command manages pipelines, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command. By default, it manages the registry pipelines installed in a project.
 
-With the `-g` (`-global`) option, the `list`, `remove`, and `view` subcommands manage the user-level store, where `nextflow run` and `nextflow pull` download pipelines (`$NXF_ASSETS`, default: `$NXF_HOME/assets`), instead of the project-level pipelines installed in the current project, like `npm -g`:
+With the `-g` (`-global`) option, the `install`, `list`, and `remove` subcommands manage the user-level store instead, like `npm -g`. This is where `nextflow run` downloads pipelines (`$NXF_ASSETS`, default: `$NXF_HOME/assets`):
 
 ```bash
+nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
+nextflow pipeline install -g https://github.com/nextflow-io/hello
 nextflow pipeline list -g
-nextflow pipeline view -g nf-core/rnaseq
-nextflow pipeline remove -g nf-core/rnaseq
+nextflow pipeline remove -g nf-core/rnaseq -version 3.14.0
 ```
+
+The `pipeline` command uses the registry by default, while `nextflow run` uses GitHub by default. Give a pipeline that is not in the registry by its Git repository URL. The user-level store keeps each downloaded revision, and `pipeline list -g` prints one row for each of them.
 
 See [`pipeline`][cli-pipeline] for details.
 
@@ -97,9 +100,19 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 ## Deprecations
 
-- The `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. Use `pipeline remove -g`, `pipeline list -g`, and `pipeline view -g` instead.
+- The `pull`, `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. They still work, and print a warning. Use the following commands instead:
 
-- The `info` command with a project name is deprecated. Use `pipeline view -g` instead. `pipeline view -g` has no equivalent of the `-check-updates` (`-u`) option, the `-d` detail level, or the `yaml` output of `info`. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
+  | Deprecated | Replacement |
+  |---|---|
+  | `pull <registry address> -r <version>` | `pipeline install -g <scope/name> -version <version>` |
+  | `pull <scope/name> -r <revision>` | `pipeline install -g https://github.com/<scope/name> -version <revision>` |
+  | `drop <project> -r <revision>` | `pipeline remove -g <project> -version <revision>` |
+  | `list` | `pipeline list -g` |
+  | `view <project>` | `pipeline list -g -o json` to find the local copy |
+
+  A plain `scope/name` given to `pipeline install -g` is a registry name, so give a Git pipeline by its repository URL. The `-all` option of `pull` has no equivalent.
+
+- The `info` command with a project name is deprecated. Use `pipeline list -g` instead. It has no equivalent of the `-check-updates` (`-u`) option, the `-d` detail level, or the `yaml` output of `info`. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
 
 ## Miscellaneous
 

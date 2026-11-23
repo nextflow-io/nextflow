@@ -255,7 +255,7 @@ Note the following:
 
 - The pipeline is cached under its registry name. A registry pipeline should have the same name as its Git repository, as nf-core pipelines do, since both are cached under that name.
 
-- With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pull`][cli-pull] to download a registry pipeline ahead of time.
+- With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pipeline install -g`][cli-pipeline-install] to download a registry pipeline ahead of time.
 
 - When `NXF_HUB` is a registry host, the other project commands work only with cached projects or Git addresses.
 
@@ -330,6 +330,6 @@ See [Pipeline parameters][cli-params] for more information about writing custom 
 [agent-page]: ../../agent
 [cache-compare-hashes]: ../../cache-and-resume#comparing-the-hashes-of-two-runs
 [cli-params]: ../../cli#pipeline-parameters
-[cli-pull]: ./pull
+[cli-pipeline-install]: ./pipeline#pipeline-install
 [config-registry]: ../config/registry
 [tracing-page]: ../../reports
