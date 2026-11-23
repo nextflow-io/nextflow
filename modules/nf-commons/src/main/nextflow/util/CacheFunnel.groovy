@@ -29,4 +29,15 @@ interface CacheFunnel {
 
     Hasher funnel(Hasher hasher, CacheHelper.HashMode mode)
 
+    /**
+     * Same as {@link #funnel(Hasher, CacheHelper.HashMode)}, but with access to the builder.
+     *
+     * Override it when the object delegates the hashing of a nested value: calling
+     * {@code builder.with(value)} keeps the builder's encoding rules, whereas starting a new
+     * {@link HashBuilder} would silently fall back to the default ones.
+     */
+    default Hasher funnel(HashBuilder builder) {
+        return funnel(builder.getHasher(), builder.getMode())
+    }
+
 }

@@ -87,6 +87,11 @@ class TaskRun implements Cloneable {
      */
     HashCode hash
 
+    /**
+     * Id of the task hash version that produced {@link #hash}
+     */
+    String hashVersion
+
     /*
      * The processor that creates this 'task'
      */
@@ -1107,6 +1112,10 @@ class TaskRun implements Cloneable {
 
     String getStubSource() {
         return config?.getStubBlock()?.getSource()
+    }
+
+    boolean hasStubBlock() {
+        return config?.getStubBlock() != null
     }
 }
 
