@@ -19,6 +19,7 @@ package nextflow.plugin
 
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.util.concurrent.ConcurrentHashMap
 
 import nextflow.serde.gson.GsonEncoder
 import groovy.transform.CompileStatic
@@ -56,6 +57,8 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     // Initialised eagerly so that getPlugin()/refresh() are safe to call even when prefetch()
     // was skipped (e.g. PluginUpdater skip-if-installed) or failed (non-fatal degradation).
     private Map<String, PluginInfo> plugins = new HashMap<>()
+
+    private final Map<String,String> hints = new ConcurrentHashMap<>()
 
     HttpPluginRepository(String id, URI url) {
         this.id = id
@@ -131,7 +134,23 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
      * Like {@link #getPlugin(String)}, but throws the registry error instead of returning null.
      */
     PluginInfo fetchPlugin(String id) {
-        return plugins.computeIfAbsent(id) { key -> fetchMetadataByIds([key]).get(key) }
+        if( plugins.containsKey(id) )
+            return plugins.get(id)
+        final fetched = fetchMetadataByIds([id])
+        final result = fetched.get(id)
+        // a moved plugin is also stored under its other ID
+        if( result != null ) for( Map.Entry<String,PluginInfo> it : fetched.entrySet() ) {
+            if( it.value.is(result) )
+                plugins.put(it.key, result)
+        }
+        return result
+    }
+
+    /**
+     * The plain name of each moved plugin seen in a registry response, mapped to its namespaced ID
+     */
+    Map<String,String> getHints() {
+        return hints
     }
 
     @Override
@@ -201,11 +220,18 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             if( decoded.plugins == null ) {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
+            final canonicalIds = canonicalIds(body)
             final result = new HashMap<String, PluginInfo>()
             for( PluginDependency plugin : decoded.plugins ) {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
+                    final canonicalId = canonicalIds.get(plugin.id)
+                    if( canonicalId ) {
+                        result.put(canonicalId, pluginInfo)
+                        // a move keeps the name, so the plain name is the part after the namespace
+                        hints.put(canonicalId.substring(canonicalId.indexOf('/')+1), canonicalId)
+                    }
                 }
                 else
                     log.debug "Registry ${resp.uri().host} has no releases for plugin: ${plugin}"
@@ -217,6 +243,21 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw new PluginRuntimeException(msg)
         }
     }
+
+    // TODO use PluginDependency.canonicalId once npr-api has it
+    private static Map<String,String> canonicalIds(String body) {
+        final List<Hint> list = new GsonEncoder<Hints>() {}.decode(body).plugins
+        final result = new HashMap<String,String>()
+        for( Hint it : list ?: List.<Hint>of() ) {
+            if( it.id && it.canonicalId?.contains('/') )
+                result.put(it.id, it.canonicalId)
+        }
+        return result
+    }
+
+    private static class Hints { List<Hint> plugins }
+
+    private static class Hint { String id; String canonicalId }
 
     /**
      * Maps a Plugin object from the repository API to a PluginInfo object for pf4j compatibility.

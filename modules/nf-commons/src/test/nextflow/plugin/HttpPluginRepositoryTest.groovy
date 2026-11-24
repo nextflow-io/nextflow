@@ -75,6 +75,30 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
+    def 'prefetch the namespaced ID of a moved plugin'() {
+        given:
+        wiremock.stubFor(get(urlPathEqualTo("/v1/plugins/dependencies"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    { "id": "nf-bar", "releases": [ { "version": "1.0.0", "url": "http://example.com/bar.zip", "date": "2025-03-21T10:40:36Z" } ] },
+                    { "id": "nf-foo", "canonicalId": "myorg/nf-foo", "releases": [ { "version": "1.0.0", "url": "http://example.com/foo.zip", "date": "2025-03-21T10:40:36Z" } ] }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("nf-bar")])
+
+        then:
+        unit.hints == ['nf-foo': 'myorg/nf-foo']
+        unit.getPlugins().keySet() == ['nf-bar', 'nf-foo', 'myorg/nf-foo'] as Set
+        unit.getPlugin('myorg/nf-foo').is(unit.getPlugin('nf-foo'))
+    }
+
+    // ------------------------------------------------------------------------
+
     def 'prefetch plugin metadata with release'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
