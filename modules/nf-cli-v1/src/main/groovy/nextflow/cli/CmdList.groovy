@@ -28,7 +28,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded projects (deprecated -- use `nextflow pipeline list -g`)")
+@Parameters(commandDescription = "List all downloaded projects")
 class CmdList extends CmdBase {
 
     static final public NAME = 'list'

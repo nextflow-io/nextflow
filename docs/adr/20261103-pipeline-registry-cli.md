@@ -158,7 +158,7 @@ The `-g` option was chosen:
 
 ### Running a registry pipeline
 
-`nextflow run` and the deprecated `nextflow pull` resolve a registry address to the release's repository and pinned commit. `pull` supports it so that a node with network can prepare offline runs. `nextflow pipeline install -g` does the same for a registry name.
+`nextflow run` resolves a registry address to the release's repository and pinned commit. `nextflow pipeline install -g` does the same for a registry name, so that a node with network can prepare offline runs.
 
 - **Registry URL**: a configured `registry.url` without `/api`, followed by `/pipelines/<scope>/<name>`. `/pipelines/` keeps it apart from modules and other registry paths. The default public registry is always recognized, because the user typed its address. A URL on the host of a known Git provider stays a Git URL.
 - **`-hub` / `NXF_HUB`**: a Git provider name is checked first, so existing setups behave the same, then a registry host. A hostname can't be confused with Git, because `-hub` only takes provider names.

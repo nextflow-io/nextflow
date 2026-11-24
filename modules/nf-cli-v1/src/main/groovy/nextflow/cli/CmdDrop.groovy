@@ -30,7 +30,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete the local copy of a project (deprecated -- use `nextflow pipeline remove -g`)")
+@Parameters(commandDescription = "Delete the local copy of a project")
 class CmdDrop extends CmdBase {
 
     static final public NAME = 'drop'

@@ -32,7 +32,7 @@ class CmdGroupTest extends Specification {
         then:
         def out = capture.toString()
         out.contains('Usage: nextflow pipeline <command> [options]')
-        out.contains('  install     Install a pipeline from the registry')
+        out.contains('  install     Install a pipeline')
         out.contains('  view        Show pipeline information')
     }
 

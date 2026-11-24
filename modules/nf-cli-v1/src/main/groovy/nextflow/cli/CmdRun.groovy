@@ -162,7 +162,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth', hidden = true)
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
     Integer deep
 
     @Parameter(names=['-latest'], description = 'Pull latest changes before run')
@@ -317,9 +317,6 @@ class CmdRun extends CmdBase implements HubAware {
 
     @Override
     void run() {
-        if( deep )
-            log.warn "The `-deep` option is deprecated -- it only applies to projects downloaded with the legacy asset strategy"
-
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
@@ -658,7 +655,7 @@ class CmdRun extends CmdBase implements HubAware {
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
                 if( offline && remoteSource && release && rev )
-                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- pull it first, or use the release commit")
+                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- install it with `nextflow pipeline install -g`")
                 if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."

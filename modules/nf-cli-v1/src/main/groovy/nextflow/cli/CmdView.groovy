@@ -31,7 +31,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View project script file(s) (deprecated)")
+@Parameters(commandDescription = "View project script file(s)")
 class CmdView extends CmdBase {
 
     static final public NAME = 'view'

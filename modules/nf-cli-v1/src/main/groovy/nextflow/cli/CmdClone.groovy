@@ -19,7 +19,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -30,7 +29,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Clone a project into a folder (deprecated -- use `git clone`)")
+@Parameters(commandDescription = "Clone a project into a folder")
 class CmdClone extends CmdBase implements HubAware {
 
     static final public NAME = 'clone'
@@ -57,8 +56,6 @@ class CmdClone extends CmdBase implements HubAware {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        if( PipelineCmdSupport.registryAddress(pipeline, hubProvider) { PipelineCmdSupport.registryConfig(this) } )
-            throw new AbortOperationException("Registry pipelines are only supported by `nextflow run` and `nextflow pull` -- use the Git URL of the pipeline")
         try (final manager = new AssetManager(pipeline, toHubOptions())) {
             // the target directory is the second parameter
             // otherwise default the current pipeline name

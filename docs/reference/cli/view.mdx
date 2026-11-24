@@ -19,7 +19,7 @@ $ nextflow view [options] [project]
 
 ## Description
 
-The `view` command inspects a pipeline already stored in the user-level store. To download a pipeline into the user-level store `~/.nextflow/assets`, use [`nextflow pipeline install -g`][cli-pipeline-install].
+The `view` command inspects a pipeline already stored in the global Nextflow cache. To download a pipeline into the global cache `~/.nextflow/assets`, use the `pull` command.
 
 ## Options
 
@@ -104,5 +104,4 @@ workflow {
 }
 ```
 
-[cli-pipeline-install]: ./pipeline#pipeline-install
 [cli-pipeline-list]: ./pipeline#pipeline-list

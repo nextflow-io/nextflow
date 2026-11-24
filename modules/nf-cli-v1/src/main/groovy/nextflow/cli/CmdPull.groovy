@@ -19,13 +19,9 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.npr.client.RegistryClient
-import nextflow.Const
-import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
-import nextflow.scm.HubOptions
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -34,7 +30,7 @@ import nextflow.util.TestOnly
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or update a project (deprecated -- use `nextflow pipeline install -g`)")
+@Parameters(commandDescription = "Download or update a project")
 class CmdPull extends CmdBase implements HubAware {
 
     static final public NAME = 'pull'
@@ -48,7 +44,7 @@ class CmdPull extends CmdBase implements HubAware {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth', hidden = true)
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
     Integer deep
 
     @Parameter(names=['-m','-migrate'], description = 'Migrate projects to multi-revision strategy', arity = 0)
@@ -60,18 +56,12 @@ class CmdPull extends CmdBase implements HubAware {
     @TestOnly
     protected File root
 
-    @TestOnly
-    protected RegistryClient registryClient
-
     @Override
     boolean isHidden() { true }
 
     @Override
     void run() {
         log.warn "The `pull` command is deprecated -- use `nextflow pipeline install -g` instead"
-
-        if( deep )
-            log.warn "The `-deep` option is deprecated -- it only applies to projects downloaded with the legacy asset strategy"
 
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
@@ -102,28 +92,8 @@ class CmdPull extends CmdBase implements HubAware {
                     branches.each { rev -> pullProjectRevision(proj, rev) }
                 }
             } else {
-                pullProject(proj, revision)
+                pullProjectRevision(proj, revision)
             }
-        }
-    }
-
-    private void pullProject(String project, String revision) {
-        final address = PipelineCmdSupport.registryAddress(project, hubProvider) { PipelineCmdSupport.registryConfig(this) }
-        if( address )
-            pullRegistryRelease(address, revision)
-        else
-            pullProjectRevision(project, revision)
-    }
-
-    /** Download a registry release at its pinned commit, cached under its registry name as `run` does */
-    private void pullRegistryRelease(PipelineCmdSupport.RegistryAddress address, String revision) {
-        final release = PipelineCmdSupport.resolveRelease(address, revision, registryClient)
-        final rev = release.commitId ?: release.revision
-        try (final manager = new AssetManager(release.repositoryUrl, rev, Const.DEFAULT_MAIN_FILE_NAME, new HubOptions(null, hubUser), release.name)) {
-            log.info "Checking ${release.name}@${release.version} ..."
-            final result = manager.download(rev, deep)
-            manager.updateModules()
-            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile().revisionInfo}"
         }
     }
 

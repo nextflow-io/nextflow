@@ -216,21 +216,6 @@ class CmdPipelineUserLevelTest extends Specification {
                 .stripIndent()
     }
 
-    def 'should point to the replacement in the help of a deprecated command'() {
-        when:
-        new Launcher().usage(NAME)
-        then:
-        capture.toString().contains(DESCRIPTION)
-
-        where:
-        NAME    | DESCRIPTION
-        'clone' | '(deprecated -- use `git clone`)'
-        'drop'  | '(deprecated -- use `nextflow pipeline remove -g`)'
-        'list'  | '(deprecated -- use `nextflow pipeline list -g`)'
-        'view'  | '(deprecated)'
-        'pull'  | '(deprecated -- use `nextflow pipeline install -g`)'
-    }
-
     def 'should not show the project options in the help of info'() {
         when:
         new Launcher().usage('info')
