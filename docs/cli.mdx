@@ -151,7 +151,7 @@ Project management commands interact with Git-hosted pipelines. Nextflow integra
 The `install`, `list`, and `remove` subcommands of the [`pipeline`][cli-pipeline] command manage the user-level store when given the `-g` (`-global`) option, similar to `npm install -g`. Without `-g`, they manage the project-level registry pipelines installed in the current project. Use these commands to download pipelines ahead of a run, inspect downloaded pipelines, and maintain the user-level store.
 
 <ChangedInVersion version="27.04">
-The `pull`, `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline install -g`, `pipeline list -g`, and `pipeline remove -g`. The `clone` command was removed. See [Deprecations][deprecations-page] for details.
+The `pull`, `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline install -g`, `pipeline list -g`, and `pipeline remove -g`. The `clone` command is deprecated in favor of `git clone`. See [Deprecations][deprecations-page] for details.
 </ChangedInVersion>
 
 ### Downloading or updating projects

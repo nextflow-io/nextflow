@@ -29,6 +29,7 @@ import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import com.sun.net.httpserver.HttpServer
 import nextflow.cli.CmdBase
+import nextflow.cli.CmdClone
 import nextflow.cli.CmdDrop
 import nextflow.cli.CmdInfo
 import nextflow.cli.CmdList
@@ -204,7 +205,7 @@ class CmdPipelineUserLevelTest extends Specification {
 
     def 'should hide the deprecated project commands'() {
         when:
-        new Launcher().printCommands([new CmdDrop(), new CmdInfo(), new CmdList(), new CmdPipeline(), new CmdPull(), new CmdView()])
+        new Launcher().printCommands([new CmdClone(), new CmdDrop(), new CmdInfo(), new CmdList(), new CmdPipeline(), new CmdPull(), new CmdView()])
         then:
         capture.toString() == '''
                 Commands:
@@ -223,6 +224,7 @@ class CmdPipelineUserLevelTest extends Specification {
 
         where:
         NAME    | DESCRIPTION
+        'clone' | '(deprecated -- use `git clone`)'
         'drop'  | '(deprecated -- use `nextflow pipeline remove -g`)'
         'list'  | '(deprecated -- use `nextflow pipeline list -g`)'
         'view'  | '(deprecated)'
@@ -266,6 +268,18 @@ class CmdPipelineUserLevelTest extends Specification {
         then:
         capture.toString().contains('The `pull` command is deprecated -- use `nextflow pipeline install -g` instead')
         Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/local/hello/${MultiRevisionRepositoryStrategy.REVISION_SUBDIR}/${repo.v2}/main.nf"))
+    }
+
+    def 'should warn and still run the deprecated clone command'() {
+        given:
+        final repo = gitRepo('hello')
+        final target = base.resolve('target')
+
+        when:
+        parse('clone', repo.url, target.toString()).run()
+        then:
+        capture.toString().contains('The `clone` command is deprecated -- use `git clone` instead')
+        Files.readString(target.resolve('main.nf')) == "println 'v2'"
     }
 
     /** A Git repository with two commits, with lightweight tags v1.0.0 and v2.0.0, on the master branch; a `file:` URL is stored under `local/<name>` */

@@ -59,6 +59,7 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 |---|---|---|
 | Named workflow entry (`-entry`) | 24.10 | Params in the entry workflow |
 | `-deep` option of `run` and `pull` | 26.04 | None (only applies to the legacy asset strategy) |
+| `clone` command | 27.04 | `git clone` |
 | `drop` command | 27.04 | [`pipeline remove -g`][cli-pipeline-remove] (removes all revisions of a pipeline; no equivalent of the `-r` option) |
 | `info` command with a project name | 27.04 | [`pipeline list -g`][cli-pipeline-list] (no equivalent of the `-check-updates` option, the `-d` detail level, or `yaml` output) |
 | `list` command | 27.04 | [`pipeline list -g`][cli-pipeline-list] |
@@ -90,7 +91,6 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `-with-weblog` option of `run` | 25.04 | 26.10 | [nf-weblog](https://github.com/nextflow-io/nf-weblog) plugin |
 | `echo` directive | 22.04 | 26.10 | `debug` |
 | `kuberun` command | | 27.04 | [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin or [launch with Fusion][k8s-fusion] |
-| `clone` command | | 27.04 | [`pipeline install`][cli-pipeline-install] or `git clone` |
 
 [cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
 [cli-pipeline-list]: ./reference/cli/pipeline#pipeline-list

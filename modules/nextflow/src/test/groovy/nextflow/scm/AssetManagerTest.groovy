@@ -397,6 +397,23 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testClone() {
+
+        given:
+        def dir = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers:[github: [auth: token]]])
+
+        when:
+        manager.clone(dir.toFile())
+
+        then:
+        dir.resolve('README.md').exists()
+        dir.resolve('.git').isDirectory()
+
+    }
+
     def testGetScriptName() {
 
         given:

@@ -843,6 +843,35 @@ class AssetManager implements Closeable {
     }
 
     /**
+     * Clone a pipeline from a remote pipeline repository to the specified folder
+     *
+     * @param directory The folder when the pipeline will be cloned
+     * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
+     */
+    void clone(File directory, String revision = null, Integer deep=null) {
+
+        def clone = Git.cloneRepository()
+        def uri = getGitRepositoryUrl()
+        log.debug "Clone project `$project` -- Using remote URI: ${redactUrlPassword(uri)} into: $directory"
+
+        if( !uri )
+            throw new AbortOperationException("Cannot find the specified project: $project")
+
+        clone.setURI(uri)
+        clone.setDirectory(directory)
+        clone.setDepth(1)
+        clone.setCloneSubmodules(manifest.recurseSubmodules)
+        if( provider.hasCredentials() )
+            clone.setCredentialsProvider( provider.getGitCredentials() )
+
+        if( revision )
+            clone.setBranch(revision)
+        if( deep )
+            clone.setDepth(deep)
+        clone.call().close()
+    }
+
+    /**
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
