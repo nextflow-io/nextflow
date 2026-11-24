@@ -21,6 +21,8 @@ import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineMetadata
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
+import nextflow.exception.AbortOperationException
 import nextflow.cli.Launcher
 import org.junit.Rule
 import spock.lang.Specification
@@ -115,4 +117,25 @@ class CmdPipelineViewTest extends Specification {
         json.usage == 'nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0'
     }
 
+    def 'should report registry errors'() {
+        given:
+        def c = cmd()
+        c.version = VERSION
+        client.primaryUrl() >> 'https://registry.nextflow.io/api'
+        client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline() }
+        client.getPipelineRelease('nf-core/rnaseq', '9.9.9') >> { throw new RegistryException('Not found', 404) }
+
+        when:
+        c.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == MESSAGE
+
+        where:
+        VERSION | PIPELINE_ERROR                              | MESSAGE
+        null    | new RegistryException('Not found', 404)     | 'Pipeline nf-core/rnaseq not found in the registry'
+        '9.9.9' | null                                        | 'Version 9.9.9 of pipeline nf-core/rnaseq not found in the registry'
+        null    | new RegistryException('Server error', 500)  | 'Cannot query registry https://registry.nextflow.io/api: Server error'
+    }
 }

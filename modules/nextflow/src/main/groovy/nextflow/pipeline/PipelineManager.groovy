@@ -17,12 +17,14 @@
 package nextflow.pipeline
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
@@ -172,8 +174,7 @@ class PipelineManager {
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)
             MODIFIED.remove(realPath(dir))
-            FileHelper.deletePath(dir)
-            Files.move(tmp, dir, StandardCopyOption.ATOMIC_MOVE)
+            replace(dir, tmp)
         }
         catch( Throwable e ) {
             try {
@@ -186,23 +187,79 @@ class PipelineManager {
         }
     }
 
-    /** Release of a registry pipeline, the latest when no version is given; fails when it is missing or revoked */
-    static PipelineInfo resolveRelease(RegistryClient client, String name, String version) {
+    // the existing copy is moved aside, and moved back when the new one can't be moved in
+    private void replace(Path dir, Path tmp) {
+        final old = Files.exists(dir, LinkOption.NOFOLLOW_LINKS) ? dir.resolveSibling("${tmp.fileName}-old") : null
+        if( old )
+            move(dir, old)
+        try {
+            move(tmp, dir)
+        }
+        catch( Throwable e ) {
+            if( old )
+                move(old, dir)
+            throw e
+        }
+        if( old )
+            FileHelper.deletePath(old)
+    }
+
+    protected void move(Path source, Path target) {
+        Files.move(source, target, StandardCopyOption.ATOMIC_MOVE)
+    }
+
+    /** Thrown when the registry has no pipeline of the given name */
+    @InheritConstructors
+    static class PipelineNotFoundException extends AbortOperationException {}
+
+    /** A registry pipeline and one of its releases */
+    static record RegistryRelease(Pipeline pipeline, PipelineRelease release) {}
+
+    /**
+     * Pipeline and release from the registry, the latest release when no version is given.
+     * Fails with {@link PipelineNotFoundException} when the pipeline is missing, and with {@link AbortOperationException} on any other error.
+     */
+    static RegistryRelease fetchRelease(RegistryClient client, String name, String version) {
         if( !isValidName(name) )
             throw new AbortOperationException("Invalid pipeline name '$name' -- expected <scope>/<name>, e.g. nf-core/rnaseq")
-        final Pipeline pipeline
-        final PipelineRelease release
+        Pipeline pipeline = null
         try {
             pipeline = client.getPipeline(name)
-            release = version ? client.getPipelineRelease(name, version) : pipeline.latest
         }
         catch( RegistryException e ) {
-            if( e.statusCode == 404 )
-                throw new AbortOperationException("Pipeline ${name}${version ? '@' + version : ''} not found in the registry", e)
-            throw e
+            if( e.statusCode != 404 )
+                throw registryError(client, e)
+        }
+        if( pipeline == null )
+            throw new PipelineNotFoundException("Pipeline ${name} not found in the registry")
+        PipelineRelease release = pipeline.latest
+        if( version ) {
+            try {
+                release = client.getPipelineRelease(name, version)
+            }
+            catch( RegistryException e ) {
+                if( e.statusCode != 404 )
+                    throw registryError(client, e)
+                release = null
+            }
+            if( release == null )
+                throw new AbortOperationException("Version ${version} of pipeline ${name} not found in the registry")
         }
         if( release == null )
             throw new AbortOperationException("Pipeline ${name} has no published release")
+        return new RegistryRelease(pipeline, release)
+    }
+
+    /** A registry error other than not found */
+    static AbortOperationException registryError(RegistryClient client, RegistryException e) {
+        return new AbortOperationException("Cannot query registry ${client.primaryUrl()}: ${e.message}", e)
+    }
+
+    /** Release of a registry pipeline, the latest when no version is given; fails when it is missing or revoked */
+    static PipelineInfo resolveRelease(RegistryClient client, String name, String version) {
+        final result = fetchRelease(client, name, version)
+        final pipeline = result.pipeline()
+        final release = result.release()
         if( pipeline.revoked || release.status == PipelineReleaseStatus.REVOKED )
             throw new AbortOperationException("Pipeline ${name}@${release.version} is revoked")
         return new PipelineInfo(

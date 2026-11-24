@@ -77,18 +77,13 @@ class PipelineCmdSupport {
             final hint = ssh.matches() ? " -- use the https URL instead, e.g. `https://${ssh.group(1)}/${ssh.group(2)}`" : ' -- use the https URL instead'
             throw new AbortOperationException("SSH Git URLs are not supported: ${name}${hint}")
         }
-        if( !isUrl(name) && name.contains('@') ) {
+        if( !AssetManager.isUrl(name) && name.contains('@') ) {
             final at = name.lastIndexOf('@')
             final hint = versionOption
                 ? "give the version with the `${versionOption}` option, e.g. `${name.substring(0, at)} ${versionOption} ${name.substring(at + 1)}`"
                 : "give the pipeline as `scope/name`, e.g. `${name.substring(0, at)}`"
             throw new AbortOperationException("Not a valid pipeline name: ${name} -- ${hint}")
         }
-    }
-
-    /** Whether a pipeline is given by a URL rather than by name, as {@link AssetManager} tells them apart */
-    static boolean isUrl(String name) {
-        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:/')
     }
 
     /** A registry pipeline address: the registry API URL, the pipeline name, and the API key to send */
@@ -113,7 +108,7 @@ class PipelineCmdSupport {
      * @param versionOption The option that gives the version, suggested when the address includes one, or {@code null} when the command takes no version
      */
     static RegistryAddress registryAddress(String name, String hub, String versionOption, Closure<RegistryConfig> registryConfig) {
-        final isUrl = name.startsWith('http://') || name.startsWith('https://')
+        final isUrl = AssetManager.isUrl(name)
         hub = hub ?: SysEnv.get('NXF_HUB')
         // cheap checks first, so that Git addresses never read the config
         if( !isUrl && !hub )

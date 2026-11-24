@@ -602,6 +602,33 @@ class CmdRunTest extends Specification {
         e.message.contains('not found in the registry')
     }
 
+    def 'should require -r to run a registry pipeline offline' () {
+        given:
+        def client = Mock(RegistryClient)
+
+        when:
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io', offline: true).registryLookup('nf-core/rnaseq')
+
+        then:
+        0 * client._
+        def e = thrown(AbortOperationException)
+        e.message == 'Option `-r` is required to run registry pipeline `nf-core/rnaseq` offline -- give the release tag or commit'
+    }
+
+    def 'should report a registry error other than not found' () {
+        given:
+        def client = Mock(RegistryClient)
+        client.primaryUrl() >> 'https://registry.nextflow.io/api'
+        client.getPipeline('nf-core/rnaseq') >> { throw new RegistryException('Unauthorized', 401) }
+
+        when:
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io').registryLookup('nf-core/rnaseq')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Cannot query registry https://registry.nextflow.io/api: Unauthorized'
+    }
+
     /** A run command with a launcher, so that it can read the registry config */
     private CmdRun runCmd(Map opts = [:]) {
         final cmd = new CmdRun(opts)

@@ -403,7 +403,67 @@ class CmdPipelineUserLevelTest extends Specification {
         installCmd(args: ['acme/hello'], version: '9.9.9', client: client).run()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Pipeline acme/hello@9.9.9 not found in the registry'
+        e.message == 'Version 9.9.9 of pipeline acme/hello not found in the registry'
+    }
+
+    def 'should report a registry error without the Git URL hint'() {
+        given:
+        final client = Mock(RegistryClient)
+        client.primaryUrl() >> 'https://registry.nextflow.io/api'
+        client.getPipeline('acme/hello') >> { throw new RegistryException('Server error', 503) }
+
+        when:
+        installCmd(args: ['acme/hello'], client: client).run()
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Cannot query registry https://registry.nextflow.io/api: Server error'
+    }
+
+    def 'should not name the default branch when updating a legacy download'() {
+        given:
+        final repo = gitRepo('hello')
+        Git.cloneRepository().setURI(repo.url).setDirectory(assets().resolve('local/hello').toFile()).call().close()
+
+        when:
+        installCmd(args: [repo.url]).run()
+        then:
+        capture.toString().contains('Pipeline local/hello was downloaded with the legacy layout, which holds a single revision -- installing the latest commit of the checked-out branch replaces the current revision')
+        !capture.toString().contains('default branch')
+    }
+
+    def 'should remove both layouts of a migrated pipeline from the user-level store'() {
+        given: 'a registry release in the multi-revision layout'
+        final repo = gitRepo('hello')
+        installCmd(args: ['acme/hello'], client: registryOf(repo)).run()
+        and: 'the legacy clone left by `pull -migrate`'
+        final legacy = assets().resolve('acme/hello')
+        Git.cloneRepository().setURI(repo.url).setDirectory(legacy.toFile()).call().close()
+
+        when:
+        resetOutput()
+        exec(new CmdPipelineRemove(args: ['acme/hello'], global: true))
+        then:
+        !Files.exists(legacy)
+        !Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/acme/hello"))
+        stdout() == ['Pipeline acme/hello removed']
+        AssetManager.list().isEmpty()
+    }
+
+    def 'should list the Git repository of a registry pipeline whose name differs from it'() {
+        given:
+        final repo = gitRepo('hello')
+        installCmd(args: ['acme/hello'], client: registryOf(repo)).run()
+        try (final bare = Git.open(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/acme/hello/${MultiRevisionRepositoryStrategy.BARE_REPO}").toFile())) {
+            bare.repository.config.setString('remote', 'origin', 'url', 'https://user:secret-token@github.com/other/repo.git')
+            bare.repository.config.save()
+        }
+
+        when:
+        resetOutput()
+        exec(new CmdPipelineList(global: true, output: 'json'))
+        final json = new JsonSlurper().parseText(stdout().join('\n')) as Map
+        then:
+        json.pipelines*.repositoryUrl == ['https://use****@github.com/other/repo.git']
     }
 
     def 'should reject -force when installing in the user-level store'() {
@@ -507,7 +567,7 @@ class CmdPipelineUserLevelTest extends Specification {
         when:
         exec(new CmdPipelineList(global: true, output: 'json'))
         final json = new JsonSlurper().parseText(stdout().join('\n')) as Map
-        final url = new AssetManager('local/hello').withCloseable { it.repositoryUrl }
+        final url = new AssetManager('local/hello').withCloseable { it.gitConfigRemoteUrl }
         then:
         json.pipelines == [
             [name: 'local/hello', version: 'dev', commit: repo.v4, status: 'modified', path: clone('local/hello', repo.v4).toString(), repositoryUrl: url],
@@ -539,7 +599,7 @@ class CmdPipelineUserLevelTest extends Specification {
         exec(new CmdPipelineList(global: true, output: 'json'))
         then:
         (new JsonSlurper().parseText(stdout().join('\n')) as Map).pipelines == [
-            [name: 'acme/hello', version: 'master', commit: commit, status: 'ok', path: dir.toString(), repositoryUrl: 'https://github.com/acme/hello']
+            [name: 'acme/hello', version: 'master', commit: commit, status: 'ok', path: dir.toString(), repositoryUrl: 'https://github.com/acme/hello.git']
         ]
     }
 

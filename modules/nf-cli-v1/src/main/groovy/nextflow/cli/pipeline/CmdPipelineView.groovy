@@ -26,6 +26,7 @@ import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
+import nextflow.pipeline.PipelineManager
 import nextflow.util.TestOnly
 
 /**
@@ -82,10 +83,9 @@ class CmdPipelineView extends CmdBase {
         PipelineCmdSupport.checkPipelineName(name)
         final registryConfig = PipelineCmdSupport.registryConfig(this)
         final client = this.client ?: RegistryClientFactory.forConfig(registryConfig)
-        final pipeline = client.getPipeline(name)
-        final release = version ? client.getPipelineRelease(name, version) : pipeline?.latest
-        if( !pipeline || !release )
-            throw new AbortOperationException("No release information available for ${name}")
+        final result = PipelineManager.fetchRelease(client, name, version)
+        final pipeline = result.pipeline()
+        final release = result.release()
 
         final url = "${PipelineCmdSupport.pageUrl(registryConfig.url)}/pipelines/${name}".toString()
         final params = schemaParams(release.schema)

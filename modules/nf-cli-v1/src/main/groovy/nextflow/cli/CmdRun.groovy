@@ -654,7 +654,7 @@ class CmdRun extends CmdBase implements HubAware {
 
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
-                if( offline && remoteSource && release && rev )
+                if( offline && remoteSource && release )
                     throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- install it with `nextflow pipeline install -g`")
                 if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
@@ -704,6 +704,8 @@ class CmdRun extends CmdBase implements HubAware {
         if( !address )
             return null
         // the release can't be resolved offline: use the copy cached under the registry name
+        if( offline && !revision )
+            throw new AbortOperationException("Option `-r` is required to run registry pipeline `${address.name}` offline -- give the release tag or commit")
         if( offline )
             return new PipelineInfo(name: address.name)
         return PipelineCmdSupport.resolveRelease(address, revision, registryClient)

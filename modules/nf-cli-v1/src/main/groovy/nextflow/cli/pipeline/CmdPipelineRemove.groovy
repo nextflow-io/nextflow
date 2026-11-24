@@ -77,13 +77,20 @@ class CmdPipelineRemove extends CmdBase {
 
     private void removeUserLevel(String name) {
         Plugins.init()
+        final String project
         try (final manager = new AssetManager(name)) {
             if( manager.isNotInitialized() ) {
                 println "Pipeline ${name} is not installed in the user-level store"
                 return
             }
             manager.drop(null, force)
-            println "Pipeline ${manager.project} removed"
+            project = manager.project
         }
+        // a pipeline migrated with `pull -migrate` also keeps its legacy clone
+        try (final legacy = new AssetManager(name)) {
+            if( !legacy.isNotInitialized() )
+                legacy.drop(null, force)
+        }
+        println "Pipeline ${project} removed"
     }
 }

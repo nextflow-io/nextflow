@@ -435,9 +435,51 @@ class PipelineManagerTest extends Specification {
         where:
         NAME              | VERSION | PIPELINE_ERROR                          | STATUS                        | REVOKED | MESSAGE
         'hello'           | null    | null                                    | null                          | false   | 'Invalid pipeline name'
-        'nf-core/rnaseq'  | null    | new RegistryException('Not found', 404) | null                          | false   | 'nf-core/rnaseq not found in the registry'
-        'nf-core/rnaseq'  | 'dev'   | null                                    | null                          | false   | 'nf-core/rnaseq@dev not found in the registry'
+        'nf-core/rnaseq'  | null    | new RegistryException('Not found', 404) | null                          | false   | 'Pipeline nf-core/rnaseq not found in the registry'
+        'nf-core/rnaseq'  | 'dev'   | null                                    | null                          | false   | 'Version dev of pipeline nf-core/rnaseq not found in the registry'
         'nf-core/rnaseq'  | null    | null                                    | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
         'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
+    }
+
+    def 'should tell a missing pipeline from a missing version and other registry errors' () {
+        given:
+        client.primaryUrl() >> 'https://reg.io/api'
+        client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline(release('3.14.0')) }
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> { throw RELEASE_ERROR }
+
+        when:
+        PipelineManager.resolveRelease(client, 'nf-core/rnaseq', VERSION)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.class == TYPE
+        e.message == MESSAGE
+
+        where:
+        VERSION | PIPELINE_ERROR                          | RELEASE_ERROR                               | TYPE                                        | MESSAGE
+        null    | new RegistryException('Not found', 404) | null                                        | PipelineManager.PipelineNotFoundException   | 'Pipeline nf-core/rnaseq not found in the registry'
+        '1.0.0' | new RegistryException('Not found', 404) | null                                        | PipelineManager.PipelineNotFoundException   | 'Pipeline nf-core/rnaseq not found in the registry'
+        '1.0.0' | null                                    | new RegistryException('Not found', 404)     | AbortOperationException                     | 'Version 1.0.0 of pipeline nf-core/rnaseq not found in the registry'
+        null    | new RegistryException('Unauthorized', 401) | null                                     | AbortOperationException                     | 'Cannot query registry https://reg.io/api: Unauthorized'
+        '1.0.0' | null                                    | new RegistryException('Server error', 503)  | AbortOperationException                     | 'Cannot query registry https://reg.io/api: Server error'
+    }
+
+    def 'keeps the existing install when the new one cannot be moved in'() {
+        given:
+        def m = Spy(new PipelineManager(base, client, fetcher))
+        client.getPipeline(_) >> pipeline(release('2.0.0'))
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> release('1.0.0', 'old')
+        fetcher.fetch(_, _, 'old', _) >> { args -> args[3].resolve('main.nf').text = 'old' }
+        fetcher.fetch(_, _, 'abc', _) >> { args -> args[3].resolve('main.nf').text = 'new' }
+        m.install('nf-core/rnaseq', '1.0.0', false)
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        then:
+        m.move({ Path it -> !it.fileName.toString().startsWith('rnaseq') && !it.fileName.toString().endsWith('-old') }, _) >> { throw new IOException('boom') }
+        def e = thrown(IOException)
+        e.message == 'boom'
+        base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'old'
+        Files.list(base.resolve('pipelines/nf-core')).count() == 1
     }
 }

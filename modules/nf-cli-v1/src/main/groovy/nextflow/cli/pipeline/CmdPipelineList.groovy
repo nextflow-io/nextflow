@@ -29,6 +29,7 @@ import nextflow.cli.CmdBase
 import nextflow.pipeline.PipelineManager
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.util.StringUtils
 import nextflow.util.TestOnly
 
 /**
@@ -107,12 +108,15 @@ class CmdPipelineList extends CmdBase {
         final rows = new ArrayList<Map<String,Object>>()
         for( final String name : AssetManager.list() ) {
             try (final manager = new AssetManager(name)) {
+                // a registry name may differ from the Git repository, so report the clone's remote
+                final origin = manager.gitConfigRemoteUrl
+                final repositoryUrl = origin ? StringUtils.redactUrlPassword(origin) : manager.repositoryUrl
                 // an annotated tag and its commit may be downloaded in two clones
                 final byCommit = manager.listDownloadedRevisions().groupBy { it.commitId }
                 for( final revs : byCommit.values() ) {
                     final rev = revs.find { it.localPath.name == it.commitId } ?: revs[0]
                     final version = revs.find { it.name }?.name
-                    rows << row(manager.project, version, rev.commitId, revs.any { !it.clean }, rev.localPath.toPath(), manager.repositoryUrl)
+                    rows << row(manager.project, version, rev.commitId, revs.any { !it.clean }, rev.localPath.toPath(), repositoryUrl)
                 }
             }
             catch( Exception e ) {

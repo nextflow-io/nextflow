@@ -263,7 +263,7 @@ Note the following:
 
 - The pipeline is cached under its registry name. A registry pipeline should have the same name as its Git repository, as nf-core pipelines do, since both are cached under that name.
 
-- With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pipeline install -g`][cli-pipeline-install] to download a registry pipeline ahead of time.
+- With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so `-r` is required, as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pipeline install -g`][cli-pipeline-install] to download a registry pipeline ahead of time.
 
 - The main script is the top-level `main.nf` of the pipeline, unless `-main-script` is given. The `manifest.mainScript` setting of the pipeline is ignored.
 

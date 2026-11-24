@@ -16,6 +16,7 @@
 
 package nextflow.cli.pipeline
 
+import nextflow.SysEnv
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
@@ -154,5 +155,17 @@ class PipelineCmdSupportTest extends Specification {
         PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'
         PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api/') == 'https://registry.nextflow.io'
         PipelineCmdSupport.pageUrl('https://example.com/registry') == 'https://example.com/registry'
+    }
+
+    def 'should not treat a file URL as a registry name when the hub is a registry' () {
+        given:
+        SysEnv.push(NXF_HUB: 'registry.nextflow.io')
+
+        expect:
+        PipelineCmdSupport.registryAddress('file:///tmp/pipelines/hello', null) { new RegistryConfig() } == null
+        PipelineCmdSupport.registryAddress('nf-core/rnaseq', null) { new RegistryConfig() }?.name == 'nf-core/rnaseq'
+
+        cleanup:
+        SysEnv.pop()
     }
 }

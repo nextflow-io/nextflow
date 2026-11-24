@@ -428,7 +428,8 @@ class AssetManager implements Closeable {
         }
     }
 
-    private static boolean isUrl(String name) {
+    /** Whether a pipeline is given by a URL rather than by name */
+    static boolean isUrl(String name) {
         return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:/')
     }
 
@@ -1139,7 +1140,7 @@ class AssetManager implements Closeable {
         }
     }
 
-    protected String getGitConfigRemoteUrl() {
+    String getGitConfigRemoteUrl() {
         // a multi-revision project has the config of its bare repository, even when the default branch is not checked out
         final gitConfig = localGitConfig
         if( !gitConfig?.exists() ) {

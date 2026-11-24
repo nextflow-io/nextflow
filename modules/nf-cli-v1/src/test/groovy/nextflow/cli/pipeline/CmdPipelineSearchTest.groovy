@@ -22,6 +22,8 @@ import io.seqera.npr.api.schema.v1.ListPipelinesResponse
 import io.seqera.npr.api.schema.v1.PipelineMetadata
 import io.seqera.npr.api.schema.v1.PipelineSummary
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
+import nextflow.exception.AbortOperationException
 import nextflow.cli.Launcher
 import org.junit.Rule
 import spock.lang.Specification
@@ -112,5 +114,18 @@ class CmdPipelineSearchTest extends Specification {
         then:
         def e = thrown(ParameterException)
         e.message == 'Output mode must be one of [simple, json] (found: text)'
+    }
+
+    def 'should report a registry error'() {
+        given:
+        client.primaryUrl() >> 'https://registry.nextflow.io/api'
+        client.listPipelines(_, _, _) >> { throw new RegistryException('Server error', 500) }
+
+        when:
+        cmd().run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Cannot query registry https://registry.nextflow.io/api: Server error'
     }
 }

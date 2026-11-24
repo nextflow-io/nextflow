@@ -23,7 +23,6 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
-import io.seqera.npr.client.RegistryException
 import nextflow.Const
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
@@ -99,14 +98,12 @@ class CmdPipelineInstall extends CmdBase {
             throw new AbortOperationException("Option `-force` is not supported with `-global` -- the user-level store keeps each downloaded revision and never overwrites it")
         Plugins.init()
         final config = PipelineCmdSupport.registryConfig(this)
-        final isUrl = PipelineCmdSupport.isUrl(name)
+        final isUrl = AssetManager.isUrl(name)
         // a page URL addresses its own registry, a name the configured registries as for project-level installs
-        final address = isUrl
-            ? PipelineCmdSupport.registryAddress(name, null, '-version') { config }
-            : new PipelineCmdSupport.RegistryAddress(config.url, name, config.apiKey)
-        if( address ) {
-            final client = this.client ?: (isUrl ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(config))
-            final release = resolveRelease(address, version, client)
+        final address = isUrl ? PipelineCmdSupport.registryAddress(name, null, '-version') { config } : null
+        if( !isUrl || address ) {
+            final client = this.client ?: (address ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(config))
+            final release = resolveRelease(client, address ? address.name : name, version)
             final label = "${release.name}@${release.version}"
             // a registry release is downloaded at its pinned commit, cached under its registry name as `run` does
             final rev = release.commitId ?: release.revision
@@ -119,7 +116,7 @@ class CmdPipelineInstall extends CmdBase {
         }
         else {
             try (final manager = new AssetManager(name)) {
-                final legacyCommit = warnLegacy(manager, version ?: 'the default branch', version)
+                final legacyCommit = warnLegacy(manager, version ?: 'the latest commit of the checked-out branch', version)
                 if( version )
                     manager.setRevision(version)
                 log.info "Checking ${manager.getProjectWithRevision()} ..."
@@ -134,7 +131,7 @@ class CmdPipelineInstall extends CmdBase {
      * Warn that installing a revision of a legacy download replaces its single revision, unless it is the checked-out one
      *
      * @param label The revision as shown to the user
-     * @param revision The revision to install: a name or a commit, or {@code null} for the default branch
+     * @param revision The revision to install: a name or a commit, or {@code null} to update the checked-out branch
      * @return the checked-out commit of the legacy download, or {@code null} when it is not one
      */
     private static String warnLegacy(AssetManager manager, String label, String revision) {
@@ -168,29 +165,12 @@ class CmdPipelineInstall extends CmdBase {
             println "Pipeline ${label} installed in ${script.localPath}"
     }
 
-    private static PipelineInfo resolveRelease(PipelineCmdSupport.RegistryAddress address, String version, RegistryClient client) {
+    private static PipelineInfo resolveRelease(RegistryClient client, String name, String version) {
         try {
-            return PipelineCmdSupport.resolveRelease(address, version, client)
+            return PipelineManager.resolveRelease(client, name, version)
         }
-        catch( AbortOperationException e ) {
-            if( isNotFound(e.cause) && (!version || !hasPipeline(client, address.name)) )
-                throw new AbortOperationException("Pipeline ${address.name} is not in the registry -- a Git pipeline is installed by its repository URL, e.g. `nextflow pipeline install -g https://github.com/${address.name}`", e)
-            throw e
+        catch( PipelineManager.PipelineNotFoundException e ) {
+            throw new AbortOperationException("Pipeline ${name} is not in the registry -- a Git pipeline is installed by its repository URL, e.g. `nextflow pipeline install -g https://github.com/${name}`", e)
         }
-    }
-
-    private static boolean hasPipeline(RegistryClient client, String name) {
-        try {
-            return client.getPipeline(name) != null
-        }
-        catch( RegistryException e ) {
-            if( isNotFound(e) )
-                return false
-            throw e
-        }
-    }
-
-    private static boolean isNotFound(Throwable e) {
-        return e instanceof RegistryException && (e as RegistryException).statusCode == 404
     }
 }

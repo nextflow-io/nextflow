@@ -22,11 +22,14 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import io.seqera.npr.api.schema.v1.ListPipelinesResponse
 import io.seqera.npr.api.schema.v1.PipelineSummary
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
+import nextflow.pipeline.PipelineManager
 import nextflow.util.TestOnly
 
 /**
@@ -113,7 +116,13 @@ class CmdPipelineSearch extends CmdBase {
     private List<PipelineSummary> fetch(RegistryClient client, String query) {
         final result = new ArrayList<PipelineSummary>()
         for( int page = 1; result.size() < limit; page++ ) {
-            final response = client.listPipelines(query, page, limit)
+            final ListPipelinesResponse response
+            try {
+                response = client.listPipelines(query, page, limit)
+            }
+            catch( RegistryException e ) {
+                throw PipelineManager.registryError(client, e)
+            }
             if( !response?.pipelines )
                 break
             result.addAll(response.pipelines)
