@@ -41,20 +41,7 @@ See [Including a pipeline from the registry][workflow-typed-registry] for detail
 
 ### `pipeline` command
 
-The new `nextflow pipeline` command manages pipelines, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command. By default, it manages the registry pipelines installed in a project.
-
-With the `-g` (`-global`) option, the `install`, `list`, and `remove` subcommands manage the user-level store instead, like `npm -g`. This is where `nextflow run` downloads pipelines (`$NXF_ASSETS`, default: `$NXF_HOME/assets`):
-
-```bash
-nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
-nextflow pipeline install -g https://github.com/nextflow-io/hello
-nextflow pipeline list -g
-nextflow pipeline remove -g nf-core/rnaseq
-```
-
-The `pipeline` command uses the registry by default, while `nextflow run` uses GitHub by default. Give a pipeline that is not in the registry by its Git repository URL. The user-level store keeps each downloaded revision, and `pipeline list -g` prints one row for each of them. `pipeline remove -g` removes a pipeline with all of its revisions.
-
-See [`pipeline`][cli-pipeline] for details.
+The new `nextflow pipeline` command manages pipelines, with the subcommands `install`, `list`, `remove`, `search`, and `view`. See [`pipeline`][cli-pipeline] for details.
 
 ## Enhancements
 
@@ -98,19 +85,7 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 ## Deprecations
 
-- The `clone`, `pull`, `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. They still work, and print a warning. Use the following commands instead:
-
-  | Deprecated | Replacement |
-  |---|---|
-  | `clone <project> [dir]` | `git clone <repository URL> [dir]` |
-  | `pull <scope/name> -r <revision>` | `pipeline install -g <repository URL> -version <revision>`, e.g. `https://github.com/<scope/name>` |
-  | `drop <project>` | `pipeline remove -g <project>` |
-  | `list` | `pipeline list -g` |
-  | `view <project>` | `pipeline list -g -o json` to find the local copy |
-
-  A plain `scope/name` given to `pipeline install -g` is a registry name, so give a Git pipeline by its repository URL. The `-all`, `-hub`, `-user`, `-migrate`, and `-deep` options of `pull`, and the `-r` option of `drop`, have no equivalent: `pipeline remove -g` removes all revisions of a pipeline. A pipeline downloaded with the legacy layout holds a single revision, so `pipeline install -g` replaces its current revision and prints a warning.
-
-- The `info` command with a project name is deprecated. Use `pipeline list -g` instead. It has no equivalent of the `-check-updates` (`-u`) option, the `-d` detail level, or the `yaml` output of `info`. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
+- The `clone`, `drop`, `list`, `pull`, and `view` commands, and the `info` command with a project name, are deprecated and hidden from `nextflow -h`. They still work, and print a warning. See [Deprecations][deprecations-page] for their replacements.
 
 ## Miscellaneous
 

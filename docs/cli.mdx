@@ -146,76 +146,17 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ## Project management
 
-Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines into a user-level store, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
+Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines into the user-level store, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
 
-The `install`, `list`, and `remove` subcommands of the [`pipeline`][cli-pipeline] command manage the user-level store when given the `-g` (`-global`) option, similar to `npm install -g`. Without `-g`, they manage the project-level registry pipelines installed in the current project. Use these commands to download pipelines ahead of a run, inspect downloaded pipelines, and maintain the user-level store.
+The [`pipeline`][cli-pipeline] command manages pipelines in the user-level store when given the `-g` option, and project-level pipelines in the current project otherwise:
+
+- Use `pipeline install -g` to download a pipeline before running it, for example for an offline run. See [`pipeline install`][cli-pipeline-install] for more information.
+- Use `pipeline list -g` to list the downloaded pipelines, with one row for each downloaded revision. See [`pipeline list`][cli-pipeline-list] for more information.
+- Use `pipeline remove -g` to remove a downloaded pipeline with all of its revisions. See [`pipeline remove`][cli-pipeline-remove] for more information.
 
 <ChangedInVersion version="27.04">
-The `pull`, `list`, `view`, and `drop` commands, and the `info` command with a project name, are deprecated in favor of `pipeline install -g`, `pipeline list -g`, and `pipeline remove -g`. The `clone` command is deprecated in favor of `git clone`. See [Deprecations][deprecations-page] for details.
+The `clone`, `drop`, `list`, `pull`, and `view` commands, and the `info` command with a project name, are deprecated. See [Deprecations][deprecations-page] for their replacements.
 </ChangedInVersion>
-
-### Downloading or updating projects
-
-The `pipeline install -g` command downloads a pipeline into the user-level store. Use it to download pipelines before running them, for example for offline use.
-
-The `pipeline` command uses the [Nextflow registry](https://registry.nextflow.io) by default. Give a registry name to download the latest release:
-
-```bash
-nextflow pipeline install -g nf-core/demo
-```
-
-This prints the path of the downloaded copy:
-
-```
-Pipeline nf-core/demo@1.2.0 installed in /home/user/.nextflow/assets/.repos/nf-core/demo/clones/32893afef8076a03a2767a020b3f0cab2e0b40b2
-```
-
-Use `-version` to download a specific release:
-
-```bash
-nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
-```
-
-To download a pipeline that is not in the registry, give its Git repository URL. Use `-version` to download a branch, tag, or commit:
-
-```bash
-nextflow pipeline install -g https://github.com/nextflow-io/hello -version mybranch
-```
-
-Each downloaded revision is kept next to the others, so older revisions can still be run. To update a branch, install it again. The previous commit of the branch stays downloaded until `pipeline remove -g` removes the pipeline.
-
-See [pipeline][cli-pipeline-install] for more information.
-
-### Listing downloaded projects
-
-The `pipeline list -g` command shows the pipelines downloaded to the user-level store, with one row for each downloaded revision. This helps you track which projects are available offline and manage the user-level store:
-
-```bash
-nextflow pipeline list -g
-```
-
-This prints an output similar to the following:
-
-```
-NAME               VERSION  COMMIT      STATUS
-nextflow-io/hello  master   3c2cdc9823  ok
-nf-core/demo       1.0.0    705f18e4b1  ok
-nf-core/demo       1.2.0    32893afef8  ok
-```
-
-The `STATUS` column is `modified` when the downloaded files were changed. Use `-o json` to also print the local path and the repository URL of each revision.
-
-### Deleting downloaded projects
-
-The `pipeline remove -g` command removes a downloaded pipeline, with all of its revisions, from the user-level store.
-
-Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
-
-```bash
-nextflow pipeline remove -g nextflow-io/hello
-```
-
-See [pipeline][cli-pipeline-remove] for more information.
 
 ## Module management
 
@@ -521,6 +462,7 @@ http://nextflow.io
 [cli-module]: ./reference/cli/module
 [cli-pipeline]: ./reference/cli/pipeline
 [cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
+[cli-pipeline-list]: ./reference/cli/pipeline#pipeline-list
 [cli-pipeline-remove]: ./reference/cli/pipeline#pipeline-remove
 [cli-plugin]: ./reference/cli/plugin
 [cli-reference]: ./reference/cli
