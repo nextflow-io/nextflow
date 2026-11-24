@@ -182,7 +182,7 @@ To download a pipeline that is not in the registry, give its Git repository URL.
 nextflow pipeline install -g https://github.com/nextflow-io/hello -version mybranch
 ```
 
-Each downloaded revision is kept next to the others, so older revisions can still be run. To update a branch, install it again. The previous commit of the branch stays downloaded until you remove it with `pipeline remove -g -version <commit>`.
+Each downloaded revision is kept next to the others, so older revisions can still be run. To update a branch, install it again. The previous commit of the branch stays downloaded until `pipeline remove -g` removes the pipeline.
 
 See [pipeline][cli-pipeline-install] for more information.
 
@@ -207,18 +207,12 @@ The `STATUS` column is `modified` when the downloaded files were changed. Use `-
 
 ### Deleting downloaded projects
 
-The `pipeline remove -g` command removes a downloaded pipeline from the user-level store.
+The `pipeline remove -g` command removes a downloaded pipeline, with all of its revisions, from the user-level store.
 
 Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
 
 ```bash
 nextflow pipeline remove -g nextflow-io/hello
-```
-
-Use `-version` to remove only one revision:
-
-```bash
-nextflow pipeline remove -g nf-core/demo -version 1.0.0
 ```
 
 See [pipeline][cli-pipeline-remove] for more information.

@@ -1167,7 +1167,7 @@ class AssetManager implements Closeable {
         String commitId
         /** The tags, then the branches, at the commit */
         List<String> names
-        /** The clone holding the revision, whose name identifies the revision for {@link #drop} */
+        /** The clone holding the revision */
         File localPath
         /** Whether the clone has no local changes */
         boolean clean

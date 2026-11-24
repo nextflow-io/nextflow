@@ -38,13 +38,6 @@ class CmdPipelineRemove extends CmdBase {
     @Parameter(description = "<pipeline>", required = true)
     List<String> args
 
-    @Parameter(names = ["-version"], description = "Remove only this revision from the user-level store: a version, branch or commit (requires `-g`)")
-    String version
-
-    // hidden alias of -version, as JCommander can't hide one name of a parameter
-    @Parameter(names = ["-r"], hidden = true)
-    String revision
-
     @Parameter(names = ["-force"], description = "Remove even with local modifications", arity = 0)
     boolean force = false
 
@@ -63,14 +56,11 @@ class CmdPipelineRemove extends CmdBase {
     void run() {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
-        version = version ?: revision
-        PipelineCmdSupport.checkPipelineName(args[0])
+        PipelineCmdSupport.checkPipelineName(args[0], null)
         if( global ) {
-            removeUserLevel(PipelineCmdSupport.userLevelName(this, args[0]), version)
+            removeUserLevel(PipelineCmdSupport.userLevelName(this, args[0]))
             return
         }
-        if( version )
-            throw new AbortOperationException("Option `-version` requires `-global` -- the project-level store holds a single version of each pipeline")
         final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
         if( manager.remove(args[0], force) ) {
             println "Pipeline ${args[0]} removed"
@@ -85,54 +75,15 @@ class CmdPipelineRemove extends CmdBase {
         return AssetManager.list().contains(name)
     }
 
-    private void removeUserLevel(String name, String version) {
+    private void removeUserLevel(String name) {
         Plugins.init()
         try (final manager = new AssetManager(name)) {
             if( manager.isNotInitialized() ) {
                 println "Pipeline ${name} is not installed in the user-level store"
                 return
             }
-            if( !version ) {
-                manager.drop(null, force)
-                println "Pipeline ${manager.project} removed"
-                return
-            }
-            final revisions = manager.listDownloadedRevisions()
-            final commit = findCommit(manager.project, revisions, version)
-            // every clone of the commit, e.g. of an annotated tag and of its commit
-            final clones = revisions.findAll { it.commitId == commit }
-            if( !force && clones.any { !it.clean } )
-                throw new AbortOperationException("Pipeline ${manager.project}@${version} has local modifications -- use -force to remove it")
-            if( manager.isUsingLegacyStrategy() ) {
-                manager.drop(null, force)
-            }
-            else {
-                for( final rev : clones )
-                    manager.drop(rev.localPath.name, force)
-                // removing the last clone on disk, readable or not, removes the pipeline
-                if( !hasClones(clones[0].localPath.parentFile) )
-                    manager.drop(null, force)
-            }
-            println "Pipeline ${manager.project}@${version} removed"
+            manager.drop(null, force)
+            println "Pipeline ${manager.project} removed"
         }
-    }
-
-    private static boolean hasClones(File revisionsDir) {
-        return revisionsDir.listFiles()?.any { File it -> it.isDirectory() }
-    }
-
-    /** The commit of the downloaded revisions with the given version or branch, else that starts with the given commit or clone name (at least 7 characters) */
-    private static String findCommit(String project, List<AssetManager.DownloadedRevision> revisions, String version) {
-        final byName = revisions.findAll { it.names.contains(version) }
-        final isCommit = version ==~ /[0-9a-f]{7,40}/
-        final matches = byName ?: !isCommit ? byName : revisions.findAll { it.commitId.startsWith(version) || it.localPath.name.startsWith(version) }
-        if( !matches ) {
-            final available = revisions.collect { it.name ?: it.commitId.take(10) }.unique().sort()
-            throw new AbortOperationException("Pipeline ${project}@${version} is not installed in the user-level store" + (available ? " -- installed revisions: ${available.join(', ')}" : ''))
-        }
-        final commits = matches.collect { it.commitId }.unique()
-        if( commits.size() > 1 )
-            throw new AbortOperationException("Ambiguous revision ${version} for pipeline ${project} -- matches commits: ${commits.collect { it.take(10) }.join(', ')}")
-        return commits[0]
     }
 }
