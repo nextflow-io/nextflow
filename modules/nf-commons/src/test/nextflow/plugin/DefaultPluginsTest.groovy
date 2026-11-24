@@ -62,6 +62,9 @@ class DefaultPluginsTest extends Specification {
         and:
         !defaults.hasPlugin('nf-foo')
         !defaults.hasPlugin('myorg/nf-foo')
+        and: 'only the core namespace'
+        !defaults.hasPlugin('other/nf-amazon')
+        PluginRef.parse('other/nf-amazon', defaults) == new PluginRef('other/nf-amazon')
     }
 
     def 'should get sorted string' () {

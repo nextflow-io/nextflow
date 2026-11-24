@@ -28,6 +28,8 @@ class DefaultPlugins {
 
     public static final DefaultPlugins INSTANCE = new DefaultPlugins()
 
+    static final String CORE_NAMESPACE = 'nextflow-io'
+
     private Map<String,PluginRef> plugins = new HashMap<>(20)
 
     protected DefaultPlugins() {
@@ -60,18 +62,17 @@ class DefaultPlugins {
         return find(pluginId) != null
     }
 
-    // a moved core plugin is known by its plain name and its namespaced ID
+    // a moved core plugin is known by its plain name and its `nextflow-io` ID
     private PluginRef find(String pluginId) {
         final result = plugins.get(pluginId)
         if( result || !pluginId )
             return result
-        final p = pluginId.indexOf('/')
-        if( p >= 0 ) {
-            // keep the requested ID: only the version is pinned
-            final plain = plugins.get(pluginId.substring(p+1))
-            return plain ? new PluginRef(pluginId, plain.version) : null
-        }
-        return plugins.values().find(it -> it.id.endsWith('/' + pluginId))
+        if( !pluginId.contains('/') )
+            return plugins.get("$CORE_NAMESPACE/$pluginId".toString())
+        if( !pluginId.startsWith(CORE_NAMESPACE + '/') )
+            return null
+        final plain = plugins.get(PluginRef.name(pluginId))
+        return plain ? new PluginRef(pluginId, plain.version) : null
     }
 
     List<PluginRef> getPlugins() {
