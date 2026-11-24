@@ -48,6 +48,22 @@ class DefaultPluginsTest extends Specification {
         e.message == "Unknown Nextflow plugin 'nf-foo'"
     }
 
+    def 'should find a moved core plugin by both IDs' () {
+        given:
+        def defaults = new DefaultPlugins(plugins: [
+                'nf-amazon': new PluginRef('nf-amazon', '1.0.0'),
+                'nextflow-io/nf-google': new PluginRef('nextflow-io/nf-google', '2.0.0') ])
+
+        expect:
+        defaults.getPlugin('nextflow-io/nf-amazon') == new PluginRef('nextflow-io/nf-amazon', '1.0.0')
+        defaults.getPlugin('nf-google') == new PluginRef('nextflow-io/nf-google', '2.0.0')
+        PluginRef.parse('nextflow-io/nf-amazon', defaults) == new PluginRef('nextflow-io/nf-amazon', '1.0.0')
+        PluginRef.parse('nf-google', defaults) == new PluginRef('nextflow-io/nf-google', '2.0.0')
+        and:
+        !defaults.hasPlugin('nf-foo')
+        !defaults.hasPlugin('myorg/nf-foo')
+    }
+
     def 'should get sorted string' () {
         given:
         def DELTA = new PluginRef('nf-delta', '1.0.0')

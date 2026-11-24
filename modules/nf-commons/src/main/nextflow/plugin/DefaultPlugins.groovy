@@ -50,14 +50,28 @@ class DefaultPlugins {
     PluginRef getPlugin(String pluginId) throws IllegalArgumentException {
         if( !pluginId )
             throw new IllegalArgumentException("Missing pluginId argument")
-        final result = plugins.get(pluginId)
+        final result = find(pluginId)
         if( !result )
             throw new IllegalArgumentException("Unknown Nextflow plugin '$pluginId'")
         return result
     }
 
     boolean hasPlugin(String pluginId) {
-        return plugins.containsKey(pluginId)
+        return find(pluginId) != null
+    }
+
+    // a moved core plugin is known by its plain name and its namespaced ID
+    private PluginRef find(String pluginId) {
+        final result = plugins.get(pluginId)
+        if( result || !pluginId )
+            return result
+        final p = pluginId.indexOf('/')
+        if( p >= 0 ) {
+            // keep the requested ID: only the version is pinned
+            final plain = plugins.get(pluginId.substring(p+1))
+            return plain ? new PluginRef(pluginId, plain.version) : null
+        }
+        return plugins.values().find(it -> it.id.endsWith('/' + pluginId))
     }
 
     List<PluginRef> getPlugins() {
