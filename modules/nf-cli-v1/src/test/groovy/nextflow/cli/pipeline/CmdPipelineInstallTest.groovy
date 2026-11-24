@@ -88,7 +88,7 @@ class CmdPipelineInstallTest extends Specification {
         cmd(['nf-core/rnaseq']).run()
 
         then:
-        capture.toString().contains('Pipeline nf-core/rnaseq@3.14.0 is already installed and up to date')
+        capture.toString().contains('Pipeline nf-core/rnaseq@3.14.0 is already installed')
         capture.toString().count('installed in') == 1
     }
 }

@@ -64,6 +64,7 @@ class CmdPipelineRemove extends CmdBase {
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
         version = version ?: revision
+        PipelineCmdSupport.checkPipelineName(args[0])
         if( global ) {
             removeUserLevel(PipelineCmdSupport.userLevelName(this, args[0]), version)
             return
@@ -97,29 +98,41 @@ class CmdPipelineRemove extends CmdBase {
                 return
             }
             final revisions = manager.listDownloadedRevisions()
-            final rev = findRevision(manager.project, revisions, version)
-            if( !force && !rev.clean )
+            final commit = findCommit(manager.project, revisions, version)
+            // every clone of the commit, e.g. of an annotated tag and of its commit
+            final clones = revisions.findAll { it.commitId == commit }
+            if( !force && clones.any { !it.clean } )
                 throw new AbortOperationException("Pipeline ${manager.project}@${version} has local modifications -- use -force to remove it")
-            // removing the last revision removes the pipeline
-            if( revisions.size() == 1 || manager.isUsingLegacyStrategy() )
+            if( manager.isUsingLegacyStrategy() ) {
                 manager.drop(null, force)
-            else
-                manager.drop(rev.localPath.name, force)
+            }
+            else {
+                for( final rev : clones )
+                    manager.drop(rev.localPath.name, force)
+                // removing the last clone on disk, readable or not, removes the pipeline
+                if( !hasClones(clones[0].localPath.parentFile) )
+                    manager.drop(null, force)
+            }
             println "Pipeline ${manager.project}@${version} removed"
         }
     }
 
-    /** The downloaded revision with the given version or branch, else whose commit starts with the given one (at least 7 characters) */
-    private static AssetManager.DownloadedRevision findRevision(String project, List<AssetManager.DownloadedRevision> revisions, String version) {
+    private static boolean hasClones(File revisionsDir) {
+        return revisionsDir.listFiles()?.any { File it -> it.isDirectory() }
+    }
+
+    /** The commit of the downloaded revisions with the given version or branch, else that starts with the given commit or clone name (at least 7 characters) */
+    private static String findCommit(String project, List<AssetManager.DownloadedRevision> revisions, String version) {
         final byName = revisions.findAll { it.names.contains(version) }
         final isCommit = version ==~ /[0-9a-f]{7,40}/
         final matches = byName ?: !isCommit ? byName : revisions.findAll { it.commitId.startsWith(version) || it.localPath.name.startsWith(version) }
         if( !matches ) {
-            final available = revisions.collect { it.name ?: it.commitId.take(10) }.sort()
+            final available = revisions.collect { it.name ?: it.commitId.take(10) }.unique().sort()
             throw new AbortOperationException("Pipeline ${project}@${version} is not installed in the user-level store" + (available ? " -- installed revisions: ${available.join(', ')}" : ''))
         }
-        if( matches.size() > 1 )
-            throw new AbortOperationException("Ambiguous revision ${version} for pipeline ${project} -- matches commits: ${matches.collect { it.commitId.take(10) }.join(', ')}")
-        return matches[0]
+        final commits = matches.collect { it.commitId }.unique()
+        if( commits.size() > 1 )
+            throw new AbortOperationException("Ambiguous revision ${version} for pipeline ${project} -- matches commits: ${commits.collect { it.take(10) }.join(', ')}")
+        return commits[0]
     }
 }

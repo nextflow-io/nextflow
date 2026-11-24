@@ -80,7 +80,7 @@ class CmdPipelineList extends CmdBase {
         }
         if( !rows ) {
             println "No pipelines installed"
-            final count = AssetManager.list().size()
+            final count = userLevelRows().collect { it.name }.unique().size()
             if( count )
                 println "${count} ${count == 1 ? 'pipeline is' : 'pipelines are'} installed in the user-level store -- use `nextflow pipeline list -g` to list them"
             return
@@ -89,18 +89,7 @@ class CmdPipelineList extends CmdBase {
     }
 
     private void listUserLevel() {
-        Plugins.init()
-        final rows = new ArrayList<Map<String,Object>>()
-        for( final String name : AssetManager.list() ) {
-            try (final manager = new AssetManager(name)) {
-                for( final rev : manager.listDownloadedRevisions() )
-                    rows << row(manager.project, rev.name, rev.commitId, !rev.clean, rev.localPath.toPath(), manager.repositoryUrl)
-            }
-            catch( Exception e ) {
-                log.warn "Unable to read pipeline ${name} in the user-level store -- cause: ${e.message ?: e}"
-            }
-        }
-        rows.sort { Map a, Map b -> (a.name as String) <=> (b.name as String) ?: compareVersions(a.version as String, b.version as String) }
+        final rows = userLevelRows()
         if( output == 'json' ) {
             printJson(rows)
             return
@@ -112,15 +101,46 @@ class CmdPipelineList extends CmdBase {
         printTable(rows)
     }
 
-    // a revision without a version comes last
-    private static int compareVersions(String a, String b) {
+    /** One row per downloaded commit of each pipeline in the user-level store */
+    private static List<Map<String,Object>> userLevelRows() {
+        Plugins.init()
+        final rows = new ArrayList<Map<String,Object>>()
+        for( final String name : AssetManager.list() ) {
+            try (final manager = new AssetManager(name)) {
+                // an annotated tag and its commit may be downloaded in two clones
+                final byCommit = manager.listDownloadedRevisions().groupBy { it.commitId }
+                for( final revs : byCommit.values() ) {
+                    final rev = revs.find { it.localPath.name == it.commitId } ?: revs[0]
+                    final version = revs.find { it.name }?.name
+                    rows << row(manager.project, version, rev.commitId, revs.any { !it.clean }, rev.localPath.toPath(), manager.repositoryUrl)
+                }
+            }
+            catch( Exception e ) {
+                log.warn "Unable to read pipeline ${name} in the user-level store -- cause: ${e.message ?: e}"
+            }
+        }
+        rows.sort { Map a, Map b -> (a.name as String) <=> (b.name as String) ?: compareVersions(a.version as String, b.version as String) }
+        return rows
+    }
+
+    /** Compares versions by their numeric parts as numbers and the other parts as text; a revision without a version comes last */
+    protected static int compareVersions(String a, String b) {
         if( a == b )
             return 0
         if( a == null )
             return 1
         if( b == null )
             return -1
-        return a <=> b
+        final ta = (a =~ /\d+|\D+/).collect { it as String }
+        final tb = (b =~ /\d+|\D+/).collect { it as String }
+        for( int i = 0; i < Math.min(ta.size(), tb.size()); i++ ) {
+            final x = ta[i]
+            final y = tb[i]
+            final cmp = x ==~ /\d+/ && y ==~ /\d+/ ? new BigInteger(x) <=> new BigInteger(y) : x <=> y
+            if( cmp )
+                return cmp
+        }
+        return ta.size() <=> tb.size() ?: a <=> b
     }
 
     private static Map<String,Object> row(String name, String version, String commit, boolean modified, Path path, String repositoryUrl) {

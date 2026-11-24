@@ -42,7 +42,7 @@ class CmdPipelineInstall extends CmdBase {
     @Parameter(description = "<pipeline>", required = true)
     List<String> args
 
-    @Parameter(names = ["-version"], description = "Pipeline version (default: latest), or the Git revision when installing a repository URL with `-g`")
+    @Parameter(names = ["-version"], description = "Pipeline version (default: latest), or the Git branch, tag or commit when installing a repository URL with `-g` (default: the default branch)")
     String version
 
     // hidden alias of -version, as JCommander can't hide one name of a parameter
@@ -75,6 +75,7 @@ class CmdPipelineInstall extends CmdBase {
             throw new AbortOperationException("Unexpected number of parameters")
 
         version = version ?: revision
+        PipelineCmdSupport.checkPipelineName(args[0])
         if( global ) {
             installUserLevel(args[0], version)
             return
@@ -85,23 +86,29 @@ class CmdPipelineInstall extends CmdBase {
         final manager = new PipelineManager(baseDir, client, fetcher ?: new PipelineGitFetcher())
         final result = manager.install(args[0], version, force)
         if( result.alreadyInstalled() )
-            println "Pipeline ${result.info().name}@${result.info().version} is already installed and up to date"
+            println "Pipeline ${result.info().name}@${result.info().version} is already installed"
     }
 
     private void installUserLevel(String name, String version) {
         if( force )
             throw new AbortOperationException("Option `-force` is not supported with `-global` -- the user-level store keeps each downloaded revision and never overwrites it")
         Plugins.init()
-        final address = registryAddress(name)
+        final config = PipelineCmdSupport.registryConfig(this)
+        final isUrl = PipelineCmdSupport.isUrl(name)
+        // a page URL addresses its own registry, a name the configured registries as for project-level installs
+        final address = isUrl
+            ? PipelineCmdSupport.registryAddress(name, null, '-version') { config }
+            : new PipelineCmdSupport.RegistryAddress(config.url, name, config.apiKey)
         final PipelineCmdSupport.UserLevelDownload result
         final String label
         if( address ) {
-            final release = resolveRelease(address, version)
-            result = PipelineCmdSupport.downloadRelease(release, null)
+            final client = this.client ?: (isUrl ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(config))
+            final release = resolveRelease(address, version, client)
+            result = PipelineCmdSupport.downloadRelease(release, null, null, true)
             label = "${release.name}@${release.version}"
         }
         else {
-            result = PipelineCmdSupport.downloadRevision(name, version, null)
+            result = PipelineCmdSupport.downloadRevision(name, version, null, null, false, true)
             label = "${result.script.projectName}@${version ?: result.script.revisionInfo.name ?: result.script.revisionInfo.commitId}"
         }
         if( result.upToDate )
@@ -110,21 +117,7 @@ class CmdPipelineInstall extends CmdBase {
             println "Pipeline ${label} installed in ${result.script.localPath}"
     }
 
-    /** The registry address of a registry name or page URL, or {@code null} for a Git repository URL */
-    private PipelineCmdSupport.RegistryAddress registryAddress(String name) {
-        final config = PipelineCmdSupport.registryConfig(this)
-        if( isGitUrl(name) )
-            return PipelineCmdSupport.registryAddress(name, null) { config }
-        // a name always addresses the primary registry
-        return PipelineCmdSupport.registryAddress(name, URI.create(config.url).authority) { config }
-    }
-
-    private static boolean isGitUrl(String name) {
-        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:')
-    }
-
-    private PipelineInfo resolveRelease(PipelineCmdSupport.RegistryAddress address, String version) {
-        final client = this.client ?: RegistryClientFactory.forUrls([address.url], address.apiKey)
+    private static PipelineInfo resolveRelease(PipelineCmdSupport.RegistryAddress address, String version, RegistryClient client) {
         try {
             return PipelineCmdSupport.resolveRelease(address, version, client)
         }

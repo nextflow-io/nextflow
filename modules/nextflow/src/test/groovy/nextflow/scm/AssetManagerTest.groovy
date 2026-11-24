@@ -1330,4 +1330,67 @@ class AssetManagerTest extends Specification {
         where:
         name << ['acme/hello', 'https://github.com/acme/hello']
     }
+
+    def 'should list the downloaded revisions with their tags and branches' () {
+        given: 'a repository with a lightweight tag v1.0.0, and an annotated tag v2.0.0 at the head of master and dev'
+        def remote = tempDir.root.resolve('remote/hello').toFile()
+        remote.mkdirs()
+        def git = Git.init().setDirectory(remote).setInitialBranch('master').call()
+        new File(remote, 'main.nf').text = "println 'v1'"
+        git.add().addFilepattern('main.nf').call()
+        def v1 = git.commit().setMessage('v1').setSign(false).call().name()
+        git.tag().setName('v1.0.0').setAnnotated(false).call()
+        new File(remote, 'main.nf').text = "println 'v2'"
+        git.add().addFilepattern('main.nf').call()
+        def v2 = git.commit().setMessage('v2').setSign(false).call().name()
+        def v2tag = git.tag().setName('v2.0.0').setAnnotated(true).setMessage('v2').setSigned(false).call().objectId.name()
+        git.branchCreate().setName('dev').call()
+        git.close()
+        def url = remote.toURI().toString()
+
+        and: 'v1 downloaded by commit, v2 by annotated tag and by branch'
+        [v1, 'v2.0.0', 'master'].each { String rev ->
+            new AssetManager(url, (HubOptions) null).withCloseable { it.setRevision(rev); it.download(rev, null) }
+        }
+        def clones = tempDir.root.resolve("$REPOS_SUBDIR/local/hello/$REVISION_SUBDIR")
+        clones.resolve(v1).resolve('main.nf').text = 'changed'
+        and: 'a clone that can not be read'
+        clones.resolve('a' * 40).mkdirs()
+
+        when:
+        def revisions = new AssetManager('local/hello').withCloseable { it.listDownloadedRevisions() }
+
+        then: 'tags before branches, the default branch first, and no tag named after a commit'
+        revisions.collect { [it.localPath.name, it.commitId, it.names, it.clean] }.sort { it[0] } == [
+            [v1, v1, ['v1.0.0'], false],
+            [v2, v2, ['v2.0.0', 'master', 'dev'], true],
+            [v2tag, v2, ['v2.0.0', 'master', 'dev'], true],
+        ].sort { it[0] }
+        revisions.find { it.localPath.name == v1 }.localPath == clones.resolve(v1).toFile()
+        revisions.find { it.localPath.name == v1 }.name == 'v1.0.0'
+    }
+
+    def 'should list the checked-out revision of a legacy download' () {
+        given:
+        def dir = tempDir.root.resolve('acme/hello').toFile()
+        dir.mkdirs()
+        def git = Git.init().setDirectory(dir).setInitialBranch('master').call()
+        new File(dir, 'main.nf').text = 'workflow { }'
+        git.add().addFilepattern('main.nf').call()
+        def commit = git.commit().setMessage('first').setSign(false).call().name()
+        git.repository.config.setString('remote', 'origin', 'url', 'https://github.com/acme/hello.git')
+        git.repository.config.save()
+        git.close()
+
+        when:
+        def revisions = new AssetManager('acme/hello').withCloseable { it.listDownloadedRevisions() }
+
+        then:
+        revisions.collect { [it.commitId, it.names, it.localPath, it.clean] } == [[commit, ['master'], dir, true]]
+    }
+
+    def 'should list no revision of a pipeline that is not downloaded' () {
+        expect:
+        new AssetManager('acme/missing').withCloseable { it.listDownloadedRevisions() } == []
+    }
 }

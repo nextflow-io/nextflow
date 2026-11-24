@@ -79,6 +79,7 @@ class CmdPipelineView extends CmdBase {
         version = version ?: revision
 
         final name = args[0]
+        PipelineCmdSupport.checkPipelineName(name)
         final registryConfig = PipelineCmdSupport.registryConfig(this)
         final client = this.client ?: RegistryClientFactory.forConfig(registryConfig)
         final pipeline = client.getPipeline(name)
