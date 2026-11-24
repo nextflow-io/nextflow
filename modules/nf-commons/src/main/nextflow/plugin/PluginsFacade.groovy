@@ -18,6 +18,7 @@ package nextflow.plugin
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -34,6 +35,7 @@ import org.pf4j.PluginManager
 import org.pf4j.PluginState
 import org.pf4j.PluginStateEvent
 import org.pf4j.PluginStateListener
+import org.pf4j.PluginWrapper
 /**
  * Manage plugins installation and configuration
  *
@@ -60,6 +62,8 @@ class PluginsFacade implements PluginStateListener {
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl
     private boolean embedded
+
+    private final Set<String> movedNotice = ConcurrentHashMap.newKeySet()
 
     PluginsFacade() {
         mode = getPluginsMode()
@@ -291,6 +295,7 @@ class PluginsFacade implements PluginStateListener {
         if( embedded ) {
             manager.startPlugins()
             this.embedded = embedded
+            aliasEmbedded()
         }
     }
 
@@ -309,6 +314,16 @@ class PluginsFacade implements PluginStateListener {
         if( embedded ) {
             manager.startPlugins()
             this.embedded = embedded
+            aliasEmbedded()
+        }
+    }
+
+    // embedded plugins that declare `Plugin-Namespace` keep answering to their plain name
+    private void aliasEmbedded() {
+        for( PluginWrapper it : manager.plugins ) {
+            final p = it.pluginId.indexOf('/')
+            if( p >= 0 )
+                updater.aliases.put(it.pluginId.substring(p+1), it.pluginId)
         }
     }
 
@@ -317,6 +332,15 @@ class PluginsFacade implements PluginStateListener {
             throw new IllegalArgumentException("Plugin system has not been initialized")
         applyRegistryConfig(config)
         start(pluginsRequirement(config))
+        // the registry hints came with the metadata fetched by `start`
+        if( !isEmbedded() )
+            parseConf(config).each(it -> noticeMoved(it.id))
+    }
+
+    private void noticeMoved(String pluginId) {
+        final id = canonical(pluginId)
+        if( id != pluginId && movedNotice.add(pluginId) )
+            log.warn "Plugin `$pluginId` has moved to `$id` -- update your config"
     }
 
     protected void applyRegistryConfig(Map config) {
@@ -370,7 +394,7 @@ class PluginsFacade implements PluginStateListener {
      */
     def <T> List<T> getExtensions(Class<T> type, String pluginId) {
         if( manager ) {
-            return manager.getExtensions(type, pluginId)
+            return manager.getExtensions(type, canonical(pluginId))
         }
         else {
             return List.of()
@@ -418,18 +442,13 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(List<PluginRef> specs) {
-        // check if the plugins are allowed to start
-        final disallow = specs.find(it-> !isAllowed(it))
-        if( disallow ) {
-            throw new AbortOperationException("Refuse to use plugin '${disallow.id}' - allowed plugins are: ${allowedPluginsString()}")
-        }
         // when running in embedded mode, default plugins should not be started
         // the following split partition the "specs" collection in to list
         // - the first holding the plugins for which "start" is not required
         // - the second all remaining plugins that requires a start invocation
         final split = specs.split(plugin -> isEmbedded() && defaultPlugins.hasPlugin(plugin.id))
         final skippable = split[0]
-        final startable = split[1]
+        def startable = split[1]
         // just report a debug line for the skipped ones
         if( skippable ) {
             final skippedIds = skippable.collect{ plugin -> plugin.id }
@@ -439,6 +458,15 @@ class PluginsFacade implements PluginStateListener {
         // explicit (in offline mode no remote repo is wired in, so this is also a no-op transitively)
         if( !offline )
             updater.prefetchMetadata(startable)
+        // the prefetch brings the registry hints: a moved plugin may now be listed twice
+        final mapped = startable.collect(it -> new PluginRef(canonical(it.id), it.version))
+        if( mapped != startable )
+            startable = mergePluginSpecs([], mapped)
+        // check if the plugins are allowed to start
+        final disallow = (skippable + startable).find(it-> !isAllowed(it))
+        if( disallow ) {
+            throw new AbortOperationException("Refuse to use plugin '${disallow.id}' - allowed plugins are: ${allowedPluginsString()}")
+        }
         // finally start the plugins
         for( PluginRef plugin : startable ) {
             updater.prepareAndStart(plugin.id, plugin.version)
@@ -446,7 +474,16 @@ class PluginsFacade implements PluginStateListener {
     }
 
     boolean isStarted(String pluginId) {
-        manager.getPlugin(pluginId)?.pluginState == PluginState.STARTED
+        getPlugin(pluginId)?.pluginState == PluginState.STARTED
+    }
+
+    PluginWrapper getPlugin(String pluginId) {
+        manager.getPlugin(canonical(pluginId))
+    }
+
+    // no updater before init
+    private String canonical(String pluginId) {
+        return updater ? updater.canonical(pluginId) : pluginId
     }
 
     /**
@@ -660,7 +697,7 @@ class PluginsFacade implements PluginStateListener {
     protected boolean isAllowed(String pluginId) {
         final list = getAllowedPlugins()
         return list != null
-            ? list.any(it->it.id==pluginId)
+            ? list.any(it -> canonical(it.id) == canonical(pluginId))
             : true
     }
 

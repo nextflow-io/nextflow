@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.pf4j.PluginManager
+import org.pf4j.PluginWrapper
 /**
  * Plugin manager specialized for Nextflow build environment
  *
@@ -86,6 +87,10 @@ class Plugins {
             log.debug "Plugins subsystem not available - Ignoring installIfMissing('$pluginId')"
             return false
         }
+    }
+
+    static PluginWrapper getPlugin(String pluginId) {
+        INSTANCE.getPlugin(pluginId)
     }
 
     static boolean isStarted(String pluginId) {

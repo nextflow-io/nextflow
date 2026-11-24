@@ -19,7 +19,9 @@ package nextflow.plugin
 import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
@@ -29,6 +31,7 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedPredicate
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
@@ -73,6 +76,10 @@ class PluginUpdater extends UpdateManager {
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
+    /** Plain name of a moved plugin to its namespaced ID */
+    @PackageScope
+    final Map<String,String> aliases = new ConcurrentHashMap<>()
+
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
         this.pluginManager = pluginManager
@@ -83,6 +90,80 @@ class PluginUpdater extends UpdateManager {
         this.offline = offline
         this.pluginsStore = pluginsRoot
         this.pluginManager = pluginManager
+        if( pluginsRoot && Files.isDirectory(pluginsRoot) )
+            aliases.putAll(storeAliases(pluginsRoot))
+    }
+
+    /**
+     * The namespaced ID of a moved plugin, or the given ID
+     */
+    String canonical(String id) {
+        return id ? aliases.getOrDefault(id, id) : id
+    }
+
+    private void readHints() {
+        for( def repo : this.@repositories ) {
+            if( repo instanceof HttpPluginRepository )
+                aliases.putAll(repo.hints)
+        }
+    }
+
+    /**
+     * Reads the moved plugins from the store links between `<name>-<ver>` and `<ns>~<name>-<ver>`.
+     * Only Nextflow writes these links, from a registry hint or a served zip.
+     */
+    static Map<String,String> storeAliases(Path store) {
+        final Map<String,Set<String>> found = new HashMap<>()
+        for( Path p : FilesEx.listFiles(store) ) {
+            if( !Files.isSymbolicLink(p) || !Files.exists(p) )
+                continue
+            final names = [p.fileName.toString(), Files.readSymbolicLink(p).fileName.toString()]
+            final scoped = names.findAll { it.contains('~') }
+            if( scoped.size() != 1 )
+                continue
+            final parts = scoped[0].split('~', 2)
+            final name = parts[1].replaceFirst(/-\d+\.\d+\.\d+\S*$/, '')
+            found.computeIfAbsent(name, k -> new HashSet<String>()).add("${parts[0]}/$name".toString())
+        }
+        final result = new HashMap<String,String>()
+        for( Map.Entry<String,Set<String>> it : found.entrySet() ) {
+            // a name linked to two namespaces is ambiguous
+            if( it.value.size() == 1 )
+                result.put(it.key, it.value.first())
+        }
+        return result
+    }
+
+    /**
+     * Stores a moved plugin once and links its other store name to it,
+     * so older Nextflow and offline runs find it under both IDs
+     */
+    private void linkMoved(String id, String version) {
+        final name = id.substring(id.indexOf('/')+1)
+        if( aliases.get(name) != id )
+            return
+        final scopedPath = pluginsStore.resolve("${PluginRef.dirName(id)}-$version")
+        final plainPath = pluginsStore.resolve("$name-$version")
+        if( isComplete(plainPath) )
+            createLink(scopedPath, plainPath)
+        else if( isComplete(scopedPath) )
+            createLink(plainPath, scopedPath)
+    }
+
+    // a real folder that load0 accepts, never a link
+    private static boolean isComplete(Path dir) {
+        return Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS) && Files.exists(dir.resolve('classes/META-INF/MANIFEST.MF'))
+    }
+
+    private static void createLink(Path link, Path target) {
+        if( Files.exists(link, LinkOption.NOFOLLOW_LINKS) )
+            return
+        try {
+            Files.createSymbolicLink(link, target.fileName)
+        }
+        catch( IOException | UnsupportedOperationException e ) {
+            log.debug "Unable to link plugin $link -> $target - cause: ${e.message}"
+        }
     }
 
     static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
@@ -170,6 +251,11 @@ class PluginUpdater extends UpdateManager {
                 else
                     mergeReleases(merged, entry.value)
             }
+        }
+        // a plugins.json index lists a moved plugin only under its plain name
+        for( Map.Entry<String,String> it : aliases.entrySet() ) {
+            if( !result.containsKey(it.value) && result.containsKey(it.key) )
+                result.put(it.value, result.get(it.key))
         }
         return result
     }
@@ -259,11 +345,15 @@ class PluginUpdater extends UpdateManager {
         // Skip plugins that are already installed at the requested pinned version: no remote
         // metadata is needed to start them. This eliminates the registry round-trip on every
         // Nextflow invocation in the common CI case (pinned versions, plugins already cached).
-        final needed = plugins.findAll { ref -> !isAlreadyInstalled(ref) }
+        final needed = plugins.findAll { ref -> !isAlreadyInstalled(ref) || hasUnlinkedTwin(ref, plugins) }
         if( !needed ) {
             log.trace "All requested plugins are already installed - skipping registry metadata prefetch"
             return
         }
+        prefetch0(needed)
+    }
+
+    private void prefetch0(List<PluginRef> needed) {
         // use direct field access because getRepositories() calls refresh() when the repository
         // list is null (e.g. in the dev updater), which loads `repositories.json` from the
         // working directory or fails if it does not exist
@@ -273,6 +363,16 @@ class PluginUpdater extends UpdateManager {
                 repo.prefetch(needed)
             }
         }
+        readHints()
+    }
+
+    // `nf-foo` and `myorg/nf-foo` in one run may be one moved plugin: only the registry can tell
+    private boolean hasUnlinkedTwin(PluginRef ref, List<PluginRef> plugins) {
+        return plugins.any { it -> isUnlinkedPair(ref.id, it.id) || isUnlinkedPair(it.id, ref.id) }
+    }
+
+    private boolean isUnlinkedPair(String plain, String scoped) {
+        return scoped.endsWith('/' + plain) && aliases.get(plain) != scoped
     }
 
     /**
@@ -294,6 +394,7 @@ class PluginUpdater extends UpdateManager {
                 log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
             }
         }
+        readHints()
     }
 
     protected boolean isAlreadyInstalled(PluginRef ref) {
@@ -321,6 +422,7 @@ class PluginUpdater extends UpdateManager {
      * @param version The required version, can be null for the latest version
      */
     void prepareAndStart(String pluginId, String version) {
+        pluginId = canonical(pluginId)
         final PluginWrapper current = pluginManager.getPlugin(pluginId)
         if( !current ) {
             log.debug "Installing plugin ${pluginId} version: ${version ?: 'latest'}"
@@ -343,7 +445,8 @@ class PluginUpdater extends UpdateManager {
         pullOnly=true
         try {
             final specs = plugins.collect(it -> PluginRef.parse(it,defaultPlugins))
-            prefetchMetadata(specs)
+            // also for installed plugins: the response tells which ones moved, to add the missing links
+            prefetch0(specs)
             for( PluginRef spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
@@ -354,6 +457,7 @@ class PluginUpdater extends UpdateManager {
     }
 
     void pullPlugin0(String pluginId, String version) {
+        pluginId = canonical(pluginId)
         final PluginWrapper current = pluginManager.getPlugin(pluginId)
         if( !current ) {
             log.debug "Installing plugin ${pluginId} version: ${version ?: 'latest'}"
@@ -376,6 +480,7 @@ class PluginUpdater extends UpdateManager {
      */
     @Override
     boolean installPlugin(String id, String version) {
+        id = canonical(id)
         // in dev mode, core plugins must be built locally rather than downloaded
         if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT && defaultPlugins.hasPlugin(id) )
             throw new UnsupportedOperationException("Core plugin $id is not available in dev mode -- make sure it is built locally (e.g. `make compile`)")
@@ -502,13 +607,16 @@ class PluginUpdater extends UpdateManager {
 
     private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
+        id = canonical(id)
 
         if( offline && !requestedVersion ) {
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
         }
 
-        if( !isAlreadyInstalled(new PluginRef(id, requestedVersion)) )
+        if( !isAlreadyInstalled(new PluginRef(id, requestedVersion)) ) {
             fetchMissingMetadata(id)
+            id = canonical(id)
+        }
 
         def version = requestedVersion
         if( !version ) {
@@ -531,9 +639,12 @@ class PluginUpdater extends UpdateManager {
             log.debug "Plugin $id version $requestedVersion resolved to: $version"
         }
 
+        // reuse the folder of an older Nextflow, or link the one already stored
+        linkMoved(id, version)
         def pluginPath = pluginsStore.resolve("${PluginRef.dirName(id)}-$version")
         if( !FilesEx.exists(pluginPath) ) {
             pluginPath = safeDownload(id, version)
+            linkMoved(id, version)
         }
 
         // verify the plugin install path contains the expected manifest path
@@ -543,6 +654,18 @@ class PluginUpdater extends UpdateManager {
 
         // load the plugin from the file system
         PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)
+        // the zip of a moved plugin declares its namespace
+        if( wrapper.pluginId != id ) {
+            if( id.contains('/') ) {
+                pluginManager.unloadUnresolved(wrapper.pluginId)
+                throw new PluginRuntimeException("Plugin $id cannot be loaded -- its zip declares the ID ${wrapper.pluginId}")
+            }
+            if( wrapper.pluginId.endsWith('/' + id) ) {
+                aliases.put(id, wrapper.pluginId)
+                id = wrapper.pluginId
+                linkMoved(id, version)
+            }
+        }
 
         // pull all required required deps
         final deps = wrapper.descriptor.dependencies ?: Collections.<PluginDependency>emptyList()
@@ -572,6 +695,9 @@ class PluginUpdater extends UpdateManager {
         if( pullOnly )
             return false
 
+        // pf4j matches dependency IDs as they are: use the ID of a moved plugin, known at the latest once it is loaded
+        for( PluginWrapper it : pluginManager.plugins )
+            it.descriptor.dependencies.replaceAll(dep -> canonical(dep))
         // resolve the plugins
         pluginManager.resolvePlugins()
         // finally start it
@@ -589,6 +715,7 @@ class PluginUpdater extends UpdateManager {
      */
     @Override
     boolean updatePlugin(String id, String version) {
+        id = canonical(id)
         if (pluginManager.getPlugin(id) == null) {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
@@ -616,6 +743,7 @@ class PluginUpdater extends UpdateManager {
             return false
         }
 
+        pluginId = canonical(pluginId)
         if( !version )
             version = getLastPluginRelease(pluginId)?.version
         if( !version ) {
@@ -631,7 +759,7 @@ class PluginUpdater extends UpdateManager {
     protected String checkInstalled(String id, String verConstraint) {
         final versionManager = pluginManager.getVersionManager()
         // check if the installed version satisfies the requirement
-        final current = pluginManager.getPlugin(id)
+        final current = pluginManager.getPlugin(canonical(id))
         if( !current )
             return null
 
@@ -651,7 +779,7 @@ class PluginUpdater extends UpdateManager {
 
         final versionManager = pluginManager.getVersionManager()
 
-        PluginInfo pluginInfo = getPluginsMap().get(id)
+        PluginInfo pluginInfo = getPluginsMap().get(canonical(id))
         if( !pluginInfo )
             throw new IllegalArgumentException("Unknown plugin id: $id")
 
@@ -666,5 +794,16 @@ class PluginUpdater extends UpdateManager {
         }
 
         return null
+    }
+
+    @Override
+    PluginInfo.PluginRelease getLastPluginRelease(String id) {
+        return super.getLastPluginRelease(canonical(id))
+    }
+
+    // keeps the optional mark and the version constraint
+    private PluginDependency canonical(PluginDependency dep) {
+        final id = canonical(dep.pluginId)
+        return id == dep.pluginId ? dep : new PluginDependency("${id}${dep.optional ? '?' : ''}@${dep.pluginVersionSupport}")
     }
 }

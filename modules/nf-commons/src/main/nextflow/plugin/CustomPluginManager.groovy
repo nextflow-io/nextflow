@@ -50,6 +50,11 @@ class CustomPluginManager extends DefaultPluginManager {
         super.resolvePlugins()
     }
 
+    // pf4j's public unload needs the plugins resolved first
+    void unloadUnresolved(String pluginId) {
+        unloadPlugin(pluginId, false, false)
+    }
+
     @Override
     protected VersionManager createVersionManager() {
         return new CustomVersionManager()
