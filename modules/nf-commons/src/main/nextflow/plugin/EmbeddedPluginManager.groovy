@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import org.pf4j.DefaultPluginLoader
 import org.pf4j.DefaultPluginRepository
-import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptorFinder
 import org.pf4j.PluginLoader
 import org.pf4j.PluginRepository
@@ -40,7 +39,7 @@ class EmbeddedPluginManager extends CustomPluginManager {
 
     @Override
     protected PluginDescriptorFinder createPluginDescriptorFinder() {
-        return new ManifestPluginDescriptorFinder()
+        return new NamespaceDescriptorFinder()
     }
 
     @Override

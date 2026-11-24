@@ -26,7 +26,6 @@ import nextflow.Const
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginLoader
 import org.pf4j.DefaultPluginManager
-import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptorFinder
 import org.pf4j.PluginLoader
 import org.pf4j.PluginRepository
@@ -64,7 +63,7 @@ class LocalPluginManager extends CustomPluginManager {
 
     @Override
     protected PluginDescriptorFinder createPluginDescriptorFinder() {
-        return new ManifestPluginDescriptorFinder()
+        return new NamespaceDescriptorFinder()
     }
 
     @Override
