@@ -33,6 +33,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import io.seqera.npr.client.RegistryClient
 import nextflow.BuildInfo
+import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
@@ -647,7 +648,8 @@ class CmdRun extends CmdBase implements HubAware {
         final project = release ? (release.repositoryUrl ?: release.name) : pipelineName
         final rev = release?.repositoryUrl ? (release.commitId ?: release.revision) : revision
         final localName = release?.name
-        final main = mainScript ?: release?.workflowPath
+        // registry pipelines always use a top-level main.nf, regardless of `manifest.mainScript`
+        final main = mainScript ?: (release ? Const.DEFAULT_MAIN_FILE_NAME : null)
         final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
         try( final manager = new AssetManager(project, rev, main, hubOpts, localName) ) {
             final repo = manager.getProjectWithRevision()

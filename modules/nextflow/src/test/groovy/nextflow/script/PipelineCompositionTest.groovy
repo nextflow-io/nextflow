@@ -681,7 +681,7 @@ class PipelineCompositionTest extends Dsl2Spec {
             Files.createDirectories(target.parent)
             target.text = text.stripIndent()
         }
-        new PipelineInfo(name: name, version: '1.0.0', workflowPath: 'main.nf', checksum: PipelineInfo.checksum(dir)).save(dir)
+        new PipelineInfo(name: name, version: '1.0.0', checksum: PipelineInfo.checksum(dir)).save(dir)
     }
 
     def 'should include a pipeline by registry name' () {

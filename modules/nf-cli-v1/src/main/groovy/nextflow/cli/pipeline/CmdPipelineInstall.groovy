@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
+import nextflow.Const
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
@@ -113,7 +114,7 @@ class CmdPipelineInstall extends CmdBase {
                 final legacyCommit = warnLegacy(manager, label, rev)
                 log.info "Checking ${label} ..."
                 final upToDate = download(manager, rev, legacyCommit)
-                printResult(label, upToDate, manager.getScriptFile(release.workflowPath))
+                printResult(label, upToDate, manager.getScriptFile(Const.DEFAULT_MAIN_FILE_NAME))
             }
         }
         else {

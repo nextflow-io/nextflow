@@ -100,6 +100,7 @@ This ADR makes three decisions:
 - **Run addressing: an explicit registry address**, with no fallback to Git. A plain `scope/name` still runs from Git.
 - **Run cache: the registry name**, through a local name in `AssetManager`. Bundle releases need a separate registry folder or a similar cache; their ADR decides.
 - **User-level pipelines: a `-g` option on the `pipeline` commands.** See [User-level pipelines](#user-level-pipelines).
+- **Main script: a top-level `main.nf`**, as for modules. The registry's `workflowPath` is not used, and `run` of a registry pipeline ignores `manifest.mainScript` (`-main-script` still applies). The registry only has nf-core pipelines, which already require a top-level `main.nf`; it will be enforced at publish time.
 
 ## Rationale & discussion
 
@@ -107,7 +108,7 @@ This ADR makes three decisions:
 
 A `scope/name` include is a **pipeline include** when its entries name `workflow` or `params`. Module files have no entry workflow and no `params` block, so the two kinds can't be confused, and the language already requires the alias `workflow as X`, so no new syntax is needed. Path resolution makes this check before loading, so that the right directory is chosen and installed. The registry keeps modules and pipelines in separate namespaces, so `nf-core/rnaseq` may exist as both.
 
-A pipeline include resolves to `pipelines/<scope>/<name>/`, with the main script given by the release. The whole repository tree at the pinned commit is installed, without `.git`. This keeps `conf/` available for `includeConfig`, and keeps the modules that nf-core commits in the repository. Installed pipelines should be committed to the meta-pipeline repository, like vendored modules.
+A pipeline include resolves to `pipelines/<scope>/<name>/main.nf`. The whole repository tree at the pinned commit is installed, without `.git`. This keeps `conf/` available for `includeConfig`, and keeps the modules that nf-core commits in the repository. Installed pipelines should be committed to the meta-pipeline repository, like vendored modules.
 
 ```
 meta-pipeline/

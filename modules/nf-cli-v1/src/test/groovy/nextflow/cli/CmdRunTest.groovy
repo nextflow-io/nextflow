@@ -536,6 +536,34 @@ class CmdRunTest extends Specification {
         e.message.contains('Revision `1.0.0` of `acme/hello` is not in the local cache')
     }
 
+    def 'should run main.nf of a registry release, ignoring manifest.mainScript' () {
+        given: 'a bare repo whose manifest sets another main script'
+        def folder = tempDir.getRoot()
+        def sourceDir = folder.resolve('source-repo')
+        Files.createDirectories(sourceDir)
+        sourceDir.resolve('main.nf').text = "println 'main'"
+        sourceDir.resolve('other.nf').text = "println 'other'"
+        sourceDir.resolve('nextflow.config').text = "manifest.mainScript = 'other.nf'"
+        def git = Git.init().setDirectory(sourceDir.toFile()).call()
+        git.add().addFilepattern('.').call()
+        def commit = git.commit().setSign(false).setMessage('init').call().name()
+        git.close()
+        def bareDir = folder.resolve('hello.git')
+        Git.cloneRepository().setURI(sourceDir.toUri().toString()).setDirectory(bareDir.toFile()).setBare(true).call().close()
+        AssetManager.root = folder.resolve('assets').toFile()
+
+        and:
+        def client = Mock(RegistryClient)
+        def release = new PipelineRelease().version('1.0.0').gitRevision('1.0.0').commitId(commit)
+        client.getPipeline('acme/hello') >> new Pipeline().repositoryUrl("file:${bareDir}".toString()).latest(release)
+
+        expect: 'a registry run uses main.nf unless -main-script is given'
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io').getScriptFile0('acme/hello').main.text.contains("println 'main'")
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io', mainScript: 'other.nf').getScriptFile0('acme/hello').main.text.contains("println 'other'")
+        and: 'a Git run still honors manifest.mainScript'
+        new CmdRun().getScriptFile0("file:${bareDir}").main.text.contains("println 'other'")
+    }
+
     def 'should look up the registry only for a registry address' () {
         given:
         def client = Mock(RegistryClient)

@@ -27,6 +27,8 @@ The `install`, `list`, and `remove` subcommands work on one of two stores, simil
 
 The `pipeline` subcommands use the registry by default: a name such as `nf-core/rnaseq` is a registry name. Only `install -g` also accepts a Git repository URL. In contrast, `nextflow run` resolves a plain name with Git (GitHub by default).
 
+A registry pipeline uses the top-level `main.nf` of its repository as its main script, both when it is included by name and when it is run.
+
 The `install`, `search`, and `view` subcommands use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
 
 ## Options

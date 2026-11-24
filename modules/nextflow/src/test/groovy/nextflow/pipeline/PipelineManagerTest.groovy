@@ -46,7 +46,7 @@ class PipelineManagerTest extends Specification {
     }
 
     static Pipeline pipeline(PipelineRelease latest, boolean revoked = false) {
-        new Pipeline().latest(latest).repositoryUrl('https://github.com/nf-core/rnaseq').workflowPath('main.nf').revoked(revoked)
+        new Pipeline().latest(latest).repositoryUrl('https://github.com/nf-core/rnaseq').revoked(revoked)
     }
 
     def 'installs latest when missing'() {
@@ -73,15 +73,6 @@ class PipelineManagerTest extends Specification {
         1 * fetcher.fetch(_, '1.0.0', null, _) >> { args -> args[3].resolve('main.nf').text = 'x'; 'def' }
         info.commitId == 'def'
         PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).commitId == 'def'
-    }
-
-    def 'null workflowPath defaults to main.nf'() {
-        when:
-        def info = manager().install('nf-core/rnaseq', null, false).info()
-        then:
-        1 * client.getPipeline(_) >> pipeline(release('1.0.0')).workflowPath(null)
-        1 * fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
-        info.workflowPath == 'main.nf'
     }
 
     def 'uses installed pipeline without calling the registry'() {
@@ -362,20 +353,30 @@ class PipelineManagerTest extends Specification {
         m.remove('nf-core/rnaseq', true)
     }
 
-    def 'rejects a workflowPath that escapes the pipeline dir'() {
+    def 'ignores a workflowPath key in an old .pipeline-info'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        m.install('nf-core/rnaseq', null, false)
+        def dir = m.pipelineDir('nf-core/rnaseq')
+        def file = dir.resolve('.pipeline-info')
+        file.text = file.text + 'workflowPath=workflows/x.nf\n'
+
         when:
-        manager().install('nf-core/rnaseq', null, false)
+        def main = m.resolve('nf-core/rnaseq')
+        def info = PipelineInfo.load(dir)
         then:
-        1 * client.getPipeline(_) >> pipeline(release('1.0.0')).workflowPath('../../evil.nf')
-        def e = thrown(AbortOperationException)
-        e.message.contains("Invalid workflow path '../../evil.nf'")
-        0 * fetcher._
-        !Files.exists(manager().pipelineDir('nf-core/rnaseq'))
+        0 * client._
+        main == dir.resolve('main.nf')
+        info.version == '1.0.0'
+        !info.isModified(dir)
+        m.install('nf-core/rnaseq', null, false).alreadyInstalled()
     }
     def 'should resolve a registry release' () {
         given:
         def latest = new PipelineRelease().version('3.14.0').gitRevision('3.14.0').commitId('abc123')
-        def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq').workflowPath('main.nf').latest(latest)
+        def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq').latest(latest)
 
         when:
         def result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', null)
@@ -387,7 +388,6 @@ class PipelineManagerTest extends Specification {
         result.version == '3.14.0'
         result.repositoryUrl == 'https://github.com/nf-core/rnaseq'
         result.commitId == 'abc123'
-        result.workflowPath == 'main.nf'
 
         when:
         result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', '3.13.0')

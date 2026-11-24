@@ -257,6 +257,8 @@ Note the following:
 
 - With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pipeline install -g`][cli-pipeline-install] to download a registry pipeline ahead of time.
 
+- The main script is the top-level `main.nf` of the pipeline, unless `-main-script` is given. The `manifest.mainScript` setting of the pipeline is ignored.
+
 - When `NXF_HUB` is a registry host, the other project commands work only with cached projects or Git addresses.
 
 ## Examples

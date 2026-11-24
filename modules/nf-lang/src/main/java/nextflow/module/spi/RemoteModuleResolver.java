@@ -16,14 +16,11 @@
 
 package nextflow.module.spi;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Properties;
 
 /**
  * Service Provider Interface for resolving remote modules referenced with '@scope/name' syntax.
@@ -176,8 +173,7 @@ public interface RemoteModuleResolver {
      *
      * @param name    The pipeline reference string
      * @param baseDir0 The directory whose {@code pipelines/} directory is searched
-     * @return Path to the pipeline's main script: the {@code workflowPath} of its
-     *     pipeline info file, or {@code main.nf}
+     * @return Path to the pipeline's top-level {@code main.nf}
      * @throws IllegalStateException if the pipeline is invalid or not installed
      */
     default Path resolvePipeline(String name, Path baseDir0) {
@@ -188,29 +184,7 @@ public interface RemoteModuleResolver {
             throw new IllegalStateException("Invalid pipeline name '" + name + "' -- path escapes the pipelines directory");
         if( !Files.exists(resolved) )
             throw new IllegalStateException("Pipeline '" + name + "' not found in 'pipelines' directory -- use 'nextflow pipeline install' to install it first");
-        var workflow = resolved.resolve(readWorkflowPath(resolved)).normalize();
-        if( !workflow.startsWith(resolved) )
-            throw new IllegalStateException("Invalid workflow path for pipeline '" + name + "' -- it must stay inside the pipeline directory");
-        return workflow;
-    }
-
-    /**
-     * @return the {@code workflowPath} recorded in the pipeline info file of the given
-     * pipeline directory, or {@code main.nf} if there is none
-     */
-    static String readWorkflowPath(Path pipelineDir) {
-        var file = pipelineDir.resolve(PIPELINE_INFO_FILE);
-        if( !Files.exists(file) )
-            return "main.nf";
-        var props = new Properties();
-        try( var reader = Files.newBufferedReader(file) ) {
-            props.load(reader);
-        }
-        catch( IOException e ) {
-            throw new UncheckedIOException("Cannot read " + file, e);
-        }
-        var result = props.getProperty("workflowPath");
-        return result != null && !result.isBlank() ? result : "main.nf";
+        return resolved.resolve("main.nf");
     }
 
     /**

@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
+import nextflow.Const
 import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -122,7 +123,7 @@ class CmdPull extends CmdBase implements HubAware {
             log.info "Checking ${release.name}@${release.version} ..."
             final result = manager.download(rev, deep)
             manager.updateModules()
-            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile(release.workflowPath).revisionInfo}"
+            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile(Const.DEFAULT_MAIN_FILE_NAME).revisionInfo}"
         }
     }
 

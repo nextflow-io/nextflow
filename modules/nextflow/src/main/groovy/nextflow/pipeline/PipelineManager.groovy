@@ -29,6 +29,7 @@ import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.module.spi.RemoteModuleResolver
@@ -41,8 +42,6 @@ import nextflow.module.spi.RemoteModuleResolver
 class PipelineManager {
 
     private static final Pattern NAME_PATTERN = ~/^[a-z0-9][a-z0-9._-]*\/[a-z][a-z0-9._-]*$/
-
-    private static final String DEFAULT_WORKFLOW = 'main.nf'
 
     /** An installed pipeline directory with its {@code .pipeline-info} */
     static record InstalledPipeline(Path dir, PipelineInfo info) {}
@@ -77,16 +76,15 @@ class PipelineManager {
     Path resolve(String name) {
         final dir = pipelineDir(name)
         final info = PipelineInfo.load(dir)
-        if( info == null ) {
-            if( Files.exists(dir) ) {
-                log.warn1 "Pipeline ${name} has no registry origin (.pipeline-info missing)"
-                return dir.resolve(DEFAULT_WORKFLOW)
-            }
-            return workflowFile(dir, name, install(name, null, false).info().workflowPath)
+        if( info != null ) {
+            if( isModified(info, dir) )
+                log.warn1 "Pipeline ${name} has local modifications (checksum mismatch)"
         }
-        if( isModified(info, dir) )
-            log.warn1 "Pipeline ${name} has local modifications (checksum mismatch)"
-        return workflowFile(dir, name, info.workflowPath ?: DEFAULT_WORKFLOW)
+        else if( Files.exists(dir) )
+            log.warn1 "Pipeline ${name} has no registry origin (.pipeline-info missing)"
+        else
+            install(name, null, false)
+        return dir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
     }
 
     // the whole-tree checksum is costly and an include resolves the same pipeline several times per run
@@ -108,19 +106,9 @@ class PipelineManager {
         return Files.exists(dir) ? dir.toRealPath() : dir.toAbsolutePath().normalize()
     }
 
-    // the workflow path comes from the registry or .pipeline-info, so it must not escape the pipeline dir
-    private static Path workflowFile(Path dir, String name, String workflowPath) {
-        final file = dir.resolve(workflowPath).normalize()
-        if( !file.startsWith(dir) )
-            throw new AbortOperationException("Invalid workflow path '${workflowPath}' for pipeline ${name} -- it must stay inside the pipeline directory")
-        return file
-    }
-
     InstallResult install(String name, String version, boolean force) {
         final dir = pipelineDir(name)
         final info = resolveRelease(client, name, version)
-        info.workflowPath = info.workflowPath ?: DEFAULT_WORKFLOW
-        workflowFile(dir, name, info.workflowPath)
 
         final exists = Files.exists(dir)
         final existing = exists ? PipelineInfo.load(dir) : null
@@ -218,7 +206,6 @@ class PipelineManager {
         return new PipelineInfo(
             name: name,
             version: release.version,
-            workflowPath: pipeline.workflowPath,
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
             commitId: release.commitId,

@@ -45,7 +45,7 @@ class CmdPipelineInstallTest extends Specification {
     }
 
     static Pipeline pipeline(String latest = '3.14.0') {
-        new Pipeline().latest(release(latest)).repositoryUrl('https://github.com/nf-core/rnaseq').workflowPath('main.nf')
+        new Pipeline().latest(release(latest)).repositoryUrl('https://github.com/nf-core/rnaseq')
     }
 
     CmdPipelineInstall cmd(List<String> args, boolean force = false) {
