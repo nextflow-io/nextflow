@@ -31,9 +31,7 @@ import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
 import nextflow.scm.AssetManager
-import nextflow.scm.HubOptions
 import nextflow.scm.ProviderConfig
-import nextflow.script.ScriptFile
 
 /**
  * Helpers shared by the pipeline subcommands
@@ -174,88 +172,6 @@ class PipelineCmdSupport {
         final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
         log.info "Using registry release ${address.name}@${release.version}" + (release.commitId ? " (commit ${release.commitId.take(10)})" : '')
         return release
-    }
-
-    /** A revision downloaded into the user-level store */
-    @Canonical
-    static class UserLevelDownload {
-        /** The download result, e.g. {@code Already-up-to-date} when the revision was already downloaded */
-        String message
-        ScriptFile script
-
-        boolean isUpToDate() {
-            return message == 'Already-up-to-date'
-        }
-    }
-
-    /**
-     * Download a registry release into the user-level store at its pinned commit, cached under its registry name as `run` does
-     */
-    static UserLevelDownload downloadRelease(PipelineInfo release, HubOptions hubOpts, Integer deep = null, boolean install = false) {
-        final rev = release.commitId ?: release.revision
-        try (final manager = new AssetManager(release.repositoryUrl, rev, null, hubOpts, release.name)) {
-            final legacyCommit = install ? warnLegacy(manager, "${release.name}@${release.version}", rev) : null
-            log.info "Checking ${release.name}@${release.version} ..."
-            final result = legacySwitch(manager, legacyCommit, manager.download(rev, deep))
-            manager.updateModules()
-            return new UserLevelDownload(result, manager.getScriptFile(release.workflowPath))
-        }
-    }
-
-    /**
-     * Download a Git revision of a project into the user-level store
-     *
-     * @param project A project name or a Git repository URL
-     * @param revision A branch, tag or commit, or {@code null} for the default branch
-     * @param migrate Whether to migrate a legacy download to the multi-revision strategy
-     * @param install Whether the download is an install, whose warning for a legacy download does not suggest {@code -migrate}
-     */
-    static UserLevelDownload downloadRevision(String project, String revision, HubOptions hubOpts, Integer deep = null, boolean migrate = false, boolean install = false) {
-        try (final manager = new AssetManager(project, hubOpts)) {
-            final legacyCommit = install ? warnLegacy(manager, revision ?: 'the default branch', revision) : null
-            if( !install && manager.isUsingLegacyStrategy() ) {
-                if( migrate ) {
-                    log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
-                    manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
-                } else {
-                    log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
-                        "Consider updating the project ${project} using '-migrate' option"
-                }
-            }
-
-            if( revision )
-                manager.setRevision(revision)
-
-            log.info "Checking ${manager.getProjectWithRevision()} ..."
-
-            final result = legacySwitch(manager, legacyCommit, manager.download(revision, deep))
-            manager.updateModules()
-            return new UserLevelDownload(result, manager.getScriptFile())
-        }
-    }
-
-    /**
-     * Warn that installing a revision of a legacy download replaces its single revision, unless it is the checked-out one
-     *
-     * @param label The revision as shown to the user
-     * @param revision The revision to install: a name or a commit, or {@code null} for the default branch
-     * @return the checked-out commit of the legacy download, or {@code null} when it is not one
-     */
-    private static String warnLegacy(AssetManager manager, String label, String revision) {
-        if( !manager.isUsingLegacyStrategy() || !manager.localPath?.exists() )
-            return null
-        final current = manager.getCurrentRevisionAndName()
-        if( !revision || (revision != current?.name && !current?.commitId?.startsWith(revision)) )
-            log.warn "Pipeline ${manager.project} was downloaded with the legacy layout, which holds a single revision -- installing ${label} replaces the current revision"
-        return current?.commitId
-    }
-
-    // the result of a legacy download does not tell whether it switched to another commit
-    private static String legacySwitch(AssetManager manager, String before, String result) {
-        if( !before )
-            return result
-        final after = manager.getCurrentRevisionAndName()?.commitId
-        return after == before ? 'Already-up-to-date' : "checked out at ${after}"
     }
 
     /** Base URL of the registry web pages: the API URL without {@code /api} */

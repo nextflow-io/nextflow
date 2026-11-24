@@ -21,6 +21,7 @@ import java.nio.file.Path
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import nextflow.cli.CmdBase
@@ -30,11 +31,14 @@ import nextflow.pipeline.PipelineGitFetcher
 import nextflow.pipeline.PipelineInfo
 import nextflow.pipeline.PipelineManager
 import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
+import nextflow.script.ScriptFile
 import nextflow.util.TestOnly
 
 /**
  * Pipeline install subcommand
  */
+@Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Install a pipeline from the registry, or from a Git repository with `-g`")
 class CmdPipelineInstall extends CmdBase {
@@ -99,22 +103,68 @@ class CmdPipelineInstall extends CmdBase {
         final address = isUrl
             ? PipelineCmdSupport.registryAddress(name, null, '-version') { config }
             : new PipelineCmdSupport.RegistryAddress(config.url, name, config.apiKey)
-        final PipelineCmdSupport.UserLevelDownload result
-        final String label
         if( address ) {
             final client = this.client ?: (isUrl ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(config))
             final release = resolveRelease(address, version, client)
-            result = PipelineCmdSupport.downloadRelease(release, null, null, true)
-            label = "${release.name}@${release.version}"
+            final label = "${release.name}@${release.version}"
+            // a registry release is downloaded at its pinned commit, cached under its registry name as `run` does
+            final rev = release.commitId ?: release.revision
+            try (final manager = new AssetManager(release.repositoryUrl, rev, null, null, release.name)) {
+                final legacyCommit = warnLegacy(manager, label, rev)
+                log.info "Checking ${label} ..."
+                final upToDate = download(manager, rev, legacyCommit)
+                printResult(label, upToDate, manager.getScriptFile(release.workflowPath))
+            }
         }
         else {
-            result = PipelineCmdSupport.downloadRevision(name, version, null, null, false, true)
-            label = "${result.script.projectName}@${version ?: result.script.revisionInfo.name ?: result.script.revisionInfo.commitId}"
+            try (final manager = new AssetManager(name)) {
+                final legacyCommit = warnLegacy(manager, version ?: 'the default branch', version)
+                if( version )
+                    manager.setRevision(version)
+                log.info "Checking ${manager.getProjectWithRevision()} ..."
+                final upToDate = download(manager, version, legacyCommit)
+                final script = manager.getScriptFile()
+                printResult("${script.projectName}@${version ?: script.revisionInfo.name ?: script.revisionInfo.commitId}", upToDate, script)
+            }
         }
-        if( result.upToDate )
+    }
+
+    /**
+     * Warn that installing a revision of a legacy download replaces its single revision, unless it is the checked-out one
+     *
+     * @param label The revision as shown to the user
+     * @param revision The revision to install: a name or a commit, or {@code null} for the default branch
+     * @return the checked-out commit of the legacy download, or {@code null} when it is not one
+     */
+    private static String warnLegacy(AssetManager manager, String label, String revision) {
+        if( !manager.isUsingLegacyStrategy() || !manager.localPath?.exists() )
+            return null
+        final current = manager.getCurrentRevisionAndName()
+        if( !revision || (revision != current?.name && !current?.commitId?.startsWith(revision)) )
+            log.warn "Pipeline ${manager.project} was downloaded with the legacy layout, which holds a single revision -- installing ${label} replaces the current revision"
+        return current?.commitId
+    }
+
+    /**
+     * Download a revision into the user-level store
+     *
+     * @param legacyCommit The checked-out commit of a legacy download, or {@code null}
+     * @return whether the revision was already downloaded
+     */
+    private static boolean download(AssetManager manager, String revision, String legacyCommit) {
+        final result = manager.download(revision)
+        manager.updateModules()
+        // the result of a legacy download does not tell whether it switched to another commit
+        return legacyCommit
+            ? manager.getCurrentRevisionAndName()?.commitId == legacyCommit
+            : result == 'Already-up-to-date'
+    }
+
+    private static void printResult(String label, boolean upToDate, ScriptFile script) {
+        if( upToDate )
             println "Pipeline ${label} is already installed"
         else
-            println "Pipeline ${label} installed in ${result.script.localPath}"
+            println "Pipeline ${label} installed in ${script.localPath}"
     }
 
     private static PipelineInfo resolveRelease(PipelineCmdSupport.RegistryAddress address, String version, RegistryClient client) {
