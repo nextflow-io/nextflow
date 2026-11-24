@@ -56,7 +56,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     protected GoogleBatchScriptLauncher() {}
 
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
-        super(bean)
+        super(bean, new GoogleBatchFileCopyStrategy(bean))
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
