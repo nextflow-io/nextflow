@@ -41,7 +41,7 @@ import nextflow.util.TestOnly
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Install a pipeline from the registry, or from a Git repository with `-g`")
+@Parameters(commandDescription = "Install a pipeline")
 class CmdPipelineInstall extends CmdBase {
 
     @Parameter(description = "<pipeline>", required = true)
