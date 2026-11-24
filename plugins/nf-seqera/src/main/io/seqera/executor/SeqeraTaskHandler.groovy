@@ -113,6 +113,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final resourceReq = new ResourceRequirement()
             .cpuShares(task.config.getCpus() * 1024)
             .memoryMiB(memoryMiB())
+            .time(timeLimit())
         // add accelerator settings if defined
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -320,6 +321,21 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             return null
         }
         return (int) (memory.toBytes() / (1024 * 1024))
+    }
+
+    /**
+     * The process {@code time} directive, forwarded so the scheduler stops a task attempt that
+     * runs past it and fails it with exit code 140.
+     * <p>
+     * Sent as whole milliseconds ({@code 14400000ms}) rather than ISO-8601: the scheduler accepts
+     * both, but the value can come back as the granted time, which {@link #getGrantedTime()} parses
+     * with {@link Duration#of(String)}, and that does not read the ISO form.
+     *
+     * @return the time limit, or null when the process declares none (or a non-positive one)
+     */
+    protected String timeLimit() {
+        final time = task.config.getTime()
+        return time != null && time.toMillis() > 0 ? "${time.toMillis()}ms".toString() : null
     }
 
     /**

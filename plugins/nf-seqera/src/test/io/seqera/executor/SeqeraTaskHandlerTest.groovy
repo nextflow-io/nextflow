@@ -1077,6 +1077,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getMemory() >> null
             getAccelerator() >> new AcceleratorResource([request: 1, type: 'nvidia-l4', cuda: '12.2'])
             getDisk() >> null
+            getTime() >> Duration.of('4h')
         }
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
@@ -1102,6 +1103,27 @@ class SeqeraTaskHandlerTest extends Specification {
         req.acceleratorCount == 1
         req.acceleratorName == 'nvidia-l4'
         req.acceleratorCuda == '12.2'
+        req.time == '14400000ms'
+    }
+
+    def 'should forward the time directive as milliseconds the granted time can read back: #time'() {
+        given:
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig) { getTime() >> time }
+        }
+        def handler = new SeqeraTaskHandler(taskRun, Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) })
+
+        expect:
+        handler.timeLimit() == expected
+        expected == null || Duration.of(expected) == time
+
+        where:
+        time                     || expected
+        Duration.of('4h')        || '14400000ms'
+        Duration.of('1h 30m')    || '5400000ms'
+        Duration.of('0s')        || null
+        null                     || null
     }
 
     def 'should build resource limit from task config'() {
