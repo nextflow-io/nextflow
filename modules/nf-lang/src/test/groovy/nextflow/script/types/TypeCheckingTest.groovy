@@ -1009,6 +1009,10 @@ class TypeCheckingTest extends Specification {
         "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
         "[1, 2, 3]"     | null
         "[1, 'a'].collect { v -> v.size() }"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
+        "[1, null]"     | null
+        "[null, 1]"     | null
+        "[['a', 'b'], ['c', null]]" | null
+        "[1, null, 'a']"    | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
     }
 
     @Unroll
@@ -1023,6 +1027,11 @@ class TypeCheckingTest extends Specification {
         '[1, 2, 3]'                         | 'List<Integer>'
         '[x: 1, y: 2]'                      | 'Map<String, Integer>'
         "[x: '1', y: 2]"                    | 'Map<String, ?>'
+        '[1, null]'                         | 'List<Integer?>'
+        '[null, 1]'                         | 'List<Integer?>'
+        '[[1], null]'                       | 'List<List<Integer>?>'
+        '[null]'                            | 'List<?>'
+        '[1, null]\n[1, 2, 3]'              | 'List<Integer>'
         "([x: '1'] + [y: '2']).keySet()"    | 'Set<String>'
         "([x: '1'] + [y: '2']).values()"    | 'Bag<String>'
         '[1, 2, 3].first()'                 | 'Integer'
