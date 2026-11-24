@@ -153,7 +153,7 @@ The `-g` option was chosen:
 - **`pipeline view -g` was removed.** `view` shows registry releases only. The local path, downloaded revisions and repository that `view -g` showed are in `pipeline list -g -o json`, so `info <project>` and `view` point to `pipeline list -g`. There is no equivalent of the `-check-updates` option, the `-d` detail level or the `yaml` output of `info`.
 - `pipeline install -g`, `pipeline list -g` and `pipeline remove -g` replace `pull`, `list` and `drop`. `pipeline remove -g` removes a pipeline with all of its revisions; it has no option to remove a single revision, so the revisions of a pipeline, including the old commits of a branch, stay until it is removed. The `-r` option of `drop` has no equivalent. `pipeline list` without `-g` hints at `-g` when the project has no pipelines but the user-level store does, and `pipeline remove` does the same when the pipeline is only in the user-level store. `pipeline remove -g` maps a registry page URL to the registry name.
 - `pull`, `drop`, `list` and `view` keep working but are hidden from `nextflow -h` and warn, pointing to the `-g` commands. `info <project>` warns; `info` without a project still prints the system information.
-- `clone` is removed, with a stub that points to `pipeline install` or `git clone`.
+- `clone` keeps working but is hidden from `nextflow -h` and warns, pointing to `git clone`.
 
 ### Running a registry pipeline
 

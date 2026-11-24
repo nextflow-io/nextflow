@@ -74,8 +74,6 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 ## Breaking changes
 
-- The `clone` command was removed. Use [`nextflow pipeline install`][cli-pipeline-install] to add a registry pipeline to a project, or `git clone` for any other pipeline.
-
 - The `console` command and the `nf-console` plugin were removed.
 
 - The `kuberun` command was removed. Use the [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin (`nextflow plugin nf-kuberun:run`) or launch the pipeline in a pod with Fusion instead.
@@ -100,10 +98,11 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 ## Deprecations
 
-- The `pull`, `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. They still work, and print a warning. Use the following commands instead:
+- The `clone`, `pull`, `drop`, `list`, and `view` commands are deprecated and hidden from `nextflow -h`. They still work, and print a warning. Use the following commands instead:
 
   | Deprecated | Replacement |
   |---|---|
+  | `clone <project> [dir]` | `git clone <repository URL> [dir]` |
   | `pull <registry address> -r <version>` | `pipeline install -g <scope/name> -version <version>` |
   | `pull <scope/name> -r <revision>` | `pipeline install -g <repository URL> -version <revision>`, e.g. `https://github.com/<scope/name>` |
   | `drop <project>` | `pipeline remove -g <project>` |
@@ -122,7 +121,6 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
 
 [cli-pipeline]: ../reference/cli/pipeline
-[cli-pipeline-install]: ../reference/cli/pipeline#pipeline-install
 [cli-run-registry]: ../reference/cli/run#registry-pipelines
 [cli-self-update-clean]: ../reference/cli/self-update#-clean
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout

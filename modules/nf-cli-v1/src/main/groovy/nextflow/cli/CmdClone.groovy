@@ -15,24 +15,69 @@
  */
 
 package nextflow.cli
-
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-
+import groovy.util.logging.Slf4j
+import nextflow.cli.pipeline.PipelineCmdSupport
+import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
 /**
- * Stub for the removed `clone` command.
+ * CLI sub-command clone
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-@Parameters
-class CmdClone extends CmdRemoved {
+@Parameters(commandDescription = "Clone a project into a folder (deprecated -- use `git clone`)")
+class CmdClone extends CmdBase implements HubAware {
 
-    static final public String NAME = 'clone'
+    static final public NAME = 'clone'
+
+    @Parameter(required=true, description = 'name of the project to clone')
+    List<String> args
+
+    @Parameter(names='-r', description = 'Revision of the project to clone (either a git branch, tag or commit SHA number)')
+    String revision
+
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
 
     @Override
-    String getName() { NAME }
+    final String getName() { NAME }
 
     @Override
-    String getMessage() {
-        "The `clone` command has been removed -- use `nextflow pipeline install` to add a registry pipeline to a project, or `git clone`"
+    boolean isHidden() { true }
+
+    @Override
+    void run() {
+        log.warn "The `clone` command is deprecated -- use `git clone` instead"
+        // init plugin system
+        Plugins.init()
+        // the pipeline name
+        String pipeline = args[0]
+        if( PipelineCmdSupport.registryAddress(pipeline, hubProvider) { PipelineCmdSupport.registryConfig(this) } )
+            throw new AbortOperationException("Registry pipelines are only supported by `nextflow run` and `nextflow pull` -- use the Git URL of the pipeline")
+        try (final manager = new AssetManager(pipeline, toHubOptions())) {
+            // the target directory is the second parameter
+            // otherwise default the current pipeline name
+            def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
+            if( target.exists() ) {
+                if( target.isFile() )
+                    throw new AbortOperationException("A file with the same name already exists: $target")
+                if( !target.empty() )
+                    throw new AbortOperationException("Clone target directory must be empty: $target")
+            }
+            else if( !target.mkdirs() ) {
+                throw new AbortOperationException("Cannot create clone target directory: $target")
+            }
+
+            manager.checkValidRemoteRepo()
+            print "Cloning ${manager.getProjectWithRevision()} ..."
+            manager.clone(target, revision, deep)
+            print "\r"
+            println "${manager.getProjectWithRevision()} cloned to: $target"
+        }
     }
 }

@@ -1,0 +1,64 @@
+---
+title: nextflow clone
+description: Reference for the nextflow clone command. Clone a remote project into a folder.
+---
+
+# `nextflow clone`
+
+<DeprecatedInVersion version="27.04">
+The `clone` command is deprecated. Use `git clone` instead, for example `git clone https://github.com/nextflow-io/hello`.
+</DeprecatedInVersion>
+
+Clone a remote project into a folder.
+
+## Usage
+
+```console
+$ nextflow clone [options] [project]
+```
+
+## Description
+
+The `clone` command downloads a pipeline from a Git-hosting platform into the *current directory* and modifies it accordingly. To download a pipeline into the user-level store `~/.nextflow/assets`, use [`nextflow pipeline install -g`][cli-pipeline-install].
+
+Registry pipeline addresses (a registry page URL, or a registry host given with `-hub` or `NXF_HUB`) are not supported. Use the Git URL of the pipeline, or `-hub github`.
+
+## Options
+
+##### `-d, -deep`
+
+Create a shallow clone of the specified depth.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-hub` (`github`)
+
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+
+##### `-r` (`master`)
+
+Revision to clone. Can be a git branch, tag, or commit SHA number.
+
+##### `-user`
+
+Private repository user name.
+
+## Examples
+
+Clone the latest revision of a pipeline:
+
+```console
+$ nextflow clone nextflow-io/hello
+nextflow-io/hello cloned to: hello
+```
+
+Clone a specific revision of a pipeline:
+
+```console
+$ nextflow clone nextflow-io/hello -r v1.1
+nextflow-io/hello cloned to: hello
+```
+
+[cli-pipeline-install]: ./pipeline#pipeline-install
