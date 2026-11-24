@@ -251,7 +251,7 @@ The `run` command can run a pipeline published in the [Nextflow registry](https:
 
 - `-hub` set to the host of a configured registry or of the public registry, for example `-hub registry.nextflow.io`. Set the `NXF_HUB` environment variable to a registry host to use that registry by default for the `run` command.
 
-A plain project name such as `nf-core/rnaseq` is resolved with Git.
+A plain project name such as `nf-core/rnaseq` is resolved from GitHub, or from the Git provider given with `-hub`.
 
 Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release.
 

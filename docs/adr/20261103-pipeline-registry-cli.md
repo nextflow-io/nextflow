@@ -37,7 +37,7 @@ The registry now has a read-only pipeline catalog, filled from nf-core and from 
 This ADR makes three decisions:
 
 1. **Install source**: Git, or a bundle stored in the registry.
-2. **Run addressing**: how `nextflow run` knows that a name refers to the registry. Registry first with a Git fallback, an explicit registry address, a reserved hub name, or a short prefix.
+2. **Run addressing**: how `nextflow run` knows that a name refers to the registry. Registry first with a GitHub fallback, an explicit registry address, a reserved hub name, or a short prefix.
 3. **Run cache**: where `run` keeps a registry pipeline. Under its Git name, under its registry name through `AssetManager`, or in a separate registry folder.
 
 ## Pros and Cons of the Options
@@ -57,7 +57,7 @@ This ADR makes three decisions:
 
 ### Run addressing
 
-**Registry first, Git fallback for a plain `scope/name`.**
+**Registry first, GitHub fallback for a plain `scope/name`.**
 
 - Bad, because the same name can resolve to different code depending on the registry answer, the network and the version, so a user can run an unintended pipeline without noticing.
 
@@ -96,7 +96,7 @@ This ADR makes three decisions:
 ## Solution or decision outcome
 
 - **Install source: Git now.** Install from the Git commit pinned by the release. The install code chooses the source in one place, so a bundle source can be added later.
-- **Run addressing: an explicit registry address**, with no fallback to Git. A plain `scope/name` still runs from Git.
+- **Run addressing: an explicit registry address**, with no fallback to Git. A plain `scope/name` still runs from GitHub, or the Git provider given with `-hub`.
 - **Run cache: the registry name**, through a local name in `AssetManager`. Bundle releases need a separate registry folder or a similar cache; their ADR decides.
 - **User-level pipelines: a `-g` option on the `pipeline` commands.** See [User-level pipelines](#user-level-pipelines).
 - **Main script: a top-level `main.nf`**, as for modules. The registry's `workflowPath` is not used, and `run` of a registry pipeline ignores `manifest.mainScript` (`-main-script` still applies). The registry only has nf-core pipelines, which already require a top-level `main.nf`; it will be enforced at publish time.

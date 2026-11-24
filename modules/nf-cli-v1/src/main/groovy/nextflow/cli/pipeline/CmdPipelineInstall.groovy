@@ -113,8 +113,8 @@ class CmdPipelineInstall extends CmdBase {
             try (final manager = new AssetManager(release.repositoryUrl, rev, Const.DEFAULT_MAIN_FILE_NAME, null, release.name)) {
                 final legacyCommit = warnLegacy(manager, label, rev)
                 log.info "Checking ${label} ..."
-                final upToDate = download(manager, rev, legacyCommit)
-                printResult(label, upToDate, manager.getScriptFile())
+                final alreadyInstalled = download(manager, rev, legacyCommit)
+                printResult(label, alreadyInstalled, manager.getScriptFile())
             }
         }
         else {
@@ -123,9 +123,9 @@ class CmdPipelineInstall extends CmdBase {
                 if( version )
                     manager.setRevision(version)
                 log.info "Checking ${manager.getProjectWithRevision()} ..."
-                final upToDate = download(manager, version, legacyCommit)
+                final alreadyInstalled = download(manager, version, legacyCommit)
                 final script = manager.getScriptFile()
-                printResult("${script.projectName}@${version ?: script.revisionInfo.name ?: script.revisionInfo.commitId}", upToDate, script)
+                printResult("${script.projectName}@${version ?: script.revisionInfo.name ?: script.revisionInfo.commitId}", alreadyInstalled, script)
             }
         }
     }
@@ -150,8 +150,8 @@ class CmdPipelineInstall extends CmdBase {
             : result == 'Already-up-to-date'
     }
 
-    private static void printResult(String label, boolean upToDate, ScriptFile script) {
-        if( upToDate )
+    private static void printResult(String label, boolean alreadyInstalled, ScriptFile script) {
+        if( alreadyInstalled )
             println "Pipeline ${label} is already installed"
         else
             println "Pipeline ${label} installed in ${script.localPath}"

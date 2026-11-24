@@ -25,7 +25,7 @@ The `install`, `list`, and `remove` subcommands work on one of two stores, simil
 
 - **User-level** (`-g`): the directory where [`nextflow run`][cli-run] downloads pipelines, set by [`NXF_ASSETS`][env-vars-nxf-assets] (default: `$NXF_HOME/assets`). Use it to download a pipeline ahead of a run, for example an `-offline` run, and to inspect or delete downloaded pipelines. The user-level store can hold several revisions of the same pipeline.
 
-The `pipeline` subcommands use the registry by default: a name such as `nf-core/rnaseq` is a registry name. Only `install -g` also accepts a Git repository URL. In contrast, `nextflow run` resolves a plain name with Git (GitHub by default).
+The `pipeline` subcommands use the registry by default: a name such as `nf-core/rnaseq` is a registry name. Only `install -g` also accepts a Git repository URL. In contrast, `nextflow run` resolves a plain name from GitHub, or from the Git provider given with `-hub`.
 
 The `install`, `search`, and `view` subcommands use the registries defined in the [`registry`][config-registry] config scope, read from `~/.nextflow/config`, the `nextflow.config` in the current folder, and any config file given with `-c` before the subcommand.
 
