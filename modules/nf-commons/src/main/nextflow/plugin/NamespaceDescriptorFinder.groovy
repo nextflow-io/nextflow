@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import org.pf4j.DefaultPluginDescriptor
 import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptor
+import org.pf4j.PluginRuntimeException
 
 /**
  * Reads the plugin ID as `<namespace>/<Plugin-Id>`, taking the namespace from
@@ -34,13 +35,35 @@ class NamespaceDescriptorFinder extends ManifestPluginDescriptorFinder {
 
     @Override
     PluginDescriptor find(Path pluginPath) {
+        return find(pluginPath, pluginPath.fileName.toString())
+    }
+
+    /**
+     * @param folderName The store folder name, which can differ from the path name
+     */
+    PluginDescriptor find(Path pluginPath, String folderName) {
         final manifest = readManifest(pluginPath)
         final result = (Descriptor) createPluginDescriptor(manifest)
         final id = result.pluginId
-        final ns = manifest.mainAttributes.getValue(PLUGIN_NAMESPACE) ?: folderNamespace(pluginPath)
-        if( id && !id.contains('/') && ns )
+        if( !id || id.contains('/') )
+            return result
+        final declared = manifest.mainAttributes.getValue(PLUGIN_NAMESPACE)
+        if( declared != null && !isValid(declared, id) )
+            throw new PluginRuntimeException("Invalid {} '{}' in plugin {}", PLUGIN_NAMESPACE, declared, pluginPath)
+        final ns = declared ?: folderNamespace(folderName)
+        if( ns )
             result.setPluginId("$ns/$id")
         return result
+    }
+
+    private static boolean isValid(String ns, String id) {
+        try {
+            PluginRef.parse("$ns/$id")
+            return true
+        }
+        catch( IllegalArgumentException e ) {
+            return false
+        }
     }
 
     @Override
@@ -48,10 +71,9 @@ class NamespaceDescriptorFinder extends ManifestPluginDescriptorFinder {
         return new Descriptor()
     }
 
-    private static String folderNamespace(Path path) {
-        final name = path.fileName.toString()
-        final p = name.indexOf('~')
-        return p > 0 ? name.substring(0, p) : null
+    private static String folderNamespace(String folderName) {
+        final id = PluginRef.fromDirName(folderName)
+        return id.contains('/') ? id.substring(0, id.indexOf('/')) : null
     }
 
     // pf4j keeps `setPluginId` protected

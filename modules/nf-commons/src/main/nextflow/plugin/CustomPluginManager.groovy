@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import nextflow.BuildInfo
 import org.pf4j.DefaultPluginManager
 import org.pf4j.ExtensionFactory
+import org.pf4j.PluginDescriptorFinder
 import org.pf4j.PluginWrapper
 import org.pf4j.SingletonExtensionFactory
 import org.pf4j.VersionManager
@@ -43,6 +44,16 @@ class CustomPluginManager extends DefaultPluginManager {
     @Override
     PluginWrapper loadPluginFromPath(Path pluginPath) {
         super.loadPluginFromPath(pluginPath)
+    }
+
+    // the store folder name can carry the namespace, see NamespaceDescriptorFinder
+    PluginWrapper loadPluginFromPath(Path pluginPath, String folderName) {
+        return loadPluginFromPath(pluginPath)
+    }
+
+    @Override
+    protected PluginDescriptorFinder createPluginDescriptorFinder() {
+        return new NamespaceDescriptorFinder()
     }
 
     @Override
