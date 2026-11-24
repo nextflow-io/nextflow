@@ -32,7 +32,7 @@ Plugin-Id: nf-foo
 Plugin-Namespace: myorg
 ```
 
-Nextflow loads a moved plugin as `myorg/nf-foo`, also when a pipeline or another plugin uses the name `nf-foo`. The plugin is loaded only once. When the configuration or the `-plugins` option uses `nf-foo`, Nextflow prints a warning such as:
+Nextflow loads a moved plugin as `myorg/nf-foo`. This is true even if a pipeline or another plugin asks for `nf-foo`. The plugin is loaded only once. When the configuration or the `-plugins` option uses `nf-foo`, Nextflow prints a warning such as:
 
 ```
 Plugin `nf-foo` has moved to `myorg/nf-foo` -- update your config
@@ -116,11 +116,11 @@ To use Nextflow plugins in an offline environment:
     :::
 
 :::note
-A plugin directory filled by a Nextflow version without namespace support has no links for moved plugins. Run `nextflow plugin install` again with a newer Nextflow version, online, to add them.
+A plugin directory created by a Nextflow version without namespace support has no links for moved plugins. Run `nextflow plugin install` again with a newer Nextflow version, online, to add them.
 :::
 
 :::warning
-Nextflow versions without namespace support can fail offline with a version range, such as `nf-foo@~1.0.0`, when they share the plugins directory with a newer Nextflow version. Use exact plugin versions, or a separate plugins directory, for these versions.
+An old Nextflow (no namespace support) can fail offline on a version range such as `nf-foo@~1.0.0`. This happens when it shares the plugins directory with a newer Nextflow. To avoid this, use exact versions or a separate plugins directory.
 :::
 
 [install-standalone]: ../install#standalone-distribution

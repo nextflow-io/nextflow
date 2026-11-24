@@ -19,8 +19,6 @@ The [plugin namespace in the MANIFEST ADR](20261124-plugin-namespace-manifest.md
 - The zip MANIFEST keeps the plain name in `Plugin-Id`. The namespace goes in a new attribute, `Plugin-Namespace`.
 - Nextflow builds the ID `<namespace>/<name>` from these two attributes, or from the store folder name.
 
-This copy is updated for these changes.
-
 ## Problem Statement
 
 Plugin IDs are global and flat. Two organisations cannot publish a plugin with the same name, and there is no ownership of a name beyond "first to claim it". Private registries make this worse: each one needs its own names, and an organisation cannot reserve its names in the public registry.
