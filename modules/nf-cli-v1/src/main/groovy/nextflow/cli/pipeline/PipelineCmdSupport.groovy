@@ -62,8 +62,30 @@ class PipelineCmdSupport {
      * @param name A pipeline name or a registry page URL
      */
     static String userLevelName(CmdBase cmd, String name) {
-        final address = registryAddress(name, null) { registryConfig(cmd) }
+        checkPipelineName(name)
+        final address = registryAddress(name, null, '-version') { registryConfig(cmd) }
         return address ? address.name : name
+    }
+
+    /**
+     * Fails for an SSH Git URL, which is not supported, and for a pipeline name with an {@code @version} suffix,
+     * as the pipeline commands take the version with {@code -version}
+     */
+    static void checkPipelineName(String name) {
+        final ssh = name =~ /^(?:ssh:\/\/)?(?:[\w.-]+@)?([\w.-]+)(?::\d+\/|:|\/)(.+?)(?:\.git)?\/?$/
+        if( name.startsWith('ssh://') || (name =~ /^[\w.-]+@[\w.-]+:/).find() ) {
+            final hint = ssh.matches() ? " -- use the https URL instead, e.g. `https://${ssh.group(1)}/${ssh.group(2)}`" : ' -- use the https URL instead'
+            throw new AbortOperationException("SSH Git URLs are not supported: ${name}${hint}")
+        }
+        if( !isUrl(name) && name.contains('@') ) {
+            final at = name.lastIndexOf('@')
+            throw new AbortOperationException("Not a valid pipeline name: ${name} -- give the version with the `-version` option, e.g. `${name.substring(0, at)} -version ${name.substring(at + 1)}`")
+        }
+    }
+
+    /** Whether a pipeline is given by a URL rather than by name, as {@link AssetManager} tells them apart */
+    static boolean isUrl(String name) {
+        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:/')
     }
 
     /** A registry pipeline address: the registry API URL, the pipeline name, and the API key to send */
@@ -81,6 +103,13 @@ class PipelineCmdSupport {
      * @return the registry address, or {@code null} when {@code name} and {@code hub} address Git
      */
     static RegistryAddress registryAddress(String name, String hub, Closure<RegistryConfig> registryConfig) {
+        return registryAddress(name, hub, '-r', registryConfig)
+    }
+
+    /**
+     * @param versionOption The option that gives the version, suggested when the address includes one
+     */
+    static RegistryAddress registryAddress(String name, String hub, String versionOption, Closure<RegistryConfig> registryConfig) {
         final isUrl = name.startsWith('http://') || name.startsWith('https://')
         hub = hub ?: SysEnv.get('NXF_HUB')
         // cheap checks first, so that Git addresses never read the config
@@ -110,19 +139,19 @@ class PipelineCmdSupport {
             final prefix = (URI.create(pageUrl(api)).path ?: '') + '/pipelines/'
             if( !uri.path.startsWith(prefix) )
                 return null
-            return newAddress(api, uri.path.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey)
+            return newAddress(api, uri.path.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey, versionOption)
         }
         if( !api ) {
             final hosts = registries.collect { URI.create(it).authority }.unique()
             throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
         }
-        return newAddress(api, name, apiKey)
+        return newAddress(api, name, apiKey, versionOption)
     }
 
     // checked here rather than when resolving the release, so that it applies offline too
-    private static RegistryAddress newAddress(String api, String name, String apiKey) {
+    private static RegistryAddress newAddress(String api, String name, String apiKey, String versionOption) {
         if( name.contains('@') )
-            throw new AbortOperationException("Not a valid registry pipeline address: ${name} -- give the version with the `-r` option")
+            throw new AbortOperationException("Not a valid registry pipeline address: ${name} -- give the version with the `${versionOption}` option")
         return new RegistryAddress(api, name, apiKey)
     }
 
@@ -157,9 +186,11 @@ class PipelineCmdSupport {
     /**
      * Download a registry release into the user-level store at its pinned commit, cached under its registry name as `run` does
      */
-    static UserLevelDownload downloadRelease(PipelineInfo release, HubOptions hubOpts, Integer deep = null) {
+    static UserLevelDownload downloadRelease(PipelineInfo release, HubOptions hubOpts, Integer deep = null, boolean rejectLegacy = false) {
         final rev = release.commitId ?: release.revision
         try (final manager = new AssetManager(release.repositoryUrl, rev, null, hubOpts, release.name)) {
+            if( rejectLegacy )
+                checkNotLegacy(manager)
             log.info "Checking ${release.name}@${release.version} ..."
             final result = manager.download(rev, deep)
             manager.updateModules()
@@ -173,9 +204,12 @@ class PipelineCmdSupport {
      * @param project A project name or a Git repository URL
      * @param revision A branch, tag or commit, or {@code null} for the default branch
      * @param migrate Whether to migrate a legacy download to the multi-revision strategy
+     * @param rejectLegacy Whether to fail, rather than download, when the project was downloaded with the legacy layout
      */
-    static UserLevelDownload downloadRevision(String project, String revision, HubOptions hubOpts, Integer deep = null, boolean migrate = false) {
+    static UserLevelDownload downloadRevision(String project, String revision, HubOptions hubOpts, Integer deep = null, boolean migrate = false, boolean rejectLegacy = false) {
         try (final manager = new AssetManager(project, hubOpts)) {
+            if( rejectLegacy )
+                checkNotLegacy(manager)
             if( manager.isUsingLegacyStrategy() ) {
                 if( migrate ) {
                     log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
@@ -195,6 +229,12 @@ class PipelineCmdSupport {
             manager.updateModules()
             return new UserLevelDownload(result, manager.getScriptFile())
         }
+    }
+
+    // the legacy layout holds a single revision, so installing another one would replace it
+    private static void checkNotLegacy(AssetManager manager) {
+        if( manager.isOnlyLegacy() )
+            throw new AbortOperationException("Pipeline ${manager.project} was downloaded with the legacy layout -- remove it with `nextflow pipeline remove -g ${manager.project}` and install it again")
     }
 
     /** Base URL of the registry web pages: the API URL without {@code /api} */

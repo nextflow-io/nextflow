@@ -182,7 +182,7 @@ To download a pipeline that is not in the registry, give its Git repository URL.
 nextflow pipeline install -g https://github.com/nextflow-io/hello -version mybranch
 ```
 
-Each downloaded revision is kept next to the others, so older revisions can still be run. To update a branch, install it again.
+Each downloaded revision is kept next to the others, so older revisions can still be run. To update a branch, install it again. The previous commit of the branch stays downloaded until you remove it with `pipeline remove -g -version <commit>`.
 
 See [pipeline][cli-pipeline-install] for more information.
 

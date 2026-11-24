@@ -64,6 +64,41 @@ class PipelineCmdSupportTest extends Specification {
         'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io'
     }
 
+    def 'should suggest the given version option for a version in a registry address' () {
+        when:
+        PipelineCmdSupport.registryAddress('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0', null, '-version') { new RegistryConfig() }
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Not a valid registry pipeline address: nf-core/rnaseq@3.14.0 -- give the version with the `-version` option"
+    }
+
+    def 'should reject a pipeline name with a version or an SSH URL' () {
+        when:
+        PipelineCmdSupport.checkPipelineName(NAME)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == MESSAGE
+
+        where:
+        NAME                                            | MESSAGE
+        'nf-core/demo@1.2.0'                            | 'Not a valid pipeline name: nf-core/demo@1.2.0 -- give the version with the `-version` option, e.g. `nf-core/demo -version 1.2.0`'
+        'git@github.com:nextflow-io/hello.git'          | 'SSH Git URLs are not supported: git@github.com:nextflow-io/hello.git -- use the https URL instead, e.g. `https://github.com/nextflow-io/hello`'
+        'ssh://git@gitlab.com:2222/acme/hello.git'      | 'SSH Git URLs are not supported: ssh://git@gitlab.com:2222/acme/hello.git -- use the https URL instead, e.g. `https://gitlab.com/acme/hello`'
+    }
+
+    def 'should accept a pipeline name or URL' () {
+        when:
+        PipelineCmdSupport.checkPipelineName(NAME)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        NAME << ['nf-core/demo', 'https://github.com/nextflow-io/hello', 'https://user@example.com/acme/hello', 'file:/tmp/hello']
+    }
+
     def 'should match a registry URL under a base path' () {
         given:
         def config = new RegistryConfig(url: 'https://example.com/registry/api')

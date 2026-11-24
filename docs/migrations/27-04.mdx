@@ -105,12 +105,12 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
   | Deprecated | Replacement |
   |---|---|
   | `pull <registry address> -r <version>` | `pipeline install -g <scope/name> -version <version>` |
-  | `pull <scope/name> -r <revision>` | `pipeline install -g https://github.com/<scope/name> -version <revision>` |
+  | `pull <scope/name> -r <revision>` | `pipeline install -g <repository URL> -version <revision>`, e.g. `https://github.com/<scope/name>` |
   | `drop <project> -r <revision>` | `pipeline remove -g <project> -version <revision>` |
   | `list` | `pipeline list -g` |
   | `view <project>` | `pipeline list -g -o json` to find the local copy |
 
-  A plain `scope/name` given to `pipeline install -g` is a registry name, so give a Git pipeline by its repository URL. The `-all` option of `pull` has no equivalent.
+  A plain `scope/name` given to `pipeline install -g` is a registry name, so give a Git pipeline by its repository URL. The `-all`, `-hub`, `-user`, `-migrate`, and `-deep` options of `pull` have no equivalent. A pipeline downloaded with the legacy layout must be removed with `pipeline remove -g` before `pipeline install -g` can add a revision to it.
 
 - The `info` command with a project name is deprecated. Use `pipeline list -g` instead. It has no equivalent of the `-check-updates` (`-u`) option, the `-d` detail level, or the `yaml` output of `info`. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
 

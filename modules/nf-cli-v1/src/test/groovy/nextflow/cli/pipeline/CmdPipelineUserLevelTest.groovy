@@ -17,6 +17,7 @@
 package nextflow.cli.pipeline
 
 import java.nio.file.Files
+import java.util.concurrent.CopyOnWriteArrayList
 import java.nio.file.Path
 
 import com.beust.jcommander.JCommander
@@ -26,6 +27,7 @@ import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
+import com.sun.net.httpserver.HttpServer
 import nextflow.cli.CmdBase
 import nextflow.cli.CmdDrop
 import nextflow.cli.CmdInfo
@@ -121,7 +123,9 @@ class CmdPipelineUserLevelTest extends Specification {
 
     def 'should hint at the user-level store when no pipeline is installed in the project'() {
         given:
-        seedDirs(*USER_LEVEL)
+        USER_LEVEL.each { String it -> seedRepo(it, "https://github.com/${it}.git") }
+        and: 'a folder without a readable clone, which `list -g` does not show either'
+        seedDirs('acme/empty')
 
         when:
         new CmdPipelineList(root: base.resolve('project')).run()
@@ -632,6 +636,198 @@ class CmdPipelineUserLevelTest extends Specification {
         NAME            | EXPECTED
         'acme/hello'    | ['Pipeline acme/hello is not installed', 'Pipeline acme/hello is installed in the user-level store -- use `nextflow pipeline remove -g acme/hello` to remove it']
         'acme/other'    | ['Pipeline acme/other is not installed']
+    }
+
+    def 'should keep an unreadable clone when removing the last readable revision'() {
+        given:
+        final repo = gitRepo('hello')
+        installCmd(args: [repo.url]).run()
+        installCmd(args: [repo.url], version: 'v1.0.0').run()
+        and: 'a clone that can not be read, e.g. an interrupted clone'
+        final unreadable = Files.createDirectories(clone('local/hello', 'a' * 40))
+        Files.writeString(unreadable.resolve('precious.txt'), 'keep')
+
+        when:
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0'))
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'master'))
+        then:
+        !Files.exists(clone('local/hello', repo.v1))
+        !Files.exists(clone('local/hello', repo.v2))
+        unreadable.resolve('precious.txt').text == 'keep'
+        Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/local/hello/${MultiRevisionRepositoryStrategy.BARE_REPO}"))
+    }
+
+    def 'should not install a revision next to a legacy download'() {
+        given:
+        final repo = gitRepo('hello')
+        final dir = seedRepo(NAME, repo.url)
+        final commit = Git.open(dir.toFile()).withCloseable { it.repository.resolve('HEAD').name() }
+
+        when:
+        installCmd(args: [NAME == 'local/hello' ? repo.url : NAME], version: VERSION, client: registryOf(repo)).run()
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Pipeline ${NAME} was downloaded with the legacy layout -- remove it with `nextflow pipeline remove -g ${NAME}` and install it again".toString()
+        Git.open(dir.toFile()).withCloseable { it.repository.resolve('HEAD').name() } == commit
+        !Files.exists(assets().resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR))
+
+        where:
+        NAME            | VERSION
+        'local/hello'   | 'v1.0.0'
+        'acme/hello'    | '1.0.0'
+    }
+
+    def 'should treat the clones of an annotated tag and of its commit as one revision'() {
+        given:
+        final repo = branchedRepo()
+        installCmd(args: [repo.url], version: 'v3.0.0').run()
+        installCmd(args: [repo.url], version: repo.v3).run()
+        installCmd(args: [repo.url], version: 'v1.0.0').run()
+        assert Files.exists(clone('local/hello', repo.v3tag)) && Files.exists(clone('local/hello', repo.v3))
+
+        when:
+        resetOutput()
+        exec(new CmdPipelineList(global: true, output: 'json'))
+        then: 'one row, at the clone named after the commit'
+        (new JsonSlurper().parseText(stdout().join('\n')) as Map).pipelines.collect { Map it -> [it.version, it.commit, it.path] } == [
+            ['v1.0.0', repo.v1, clone('local/hello', repo.v1).toString()],
+            ['v3.0.0', repo.v3, clone('local/hello', repo.v3).toString()],
+        ]
+
+        when:
+        resetOutput()
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: VERSION == 'commit' ? repo.v3 : VERSION))
+        then: 'removes both clones'
+        !Files.exists(clone('local/hello', repo.v3tag))
+        !Files.exists(clone('local/hello', repo.v3))
+        Files.exists(clone('local/hello', repo.v1))
+
+        where:
+        VERSION << ['v3.0.0', 'commit']
+    }
+
+    def 'should check each clone of a commit for local modifications'() {
+        given:
+        final repo = branchedRepo()
+        installCmd(args: [repo.url], version: 'v3.0.0').run()
+        installCmd(args: [repo.url], version: repo.v3).run()
+        installCmd(args: [repo.url], version: 'v1.0.0').run()
+        Files.writeString(clone('local/hello', repo.v3).resolve('main.nf'), 'changed')
+
+        when:
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v3.0.0'))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline local/hello@v3.0.0 has local modifications -- use -force to remove it'
+        Files.exists(clone('local/hello', repo.v3tag))
+        Files.exists(clone('local/hello', repo.v3))
+
+        when:
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v3.0.0', force: true))
+        then:
+        !Files.exists(clone('local/hello', repo.v3tag))
+        !Files.exists(clone('local/hello', repo.v3))
+    }
+
+    def 'should sort the versions in the user-level store by their numbers'() {
+        expect:
+        ['v1.10.0', '1.9.0', null, 'dev', '1.10.0', 'v1.9.0', '1.9.0-rc1'].sort(false) { String a, String b -> CmdPipelineList.compareVersions(a, b) } ==
+            ['1.9.0', '1.9.0-rc1', '1.10.0', 'dev', 'v1.9.0', 'v1.10.0', null]
+    }
+
+    def 'should reject a version in the pipeline name'() {
+        when:
+        exec(CMD)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Not a valid pipeline name: nf-core/demo@1.2.0 -- give the version with the `-version` option, e.g. `nf-core/demo -version 1.2.0`'
+
+        where:
+        CMD << [
+            new CmdPipelineInstall(args: ['nf-core/demo@1.2.0'], global: true),
+            new CmdPipelineInstall(args: ['nf-core/demo@1.2.0']),
+            new CmdPipelineRemove(args: ['nf-core/demo@1.2.0'], global: true),
+            new CmdPipelineRemove(args: ['nf-core/demo@1.2.0']),
+            new CmdPipelineView(args: ['nf-core/demo@1.2.0']),
+        ]
+    }
+
+    def 'should reject an SSH Git URL'() {
+        when:
+        installCmd(args: ['git@github.com:nextflow-io/hello.git']).run()
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'SSH Git URLs are not supported: git@github.com:nextflow-io/hello.git -- use the https URL instead, e.g. `https://github.com/nextflow-io/hello`'
+    }
+
+    /** A registry API that serves the latest release of `acme/hello` from the given repository, or 404 for everything, and records the requests */
+    private HttpServer registryServer(Map<String,String> repo, List<String> requests) {
+        final server = HttpServer.create(new InetSocketAddress('127.0.0.1', 0), 0)
+        server.createContext('/api/') { exchange ->
+            requests << exchange.requestURI.rawPath
+            final body = repo
+                ? """{"pipeline": {"name": "acme/hello", "repositoryUrl": "${repo.url}", "latest": {"version": "2.0.0", "gitRevision": "v2.0.0", "commitId": "${repo.v2}"}}}"""
+                : '{"message": "not found"}'
+            final bytes = body.getBytes('UTF-8')
+            exchange.responseHeaders.add('Content-Type', 'application/json')
+            exchange.sendResponseHeaders(repo ? 200 : 404, bytes.length)
+            exchange.responseBody.withCloseable { it.write(bytes) }
+        }
+        server.start()
+        servers << server
+        return server
+    }
+
+    private List<HttpServer> servers = []
+
+    private static String apiUrl(HttpServer server) {
+        return "http://127.0.0.1:${server.address.port}/api"
+    }
+
+    private CmdPipelineInstall installWithConfig(String registries, Map opts) {
+        final config = base.resolve('registry.config')
+        Files.writeString(config, "registry.url = ${registries}")
+        Plugins.stop()
+        final cmd = new CmdPipelineInstall(opts + [global: true])
+        cmd.launcher = new Launcher().parseMainArgs('-c', config.toString(), 'pipeline')
+        return cmd
+    }
+
+    def 'should install a registry name from the configured registries, falling back when one does not have it'() {
+        given:
+        final repo = gitRepo('hello')
+        final missing = new CopyOnWriteArrayList<String>()
+        final found = new CopyOnWriteArrayList<String>()
+        final first = registryServer(null, missing)
+        final second = registryServer(repo, found)
+
+        when:
+        installWithConfig("['${apiUrl(first)}', '${apiUrl(second)}']", [args: ['acme/hello']]).run()
+        then:
+        missing && found
+        stdout().last() == "Pipeline acme/hello@2.0.0 installed in ${clone('acme/hello', repo.v2)}".toString()
+
+        cleanup:
+        servers*.stop(0)
+    }
+
+    def 'should install a registry page URL from the registry it names'() {
+        given:
+        final repo = gitRepo('hello')
+        final primary = new CopyOnWriteArrayList<String>()
+        final other = new CopyOnWriteArrayList<String>()
+        final first = registryServer(repo, primary)
+        final second = registryServer(repo, other)
+
+        when:
+        installWithConfig("['${apiUrl(first)}', '${apiUrl(second)}']", [args: ["http://127.0.0.1:${second.address.port}/pipelines/acme/hello".toString()]]).run()
+        then:
+        !primary
+        other
+        stdout().last() == "Pipeline acme/hello@2.0.0 installed in ${clone('acme/hello', repo.v2)}".toString()
+
+        cleanup:
+        servers*.stop(0)
     }
 
     private static String usage(Object cmd) {

@@ -47,7 +47,11 @@ With `-g`, Nextflow installs the pipeline into the user-level store instead. The
 - A registry name, such as `nf-core/demo`, or a registry page URL. Nextflow downloads the Git commit pinned by the release.
 - A Git repository URL, such as `https://github.com/nextflow-io/hello`. Nextflow downloads the revision given with `-version`, or the default branch. Use the URL form for a pipeline that is not in the registry.
 
-Nextflow adds the revision next to the revisions already downloaded, so older revisions can still be run with `nextflow run -r`. If the revision is already downloaded, Nextflow prints that it is already installed. For a branch, Nextflow downloads its latest commit. Use `pipeline remove -g -version` to remove a revision.
+Nextflow adds the revision next to the revisions already downloaded, so older revisions can still be run with `nextflow run -r`. If the revision is already downloaded, Nextflow prints that it is already installed. For a branch, Nextflow downloads its latest commit and keeps the previous one. Use `pipeline remove -g -version` to remove a revision.
+
+A registry name is looked up in the configured registries in order, as for a project install. A registry page URL uses only the registry it names. SSH Git URLs, such as `git@github.com:nextflow-io/hello.git`, are not supported; use the `https://` URL instead.
+
+A pipeline downloaded with the legacy layout (by `nextflow pull` with `NXF_SCM_LEGACY`, or by an older Nextflow version) holds a single revision, so `install -g` refuses to add a revision to it. Remove it with `nextflow pipeline remove -g <pipeline>` and install it again.
 
 The `install -g` subcommand downloads only the pipeline repository. Registry modules and pipelines that the pipeline includes but does not commit are installed when the pipeline runs, so they must be committed in the pipeline for an `-offline` run.
 
@@ -63,7 +67,7 @@ Install the pipeline into the user-level store used by `nextflow run`.
 
 ###### `-version`
 
-Pipeline version to install, for example `3.14.0`. Defaults to the latest published release. With `-g` and a Git repository URL, the Git revision to download: a branch, tag, or commit.
+Pipeline version to install, for example `3.14.0`. Defaults to the latest published release. With `-g` and a Git repository URL, the Git revision to download: a branch, tag, or commit. Defaults to the default branch of the repository.
 
 ##### `list [options]` {#pipeline-list}
 
@@ -78,7 +82,7 @@ Both stores print the same columns:
 - `COMMIT`: the installed Git commit, shortened to 10 characters.
 - `STATUS`: `ok`, or `modified` if the files were changed after install.
 
-A missing value is shown as `-`. At the user level, Nextflow prints one row for each downloaded revision.
+A missing value is shown as `-`. At the user level, Nextflow prints one row for each downloaded commit, sorted by name and then by version.
 
 The following options are available:
 
@@ -108,7 +112,7 @@ Remove the pipeline from the user-level store, with all of its downloaded revisi
 
 ###### `-version`
 
-Remove only one revision from the user-level store: a version, branch, or commit. Requires `-g`. Removing the last revision removes the pipeline.
+Remove only one revision from the user-level store: a version, branch, or commit. Requires `-g`. A revision downloaded twice, for example by an annotated tag and by its commit, is removed with all of its copies. Removing the last revision removes the pipeline.
 
 ##### `search [options] <query>` {#pipeline-search}
 
