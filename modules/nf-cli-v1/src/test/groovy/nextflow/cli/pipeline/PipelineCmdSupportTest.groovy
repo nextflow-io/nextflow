@@ -57,21 +57,12 @@ class PipelineCmdSupportTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message == "Not a valid registry pipeline address: nf-core/rnaseq@3.14.0 -- give the version with the `-r` option"
+        e.message == "Not a valid registry pipeline address: nf-core/rnaseq@3.14.0 -- give the version with the `-r`/`-version` option"
 
         where:
         NAME                                                            | HUB
         'https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0'  | null
         'nf-core/rnaseq@3.14.0'                                         | 'registry.nextflow.io'
-    }
-
-    def 'should suggest the given version option for a version in a registry address' () {
-        when:
-        PipelineCmdSupport.registryAddress('https://registry.nextflow.io/pipelines/nf-core/rnaseq@3.14.0', null, '-version') { new RegistryConfig() }
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message == "Not a valid registry pipeline address: nf-core/rnaseq@3.14.0 -- give the version with the `-version` option"
     }
 
     def 'should reject a pipeline name with a version or an SSH URL' () {

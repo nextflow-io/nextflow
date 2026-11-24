@@ -473,7 +473,7 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new CmdClone(), new CmdInfo(), new CmdRun(), new CmdPull(), new CmdList()] )
+        launcher.printCommands( [new CmdClone(), new CmdDrop(), new CmdInfo(), new CmdRun(), new CmdPull(), new CmdList(), new CmdView()] )
         then:
         capture.toString() == '''
                 Commands:

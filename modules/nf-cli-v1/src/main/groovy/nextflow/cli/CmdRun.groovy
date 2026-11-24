@@ -640,8 +640,7 @@ class CmdRun extends CmdBase implements HubAware {
          * try to look for a pipeline in the repository
          */
         final release = registryLookup(pipelineName)
-        // a registry release is fetched from its Git repository and cached under its registry name;
-        // offline, it has no repository and the cached copy is used
+        // a registry release is cached under its registry name; offline, the cached copy is used
         final project = release ? (release.repositoryUrl ?: release.name) : pipelineName
         final rev = release?.repositoryUrl ? (release.commitId ?: release.revision) : revision
         final localName = release?.name

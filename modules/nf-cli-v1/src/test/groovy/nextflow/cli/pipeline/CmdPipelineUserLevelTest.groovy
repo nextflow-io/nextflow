@@ -21,7 +21,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.nio.file.Path
 
 import com.beust.jcommander.JCommander
-import com.beust.jcommander.ParameterException
 import groovy.json.JsonSlurper
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
@@ -29,13 +28,6 @@ import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import com.sun.net.httpserver.HttpServer
 import nextflow.cli.CmdBase
-import nextflow.cli.CmdClone
-import nextflow.cli.CmdDrop
-import nextflow.cli.CmdInfo
-import nextflow.cli.CmdList
-import nextflow.cli.CmdPipeline
-import nextflow.cli.CmdPull
-import nextflow.cli.CmdView
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -73,10 +65,6 @@ class CmdPipelineUserLevelTest extends Specification {
 
     private static Path assets() {
         return AssetManager.root.toPath()
-    }
-
-    private static void seedDirs(String... names) {
-        names.each { Files.createDirectories(assets().resolve(it)) }
     }
 
     /** A Git repository with one commit and the given remote, as downloaded by the legacy strategy */
@@ -125,8 +113,6 @@ class CmdPipelineUserLevelTest extends Specification {
     def 'should hint at the user-level store when no pipeline is installed in the project'() {
         given:
         USER_LEVEL.each { String it -> seedRepo(it, "https://github.com/${it}.git") }
-        and: 'a folder without a readable clone, which `list -g` does not show either'
-        seedDirs('acme/empty')
 
         when:
         new CmdPipelineList(root: base.resolve('project')).run()
@@ -140,22 +126,14 @@ class CmdPipelineUserLevelTest extends Specification {
         ['acme/foo', 'nextflow-io/hello']   | ['No pipelines installed', '2 pipelines are installed in the user-level store -- use `nextflow pipeline list -g` to list them']
     }
 
-    def 'should not accept -g when viewing a pipeline'() {
-        when:
-        new JCommander(new CmdPipelineView()).parse('-g', 'acme/hello')
-        then:
-        thrown(ParameterException)
-    }
-
     def 'should map a registry page URL to the registry name in the user-level store'() {
         given:
         final launcher = new Launcher().parseMainArgs('pipeline')
-        final cmd = new CmdPipelineView(launcher: launcher)
 
-        expect:
-        PipelineCmdSupport.userLevelName(cmd, 'https://registry.nextflow.io/pipelines/nf-core/demo') == 'nf-core/demo'
-        PipelineCmdSupport.userLevelName(cmd, 'nf-core/demo') == 'nf-core/demo'
-        PipelineCmdSupport.userLevelName(cmd, 'https://github.com/nf-core/demo') == 'https://github.com/nf-core/demo'
+        when:
+        new CmdPipelineRemove(launcher: launcher, args: ['https://registry.nextflow.io/pipelines/nf-core/demo'], global: true).run()
+        then:
+        stdout() == ['Pipeline nf-core/demo is not installed in the user-level store']
     }
 
     def 'should remove a pipeline from the user-level store'() {
@@ -201,19 +179,6 @@ class CmdPipelineUserLevelTest extends Specification {
 
         cleanup:
         manager?.close()
-    }
-
-    def 'should hide the deprecated project commands'() {
-        when:
-        new Launcher().printCommands([new CmdClone(), new CmdDrop(), new CmdInfo(), new CmdList(), new CmdPipeline(), new CmdPull(), new CmdView()])
-        then:
-        capture.toString() == '''
-                Commands:
-                  info       Print system runtime information
-                  pipeline   Manage pipelines
-
-                '''
-                .stripIndent()
     }
 
     def 'should not show the project options in the help of info'() {
@@ -601,16 +566,6 @@ class CmdPipelineUserLevelTest extends Specification {
         (new JsonSlurper().parseText(stdout().join('\n')) as Map).pipelines == [
             [name: 'acme/hello', version: 'master', commit: commit, status: 'ok', path: dir.toString(), repositoryUrl: 'https://github.com/acme/hello.git']
         ]
-    }
-
-    def 'should not accept -version when removing a pipeline'() {
-        when:
-        new JCommander(new CmdPipelineRemove()).parse(ARGS as String[])
-        then:
-        thrown(ParameterException)
-
-        where:
-        ARGS << [['-g', '-version', '1.0.0', 'acme/hello'], ['-g', '-r', '1.0.0', 'acme/hello']]
     }
 
     def 'should remove every revision from the user-level store'() {

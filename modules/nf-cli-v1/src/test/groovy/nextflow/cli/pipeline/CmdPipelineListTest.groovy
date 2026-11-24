@@ -19,8 +19,8 @@ package nextflow.cli.pipeline
 import java.nio.file.Files
 import java.nio.file.Path
 
-import com.beust.jcommander.ParameterException
 import groovy.json.JsonSlurper
+import nextflow.exception.AbortOperationException
 import nextflow.pipeline.PipelineInfo
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -78,7 +78,7 @@ class CmdPipelineListTest extends Specification {
         given:
         def dir = base.resolve('pipelines/acme/bare')
         Files.createDirectories(dir)
-        Files.writeString(dir.resolve('.pipeline-info'), 'registryUrl=x\n')
+        Files.writeString(dir.resolve('.pipeline-info'), 'checksum=x\n')
         def cmd = new CmdPipelineList(root: base)
 
         when:
@@ -99,10 +99,10 @@ class CmdPipelineListTest extends Specification {
 
     def 'should reject the simple output mode'() {
         when:
-        new CmdPipelineList.OutputModeValidator().validate('-o', 'simple')
+        new CmdPipelineList(output: 'simple').run()
 
         then:
-        def e = thrown(ParameterException)
+        def e = thrown(AbortOperationException)
         e.message == 'Output mode must be one of [text, json] (found: simple)'
     }
 }

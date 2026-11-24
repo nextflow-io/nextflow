@@ -68,9 +68,13 @@ class PipelineManager {
         return name && NAME_PATTERN.matcher(name).matches()
     }
 
-    Path pipelineDir(String name) {
+    private static void checkName(String name) {
         if( !isValidName(name) )
             throw new AbortOperationException("Invalid pipeline name '$name' -- expected <scope>/<name>, e.g. nf-core/rnaseq")
+    }
+
+    Path pipelineDir(String name) {
+        checkName(name)
         return baseDir.resolve(RemoteModuleResolver.PIPELINES_DIR).resolve(name)
     }
 
@@ -220,8 +224,7 @@ class PipelineManager {
      * Fails with {@link PipelineNotFoundException} when the pipeline is missing, and with {@link AbortOperationException} on any other error.
      */
     static RegistryRelease fetchRelease(RegistryClient client, String name, String version) {
-        if( !isValidName(name) )
-            throw new AbortOperationException("Invalid pipeline name '$name' -- expected <scope>/<name>, e.g. nf-core/rnaseq")
+        checkName(name)
         Pipeline pipeline = null
         try {
             pipeline = client.getPipeline(name)
@@ -267,7 +270,6 @@ class PipelineManager {
             version: release.version,
             repositoryUrl: pipeline.repositoryUrl,
             revision: release.gitRevision,
-            commitId: release.commitId,
-            registryUrl: client.primaryUrl())
+            commitId: release.commitId)
     }
 }

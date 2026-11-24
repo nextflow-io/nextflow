@@ -1377,14 +1377,13 @@ class AssetManagerTest extends Specification {
         when:
         def revisions = new AssetManager('local/hello').withCloseable { it.listDownloadedRevisions() }
 
-        then: 'tags before branches, the default branch first, and no tag named after a commit'
-        revisions.collect { [it.localPath.name, it.commitId, it.names, it.clean] }.sort { it[0] } == [
-            [v1, v1, ['v1.0.0'], false],
-            [v2, v2, ['v2.0.0', 'master', 'dev'], true],
-            [v2tag, v2, ['v2.0.0', 'master', 'dev'], true],
+        then: 'the tag before the branches, and no tag named after a commit'
+        revisions.collect { [it.localPath.name, it.commitId, it.name, it.clean] }.sort { it[0] } == [
+            [v1, v1, 'v1.0.0', false],
+            [v2, v2, 'v2.0.0', true],
+            [v2tag, v2, 'v2.0.0', true],
         ].sort { it[0] }
         revisions.find { it.localPath.name == v1 }.localPath == clones.resolve(v1).toFile()
-        revisions.find { it.localPath.name == v1 }.name == 'v1.0.0'
     }
 
     def 'should list the checked-out revision of a legacy download' () {
@@ -1403,7 +1402,7 @@ class AssetManagerTest extends Specification {
         def revisions = new AssetManager('acme/hello').withCloseable { it.listDownloadedRevisions() }
 
         then:
-        revisions.collect { [it.commitId, it.names, it.localPath, it.clean] } == [[commit, ['master'], dir, true]]
+        revisions.collect { [it.commitId, it.name, it.localPath, it.clean] } == [[commit, 'master', dir, true]]
     }
 
     def 'should list no revision of a pipeline that is not downloaded' () {

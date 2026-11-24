@@ -384,16 +384,7 @@ class AssetManager implements Closeable {
 
     }
 
-    /**
-     * Reconcile the Git project of a project cached under a local name (i.e. a registry
-     * pipeline) with the one of its local clone. Given as a URL, a clone of a different
-     * repository is an error. Given as a plain name (offline), the clone decides.
-     *
-     * Plain Git runs are not checked: some providers (e.g. Bitbucket Server) use a
-     * different path in the clone URL than in the project URL.
-     *
-     * @param fromUrl Whether the Git project was given as a URL
-     */
+    /** Check that the clone of a project cached under a local name has the given repository URL; offline, the clone decides */
     private void checkRemoteProject(boolean fromUrl) {
         final cloned = getClonedProject()
         // Git hosts match names ignoring the case, and the clone URL uses the host's spelling
@@ -1195,14 +1186,12 @@ class AssetManager implements Closeable {
     static class DownloadedRevision {
         /** The checked-out commit */
         String commitId
-        /** The tags, then the branches, at the commit */
-        List<String> names
+        /** The tag or branch at the commit, or {@code null} */
+        String name
         /** The clone holding the revision */
         File localPath
         /** Whether the clone has no local changes */
         boolean clean
-
-        String getName() { names ? names[0] : null }
     }
 
     /**
@@ -1229,7 +1218,7 @@ class AssetManager implements Closeable {
                 final commit = git.repository.resolve('HEAD^{commit}')?.name()
                 if( !commit )
                     throw new IllegalStateException("no checked-out commit")
-                result << new DownloadedRevision(commit, refNamesAt(commit, dir.name, tags, branches, defaultBranch), dir, git.status().call().isClean())
+                result << new DownloadedRevision(commit, refNameAt(commit, dir.name, tags, branches, defaultBranch), dir, git.status().call().isClean())
             }
             catch( Exception e ) {
                 log.warn "Unable to read the revision of ${project} in ${dir} -- cause: ${e.message ?: e}"
@@ -1238,24 +1227,21 @@ class AssetManager implements Closeable {
         return result
     }
 
-    /**
-     * The tags, then the branches, at a commit. The multi-revision strategy names the clone of an annotated tag after the tag object,
-     * so that tag comes first. Tags named after a commit, created when downloading a commit, are skipped.
-     */
-    private static List<String> refNamesAt(String commit, String cloneName, List<Ref> tags, List<Ref> branches, String defaultBranch) {
+    /** The tag, else the branch, at a commit: the tag the clone is named after first, the default branch first, and no tag named after a commit */
+    private static String refNameAt(String commit, String cloneName, List<Ref> tags, List<Ref> branches, String defaultBranch) {
         final tagNames = tags
             .findAll { Ref it -> (it.peeledObjectId ?: it.objectId)?.name() == commit }
             .sort { Ref a, Ref b -> (a.objectId?.name() == cloneName ? 0 : 1) <=> (b.objectId?.name() == cloneName ? 0 : 1) ?: a.name <=> b.name }
             .collect { Ref it -> shortenRefName(it.name) }
             .findAll { String it -> !(it ==~ /[0-9a-f]{40}/) }
+        if( tagNames )
+            return tagNames[0]
         final branchNames = branches
             .findAll { Ref it -> it.objectId?.name() == commit }
             .collect { Ref it -> shortenRefName(it.name) }
-            .unique()
             .sort { String a, String b -> (a == defaultBranch ? 0 : 1) <=> (b == defaultBranch ? 0 : 1) ?: a <=> b }
-        return (tagNames + branchNames) as List<String>
+        return branchNames ? branchNames[0] : null
     }
-
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath

@@ -47,36 +47,29 @@ class PipelineGitFetcherTest extends Specification {
         url = repo.toUri().toString()
     }
 
-    def 'fetches the tag and removes .git'() {
-        given:
-        def target = dir.resolve('target')
-        when:
-        new PipelineGitFetcher().fetch(url, '1.0', sha1, target)
-        then:
-        target.resolve('main.nf').text == 'one'
-        !Files.exists(target.resolve('.git'))
+    // the commits are created in setup, so the tables name them
+    private String sha(String value) {
+        value == 'SHA1' ? sha1 : value == 'SHA2' ? sha2 : value
     }
 
-    def 'fetches a commit sha revision'() {
+    def 'fetches the pinned commit, else the revision, and removes .git'() {
         given:
         def target = dir.resolve('target')
         when:
-        new PipelineGitFetcher().fetch(url, sha2, sha2, target)
+        def commit = new PipelineGitFetcher().fetch(url, sha(REVISION), sha(COMMIT_ID), target)
         then:
-        target.resolve('main.nf').text == 'two'
-        !Files.exists(target.resolve('.git'))
-    }
-
-    def 'fetches the pinned commit when the revision is blank'() {
-        given:
-        def target = dir.resolve('target')
-        when:
-        new PipelineGitFetcher().fetch(url, revision, sha1, target)
-        then:
-        target.resolve('main.nf').text == 'one'
+        commit == sha(EXPECTED)
+        target.resolve('main.nf').text == (EXPECTED == 'SHA1' ? 'one' : 'two')
         !Files.exists(target.resolve('.git'))
         where:
-        revision << [null, '']
+        REVISION | COMMIT_ID | EXPECTED
+        '1.0'    | 'SHA1'    | 'SHA1'   // a tag
+        'SHA2'   | 'SHA2'    | 'SHA2'   // a commit sha
+        null     | 'SHA1'    | 'SHA1'   // no revision
+        ''       | 'SHA1'    | 'SHA1'
+        'master' | 'SHA1'    | 'SHA1'   // the revision has moved
+        '1.0'    | null      | 'SHA1'   // no commit id
+        '1.0'    | ''        | 'SHA1'
     }
 
     def 'fails clearly when there is neither a revision nor a commit id'() {
@@ -85,29 +78,6 @@ class PipelineGitFetcherTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('neither a git revision nor a commit id')
-        where:
-        commitId << [null, '']
-    }
-
-    def 'fetches the pinned commit when the revision has moved'() {
-        given:
-        def target = dir.resolve('target')
-        when:
-        def commit = new PipelineGitFetcher().fetch(url, 'master', sha1, target)
-        then:
-        commit == sha1
-        target.resolve('main.nf').text == 'one'
-    }
-
-    def 'fetches the revision when there is no commit id'() {
-        given:
-        def target = dir.resolve('target')
-        when:
-        def commit = new PipelineGitFetcher().fetch(url, '1.0', commitId, target)
-        then:
-        commit == sha1
-        target.resolve('main.nf').text == 'one'
-        !Files.exists(target.resolve('.git'))
         where:
         commitId << [null, '']
     }

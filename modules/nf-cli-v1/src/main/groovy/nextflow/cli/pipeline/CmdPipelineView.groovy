@@ -16,9 +16,7 @@
 
 package nextflow.cli.pipeline
 
-import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -43,23 +41,8 @@ class CmdPipelineView extends CmdBase {
     @Parameter(names = ["-r"], hidden = true)
     String revision
 
-    @Parameter(
-        names = ['-o', '-output'],
-        description = 'Output mode: text, json',
-        validateWith = OutputModeValidator
-    )
+    @Parameter(names = ['-o', '-output'], description = 'Output mode: text, json')
     String output = 'text'
-
-    static class OutputModeValidator implements IParameterValidator {
-
-        private static final List<String> MODES = List.of('text', 'json')
-
-        @Override
-        void validate(String name, String value) {
-            if( !MODES.contains(value) )
-                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
-        }
-    }
 
     @Parameter(description = "<scope/name>", required = true)
     List<String> args
@@ -74,6 +57,7 @@ class CmdPipelineView extends CmdBase {
 
     @Override
     void run() {
+        PipelineCmdSupport.checkOutputMode(output, ['text', 'json'])
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 

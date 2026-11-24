@@ -33,7 +33,7 @@ import nextflow.module.spi.RemoteModuleResolver
 @CompileStatic
 class PipelineInfo {
 
-    private static final List<String> FIELDS = ['name', 'version', 'repositoryUrl', 'revision', 'commitId', 'checksum', 'registryUrl']
+    private static final List<String> FIELDS = ['name', 'version', 'repositoryUrl', 'revision', 'commitId', 'checksum']
 
     String name
     String version
@@ -41,7 +41,6 @@ class PipelineInfo {
     String revision
     String commitId
     String checksum
-    String registryUrl
 
     static PipelineInfo load(Path dir) {
         final file = dir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)

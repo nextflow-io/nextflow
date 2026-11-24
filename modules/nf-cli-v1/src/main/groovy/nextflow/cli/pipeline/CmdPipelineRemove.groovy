@@ -58,7 +58,9 @@ class CmdPipelineRemove extends CmdBase {
             throw new AbortOperationException("Unexpected number of parameters")
         PipelineCmdSupport.checkPipelineName(args[0], null)
         if( global ) {
-            removeUserLevel(PipelineCmdSupport.userLevelName(this, args[0]))
+            // a registry pipeline is cached under its registry name
+            final address = PipelineCmdSupport.registryAddress(args[0], null) { PipelineCmdSupport.registryConfig(this) }
+            removeUserLevel(address ? address.name : args[0])
             return
         }
         final manager = new PipelineManager(root ?: Path.of('.').toAbsolutePath().normalize(), null)
@@ -67,12 +69,8 @@ class CmdPipelineRemove extends CmdBase {
             return
         }
         println "Pipeline ${args[0]} is not installed"
-        if( isInUserLevelStore(args[0]) )
+        if( AssetManager.list().contains(args[0]) )
             println "Pipeline ${args[0]} is installed in the user-level store -- use `nextflow pipeline remove -g ${args[0]}` to remove it"
-    }
-
-    private static boolean isInUserLevelStore(String name) {
-        return AssetManager.list().contains(name)
     }
 
     private void removeUserLevel(String name) {

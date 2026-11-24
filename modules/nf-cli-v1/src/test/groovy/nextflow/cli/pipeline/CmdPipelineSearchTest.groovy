@@ -16,7 +16,6 @@
 
 package nextflow.cli.pipeline
 
-import com.beust.jcommander.ParameterException
 import groovy.json.JsonSlurper
 import io.seqera.npr.api.schema.v1.ListPipelinesResponse
 import io.seqera.npr.api.schema.v1.PipelineMetadata
@@ -85,34 +84,12 @@ class CmdPipelineSearchTest extends Specification {
         capture.toString().contains('No pipelines found')
     }
 
-    def 'should read pages until the limit when the server caps the page size'() {
-        given:
-        def command = cmd()
-        command.limit = 150
-        def page = { int from, int count ->
-            new ListPipelinesResponse().last(false).pipelines((from..<from + count).collect {
-                new PipelineSummary().name("acme/p$it".toString()).latestVersion('1.0.0')
-            })
-        }
-
-        when:
-        command.run()
-
-        then:
-        1 * client.listPipelines('rnaseq', 1, 150) >> page(0, 100)
-        1 * client.listPipelines('rnaseq', 2, 150) >> page(100, 100)
-        0 * client.listPipelines(*_)
-        capture.toString().contains('Top 150 matching pipeline(s):')
-        capture.toString().contains('  acme/p149\n')
-        !capture.toString().contains('  acme/p150\n')
-    }
-
     def 'should reject the text output mode'() {
         when:
-        new CmdPipelineSearch.OutputModeValidator().validate('-o', 'text')
+        cmd('text').run()
 
         then:
-        def e = thrown(ParameterException)
+        def e = thrown(AbortOperationException)
         e.message == 'Output mode must be one of [simple, json] (found: text)'
     }
 

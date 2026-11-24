@@ -100,7 +100,7 @@ class CmdPipelineInstall extends CmdBase {
         final config = PipelineCmdSupport.registryConfig(this)
         final isUrl = AssetManager.isUrl(name)
         // a page URL addresses its own registry, a name the configured registries as for project-level installs
-        final address = isUrl ? PipelineCmdSupport.registryAddress(name, null, '-version') { config } : null
+        final address = isUrl ? PipelineCmdSupport.registryAddress(name, null) { config } : null
         if( !isUrl || address ) {
             final client = this.client ?: (address ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(config))
             final release = resolveRelease(client, address ? address.name : name, version)
@@ -127,13 +127,7 @@ class CmdPipelineInstall extends CmdBase {
         }
     }
 
-    /**
-     * Warn that installing a revision of a legacy download replaces its single revision, unless it is the checked-out one
-     *
-     * @param label The revision as shown to the user
-     * @param revision The revision to install: a name or a commit, or {@code null} to update the checked-out branch
-     * @return the checked-out commit of the legacy download, or {@code null} when it is not one
-     */
+    /** Warn that installing into a legacy download replaces its single revision; returns its checked-out commit, or {@code null} when it is not one */
     private static String warnLegacy(AssetManager manager, String label, String revision) {
         if( !manager.isUsingLegacyStrategy() || !manager.localPath?.exists() )
             return null
@@ -143,12 +137,7 @@ class CmdPipelineInstall extends CmdBase {
         return current?.commitId
     }
 
-    /**
-     * Download a revision into the user-level store
-     *
-     * @param legacyCommit The checked-out commit of a legacy download, or {@code null}
-     * @return whether the revision was already downloaded
-     */
+    /** Download a revision into the user-level store, returning whether it was already downloaded */
     private static boolean download(AssetManager manager, String revision, String legacyCommit) {
         final result = manager.download(revision)
         manager.updateModules()

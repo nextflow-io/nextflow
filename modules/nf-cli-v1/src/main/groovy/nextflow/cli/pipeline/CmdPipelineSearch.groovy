@@ -16,13 +16,10 @@
 
 package nextflow.cli.pipeline
 
-import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
-import io.seqera.npr.api.schema.v1.ListPipelinesResponse
 import io.seqera.npr.api.schema.v1.PipelineSummary
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
@@ -42,23 +39,8 @@ class CmdPipelineSearch extends CmdBase {
     @Parameter(names = ["-limit"], description = "Maximum number of results")
     int limit = 20
 
-    @Parameter(
-        names = ['-o', '-output'],
-        description = 'Output mode: simple, json',
-        validateWith = OutputModeValidator
-    )
+    @Parameter(names = ['-o', '-output'], description = 'Output mode: simple, json')
     String output = 'simple'
-
-    static class OutputModeValidator implements IParameterValidator {
-
-        private static final List<String> MODES = List.of('simple', 'json')
-
-        @Override
-        void validate(String name, String value) {
-            if( !MODES.contains(value) )
-                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
-        }
-    }
 
     @Parameter(description = "<query>", required = true)
     List<String> args
@@ -73,6 +55,7 @@ class CmdPipelineSearch extends CmdBase {
 
     @Override
     void run() {
+        PipelineCmdSupport.checkOutputMode(output, ['simple', 'json'])
         if( !args || args.size() != 1 )
             throw new AbortOperationException("Unexpected number of parameters")
 
@@ -109,26 +92,13 @@ class CmdPipelineSearch extends CmdBase {
         }
     }
 
-    /**
-     * The server caps the page size (100), so read pages until {@code limit} results or the last page.
-     * The same size is sent on every page so the server's page offsets stay consistent.
-     */
+    // the server caps the page size at 100
     private List<PipelineSummary> fetch(RegistryClient client, String query) {
-        final result = new ArrayList<PipelineSummary>()
-        for( int page = 1; result.size() < limit; page++ ) {
-            final ListPipelinesResponse response
-            try {
-                response = client.listPipelines(query, page, limit)
-            }
-            catch( RegistryException e ) {
-                throw PipelineManager.registryError(client, e)
-            }
-            if( !response?.pipelines )
-                break
-            result.addAll(response.pipelines)
-            if( response.last )
-                break
+        try {
+            return client.listPipelines(query, 1, limit)?.pipelines ?: []
         }
-        return result.take(limit)
+        catch( RegistryException e ) {
+            throw PipelineManager.registryError(client, e)
+        }
     }
 }

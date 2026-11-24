@@ -140,7 +140,7 @@ public class ModuleResolver {
             return getIncludeUri(uri, node, projectDir);
         }
         catch( Exception e ) {
-            // the remote resolver may throw a checked exception (e.g. from Groovy), rethrown as-is
+            // a Groovy remote resolver may throw a checked exception
             includeFailures.put(key, e);
             throw sneakyThrow(e);
         }

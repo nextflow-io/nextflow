@@ -54,16 +54,9 @@ class PipelineCmdSupport {
         return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
     }
 
-    /**
-     * The name of a pipeline in the user-level store, where a registry pipeline is cached under its registry name.
-     * Used by commands that take no version.
-     *
-     * @param name A pipeline name or a registry page URL
-     */
-    static String userLevelName(CmdBase cmd, String name) {
-        checkPipelineName(name, null)
-        final address = registryAddress(name, null, null) { registryConfig(cmd) }
-        return address ? address.name : name
+    static void checkOutputMode(String output, List<String> modes) {
+        if( output !in modes )
+            throw new AbortOperationException("Output mode must be one of $modes (found: $output)")
     }
 
     /**
@@ -101,13 +94,6 @@ class PipelineCmdSupport {
      * @return the registry address, or {@code null} when {@code name} and {@code hub} address Git
      */
     static RegistryAddress registryAddress(String name, String hub, Closure<RegistryConfig> registryConfig) {
-        return registryAddress(name, hub, '-r', registryConfig)
-    }
-
-    /**
-     * @param versionOption The option that gives the version, suggested when the address includes one, or {@code null} when the command takes no version
-     */
-    static RegistryAddress registryAddress(String name, String hub, String versionOption, Closure<RegistryConfig> registryConfig) {
         final isUrl = AssetManager.isUrl(name)
         hub = hub ?: SysEnv.get('NXF_HUB')
         // cheap checks first, so that Git addresses never read the config
@@ -137,19 +123,19 @@ class PipelineCmdSupport {
             final prefix = (URI.create(pageUrl(api)).path ?: '') + '/pipelines/'
             if( !uri.path.startsWith(prefix) )
                 return null
-            return newAddress(api, uri.path.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey, versionOption)
+            return newAddress(api, uri.path.substring(prefix.length()).replaceFirst(/\/$/, ''), apiKey)
         }
         if( !api ) {
             final hosts = registries.collect { URI.create(it).authority }.unique()
             throw new AbortOperationException("Unknown repository provider or registry: `$hub` -- providers: ${providers.join(', ')}; registries: ${hosts.join(', ')}")
         }
-        return newAddress(api, name, apiKey, versionOption)
+        return newAddress(api, name, apiKey)
     }
 
     // checked here rather than when resolving the release, so that it applies offline too
-    private static RegistryAddress newAddress(String api, String name, String apiKey, String versionOption) {
+    private static RegistryAddress newAddress(String api, String name, String apiKey) {
         if( name.contains('@') )
-            throw new AbortOperationException("Not a valid registry pipeline address: ${name}" + (versionOption ? " -- give the version with the `${versionOption}` option" : ''))
+            throw new AbortOperationException("Not a valid registry pipeline address: ${name} -- give the version with the `-r`/`-version` option")
         return new RegistryAddress(api, name, apiKey)
     }
 

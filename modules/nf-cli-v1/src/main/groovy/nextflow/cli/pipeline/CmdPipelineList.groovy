@@ -18,9 +18,7 @@ package nextflow.cli.pipeline
 
 import java.nio.file.Path
 
-import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -31,6 +29,7 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.StringUtils
 import nextflow.util.TestOnly
+import nextflow.util.VersionNumber
 
 /**
  * Pipeline list subcommand
@@ -40,19 +39,8 @@ import nextflow.util.TestOnly
 @Parameters(commandDescription = "List installed pipelines")
 class CmdPipelineList extends CmdBase {
 
-    @Parameter(names = ['-o', '-output'], description = 'Output mode: text, json', validateWith = OutputModeValidator)
+    @Parameter(names = ['-o', '-output'], description = 'Output mode: text, json')
     String output = 'text'
-
-    static class OutputModeValidator implements IParameterValidator {
-
-        private static final List<String> MODES = List.of('text', 'json')
-
-        @Override
-        void validate(String name, String value) {
-            if( !MODES.contains(value) )
-                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
-        }
-    }
 
     @Parameter(names = ['-g', '-global'], description = 'List the pipelines in the user-level store used by `nextflow run`', arity = 0)
     boolean global
@@ -67,6 +55,7 @@ class CmdPipelineList extends CmdBase {
 
     @Override
     void run() {
+        PipelineCmdSupport.checkOutputMode(output, ['text', 'json'])
         if( global ) {
             listUserLevel()
             return
@@ -81,7 +70,7 @@ class CmdPipelineList extends CmdBase {
         }
         if( !rows ) {
             println "No pipelines installed"
-            final count = userLevelRows().collect { it.name }.unique().size()
+            final count = AssetManager.list().size()
             if( count )
                 println "${count} ${count == 1 ? 'pipeline is' : 'pipelines are'} installed in the user-level store -- use `nextflow pipeline list -g` to list them"
             return
@@ -129,22 +118,9 @@ class CmdPipelineList extends CmdBase {
 
     /** Compares versions by their numeric parts as numbers and the other parts as text; a revision without a version comes last */
     protected static int compareVersions(String a, String b) {
-        if( a == b )
-            return 0
-        if( a == null )
-            return 1
-        if( b == null )
-            return -1
-        final ta = (a =~ /\d+|\D+/).collect { it as String }
-        final tb = (b =~ /\d+|\D+/).collect { it as String }
-        for( int i = 0; i < Math.min(ta.size(), tb.size()); i++ ) {
-            final x = ta[i]
-            final y = tb[i]
-            final cmp = x ==~ /\d+/ && y ==~ /\d+/ ? new BigInteger(x) <=> new BigInteger(y) : x <=> y
-            if( cmp )
-                return cmp
-        }
-        return ta.size() <=> tb.size() ?: a <=> b
+        if( a == null || b == null )
+            return a == b ? 0 : a == null ? 1 : -1
+        return new VersionNumber(a) <=> new VersionNumber(b)
     }
 
     private static Map<String,Object> row(String name, String version, String commit, boolean modified, Path path, String repositoryUrl) {

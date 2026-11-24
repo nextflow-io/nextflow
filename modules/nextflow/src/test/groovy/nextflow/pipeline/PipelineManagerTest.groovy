@@ -54,14 +54,12 @@ class PipelineManagerTest extends Specification {
         def main = manager().resolve('nf-core/rnaseq')
         then:
         1 * client.getPipeline('nf-core/rnaseq') >> pipeline(release('3.14.0'))
-        client.primaryUrl() >> 'https://reg.io'
         1 * fetcher.fetch('https://github.com/nf-core/rnaseq', '3.14.0', 'abc', _) >> { args -> args[3].resolve('main.nf').text = 'hello' }
         and:
         main == base.resolve('pipelines/nf-core/rnaseq/main.nf')
         def info = PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq'))
         info.version == '3.14.0'
         info.commitId == 'abc'
-        info.registryUrl == 'https://reg.io'
         info.checksum
     }
 
@@ -247,7 +245,7 @@ class PipelineManagerTest extends Specification {
         given:
         def bare = base.resolve('pipelines/acme/bare')
         Files.createDirectories(bare)
-        bare.resolve('.pipeline-info').text = 'registryUrl=x\n'
+        bare.resolve('.pipeline-info').text = 'checksum=x\n'
         def bad = base.resolve('pipelines/acme/bad')
         Files.createDirectories(bad)
         bad.resolve('.pipeline-info').text = 'name=../evil\n'
@@ -372,26 +370,6 @@ class PipelineManagerTest extends Specification {
         m.remove('nf-core/rnaseq', true)
     }
 
-    def 'ignores a workflowPath key in an old .pipeline-info'() {
-        given:
-        def m = manager()
-        client.getPipeline(_) >> pipeline(release('1.0.0'))
-        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
-        m.install('nf-core/rnaseq', null, false)
-        def dir = m.pipelineDir('nf-core/rnaseq')
-        def file = dir.resolve('.pipeline-info')
-        file.text = file.text + 'workflowPath=workflows/x.nf\n'
-
-        when:
-        def main = m.resolve('nf-core/rnaseq')
-        def info = PipelineInfo.load(dir)
-        then:
-        0 * client._
-        main == dir.resolve('main.nf')
-        info.version == '1.0.0'
-        !info.isModified(dir)
-        m.install('nf-core/rnaseq', null, false).alreadyInstalled()
-    }
     def 'should resolve a registry release' () {
         given:
         def latest = new PipelineRelease().version('3.14.0').gitRevision('3.14.0').commitId('abc123')
