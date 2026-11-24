@@ -57,11 +57,21 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private Compiler compiler;
 
+    private ModuleResolver moduleResolver;
+
     private Set<URI> changedUris;
 
     private List<SyntaxErrorMessage> errors = new ArrayList<>();
 
     private boolean changed;
+
+    /**
+     * @param moduleResolver the resolver of this compile, whose failure cache is shared (may be null)
+     */
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler, ModuleResolver moduleResolver) {
+        this(sourceUnit, projectDir, compiler, (Set<URI>) null);
+        this.moduleResolver = moduleResolver;
+    }
 
     public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler, Set<URI> changedUris) {
         this.sourceUnit = sourceUnit;
@@ -72,7 +82,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     }
 
     public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler) {
-        this(sourceUnit, projectDir, compiler, null);
+        this(sourceUnit, projectDir, compiler, (Set<URI>) null);
     }
 
     @Override
@@ -96,7 +106,9 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
         URI includeUri;
         try {
-            includeUri = ModuleResolver.getIncludeUri(uri, source, projectDir);
+            includeUri = moduleResolver != null
+                ? moduleResolver.getIncludeUri(uri, node)
+                : ModuleResolver.getIncludeUri(uri, node, projectDir);
         }
         catch( Exception e ) {
             addError(e.getMessage(), node);

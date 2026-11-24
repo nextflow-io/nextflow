@@ -37,7 +37,11 @@ class CmdList extends CmdBase {
     final String getName() { NAME }
 
     @Override
+    boolean isHidden() { true }
+
+    @Override
     void run() {
+        log.warn "The `list` command is deprecated -- use `nextflow pipeline list -g` instead"
 
         def all = AssetManager.list()
         if( !all ) {

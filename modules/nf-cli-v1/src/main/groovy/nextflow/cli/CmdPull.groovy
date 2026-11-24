@@ -57,7 +57,11 @@ class CmdPull extends CmdBase implements HubAware {
     protected File root
 
     @Override
+    boolean isHidden() { true }
+
+    @Override
     void run() {
+        log.warn "The `pull` command is deprecated -- use `nextflow pipeline install -g` instead (with a Git URL for pipelines not in the registry)"
 
         if( !all && !args )
             throw new AbortOperationException('Missing argument')

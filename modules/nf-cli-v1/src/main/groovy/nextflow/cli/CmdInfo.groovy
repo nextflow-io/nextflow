@@ -76,6 +76,7 @@ class CmdInfo extends CmdBase {
             return
         }
 
+        log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline list -g -o json` instead"
         Plugins.init()
         try (final manager = new AssetManager(args[0])) {
             if( manager.isNotInitialized() ) {

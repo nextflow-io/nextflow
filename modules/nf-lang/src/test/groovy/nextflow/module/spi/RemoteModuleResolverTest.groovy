@@ -32,6 +32,20 @@ class RemoteModuleResolverTest extends Specification {
     @TempDir
     Path projectDir
 
+    def 'should find the pipeline root of a vendored module, bounded by the project dir'() {
+        given:
+        def pipeline = projectDir.resolve('pipelines/a/b')
+        def moduleDir = pipeline.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(moduleDir)
+        pipeline.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
+        projectDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=outer\n'
+
+        expect:
+        RemoteModuleResolver.findPipelineRoot(moduleDir, projectDir) == pipeline
+        and: 'a dir outside any pipeline falls back to the project dir'
+        RemoteModuleResolver.findPipelineRoot(projectDir.resolve('modules/x'), projectDir.resolve('pipelines')) == projectDir.resolve('pipelines')
+    }
+
     def 'should resolve an include in a module script against the module directory'() {
         given:
         def moduleDir = projectDir.resolve('modules/nf-core/my-workflow')
@@ -81,4 +95,64 @@ class RemoteModuleResolverTest extends Specification {
         RemoteModuleResolver.resolveBaseDir(URI.create('untitled:Untitled-1'), projectDir) == projectDir
     }
 
+    def 'should resolve against the nearest pipeline root'() {
+        given:
+        def root = projectDir.resolve('pipelines/nf-core/rnaseq')
+        Files.createDirectories(root.resolve('subworkflows/local'))
+        Files.createFile(root.resolve('.pipeline-info'))
+        expect:
+        RemoteModuleResolver.resolveBaseDir(root.resolve('main.nf'), projectDir) == root
+        RemoteModuleResolver.resolveBaseDir(root.resolve('subworkflows/local/align.nf'), projectDir) == root
+    }
+
+    def 'should prefer a vendored module dir inside a pipeline root'() {
+        given:
+        def root = projectDir.resolve('pipelines/nf-core/rnaseq')
+        def wf = root.resolve('modules/nf-core/bam_sort')
+        Files.createDirectories(wf)
+        Files.createFile(root.resolve('.pipeline-info'))
+        expect:
+        RemoteModuleResolver.resolveBaseDir(wf.resolve('main.nf'), projectDir) == wf
+    }
+
+    def 'should resolve a nested pipeline against its own root'() {
+        given:
+        def outer = projectDir.resolve('pipelines/nf-core/a')
+        def inner = outer.resolve('pipelines/nf-core/b')
+        Files.createDirectories(inner)
+        Files.createFile(outer.resolve('.pipeline-info'))
+        Files.createFile(inner.resolve('.pipeline-info'))
+        expect:
+        RemoteModuleResolver.resolveBaseDir(inner.resolve('main.nf'), projectDir) == inner
+    }
+
+    def 'should detect a pipeline include by its entry names'() {
+        expect:
+        RemoteModuleResolver.isPipelineInclude(['workflow'])
+        RemoteModuleResolver.isPipelineInclude(['params'])
+        !RemoteModuleResolver.isPipelineInclude(['FASTQC'])
+    }
+
+    def 'should resolve an installed pipeline to its main.nf'() {
+        given:
+        def resolver = new FallbackRemoteModuleResolver()
+        def dir = Files.createDirectories(projectDir.resolve('pipelines/acme/hello'))
+        if( INFO != null )
+            dir.resolve('.pipeline-info').text = INFO
+
+        expect:
+        resolver.resolvePipeline('acme/hello', projectDir) == dir.resolve('main.nf')
+
+        where:
+        INFO << [null, 'name=acme/hello\n', 'workflowPath=workflows/x.nf\n']
+    }
+
+    def 'should reject a pipeline name that escapes the pipelines directory'() {
+        when:
+        new FallbackRemoteModuleResolver().resolvePipeline('../other', projectDir)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('path escapes the pipelines directory')
+    }
 }

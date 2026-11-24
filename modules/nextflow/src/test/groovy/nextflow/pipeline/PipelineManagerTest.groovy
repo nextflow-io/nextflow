@@ -1,0 +1,463 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.pipeline
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
+
+import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineRelease
+import io.seqera.npr.api.schema.v1.PipelineReleaseStatus
+import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
+import nextflow.exception.AbortOperationException
+import spock.lang.Specification
+import spock.lang.TempDir
+
+class PipelineManagerTest extends Specification {
+
+    @TempDir
+    Path base
+
+    RegistryClient client = Mock(RegistryClient)
+    PipelineGitFetcher fetcher = Mock(PipelineGitFetcher)
+
+    PipelineManager manager() {
+        new PipelineManager(base, client, fetcher)
+    }
+
+    static PipelineRelease release(String version, String commit = 'abc', PipelineReleaseStatus status = PipelineReleaseStatus.PUBLISHED) {
+        new PipelineRelease().version(version).gitRevision(version).commitId(commit).status(status)
+    }
+
+    static Pipeline pipeline(PipelineRelease latest, boolean revoked = false) {
+        new Pipeline().latest(latest).repositoryUrl('https://github.com/nf-core/rnaseq').revoked(revoked)
+    }
+
+    def 'installs latest when missing'() {
+        when:
+        def main = manager().resolve('nf-core/rnaseq')
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline(release('3.14.0'))
+        1 * fetcher.fetch('https://github.com/nf-core/rnaseq', '3.14.0', 'abc', _) >> { args -> args[3].resolve('main.nf').text = 'hello' }
+        and:
+        main == base.resolve('pipelines/nf-core/rnaseq/main.nf')
+        def info = PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq'))
+        info.version == '3.14.0'
+        info.commitId == 'abc'
+        info.checksum
+    }
+
+    def 'records the fetched commit when the release has no commit id'() {
+        when:
+        def info = manager().install('nf-core/rnaseq', null, false).info()
+        then:
+        1 * client.getPipeline(_) >> pipeline(release('1.0.0', null))
+        1 * fetcher.fetch(_, '1.0.0', null, _) >> { args -> args[3].resolve('main.nf').text = 'x'; 'def' }
+        info.commitId == 'def'
+        PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).commitId == 'def'
+    }
+
+    def 'uses installed pipeline without calling the registry'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        m.resolve('nf-core/rnaseq')
+
+        when:
+        def main = m.resolve('nf-core/rnaseq')
+        then:
+        0 * client._
+        0 * fetcher._
+        main == base.resolve('pipelines/nf-core/rnaseq/main.nf')
+    }
+
+    def 'warns and keeps a modified pipeline'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        def main = m.resolve('nf-core/rnaseq')
+        main.text = 'edited'
+
+        when:
+        def again = m.resolve('nf-core/rnaseq')
+        then:
+        0 * client._
+        0 * fetcher._
+        again == main
+        main.text == 'edited'
+    }
+
+    def 'install refuses a modified pipeline without force, replaces it with force'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        def main = m.resolve('nf-core/rnaseq')
+        main.text = 'edited'
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        then:
+        thrown(AbortOperationException)
+        main.text == 'edited'
+
+        when:
+        m.install('nf-core/rnaseq', null, true)
+        then:
+        main.text == 'x'
+    }
+
+    def 'install of the same version and checksum is a no-op'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        1 * fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        m.install('nf-core/rnaseq', null, false)
+
+        when:
+        def result = m.install('nf-core/rnaseq', null, false)
+        then:
+        0 * fetcher._
+        result.alreadyInstalled()
+        result.info().version == '1.0.0'
+    }
+
+    def 'install -version replaces an unmodified different version'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('2.0.0'))
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> release('1.0.0', 'old')
+        fetcher.fetch(_, _, 'old', _) >> { args -> args[3].resolve('main.nf').text = 'old' }
+        fetcher.fetch(_, _, 'abc', _) >> { args -> args[3].resolve('main.nf').text = 'new' }
+        m.install('nf-core/rnaseq', '1.0.0', false)
+
+        when:
+        def result = m.install('nf-core/rnaseq', null, false)
+        then:
+        !result.alreadyInstalled()
+        result.info().version == '2.0.0'
+        base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'new'
+        // no leftover temp dirs
+        Files.list(base.resolve('pipelines/nf-core')).count() == 1
+    }
+
+    def 'failed install leaves no directory'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+
+        when:
+        m.resolve('nf-core/rnaseq')
+        then:
+        1 * fetcher.fetch(*_) >> { args -> args[3].resolve('.git').toFile().mkdirs(); throw new AbortOperationException('boom') }
+        thrown(AbortOperationException)
+        !Files.exists(base.resolve('pipelines/nf-core/rnaseq'))
+        Files.list(base.resolve('pipelines/nf-core')).count() == 0
+
+        when:
+        m.resolve('nf-core/rnaseq')
+        then:
+        1 * fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        Files.exists(base.resolve('pipelines/nf-core/rnaseq/main.nf'))
+    }
+
+    def 'install rejects a release without a top-level main.nf and keeps the existing install'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('2.0.0'))
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> release('1.0.0', 'old')
+        fetcher.fetch(_, _, 'old', _) >> { args -> args[3].resolve('main.nf').text = 'old' }
+        fetcher.fetch(_, _, 'abc', _) >> { args -> args[3].resolve('workflows').toFile().mkdirs(); args[3].resolve('workflows/main.nf').text = 'new' }
+        m.install('nf-core/rnaseq', '1.0.0', false)
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline nf-core/rnaseq@2.0.0 has no main.nf -- a registry pipeline must have a top-level main.nf'
+        base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'old'
+        PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).version == '1.0.0'
+        Files.list(base.resolve('pipelines/nf-core')).count() == 1
+    }
+
+    def 'fails on no published release or a revoked version'() {
+        when:
+        manager().install('nf-core/rnaseq', null, false)
+        then:
+        client.getPipeline(_) >> new Pipeline().repositoryUrl('u')
+        def e = thrown(AbortOperationException)
+        e.message.contains('has no published release')
+
+        when:
+        manager().install('nf-core/rnaseq', '1.0.0', false)
+        then:
+        client.getPipeline(_) >> pipeline(release('2.0.0'))
+        client.getPipelineRelease(_, _) >> release('1.0.0', 'abc', PipelineReleaseStatus.REVOKED)
+        e = thrown(AbortOperationException)
+        e.message.contains('is revoked')
+    }
+
+    def 'rejects invalid pipeline names'() {
+        when:
+        manager().resolve(name)
+        then:
+        0 * client._
+        thrown(AbortOperationException)
+        where:
+        name << ['../x', 'nf-core/a/b', 'NF-core/x', 'x']
+    }
+
+    def 'list returns installed pipelines'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+
+        expect:
+        m.list() == []
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        m.install('acme/tool', null, false)
+        then:
+        m.list()*.info()*.name as Set == ['nf-core/rnaseq', 'acme/tool'] as Set
+    }
+
+    def 'list tolerates a damaged .pipeline-info and skips invalid names'() {
+        given:
+        def bare = base.resolve('pipelines/acme/bare')
+        Files.createDirectories(bare)
+        bare.resolve('.pipeline-info').text = 'checksum=x\n'
+        def bad = base.resolve('pipelines/acme/bad')
+        Files.createDirectories(bad)
+        bad.resolve('.pipeline-info').text = 'name=../evil\n'
+
+        when:
+        def result = manager().list()
+        then:
+        result.size() == 1
+        result[0].dir() == bare
+        result[0].info().name == null
+        result[0].info().version == null
+    }
+
+    def 'list skips in-flight install dirs'() {
+        given:
+        def tmp = base.resolve('pipelines/acme/.tmp-tool-123')
+        Files.createDirectories(tmp)
+        tmp.resolve('.pipeline-info').text = 'name=acme/tool\n'
+
+        expect:
+        manager().list() == []
+    }
+
+    def 'resolve computes the checksum once per pipeline dir'() {
+        given:
+        def calls = new AtomicInteger()
+        def m = new PipelineManager(base, client, fetcher) {
+            @Override
+            protected boolean computeModified(PipelineInfo info, Path dir) {
+                calls.incrementAndGet()
+                return super.computeModified(info, dir)
+            }
+        }
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        m.resolve('nf-core/rnaseq')
+
+        when:
+        m.resolve('nf-core/rnaseq')
+        m.resolve('nf-core/rnaseq')
+        then:
+        calls.get() == 1
+    }
+
+    def 'remove and install -force delete a symlink without following it'() {
+        given:
+        def outside = base.resolve('outside')
+        Files.createDirectories(outside)
+        outside.resolve('keep.txt').text = 'keep'
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args ->
+            args[3].resolve('main.nf').text = 'x'
+            Files.createSymbolicLink(args[3].resolve('link'), outside)
+        }
+        def dir = m.pipelineDir('nf-core/rnaseq')
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        dir.resolve('main.nf').text = 'edited'
+        m.install('nf-core/rnaseq', null, true)
+        then:
+        Files.isSymbolicLink(dir.resolve('link'))
+        outside.resolve('keep.txt').text == 'keep'
+
+        when:
+        def removed = m.remove('nf-core/rnaseq', false)
+        then:
+        removed
+        !Files.exists(dir)
+        outside.resolve('keep.txt').text == 'keep'
+    }
+
+    def 'remove deletes, refuses modified without force'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('1.0.0'))
+        fetcher.fetch(*_) >> { args -> args[3].resolve('main.nf').text = 'x' }
+        m.install('nf-core/rnaseq', null, false)
+        def main = m.pipelineDir('nf-core/rnaseq').resolve('main.nf')
+        main.text = 'edited'
+
+        when:
+        m.remove('nf-core/rnaseq', false)
+        then:
+        thrown(AbortOperationException)
+        Files.exists(main)
+
+        expect:
+        m.remove('nf-core/rnaseq', true)
+        !Files.exists(m.pipelineDir('nf-core/rnaseq'))
+        !m.remove('nf-core/rnaseq', false)
+    }
+
+    def 'uses a pipeline dir without .pipeline-info as it is'() {
+        given:
+        def dir = manager().pipelineDir('nf-core/rnaseq')
+        Files.createDirectories(dir)
+        dir.resolve('main.nf').text = 'x'
+
+        when:
+        def main = manager().resolve('nf-core/rnaseq')
+        then:
+        0 * client._
+        0 * fetcher._
+        main == dir.resolve('main.nf')
+    }
+
+    def 'remove refuses a dir without .pipeline-info unless forced'() {
+        given:
+        def m = manager()
+        def dir = m.pipelineDir('nf-core/rnaseq')
+        Files.createDirectories(dir)
+
+        when:
+        m.remove('nf-core/rnaseq', false)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline nf-core/rnaseq has no registry origin (.pipeline-info missing) -- use -force to remove it'
+
+        expect:
+        m.remove('nf-core/rnaseq', true)
+    }
+
+    def 'should resolve a registry release' () {
+        given:
+        def latest = new PipelineRelease().version('3.14.0').gitRevision('3.14.0').commitId('abc123')
+        def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq').latest(latest)
+
+        when:
+        def result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', null)
+
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
+        0 * client.getPipelineRelease(_, _)
+        result.name == 'nf-core/rnaseq'
+        result.version == '3.14.0'
+        result.repositoryUrl == 'https://github.com/nf-core/rnaseq'
+        result.commitId == 'abc123'
+
+        when:
+        result = PipelineManager.resolveRelease(client, 'nf-core/rnaseq', '3.13.0')
+
+        then:
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline
+        1 * client.getPipelineRelease('nf-core/rnaseq', '3.13.0') >> new PipelineRelease().version('3.13.0').commitId('def456')
+        result.commitId == 'def456'
+    }
+
+    def 'should fail when the registry cannot resolve the release' () {
+        given:
+        def pipeline = new Pipeline().repositoryUrl('https://github.com/nf-core/rnaseq')
+            .latest(new PipelineRelease().version('3.14.0').commitId('abc123').status(STATUS))
+            .revoked(REVOKED)
+        client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline }
+        client.getPipelineRelease('nf-core/rnaseq', 'dev') >> { throw new RegistryException('Not found', 404) }
+
+        when:
+        PipelineManager.resolveRelease(client, NAME, VERSION)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains(MESSAGE)
+
+        where:
+        NAME              | VERSION | PIPELINE_ERROR                          | STATUS                        | REVOKED | MESSAGE
+        'hello'           | null    | null                                    | null                          | false   | 'Invalid pipeline name'
+        'nf-core/rnaseq'  | null    | new RegistryException('Not found', 404) | null                          | false   | 'Pipeline nf-core/rnaseq not found in the registry'
+        'nf-core/rnaseq'  | 'dev'   | null                                    | null                          | false   | 'Version dev of pipeline nf-core/rnaseq not found in the registry'
+        'nf-core/rnaseq'  | null    | null                                    | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
+        'nf-core/rnaseq'  | null    | null                                    | null                          | true    | 'is revoked'
+    }
+
+    def 'should tell a missing pipeline from a missing version and other registry errors' () {
+        given:
+        client.primaryUrl() >> 'https://reg.io/api'
+        client.getPipeline('nf-core/rnaseq') >> { if( PIPELINE_ERROR ) throw PIPELINE_ERROR; pipeline(release('3.14.0')) }
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> { throw RELEASE_ERROR }
+
+        when:
+        PipelineManager.resolveRelease(client, 'nf-core/rnaseq', VERSION)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.class == TYPE
+        e.message == MESSAGE
+
+        where:
+        VERSION | PIPELINE_ERROR                          | RELEASE_ERROR                               | TYPE                                        | MESSAGE
+        null    | new RegistryException('Not found', 404) | null                                        | PipelineManager.PipelineNotFoundException   | 'Pipeline nf-core/rnaseq not found in the registry'
+        '1.0.0' | new RegistryException('Not found', 404) | null                                        | PipelineManager.PipelineNotFoundException   | 'Pipeline nf-core/rnaseq not found in the registry'
+        '1.0.0' | null                                    | new RegistryException('Not found', 404)     | AbortOperationException                     | 'Version 1.0.0 of pipeline nf-core/rnaseq not found in the registry'
+        null    | new RegistryException('Unauthorized', 401) | null                                     | AbortOperationException                     | 'Cannot query registry https://reg.io/api: Unauthorized'
+        '1.0.0' | null                                    | new RegistryException('Server error', 503)  | AbortOperationException                     | 'Cannot query registry https://reg.io/api: Server error'
+    }
+
+    def 'keeps the existing install when the new one cannot be moved in'() {
+        given:
+        def m = Spy(new PipelineManager(base, client, fetcher))
+        client.getPipeline(_) >> pipeline(release('2.0.0'))
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> release('1.0.0', 'old')
+        fetcher.fetch(_, _, 'old', _) >> { args -> args[3].resolve('main.nf').text = 'old' }
+        fetcher.fetch(_, _, 'abc', _) >> { args -> args[3].resolve('main.nf').text = 'new' }
+        m.install('nf-core/rnaseq', '1.0.0', false)
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        then:
+        m.move({ Path it -> !it.fileName.toString().startsWith('rnaseq') && !it.fileName.toString().endsWith('-old') }, _) >> { throw new IOException('boom') }
+        def e = thrown(IOException)
+        e.message == 'boom'
+        base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'old'
+        Files.list(base.resolve('pipelines/nf-core')).count() == 1
+    }
+}

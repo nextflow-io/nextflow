@@ -39,6 +39,9 @@ class CmdView extends CmdBase {
     @Override
     String getName() { NAME }
 
+    @Override
+    boolean isHidden() { true }
+
     @Parameter(description = 'project name', required = true)
     List<String> args = []
 
@@ -53,6 +56,7 @@ class CmdView extends CmdBase {
 
     @Override
     void run() {
+        log.warn "The `view` command is deprecated -- use `nextflow pipeline list -g -o json` to find the local path of a pipeline"
         Plugins.init()
         try (final manager = new AssetManager(args[0], revision)) {
             if( !manager.isLocal() )

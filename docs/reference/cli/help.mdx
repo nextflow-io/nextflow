@@ -25,16 +25,16 @@ Print the command usage.
 
 ## Examples
 
-Print the help for the `drop` command:
+Print the help for the `self-update` command:
 
 ```console
-$ nextflow help drop
+$ nextflow help self-update
 
-Delete the local copy of a project
-Usage: drop [options] name of the project to drop
+Update nextflow runtime to the latest available version
+Usage: self-update [options]
    Options:
-     -f
-          Delete the repository without taking care of local changes
+     -clean
+          Remove the files of all other Nextflow versions after updating
           Default: false
      -h, -help
           Print the command usage

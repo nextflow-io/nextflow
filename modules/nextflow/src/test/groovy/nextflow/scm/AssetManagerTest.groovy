@@ -1301,5 +1301,112 @@ class AssetManagerTest extends Specification {
         manager.getLocalPath().toString().contains('1c3e9e7404127514d69369cd87f8036830f5cf64')
     }
 
+    def 'should use the repository of a clone cached under a local name' () {
+        given: 'a clone of other/hello cached under the name acme/hello'
+        def bare = tempDir.root.resolve("$REPOS_SUBDIR/acme/hello/$BARE_REPO").toFile()
+        bare.mkdirs()
+        Git.init().setBare(true).setDirectory(bare).call().close()
+        new File(bare, 'config') << '[remote "origin"]\n\turl = https://github.com/other/hello.git\n'
 
+        when: 'it is used by its local name only (offline registry run)'
+        def manager = new AssetManager('acme/hello', null, null, null, 'acme/hello')
+
+        then: 'the Git calls go to the cloned repository'
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/other/hello'
+
+        when: 'the local name is given with the Git address of another repository'
+        new AssetManager('https://github.com/acme/hello', null, null, null, 'acme/hello')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('downloaded from a different repository: `other/hello` -- use `nextflow pipeline remove -g acme/hello` to remove it')
+
+        when: 'it is given with its own Git address and local name'
+        manager = new AssetManager('https://github.com/other/hello', null, null, null, 'acme/hello')
+
+        then:
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/other/hello'
+    }
+
+    def 'should not check the cached clone of a plain Git run' () {
+        given: 'a clone whose origin URL path differs from the project URL path'
+        def bare = tempDir.root.resolve("$REPOS_SUBDIR/acme/hello/$BARE_REPO").toFile()
+        bare.mkdirs()
+        Git.init().setBare(true).setDirectory(bare).call().close()
+        new File(bare, 'config') << '[remote "origin"]\n\turl = https://github.com/other/hello.git\n'
+
+        when:
+        def manager = new AssetManager(name)
+
+        then:
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/acme/hello'
+
+        where:
+        name << ['acme/hello', 'https://github.com/acme/hello']
+    }
+
+    def 'should list the downloaded revisions with their tags and branches' () {
+        given: 'a repository with a lightweight tag v1.0.0, and an annotated tag v2.0.0 at the head of master and dev'
+        def remote = tempDir.root.resolve('remote/hello').toFile()
+        remote.mkdirs()
+        def git = Git.init().setDirectory(remote).setInitialBranch('master').call()
+        new File(remote, 'main.nf').text = "println 'v1'"
+        git.add().addFilepattern('main.nf').call()
+        def v1 = git.commit().setMessage('v1').setSign(false).call().name()
+        git.tag().setName('v1.0.0').setAnnotated(false).call()
+        new File(remote, 'main.nf').text = "println 'v2'"
+        git.add().addFilepattern('main.nf').call()
+        def v2 = git.commit().setMessage('v2').setSign(false).call().name()
+        def v2tag = git.tag().setName('v2.0.0').setAnnotated(true).setMessage('v2').setSigned(false).call().objectId.name()
+        git.branchCreate().setName('dev').call()
+        git.close()
+        def url = remote.toURI().toString()
+
+        and: 'v1 downloaded by commit, v2 by annotated tag and by branch'
+        [v1, 'v2.0.0', 'master'].each { String rev ->
+            new AssetManager(url, (HubOptions) null).withCloseable { it.setRevision(rev); it.download(rev, null) }
+        }
+        def clones = tempDir.root.resolve("$REPOS_SUBDIR/local/hello/$REVISION_SUBDIR")
+        clones.resolve(v1).resolve('main.nf').text = 'changed'
+        and: 'a clone that can not be read'
+        clones.resolve('a' * 40).mkdirs()
+
+        when:
+        def revisions = new AssetManager('local/hello').withCloseable { it.listDownloadedRevisions() }
+
+        then: 'the tag before the branches, and no tag named after a commit'
+        revisions.collect { [it.localPath.name, it.commitId, it.name, it.clean] }.sort { it[0] } == [
+            [v1, v1, 'v1.0.0', false],
+            [v2, v2, 'v2.0.0', true],
+            [v2tag, v2, 'v2.0.0', true],
+        ].sort { it[0] }
+        revisions.find { it.localPath.name == v1 }.localPath == clones.resolve(v1).toFile()
+    }
+
+    def 'should list the checked-out revision of a legacy download' () {
+        given:
+        def dir = tempDir.root.resolve('acme/hello').toFile()
+        dir.mkdirs()
+        def git = Git.init().setDirectory(dir).setInitialBranch('master').call()
+        new File(dir, 'main.nf').text = 'workflow { }'
+        git.add().addFilepattern('main.nf').call()
+        def commit = git.commit().setMessage('first').setSign(false).call().name()
+        git.repository.config.setString('remote', 'origin', 'url', 'https://github.com/acme/hello.git')
+        git.repository.config.save()
+        git.close()
+
+        when:
+        def revisions = new AssetManager('acme/hello').withCloseable { it.listDownloadedRevisions() }
+
+        then:
+        revisions.collect { [it.commitId, it.name, it.localPath, it.clean] } == [[commit, 'master', dir, true]]
+    }
+
+    def 'should list no revision of a pipeline that is not downloaded' () {
+        expect:
+        new AssetManager('acme/missing').withCloseable { it.listDownloadedRevisions() } == []
+    }
 }

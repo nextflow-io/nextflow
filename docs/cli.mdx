@@ -146,104 +146,17 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 ## Project management
 
-Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects and maintains a local cache in `$HOME/.nextflow/assets/`.
+Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects. The `run` command downloads remote pipelines into the user-level store, which is `$HOME/.nextflow/assets/` by default (see [`NXF_ASSETS`][env-vars-nxf-assets]).
 
-Use these commands to explore available pipelines, inspect their code, maintain your cache, and clone projects.
+The [`pipeline`][cli-pipeline] command manages pipelines in the user-level store when given the `-g` option, and project-level pipelines in the current project otherwise:
 
-### Listing downloaded projects
+- Use `pipeline install -g` to download a pipeline before running it, for example for an offline run. See [`pipeline install`][cli-pipeline-install] for more information.
+- Use `pipeline list -g` to list the downloaded pipelines, with one row for each downloaded revision. See [`pipeline list`][cli-pipeline-list] for more information.
+- Use `pipeline remove -g` to remove a downloaded pipeline with all of its revisions. See [`pipeline remove`][cli-pipeline-remove] for more information.
 
-The `list` command shows all pipelines currently downloaded to your local cache. This helps you track which projects are available offline and manage your cache directory. Pipelines are stored in `$HOME/.nextflow/assets/` by default:
-
-```bash
-nextflow list
-```
-
-### Showing project information
-
-The `info` command displays detailed metadata about a downloaded project, including its repository location, local path, main script, and available revisions.
-
-Use this to understand a project's structure, see available versions, or verify which revision is currently checked out:
-
-```bash
-nextflow info hello
-```
-
-This prints an output similar to the following:
-
-```bash
-project name: nextflow-io/hello
-repository  : https://github.com/nextflow-io/hello
-local path  : $HOME/.nextflow/assets/.repos/nextflow-io/hello
-main script : main.nf
-revisions   :
-> master (default)
-  mybranch
-> v1.1 [t]
-  v1.2 [t]
-```
-
-This shows:
-
-- The full project name and repository URL
-- Where it's cached locally
-- Which script runs by default
-- Available revisions (branches and tags marked with `[t]`)
-- Which revisions are currently checked out (marked with `>`)
-
-### Pulling or updating projects
-
-The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
-
-Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use:
-
-```bash
-nextflow pull nextflow-io/hello
-```
-
-You can specify a particular revision to download:
-
-```bash
-nextflow pull nextflow-io/hello -r mybranch
-```
-
-See [pull][cli-pull] for more information.
-
-### Viewing project code
-
-The `view` command displays the contents of a pipeline's main script or lists all files in the repository.
-
-Use this to quickly inspect pipeline code without opening files or explore the project structure. Specify `-l` option lists all repository files instead of showing script contents:
-
-```bash
-nextflow view nextflow-io/hello
-nextflow view nextflow-io/hello -l
-```
-
-See [view][cli-view] for more information.
-
-### Cloning projects locally
-
-The `clone` command copies a pipeline from the cache to a local directory and creates a full Git repository you can modify.
-
-Use this when you want to modify an existing pipeline, create a derivative pipeline, or study a pipeline's structure. If you omit the target directory it uses the pipeline name:
-
-```bash
-nextflow clone nextflow-io/hello my-hello
-```
-
-See [clone][cli-clone] for more information.
-
-### Deleting cached projects
-
-The `drop` command removes a downloaded pipeline from the local cache.
-
-Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
-
-```bash
-nextflow drop nextflow-io/hello
-```
-
-See [drop][cli-drop] for more information.
+<ChangedInVersion version="27.04">
+The `clone`, `drop`, `list`, `pull`, and `view` commands, and the `info` command with a project name, are deprecated. See [Deprecations][deprecations-page] for their replacements.
+</ChangedInVersion>
 
 ## Module management
 
@@ -539,9 +452,7 @@ http://nextflow.io
 
 [cli-auth]: ./reference/cli/auth
 [cli-clean]: ./reference/cli/clean
-[cli-clone]: ./reference/cli/clone
 [cli-config]: ./reference/cli/config
-[cli-drop]: ./reference/cli/drop
 [cli-fs]: ./reference/cli/fs
 [cli-inspect]: ./reference/cli/inspect
 [cli-launch]: ./reference/cli/launch
@@ -549,14 +460,18 @@ http://nextflow.io
 [cli-lint]: ./reference/cli/lint
 [cli-log]: ./reference/cli/log
 [cli-module]: ./reference/cli/module
+[cli-pipeline]: ./reference/cli/pipeline
+[cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
+[cli-pipeline-list]: ./reference/cli/pipeline#pipeline-list
+[cli-pipeline-remove]: ./reference/cli/pipeline#pipeline-remove
 [cli-plugin]: ./reference/cli/plugin
-[cli-pull]: ./reference/cli/pull
 [cli-reference]: ./reference/cli
 [cli-run]: ./reference/cli/run
 [cli-secrets]: ./reference/cli/secrets
-[cli-view]: ./reference/cli/view
 [config-page]: ./config
 [config-params]: ./config#parameters
 [data-lineage-page]: ./tutorials/data-lineage
+[deprecations-page]: ./deprecations
+[env-vars-nxf-assets]: ./reference/env-vars#nxf_assets
 [git-page]: ./git
 [using-modules-page]: ./modules/using-modules

@@ -5,6 +5,10 @@ description: Reference for the nextflow info command. Print project or system ru
 
 # `nextflow info`
 
+<DeprecatedInVersion version="27.04">
+The `info` command with a project name is deprecated. Use [`nextflow pipeline list -g -o json`][cli-pipeline-list] to find the downloaded revisions of a pipeline and their local paths instead.
+</DeprecatedInVersion>
+
 Print project or system runtime information.
 
 ## Usage
@@ -67,3 +71,5 @@ $ nextflow info nextflow-io/hello
   * v1.1 [t]
     v1.2 [t]
 ```
+
+[cli-pipeline-list]: ./pipeline#pipeline-list

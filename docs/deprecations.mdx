@@ -58,6 +58,12 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | Feature | Deprecated | Replacement |
 |---|---|---|
 | Named workflow entry (`-entry`) | 24.10 | Params in the entry workflow |
+| `clone` command | 27.04 | `git clone` |
+| `drop` command | 27.04 | [`pipeline remove -g`][cli-pipeline-remove] |
+| `info` command with a project name | 27.04 | [`pipeline list -g -o json`][cli-pipeline-list] |
+| `list` command | 27.04 | [`pipeline list -g`][cli-pipeline-list] |
+| `pull` command | 27.04 | [`pipeline install -g`][cli-pipeline-install] (with a Git repository URL for a pipeline that is not in the registry) |
+| `view` command | 27.04 | [`pipeline list -g -o json`][cli-pipeline-list] |
 
 ### Feature flags and environment variables
 
@@ -85,6 +91,9 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `echo` directive | 22.04 | 26.10 | `debug` |
 | `kuberun` command | | 27.04 | [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin or [launch with Fusion][k8s-fusion] |
 
+[cli-pipeline-install]: ./reference/cli/pipeline#pipeline-install
+[cli-pipeline-list]: ./reference/cli/pipeline#pipeline-list
+[cli-pipeline-remove]: ./reference/cli/pipeline#pipeline-remove
 [config-manifest]: ./reference/config/manifest
 [config-process-when]: ./config#disabling-processes
 [config-seqera-executor-autoLabels]: ./reference/config/seqera#seqeraexecutorautolabels

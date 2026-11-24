@@ -5,6 +5,10 @@ description: Reference for the nextflow view command. View a project's script fi
 
 # `nextflow view`
 
+<DeprecatedInVersion version="27.04">
+The `view` command is deprecated. Use [`nextflow pipeline list -g -o json`][cli-pipeline-list] to find the local copy of a pipeline instead.
+</DeprecatedInVersion>
+
 View a project's script files.
 
 ## Usage
@@ -99,3 +103,5 @@ workflow {
   channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
+
+[cli-pipeline-list]: ./pipeline#pipeline-list

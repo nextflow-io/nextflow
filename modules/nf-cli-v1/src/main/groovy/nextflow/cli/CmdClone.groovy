@@ -47,7 +47,11 @@ class CmdClone extends CmdBase implements HubAware {
     final String getName() { NAME }
 
     @Override
+    boolean isHidden() { true }
+
+    @Override
     void run() {
+        log.warn "The `clone` command is deprecated -- use `git clone` instead"
         // init plugin system
         Plugins.init()
         // the pipeline name

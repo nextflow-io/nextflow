@@ -70,11 +70,23 @@ class AssetManager implements Closeable {
     static File root = DEFAULT_ROOT
 
     /**
+     * The hub used when nothing else names one, i.e. {@code NXF_HUB}
+     */
+    @PackageScope
+    static String defaultHub = DEFAULT_HUB
+
+    /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organization account, while 'repo' is the repository name
      * containing the pipeline code
      */
     private String project
+
+    /**
+     * The project on the Git host. It differs from {@link #project} when the local
+     * name is not the Git one, e.g. a registry pipeline cached under its registry name
+     */
+    private String remoteProject
 
     private Git _git
 
@@ -122,12 +134,12 @@ class AssetManager implements Closeable {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null ) {
+    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null, String localName = null ) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, hubOpts, revision, mainScript)
+        build(pipelineName, config, hubOpts, revision, mainScript, localName)
     }
 
     /**
@@ -139,12 +151,15 @@ class AssetManager implements Closeable {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null, String localName = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
         this.httpClientOpts = RepositoryProvider.httpClientOpts(config)
 
         this.project = resolveName(pipelineName)
+        this.remoteProject = project
+        if( localName )
+            this.project = localName
         if( mainScript )
             this.mainScript = mainScript
 
@@ -153,6 +168,8 @@ class AssetManager implements Closeable {
 
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
+        if( localName )
+            checkRemoteProject(isUrl(pipelineName))
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
@@ -317,6 +334,7 @@ class AssetManager implements Closeable {
     @PackageScope
     AssetManager setProject(String name) {
         this.project = name
+        this.remoteProject = name
         if( !strategy )
             initStrategy(getRevision())
         strategy.setProject(name)
@@ -372,6 +390,46 @@ class AssetManager implements Closeable {
 
     }
 
+    /** Check that the clone of a project cached under a local name has the given repository URL; offline, the clone decides */
+    private void checkRemoteProject(boolean fromUrl) {
+        final cloned = getClonedProject()
+        // Git hosts match names ignoring the case, and the clone URL uses the host's spelling
+        if( !cloned || cloned.equalsIgnoreCase(remoteProject) )
+            return
+        if( fromUrl )
+            throw new AbortOperationException("A project with name: `$project` has already been downloaded from a different repository: `$cloned` -- use `nextflow pipeline remove -g $project` to remove it")
+        log.info "Using `$project` cached from `$cloned`"
+        this.remoteProject = cloned
+    }
+
+    /** The Git project of the local multi-revision clone, read from its `origin` remote, or {@code null} */
+    private String getClonedProject() {
+        // legacy clones keep using their folder name; local names are only used with multi-revision clones
+        if( !(strategy instanceof MultiRevisionRepositoryStrategy) )
+            return null
+        final file = getLocalGitConfig()
+        if( !file?.exists() )
+            return null
+        final str = new IniFile().load(file).getString('remote "origin"', 'url')
+        if( !str )
+            return null
+        try {
+            final url = new GitUrl(str)
+            if( url.protocol == 'file' )
+                return null
+            return RepositoryFactory.getProviderConfig(providerConfigs, url).resolveProjectName(url.path.stripStart('/'))
+        }
+        catch( Exception e ) {
+            log.debug "Cannot parse Git remote URL: ${redactUrlPassword(str)} -- cause: ${e.message}"
+            return null
+        }
+    }
+
+    /** Whether a pipeline is given by a URL rather than by name */
+    static boolean isUrl(String name) {
+        return name.startsWith('http://') || name.startsWith('https://') || name.startsWith('file:/')
+    }
+
     /**
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
@@ -388,7 +446,7 @@ class AssetManager implements Closeable {
         if( !result )
             result = guessHubProviderFromGitConfig()
         if( !result )
-            result = DEFAULT_HUB
+            result = defaultHub
 
         def providerNames = providerConfigs.collect { it.name }
         if( !providerNames.contains(result)) {
@@ -472,8 +530,7 @@ class AssetManager implements Closeable {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
-        if( !isUrl )
+        if( !isUrl(repository) )
             return null
 
         if( repository.endsWith('.nf') )
@@ -526,7 +583,7 @@ class AssetManager implements Closeable {
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
         return RepositoryFactory
-            .newRepositoryProvider(config, project)
+            .newRepositoryProvider(config, remoteProject)
             .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 
@@ -1080,19 +1137,17 @@ class AssetManager implements Closeable {
         }
     }
 
-    protected String getGitConfigRemoteUrl() {
-        if( !isLocal() ) {
-            return null
-        }
-
+    String getGitConfigRemoteUrl() {
+        // a multi-revision project has the config of its bare repository, even when the default branch is not checked out
         final gitConfig = localGitConfig
-        if( !gitConfig.exists() ) {
+        if( !gitConfig?.exists() ) {
             return null
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = manifest.getDefaultBranch()
-        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
+        // the manifest is read from the default branch, so only when it is checked out
+        final branch = isLocal() ? manifest.getDefaultBranch() : null
+        final remote = branch ? iniFile.getString("branch \"${branch}\"", "remote", "origin") : "origin"
         final url = iniFile.getString("remote \"${remote}\"", "url")
         log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
         return url
@@ -1128,6 +1183,71 @@ class AssetManager implements Closeable {
         strategy.drop(revision, force)
     }
 
+    /**
+     * A downloaded revision of a project
+     */
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
+    static class DownloadedRevision {
+        /** The checked-out commit */
+        String commitId
+        /** The tag or branch at the commit, or {@code null} */
+        String name
+        /** The clone holding the revision */
+        File localPath
+        /** Whether the clone has no local changes */
+        boolean clean
+    }
+
+    /**
+     * List the downloaded revisions: one per clone for the multi-revision strategy, the checked-out commit for the legacy one.
+     * A clone that can't be read is skipped with a warning.
+     */
+    List<DownloadedRevision> listDownloadedRevisions() {
+        if( isNotInitialized() )
+            return []
+        final List<File> dirs = strategy instanceof MultiRevisionRepositoryStrategy
+            ? strategy.listDownloadedCommits().sort().collect { String it -> new File(((MultiRevisionRepositoryStrategy) strategy).getRevisionSubdir(), it) }
+            : [localPath]
+        if( !dirs )
+            return []
+        final tags = getTagList().findAll { Ref it -> it.name.startsWith('refs/tags/') }.collect { Ref it -> strategy.peel(it) }
+        final branches = getBranchList().findAll { Ref it -> it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
+        String defaultBranch = null
+        try { defaultBranch = strategy.getRemoteDefaultBranch() }
+        catch( Exception e ) { log.debug "Unable to find the default branch of ${project} -- cause: ${e.message ?: e}" }
+
+        final result = new ArrayList<DownloadedRevision>()
+        for( final dir : dirs ) {
+            try (final git = Git.open(dir)) {
+                final commit = git.repository.resolve('HEAD^{commit}')?.name()
+                if( !commit )
+                    throw new IllegalStateException("no checked-out commit")
+                result << new DownloadedRevision(commit, refNameAt(commit, dir.name, tags, branches, defaultBranch), dir, git.status().call().isClean())
+            }
+            catch( Exception e ) {
+                log.warn "Unable to read the revision of ${project} in ${dir} -- cause: ${e.message ?: e}"
+            }
+        }
+        return result
+    }
+
+    /** The tag, else the branch, at a commit: the tag the clone is named after first, the default branch first, and no tag named after a commit */
+    private static String refNameAt(String commit, String cloneName, List<Ref> tags, List<Ref> branches, String defaultBranch) {
+        final tagNames = tags
+            .findAll { Ref it -> (it.peeledObjectId ?: it.objectId)?.name() == commit }
+            .sort { Ref a, Ref b -> (a.objectId?.name() == cloneName ? 0 : 1) <=> (b.objectId?.name() == cloneName ? 0 : 1) ?: a.name <=> b.name }
+            .collect { Ref it -> shortenRefName(it.name) }
+            .findAll { String it -> !(it ==~ /[0-9a-f]{40}/) }
+        if( tagNames )
+            return tagNames[0]
+        final branchNames = branches
+            .findAll { Ref it -> it.objectId?.name() == commit }
+            .collect { Ref it -> shortenRefName(it.name) }
+            .sort { String a, String b -> (a == defaultBranch ? 0 : 1) <=> (b == defaultBranch ? 0 : 1) ?: a <=> b }
+        return branchNames ? branchNames[0] : null
+    }
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath

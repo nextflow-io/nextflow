@@ -253,6 +253,7 @@ module.exports = {
                         "reference/cli/log",
                         "reference/cli/logfile",
                         "reference/cli/module",
+                        "reference/cli/pipeline",
                         "reference/cli/plugin",
                         "reference/cli/pull",
                         "reference/cli/run",

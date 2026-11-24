@@ -473,12 +473,11 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdList()] )
+        launcher.printCommands( [new CmdClone(), new CmdDrop(), new CmdInfo(), new CmdRun(), new CmdPull(), new CmdList(), new CmdView()] )
         then:
         capture.toString() == '''
                 Commands:
                   info   Print project and system runtime information
-                  list   List all downloaded projects
                   run    Execute a pipeline project
 
                 '''
