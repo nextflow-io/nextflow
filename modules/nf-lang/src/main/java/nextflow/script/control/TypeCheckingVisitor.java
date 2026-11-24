@@ -175,7 +175,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     private static ClassNode nullableType(ClassNode type) {
         if( isNullable(type) )
             return type;
-        var result = type.getPlainNodeReference();
+        // copy primitive types too, so that the shared class node is not marked nullable
+        var result = type.getPlainNodeReference(false);
         result.setGenericsTypes(type.getGenericsTypes());
         result.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
         return result;
@@ -1405,7 +1406,13 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         super.visitListExpression(node);
 
         ClassNode elementType = null;
+        boolean nullable = false;
         for( var el : node.getExpressions() ) {
+            // a null element makes the element type nullable instead of inconsistent
+            if( isNullConstant(el) ) {
+                nullable = true;
+                continue;
+            }
             var type = getType(el);
             if( elementType == null ) {
                 elementType = type;
@@ -1416,6 +1423,12 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 break;
             }
         }
+
+        // a list of only nulls keeps the type of the null constant
+        if( elementType == null && nullable )
+            elementType = getType(node.getExpression(0));
+        else if( nullable && !ClassHelper.isDynamicTyped(elementType) )
+            elementType = nullableType(elementType);
 
         if( elementType != null ) {
             var resultType = makeType(ClassHelper.LIST_TYPE, elementType);
