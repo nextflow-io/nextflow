@@ -28,7 +28,6 @@ The registry now has a read-only pipeline catalog, filled from nf-core and from 
 - `nextflow pipeline publish` and installing from a registry bundle (see [Future work](#future-work)).
 - `nextflow pipeline run`, `create`, `spec`, `validate`. `nextflow run` runs a pipeline.
 - Registry addresses in `config`. It works by registry name once the pipeline is downloaded.
-- A bare `github.com/nf-core/rnaseq` address (without `https://`). It is not supported today.
 - A version in the include statement or in config.
 - Loading the included pipeline's config or plugins, and changing its `projectDir`. The composition ADR covers these.
 - Private Git repositories. The registry accepts only public repositories.
@@ -148,34 +147,31 @@ The legacy commands `pull`, `drop`, `info <project>`, `list` and `view` manage t
 
 The `-g` option was chosen:
 
-- **Source.** The `pipeline` commands use the registry by default, while `run` keeps GitHub as its default. A plain `scope/name` is a registry name for `pipeline install -g` and a Git name for `run`. Only a Git URL selects Git, and only `install -g` accepts one. The `pipeline` commands have no `-hub` option. A registry pipeline is assumed to have the same name as its Git repository, as described in the run cache section below, so both share one cache entry.
-- **`pipeline install -g` replaces `pull`.** It downloads a registry release (a name or a registry page URL) at its pinned commit, or a Git URL at the revision given with `-version` (default: the default branch). It adds the revision next to the ones already downloaded and never overwrites one, so `-force` is not supported. A legacy-layout download holds a single revision, so `install -g` switches it to the new revision in place and warns, as `pull` does (without suggesting `-migrate`, which `install` does not have). A name is looked up in the configured registries in order, like a project-level install, and a registry page URL only in the registry it names. A name that is not in the registry is an error that points to installing by Git URL. `pull` keeps working, but is hidden from `nextflow -h` and warns.
-- **One list format for both stores.** `pipeline list` and `pipeline list -g` print the same `NAME`, `VERSION`, `COMMIT` and `STATUS` columns and the same JSON keys (`name`, `version`, `commit`, `status`, `path`, `repositoryUrl`), with `-` or `null` for a missing value. At the user level there is one row for each downloaded revision, and `VERSION` is the tag at the commit, else the branch. A registry release maps to its tag, assuming the release version matches the Git tag.
-- **`pipeline view` shows registry releases only.** `info <project>` and `view` point to `pipeline list -g -o json`. There is no equivalent of the `-check-updates` option, the `-d` detail level or the `yaml` output of `info`.
-- `pipeline install -g`, `pipeline list -g` and `pipeline remove -g` replace `pull`, `list` and `drop`. `pipeline remove -g` removes a pipeline with all of its revisions; it has no option to remove a single revision, so the revisions of a pipeline, including the old commits of a branch, stay until it is removed. The `-r` option of `drop` has no equivalent. `pipeline list` without `-g` hints at `-g` when the project has no pipelines but the user-level store does, and `pipeline remove` does the same when the pipeline is only in the user-level store. `pipeline remove -g` maps a registry page URL to the registry name.
-- `pull`, `drop`, `list` and `view` keep working but are hidden from `nextflow -h` and warn, pointing to the `-g` commands. `info <project>` warns; `info` without a project still prints the system information.
-- `clone` keeps working but is hidden from `nextflow -h` and warns, pointing to `git clone`.
+- **Source.** The `pipeline` commands use the registry by default, while `run` keeps GitHub as its default. Only a Git URL selects Git, and only `install -g` accepts one. A registry pipeline is assumed to have the same name as its Git repository.
+- **`pipeline install -g` replaces `pull`.** It downloads a registry release at its pinned commit, or a Git URL at a given revision, next to the revisions already downloaded, and never overwrites one.
+- **One list format for both stores.** `pipeline list` and `pipeline list -g` print the same columns and JSON keys, with one row for each downloaded revision at the user level.
+- **`pipeline remove -g` removes a pipeline with all of its revisions.** There is no option to remove a single revision.
+- **`pipeline view` shows registry releases only.**
+
+The legacy commands keep working, unchanged, but print a deprecation warning that names the replacement. All but `info` are hidden from `nextflow -h`.
 
 ### Running a registry pipeline
 
 `nextflow run` resolves a registry address to the release's repository and pinned commit. `nextflow pipeline install -g` does the same for a registry name, so that a node with network can prepare offline runs.
 
-- **Registry URL**: a configured `registry.url` without `/api`, followed by `/pipelines/<scope>/<name>`. `/pipelines/` keeps it apart from modules and other registry paths. The default public registry is always recognized, because the user typed its address. A URL on the host of a known Git provider stays a Git URL.
-- **`-hub` / `NXF_HUB`**: a Git provider name is checked first, so existing setups behave the same, then a registry host. A hostname can't be confused with Git, because `-hub` only takes provider names.
-- **One registry**: an address is resolved only against the registry it names, and the API key is sent only to the primary registry.
+- **Registry URL**: a registry page URL, `<registry>/pipelines/<scope>/<name>`.
+- **`-hub` / `NXF_HUB`**: a Git provider name is checked first, so existing setups behave the same, then a registry host.
+- **One registry**: an address is resolved only against the registry it names.
 - **Version**: an address carries no version (`@<version>` is an error); the version is given with `-r`. The release runs at its pinned `commitId`, not at its tag, because a tag can be moved. A release without a commit ID runs at its revision.
 - **No fallback**: with a registry address, every registry failure stops the run. The syntax is new, so no existing run depends on a fallback.
 
-**Offline.** With `-offline`, the registry is not called. The run uses the copy cached under the registry name, and `-r` is used as a Git revision (a commit, or a tag equal to the version). This works for nf-core, whose versions are their Git tags, and fails for versions that are not tag names (a `v` prefix, or a release registered from a branch or commit). A local version-to-commit map (in the bare repository's Git config, a file next to the clone, local refs, or one central file) was not added. The Git config variant is the candidate if one is needed.
+**Offline.** With `-offline`, the registry is not called, and `-r` is a Git revision of the copy cached under the registry name. This works for nf-core, whose versions are their Git tags. A local version-to-commit map is deferred.
 
-**Registry config.** `registry.url` and `registry.apiKey` are read as for the `pipeline` commands. The pipeline's own config can't be used, because it is not downloaded yet. The registry config is read only for a possible registry address, never for a plain name, a Git URL or a Git provider hub, because a launch config may be readable only once (Seqera Platform).
+**Registry config.** The registry config is read as for the `pipeline` commands, and only for a possible registry address, never for a plain name, a Git URL or a Git provider hub.
 
 ### Run cache
 
 A registry release is cached under its **registry name**. `AssetManager` keeps two names: the local name (cache folder, `nextflow pipeline list -g`, `workflow.projectName`) and the remote Git project (Git provider, `workflow.repository`).
-
-- A registry run is checked against the clone: a clone of a different repository under the registry name is an error, and offline the Git project is read from the clone.
-- Plain Git names and URLs are not checked, as today. Comparing them is not reliable: some providers (Bitbucket Server) use a different path in the clone URL than in the project URL.
 
 **Registry names mirror Git names.** A registry pipeline is expected to have the same `<scope>/<name>` as its Git repository, as nf-core pipelines do. Then the registry run and a plain Git run of the same name share one cache entry and run the same code. This is a registry best practice, not enforced by Nextflow.
 

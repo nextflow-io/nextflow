@@ -247,7 +247,7 @@ Directory where intermediate result files are stored.
 
 The `run` command can run a pipeline published in the [Nextflow registry](https://registry.nextflow.io). The registry is used only when it is addressed explicitly, in one of the following ways:
 
-- A registry page URL, for example `https://registry.nextflow.io/pipelines/nf-core/rnaseq`. The URL must be `<registry>/pipelines/<scope>/<name>`, where `<registry>` is a registry configured in [`registry.url`][config-registry] without the trailing `/api`, or the public registry `https://registry.nextflow.io`.
+- A registry page URL, for example `https://registry.nextflow.io/pipelines/nf-core/rnaseq`, on the public registry or a registry configured in [`registry.url`][config-registry].
 
 - `-hub` set to the host of a configured registry or of the public registry, for example `-hub registry.nextflow.io`. Set the `NXF_HUB` environment variable to a registry host to use that registry by default for the `run` command.
 
@@ -259,9 +259,7 @@ Note the following:
 
 - There is no fallback to Git. A pipeline that is not in the registry, a `-r` value that is not a published release, a revoked release, or an unreachable registry is an error.
 
-- Registry settings are read from `~/.nextflow/config`, `./nextflow.config`, and `-c` files, not from the pipeline config. The API key is sent only to the first entry of `registry.url`.
-
-- The pipeline is cached under its registry name. A registry pipeline should have the same name as its Git repository, as nf-core pipelines do, since both are cached under that name.
+- Registry settings are read from `~/.nextflow/config`, `./nextflow.config`, and `-c` files, not from the pipeline config.
 
 - With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so `-r` is required, as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pipeline install -g`][cli-pipeline-install] to download a registry pipeline ahead of time.
 

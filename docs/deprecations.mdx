@@ -59,11 +59,11 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 |---|---|---|
 | Named workflow entry (`-entry`) | 24.10 | Params in the entry workflow |
 | `clone` command | 27.04 | `git clone` |
-| `drop` command | 27.04 | [`pipeline remove -g`][cli-pipeline-remove] (removes all revisions of a pipeline; no equivalent of the `-r` option) |
-| `info` command with a project name | 27.04 | [`pipeline list -g -o json`][cli-pipeline-list] (no equivalent of the `-check-updates` option, the `-d` detail level, or `yaml` output) |
+| `drop` command | 27.04 | [`pipeline remove -g`][cli-pipeline-remove] |
+| `info` command with a project name | 27.04 | [`pipeline list -g -o json`][cli-pipeline-list] |
 | `list` command | 27.04 | [`pipeline list -g`][cli-pipeline-list] |
-| `pull` command | 27.04 | [`pipeline install -g`][cli-pipeline-install] (a pipeline that is not in the registry is given by its Git repository URL; no equivalent of the `-all`, `-hub`, `-user`, `-migrate`, and `-deep` options) |
-| `view` command | 27.04 | [`pipeline list -g -o json`][cli-pipeline-list] to find the local copy of a pipeline |
+| `pull` command | 27.04 | [`pipeline install -g`][cli-pipeline-install] (with a Git repository URL for a pipeline that is not in the registry) |
+| `view` command | 27.04 | [`pipeline list -g -o json`][cli-pipeline-list] |
 
 ### Feature flags and environment variables
 
