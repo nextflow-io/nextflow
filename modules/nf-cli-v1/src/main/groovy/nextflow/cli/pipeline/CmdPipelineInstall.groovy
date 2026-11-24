@@ -110,11 +110,11 @@ class CmdPipelineInstall extends CmdBase {
             final label = "${release.name}@${release.version}"
             // a registry release is downloaded at its pinned commit, cached under its registry name as `run` does
             final rev = release.commitId ?: release.revision
-            try (final manager = new AssetManager(release.repositoryUrl, rev, null, null, release.name)) {
+            try (final manager = new AssetManager(release.repositoryUrl, rev, Const.DEFAULT_MAIN_FILE_NAME, null, release.name)) {
                 final legacyCommit = warnLegacy(manager, label, rev)
                 log.info "Checking ${label} ..."
                 final upToDate = download(manager, rev, legacyCommit)
-                printResult(label, upToDate, manager.getScriptFile(Const.DEFAULT_MAIN_FILE_NAME))
+                printResult(label, upToDate, manager.getScriptFile())
             }
         }
         else {

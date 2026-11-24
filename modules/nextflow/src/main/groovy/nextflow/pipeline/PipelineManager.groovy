@@ -166,6 +166,8 @@ class PipelineManager {
         final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
         try {
             final commit = fetcher.fetch(info.repositoryUrl, info.revision, info.commitId, tmp)
+            if( !Files.isRegularFile(tmp.resolve(Const.DEFAULT_MAIN_FILE_NAME)) )
+                throw new AbortOperationException("Pipeline ${info.name}@${info.version} has no main.nf -- a registry pipeline must have a top-level main.nf")
             info.commitId = info.commitId ?: commit
             info.checksum = PipelineInfo.checksum(tmp)
             info.save(tmp)

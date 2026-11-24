@@ -181,6 +181,25 @@ class PipelineManagerTest extends Specification {
         Files.exists(base.resolve('pipelines/nf-core/rnaseq/main.nf'))
     }
 
+    def 'install rejects a release without a top-level main.nf and keeps the existing install'() {
+        given:
+        def m = manager()
+        client.getPipeline(_) >> pipeline(release('2.0.0'))
+        client.getPipelineRelease('nf-core/rnaseq', '1.0.0') >> release('1.0.0', 'old')
+        fetcher.fetch(_, _, 'old', _) >> { args -> args[3].resolve('main.nf').text = 'old' }
+        fetcher.fetch(_, _, 'abc', _) >> { args -> args[3].resolve('workflows').toFile().mkdirs(); args[3].resolve('workflows/main.nf').text = 'new' }
+        m.install('nf-core/rnaseq', '1.0.0', false)
+
+        when:
+        m.install('nf-core/rnaseq', null, false)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline nf-core/rnaseq@2.0.0 has no main.nf -- a registry pipeline must have a top-level main.nf'
+        base.resolve('pipelines/nf-core/rnaseq/main.nf').text == 'old'
+        PipelineInfo.load(base.resolve('pipelines/nf-core/rnaseq')).version == '1.0.0'
+        Files.list(base.resolve('pipelines/nf-core')).count() == 1
+    }
+
     def 'fails on no published release or a revoked version'() {
         when:
         manager().install('nf-core/rnaseq', null, false)

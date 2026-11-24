@@ -119,11 +119,11 @@ class CmdPull extends CmdBase implements HubAware {
     private void pullRegistryRelease(PipelineCmdSupport.RegistryAddress address, String revision) {
         final release = PipelineCmdSupport.resolveRelease(address, revision, registryClient)
         final rev = release.commitId ?: release.revision
-        try (final manager = new AssetManager(release.repositoryUrl, rev, null, new HubOptions(null, hubUser), release.name)) {
+        try (final manager = new AssetManager(release.repositoryUrl, rev, Const.DEFAULT_MAIN_FILE_NAME, new HubOptions(null, hubUser), release.name)) {
             log.info "Checking ${release.name}@${release.version} ..."
             final result = manager.download(rev, deep)
             manager.updateModules()
-            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile(Const.DEFAULT_MAIN_FILE_NAME).revisionInfo}"
+            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile().revisionInfo}"
         }
     }
 

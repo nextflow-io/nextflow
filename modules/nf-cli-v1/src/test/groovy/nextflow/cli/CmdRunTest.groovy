@@ -560,6 +560,8 @@ class CmdRunTest extends Specification {
         expect: 'a registry run uses main.nf unless -main-script is given'
         runCmd(registryClient: client, hubProvider: 'registry.nextflow.io').getScriptFile0('acme/hello').main.text.contains("println 'main'")
         runCmd(registryClient: client, hubProvider: 'registry.nextflow.io', mainScript: 'other.nf').getScriptFile0('acme/hello').main.text.contains("println 'other'")
+        and: 'also offline, from the cached release'
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io', offline: true, revision: commit).getScriptFile0('acme/hello').main.text.contains("println 'main'")
         and: 'a Git run still honors manifest.mainScript'
         new CmdRun().getScriptFile0("file:${bareDir}").main.text.contains("println 'other'")
     }
