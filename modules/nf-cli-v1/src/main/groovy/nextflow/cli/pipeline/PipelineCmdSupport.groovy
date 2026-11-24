@@ -57,21 +57,23 @@ class PipelineCmdSupport {
     }
 
     /**
-     * The name of a pipeline in the user-level store, where a registry pipeline is cached under its registry name
+     * The name of a pipeline in the user-level store, where a registry pipeline is cached under its registry name.
+     * Used by commands that take no version.
      *
      * @param name A pipeline name or a registry page URL
      */
     static String userLevelName(CmdBase cmd, String name) {
-        checkPipelineName(name)
-        final address = registryAddress(name, null, '-version') { registryConfig(cmd) }
+        checkPipelineName(name, null)
+        final address = registryAddress(name, null, null) { registryConfig(cmd) }
         return address ? address.name : name
     }
 
     /**
-     * Fails for an SSH Git URL, which is not supported, and for a pipeline name with an {@code @version} suffix,
-     * as the pipeline commands take the version with {@code -version}
+     * Fails for an SSH Git URL, which is not supported, and for a pipeline name with an {@code @version} suffix
+     *
+     * @param versionOption The option that gives the version, suggested instead of the suffix, or {@code null} when the command takes no version
      */
-    static void checkPipelineName(String name) {
+    static void checkPipelineName(String name, String versionOption = '-version') {
         final ssh = name =~ /^(?:ssh:\/\/)?(?:[\w.-]+@)?([\w.-]+)(?::\d+\/|:|\/)(.+?)(?:\.git)?\/?$/
         if( name.startsWith('ssh://') || (name =~ /^[\w.-]+@[\w.-]+:/).find() ) {
             final hint = ssh.matches() ? " -- use the https URL instead, e.g. `https://${ssh.group(1)}/${ssh.group(2)}`" : ' -- use the https URL instead'
@@ -79,7 +81,10 @@ class PipelineCmdSupport {
         }
         if( !isUrl(name) && name.contains('@') ) {
             final at = name.lastIndexOf('@')
-            throw new AbortOperationException("Not a valid pipeline name: ${name} -- give the version with the `-version` option, e.g. `${name.substring(0, at)} -version ${name.substring(at + 1)}`")
+            final hint = versionOption
+                ? "give the version with the `${versionOption}` option, e.g. `${name.substring(0, at)} ${versionOption} ${name.substring(at + 1)}`"
+                : "give the pipeline as `scope/name`, e.g. `${name.substring(0, at)}`"
+            throw new AbortOperationException("Not a valid pipeline name: ${name} -- ${hint}")
         }
     }
 
@@ -107,7 +112,7 @@ class PipelineCmdSupport {
     }
 
     /**
-     * @param versionOption The option that gives the version, suggested when the address includes one
+     * @param versionOption The option that gives the version, suggested when the address includes one, or {@code null} when the command takes no version
      */
     static RegistryAddress registryAddress(String name, String hub, String versionOption, Closure<RegistryConfig> registryConfig) {
         final isUrl = name.startsWith('http://') || name.startsWith('https://')
@@ -151,7 +156,7 @@ class PipelineCmdSupport {
     // checked here rather than when resolving the release, so that it applies offline too
     private static RegistryAddress newAddress(String api, String name, String apiKey, String versionOption) {
         if( name.contains('@') )
-            throw new AbortOperationException("Not a valid registry pipeline address: ${name} -- give the version with the `${versionOption}` option")
+            throw new AbortOperationException("Not a valid registry pipeline address: ${name}" + (versionOption ? " -- give the version with the `${versionOption}` option" : ''))
         return new RegistryAddress(api, name, apiKey)
     }
 
@@ -186,13 +191,12 @@ class PipelineCmdSupport {
     /**
      * Download a registry release into the user-level store at its pinned commit, cached under its registry name as `run` does
      */
-    static UserLevelDownload downloadRelease(PipelineInfo release, HubOptions hubOpts, Integer deep = null, boolean rejectLegacy = false) {
+    static UserLevelDownload downloadRelease(PipelineInfo release, HubOptions hubOpts, Integer deep = null, boolean install = false) {
         final rev = release.commitId ?: release.revision
         try (final manager = new AssetManager(release.repositoryUrl, rev, null, hubOpts, release.name)) {
-            if( rejectLegacy )
-                checkNotLegacy(manager)
+            final legacyCommit = install ? warnLegacy(manager, "${release.name}@${release.version}", rev) : null
             log.info "Checking ${release.name}@${release.version} ..."
-            final result = manager.download(rev, deep)
+            final result = legacySwitch(manager, legacyCommit, manager.download(rev, deep))
             manager.updateModules()
             return new UserLevelDownload(result, manager.getScriptFile(release.workflowPath))
         }
@@ -204,13 +208,12 @@ class PipelineCmdSupport {
      * @param project A project name or a Git repository URL
      * @param revision A branch, tag or commit, or {@code null} for the default branch
      * @param migrate Whether to migrate a legacy download to the multi-revision strategy
-     * @param rejectLegacy Whether to fail, rather than download, when the project was downloaded with the legacy layout
+     * @param install Whether the download is an install, whose warning for a legacy download does not suggest {@code -migrate}
      */
-    static UserLevelDownload downloadRevision(String project, String revision, HubOptions hubOpts, Integer deep = null, boolean migrate = false, boolean rejectLegacy = false) {
+    static UserLevelDownload downloadRevision(String project, String revision, HubOptions hubOpts, Integer deep = null, boolean migrate = false, boolean install = false) {
         try (final manager = new AssetManager(project, hubOpts)) {
-            if( rejectLegacy )
-                checkNotLegacy(manager)
-            if( manager.isUsingLegacyStrategy() ) {
+            final legacyCommit = install ? warnLegacy(manager, revision ?: 'the default branch', revision) : null
+            if( !install && manager.isUsingLegacyStrategy() ) {
                 if( migrate ) {
                     log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
                     manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
@@ -225,16 +228,34 @@ class PipelineCmdSupport {
 
             log.info "Checking ${manager.getProjectWithRevision()} ..."
 
-            final result = manager.download(revision, deep)
+            final result = legacySwitch(manager, legacyCommit, manager.download(revision, deep))
             manager.updateModules()
             return new UserLevelDownload(result, manager.getScriptFile())
         }
     }
 
-    // the legacy layout holds a single revision, so installing another one would replace it
-    private static void checkNotLegacy(AssetManager manager) {
-        if( manager.isOnlyLegacy() )
-            throw new AbortOperationException("Pipeline ${manager.project} was downloaded with the legacy layout -- remove it with `nextflow pipeline remove -g ${manager.project}` and install it again")
+    /**
+     * Warn that installing a revision of a legacy download replaces its single revision, unless it is the checked-out one
+     *
+     * @param label The revision as shown to the user
+     * @param revision The revision to install: a name or a commit, or {@code null} for the default branch
+     * @return the checked-out commit of the legacy download, or {@code null} when it is not one
+     */
+    private static String warnLegacy(AssetManager manager, String label, String revision) {
+        if( !manager.isUsingLegacyStrategy() || !manager.localPath?.exists() )
+            return null
+        final current = manager.getCurrentRevisionAndName()
+        if( !revision || (revision != current?.name && !current?.commitId?.startsWith(revision)) )
+            log.warn "Pipeline ${manager.project} was downloaded with the legacy layout, which holds a single revision -- installing ${label} replaces the current revision"
+        return current?.commitId
+    }
+
+    // the result of a legacy download does not tell whether it switched to another commit
+    private static String legacySwitch(AssetManager manager, String before, String result) {
+        if( !before )
+            return result
+        final after = manager.getCurrentRevisionAndName()?.commitId
+        return after == before ? 'Already-up-to-date' : "checked out at ${after}"
     }
 
     /** Base URL of the registry web pages: the API URL without {@code /api} */

@@ -49,10 +49,10 @@ With the `-g` (`-global`) option, the `install`, `list`, and `remove` subcommand
 nextflow pipeline install -g nf-core/rnaseq -version 3.14.0
 nextflow pipeline install -g https://github.com/nextflow-io/hello
 nextflow pipeline list -g
-nextflow pipeline remove -g nf-core/rnaseq -version 3.14.0
+nextflow pipeline remove -g nf-core/rnaseq
 ```
 
-The `pipeline` command uses the registry by default, while `nextflow run` uses GitHub by default. Give a pipeline that is not in the registry by its Git repository URL. The user-level store keeps each downloaded revision, and `pipeline list -g` prints one row for each of them.
+The `pipeline` command uses the registry by default, while `nextflow run` uses GitHub by default. Give a pipeline that is not in the registry by its Git repository URL. The user-level store keeps each downloaded revision, and `pipeline list -g` prints one row for each of them. `pipeline remove -g` removes a pipeline with all of its revisions.
 
 See [`pipeline`][cli-pipeline] for details.
 
@@ -106,11 +106,11 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
   |---|---|
   | `pull <registry address> -r <version>` | `pipeline install -g <scope/name> -version <version>` |
   | `pull <scope/name> -r <revision>` | `pipeline install -g <repository URL> -version <revision>`, e.g. `https://github.com/<scope/name>` |
-  | `drop <project> -r <revision>` | `pipeline remove -g <project> -version <revision>` |
+  | `drop <project>` | `pipeline remove -g <project>` |
   | `list` | `pipeline list -g` |
   | `view <project>` | `pipeline list -g -o json` to find the local copy |
 
-  A plain `scope/name` given to `pipeline install -g` is a registry name, so give a Git pipeline by its repository URL. The `-all`, `-hub`, `-user`, `-migrate`, and `-deep` options of `pull` have no equivalent. A pipeline downloaded with the legacy layout must be removed with `pipeline remove -g` before `pipeline install -g` can add a revision to it.
+  A plain `scope/name` given to `pipeline install -g` is a registry name, so give a Git pipeline by its repository URL. The `-all`, `-hub`, `-user`, `-migrate`, and `-deep` options of `pull`, and the `-r` option of `drop`, have no equivalent: `pipeline remove -g` removes all revisions of a pipeline. A pipeline downloaded with the legacy layout holds a single revision, so `pipeline install -g` replaces its current revision and prints a warning.
 
 - The `info` command with a project name is deprecated. Use `pipeline list -g` instead. It has no equivalent of the `-check-updates` (`-u`) option, the `-d` detail level, or the `yaml` output of `info`. `nextflow info` without a project name still prints the system information. See [Deprecations][deprecations-page] for details.
 

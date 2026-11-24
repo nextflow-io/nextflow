@@ -544,83 +544,25 @@ class CmdPipelineUserLevelTest extends Specification {
         ]
     }
 
-    def 'should remove one revision from the user-level store'() {
+    def 'should not accept -version when removing a pipeline'() {
+        when:
+        new JCommander(new CmdPipelineRemove()).parse(ARGS as String[])
+        then:
+        thrown(ParameterException)
+
+        where:
+        ARGS << [['-g', '-version', '1.0.0', 'acme/hello'], ['-g', '-r', '1.0.0', 'acme/hello']]
+    }
+
+    def 'should remove every revision from the user-level store'() {
         given:
-        final repo = installRevisions()
+        installRevisions()
 
-        when: 'by tag'
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0'))
+        when:
+        exec(new CmdPipelineRemove(args: ['local/hello'], global: true))
         then:
-        !Files.exists(clone('local/hello', repo.v1))
-        Files.exists(clone('local/hello', repo.v2))
-        stdout() == ['Pipeline local/hello@v1.0.0 removed']
-
-        when: 'by annotated tag'
-        resetOutput()
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v3.0.0'))
-        then:
-        !Files.exists(clone('local/hello', repo.v3tag))
-        stdout() == ['Pipeline local/hello@v3.0.0 removed']
-
-        when: 'by short commit, with the -r alias'
-        resetOutput()
-        final cmd = new CmdPipelineRemove()
-        new JCommander(cmd).parse('-g', '-r', repo.v4.take(7), 'local/hello')
-        exec(cmd)
-        then:
-        !Files.exists(clone('local/hello', repo.v4))
-        stdout() == ["Pipeline local/hello@${repo.v4.take(7)} removed".toString()]
-
-        when: 'the last revision, by branch'
-        resetOutput()
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'master'))
-        then: 'removes the pipeline'
         !Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/local/hello"))
-        stdout() == ['Pipeline local/hello@master removed']
-    }
-
-    def 'should not remove an unknown or modified revision from the user-level store'() {
-        given:
-        final repo = installRevisions()
-
-        when:
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: '9.9.9'))
-        then:
-        def e = thrown(AbortOperationException)
-        e.message == 'Pipeline local/hello@9.9.9 is not installed in the user-level store -- installed revisions: dev, v1.0.0, v2.0.0, v3.0.0'
-
-        when:
-        Files.writeString(clone('local/hello', repo.v1).resolve('main.nf'), 'changed')
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0'))
-        then:
-        e = thrown(AbortOperationException)
-        e.message == 'Pipeline local/hello@v1.0.0 has local modifications -- use -force to remove it'
-        Files.exists(clone('local/hello', repo.v1))
-
-        when:
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0', force: true))
-        then:
-        !Files.exists(clone('local/hello', repo.v1))
-        Files.exists(clone('local/hello', repo.v2))
-    }
-
-    def 'should remove a legacy download by its version'() {
-        given:
-        final dir = seedRepo('acme/hello', 'https://github.com/acme/hello.git')
-
-        when:
-        exec(new CmdPipelineRemove(args: ['acme/hello'], global: true, version: 'master'))
-        then:
-        !Files.exists(dir)
-        stdout() == ['Pipeline acme/hello@master removed']
-    }
-
-    def 'should reject -version when removing from the project'() {
-        when:
-        exec(new CmdPipelineRemove(args: ['acme/hello'], version: '1.0.0', root: base.resolve('project')))
-        then:
-        def e = thrown(AbortOperationException)
-        e.message == 'Option `-version` requires `-global` -- the project-level store holds a single version of each pipeline'
+        stdout() == ['Pipeline local/hello removed']
     }
 
     def 'should hint at the user-level store when removing a pipeline that is not in the project'() {
@@ -638,46 +580,40 @@ class CmdPipelineUserLevelTest extends Specification {
         'acme/other'    | ['Pipeline acme/other is not installed']
     }
 
-    def 'should keep an unreadable clone when removing the last readable revision'() {
+    def 'should switch the revision of a legacy download when installing another one'() {
         given:
         final repo = gitRepo('hello')
-        installCmd(args: [repo.url]).run()
-        installCmd(args: [repo.url], version: 'v1.0.0').run()
-        and: 'a clone that can not be read, e.g. an interrupted clone'
-        final unreadable = Files.createDirectories(clone('local/hello', 'a' * 40))
-        Files.writeString(unreadable.resolve('precious.txt'), 'keep')
+        final dir = assets().resolve(NAME)
+        Git.cloneRepository().setURI(repo.url).setDirectory(dir.toFile()).call().close()
+        final head = { Git.open(dir.toFile()).withCloseable { it.repository.resolve('HEAD').name() } }
+        assert head() == repo.v2
 
         when:
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v1.0.0'))
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'master'))
-        then:
-        !Files.exists(clone('local/hello', repo.v1))
-        !Files.exists(clone('local/hello', repo.v2))
-        unreadable.resolve('precious.txt').text == 'keep'
-        Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/local/hello/${MultiRevisionRepositoryStrategy.BARE_REPO}"))
-    }
-
-    def 'should not install a revision next to a legacy download'() {
-        given:
-        final repo = gitRepo('hello')
-        final dir = seedRepo(NAME, repo.url)
-        final commit = Git.open(dir.toFile()).withCloseable { it.repository.resolve('HEAD').name() }
-
-        when:
+        resetOutput()
         installCmd(args: [NAME == 'local/hello' ? repo.url : NAME], version: VERSION, client: registryOf(repo)).run()
         then:
-        def e = thrown(AbortOperationException)
-        e.message == "Pipeline ${NAME} was downloaded with the legacy layout -- remove it with `nextflow pipeline remove -g ${NAME}` and install it again".toString()
-        Git.open(dir.toFile()).withCloseable { it.repository.resolve('HEAD').name() } == commit
+        head() == repo.v1
+        capture.toString().contains("Pipeline ${NAME} was downloaded with the legacy layout, which holds a single revision -- installing ${LABEL} replaces the current revision")
+        !capture.toString().contains('-migrate')
+        stdout().last() == "Pipeline ${NAME}@${VERSION} installed in ${dir}".toString()
         !Files.exists(assets().resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR))
 
+        when: 'the same revision again'
+        resetOutput()
+        final mark = capture.toString().length()
+        installCmd(args: [NAME == 'local/hello' ? repo.url : NAME], version: VERSION, client: registryOf(repo)).run()
+        then:
+        head() == repo.v1
+        !capture.toString().substring(mark).contains('legacy layout')
+        stdout().last() == "Pipeline ${NAME}@${VERSION} is already installed".toString()
+
         where:
-        NAME            | VERSION
-        'local/hello'   | 'v1.0.0'
-        'acme/hello'    | '1.0.0'
+        NAME            | VERSION   | LABEL
+        'local/hello'   | 'v1.0.0'  | 'v1.0.0'
+        'acme/hello'    | '1.0.0'   | 'acme/hello@1.0.0'
     }
 
-    def 'should treat the clones of an annotated tag and of its commit as one revision'() {
+    def 'should list the clones of an annotated tag and of its commit as one revision'() {
         given:
         final repo = branchedRepo()
         installCmd(args: [repo.url], version: 'v3.0.0').run()
@@ -693,40 +629,6 @@ class CmdPipelineUserLevelTest extends Specification {
             ['v1.0.0', repo.v1, clone('local/hello', repo.v1).toString()],
             ['v3.0.0', repo.v3, clone('local/hello', repo.v3).toString()],
         ]
-
-        when:
-        resetOutput()
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: VERSION == 'commit' ? repo.v3 : VERSION))
-        then: 'removes both clones'
-        !Files.exists(clone('local/hello', repo.v3tag))
-        !Files.exists(clone('local/hello', repo.v3))
-        Files.exists(clone('local/hello', repo.v1))
-
-        where:
-        VERSION << ['v3.0.0', 'commit']
-    }
-
-    def 'should check each clone of a commit for local modifications'() {
-        given:
-        final repo = branchedRepo()
-        installCmd(args: [repo.url], version: 'v3.0.0').run()
-        installCmd(args: [repo.url], version: repo.v3).run()
-        installCmd(args: [repo.url], version: 'v1.0.0').run()
-        Files.writeString(clone('local/hello', repo.v3).resolve('main.nf'), 'changed')
-
-        when:
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v3.0.0'))
-        then:
-        def e = thrown(AbortOperationException)
-        e.message == 'Pipeline local/hello@v3.0.0 has local modifications -- use -force to remove it'
-        Files.exists(clone('local/hello', repo.v3tag))
-        Files.exists(clone('local/hello', repo.v3))
-
-        when:
-        exec(new CmdPipelineRemove(args: ['local/hello'], global: true, version: 'v3.0.0', force: true))
-        then:
-        !Files.exists(clone('local/hello', repo.v3tag))
-        !Files.exists(clone('local/hello', repo.v3))
     }
 
     def 'should sort the versions in the user-level store by their numbers'() {
@@ -740,16 +642,15 @@ class CmdPipelineUserLevelTest extends Specification {
         exec(CMD)
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Not a valid pipeline name: nf-core/demo@1.2.0 -- give the version with the `-version` option, e.g. `nf-core/demo -version 1.2.0`'
+        e.message == "Not a valid pipeline name: nf-core/demo@1.2.0 -- ${HINT}".toString()
 
         where:
-        CMD << [
-            new CmdPipelineInstall(args: ['nf-core/demo@1.2.0'], global: true),
-            new CmdPipelineInstall(args: ['nf-core/demo@1.2.0']),
-            new CmdPipelineRemove(args: ['nf-core/demo@1.2.0'], global: true),
-            new CmdPipelineRemove(args: ['nf-core/demo@1.2.0']),
-            new CmdPipelineView(args: ['nf-core/demo@1.2.0']),
-        ]
+        CMD                                                                 | HINT
+        new CmdPipelineInstall(args: ['nf-core/demo@1.2.0'], global: true)  | 'give the version with the `-version` option, e.g. `nf-core/demo -version 1.2.0`'
+        new CmdPipelineInstall(args: ['nf-core/demo@1.2.0'])                | 'give the version with the `-version` option, e.g. `nf-core/demo -version 1.2.0`'
+        new CmdPipelineRemove(args: ['nf-core/demo@1.2.0'], global: true)   | 'give the pipeline as `scope/name`, e.g. `nf-core/demo`'
+        new CmdPipelineRemove(args: ['nf-core/demo@1.2.0'])                 | 'give the pipeline as `scope/name`, e.g. `nf-core/demo`'
+        new CmdPipelineView(args: ['nf-core/demo@1.2.0'])                   | 'give the version with the `-version` option, e.g. `nf-core/demo -version 1.2.0`'
     }
 
     def 'should reject an SSH Git URL'() {
