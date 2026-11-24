@@ -21,6 +21,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.concurrent.ConcurrentHashMap
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
+
 import nextflow.serde.gson.GsonEncoder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -58,7 +61,8 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     // was skipped (e.g. PluginUpdater skip-if-installed) or failed (non-fatal degradation).
     private Map<String, PluginInfo> plugins = new HashMap<>()
 
-    private final Map<String,String> hints = new ConcurrentHashMap<>()
+    // plain name of a moved plugin to its `canonicalId`
+    private final Map<String,String> canonicalIds = new ConcurrentHashMap<>()
 
     HttpPluginRepository(String id, URI url) {
         this.id = id
@@ -137,20 +141,12 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         if( plugins.containsKey(id) )
             return plugins.get(id)
         final fetched = fetchMetadataByIds([id])
-        final result = fetched.get(id)
-        // a moved plugin is also stored under its other ID
-        if( result != null ) for( Map.Entry<String,PluginInfo> it : fetched.entrySet() ) {
-            if( it.value.is(result) )
-                plugins.put(it.key, result)
-        }
-        return result
+        plugins.putAll(fetched)
+        return fetched.get(id)
     }
 
-    /**
-     * The plain name of each moved plugin seen in a registry response, mapped to its namespaced ID
-     */
-    Map<String,String> getHints() {
-        return hints
+    Map<String,String> getCanonicalIds() {
+        return canonicalIds
     }
 
     @Override
@@ -220,17 +216,17 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             if( decoded.plugins == null ) {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
-            final canonicalIds = canonicalIds(body)
+            final moved = parseCanonicalIds(body)
             final result = new HashMap<String, PluginInfo>()
             for( PluginDependency plugin : decoded.plugins ) {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
-                    final canonicalId = canonicalIds.get(plugin.id)
+                    final canonicalId = moved.get(plugin.id)
                     if( canonicalId ) {
                         result.put(canonicalId, pluginInfo)
-                        // a move keeps the name, so the plain name is the part after the namespace
-                        hints.put(canonicalId.substring(canonicalId.indexOf('/')+1), canonicalId)
+                        // a move keeps the name
+                        canonicalIds.put(PluginRef.name(canonicalId), canonicalId)
                     }
                 }
                 else
@@ -244,20 +240,17 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
     }
 
-    // TODO use PluginDependency.canonicalId once npr-api has it
-    private static Map<String,String> canonicalIds(String body) {
-        final List<Hint> list = new GsonEncoder<Hints>() {}.decode(body).plugins
+    // TODO remove once npr-api `PluginDependency` has `canonicalId`
+    private static Map<String,String> parseCanonicalIds(String body) {
         final result = new HashMap<String,String>()
-        for( Hint it : list ?: List.<Hint>of() ) {
-            if( it.id && it.canonicalId?.contains('/') )
-                result.put(it.id, it.canonicalId)
+        for( JsonElement it : JsonParser.parseString(body).asJsonObject.getAsJsonArray('plugins') ) {
+            final id = it.asJsonObject.get('id')
+            final canonicalId = it.asJsonObject.get('canonicalId')
+            if( id?.isJsonPrimitive() && canonicalId?.isJsonPrimitive() && canonicalId.asString.contains('/') )
+                result.put(id.asString, canonicalId.asString)
         }
         return result
     }
-
-    private static class Hints { List<Hint> plugins }
-
-    private static class Hint { String id; String canonicalId }
 
     /**
      * Maps a Plugin object from the repository API to a PluginInfo object for pf4j compatibility.

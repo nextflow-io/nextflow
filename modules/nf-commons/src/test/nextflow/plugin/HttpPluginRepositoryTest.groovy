@@ -92,7 +92,7 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-bar")])
 
         then:
-        unit.hints == ['nf-foo': 'myorg/nf-foo']
+        unit.canonicalIds == ['nf-foo': 'myorg/nf-foo']
         unit.getPlugins().keySet() == ['nf-bar', 'nf-foo', 'myorg/nf-foo'] as Set
         unit.getPlugin('myorg/nf-foo').is(unit.getPlugin('nf-foo'))
     }

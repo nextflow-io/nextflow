@@ -34,6 +34,7 @@ import org.pf4j.ExtensionPoint
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginState
 import org.slf4j.LoggerFactory
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 /**
@@ -137,14 +138,14 @@ class PluginNamespaceTest extends Specification {
 
     // -- loading
 
-    def 'should load a zip with Plugin-Namespace once, by both IDs' () {
+    def 'should load a moved plugin once, by both IDs' () {
         given:
-        def z = zip('nf-foo', '1.0.0', ns: 'myorg')
+        def z = zip('nf-foo', '1.0.0', ns: NS)
         registry(entry('nf-foo', 'myorg/nf-foo', z), entry('myorg/nf-foo', 'myorg/nf-foo', z))
         def updater = updater()
 
         when:
-        updater.prefetchMetadata([new PluginRef('nf-foo', '1.0.0'), new PluginRef('myorg/nf-foo', '1.0.0')])
+        updater.prefetchMetadata([new PluginRef('nf-foo', '1.0.0')])
         updater.prepareAndStart('nf-foo', '1.0.0')
         updater.prepareAndStart('myorg/nf-foo', '1.0.0')
 
@@ -154,6 +155,9 @@ class PluginNamespaceTest extends Specification {
         and: 'stored once, linked under the plain name'
         isFolder('myorg~nf-foo-1.0.0')
         isLink('nf-foo-1.0.0', 'myorg~nf-foo-1.0.0')
+
+        where:
+        NS << ['myorg', null]
     }
 
     def 'should learn the namespace from the zip of a plain request' () {
@@ -173,6 +177,21 @@ class PluginNamespaceTest extends Specification {
         isLink('myorg~nf-foo-1.0.0', 'nf-foo-1.0.0')
     }
 
+    def 'should reuse the loaded plugin when the plain name comes after the namespaced ID' () {
+        given: 'the registry gives no canonicalId'
+        def z = zip('nf-foo', '1.0.0', ns: 'myorg')
+        registry(entry('nf-foo', null, z), entry('myorg/nf-foo', null, z))
+        def updater = updater()
+
+        when:
+        updater.prepareAndStart('myorg/nf-foo', '1.0.0')
+        updater.prepareAndStart('nf-foo', '1.0.0')
+
+        then:
+        loaded(updater) == ['myorg/nf-foo']
+        updater.aliases == ['nf-foo': 'myorg/nf-foo']
+    }
+
     def 'should load a zip without Plugin-Namespace by the namespaced ID' () {
         given:
         def z = zip('nf-foo', '1.0.0')
@@ -185,23 +204,6 @@ class PluginNamespaceTest extends Specification {
         then: 'the namespace comes from the store folder name'
         loaded(updater) == ['myorg/nf-foo']
         isFolder('myorg~nf-foo-1.0.0')
-    }
-
-    def 'should load a zip without Plugin-Namespace once, by the plain name with the hint' () {
-        given:
-        def z = zip('nf-foo', '1.0.0')
-        registry(entry('nf-foo', 'myorg/nf-foo', z), entry('myorg/nf-foo', 'myorg/nf-foo', z))
-        def updater = updater()
-
-        when:
-        updater.prefetchMetadata([new PluginRef('nf-foo', '1.0.0')])
-        updater.prepareAndStart('nf-foo', '1.0.0')
-        updater.prepareAndStart('myorg/nf-foo', '1.0.0')
-
-        then:
-        loaded(updater) == ['myorg/nf-foo']
-        isFolder('myorg~nf-foo-1.0.0')
-        isLink('nf-foo-1.0.0', 'myorg~nf-foo-1.0.0')
     }
 
     def 'should load a zip with a namespaced Plugin-Id' () {
@@ -269,7 +271,7 @@ class PluginNamespaceTest extends Specification {
         registryCalls() == 1
     }
 
-    // -- registry hint
+    // -- canonicalId from the registry
 
     def 'should map the plugins named in the registry response' () {
         given:
@@ -291,7 +293,7 @@ class PluginNamespaceTest extends Specification {
         null            | [:]                           | ['nf-bar', 'nf-foo']
     }
 
-    def 'should find the plugin info of a plain-only index by the namespaced ID' () {
+    def 'should find a moved plugin by namespaced ID in a legacy plugins.json' () {
         given: 'a plugins.json index and a store link'
         def z = zip('nf-foo', '1.0.0')
         def index = repo.resolve('plugins.json')
@@ -311,9 +313,13 @@ class PluginNamespaceTest extends Specification {
 
     def 'should map a plain dependency on a moved plugin' () {
         given:
-        def bar = zip('nf-bar', '1.0.0', deps: 'nf-foo@>=1.0.0')
+        def bar = zip('nf-bar', '1.0.0', deps: 'nf-foo?@>=1.0.0')
         def foo = zip('nf-foo', '1.0.0')
-        registry(entry('nf-bar', null, bar), entry('nf-foo', 'myorg/nf-foo', foo), entry('myorg/nf-foo', 'myorg/nf-foo', foo))
+        and: 'LATE: the canonicalId comes only with the dependency metadata, after nf-bar is loaded'
+        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).withQueryParam('plugins', matching('nf-bar.*'))
+            .willReturn(aResponse().withStatus(200).withBody("""{"plugins":[${entry('nf-bar', null, bar)}${LATE ? '' : ',' + entry('nf-foo', 'myorg/nf-foo', foo)}]}""")))
+        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).withQueryParam('plugins', matching('nf-foo.*'))
+            .willReturn(aResponse().withStatus(200).withBody("""{"plugins":[${entry('nf-foo', 'myorg/nf-foo', foo)}]}""")))
         def updater = updater()
 
         when:
@@ -323,29 +329,14 @@ class PluginNamespaceTest extends Specification {
         then:
         loaded(updater) == ['myorg/nf-foo', 'nf-bar']
         updater.@pluginManager.getPlugin('nf-bar').pluginState == PluginState.STARTED
-        updater.@pluginManager.getPlugin('nf-bar').descriptor.dependencies*.pluginId == ['myorg/nf-foo']
-    }
-
-    def 'should map a dependency whose hint arrives after its dependent was loaded' () {
-        given:
-        def bar = zip('nf-bar', '1.0.0', deps: 'nf-foo?@>=1.0.0')
-        def foo = zip('nf-foo', '1.0.0')
-        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).withQueryParam('plugins', matching('nf-bar.*'))
-            .willReturn(aResponse().withStatus(200).withBody("""{"plugins":[${entry('nf-bar', null, bar)}]}""")))
-        wiremock.stubFor(get(urlPathEqualTo('/v1/plugins/dependencies')).withQueryParam('plugins', matching('nf-foo.*'))
-            .willReturn(aResponse().withStatus(200).withBody("""{"plugins":[${entry('nf-foo', 'myorg/nf-foo', foo)}]}""")))
-        def updater = updater()
-
-        when:
-        updater.prepareAndStart('nf-bar', '1.0.0')
-
-        then:
-        loaded(updater) == ['myorg/nf-foo', 'nf-bar']
         with(updater.@pluginManager.getPlugin('nf-bar').descriptor.dependencies[0]) {
             pluginId == 'myorg/nf-foo'
             optional
             pluginVersionSupport == '>=1.0.0'
         }
+
+        where:
+        LATE << [false, true]
     }
 
     def 'should keep the pinned version of a moved core plugin' () {
@@ -382,6 +373,21 @@ class PluginNamespaceTest extends Specification {
         plugins.manager.plugins*.pluginId == ['myorg/nf-foo']
         plugins.getPlugin('nf-foo').descriptor.version == '1.0.0'
         !store.resolve('myorg~nf-foo-2.0.0').exists()
+    }
+
+    def 'should let the config version win over the default plugin version' () {
+        given:
+        def z1 = zip('nf-foo', '1.0.0', ns: 'myorg')
+        def z2 = zip('nf-foo', '2.0.0', ns: 'myorg')
+        registry(entry('nf-foo', 'myorg/nf-foo', z1, z2), entry('myorg/nf-foo', 'myorg/nf-foo', z1, z2))
+        def plugins = facade(NXF_PLUGINS_DEFAULT: 'nf-foo@2.0.0')
+
+        when:
+        plugins.load([plugins: ['myorg/nf-foo@1.0.0']])
+
+        then:
+        plugins.manager.plugins*.pluginId == ['myorg/nf-foo']
+        plugins.getPlugin('nf-foo').descriptor.version == '1.0.0'
     }
 
     def 'should resolve the plain ID of an include' () {
@@ -446,7 +452,7 @@ class PluginNamespaceTest extends Specification {
         registry(entry('nf-foo', null, z))
         def plugins = facade(NXF_PLUGINS_ALLOWED: 'myorg/nf-foo')
 
-        when: 'no hint says nf-foo moved'
+        when: 'no canonicalId says nf-foo moved'
         plugins.start('nf-foo@1.0.0')
 
         then:
@@ -511,9 +517,12 @@ class PluginNamespaceTest extends Specification {
         def z = zip('nf-foo', '1.0.0', ns: 'org1')
         registry(entry('org1/nf-foo', 'org1/nf-foo', z), entry('nf-foo', 'org1/nf-foo', z))
         and:
-        Files.createDirectory(store.resolve(OTHER))
-        if( LINK )
-            Files.createSymbolicLink(store.resolve('nf-foo-1.0.0'), Path.of(OTHER))
+        if( LINK ) {
+            stored('org2~nf-foo-1.0.0', 'nf-foo', '1.0.0', ns: 'org2')
+            Files.createSymbolicLink(store.resolve('nf-foo-1.0.0'), Path.of('org2~nf-foo-1.0.0'))
+        }
+        else
+            Files.createDirectory(store.resolve('nf-foo-1.0.0'))
         def updater = updater()
 
         when:
@@ -525,27 +534,39 @@ class PluginNamespaceTest extends Specification {
         isFolder('org1~nf-foo-1.0.0')
 
         where:
-        OTHER                   | LINK
-        'org2~nf-foo-1.0.0'     | true
-        'nf-foo-1.0.0'          | false
+        LINK << [true, false]
     }
 
-    def 'should load from a read-only store without the link' () {
-        given:
-        def z = zip('nf-foo', '1.0.0')
-        registry(entry('myorg/nf-foo', 'myorg/nf-foo', z))
-        updater().pullPlugins(['myorg/nf-foo@1.0.0'])
-        store.resolve('nf-foo-1.0.0').toFile().delete()
+    @IgnoreIf({ System.getProperty('user.name') == 'root' })
+    def 'should load the plain folder of an older Nextflow from a read-only store' () {
+        given: 'the registry release cannot be downloaded'
+        stored('nf-foo-1.0.0', 'nf-foo', '1.0.0')
+        registry(entry('myorg/nf-foo', 'myorg/nf-foo', folder.resolve('missing/nf-foo-1.0.0.zip')))
         store.toFile().setWritable(false)
         def updater = updater()
-        updater.aliases['nf-foo'] = 'myorg/nf-foo'
 
         when:
+        updater.prefetchMetadata([new PluginRef('myorg/nf-foo', '1.0.0')])
         updater.prepareAndStart('myorg/nf-foo', '1.0.0')
 
         then:
         loaded(updater) == ['myorg/nf-foo']
-        !Files.exists(store.resolve('nf-foo-1.0.0'), LinkOption.NOFOLLOW_LINKS)
+        !Files.exists(store.resolve('myorg~nf-foo-1.0.0'), LinkOption.NOFOLLOW_LINKS)
+    }
+
+    def 'should refuse an invalid Plugin-Namespace' () {
+        given:
+        def dir = stored('nf-foo-1.0.0', 'nf-foo', '1.0.0', ns: NS)
+
+        when:
+        new NamespaceDescriptorFinder().find(dir)
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message == "Invalid Plugin-Namespace '$NS' in plugin $dir"
+
+        where:
+        NS << ['a~b', 'a/b', '..', '.']
     }
 
     def 'should map only from store links' () {
@@ -589,7 +610,7 @@ class PluginNamespaceTest extends Specification {
     }
 
     def 'should resolve offline a plain dependency on a moved plugin' () {
-        given: 'a store filled online with the hint'
+        given: 'a store filled online, with the canonicalId'
         def foo = zip('nf-foo', '1.0.0')
         def bar = zip('nf-bar', '1.0.0', deps: 'nf-foo@1.0.0')
         registry(entry('nf-bar', null, bar), entry('nf-foo', 'myorg/nf-foo', foo), entry('myorg/nf-foo', 'myorg/nf-foo', foo))

@@ -76,7 +76,7 @@ class PluginUpdater extends UpdateManager {
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
-    /** Plain name of a moved plugin to its namespaced ID */
+    // plain name of a moved plugin to its namespaced ID
     @PackageScope
     final Map<String,String> aliases = new ConcurrentHashMap<>()
 
@@ -101,69 +101,54 @@ class PluginUpdater extends UpdateManager {
         return id ? aliases.getOrDefault(id, id) : id
     }
 
-    private void readHints() {
+    private void readCanonicalIds() {
+        // the first registry wins
+        final result = new HashMap<String,String>()
         for( def repo : this.@repositories ) {
             if( repo instanceof HttpPluginRepository )
-                aliases.putAll(repo.hints)
+                repo.canonicalIds.each { k, v -> result.putIfAbsent(k, v) }
         }
+        aliases.putAll(result)
     }
 
-    /**
-     * Reads the moved plugins from the store links between `<name>-<ver>` and `<ns>~<name>-<ver>`.
-     * Only Nextflow writes these links, from a registry hint or a served zip.
-     */
+    // only Nextflow writes the links between `<name>-<ver>` and `<ns>~<name>-<ver>`
     static Map<String,String> storeAliases(Path store) {
-        final Map<String,Set<String>> found = new HashMap<>()
-        for( Path p : FilesEx.listFiles(store) ) {
-            if( !Files.isSymbolicLink(p) || !Files.exists(p) )
-                continue
-            final names = [p.fileName.toString(), Files.readSymbolicLink(p).fileName.toString()]
-            final scoped = names.findAll { it.contains('~') }
-            if( scoped.size() != 1 )
-                continue
-            final parts = scoped[0].split('~', 2)
-            final name = parts[1].replaceFirst(/-\d+\.\d+\.\d+\S*$/, '')
-            found.computeIfAbsent(name, k -> new HashSet<String>()).add("${parts[0]}/$name".toString())
-        }
-        final result = new HashMap<String,String>()
-        for( Map.Entry<String,Set<String>> it : found.entrySet() ) {
-            // a name linked to two namespaces is ambiguous
-            if( it.value.size() == 1 )
-                result.put(it.key, it.value.first())
-        }
-        return result
+        final List<String> ids = FilesEx.listFiles(store)
+            .findAll { Path p -> Files.isSymbolicLink(p) && Files.exists(p) }
+            .collect { Path p -> [p.fileName.toString(), Files.readSymbolicLink(p).fileName.toString()].findAll { String n -> n.contains('~') } }
+            .findAll { List<String> names -> names.size() == 1 }
+            .collect { List<String> names -> PluginRef.fromDirName(names[0].replaceFirst(/-\d+\.\d+\.\d+\S*$/, '')) }
+            .unique()
+        // a name linked to two namespaces is ambiguous
+        return ids
+            .groupBy { String id -> PluginRef.name(id) }
+            .findAll { String k, List<String> v -> v.size() == 1 }
+            .collectEntries { String k, List<String> v -> [k, v[0]] } as Map<String,String>
     }
 
-    /**
-     * Stores a moved plugin once and links its other store name to it,
-     * so older Nextflow and offline runs find it under both IDs
-     */
-    private void linkMoved(String id, String version) {
-        final name = id.substring(id.indexOf('/')+1)
-        if( aliases.get(name) != id )
-            return
-        final scopedPath = pluginsStore.resolve("${PluginRef.dirName(id)}-$version")
-        final plainPath = pluginsStore.resolve("$name-$version")
-        if( isComplete(plainPath) )
-            createLink(scopedPath, plainPath)
-        else if( isComplete(scopedPath) )
-            createLink(plainPath, scopedPath)
+    private boolean isMoved(String id) {
+        return id.contains('/') && aliases.get(PluginRef.name(id)) == id
     }
 
-    // a real folder that load0 accepts, never a link
+    // load0 needs a real folder, not a link
     private static boolean isComplete(Path dir) {
         return Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS) && Files.exists(dir.resolve('classes/META-INF/MANIFEST.MF'))
     }
 
-    private static void createLink(Path link, Path target) {
-        if( Files.exists(link, LinkOption.NOFOLLOW_LINKS) )
-            return
+    private static boolean createLink(Path link, Path target) {
         try {
             Files.createSymbolicLink(link, target.fileName)
+            return true
         }
         catch( IOException | UnsupportedOperationException e ) {
             log.debug "Unable to link plugin $link -> $target - cause: ${e.message}"
+            return false
         }
+    }
+
+    // takes the plain lock, which older Nextflow holds while it copies the folder
+    private boolean linkToPlain(Path link, Path plainPath, String id, String version) {
+        return withLock(PluginRef.name(id), version) { isComplete(plainPath) && createLink(link, plainPath) }
     }
 
     static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
@@ -363,10 +348,10 @@ class PluginUpdater extends UpdateManager {
                 repo.prefetch(needed)
             }
         }
-        readHints()
+        readCanonicalIds()
     }
 
-    // `nf-foo` and `myorg/nf-foo` in one run may be one moved plugin: only the registry can tell
+    // both may be one moved plugin; only the registry knows
     private boolean hasUnlinkedTwin(PluginRef ref, List<PluginRef> plugins) {
         return plugins.any { it -> isUnlinkedPair(ref.id, it.id) || isUnlinkedPair(it.id, ref.id) }
     }
@@ -394,7 +379,7 @@ class PluginUpdater extends UpdateManager {
                 log.warn "Failed to fetch metadata for plugin ${id} from ${repo.url} - cause: ${e.message}"
             }
         }
-        readHints()
+        readCanonicalIds()
     }
 
     protected boolean isAlreadyInstalled(PluginRef ref) {
@@ -445,7 +430,7 @@ class PluginUpdater extends UpdateManager {
         pullOnly=true
         try {
             final specs = plugins.collect(it -> PluginRef.parse(it,defaultPlugins))
-            // also for installed plugins: the response tells which ones moved, to add the missing links
+            // installed plugins too, to add missing links
             prefetch0(specs)
             for( PluginRef spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
@@ -583,10 +568,14 @@ class PluginUpdater extends UpdateManager {
      * @return The uncompressed plugin directory path
      */
     private Path safeDownload(String id, String version) {
+        return withLock(id, version) { download0(id, version) }
+    }
+
+    private <T> T withLock(String id, String version, Closure<T> action) {
         final sentinel = lockFile(id,version)
         final mutex = new FileMutex(target: sentinel, timeout: '10 min')
         try {
-            return mutex.lock { download0(id, version) }
+            return mutex.lock(action)
         }
         finally {
             sentinel.delete()
@@ -639,31 +628,36 @@ class PluginUpdater extends UpdateManager {
             log.debug "Plugin $id version $requestedVersion resolved to: $version"
         }
 
-        // reuse the folder of an older Nextflow, or link the one already stored
-        linkMoved(id, version)
-        def pluginPath = pluginsStore.resolve("${PluginRef.dirName(id)}-$version")
-        if( !FilesEx.exists(pluginPath) ) {
+        final folderName = "${PluginRef.dirName(id)}-$version".toString()
+        def pluginPath = pluginsStore.resolve(folderName)
+        final plainPath = isMoved(id) ? pluginsStore.resolve("${PluginRef.name(id)}-$version") : null
+        // a read-only store keeps the plain folder of an older Nextflow without the link
+        if( plainPath && !FilesEx.exists(pluginPath) && !linkToPlain(pluginPath, plainPath, id, version) && isComplete(plainPath) )
+            pluginPath = plainPath
+        if( !FilesEx.exists(pluginPath) )
             pluginPath = safeDownload(id, version)
-            linkMoved(id, version)
-        }
+        if( plainPath && isComplete(pluginPath) && pluginPath != plainPath )
+            createLink(plainPath, pluginPath)
 
         // verify the plugin install path contains the expected manifest path
         if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
             log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
 
-        // load the plugin from the file system
-        PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)
-        // the zip of a moved plugin declares its namespace
+        // load the plugin from the file system, unless it is already loaded under the namespace its zip declares
+        final declared = new NamespaceDescriptorFinder().find(pluginPath, folderName).pluginId
+        PluginWrapper wrapper = declared != id && PluginRef.name(declared) == id ? pluginManager.getPlugin(declared) : null
+        if( !wrapper )
+            wrapper = pluginManager.loadPluginFromPath(pluginPath, folderName)
         if( wrapper.pluginId != id ) {
             if( id.contains('/') ) {
                 pluginManager.unloadUnresolved(wrapper.pluginId)
                 throw new PluginRuntimeException("Plugin $id cannot be loaded -- its zip declares the ID ${wrapper.pluginId}")
             }
-            if( wrapper.pluginId.endsWith('/' + id) ) {
+            if( PluginRef.name(wrapper.pluginId) == id ) {
                 aliases.put(id, wrapper.pluginId)
+                linkToPlain(pluginsStore.resolve("${PluginRef.dirName(wrapper.pluginId)}-$version"), pluginPath, wrapper.pluginId, version)
                 id = wrapper.pluginId
-                linkMoved(id, version)
             }
         }
 
@@ -695,9 +689,15 @@ class PluginUpdater extends UpdateManager {
         if( pullOnly )
             return false
 
-        // pf4j matches dependency IDs as they are: use the ID of a moved plugin, known at the latest once it is loaded
-        for( PluginWrapper it : pluginManager.plugins )
-            it.descriptor.dependencies.replaceAll(dep -> canonical(dep))
+        // pf4j matches dependency IDs exactly; `set` keeps the list safe for readers on other threads
+        for( PluginWrapper it : pluginManager.plugins ) {
+            final list = it.descriptor.dependencies
+            for( int i=0; i<list.size(); i++ ) {
+                final dep = canonical(list[i])
+                if( !dep.is(list[i]) )
+                    list.set(i, dep)
+            }
+        }
         // resolve the plugins
         pluginManager.resolvePlugins()
         // finally start it
@@ -796,12 +796,6 @@ class PluginUpdater extends UpdateManager {
         return null
     }
 
-    @Override
-    PluginInfo.PluginRelease getLastPluginRelease(String id) {
-        return super.getLastPluginRelease(canonical(id))
-    }
-
-    // keeps the optional mark and the version constraint
     private PluginDependency canonical(PluginDependency dep) {
         final id = canonical(dep.pluginId)
         return id == dep.pluginId ? dep : new PluginDependency("${id}${dep.optional ? '?' : ''}@${dep.pluginVersionSupport}")

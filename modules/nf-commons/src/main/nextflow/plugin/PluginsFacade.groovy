@@ -318,12 +318,11 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    // embedded plugins that declare `Plugin-Namespace` keep answering to their plain name
+    // embedded plugins that declare `Plugin-Namespace` can still be found by their plain name
     private void aliasEmbedded() {
         for( PluginWrapper it : manager.plugins ) {
-            final p = it.pluginId.indexOf('/')
-            if( p >= 0 )
-                updater.aliases.put(it.pluginId.substring(p+1), it.pluginId)
+            if( it.pluginId.contains('/') )
+                updater.aliases.put(PluginRef.name(it.pluginId), it.pluginId)
         }
     }
 
@@ -332,7 +331,7 @@ class PluginsFacade implements PluginStateListener {
             throw new IllegalArgumentException("Plugin system has not been initialized")
         applyRegistryConfig(config)
         start(pluginsRequirement(config))
-        // the registry hints came with the metadata fetched by `start`
+        // `start` fetched the canonicalIds
         if( !isEmbedded() )
             parseConf(config).each(it -> noticeMoved(it.id))
     }
@@ -458,7 +457,7 @@ class PluginsFacade implements PluginStateListener {
         // explicit (in offline mode no remote repo is wired in, so this is also a no-op transitively)
         if( !offline )
             updater.prefetchMetadata(startable)
-        // the prefetch brings the registry hints: a moved plugin may now be listed twice
+        // the prefetch brings the canonicalIds: a moved plugin may now be listed twice
         final mapped = startable.collect(it -> new PluginRef(canonical(it.id), it.version))
         if( mapped != startable )
             startable = mergePluginSpecs([], mapped)
