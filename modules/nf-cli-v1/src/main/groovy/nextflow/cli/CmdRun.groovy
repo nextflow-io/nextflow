@@ -640,13 +640,16 @@ class CmdRun extends CmdBase implements HubAware {
          * try to look for a pipeline in the repository
          */
         final release = registryLookup(pipelineName)
-        // a registry release is cached under its registry name; offline, the cached copy is used
-        final project = release ? (release.repositoryUrl ?: release.name) : pipelineName
-        final rev = release?.repositoryUrl ? (release.commitId ?: release.revision) : revision
+        // a registry release is cached under its registry name; offline, the cached copy is used at the Git revision `-r`
+        final project = release ? (offline ? release.name : release.repositoryUrl) : pipelineName
+        final rev = release && !offline ? (release.commitId ?: release.revision) : revision
         final localName = release?.name
         // registry pipelines always use a top-level main.nf, regardless of `manifest.mainScript`
         final main = mainScript ?: (release ? Const.DEFAULT_MAIN_FILE_NAME : null)
         final hubOpts = release ? new HubOptions(null, hubUser) : toHubOptions()
+        // checked before building the manager, which can't resolve the Git provider of a pipeline that is not cached
+        if( offline && release && release.name !in AssetManager.list() )
+            throw notCached(release, rev)
         try( final manager = new AssetManager(project, rev, main, hubOpts, localName) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
@@ -654,7 +657,7 @@ class CmdRun extends CmdBase implements HubAware {
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
                 if( offline && remoteSource && release )
-                    throw new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- install it with `nextflow pipeline install -g`")
+                    throw notCached(release, rev)
                 if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."
@@ -686,6 +689,10 @@ class CmdRun extends CmdBase implements HubAware {
             }
         }
 
+    }
+
+    private static AbortOperationException notCached(PipelineInfo release, String rev) {
+        return new AbortOperationException("Revision `$rev` of `${release.name}` is not in the local cache -- install it with `nextflow pipeline install -g`")
     }
 
     /**

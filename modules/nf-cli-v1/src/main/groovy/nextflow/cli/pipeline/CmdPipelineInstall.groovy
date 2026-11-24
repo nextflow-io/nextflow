@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
 import nextflow.Const
 import nextflow.cli.CmdBase
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
 import nextflow.pipeline.PipelineGitFetcher
@@ -97,12 +98,14 @@ class CmdPipelineInstall extends CmdBase {
         if( force )
             throw new AbortOperationException("Option `-force` is not supported with `-global` -- the user-level store keeps each downloaded revision and never overwrites it")
         Plugins.init()
-        final config = PipelineCmdSupport.registryConfig(this)
+        // the config is read only for a registry address, so that a Git URL never reads it
+        RegistryConfig config = null
+        final Closure<RegistryConfig> registryConfig = { config ?: (config = PipelineCmdSupport.registryConfig(this)) }
         final isUrl = AssetManager.isUrl(name)
         // a page URL addresses its own registry, a name the configured registries as for project-level installs
-        final address = isUrl ? PipelineCmdSupport.registryAddress(name, null) { config } : null
+        final address = isUrl ? PipelineCmdSupport.registryAddress(name, null, registryConfig) : null
         if( !isUrl || address ) {
-            final client = this.client ?: (address ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(config))
+            final client = this.client ?: (address ? RegistryClientFactory.forUrls([address.url], address.apiKey) : RegistryClientFactory.forConfig(registryConfig.call()))
             final release = resolveRelease(client, address ? address.name : name, version)
             final label = "${release.name}@${release.version}"
             // a registry release is downloaded at its pinned commit, cached under its registry name as `run` does

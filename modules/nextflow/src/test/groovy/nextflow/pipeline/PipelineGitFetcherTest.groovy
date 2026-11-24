@@ -19,8 +19,12 @@ package nextflow.pipeline
 import java.nio.file.Files
 import java.nio.file.Path
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -96,5 +100,21 @@ class PipelineGitFetcherTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message.contains("Cannot fetch commit")
+    }
+
+    def 'fails without closing the repository twice when the fallback clone fails'() {
+        given:
+        def logger = (Logger) LoggerFactory.getLogger('org.eclipse.jgit')
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        when:
+        new PipelineGitFetcher().fetch(dir.resolve('missing').toUri().toString(), '1.0', sha1, dir.resolve('target'))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains("Cannot fetch commit")
+        !appender.list.any { it.formattedMessage.contains('useCnt') }
+        cleanup:
+        logger.detachAppender(appender)
     }
 }

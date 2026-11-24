@@ -70,6 +70,12 @@ class AssetManager implements Closeable {
     static File root = DEFAULT_ROOT
 
     /**
+     * The hub used when nothing else names one, i.e. {@code NXF_HUB}
+     */
+    @PackageScope
+    static String defaultHub = DEFAULT_HUB
+
+    /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organization account, while 'repo' is the repository name
      * containing the pipeline code
@@ -440,7 +446,7 @@ class AssetManager implements Closeable {
         if( !result )
             result = guessHubProviderFromGitConfig()
         if( !result )
-            result = DEFAULT_HUB
+            result = defaultHub
 
         def providerNames = providerConfigs.collect { it.name }
         if( !providerNames.contains(result)) {

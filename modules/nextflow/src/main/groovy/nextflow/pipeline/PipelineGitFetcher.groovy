@@ -75,6 +75,7 @@ class PipelineGitFetcher {
             catch( GitAPIException | JGitInternalException e ) {
                 log.debug "Cannot fetch commit ${commitId} of ${repositoryUrl}, falling back to a full clone: ${e.message}"
                 git.close()
+                git = null
                 FileHelper.deletePath(target)
                 git = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
             }
@@ -82,7 +83,7 @@ class PipelineGitFetcher {
             return git
         }
         catch( Throwable e ) {
-            git.close()
+            git?.close()
             throw e
         }
     }

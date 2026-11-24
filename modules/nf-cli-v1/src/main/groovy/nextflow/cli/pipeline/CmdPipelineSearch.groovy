@@ -36,7 +36,7 @@ import nextflow.util.TestOnly
 @Parameters(commandDescription = "Search for pipelines in the registry")
 class CmdPipelineSearch extends CmdBase {
 
-    @Parameter(names = ["-limit"], description = "Maximum number of results")
+    @Parameter(names = ["-limit"], description = "Maximum number of results (at most 100)")
     int limit = 20
 
     @Parameter(names = ['-o', '-output'], description = 'Output mode: simple, json')

@@ -1,27 +1,33 @@
 ---
 title: nextflow info
-description: Reference for the nextflow info command. Print system runtime information.
+description: Reference for the nextflow info command. Print project or system runtime information.
 ---
 
 # `nextflow info`
 
-Print system runtime information.
+<DeprecatedInVersion version="27.04">
+The `info` command with a project name is deprecated. Use [`nextflow pipeline list -g -o json`][cli-pipeline-list] to find the downloaded revisions of a pipeline and their local paths instead.
+</DeprecatedInVersion>
+
+Print project or system runtime information.
 
 ## Usage
 
 ```console
-$ nextflow info [options]
+$ nextflow info [options] [project]
 ```
 
 ## Description
 
-The `info` command prints runtime information about the hardware and software: the Nextflow version and build, the operating system, and the Groovy and Java runtimes.
+The `info` command prints runtime information about the hardware and software: the Nextflow version and build, the operating system, and the Groovy and Java runtimes. It can also print information about a specific project.
 
-<ChangedInVersion version="27.04">
-The `info` command with a project name is deprecated. Use [`nextflow pipeline list -g`][cli-pipeline-list] to find the downloaded revisions of a pipeline.
-</ChangedInVersion>
+If no run name or session id is provided, it will clean the latest run.
 
 ## Options
+
+##### `-u, -check-updates`
+
+Check for remote updates.
 
 ##### `-d`
 
@@ -30,6 +36,10 @@ Show detailed information.
 ##### `-h, -help`
 
 Print the command usage.
+
+##### `-o` (`text`)
+
+Output format, either `text`, `json`, or `yaml`.
 
 ## Examples
 
@@ -43,6 +53,23 @@ $ nextflow info
   System: Mac OS X 10.15.6
   Runtime: Groovy 2.5.11 on OpenJDK 64-Bit Server VM 1.8.0_192-b01
   Encoding: UTF-8 (UTF-8)
+```
+
+Display information about a specific project:
+
+```console
+$ nextflow info nextflow-io/hello
+
+  project name: nextflow-io/hello
+  repository  : https://github.com/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/.repos/nextflow-io/hello
+  main script : main.nf
+  revisions   :
+  * master (default)
+    mybranch
+    testing
+  * v1.1 [t]
+    v1.2 [t]
 ```
 
 [cli-pipeline-list]: ./pipeline#pipeline-list

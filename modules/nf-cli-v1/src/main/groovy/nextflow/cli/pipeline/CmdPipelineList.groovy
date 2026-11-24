@@ -116,7 +116,7 @@ class CmdPipelineList extends CmdBase {
         return rows
     }
 
-    /** Compares versions by their numeric parts as numbers and the other parts as text; a revision without a version comes last */
+    /** Compares versions as {@link VersionNumber} does, i.e. `.`/`-` separated parts, integers as numbers and other parts as text; a revision without a version comes last */
     protected static int compareVersions(String a, String b) {
         if( a == null || b == null )
             return a == b ? 0 : a == null ? 1 : -1

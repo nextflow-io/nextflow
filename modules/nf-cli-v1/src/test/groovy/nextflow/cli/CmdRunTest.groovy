@@ -24,6 +24,7 @@ import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
+import nextflow.Const
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
@@ -600,6 +601,37 @@ class CmdRunTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('not found in the registry')
+    }
+
+    def 'should report a registry pipeline that is not cached offline when NXF_HUB is a registry host' () {
+        given: 'a registry host as the default hub, which is not a Git provider'
+        SysEnv.push(NXF_HUB: 'registry.nextflow.io')
+        AssetManager.defaultHub = 'registry.nextflow.io'
+        AssetManager.root = tempDir.getRoot().resolve('assets').toFile()
+
+        when:
+        runCmd(offline: true, revision: '1.0.0').getScriptFile0('nf-core/demo')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Revision `1.0.0` of `nf-core/demo` is not in the local cache -- install it with `nextflow pipeline install -g`'
+
+        cleanup:
+        AssetManager.defaultHub = Const.DEFAULT_HUB
+        SysEnv.pop()
+    }
+
+    def 'should fail for a registry release without a repository URL' () {
+        given:
+        def client = Mock(RegistryClient)
+        client.getPipeline('nf-core/rnaseq') >> new Pipeline().latest(new PipelineRelease().version('3.14.0').commitId('abc123'))
+
+        when:
+        runCmd(registryClient: client, hubProvider: 'registry.nextflow.io').registryLookup('nf-core/rnaseq')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline nf-core/rnaseq@3.14.0 has no repository URL in the registry'
     }
 
     def 'should require -r to run a registry pipeline offline' () {

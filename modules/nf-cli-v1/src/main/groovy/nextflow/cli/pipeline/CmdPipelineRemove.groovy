@@ -74,6 +74,11 @@ class CmdPipelineRemove extends CmdBase {
     }
 
     private void removeUserLevel(String name) {
+        // checked before building the manager, which can't resolve the Git provider of a pipeline that is not downloaded
+        if( !AssetManager.isUrl(name) && !isDownloaded(name) ) {
+            println "Pipeline ${name} is not installed in the user-level store"
+            return
+        }
         Plugins.init()
         final String project
         try (final manager = new AssetManager(name)) {
@@ -85,10 +90,20 @@ class CmdPipelineRemove extends CmdBase {
             project = manager.project
         }
         // a pipeline migrated with `pull -migrate` also keeps its legacy clone
-        try (final legacy = new AssetManager(name)) {
-            if( !legacy.isNotInitialized() )
-                legacy.drop(null, force)
+        if( project in AssetManager.list() ) {
+            try (final legacy = new AssetManager(name)) {
+                if( !legacy.isNotInitialized() )
+                    legacy.drop(null, force)
+            }
         }
         println "Pipeline ${project} removed"
+    }
+
+    /** Whether a name matches a download, as {@link AssetManager} resolves it: a short name matches by its last part */
+    private static boolean isDownloaded(String name) {
+        final names = AssetManager.list()
+        return name.contains('/')
+            ? names.contains(name)
+            : names.any { String it -> it.tokenize('/')[1].startsWith(name) }
     }
 }

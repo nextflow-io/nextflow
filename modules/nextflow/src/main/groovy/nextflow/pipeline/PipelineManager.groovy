@@ -258,13 +258,15 @@ class PipelineManager {
         return new AbortOperationException("Cannot query registry ${client.primaryUrl()}: ${e.message}", e)
     }
 
-    /** Release of a registry pipeline, the latest when no version is given; fails when it is missing or revoked */
+    /** Release of a registry pipeline, the latest when no version is given; fails when it is missing, revoked or has no repository URL */
     static PipelineInfo resolveRelease(RegistryClient client, String name, String version) {
         final result = fetchRelease(client, name, version)
         final pipeline = result.pipeline()
         final release = result.release()
         if( pipeline.revoked || release.status == PipelineReleaseStatus.REVOKED )
             throw new AbortOperationException("Pipeline ${name}@${release.version} is revoked")
+        if( !pipeline.repositoryUrl )
+            throw new AbortOperationException("Pipeline ${name}@${release.version} has no repository URL in the registry")
         return new PipelineInfo(
             name: name,
             version: release.version,

@@ -147,7 +147,7 @@ Project revision to run. Can be a git branch, tag, or commit SHA number.
 
 When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
-For a [registry pipeline](#registry-pipelines), the revision must be a release version published in the registry. Defaults to the latest published release.
+For a [registry pipeline](#registry-pipelines), the revision must be a release version published in the registry, and defaults to the latest published release. With `-offline`, it must instead be a Git revision of the cached copy.
 
 ##### `-stub-run, -stub`
 

@@ -27,6 +27,8 @@ import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import com.sun.net.httpserver.HttpServer
+import nextflow.Const
+import nextflow.SysEnv
 import nextflow.cli.CmdBase
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
@@ -154,6 +156,39 @@ class CmdPipelineUserLevelTest extends Specification {
         stdout() == ['Pipeline acme/hello is not installed in the user-level store']
     }
 
+    def 'should remove and list the user-level store when NXF_HUB is a registry host'() {
+        given: 'a registry host as the default hub, which is not a Git provider'
+        SysEnv.push(NXF_HUB: 'registry.nextflow.io')
+        AssetManager.defaultHub = 'registry.nextflow.io'
+        final launcher = new Launcher().parseMainArgs('pipeline')
+
+        when: 'a pipeline that is not installed'
+        exec(new CmdPipelineRemove(launcher: launcher, args: [NAME], global: true))
+        then:
+        stdout() == ["Pipeline ${NAME} is not installed in the user-level store".toString()]
+
+        when: 'an installed pipeline'
+        final dir = seedRepo('acme/hello', 'https://github.com/acme/hello.git')
+        resetOutput()
+        exec(new CmdPipelineList(global: true))
+        then:
+        stdout()[1].startsWith('acme/hello')
+
+        when:
+        resetOutput()
+        exec(new CmdPipelineRemove(launcher: launcher, args: ['acme/hello'], global: true))
+        then:
+        !Files.exists(dir)
+        stdout() == ['Pipeline acme/hello removed']
+
+        cleanup:
+        AssetManager.defaultHub = Const.DEFAULT_HUB
+        SysEnv.pop()
+
+        where:
+        NAME << ['nf-core/demo', 'demo']
+    }
+
     def 'should find the provider of a pipeline whose default branch is not checked out'() {
         given: 'a bare repository from GitLab, as a registry release leaves it, with only its pinned commit checked out'
         final source = base.resolve('source')
@@ -181,17 +216,6 @@ class CmdPipelineUserLevelTest extends Specification {
         manager?.close()
     }
 
-    def 'should not show the project options in the help of info'() {
-        when:
-        new Launcher().usage('info')
-        then:
-        final out = capture.toString()
-        out.contains('-d')
-        !out.contains('project name')
-        !out.contains('-check-updates')
-        !out.contains('yaml')
-    }
-
     def 'should warn and still run the deprecated project commands'() {
         given:
         seedRepo('acme/hello', 'https://github.com/acme/hello.git')
@@ -204,8 +228,8 @@ class CmdPipelineUserLevelTest extends Specification {
         where:
         ARGS                                | WARNING
         ['list']                            | 'The `list` command is deprecated -- use `nextflow pipeline list -g` instead'
-        ['info', 'acme/hello']              | 'The `info <project>` command is deprecated -- use `nextflow pipeline list -g` instead'
-        ['view', 'acme/hello']              | 'The `view` command is deprecated -- use `nextflow pipeline list -g` to find the local path of a pipeline'
+        ['info', 'acme/hello']              | 'The `info <project>` command is deprecated -- use `nextflow pipeline list -g -o json` instead'
+        ['view', 'acme/hello']              | 'The `view` command is deprecated -- use `nextflow pipeline list -g -o json` to find the local path of a pipeline'
         ['drop', 'acme/hello']              | 'The `drop` command is deprecated -- use `nextflow pipeline remove -g` instead'
     }
 
@@ -216,7 +240,7 @@ class CmdPipelineUserLevelTest extends Specification {
         when:
         parse('pull', repo.url).run()
         then:
-        capture.toString().contains('The `pull` command is deprecated -- use `nextflow pipeline install -g` instead')
+        capture.toString().contains('The `pull` command is deprecated -- use `nextflow pipeline install -g` instead (with a Git URL for pipelines not in the registry)')
         Files.exists(assets().resolve("${MultiRevisionRepositoryStrategy.REPOS_SUBDIR}/local/hello/${MultiRevisionRepositoryStrategy.REVISION_SUBDIR}/${repo.v2}/main.nf"))
     }
 
@@ -319,6 +343,19 @@ class CmdPipelineUserLevelTest extends Specification {
         then:
         clone(name, repo.v1).resolve('main.nf').text == "println 'v1'"
         stdout() == ["Pipeline ${name}@v1.0.0 installed in ${clone(name, repo.v1)}".toString()]
+    }
+
+    def 'should install a Git repository in the user-level store without reading the config'() {
+        given:
+        final repo = gitRepo('hello')
+        final config = Files.writeString(base.resolve('broken.config'), 'this is { not valid')
+        final cmd = new CmdPipelineInstall(args: [repo.url], global: true)
+        cmd.launcher = new Launcher().parseMainArgs('-c', config.toString(), 'pipeline')
+
+        when:
+        exec(cmd)
+        then:
+        stdout() == ["Pipeline local/hello@master installed in ${clone('local/hello', repo.v2)}".toString()]
     }
 
     def 'should fetch a branch again when installing it in the user-level store'() {

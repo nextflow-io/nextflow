@@ -119,7 +119,7 @@ The following options are available:
 
 ###### `-limit` (`20`)
 
-Maximum number of results to return.
+Maximum number of results to return. The registry returns at most 100 results.
 
 ###### `-o, -output` (`simple`)
 
@@ -130,7 +130,7 @@ Output mode for search results. Options: `simple` (default), `json`.
 Display detailed information about a pipeline release from the registry.
 Shows the release details, the pipeline params when available, and a usage line to run it, for example `nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0`.
 
-To find the downloaded revisions of a pipeline and their local paths, use `nextflow pipeline list -g`.
+To find the downloaded revisions of a pipeline and their local paths, use `nextflow pipeline list -g -o json`.
 
 The following options are available:
 

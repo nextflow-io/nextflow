@@ -42,14 +42,14 @@ import org.yaml.snakeyaml.Yaml
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print system runtime information")
+@Parameters(commandDescription = "Print project and system runtime information")
 class CmdInfo extends CmdBase {
 
     static final public NAME = 'info'
 
     private PrintStream out = System.out
 
-    @Parameter(hidden = true)
+    @Parameter(description = 'project name')
     List<String> args
 
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
@@ -58,10 +58,10 @@ class CmdInfo extends CmdBase {
     @Parameter(names='-dd', hidden = true, arity = 0)
     boolean moreDetailed
 
-    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml', hidden = true)
+    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
     String format
 
-    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates', hidden = true)
+    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
     boolean checkForUpdates
 
     @Override
@@ -76,7 +76,7 @@ class CmdInfo extends CmdBase {
             return
         }
 
-        log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline list -g` instead"
+        log.warn "The `info <project>` command is deprecated -- use `nextflow pipeline list -g -o json` instead"
         Plugins.init()
         try (final manager = new AssetManager(args[0])) {
             if( manager.isNotInitialized() ) {
