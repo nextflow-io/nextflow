@@ -246,10 +246,26 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         for( JsonElement it : JsonParser.parseString(body).asJsonObject.getAsJsonArray('plugins') ) {
             final id = it.asJsonObject.get('id')
             final canonicalId = it.asJsonObject.get('canonicalId')
-            if( id?.isJsonPrimitive() && canonicalId?.isJsonPrimitive() && canonicalId.asString.contains('/') )
+            if( !id?.isJsonPrimitive() || !canonicalId?.isJsonPrimitive() )
+                continue
+            if( isCanonicalId(id.asString, canonicalId.asString) )
                 result.put(id.asString, canonicalId.asString)
+            else
+                log.debug "Ignoring invalid canonicalId '${canonicalId.asString}' for plugin ${id.asString}"
         }
         return result
+    }
+
+    // a move keeps the name: `nf-foo` or `myorg/nf-foo` can only have `myorg/nf-foo`
+    private static boolean isCanonicalId(String id, String canonicalId) {
+        try {
+            return canonicalId.contains('/')
+                && PluginRef.parse(canonicalId).id == canonicalId
+                && (id.contains('/') ? canonicalId == id : PluginRef.name(canonicalId) == id)
+        }
+        catch( IllegalArgumentException e ) {
+            return false
+        }
     }
 
     /**

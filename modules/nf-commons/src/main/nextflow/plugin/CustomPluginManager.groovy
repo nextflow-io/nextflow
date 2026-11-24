@@ -46,7 +46,7 @@ class CustomPluginManager extends DefaultPluginManager {
         super.loadPluginFromPath(pluginPath)
     }
 
-    // the store folder name can carry the namespace, see NamespaceDescriptorFinder
+    // only LocalPluginManager uses `folderName`, whose namespace the finder reads
     PluginWrapper loadPluginFromPath(Path pluginPath, String folderName) {
         return loadPluginFromPath(pluginPath)
     }

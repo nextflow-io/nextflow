@@ -111,13 +111,13 @@ class PluginUpdater extends UpdateManager {
         aliases.putAll(result)
     }
 
-    // only Nextflow writes the links between `<name>-<ver>` and `<ns>~<name>-<ver>`
+    // trust only links: only Nextflow writes them
     static Map<String,String> storeAliases(Path store) {
         final List<String> ids = FilesEx.listFiles(store)
             .findAll { Path p -> Files.isSymbolicLink(p) && Files.exists(p) }
             .collect { Path p -> [p.fileName.toString(), Files.readSymbolicLink(p).fileName.toString()].findAll { String n -> n.contains('~') } }
             .findAll { List<String> names -> names.size() == 1 }
-            .collect { List<String> names -> PluginRef.fromDirName(names[0].replaceFirst(/-\d+\.\d+\.\d+\S*$/, '')) }
+            .collect { List<String> names -> names[0].replaceFirst(/-\d+\.\d+\.\d+\S*$/, '').replace('~', '/') }
             .unique()
         // a name linked to two namespaces is ambiguous
         return ids
@@ -351,7 +351,7 @@ class PluginUpdater extends UpdateManager {
         readCanonicalIds()
     }
 
-    // both may be one moved plugin; only the registry knows
+    // `nf-foo` and `myorg/nf-foo` may be one moved plugin; only the registry knows
     private boolean hasUnlinkedTwin(PluginRef ref, List<PluginRef> plugins) {
         return plugins.any { it -> isUnlinkedPair(ref.id, it.id) || isUnlinkedPair(it.id, ref.id) }
     }
@@ -631,7 +631,7 @@ class PluginUpdater extends UpdateManager {
         final folderName = "${PluginRef.dirName(id)}-$version".toString()
         def pluginPath = pluginsStore.resolve(folderName)
         final plainPath = isMoved(id) ? pluginsStore.resolve("${PluginRef.name(id)}-$version") : null
-        // a read-only store keeps the plain folder of an older Nextflow without the link
+        // read-only store: load the plain folder of an older Nextflow when the link cannot be written
         if( plainPath && !FilesEx.exists(pluginPath) && !linkToPlain(pluginPath, plainPath, id, version) && isComplete(plainPath) )
             pluginPath = plainPath
         if( !FilesEx.exists(pluginPath) )
@@ -647,6 +647,8 @@ class PluginUpdater extends UpdateManager {
         // load the plugin from the file system, unless it is already loaded under the namespace its zip declares
         final declared = new NamespaceDescriptorFinder().find(pluginPath, folderName).pluginId
         PluginWrapper wrapper = declared != id && PluginRef.name(declared) == id ? pluginManager.getPlugin(declared) : null
+        if( wrapper && wrapper.descriptor.version != version )
+            throw new PluginRuntimeException("Plugin $id@$version cannot be loaded -- its zip declares the ID $declared, already loaded with version ${wrapper.descriptor.version}")
         if( !wrapper )
             wrapper = pluginManager.loadPluginFromPath(pluginPath, folderName)
         if( wrapper.pluginId != id ) {
@@ -689,7 +691,7 @@ class PluginUpdater extends UpdateManager {
         if( pullOnly )
             return false
 
-        // pf4j matches dependency IDs exactly; `set` keeps the list safe for readers on other threads
+        // pf4j matches dependency IDs exactly; `set`, not `replaceAll`: replaceAll breaks iterators on other threads
         for( PluginWrapper it : pluginManager.plugins ) {
             final list = it.descriptor.dependencies
             for( int i=0; i<list.size(); i++ ) {

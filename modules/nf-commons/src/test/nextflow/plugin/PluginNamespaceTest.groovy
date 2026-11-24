@@ -190,6 +190,24 @@ class PluginNamespaceTest extends Specification {
         then:
         loaded(updater) == ['myorg/nf-foo']
         updater.aliases == ['nf-foo': 'myorg/nf-foo']
+        updater.@pluginManager.getPlugin('myorg/nf-foo').descriptor.version == '1.0.0'
+    }
+
+    def 'should refuse the plain name of a loaded moved plugin with another version' () {
+        given: 'the registry gives no canonicalId'
+        def z1 = zip('nf-foo', '1.0.0', ns: 'myorg')
+        def z2 = zip('nf-foo', '2.0.0', ns: 'myorg')
+        registry(entry('nf-foo', null, z1, z2), entry('myorg/nf-foo', null, z1, z2))
+        def updater = updater()
+        updater.prepareAndStart('myorg/nf-foo', '1.0.0')
+
+        when:
+        updater.prepareAndStart('nf-foo', '2.0.0')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message == 'Plugin nf-foo@2.0.0 cannot be loaded -- its zip declares the ID myorg/nf-foo, already loaded with version 1.0.0'
+        loaded(updater) == ['myorg/nf-foo']
     }
 
     def 'should load a zip without Plugin-Namespace by the namespaced ID' () {
@@ -291,6 +309,22 @@ class PluginNamespaceTest extends Specification {
         CANONICAL       | EXPECTED                      | KEYS
         'myorg/nf-foo'  | ['nf-foo': 'myorg/nf-foo']    | ['nf-bar', 'nf-foo', 'myorg/nf-foo']
         null            | [:]                           | ['nf-bar', 'nf-foo']
+    }
+
+    def 'should take the canonicalId of the first registry' () {
+        given:
+        def z = zip('nf-foo', '1.0.0', ns: 'org1')
+        registry(entry('nf-foo', 'org1/nf-foo', z))
+        wiremock.stubFor(get(urlPathEqualTo('/second/v1/plugins/dependencies'))
+            .willReturn(aResponse().withStatus(200).withBody("""{"plugins":[${entry('nf-foo', 'org2/nf-foo', z)}]}""")))
+        def updater = updater()
+        updater.addRepository(new HttpPluginRepository('second', URI.create("http://localhost:${wiremock.port()}/second/")))
+
+        when:
+        updater.prefetchMetadata([new PluginRef('nf-foo', '1.0.0')])
+
+        then:
+        updater.aliases == ['nf-foo': 'org1/nf-foo']
     }
 
     def 'should find a moved plugin by namespaced ID in a legacy plugins.json' () {
@@ -566,7 +600,7 @@ class PluginNamespaceTest extends Specification {
         e.message == "Invalid Plugin-Namespace '$NS' in plugin $dir"
 
         where:
-        NS << ['a~b', 'a/b', '..', '.']
+        NS << ['a~b', 'a/b', '..', '.', 'a@b']
     }
 
     def 'should map only from store links' () {

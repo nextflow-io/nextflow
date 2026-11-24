@@ -99,6 +99,34 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
+    def 'ignore an invalid canonicalId'() {
+        given:
+        def release = '"releases": [ { "version": "1.0.0", "url": "http://example.com/a.zip", "date": "2025-03-21T10:40:36Z" } ]'
+        wiremock.stubFor(get(urlPathEqualTo("/v1/plugins/dependencies"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    { "id": "nf-a", "canonicalId": "myorg/nf-other", $release },
+                    { "id": "nf-b", "canonicalId": "a/b/nf-b", $release },
+                    { "id": "nf-c", "canonicalId": "my~org/nf-c", $release },
+                    { "id": "myorg/nf-d", "canonicalId": "other/nf-d", $release },
+                    { "id": "nf-e", "canonicalId": "myorg/nf-e@1.0.0", $release },
+                    { "id": "nf-f", "canonicalId": "myorg/nf-f", $release }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("nf-a")])
+
+        then:
+        unit.canonicalIds == ['nf-f': 'myorg/nf-f']
+        unit.getPlugins().keySet() == ['nf-a', 'nf-b', 'nf-c', 'myorg/nf-d', 'nf-e', 'nf-f', 'myorg/nf-f'] as Set
+    }
+
+    // ------------------------------------------------------------------------
+
     def 'prefetch plugin metadata with release'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))

@@ -48,22 +48,21 @@ class NamespaceDescriptorFinder extends ManifestPluginDescriptorFinder {
         if( !id || id.contains('/') )
             return result
         final declared = manifest.mainAttributes.getValue(PLUGIN_NAMESPACE)
-        if( declared != null && !isValid(declared, id) )
-            throw new PluginRuntimeException("Invalid {} '{}' in plugin {}", PLUGIN_NAMESPACE, declared, pluginPath)
+        if( declared != null ) {
+            final scoped = "$declared/$id".toString()
+            try {
+                // `parse` splits at `@` first
+                if( PluginRef.parse(scoped).id != scoped )
+                    throw new IllegalArgumentException()
+            }
+            catch( IllegalArgumentException e ) {
+                throw new PluginRuntimeException("Invalid {} '{}' in plugin {}", PLUGIN_NAMESPACE, declared, pluginPath)
+            }
+        }
         final ns = declared ?: folderNamespace(folderName)
         if( ns )
             result.setPluginId("$ns/$id")
         return result
-    }
-
-    private static boolean isValid(String ns, String id) {
-        try {
-            PluginRef.parse("$ns/$id")
-            return true
-        }
-        catch( IllegalArgumentException e ) {
-            return false
-        }
     }
 
     @Override
@@ -72,8 +71,8 @@ class NamespaceDescriptorFinder extends ManifestPluginDescriptorFinder {
     }
 
     private static String folderNamespace(String folderName) {
-        final id = PluginRef.fromDirName(folderName)
-        return id.contains('/') ? id.substring(0, id.indexOf('/')) : null
+        final p = folderName.indexOf('~')
+        return p > 0 ? folderName.substring(0, p) : null
     }
 
     // pf4j keeps `setPluginId` protected

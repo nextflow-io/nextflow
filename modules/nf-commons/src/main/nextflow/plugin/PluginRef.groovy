@@ -63,11 +63,6 @@ class PluginRef implements Comparable<PluginRef> {
         return id.replace('/', '~')
     }
 
-    /** Plugin id of a file name prefix: `myorg~nf-foo` becomes `myorg/nf-foo` */
-    static String fromDirName(String name) {
-        return name.replace('~', '/')
-    }
-
     /** Name part of a plugin id: `myorg/nf-foo` gives `nf-foo` */
     static String name(String id) {
         return id.substring(id.indexOf('/')+1)
