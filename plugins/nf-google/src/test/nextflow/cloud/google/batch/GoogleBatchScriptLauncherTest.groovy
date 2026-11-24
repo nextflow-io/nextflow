@@ -140,4 +140,50 @@ class GoogleBatchScriptLauncherTest extends Specification{
         script.contains('ln -sfn /mnt/disks/alpha/data/a.bam a.bam')
     }
 
+    @Unroll
+    def 'should copy the task command files whatever the stage-in mode: #MODE' () {
+        given:
+        def bucket = CloudStorageFileSystem.forBucket('alpha')
+        def bean = new TaskBean(
+            workDir: bucket.getPath('/work/dir'),
+            targetDir: bucket.getPath('/work/dir'),
+            stageInMode: MODE,
+            statsEnabled: true,
+            input: 'some stdin',
+            inputFiles: ['a.bam': bucket.getPath('/data/a.bam')] )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        def script = launcher.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        then:
+        script.contains('cp -fRL /mnt/disks/alpha/work/dir/.command.sh .command.sh')
+        script.contains('cp -fRL /mnt/disks/alpha/work/dir/.command.run .command.run')
+        script.contains('cp -fRL /mnt/disks/alpha/work/dir/.command.in .command.in')
+        and:
+        script.contains(DATA)
+
+        where:
+        MODE        | DATA
+        null        | 'ln -sfn /mnt/disks/alpha/data/a.bam a.bam'
+        'symlink'   | 'ln -sfn /mnt/disks/alpha/data/a.bam a.bam'
+        'copy'      | 'cp -fRL /mnt/disks/alpha/data/a.bam a.bam'
+    }
+
+    def 'should only stage the command script when trace and stdin are not required' () {
+        given:
+        def bucket = CloudStorageFileSystem.forBucket('alpha')
+        def bean = new TaskBean(
+            workDir: bucket.getPath('/work/dir'),
+            targetDir: bucket.getPath('/work/dir'),
+            stageInMode: 'symlink' )
+
+        when:
+        def launcher = new GoogleBatchScriptLauncher(bean, null)
+        def script = launcher.copyStrategy.getStageInputFilesScript(bean.inputFiles)
+        then:
+        bean.inputFiles.keySet() == [TaskRun.CMD_SCRIPT] as Set
+        script.contains('cp -fRL /mnt/disks/alpha/work/dir/.command.sh .command.sh')
+        !script.contains('ln -sfn')
+    }
+
 }
