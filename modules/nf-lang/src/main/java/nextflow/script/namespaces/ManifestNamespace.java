@@ -36,12 +36,6 @@ public interface ManifestNamespace extends Namespace {
     """)
     List<Map> getContributors();
 
-    @Constant("defaultBranch")
-    @Description("""
-        Git repository default branch (default: `master`).
-    """)
-    String getDefaultBranch();
-
     @Constant("description")
     @Description("""
         Free text describing the workflow project.

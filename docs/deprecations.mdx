@@ -50,7 +50,6 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `https://api.tower.nf` as the Seqera Platform endpoint | 24.04 | `https://api.cloud.seqera.io` |
 | [`manifest.author`][config-manifest] | 24.10 | `manifest.contributors` |
 | [Workflow handlers][config-workflow-handlers] in config files | 25.10 | Trace observer in a plugin |
-| [`manifest.defaultBranch`][config-manifest] | 26.04 | Automatic detection of the default branch |
 | [`seqera.executor.autoLabels`][config-seqera-executor-autoLabels] | 26.10 | [`tower.autoLabels`][config-tower-autoLabels] |
 
 ### Command line
@@ -84,6 +83,10 @@ See [Migration notes][migrations-page] for the full list of changes in each rele
 | `-with-weblog` option of `run` | 25.04 | 26.10 | [nf-weblog](https://github.com/nextflow-io/nf-weblog) plugin |
 | `echo` directive | 22.04 | 26.10 | `debug` |
 | `kuberun` command | | 27.04 | [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin or [launch with Fusion][k8s-fusion] |
+| `manifest.defaultBranch` | 26.04 | 27.04 | Automatic detection of the default branch |
+| Legacy pipeline asset layout (`$NXF_ASSETS/<org>/<repo>`) and `NXF_SCM_LEGACY` | | 27.04 | Multi-revision asset layout |
+| `-deep` option of `pull` and `run` | 26.04 | 27.04 | None |
+| `-migrate` option of `pull` | | 27.04 | Run `nextflow pull -migrate` with Nextflow 26.04 or 26.10 before upgrading |
 
 [config-manifest]: ./reference/config/manifest
 [config-process-when]: ./config#disabling-processes

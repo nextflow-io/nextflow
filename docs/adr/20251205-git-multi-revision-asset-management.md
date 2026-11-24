@@ -6,6 +6,13 @@
 - Date: 2025-12-05
 - Tags: scm, asset-management, multi-revision
 
+## Updates
+
+### Update (2026-11-24)
+
+- Removed the legacy strategy in Nextflow 27.04, together with the strategy pattern (`RepositoryStrategy`, `AbstractRepositoryStrategy`, `LegacyRepositoryStrategy`), `NXF_SCM_LEGACY`, the `-migrate` and `-deep` options of `pull`/`run`, and `manifest.defaultBranch`. `MultiRevisionRepositoryStrategy` was renamed to `MultiRevisionRepository` and is used directly by `AssetManager`.
+- Leftover legacy clones in `$NXF_ASSETS/<org>/<repo>` are ignored, with a warning. Users can delete them, or migrate them beforehand with `nextflow pull -migrate` using Nextflow 26.04 or 26.10.
+
 ## Summary
 
 Nextflow's asset management now supports multiple revisions of the same pipeline at once, using a bare repository with shared object storage. Legacy direct-clone repositories keep working unchanged, selected through the Strategy design pattern.

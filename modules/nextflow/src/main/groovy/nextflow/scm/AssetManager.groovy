@@ -35,7 +35,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
-import nextflow.SysEnv
 import nextflow.util.HttpClientOpts
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.Git
@@ -45,16 +44,9 @@ import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.merge.MergeStrategy
 /**
  * Handles operation on remote and local installed pipelines.
- * Uses the strategy pattern to support different ways to manage local installations.
- * Current available {@link RepositoryStrategy}:
- * - {@link LegacyRepositoryStrategy}: This is the traditional approach where each project gets a full git clone.
- * - {@Link MultiRevisionRepositoryStrategy}: This approach allows multiple revisions to coexist efficiently by sharing objects
- * through a bare repository and creating lightweight clones for each commit.
- *
- * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
- * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
- * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
- * Setting `NXF_SCM_LEGACY=true` forces the {@link LegacyRepositoryStrategy}.
+ * Local installations are managed by {@link MultiRevisionRepository}, which allows multiple
+ * revisions to coexist efficiently by sharing objects through a bare repository and creating
+ * lightweight clones for each commit.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -76,8 +68,6 @@ class AssetManager implements Closeable {
      */
     private String project
 
-    private Git _git
-
     private String mainScript
 
     private RepositoryProvider provider
@@ -87,9 +77,9 @@ class AssetManager implements Closeable {
     private List<ProviderConfig> providerConfigs
 
     /**
-     * The repository strategy (legacy or multi-revision)
+     * The local pipeline repository
      */
-    private RepositoryStrategy strategy
+    private MultiRevisionRepository repository
 
     /**
      * The http client settings declared in the SCM config file
@@ -151,15 +141,15 @@ class AssetManager implements Closeable {
         if( !isValidProjectName(project) )
             throw new IllegalArgumentException("Not a valid project name: ${project}")
 
-        // Initialize strategy based on environment and repository state
-        initStrategy(revision)
+        initRepository(revision)
+        checkLegacyClone()
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
         if( revision )
             setRevision(revision)
 
-        strategy.setProvider(this.provider)
+        repository.setProvider(this.provider)
 
         setupCredentials(hubOpts)
 
@@ -168,141 +158,52 @@ class AssetManager implements Closeable {
         return this
     }
 
-    /**
-     * Update the repository strategy based on environment and current state, or create a new one if not exists
-     */
-    private void updateStrategy(RepositoryStrategyType type = null) {
-        def revision = getRevision()
-        if( strategy )
-            strategy.close()
-        if( !type )
-            type = selectStrategyType()
-        if( type == RepositoryStrategyType.LEGACY )
-            strategy = new LegacyRepositoryStrategy(project)
-        else if( type == RepositoryStrategyType.MULTI_REVISION )
-            strategy = new MultiRevisionRepositoryStrategy(project, revision)
-        else
-            throw new AbortOperationException("Not supported strategy $type")
+    private void initRepository(String revision = null) {
+        repository = new MultiRevisionRepository(project, revision)
         if( revision )
             setRevision(revision)
-        strategy.setProvider(provider)
-    }
-
-    private void initStrategy(String revision = null) {
-        def type = selectStrategyType()
-        if( type == RepositoryStrategyType.LEGACY )
-            strategy = new LegacyRepositoryStrategy(project)
-        else if( type == RepositoryStrategyType.MULTI_REVISION )
-            strategy = new MultiRevisionRepositoryStrategy(project, revision)
-        else
-            throw new AbortOperationException("Not supported strategy $type")
-        if( revision )
-            setRevision(revision)
-        strategy.setProvider(provider)
-    }
-
-    private RepositoryStrategyType selectStrategyType() {
-        // Check environment variable for legacy mode
-        if( SysEnv.get('NXF_SCM_LEGACY') as boolean ) {
-            log.warn "Forcing to use legacy repository strategy (NXF_SCM_LEGACY is set to true)"
-            return RepositoryStrategyType.LEGACY
-        }
-
-        if (isOnlyLegacy()){
-            log.debug "Legacy repository detected, selecting legacy strategy"
-            return RepositoryStrategyType.LEGACY
-        } else {
-            log.debug "Selecting multi-revision strategy"
-            return RepositoryStrategyType.MULTI_REVISION
-        }
+        repository.setProvider(provider)
     }
 
     /**
-     * Set the repository strategy type explicitly
-     *
-     * @param useLegacy If true, use legacy strategy; otherwise use multi-revision
+     * Warn about a leftover clone created by the legacy asset layout, which is no longer used
      */
-    void setStrategyType(RepositoryStrategyType type) {
-        if( (type == RepositoryStrategyType.LEGACY && isUsingLegacyStrategy()) ||
-            (type == RepositoryStrategyType.MULTI_REVISION && isUsingMultiRevisionStrategy()) ) {
-            //nothing to do
-            return
-        }
-        if( type == RepositoryStrategyType.LEGACY && isUsingMultiRevisionStrategy() ) {
-            log.warn1 "Switching to legacy SCM repository management"
-            updateStrategy(RepositoryStrategyType.LEGACY)
-        } else if( type == RepositoryStrategyType.MULTI_REVISION && SysEnv.get('NXF_SCM_LEGACY') ) {
-            log.warn1 "Received a request to change to multi-revision SCM repository management and NXF_SCM_LEGACY is defined. Keeping legacy strategy"
-            updateStrategy(RepositoryStrategyType.LEGACY)
-        } else {
-            log.debug "Switching to multi-revision repository strategy"
-            updateStrategy(RepositoryStrategyType.MULTI_REVISION)
-        }
+    private void checkLegacyClone() {
+        final legacyPath = new File(root, project)
+        if( new File(legacyPath, '.git').exists() )
+            log.warn1 "The legacy pipeline cache at ${legacyPath} is no longer used and can be deleted (or migrated beforehand with `nextflow pull -migrate` using Nextflow 26.04 or 26.10)"
     }
 
     /**
-     * Check if using legacy strategy
-     */
-    boolean isUsingLegacyStrategy() {
-        return strategy instanceof LegacyRepositoryStrategy
-    }
-
-    /**
-     * Check if using multi-revision strategy
-     */
-    boolean isUsingMultiRevisionStrategy() {
-        return strategy instanceof MultiRevisionRepositoryStrategy
-    }
-
-    /**
-     * Check if a multi-revision or legacy local asset exist.
-     * @return 'true' if none of them exist, otherwise 'false'.
+     * Check if the local repository exists.
+     * @return 'true' if it doesn't exist, otherwise 'false'.
      */
     boolean isNotInitialized() {
-        final hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
-        final hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
-
-        return !hasMultiRevision && !hasLegacy
+        return !MultiRevisionRepository.checkProject(root, project)
     }
 
     /**
-     * Check if repository has only a local legacy asset
-     * @return 'true' if legacy asset exists and multi-revision doesn't exist, otherwise 'false'.
-     */
-    boolean isOnlyLegacy(){
-        final hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
-        final hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
-
-        return hasLegacy && !hasMultiRevision
-    }
-
-
-    /**
-     * Set the revision for multi-revision strategy
+     * Set the revision to work with
      */
     AssetManager setRevision(String revision) {
         if( provider )
             provider.setRevision(revision)
-        if( revision && strategy instanceof MultiRevisionRepositoryStrategy ) {
-            ((MultiRevisionRepositoryStrategy) strategy).setRevision(revision)
-        }
+        if( revision && repository )
+            repository.setRevision(revision)
         return this
     }
 
     /**
-     * Get the current revision (multi-revision strategy only)
+     * Get the current revision
      */
     private String getRevision() {
         if( provider )
             return provider.getRevision()
-        if( strategy && strategy instanceof MultiRevisionRepositoryStrategy ) {
-            return ((MultiRevisionRepositoryStrategy) strategy).getRevision()
-        }
-        return null
+        return repository?.getRevision()
     }
 
     /**
-     * Get the project name with revision appended (for multi-revision strategy)
+     * Get the project name with revision appended
      */
     String getProjectWithRevision() {
         def rev = getRevision()
@@ -311,15 +212,15 @@ class AssetManager implements Closeable {
 
     @PackageScope
     File getLocalGitConfig() {
-        return strategy?.getLocalGitConfig() ?: null
+        return repository?.getLocalGitConfig()
     }
 
     @PackageScope
     AssetManager setProject(String name) {
         this.project = name
-        if( !strategy )
-            initStrategy(getRevision())
-        strategy.setProject(name)
+        if( !repository )
+            initRepository(getRevision())
+        repository.setProject(name)
         return this
     }
 
@@ -356,7 +257,7 @@ class AssetManager implements Closeable {
     @PackageScope
     void validateProjectDir() {
 
-        if( !localPath.exists() ) {
+        if( !localPath?.exists() ) {
             return
         }
 
@@ -531,9 +432,9 @@ class AssetManager implements Closeable {
     }
 
     AssetManager setLocalPath(File path) {
-        if (!strategy)
-            initStrategy(getRevision())
-        strategy.setLocalPath(path)
+        if( !repository )
+            initRepository(getRevision())
+        repository.setLocalPath(path)
         return this
     }
 
@@ -548,15 +449,15 @@ class AssetManager implements Closeable {
     }
 
     String getGitRepositoryUrl() {
-        return strategy?.getGitRepositoryUrl() ?: provider.getCloneUrl()
+        return repository?.getGitRepositoryUrl() ?: provider.getCloneUrl()
     }
 
     File getLocalPath() {
-        return strategy?.getLocalPath()
+        return repository?.getLocalPath()
     }
 
     File getProjectPath() {
-        return strategy?.getProjectPath()
+        return repository?.getProjectPath()
     }
 
     ScriptFile getScriptFile(String scriptName=null) {
@@ -571,8 +472,8 @@ class AssetManager implements Closeable {
     }
 
     File getMainScriptFile(String scriptName=null) {
-        if( !localPath.exists() ) {
-            throw new AbortOperationException("Unknown project folder: $localPath")
+        if( !localPath?.exists() ) {
+            throw new AbortOperationException("Unknown project folder: ${localPath ?: project}")
         }
 
         def mainScript = scriptName ?: getMainScriptName()
@@ -596,11 +497,7 @@ class AssetManager implements Closeable {
     }
 
     String getDefaultBranch() {
-        // if specified in manifest, that takes priority
-        // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
-        return getManifest().getDefaultBranch()
-                ?: strategy?.getRemoteDefaultBranch()
-                ?: DEFAULT_BRANCH
+        return repository?.getRemoteDefaultBranch() ?: DEFAULT_BRANCH
     }
 
     @Memoized
@@ -613,7 +510,7 @@ class AssetManager implements Closeable {
         String text = null
         ConfigObject result = null
         try {
-            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            text = localPath?.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
         }
         catch( FileNotFoundException e ) {
             log.debug "Project manifest does not exist: ${e.message}"
@@ -638,7 +535,7 @@ class AssetManager implements Closeable {
     }
 
     Path getConfigFile() {
-        if( localPath.exists() ) {
+        if( localPath?.exists() ) {
             return new File(localPath, MANIFEST_FILE_NAME).toPath()
         }
         else {
@@ -687,20 +584,14 @@ class AssetManager implements Closeable {
      *         and the current HEAD, false if differences do exist
      */
     boolean isClean() {
-        return strategy?.isClean() ?: true
+        return repository?.isClean() ?: true
     }
 
     /**
      * Close the underlying Git repository
      */
     void close() {
-        if( _git ) {
-            _git.close()
-            _git = null
-        }
-        if( strategy ) {
-            strategy.close()
-        }
+        repository?.close()
     }
 
     /**
@@ -718,19 +609,18 @@ class AssetManager implements Closeable {
     }
 
     /**
-     * Append found projects to results considering the new multi-revision projects in '.repos' subdirectory
+     * Append the projects found in the '.repos' subdirectory
      * @param dir
      * @param result
      */
     private static void appendProjectsFromDir(File dir, HashSet result) {
-        dir.eachDir { File org ->
-            if( org.getName() == MultiRevisionRepositoryStrategy.REPOS_SUBDIR ) {
-                appendProjectsFromDir(org, result)
-            } else {
-                org.eachDir { File it ->
-                    log.debug("Adding ${org.getName()}/${it.getName()}")
-                    result << "${org.getName()}/${it.getName()}".toString()
-                }
+        final reposDir = new File(dir, MultiRevisionRepository.REPOS_SUBDIR)
+        if( !reposDir.isDirectory() )
+            return
+        reposDir.eachDir { File org ->
+            org.eachDir { File it ->
+                log.debug("Adding ${org.getName()}/${it.getName()}")
+                result << "${org.getName()}/${it.getName()}".toString()
             }
         }
     }
@@ -753,34 +643,25 @@ class AssetManager implements Closeable {
 
 
     protected Git getGit() {
-        if( strategy ) {
-            return strategy.getGit()
-        }
-        // Fallback to legacy behavior if strategy not initialized
-        if( !_git ) {
-            _git = Git.open(localPath)
-            AbstractRepositoryStrategy.removeBitbucketToken(_git, provider)
-        }
-        return _git
+        return repository?.getGit()
     }
 
     /**
      * Download a pipeline from a remote Github repository
      *
      * @param revision The revision to download
-     * @param deep Optional depth for shallow clones
      * @return A message representing the operation result
      */
-    String download(String revision = null, Integer deep = null) {
+    String download(String revision = null) {
         assert project
-        if( !strategy ) {
-            throw new IllegalStateException("Strategy not initialized")
+        if( !repository ) {
+            throw new IllegalStateException("Repository not initialized")
         }
         // If it is a new download check is a valid repository
-        if( !localPath.exists() ) {
+        if( !localPath?.exists() ) {
             checkValidRemoteRepo(revision)
         }
-        return strategy.download(revision, deep, manifest)
+        return repository.download(revision, manifest)
     }
 
     /**
@@ -816,18 +697,17 @@ class AssetManager implements Closeable {
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
-        if( !strategy ) {
-            throw new IllegalStateException("Strategy not initialized")
+        if( !repository ) {
+            throw new IllegalStateException("Repository not initialized")
         }
-        return strategy.getCurrentRevision()
-
+        return repository.getCurrentRevision()
     }
 
     RevisionInfo getCurrentRevisionAndName() {
-        if( !strategy ) {
-            throw new IllegalStateException("Strategy not initialized")
+        if( !repository ) {
+            throw new IllegalStateException("Repository not initialized")
         }
-        return strategy.getCurrentRevisionAndName()
+        return repository.getCurrentRevisionAndName()
     }
 
     /**
@@ -846,7 +726,7 @@ class AssetManager implements Closeable {
     @Deprecated
     List<String> getRevisions(int level) {
 
-        def pulled = strategy.listDownloadedCommits()
+        def pulled = repository.listDownloadedCommits()
         def master = getDefaultBranch()
 
         List<String> branches = getBranchList()
@@ -856,7 +736,7 @@ class AssetManager implements Closeable {
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { refToString(strategy.peel(it) , pulled, master, true, level) }
+                .collect { refToString(repository.peel(it) , pulled, master, true, level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
@@ -877,14 +757,14 @@ class AssetManager implements Closeable {
 
     Map getBranchesAndTags(boolean checkForUpdates) {
         final result = [:]
-        final currentCommits = strategy.listDownloadedCommits()
+        final currentCommits = repository.listDownloadedCommits()
         final master = getDefaultBranch()
 
         final branches = []
         final tags = []
         final pulled = new LinkedList<Map>()
         log.debug("Current commits : $currentCommits")
-        Map<String, Ref> remote = checkForUpdates ? strategy.lsRemote(false) : null
+        Map<String, Ref> remote = checkForUpdates ? repository.lsRemote(false) : null
         getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
             .unique { shortenRefName(it.name) }
@@ -895,11 +775,11 @@ class AssetManager implements Closeable {
                 branches << map
             }
 
-        remote = checkForUpdates ? strategy.lsRemote(true) : null
+        remote = checkForUpdates ? repository.lsRemote(true) : null
         getTagList()
             .findAll { it.name.startsWith('refs/tags/') }
             .each {
-                Ref ref = strategy.peel(it)
+                Ref ref = repository.peel(it)
                 final map = refToMap(ref, remote)
                 if( isRefInCommits(ref, currentCommits) )
                     pulled << map
@@ -915,20 +795,19 @@ class AssetManager implements Closeable {
 
     @Memoized
     protected List<Ref> getBranchList() {
-        return strategy?.getBranchList() ?: []
+        return repository?.getBranchList() ?: []
     }
 
     @Memoized
     protected List<Ref> getTagList() {
-        return strategy?.getTagList() ?: []
+        return repository?.getTagList() ?: []
     }
 
     protected String refToString(Ref ref, List<String> downloaded, String master, boolean tag, int level ) {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        def coChar = isOnlyLegacy() ? '*' : '>'
-        result << ( isRefInCommits(ref, downloaded) ? coChar : ' ')
+        result << ( isRefInCommits(ref, downloaded) ? '>' : ' ')
 
         if( level ) {
             def obj = ref.getPeeledObjectId() ?: ref.getObjectId()
@@ -949,14 +828,14 @@ class AssetManager implements Closeable {
     @Deprecated
     List<String> getUpdates(int level) {
 
-        def remote = strategy.lsRemote(false)
+        def remote = repository.lsRemote(false)
         List<String> branches = getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
                 .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
 
-        remote = strategy.lsRemote(true)
+        remote = repository.lsRemote(true)
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
@@ -988,19 +867,19 @@ class AssetManager implements Closeable {
      */
     void tryCheckout(String revision = null) throws RefNotFoundException {
         assert project
-        if( !strategy ) {
-            throw new IllegalStateException("Strategy not initialized")
+        if( !repository ) {
+            throw new IllegalStateException("Repository not initialized")
         }
-        strategy.tryCheckout(revision, manifest)
+        repository.tryCheckout(revision)
     }
 
 
     protected Ref checkoutRemoteBranch(String revision) {
         assert project
-        if( !strategy ) {
-            throw new IllegalStateException("Strategy not initialized")
+        if( !repository ) {
+            throw new IllegalStateException("Repository not initialized")
         }
-        return strategy.checkoutRemoteBranch(revision, manifest)
+        return repository.checkoutRemoteBranch(revision, manifest)
     }
 
     void updateModules() {
@@ -1044,7 +923,7 @@ class AssetManager implements Closeable {
 
     protected String getRemoteCommitId(RevisionInfo rev) {
         final tag = rev.type == RevisionInfo.Type.TAG
-        final list = strategy.lsRemote(tag).values()
+        final list = repository.lsRemote(tag).values()
         final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
         if( !ref ) {
             log.debug "WARN: Cannot find any Git revision matching: ${rev.name}; ls-remote: $list"
@@ -1086,15 +965,13 @@ class AssetManager implements Closeable {
         }
 
         final gitConfig = localGitConfig
-        if( !gitConfig.exists() ) {
+        if( !gitConfig?.exists() ) {
             return null
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = manifest.getDefaultBranch()
-        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
-        final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: ${redactUrlPassword(url)}"
+        final url = iniFile.getString('remote "origin"', "url")
+        log.debug "Git config: $gitConfig; url: ${redactUrlPassword(url)}"
         return url
     }
 
@@ -1125,17 +1002,15 @@ class AssetManager implements Closeable {
     void drop(String revision = null, boolean force = false) {
         if( isNotInitialized() )
             throw new AbortOperationException("No match found for: ${getProjectWithRevision()}")
-        strategy.drop(revision, force)
+        repository.drop(revision, force)
     }
 
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
-        assert localPath
-
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {
-            def message = (localGitConfig.exists()
+            def message = (localGitConfig?.exists()
                             ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
                             : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
             throw new AbortOperationException(message)
@@ -1193,21 +1068,6 @@ class AssetManager implements Closeable {
 
             return commitId
         }
-    }
-
-    /**
-     * Enumeration of possible repository strategy types.
-     */
-    enum RepositoryStrategyType {
-        /**
-         * Legacy full clone strategy
-         */
-        LEGACY,
-
-        /**
-         * Bare repo + Multi-revision strategy
-         */
-        MULTI_REVISION
     }
 
 }

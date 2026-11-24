@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+import static nextflow.scm.MultiRevisionRepository.REPOS_SUBDIR
 
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
@@ -93,7 +93,6 @@ class CmdInfoTest extends Specification {
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "${tempDir}/${REPOS_SUBDIR}/nextflow-io/hello".toString()
         json.manifest.mainScript == 'main.nf'
-        json.manifest.defaultBranch == null
         json.revisions.master == 'master'
         json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
@@ -121,7 +120,6 @@ class CmdInfoTest extends Specification {
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "${tempDir}/${REPOS_SUBDIR}/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
-        json.manifest.defaultBranch == null
         json.revisions.master == 'master'
         json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
