@@ -77,7 +77,9 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        try (final manager = new AssetManager(args[0])) {
+        // a registry pipeline is cached under its registry name
+        final name = RegistrySupport.cachedName(args[0], null) { RegistrySupport.registryConfig(this) }
+        try (final manager = name ? new AssetManager(name, null, null, null, name) : new AssetManager(args[0])) {
             if( manager.isNotInitialized() ) {
                 throw new AbortOperationException("Unknown project `${args[0]}`")
             }

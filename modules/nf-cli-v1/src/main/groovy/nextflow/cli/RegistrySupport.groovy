@@ -102,6 +102,15 @@ class RegistrySupport {
         return newAddress(api, name, apiKey)
     }
 
+    /**
+     * Name under which a registry address is cached in the local assets, without a network call.
+     *
+     * @return the registry name, or {@code null} when {@code arg} and {@code hub} address Git
+     */
+    static String cachedName(String arg, String hub, Closure<RegistryConfig> registryConfig) {
+        return registryAddress(arg, hub, registryConfig)?.name
+    }
+
     // checked here rather than when resolving the release, so that it applies offline too
     private static RegistryAddress newAddress(String api, String name, String apiKey) {
         if( name.contains('@') )

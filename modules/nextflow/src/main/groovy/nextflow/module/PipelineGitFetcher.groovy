@@ -26,6 +26,7 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.GitAPIException
 import org.eclipse.jgit.api.errors.JGitInternalException
 import org.eclipse.jgit.transport.RefSpec
+import org.eclipse.jgit.transport.URIish
 
 /**
  * Fetches the exact tree of a pinned commit from a public Git repository.
@@ -40,9 +41,11 @@ class PipelineGitFetcher {
     /**
      * Fetch the pinned commit, or the revision when the release has no commit id
      *
+     * @param keepGit Keep the `.git` folder, with `origin` set to the repository URL
+     * @param depth The history depth to fetch, 1 by default
      * @return The commit that was fetched
      */
-    String fetch(String repositoryUrl, String revision, String commitId, Path target) {
+    String fetch(String repositoryUrl, String revision, String commitId, Path target, boolean keepGit = false, Integer depth = null) {
         if( !revision && !commitId )
             throw new AbortOperationException("Cannot fetch $repositoryUrl: the release has neither a git revision nor a commit id")
         Git git = null
@@ -50,8 +53,8 @@ class PipelineGitFetcher {
         try {
             // the revision can be a branch that moved after the release, so the commit takes precedence
             git = commitId
-                ? fetchCommit(repositoryUrl, commitId, target)
-                : Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).setBranch(revision).setDepth(1).call()
+                ? fetchCommit(repositoryUrl, commitId, target, depth ?: 1)
+                : Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).setBranch(revision).setDepth(depth ?: 1).call()
             head = git.repository.resolve('HEAD')?.name()
         }
         catch( GitAPIException | JGitInternalException e ) {
@@ -61,16 +64,18 @@ class PipelineGitFetcher {
         finally {
             git?.close()
         }
-        FileHelper.deletePath(target.resolve('.git'))
+        if( !keepGit )
+            FileHelper.deletePath(target.resolve('.git'))
         return head
     }
 
     /** Shallow-fetch the commit; servers that refuse unadvertised commits get a full clone */
-    private static Git fetchCommit(String repositoryUrl, String commitId, Path target) {
+    private static Git fetchCommit(String repositoryUrl, String commitId, Path target, int depth) {
         Git git = Git.init().setDirectory(target.toFile()).call()
         try {
             try {
-                git.fetch().setRemote(repositoryUrl).setRefSpecs(new RefSpec(commitId)).setDepth(1).call()
+                git.remoteAdd().setName('origin').setUri(new URIish(repositoryUrl)).call()
+                git.fetch().setRemote('origin').setRefSpecs(new RefSpec(commitId)).setDepth(depth).call()
             }
             catch( GitAPIException | JGitInternalException e ) {
                 log.debug "Cannot fetch commit ${commitId} of ${repositoryUrl}, falling back to a full clone: ${e.message}"

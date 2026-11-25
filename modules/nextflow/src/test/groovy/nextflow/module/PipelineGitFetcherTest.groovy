@@ -112,6 +112,35 @@ class PipelineGitFetcherTest extends Specification {
         commitId << [null, '']
     }
 
+    def 'keeps .git with the origin URL'() {
+        given:
+        def target = dir.resolve('target')
+        when:
+        def commit = new PipelineGitFetcher().fetch(url, '1.0', pinned ? sha1 : null, target, true)
+        then:
+        commit == sha1
+        target.resolve('main.nf').text == 'one'
+        def git = Git.open(target.toFile())
+        git.repository.resolve('HEAD').name() == sha1
+        git.repository.config.getString('remote', 'origin', 'url') == url
+        cleanup:
+        git?.close()
+        where:
+        pinned << [true, false]
+    }
+
+    def 'fetches the given depth'() {
+        given:
+        def target = dir.resolve('target')
+        when:
+        new PipelineGitFetcher().fetch(url, null, sha2, target, true, 2)
+        then:
+        def git = Git.open(target.toFile())
+        git.log().call().collect { it.name() } == [sha2, sha1]
+        cleanup:
+        git?.close()
+    }
+
     def 'fails on an unknown revision'() {
         when:
         new PipelineGitFetcher().fetch(url, 'no-such-tag', null, dir.resolve('target'))

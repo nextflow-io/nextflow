@@ -50,7 +50,9 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        try (final manager = new AssetManager(args[0])) {
+        // a registry pipeline is cached under its registry name; `-r` is a Git revision
+        final name = RegistrySupport.cachedName(args[0], null) { RegistrySupport.registryConfig(this) }
+        try (final manager = name ? new AssetManager(name, null, null, null, name) : new AssetManager(args[0])) {
             manager.drop(revision, force)
         }
     }
