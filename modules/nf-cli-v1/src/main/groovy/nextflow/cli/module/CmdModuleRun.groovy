@@ -29,6 +29,7 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleResolver
+import nextflow.module.ModuleStorage
 import nextflow.module.RegistryClientFactory
 import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
@@ -99,13 +100,17 @@ class CmdModuleRun extends CmdRun {
             .build()
 
         final registryConfig = new RegistryConfig(config.registry as Map ?: Collections.emptyMap())
+        final Path mainFile
         try {
             final resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
             // vendor the module together with its transitive deps (pinned) before running,
             // consistent with `module install` and include-time auto-install
-            return resolver.installWithDependencies(reference, version)
+            mainFile = resolver.installWithDependencies(reference, version)
         } catch( Exception e ) {
             throw new AbortOperationException("Unable to install module: ${name}", e)
         }
+        if( new ModuleStorage(baseDir).getInstalledModule(reference)?.pipeline )
+            throw new AbortOperationException("`${reference}` is a pipeline -- use `nextflow run` or include it")
+        return mainFile
     }
 }

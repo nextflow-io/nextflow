@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.pipeline
+package nextflow.module
 
 import java.nio.file.Path
 

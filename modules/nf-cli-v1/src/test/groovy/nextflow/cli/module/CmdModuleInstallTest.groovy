@@ -402,6 +402,53 @@ class CmdModuleInstallTest extends Specification {
         thrown(AbortOperationException)
     }
 
+    def 'should report an installed pipeline'() {
+        given:
+        installPipeline('3.14.0')
+        def cmd = new CmdModuleInstall()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/rnaseq']
+        cmd.root = tempDir
+        def client = Mock(RegistryClient)
+        cmd.client = client
+
+        when:
+        cmd.run()
+
+        then:
+        0 * client._
+        capture.toString().contains('Pipeline nf-core/rnaseq@3.14.0 installed')
+    }
+
+    def 'should reject -update-deps for a pipeline'() {
+        given:
+        installPipeline('3.14.0')
+        def cmd = new CmdModuleInstall()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/rnaseq']
+        cmd.root = tempDir
+        cmd.updateDeps = true
+        cmd.client = Mock(RegistryClient)
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'nf-core/rnaseq is a pipeline -- -update-deps applies to modules only'
+    }
+
+    private void installPipeline(String version) {
+        def dir = Files.createDirectories(tempDir.resolve('modules/nf-core/rnaseq'))
+        dir.resolve('main.nf').text = 'workflow { }'
+        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleChecksum.clearPipeline(dir)
+    }
+
     // Helper method to create a module package (tar.gz)
     private byte[] createModulePackage(String scope, String name, String version) {
         def baos = new ByteArrayOutputStream()

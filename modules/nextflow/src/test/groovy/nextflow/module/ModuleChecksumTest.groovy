@@ -411,4 +411,30 @@ class ModuleChecksumTest extends Specification {
         checksum != null
         checksum.length() == 64
     }
+
+    def 'should compute a pipeline checksum without .git and .module-info'() {
+        given:
+        def dir = tempDir.resolve('pipeline')
+        Files.createDirectories(dir)
+        dir.resolve('main.nf').text = 'one'
+        def c1 = ModuleChecksum.computePipeline(dir)
+        ModuleChecksum.clearPipeline(dir)
+
+        when:
+        ModuleInfo.save(dir, 'kind', ModuleInfo.KIND_PIPELINE)
+        Files.createDirectories(dir.resolve('.git'))
+        dir.resolve('.git/HEAD').text = 'ref'
+        then:
+        ModuleChecksum.computePipeline(dir) == c1
+
+        when:
+        dir.resolve('main.nf').text = 'two'
+        then: 'memoized until cleared'
+        ModuleChecksum.computePipeline(dir) == c1
+
+        when:
+        ModuleChecksum.clearPipeline(dir)
+        then:
+        ModuleChecksum.computePipeline(dir) != c1
+    }
 }

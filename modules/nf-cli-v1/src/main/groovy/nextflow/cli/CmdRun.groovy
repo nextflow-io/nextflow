@@ -43,7 +43,7 @@ import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.pipeline.PipelineInfo
+import nextflow.module.PipelineSource
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.scm.HubOptions
@@ -692,7 +692,7 @@ class CmdRun extends CmdBase implements HubAware {
      *
      * @return the release, or {@code null} when the name is not a registry address
      */
-    protected PipelineInfo registryLookup(String name) {
+    protected PipelineSource registryLookup(String name) {
         // read only for a registry address; the pipeline config is not fetched yet: read the launch folder config and the `-c` files
         final address = RegistrySupport.registryAddress(name, hubProvider) {
             final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
@@ -702,7 +702,7 @@ class CmdRun extends CmdBase implements HubAware {
             return null
         // the release can't be resolved offline: use the copy cached under the registry name
         if( offline )
-            return new PipelineInfo(name: address.name)
+            return new PipelineSource(name: address.name)
         return RegistrySupport.resolveRelease(address, revision, registryClient)
     }
 

@@ -19,7 +19,9 @@ package nextflow.module
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 
+import nextflow.Const
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 
@@ -39,11 +41,13 @@ class ModuleResolver {
     private final RegistryClient registryClient
     private final ModuleStorage storage
     private final Path baseDir
+    private final PipelineGitFetcher fetcher
 
-    ModuleResolver(Path baseDir, RegistryClient registryClient) {
+    ModuleResolver(Path baseDir, RegistryClient registryClient, PipelineGitFetcher fetcher = new PipelineGitFetcher()) {
         this.baseDir = baseDir
         this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
+        this.fetcher = fetcher
     }
 
     ModuleResolver(Path baseDir, RegistryConfig registryConfig = null) {
@@ -141,31 +145,32 @@ class ModuleResolver {
         if( !force && store.isInstalled(reference) ) {
             def installed = store.getInstalledModule(reference)
             def integrity = installed.integrity
+            def kind = installed.pipeline ? 'Pipeline' : 'Module'
 
             // A corrupted module cannot be reused whatever version is asked for -- its files are
             // missing, so returning it would only defer the failure to the caller
             if( integrity == ModuleIntegrity.CORRUPTED ) {
                 throw new AbortOperationException(
-                    "Module ${reference} is corrupted (missing required files). " +
+                    "${kind} ${reference} is corrupted (missing required files). " +
                         "Use '-force' to reinstall it."
                 )
             }
 
             // No specific version requested -- use the local module as-is
             if( !version ) {
-                log.debug "Module ${reference}@${installed.installedVersion} is already installed locally"
+                log.debug "${kind} ${reference}@${installed.installedVersion} is already installed locally"
                 return installed
             }
 
             if( installed.installedVersion == version ) {
-                log.debug "Module ${reference}@${installed.installedVersion} is already installed (version $version)"
+                log.debug "${kind} ${reference}@${installed.installedVersion} is already installed (version $version)"
                 return installed
             }
 
             // Version mismatch -- check for local modifications before overwriting
             if( integrity == ModuleIntegrity.MODIFIED ) {
                 throw new AbortOperationException(
-                    "Module ${reference} has local modifications. " +
+                    "${kind} ${reference} has local modifications. " +
                         "Use '-force' to override, or save your changes first."
                 )
             }
@@ -177,16 +182,33 @@ class ModuleResolver {
             }
         }
 
-        if( !version )
-            version = resolveVersion(reference)
-
-        log.info "Installing module ${reference}@${version}..."
+        // the kind is known only from the registry: try the module first, the pipeline only on a 404
+        if( !version ) {
+            try {
+                version = resolveVersion(reference)
+            }
+            catch( RegistryException e ) {
+                if( e.statusCode != 404 )
+                    throw e
+                return installPipeline(store, reference, null)
+            }
+        }
 
         // Download module package to temporary location
         Path tempFile = Files.createTempFile("nf-module-", ".tgz")
         try {
             // Download and validate integrity using server checksum
-            def downloadUrl = registryClient.downloadModuleRelease(reference.fullName, version, tempFile)
+            String downloadUrl
+            try {
+                downloadUrl = registryClient.downloadModuleRelease(reference.fullName, version, tempFile)
+            }
+            catch( RegistryException e ) {
+                if( e.statusCode != 404 )
+                    throw e
+                return installPipeline(store, reference, version)
+            }
+
+            log.info "Installing module ${reference}@${version}..."
 
             // Install to modules directory (will compute directory checksum for future integrity checks)
             InstalledModule installed = store.installModule(reference, version, tempFile, downloadUrl)
@@ -199,6 +221,30 @@ class ModuleResolver {
             if( Files.exists(tempFile) ) {
                 Files.delete(tempFile)
             }
+        }
+    }
+
+    private InstalledModule installPipeline(ModuleStorage store, ModuleReference reference, String version) {
+        final source = resolvePipeline(reference, version)
+        if( source.workflowPath && source.workflowPath != Const.DEFAULT_MAIN_FILE_NAME )
+            log.warn "Pipeline ${reference} declares `${source.workflowPath}` as its main script -- an include always uses `${Const.DEFAULT_MAIN_FILE_NAME}`"
+        log.info "Installing pipeline ${reference}@${source.version}..."
+        final installed = store.installPipeline(reference, source, fetcher)
+        log.info "Pipeline ${reference}@${source.version} installed successfully at ${installed.directory.toAbsolutePath()}"
+        return installed
+    }
+
+    private PipelineSource resolvePipeline(ModuleReference reference, String version) {
+        final notFound = "Module or pipeline `${reference}${version ? '@' + version : ''}` not found in the registry"
+        if( !PipelineSource.isValidName(reference.fullName) )
+            throw new AbortOperationException(notFound)
+        try {
+            return PipelineSource.resolve(registryClient, reference.fullName, version)
+        }
+        catch( AbortOperationException e ) {
+            if( e.cause instanceof RegistryException && (e.cause as RegistryException).statusCode == 404 )
+                throw new AbortOperationException(notFound, e.cause)
+            throw e
         }
     }
 
@@ -342,6 +388,8 @@ class ModuleResolver {
         final installed = storage.getInstalledModule(reference)
         if( installed == null )
             throw new AbortOperationException("Module ${reference} is not installed")
+        if( installed.pipeline )
+            throw new AbortOperationException("${reference} is a pipeline -- -update-deps applies to modules only")
 
         // declared direct dependencies from the installed (possibly locally-edited) meta.yml
         final deps = ModuleSpecFactory.fromYaml(installed.manifestFile).requiresModules
@@ -397,6 +445,10 @@ class ModuleResolver {
 
         // install this module at the current level
         final installed = installInto(store, reference, version, force)
+
+        // a pipeline vendors its own modules, it has no meta.yml dependencies
+        if( installed.pipeline )
+            return installed.mainFile
 
         // read its direct dependencies from the installed spec (requiresModules is never null)
         final deps = ModuleSpecFactory.fromYaml(installed.manifestFile).requiresModules

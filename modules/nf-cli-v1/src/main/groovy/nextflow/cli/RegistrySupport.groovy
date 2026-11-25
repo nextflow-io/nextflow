@@ -26,9 +26,8 @@ import nextflow.SysEnv
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
+import nextflow.module.PipelineSource
 import nextflow.module.RegistryClientFactory
-import nextflow.pipeline.PipelineInfo
-import nextflow.pipeline.PipelineManager
 import nextflow.scm.ProviderConfig
 
 /**
@@ -39,15 +38,13 @@ import nextflow.scm.ProviderConfig
 class RegistrySupport {
 
     /**
-     * Registry config from the user config, the `nextflow.config` in the base directory, and the given config files
-     *
-     * @param baseDir The launch directory, the current directory by default
+     * Registry config from the user config, the `nextflow.config` in the launch directory, and the given config files
      */
-    static RegistryConfig registryConfig(CmdBase cmd, List<Path> configFiles = [], Path baseDir = null) {
+    static RegistryConfig registryConfig(CmdBase cmd, List<Path> configFiles = []) {
         final config = new ConfigCmdAdapter()
             .setOptions(cmd.launcher.options)
             .setUserConfigFiles(configFiles)
-            .setBaseDir(baseDir ?: Path.of('.').toAbsolutePath().normalize())
+            .setBaseDir(Path.of('.').toAbsolutePath().normalize())
             .build()
         return config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
     }
@@ -122,8 +119,8 @@ class RegistrySupport {
      *
      * @param revision The registry version, or {@code null} for the latest release
      */
-    static PipelineInfo resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
-        final release = PipelineManager.resolveRelease(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
+    static PipelineSource resolveRelease(RegistryAddress address, String revision, RegistryClient client = null) {
+        final release = PipelineSource.resolve(client ?: RegistryClientFactory.forUrls([address.url], address.apiKey), address.name, revision)
         log.info "Using registry release ${address.name}@${release.version}" + (release.commitId ? " (commit ${release.commitId.take(10)})" : '')
         return release
     }

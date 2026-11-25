@@ -31,6 +31,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.stream.Stream
 import java.util.zip.ZipEntry
@@ -261,6 +262,53 @@ class ModuleStorage {
     }
 
     /**
+     * Install a registry pipeline: fetch its release into a temporary sibling folder,
+     * record its origin in {@code .module-info}, then replace the installed folder.
+     *
+     * @param reference The pipeline reference
+     * @param source The pipeline release
+     * @param fetcher The Git fetcher
+     * @return The InstalledModule object
+     */
+    InstalledModule installPipeline(ModuleReference reference, PipelineSource source, PipelineGitFetcher fetcher) {
+        final dir = getModuleDir(reference)
+        Files.createDirectories(dir.parent)
+        final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
+        try {
+            final commit = fetcher.fetch(source.repositoryUrl, source.revision, source.commitId, tmp)
+            final checksum = ModuleChecksum.computePipeline(tmp)
+            ModuleChecksum.clearPipeline(tmp)
+            final info = [
+                kind: ModuleInfo.KIND_PIPELINE,
+                version: source.version,
+                repositoryUrl: source.repositoryUrl,
+                revision: source.revision,
+                commitId: source.commitId ?: commit,
+                workflowPath: source.workflowPath,
+                registryUrl: source.registryUrl,
+                checksum: checksum
+            ].findAll { k, v -> v != null } as Map<String,String>
+            ModuleInfo.save(tmp, info)
+            if( Files.exists(dir) ) {
+                ModuleChecksum.clearPipeline(dir)
+                FileHelper.deletePath(dir)
+            }
+            Files.move(tmp, dir, StandardCopyOption.ATOMIC_MOVE)
+        }
+        catch( Throwable e ) {
+            try {
+                FileHelper.deletePath(tmp)
+            }
+            catch( IOException ex ) {
+                log.warn "Cannot delete temporary directory ${tmp}: ${ex.message}"
+            }
+            throw e
+        }
+        log.debug "Installed pipeline ${reference}@${source.version} to ${dir}"
+        return getInstalledModule(reference)
+    }
+
+    /**
      * Remove an installed module
      *
      * @param reference The module reference
@@ -286,6 +334,7 @@ class ModuleStorage {
         }
 
         try {
+            ModuleChecksum.clearPipeline(installed.directory)
             FileHelper.deletePath(installed.directory)
             log.debug "Removed module: ${reference}"
 

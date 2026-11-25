@@ -22,6 +22,8 @@ import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
@@ -292,6 +294,32 @@ class CmdModuleRunTest extends Specification {
 
         then:
         thrown(AbortOperationException)
+    }
+
+    def 'should refuse to run a pipeline'() {
+        given:
+        installPipeline('3.14.0')
+        def cmd = new CmdModuleRun()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/rnaseq']
+        cmd.root = tempDir
+        cmd.client = Mock(RegistryClient)
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == '`nf-core/rnaseq` is a pipeline -- use `nextflow run` or include it'
+    }
+
+    private void installPipeline(String version) {
+        def dir = Files.createDirectories(tempDir.resolve('modules/nf-core/rnaseq'))
+        dir.resolve('main.nf').text = 'workflow { }'
+        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleChecksum.clearPipeline(dir)
     }
 
     // Helper method to create a module package (tar.gz)
