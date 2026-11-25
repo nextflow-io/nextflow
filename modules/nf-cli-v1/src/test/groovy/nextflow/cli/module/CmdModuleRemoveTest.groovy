@@ -19,6 +19,7 @@ package nextflow.cli.module
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import org.junit.Rule
@@ -279,7 +280,7 @@ class CmdModuleRemoveTest extends Specification {
         Files.createDirectories(dir.resolve('conf'))
         dir.resolve('main.nf').text = 'workflow { }\n'
         dir.resolve('conf/base.config').text = 'process.cpus = 2\n'
-        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: '3.14.0', checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: '3.14.0', checksum: ModuleChecksum.computePipeline(dir)])
         ModuleChecksum.clearPipeline(dir)
         return dir
     }

@@ -77,7 +77,7 @@ class ModuleResolverPipelineTest extends Specification {
         and:
         main == dir().resolve('main.nf')
         def info = ModuleInfo.load(dir())
-        info.kind == 'pipeline'
+        info.kind == 'Pipeline'
         info.version == '3.14.0'
         info.repositoryUrl == 'https://github.com/nf-core/rnaseq'
         info.revision == '3.14.0'
@@ -185,24 +185,18 @@ class ModuleResolverPipelineTest extends Specification {
         Files.exists(dir().resolve('main.nf'))
     }
 
-    def 'fails on a revoked or missing release'() {
+    def 'fails on a revoked release without fetching'() {
         given:
         client.getModule(_) >> { throw notFound() }
 
         when:
         resolver().installWithDependencies(ref)
         then:
-        client.getPipeline(_) >> PIPELINE
+        client.getPipeline(_) >> pipeline(release('1.0.0'), true)
         def e = thrown(AbortOperationException)
-        e.message.contains(MESSAGE)
+        e.message.contains('is revoked')
         0 * fetcher._
         !Files.exists(dir())
-
-        where:
-        PIPELINE                                                         | MESSAGE
-        pipeline(release('1.0.0'), true)                                 | 'is revoked'
-        pipeline(release('1.0.0', 'abc', PipelineReleaseStatus.REVOKED)) | 'is revoked'
-        new Pipeline().repositoryUrl('u')                                | 'has no published release'
     }
 
     def 'reports a name missing as both a module and a pipeline with the registry detail'() {

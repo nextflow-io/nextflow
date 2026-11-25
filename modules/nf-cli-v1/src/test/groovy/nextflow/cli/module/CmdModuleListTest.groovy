@@ -19,6 +19,7 @@ package nextflow.cli.module
 import groovy.json.JsonSlurper
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import org.junit.Rule
@@ -205,7 +206,7 @@ class CmdModuleListTest extends Specification {
         def dir = storage.getModuleDir(new ModuleReference(scope, name))
         Files.createDirectories(dir)
         dir.resolve('main.nf').text = 'workflow { }\n'
-        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
         ModuleChecksum.clearPipeline(dir)
         return dir
     }

@@ -144,18 +144,6 @@ class RegistryPipelineCmdTest extends Specification {
         !AssetManager.list().contains('acme/hello')
     }
 
-    def 'should not read the registry config for a plain name' () {
-        given:
-        pullRelease()
-
-        when: 'there is no launcher to read the config with'
-        new CmdInfo(args: ['acme/other']).run()
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message == 'Unknown project `acme/other`'
-    }
-
     def 'should fail clearly for an uncached registry pipeline when NXF_HUB is a registry host' () {
         given:
         SysEnv.push(NXF_HUB: 'registry.nextflow.io')

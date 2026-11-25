@@ -114,14 +114,6 @@ class RegistrySupportTest extends Specification {
         'http://localhost:8080/pipelines/acme/hello'            | null
     }
 
-    def 'should get the cached name of a registry address' () {
-        expect:
-        RegistrySupport.cachedName('https://registry.nextflow.io/pipelines/nf-core/rnaseq', null) { new RegistryConfig() } == 'nf-core/rnaseq'
-        RegistrySupport.cachedName('nf-core/rnaseq', 'registry.nextflow.io') { new RegistryConfig() } == 'nf-core/rnaseq'
-        RegistrySupport.cachedName('nf-core/rnaseq', null) { throw new AssertionError('config must not be read') } == null
-        RegistrySupport.cachedName('nf-core/rnaseq', 'github') { throw new AssertionError('config must not be read') } == null
-    }
-
     def 'should get the page URL of a registry' () {
         expect:
         RegistrySupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'

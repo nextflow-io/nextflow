@@ -23,6 +23,7 @@ import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -445,7 +446,7 @@ class CmdModuleInstallTest extends Specification {
     private void installPipeline(String version) {
         def dir = Files.createDirectories(tempDir.resolve('modules/nf-core/rnaseq'))
         dir.resolve('main.nf').text = 'workflow { }'
-        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
         ModuleChecksum.clearPipeline(dir)
     }
 

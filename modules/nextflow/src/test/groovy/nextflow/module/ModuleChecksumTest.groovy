@@ -421,7 +421,7 @@ class ModuleChecksumTest extends Specification {
         ModuleChecksum.clearPipeline(dir)
 
         when:
-        ModuleInfo.save(dir, 'kind', ModuleInfo.KIND_PIPELINE)
+        ModuleInfo.save(dir, 'kind', ModuleSpec.KIND_PIPELINE)
         Files.createDirectories(dir.resolve('.git'))
         dir.resolve('.git/HEAD').text = 'ref'
         then:

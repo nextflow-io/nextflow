@@ -230,7 +230,7 @@ class ModuleResolverTest extends Specification {
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process TEST { }'
         moduleDir.resolve('meta.yml').text = 'name: nf-core/vendored-by-pipeline\nversion: 1.0.0\n'
-        ModuleInfo.save(tempDir, 'kind', ModuleInfo.KIND_PIPELINE)
+        ModuleInfo.save(tempDir, 'kind', ModuleSpec.KIND_PIPELINE)
         def noOrigin = { appender.list.any { it.formattedMessage.contains('has no registry origin') } }
 
         when:

@@ -55,7 +55,7 @@ class CmdView extends CmdBase {
     void run() {
         Plugins.init()
         // a registry pipeline is cached under its registry name; `-r` is a Git revision
-        final name = RegistrySupport.cachedName(args[0], null) { RegistrySupport.registryConfig(this) }
+        final name = RegistrySupport.registryAddress(args[0], null) { RegistrySupport.registryConfig(this) }?.name
         try (final manager = new AssetManager(name ?: args[0], revision, null, null, name)) {
             if( !manager.isLocal() )
                 throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")

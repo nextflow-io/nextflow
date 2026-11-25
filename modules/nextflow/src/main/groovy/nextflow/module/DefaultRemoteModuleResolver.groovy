@@ -52,7 +52,7 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
         final registryConfig = config.navigate('registry') as RegistryConfig
 
         // Create module resolver
-        def resolver = createResolver(baseDir, registryConfig)
+        def resolver = new ModuleResolver(baseDir, registryConfig)
 
         try {
             log.debug "Resolving remote module: ${moduleName}"
@@ -71,10 +71,6 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
         } catch (Exception e) {
             throw new IllegalModulePathException("Failed to resolve remote module ${moduleName}: ${e.message}", e)
         }
-    }
-
-    protected ModuleResolver createResolver(Path baseDir, RegistryConfig registryConfig) {
-        return new ModuleResolver(baseDir, registryConfig)
     }
 
     @Override

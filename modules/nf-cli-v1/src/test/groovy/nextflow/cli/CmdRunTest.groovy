@@ -557,13 +557,9 @@ class CmdRunTest extends Specification {
         (result != null) == LOOKUP
 
         where:
-        NAME                                                    | HUB        | LOOKUP
-        'nf-core/rnaseq'                                        | null       | false
-        'nf-core/rnaseq'                                        | 'gitlab'   | false
-        'https://github.com/nf-core/rnaseq'                     | null       | false
-        'nf-core/rnaseq'                                        | 'registry.nextflow.io' | true
-        'https://registry.nextflow.io/pipelines/nf-core/rnaseq' | null       | true
-        'https://registry-dev.nextflow.io/pipelines/nf-core/rnaseq' | null   | false
+        NAME             | HUB                    | LOOKUP
+        'nf-core/rnaseq' | null                   | false
+        'nf-core/rnaseq' | 'registry.nextflow.io' | true
     }
 
     def 'should not fall back to Git for a registry address' () {

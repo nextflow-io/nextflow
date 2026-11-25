@@ -34,9 +34,6 @@ class ModuleInfo {
 
     public static final String MODULE_INFO_FILE = RemoteModuleResolver.MODULE_INFO_FILE
 
-    /** Value of the {@code kind} property for an installed pipeline (absent for a module) */
-    public static final String KIND_PIPELINE = 'pipeline'
-
 
     /**
      * Save a property to the .module-info file in the module directory

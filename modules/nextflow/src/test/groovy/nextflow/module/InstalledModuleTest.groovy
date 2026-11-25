@@ -216,7 +216,7 @@ class InstalledModuleTest extends Specification {
             kind: ModuleSpec.KIND_PIPELINE,
             expectedChecksum: ModuleChecksum.computePipeline(dir)
         )
-        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, checksum: installed.expectedChecksum])
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, checksum: installed.expectedChecksum])
 
         expect:
         installed.pipeline

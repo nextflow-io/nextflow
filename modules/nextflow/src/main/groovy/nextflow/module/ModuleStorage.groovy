@@ -155,7 +155,7 @@ class ModuleStorage {
         installed.expectedChecksum = infoProps?.checksum
         installed.registryUrl = infoProps?.registryUrl
 
-        if( infoProps?.kind == ModuleInfo.KIND_PIPELINE ) {
+        if( infoProps?.kind == ModuleSpec.KIND_PIPELINE ) {
             installed.installedVersion = infoProps.version
             installed.kind = ModuleSpec.KIND_PIPELINE
             return installed
@@ -286,7 +286,7 @@ class ModuleStorage {
             final checksum = ModuleChecksum.computePipeline(tmp)
             ModuleChecksum.clearPipeline(tmp)
             final info = [
-                kind: ModuleInfo.KIND_PIPELINE,
+                kind: ModuleSpec.KIND_PIPELINE,
                 version: source.version,
                 repositoryUrl: source.repositoryUrl,
                 revision: source.revision,

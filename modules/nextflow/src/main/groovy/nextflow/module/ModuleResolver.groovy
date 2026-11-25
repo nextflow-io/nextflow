@@ -116,7 +116,7 @@ class ModuleResolver {
 
     /** Modules vendored by a pipeline have no registry origin of their own */
     private boolean insidePipeline() {
-        return ModuleInfo.load(baseDir, 'kind') == ModuleInfo.KIND_PIPELINE
+        return ModuleInfo.load(baseDir, 'kind') == ModuleSpec.KIND_PIPELINE
     }
 
     String resolveVersion(ModuleReference reference) {

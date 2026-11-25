@@ -24,6 +24,7 @@ import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import spock.lang.Timeout
 import spock.lang.Unroll
 import test.Dsl2Spec
@@ -682,7 +683,7 @@ class PipelineCompositionTest extends Dsl2Spec {
             Files.createDirectories(target.parent)
             target.text = text.stripIndent()
         }
-        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: '1.0.0', checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: '1.0.0', checksum: ModuleChecksum.computePipeline(dir)])
     }
 
     def 'should include a pipeline by registry name' () {

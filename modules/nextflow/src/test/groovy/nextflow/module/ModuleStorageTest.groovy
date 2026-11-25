@@ -635,7 +635,7 @@ class ModuleStorageTest extends Specification {
         def dir = storage.getModuleDir(reference)
         Files.createDirectories(dir)
         dir.resolve('main.nf').text = 'workflow { }'
-        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: '3.14.0', checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: '3.14.0', checksum: ModuleChecksum.computePipeline(dir)])
 
         when:
         def installed = storage.getInstalledModule(reference)
