@@ -193,7 +193,7 @@ include {
 
 An include of `<scope>/<name>` whose entries are `workflow` or `params` is a pipeline include. Any other `<scope>/<name>` include is a [module include][using-modules-including].
 
-A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. If the directory is missing, Nextflow installs the latest published release, as [`nextflow pipeline install`][cli-pipeline] does. Use that command to install a specific version.
+A pipeline include resolves to the `pipelines/<scope>/<name>/` directory of the calling project. If the directory is missing, Nextflow installs the latest published release, as [`nextflow module install`][cli-module] does. Use that command to install a specific version.
 
 Note the following:
 
@@ -205,7 +205,7 @@ Note the following:
 
 - Only public Git repositories are supported.
 
-- To use `includeConfig` with the config files of an included pipeline, install the pipeline first with `nextflow pipeline install`.
+- To use `includeConfig` with the config files of an included pipeline, install the pipeline first with `nextflow module install`.
 
 ### Best practices
 
@@ -234,7 +234,7 @@ Nextflow validates each workflow input and output against its declared type. Cal
 - [Operators][channel-type]: The core operators recommended for static typing.
 
 [channel-type]: ./reference/stdlib-types/channel
-[cli-pipeline]: ./reference/cli/pipeline
+[cli-module]: ./reference/cli/module
 [config-registry]: ./reference/config/registry
 [migrating-static-types-operators]: ./tutorials/static-types-operators
 [preparing-static-types]: ./static-typing-prep

@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package nextflow.cli.pipeline
+package nextflow.cli
 
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 
-class PipelineCmdSupportTest extends Specification {
+class RegistrySupportTest extends Specification {
 
     def 'should find the registry address of a name and hub' () {
         given:
         def config = new RegistryConfig(url: 'https://registry-dev.nextflow.io/api', apiKey: 'secret')
 
         when:
-        def address = PipelineCmdSupport.registryAddress(NAME, HUB) { config }
+        def address = RegistrySupport.registryAddress(NAME, HUB) { config }
 
         then:
         address?.url == API
@@ -52,7 +52,7 @@ class PipelineCmdSupportTest extends Specification {
 
     def 'should reject a version in a registry address' () {
         when:
-        PipelineCmdSupport.registryAddress(NAME, HUB) { new RegistryConfig() }
+        RegistrySupport.registryAddress(NAME, HUB) { new RegistryConfig() }
 
         then:
         def e = thrown(AbortOperationException)
@@ -69,13 +69,13 @@ class PipelineCmdSupportTest extends Specification {
         def config = new RegistryConfig(url: 'https://example.com/registry/api')
 
         expect:
-        PipelineCmdSupport.registryAddress('https://example.com/registry/pipelines/acme/hello', null) { config }?.name == 'acme/hello'
-        PipelineCmdSupport.registryAddress('https://example.com/pipelines/acme/hello', null) { config } == null
+        RegistrySupport.registryAddress('https://example.com/registry/pipelines/acme/hello', null) { config }?.name == 'acme/hello'
+        RegistrySupport.registryAddress('https://example.com/pipelines/acme/hello', null) { config } == null
     }
 
     def 'should reject a hub that is neither a provider nor a registry' () {
         when:
-        PipelineCmdSupport.registryAddress('nf-core/rnaseq', 'example.com') { new RegistryConfig() }
+        RegistrySupport.registryAddress('nf-core/rnaseq', 'example.com') { new RegistryConfig() }
 
         then:
         def e = thrown(AbortOperationException)
@@ -85,7 +85,7 @@ class PipelineCmdSupportTest extends Specification {
 
     def 'should not read the config for a Git address' () {
         expect:
-        PipelineCmdSupport.registryAddress(NAME, HUB) { throw new AssertionError('config must not be read') } == null
+        RegistrySupport.registryAddress(NAME, HUB) { throw new AssertionError('config must not be read') } == null
 
         where:
         NAME                                       | HUB
@@ -105,7 +105,7 @@ class PipelineCmdSupportTest extends Specification {
         def config = new RegistryConfig(url: 'http://localhost:8080/api')
 
         expect:
-        PipelineCmdSupport.registryAddress(NAME, HUB) { config }?.url == 'http://localhost:8080/api'
+        RegistrySupport.registryAddress(NAME, HUB) { config }?.url == 'http://localhost:8080/api'
 
         where:
         NAME                                                    | HUB
@@ -116,8 +116,8 @@ class PipelineCmdSupportTest extends Specification {
 
     def 'should get the page URL of a registry' () {
         expect:
-        PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'
-        PipelineCmdSupport.pageUrl('https://registry.nextflow.io/api/') == 'https://registry.nextflow.io'
-        PipelineCmdSupport.pageUrl('https://example.com/registry') == 'https://example.com/registry'
+        RegistrySupport.pageUrl('https://registry.nextflow.io/api') == 'https://registry.nextflow.io'
+        RegistrySupport.pageUrl('https://registry.nextflow.io/api/') == 'https://registry.nextflow.io'
+        RegistrySupport.pageUrl('https://example.com/registry') == 'https://example.com/registry'
     }
 }

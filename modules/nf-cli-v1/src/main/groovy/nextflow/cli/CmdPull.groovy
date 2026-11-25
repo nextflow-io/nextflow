@@ -20,7 +20,6 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
-import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -100,7 +99,7 @@ class CmdPull extends CmdBase implements HubAware {
     }
 
     private void pullProject(String project, String revision) {
-        final address = PipelineCmdSupport.registryAddress(project, hubProvider) { PipelineCmdSupport.registryConfig(this) }
+        final address = RegistrySupport.registryAddress(project, hubProvider) { RegistrySupport.registryConfig(this) }
         if( address )
             pullRegistryRelease(address, revision)
         else
@@ -108,8 +107,8 @@ class CmdPull extends CmdBase implements HubAware {
     }
 
     /** Download a registry release at its pinned commit, cached under its registry name as `run` does */
-    private void pullRegistryRelease(PipelineCmdSupport.RegistryAddress address, String revision) {
-        final release = PipelineCmdSupport.resolveRelease(address, revision, registryClient)
+    private void pullRegistryRelease(RegistrySupport.RegistryAddress address, String revision) {
+        final release = RegistrySupport.resolveRelease(address, revision, registryClient)
         final rev = release.commitId ?: release.revision
         try (final manager = new AssetManager(release.repositoryUrl, rev, null, new HubOptions(null, hubUser), release.name)) {
             log.info "Checking ${release.name}@${release.version} ..."

@@ -36,7 +36,6 @@ import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
-import nextflow.cli.pipeline.PipelineCmdSupport
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
@@ -695,16 +694,16 @@ class CmdRun extends CmdBase implements HubAware {
      */
     protected PipelineInfo registryLookup(String name) {
         // read only for a registry address; the pipeline config is not fetched yet: read the launch folder config and the `-c` files
-        final address = PipelineCmdSupport.registryAddress(name, hubProvider) {
+        final address = RegistrySupport.registryAddress(name, hubProvider) {
             final configFiles = runConfig?.collect { Path.of(it) } ?: [] as List<Path>
-            PipelineCmdSupport.registryConfig(this, configFiles)
+            RegistrySupport.registryConfig(this, configFiles)
         }
         if( !address )
             return null
         // the release can't be resolved offline: use the copy cached under the registry name
         if( offline )
             return new PipelineInfo(name: address.name)
-        return PipelineCmdSupport.resolveRelease(address, revision, registryClient)
+        return RegistrySupport.resolveRelease(address, revision, registryClient)
     }
 
     static protected File tryReadFromStdin() {

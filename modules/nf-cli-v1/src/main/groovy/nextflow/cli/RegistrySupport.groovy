@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli.pipeline
+package nextflow.cli
 
 import java.nio.file.Path
 
@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
 import nextflow.SysEnv
-import nextflow.cli.CmdBase
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
@@ -33,11 +32,11 @@ import nextflow.pipeline.PipelineManager
 import nextflow.scm.ProviderConfig
 
 /**
- * Helpers shared by the pipeline subcommands
+ * Helpers for registry pipeline addresses in the project commands
  */
 @Slf4j
 @CompileStatic
-class PipelineCmdSupport {
+class RegistrySupport {
 
     /**
      * Registry config from the user config, the `nextflow.config` in the base directory, and the given config files

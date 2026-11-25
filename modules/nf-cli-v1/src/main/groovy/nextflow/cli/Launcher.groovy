@@ -126,7 +126,6 @@ class Launcher {
         'lint':         { -> new CmdLint() },
         'lineage':      { -> new CmdLineage() },
         'module':       { -> new CmdModule() },
-        'pipeline':     { -> new CmdPipeline() },
         'secrets':      { -> SecretsLoader.isEnabled() ? new CmdSecret() : null },
     ])
 
@@ -154,8 +153,8 @@ class Launcher {
         cmd.launcher = this
         allCommands.add(cmd)
         jcommander.addCommand(cmd.name, cmd, aliases(cmd))
-        // allow unknown options for the module and pipeline commands, and for removed commands so they can report their removal
-        if( cmd instanceof CmdModule || cmd instanceof CmdPipeline || cmd instanceof CmdRemoved )
+        // allow unknown options for the module command, and for removed commands so they can report their removal
+        if( cmd instanceof CmdModule || cmd instanceof CmdRemoved )
             jcommander.getCommands().get(cmd.name).setAcceptUnknownOptions(true)
     }
 

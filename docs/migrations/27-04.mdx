@@ -39,10 +39,6 @@ Nextflow installs the pipeline into `pipelines/<scope>/<name>/` when it is missi
 
 See [Including a pipeline from the registry][workflow-typed-registry] for details.
 
-### `pipeline` command
-
-The new `nextflow pipeline` command manages the registry pipelines installed in a project, with the subcommands `install`, `list`, `remove`, `search`, and `view`. It mirrors the `nextflow module` command. See [`pipeline`][cli-pipeline] for details.
-
 ## Enhancements
 
 ### Lower memory usage
@@ -90,7 +86,6 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - New config option: [`mail.smtp.timeout`][config-mail-smtp-timeout]
 - New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
 
-[cli-pipeline]: ../reference/cli/pipeline
 [cli-run-registry]: ../reference/cli/run#registry-pipelines
 [cli-self-update-clean]: ../reference/cli/self-update#-clean
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout
