@@ -23,10 +23,12 @@ import java.util.jar.Manifest
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.pf4j.CompoundPluginRepository
+import org.pf4j.DefaultPluginLoader
 import org.pf4j.DevelopmentPluginRepository
 import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptorFinder
 import org.pf4j.PluginLoader
+import org.pf4j.PluginDescriptor
 import org.pf4j.PluginRepository
 /**
  * Custom plugin manager that allow loading plugins from Groovy/Gradle/Intellij build environment
@@ -56,9 +58,13 @@ class DevPluginManager extends CustomPluginManager {
         return new DevManifestFinder()
     }
 
+    /**
+     * Load locally built plugins from their dev classpath, and plugins downloaded
+     * from the registry (e.g. third-party plugins) from the standard plugin layout.
+     */
     @Override
     protected PluginLoader createPluginLoader() {
-        return new DevPluginLoader(this)
+        return new DevOrInstalledPluginLoader(new DevPluginLoader(this), new DefaultPluginLoader(this))
     }
 
     @Override
@@ -132,6 +138,33 @@ class DevPluginManager extends CustomPluginManager {
             if( !file )
                 return super.readManifestFromDirectory(pluginPath)
             return file.withInputStream { new Manifest(it) } as Manifest
+        }
+    }
+
+
+    @CompileStatic
+    private static class DevOrInstalledPluginLoader implements PluginLoader {
+
+        private final PluginLoader devLoader
+        private final PluginLoader installedLoader
+
+        DevOrInstalledPluginLoader(PluginLoader devLoader, PluginLoader installedLoader) {
+            this.devLoader = devLoader
+            this.installedLoader = installedLoader
+        }
+
+        private PluginLoader loaderFor(Path pluginPath) {
+            return builtManifest(pluginPath.toFile()) ? devLoader : installedLoader
+        }
+
+        @Override
+        boolean isApplicable(Path pluginPath) {
+            return loaderFor(pluginPath).isApplicable(pluginPath)
+        }
+
+        @Override
+        ClassLoader loadPlugin(Path pluginPath, PluginDescriptor descriptor) {
+            return loaderFor(pluginPath).loadPlugin(pluginPath, descriptor)
         }
     }
 

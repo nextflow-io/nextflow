@@ -513,8 +513,8 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> fullState
         1 * handler.updateTimestamps(termState)
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == 0
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -529,8 +529,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> noExitCodeState
         1 * handler.updateTimestamps(noExitCodeTermState)
         1 * handler.readExitFile() >> EXIT_STATUS
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -612,8 +612,8 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> [terminated: termState]
         0 * handler.isExitFileVisible()
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == 137
         handler.status == TaskStatus.COMPLETED
         result == true
@@ -696,8 +696,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> [terminated: termState]
         1 * handler.updateTimestamps(termState)
         0 * handler.readExitFile()
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == 137
         handler.status == TaskStatus.COMPLETED
         result == true
@@ -750,10 +750,10 @@ class K8sTaskHandlerTest extends Specification {
         0 * client.podState(POD_NAME)
         state == STATE1
 
-        // after more than a second `client.podState` is invoked
+        // once the cache expires `client.podState` is invoked
         // an empty value is returned, therefore the previous status is returned
         when:
-        sleep 1_500
+        expireStateCache(handler)
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> [:]
@@ -783,10 +783,10 @@ class K8sTaskHandlerTest extends Specification {
         0 * client.podState(POD_NAME)
         state == STATE2
 
-        // after a second, the a new invocation is executed
+        // once the cache expires, the a new invocation is executed
         // the new status is returned
         when:
-        sleep 1_500
+        expireStateCache(handler)
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE3
@@ -811,7 +811,7 @@ class K8sTaskHandlerTest extends Specification {
         // the terminated state is final: no further request is made even after
         // the cache expires, because the pod may have been deleted in the meanwhile
         when:
-        sleep 1_500
+        expireStateCache(handler)
         state = handler.getState()
         then:
         0 * client.podState(POD_NAME)
@@ -1500,4 +1500,10 @@ class K8sTaskHandlerTest extends Specification {
 
     }
 
+    // age the cached pod state past its 1 s expiry
+    private static void expireStateCache(K8sTaskHandler handler) {
+        final field = K8sTaskHandler.getDeclaredField('timestamp')
+        field.setAccessible(true)
+        field.setLong(handler, field.getLong(handler) - 2_000)
+    }
 }

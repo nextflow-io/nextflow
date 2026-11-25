@@ -302,9 +302,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         and:
         def expected = [
-            nextflow_io_runname: 'crazy_darwin',
-            nextflow_io_repository: 'https___github_com_foo_bar',
-            seqera_io_platform_workflowid: '4kz8xy',
+            'nextflow-io-runname': 'crazy_darwin',
+            'nextflow-io-repository': 'https---github-com-foo-bar',
+            'seqera-io-platform-workflowid': '4kz8xy',
             'My.Label': 'Foo/Bar' ]
         and:
         // the allocation policy and the job carry the very same labels
@@ -756,7 +756,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> false
         0 * executor.shouldDeleteJob('job1') >> true
         and:
-        0 * client.deleteJob('job1') >> null
+        0 * client.deleteJob('job1')
 
         when:
         handler.@jobId = 'job1'
@@ -767,7 +767,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         1 * executor.getReaper() >> reaper
         1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
         and:
-        1 * client.deleteJob('job1') >> null
+        1 * client.deleteJob('job1')
 
         when:
         handler.@jobId = 'job1'
@@ -776,7 +776,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * client.deleteJob('job1') >> null
+        0 * client.deleteJob('job1')
     }
 
     def 'should not fail when the job deletion fails' () {
@@ -1396,9 +1396,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         (result != null) == EXPECTED_NOT_NULL
         if (result) {
-            result.getNetworkInterfaces(0).getNetwork() == (NETWORK ?: '')
-            result.getNetworkInterfaces(0).getSubnetwork() == (SUBNET ?: '')
-            result.getNetworkInterfaces(0).getNoExternalIpAddress() == PRIVATE
+            assert result.getNetworkInterfaces(0).getNetwork() == (NETWORK ?: '')
+            assert result.getNetworkInterfaces(0).getSubnetwork() == (SUBNET ?: '')
+            assert result.getNetworkInterfaces(0).getNoExternalIpAddress() == PRIVATE
         }
 
         where:

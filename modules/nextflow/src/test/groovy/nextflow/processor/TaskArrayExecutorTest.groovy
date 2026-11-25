@@ -65,7 +65,7 @@ class TaskArrayExecutorTest extends Specification {
 
         where:
         FUSION      | WORK_DIR              | EXPECTED
-        false       | '/work/dir'           | 'bash /work/dir/.command.run 2>&1 > /work/dir/.command.log'
+        false       | '/work/dir'           | 'bash /work/dir/.command.run > /work/dir/.command.log 2>&1'
         true        | '/fusion/work/dir'    | 'bash /fusion/work/dir/.command.run'
     }
 

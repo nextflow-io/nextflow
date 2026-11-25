@@ -138,6 +138,11 @@ class SubmitContainerTokenRequest {
     boolean mirror;
 
     /**
+     * Whenever attach a SOCI index to the container, to enable SOCI lazy loading
+     */
+    boolean soci;
+
+    /**
      * The request security scan mode
      */
     ScanMode scanMode;

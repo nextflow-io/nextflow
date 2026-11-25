@@ -113,9 +113,12 @@ See [Amazon EKS](https://docs.seqera.io/fusion/guide/aws-eks) for a guide to set
 
 ## Launch with `kuberun`
 
-The [`kuberun`][cli-kuberun] command deploys the Nextflow runtime as a pod and runs a pipeline from it. It is obsolete and no longer maintained. Use [Running in a pod](#running-in-a-pod) or [Launch with Fusion](#launch-with-fusion) instead.
+<DeprecatedInVersion version="27.04">
+The `kuberun` command has been removed. It is available as the [nf-kuberun](https://github.com/nextflow-io/nf-kuberun) plugin, but it is no longer maintained. Use [Running in a pod](#running-in-a-pod) or [Launch with Fusion](#launch-with-fusion) instead.
+</DeprecatedInVersion>
 
-[cli-kuberun]: ../cli/kuberun
+The `kuberun` command deployed the Nextflow runtime as a pod and ran a pipeline from it.
+
 [config-k8s]: ../config/k8s
 [fusion-page]: ../../fusion
 [process-accelerator]: ../process/directives/accelerator

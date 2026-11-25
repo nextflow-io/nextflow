@@ -152,6 +152,7 @@ class ConfigDiscovery {
             }
             catch (Exception e2) {
                 // if still fails, throws the first exception
+                e1.addSuppressed(e2)
                 throw e1
             }
         }

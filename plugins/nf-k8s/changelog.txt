@@ -1,5 +1,12 @@
 nf-k8s changelog
 ===================
+1.7.0 - 17 Nov 2026
+- Remove Bouncy Castle from nf-k8s (#8007) [9093cce81]
+- Upgrade to Groovy 5 (#6220) [ba84754db]
+- Bump Guava to 33.7.2-jre to fix GHSA-xxph-c9ww-hj94 (#7957) [17a68a26e]
+- Use duration and memory literals in docs and config descriptions (#7955) [eeff98cbb]
+- Prevent leaking environment secrets in CI (#7873) [1260714d4]
+
 1.6.1 - 25 Sep 2026
 - Bump Bouncy Castle to 1.85 to fix critical CVEs (#7658) [ad5cb26f5]
 - Bump slf4j to 2.0.19 (#7661) [90c789759]

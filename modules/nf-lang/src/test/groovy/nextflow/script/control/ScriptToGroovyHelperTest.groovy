@@ -16,7 +16,6 @@
 
 package nextflow.script.control
 
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -26,17 +25,10 @@ import test.TestUtils
  */
 class ScriptToGroovyHelperTest extends Specification {
 
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
-
     def parse(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         def source = scriptParser.parse('main.nf', contents.stripIndent())
-        assert !TestUtils.hasSyntaxErrors(source)
+        assert TestUtils.getErrors(source) == []
         return source
     }
 

@@ -123,6 +123,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             // specific accelerator model name e.g. "nvidia-tesla-v100", "nvidia-a10g"
             if( accelerator.type )
                 resourceReq.acceleratorName(accelerator.type)
+            // CUDA release the task image was built with e.g. "12.2"; the scheduler only picks
+            // GPU models and drivers supporting it
+            if( accelerator.cuda )
+                resourceReq.acceleratorCuda(accelerator.cuda)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
         // overlay any seqera/machineRequirement.* hints on top of config-scope values (hints win)
@@ -549,6 +553,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             result.put('acceleratorType', resources.getAcceleratorType().toString())
         if (resources.getAcceleratorName() != null)
             result.put('acceleratorName', resources.getAcceleratorName())
+        if (resources.getAcceleratorCuda() != null)
+            result.put('acceleratorCuda', resources.getAcceleratorCuda())
         if (resources.getTime() != null)
             result.put('time', resources.getTime())
         return result.isEmpty() ? null : result
@@ -599,8 +605,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.logStreamId = getLogStreamId()
         result.resourceAllocation = getResourceAllocation()
         applyAttemptTiming(result)
-        // Override executor name to include cloud backend for cost tracking
-        result.executorName = "${SeqeraExecutor.SEQERA}/aws"
+        // Override executor name to include the cloud provider for cost tracking. The scheduler
+        // does not report the provider it picks, so use the configured one, defaulting to aws.
+        // Normalise it so the name is consistent regardless of how the provider was written
+        final provider = executor.getSeqeraConfig()?.provider?.trim()?.toLowerCase() ?: 'aws'
+        result.executorName = "${SeqeraExecutor.SEQERA}/${provider}".toString()
         return result
     }
 }

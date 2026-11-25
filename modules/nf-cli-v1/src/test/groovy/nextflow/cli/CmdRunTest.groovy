@@ -496,9 +496,8 @@ class CmdRunTest extends Specification {
         !specificationContext.currentIteration.displayName.contains('sysEnv')
 
         where:
-        CMD                                                          | EXPECTED
-        withFakeEnv(new CmdRun(args: ['hello'], params: [foo: 1]))   | 'CmdRun[name=run]'
-        withFakeEnv(new CmdKubeRun(args: ['hello'], namespace: 'x')) | 'CmdKubeRun[name=kuberun]'
+        CMD                                                        | EXPECTED
+        withFakeEnv(new CmdRun(args: ['hello'], params: [foo: 1])) | 'CmdRun[name=run]'
     }
 
 }

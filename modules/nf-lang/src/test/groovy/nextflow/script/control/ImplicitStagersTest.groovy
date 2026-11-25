@@ -21,7 +21,6 @@ import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -31,13 +30,6 @@ import test.TestUtils
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class ImplicitStagersTest extends Specification {
-
-    @Shared
-    ScriptParser scriptParser
-
-    def setupSpec() {
-        scriptParser = new ScriptParser()
-    }
 
     def 'should generate implicit stagers for process inputs'() {
         when:
@@ -96,7 +88,7 @@ class ImplicitStagersTest extends Specification {
     }
 
     private List<String> stagerTargets(String contents) {
-        scriptParser.compiler().getSources().clear()
+        final scriptParser = new ScriptParser()
         final source = scriptParser.parse('main.nf', contents.stripIndent())
         scriptParser.analyze()
         final errors = TestUtils.getErrors(source)

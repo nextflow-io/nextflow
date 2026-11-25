@@ -16,11 +16,14 @@
 
 package nextflow.processor
 
+import groovy.transform.CompileStatic
+
 /**
  * Strategies to handle a process execution fault
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 enum ErrorStrategy {
 
     TERMINATE(false),       // on error, terminate the pipeline execution, killing all pending and running tasks

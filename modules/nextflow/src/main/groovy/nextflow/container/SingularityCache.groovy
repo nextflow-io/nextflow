@@ -25,14 +25,13 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Const
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.LazyValue
 /**
  * Handle caching of remote Singularity images
  *
@@ -42,7 +41,7 @@ import nextflow.util.Escape
 @CompileStatic
 class SingularityCache {
 
-    static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
+    static final private Map<String,LazyValue<Path>> localImageNames = new ConcurrentHashMap<>()
 
     private String cacheDir
 
@@ -309,33 +308,18 @@ class SingularityCache {
     }
 
     /**
-     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * Given a remote image URL returns a {@link LazyValue} which holds
      * the local image path.
      *
      * This method synchronise multiple concurrent requests so that only one
      * image download is actually executed.
      *
      * @param imageUrl The singularity image remote URL
-     * @return The {@link DataflowVariable} which hold (and pull) the local image file
+     * @return The {@link LazyValue} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String imageUrl) {
-        if( imageUrl in localImageNames ) {
-            log.trace "${appName} found local cache for image `$imageUrl`"
-            return localImageNames[imageUrl]
-        }
-
-        synchronized (localImageNames) {
-            def result = localImageNames[imageUrl]
-            if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ downloadContainerImage(imageUrl) })
-                localImageNames[imageUrl] = result
-            }
-            else {
-                log.trace "${appName} found local cache for image `$imageUrl` (2)"
-            }
-            return result
-        }
+    LazyValue<Path> getLazyImagePath(String imageUrl) {
+        return localImageNames.computeIfAbsent(imageUrl, (String key) -> new LazyValue<Path>({ downloadContainerImage(imageUrl) }))
     }
 
     /**
@@ -348,10 +332,7 @@ class SingularityCache {
      * @return the container image local {@link Path}
      */
     Path getCachePathFor(String url) {
-        def promise = getLazyImagePath(url)
-        def result = promise.getVal()
-        if( promise.isError() )
-            throw new IllegalStateException(promise.getError())
+        final result = getLazyImagePath(url).get()
         if( !result )
             throw new IllegalStateException("Cannot pull ${appName} image `$url`")
         log.trace "${appName} cache for `$url` path=$result"

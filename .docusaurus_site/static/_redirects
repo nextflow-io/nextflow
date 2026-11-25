@@ -14,7 +14,6 @@
 /nextflow/workflow-outputs         /nextflow/tutorials/workflow-outputs             301
 /nextflow/flux                     /nextflow/tutorials/flux                         301
 /nextflow/developer/plugins        /nextflow/plugins/developing-plugins             301
-/nextflow/plugins                  /nextflow/plugins/plugins                        301
 /nextflow/channel                  /nextflow/workflow                               301
 /nextflow/module/                  /nextflow/modules/                               301
 /nextflow/operator                 /nextflow/reference/operator                     301

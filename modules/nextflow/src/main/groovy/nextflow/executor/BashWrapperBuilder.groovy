@@ -359,7 +359,7 @@ class BashWrapperBuilder {
         /*
          * add the task environment
          */
-        final env = copyStrategy.getEnvScript(environment, runWithContainer)
+        final env = copyStrategy.getEnvScript(escapeInputEnv(environment, inputEnvNames), runWithContainer)
         if( runWithContainer ) {
             binding.task_env = null
             binding.container_env = env
@@ -427,9 +427,52 @@ class BashWrapperBuilder {
         engine.render(res.newReader(), binding)
     }
 
+    /**
+     * Escape the values of `env` inputs so they are exported verbatim, unlike config env values which can reference other variables
+     */
+    static protected Map<String,String> escapeInputEnv(Map<String,String> environment, Set<String> names) {
+        if( !environment || !names )
+            return environment
+        final result = new LinkedHashMap<String,String>(environment)
+        for( String name : names ) {
+            final value = result.get(name)
+            // exported as `export NAME=""$'value'""`: ANSI-C quoting, with line breaks as `\n`/`\r` to keep it on one line
+            if( value )
+                result.put(name, '"$\'' + value.replace('\\','\\\\').replace("'","\\'").replace('\n','\\n').replace('\r','\\r') + '\'"')
+        }
+        return result
+    }
+
     @PackageScope String buildNew0(BufferedReader template) {
+        // also needed by job arrays, because it initialises the command files and normalises the script
         final binding = makeBinding()
-        engine.render(template, binding)
+        return bean.arrayIndexName
+            ? getArrayWrapper(binding)
+            : engine.render(template, binding)
+    }
+
+    /**
+     * Render the wrapper for a job array. It only dispatches each array element
+     * to its child task wrapper, therefore it must not write any control file
+     * (.command.begin, .exitcode, etc) into the array work directory, which is
+     * shared by all array elements.
+     *
+     * The header NXF_CHDIR variable is not used, because the array script only
+     * uses absolute paths and each child task wrapper changes to its own work dir.
+     *
+     * @param binding The wrapper template binding
+     * @return The job array wrapper script
+     */
+    protected String getArrayWrapper(Map<String,String> binding) {
+        final result = new StringBuilder()
+        result << '#!/bin/bash\n'
+        if( binding.header_script )
+            result << binding.header_script << '\n'
+        result << binding.task_metadata
+        result << 'set -eu\n'
+        result << '[[ ${NXF_DEBUG:=0} > 1 ]] && set -x\n'
+        result << script.replaceFirst(/^#!.*\n/, '')
+        return result.toString()
     }
 
     /**
@@ -665,7 +708,8 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            // the container env lines are inserted in the `bash -c` string and evaluated once in the container
+            String cmd = env ? '$(nxf_container_env); ' + launcher : launcher
             // wrap the command with an extra bash invocation either :
             // - to propagate the container environment or
             // - to change in the task work directory as required by singularity

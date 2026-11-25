@@ -36,6 +36,9 @@ class VersionNumber implements IVersionNumber, Comparable {
 
     private String human
 
+    // required by Kryo to restore a cached value
+    private VersionNumber() {}
+
     /**
      * Create a version number object
      *

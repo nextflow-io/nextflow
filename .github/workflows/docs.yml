@@ -4,6 +4,8 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - 'docs/**'
+      - '!docs/adr/**'
+      - '!docs/specs/**'
       - '.docusaurus_site/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
@@ -19,7 +21,7 @@ concurrency:
 jobs:
   docs-build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     defaults:

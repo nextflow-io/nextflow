@@ -14,7 +14,8 @@
 !agent-rpc/go.sum
 !agent-rpc/main.go
 
-# harness: installed into the runtime stage
+# harness: compiled by the harness stage
 !package.json
 !package-lock.json
 !harness/runner.mjs
+!harness/entry.mjs

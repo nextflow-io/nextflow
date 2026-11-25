@@ -330,6 +330,8 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig( [container: 'busybox'] )
         task.processor.getSession() >> new Session([(engine): config])
         task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
+
+        expect:
         task.container == contnr
         task.containerConfig.enabled
         task.containerConfig.engine == engine
@@ -338,7 +340,6 @@ class TaskRunTest extends Specification {
         engine      | contnr                    | config
         'docker'    | 'busybox'                 | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | 'd.reg/busybox'           | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'udocker'   | 'busybox:latest'          | [enabled: true, x:'alpha', y: 'beta']
         'sarus'     | 'busybox'                 | [enabled: true, x:'delta', y: 'gamma']
         'shifter'   | 'docker:busybox:latest'   | [enabled: true, x:'delta', y: 'gamma']
     }
@@ -885,6 +886,27 @@ class TaskRunTest extends Specification {
         session.getContainerConfig(null) >> new PodmanConfig(registry:'xyz')
         and:
         config == new PodmanConfig(registry:'xyz')
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> true
+        and:
+        session.getContainerConfig(null) >> null
+        and:
+        config instanceof DockerConfig
+        config.isEnabled()
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> true
+        and:
+        session.getContainerConfig(null) >> new PodmanConfig(enabled: true)
+        and:
+        config == new PodmanConfig(enabled: true)
     }
 
     def 'should get container info' () {
@@ -922,8 +944,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveBody(body) >> null
-        0 * task.resolveStub(_) >> null
+        1 * task.resolveBody(body) >> { }
+        0 * task.resolveStub(_)
     }
 
     def 'should resolve task body when no stub' () {
@@ -939,8 +961,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveBody(body) >> null
-        0 * task.resolveStub(_) >> null
+        1 * task.resolveBody(body) >> { }
+        0 * task.resolveStub(_)
     }
 
     def 'should resolve task stub' () {
@@ -957,8 +979,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveStub(stub) >> null
-        0 * task.resolveBody(_) >> null
+        1 * task.resolveStub(stub) >> { }
+        0 * task.resolveBody(_)
     }
 
     def 'should get stub source via method access' () {

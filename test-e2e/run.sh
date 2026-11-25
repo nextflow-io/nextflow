@@ -66,33 +66,82 @@ echo "Nextflow snapshots launcher image $image"
 # As in Platform, the dind launcher (including the Docker client) is used by cloud compute
 # environments, the plain launcher by all others
 #
-launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v1)
-launcher_dind=$(wave -i ${base_dind} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v1)
+launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
+launcher_dind=$(wave -i ${base_dind} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
 echo "Running Platform tests using image launcher: $launcher"
 echo "Running Platform tests using image launcher (dind): $launcher_dind"
 
-# determining the e2e test environment checking the $COMMIT_MESSAGE
-# that is set by GitHub action workflow. If it does not exist fallback
-# to the commit message in the git rpeo
-if [ -z "$COMMIT_MESSAGE" ]; then
-  COMMIT_MESSAGE=$(git show -s --format='%s')
-  echo "Commit message [from git]: $COMMIT_MESSAGE"
+# determine the e2e test environment: use $E2E_ENVIRONMENT if set (workflow_dispatch),
+# otherwise check $COMMIT_MESSAGE set by the GitHub action workflow, falling back
+# to the commit message in the git repo
+if [ -n "$E2E_ENVIRONMENT" ]; then
+  ENVIRONMENT="$E2E_ENVIRONMENT"
+  echo "Environment [from input]: $ENVIRONMENT"
 else
-  echo "Commit message [from gha]: $COMMIT_MESSAGE"
-fi
-if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
-  ENVIRONMENT="production"
-else
-  ENVIRONMENT="staging"
+  if [ -z "$COMMIT_MESSAGE" ]; then
+    COMMIT_MESSAGE=$(git show -s --format='%s')
+    echo "Commit message [from git]: $COMMIT_MESSAGE"
+  else
+    echo "Commit message [from gha]: $COMMIT_MESSAGE"
+  fi
+  if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
+    ENVIRONMENT="production"
+  else
+    ENVIRONMENT="staging"
+  fi
 fi
 
 #
 # Finally launch the showcase automation
 # see https://github.com/seqeralabs/showcase-automation/
-echo "Launching seqera-showcase-${ENVIRONMENT}"
-gh workflow run \
-  seqera-showcase-${ENVIRONMENT}.yml \
-  --repo seqeralabs/showcase-automation \
+showcase_repo=seqeralabs/showcase-automation
+workflow_file=seqera-showcase-${ENVIRONMENT}.yml
+echo "Launching ${workflow_file}"
+# `gh workflow run` prints the dispatched run URL; fall back to the workflow runs page
+if ! dispatch_out=$(gh workflow run \
+  "${workflow_file}" \
+  --repo "${showcase_repo}" \
   -f launch_container=${launcher} \
-  -f launch_container_dind=${launcher_dind}
+  -f launch_container_dind=${launcher_dind} 2>&1); then
+  echo "$dispatch_out"
+  echo "Error: failed to launch ${workflow_file}"; exit 1
+fi
+run_url=$(echo "$dispatch_out" | grep -o 'https://github.com/[^ ]*/actions/runs/[0-9]*' | tail -1)
+[ -z "$run_url" ] && run_url="https://github.com/${showcase_repo}/actions/workflows/${workflow_file}"
+echo "Showcase run: $run_url"
+
+# wait for the showcase launch job, which saves the Platform runs as an artifact,
+# and link them with a search on the run name suffix (<date>_<uuid>), one link per workspace
+platform_urls=""
+run_id=${run_url##*/runs/}
+if [[ "$run_id" =~ ^[0-9]+$ ]]; then
+  echo "Waiting for the showcase launch job..."
+  for _ in $(seq 1 30); do
+    status=$(gh run view "$run_id" --repo "$showcase_repo" --json status,jobs \
+      --jq '[.status, (.jobs[] | select(.name == "launch") | .status)] | if index("completed") then "done" else "wait" end' 2>/dev/null) || break
+    [ "$status" = done ] && break
+    sleep 30
+  done
+  artifact_dir=$(mktemp -d)
+  if gh run download "$run_id" --repo "$showcase_repo" --pattern '*_launch_json' --dir "$artifact_dir" >/dev/null 2>&1; then
+    platform_urls=$(jq -r '[.[] | select(.workflowUrl != null)
+      | (.workflowUrl | sub("/watch/.*"; "/watch")) + "?search=" + (.workflowName | capture("(?<s>[0-9]{8}_[0-9a-f]+)$").s)] | unique | .[]' \
+      "$artifact_dir"/*/*.json 2>/dev/null)
+  fi
+fi
+echo "Platform runs:"
+echo "${platform_urls:-not found}" | sed 's/^/  /'
+
+if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+  {
+    echo "### e2e showcase launched against \`${ENVIRONMENT}\`"
+    echo "- Run: ${run_url}"
+    echo "- Platform runs:"
+    echo "${platform_urls:-not found, see the showcase run}" | sed 's/^/  - /'
+    echo "- Launcher: \`${launcher}\`"
+    echo "- Launcher (dind): \`${launcher_dind}\`"
+    echo ""
+    echo "CI only launches the test. Open the run to check whether it passed."
+  } >> "$GITHUB_STEP_SUMMARY"
+fi
 

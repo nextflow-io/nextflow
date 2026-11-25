@@ -68,14 +68,15 @@ class WorkflowBindingTest extends Specification {
         given:
         def FOO = Mock(ComponentDef)
         def ARGS = ['alpha','beta'] as Object[]
-        def binding = Spy(WorkflowBinding)
-        binding.@meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta)
+        def binding = new WorkflowBinding()
+        binding.@meta = meta
 
         // should invoke an extension component
         when:
         def result = binding.invokeMethod('foo', ARGS)
         then:
-        1 * binding.getComponent0('foo') >> FOO
+        1 * meta.getComponent('foo') >> FOO
         1 * FOO.invoke_a(ARGS) >> 'Hello'
         result == 'Hello'
 
@@ -83,7 +84,7 @@ class WorkflowBindingTest extends Specification {
         when:
         result = binding.invokeMethod('map', ARGS)
         then:
-        1 * binding.getComponent0('map') >> null
+        1 * meta.getComponent('map') >> null
         result instanceof OpCall
         (result as OpCall).methodName == 'map'
         (result as OpCall).args == ARGS
@@ -92,7 +93,7 @@ class WorkflowBindingTest extends Specification {
         when:
         binding.invokeMethod('foo', ARGS)
         then:
-        1 * binding.getComponent0('foo') >> null
+        1 * meta.getComponent('foo') >> null
         thrown(MissingMethodException)
 
     }

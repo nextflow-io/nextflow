@@ -26,6 +26,8 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
+import nextflow.scm.ProviderPath
+import nextflow.scm.RepositoryProvider
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -469,6 +471,27 @@ class ConfigCmdAdapterTest extends Specification {
         def files3 = new ConfigCmdAdapter(homeDir: homeDir, baseDir: baseDir, currentDir: workDir).resolveConfigFiles()
         then:
         files3 == [homeConfig, baseConfig, workConfig]
+
+        cleanup:
+        homeDir?.deleteDir()
+        workDir?.deleteDir()
+    }
+
+    def 'should discover remote base config file' () {
+        given:
+        def homeDir = Files.createTempDirectory('home')
+        def workDir = Files.createTempDirectory('work')
+        def provider = Mock(RepositoryProvider) {
+            readText('nextflow.config') >> 'foo=1'
+        }
+        def baseDir = new ProviderPath(provider, 'nextflow.config').getParent()
+
+        when:
+        def files = new ConfigCmdAdapter(homeDir: homeDir, baseDir: baseDir, currentDir: workDir).resolveConfigFiles()
+        then:
+        files.size() == 1
+        files[0] instanceof ProviderPath
+        files[0].toString() == baseDir.resolve('nextflow.config').toString()
 
         cleanup:
         homeDir?.deleteDir()

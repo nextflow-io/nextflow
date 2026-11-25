@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.SysEnv
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
@@ -251,9 +252,17 @@ class PluginsFacade implements PluginStateListener {
     }
 
     protected PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
-        return ( mode!=DEV_MODE
-                ? new PluginUpdater(manager, root, new URL(indexUrl), offline)
-                : new DevPluginUpdater(manager) )
+        // in dev mode, plugins that are not built locally (e.g. third-party plugins)
+        // are downloaded into the user plugins store instead of the dev plugins root
+        final store = mode==DEV_MODE ? devPluginsStore() : root
+        return new PluginUpdater(manager, store, new URL(indexUrl), offline)
+    }
+
+    private static Path devPluginsStore() {
+        final result = Const.APP_HOME_DIR.resolve('plugins')
+        if( !FilesEx.exists(result) && !FilesEx.mkdirs(result) )
+            throw new IOException("Unable to create plugins dir: $result")
+        return result
     }
 
     @Override
@@ -318,12 +327,6 @@ class PluginsFacade implements PluginStateListener {
         // registry in place (consistent with module resolution in RegistryClientFactory).
         if( !registryMap?.url )
             return
-        // in dev mode plugins are resolved from the development classpath, not downloaded from
-        // any registry, so the `registry` scope has no effect on plugin resolution
-        if( mode==DEV_MODE ) {
-            log.warn "Plugin registry config is ignored in development mode -- plugins are resolved from the development classpath"
-            return
-        }
         // the updater owns the repositories and guards against re-applying the registry config,
         // so re-entrant calls are safe by construction
         updater?.addRegistryRepos(new RegistryConfig(registryMap))

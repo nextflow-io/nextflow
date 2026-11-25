@@ -230,7 +230,8 @@ class Channel  {
 
     static private DataflowWriteChannel interval0(String duration, Closure closure) {
         def millis = Duration.of(duration).toMillis()
-        def timer = new Timer()
+        // daemon timer so that it does not keep the JVM alive if downstream stops consuming (e.g. `take`)
+        def timer = new Timer(true)
         def result = CH.create()
         long index = 0
 

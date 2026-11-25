@@ -62,6 +62,7 @@ import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.file.FileHelper
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
@@ -84,6 +85,8 @@ class WaveClient {
         final SubmitContainerTokenResponse response
         final Instant createdAt
         int iteration
+        /** the container was found ready, therefore its status is not checked anymore */
+        volatile boolean ready
     }
 
     final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
@@ -121,6 +124,9 @@ class WaveClient {
 
     final private RateLimiter limiter
 
+    /** limits the requests ahead to half the rate, so that they do not slow down the task requests */
+    final private RateLimiter prefetchLimiter
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
@@ -134,6 +140,7 @@ class WaveClient {
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         this.limiter = RateLimiter.create( config.httpOpts().maxRate().rate  )
+        this.prefetchLimiter = RateLimiter.create( limiter.rate / 2 )
         // create cache
         this.cache = CacheBuilder<String, Handle>
             .newBuilder()
@@ -272,6 +279,7 @@ class WaveClient {
                 format: assets.singularity ? 'sif' : null,
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
+                soci: config.sociMode() && !assets.singularity,
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
                 buildCompression: config.buildCompression(),
@@ -301,6 +309,7 @@ class WaveClient {
                 freeze: config.freezeMode(),
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
+                soci: config.sociMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
                 buildCompression: config.buildCompression(),
@@ -312,6 +321,8 @@ class WaveClient {
     private void checkLimiter() {
         final ts = System.currentTimeMillis()
         try {
+            if( WavePrefetchObserver.isPrefetchThread() )
+                prefetchLimiter.acquire()
             limiter.acquire()
         } finally {
             final delta = System.currentTimeMillis()-ts
@@ -353,8 +364,23 @@ class WaveClient {
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
         }
         catch (IOException e) {
-            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint - cause: ${describeFailure(e)}", e)
         }
+    }
+
+    /**
+     * Describe an I/O failure including its exception type and cause chain. The JDK HTTP client
+     * raises connection and DNS failures as a {@link java.net.ConnectException} with a null message,
+     * so the message alone does not tell what went wrong.
+     */
+    static protected String describeFailure(Throwable error) {
+        final result = new ArrayList<String>()
+        for( Throwable t=error; t!=null && result.size()<3; t=t.cause ) {
+            result.add(t.message ? "${t.class.name}: ${t.message}".toString() : t.class.name)
+            if( t.cause==t )
+                break
+        }
+        return result.join(' <- ')
     }
 
     protected ContainerStatusResponse jsonToContainerStatusResponse(String body) {
@@ -572,6 +598,12 @@ class WaveClient {
         else
             checkConflicts(attrs, task.lazyName())
 
+        // Wave cannot change a Singularity image URL, use it as is
+        // (unless Fusion needs Wave to add its layer)
+        final engine = task.getContainerConfig()?.getEngine()
+        if( engine in ['singularity','apptainer'] && FileHelper.getUrlProtocol(attrs.container) && !fusion.enabled() )
+            return null
+
         //  resolve the wave assets
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
     }
@@ -734,8 +766,17 @@ class WaveClient {
 
     boolean isContainerReady(String key) {
         final handle = responses.get(key)
-        if( !handle )
-            throw new IllegalStateException("Unable to find any container with key: $key")
+        if( !handle ) {
+            // image not handled by Wave (e.g. local or URL Singularity image)
+            log.trace "Container key not handled by Wave, assume ready: $key"
+            return true
+        }
+        if( handle.ready )
+            return true
+        return handle.ready = checkContainerReady(handle)
+    }
+
+    protected boolean checkContainerReady(Handle handle) {
         final resp = handle.response
         if( resp.requestId ) {
             return resp.succeeded

@@ -67,9 +67,9 @@ class ExecutorFactory {
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap
 
-    private Map<Class<? extends Executor>,? extends Executor> executors = new HashMap<>()
+    private Map<Class<? extends Executor>,Executor> executors = new HashMap<>()
 
-    @PackageScope Map<Class<? extends Executor>,? extends Executor> getExecutors() { executors }
+    @PackageScope Map<Class<? extends Executor>,Executor> getExecutors() { executors }
 
     ExecutorFactory() {
         init0(Collections.<Class<Executor>>emptyList())
@@ -245,13 +245,13 @@ class ExecutorFactory {
      *
      * @param taskConfig
      */
-    @CompileDynamic
     protected String getExecutorName(ProcessConfig taskConfig, Session session) {
         // create the processor object
-        def result = taskConfig.executor?.toString()
+        def result = taskConfig.getProperty('executor')?.toString()
 
-        if( !result && session.config.executor?.name instanceof String ) {
-            result = session.config.executor.name
+        final executor = session.config.executor
+        if( !result && executor instanceof Map && executor.name instanceof String ) {
+            result = executor.name
         }
 
         log.debug "<< taskConfig executor: $result"

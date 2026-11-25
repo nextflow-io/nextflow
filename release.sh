@@ -27,6 +27,10 @@
 #   NPR_API_URL          - Nextflow Plugin Registry API URL
 #   NPR_API_KEY          - Nextflow Plugin Registry API key
 #
+# Java bundles:
+#   NXF_RELEASE_BUNDLES  - Directory with the Java bundles of each platform (built by the
+#                          Bundle workflow), uploaded by `deploy` next to the jar
+#
 # Container Registry Authentication:
 #   DOCKERHUB_USERNAME   - Docker Hub username for container publishing
 #   DOCKERHUB_TOKEN      - Docker Hub token/password for container publishing
@@ -93,6 +97,11 @@ elif [ $rc -ne 2 ]; then
     echo "❌ ERROR: Cannot check tag v$VERSION on origin (git exit $rc)"
     exit 1
 fi
+
+# The Java bundles of each platform are uploaded by `deploy` (step 2), but are checked before
+# anything is published, so that a release can't be published without them.
+echo "=== Checking the Java bundles ==="
+make check-release-bundles
 
 echo "🐳 === Step 1: Publish the pi agent runner image ==="
 # FIRST, before anything is published: `deploy` (step 2) uploads to s3://www2.nextflow.io,

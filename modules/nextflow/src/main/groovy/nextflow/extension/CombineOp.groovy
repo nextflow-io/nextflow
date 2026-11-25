@@ -75,7 +75,7 @@ class CombineOp {
     }
 
     CombineOp setPivot( pivot ) {
-        this.pivot = (List<Integer>)(pivot instanceof List<Integer> ? pivot : [pivot])
+        this.pivot = (List<Integer>)(pivot instanceof List ? pivot : [pivot])
         return this
     }
 
@@ -102,7 +102,7 @@ class CombineOp {
 
         opts.onComplete = {
             if( stopCount.decrementAndGet()==0) {
-                target << Channel.STOP
+                target.bind(Channel.STOP)
             }}
 
         return opts

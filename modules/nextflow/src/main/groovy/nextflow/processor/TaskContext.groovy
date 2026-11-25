@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -41,6 +43,7 @@ import nextflow.util.TestOnly
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TaskContext implements Map<String,Object>, Cloneable {
 
     @Delegate
@@ -49,7 +52,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     /**
      * Used to show the override warning message only the very first time
      */
-    private transient final overrideWarnShown = new AtomicBoolean()
+    private transient final AtomicBoolean overrideWarnShown = new AtomicBoolean()
 
     /**
      * The main script owning the process
@@ -75,9 +78,9 @@ class TaskContext implements Map<String,Object>, Cloneable {
         // fetch all the variables names referenced by the script body and retain
         // only the ones not declared as input or output, because these are supposed to
         // to be the ones provided by the *external* script context
-        variableNames = processor.getTaskBody().getValNames() ?: []
+        variableNames = processor.getTaskBody().getValNames() ?: new HashSet<String>()
         if( variableNames ) {
-            variableNames = variableNames - processor.getDeclaredNames()
+            variableNames = (Set<String>) (variableNames - processor.getDeclaredNames())
         }
 
         log.trace "Binding names for '$name' > $variableNames"
@@ -88,13 +91,14 @@ class TaskContext implements Map<String,Object>, Cloneable {
         this.holder = holder
         this.name = name
         def names = script.getBinding()?.getVariables()?.keySet()
-        this.variableNames = names ? new HashSet<String>(names) : new HashSet<String>()
+        this.variableNames = names ? new HashSet<String>((Collection<String>) names) : new HashSet<String>()
         log.trace "Binding names for '$name' > $variableNames"
     }
 
     @TestOnly
     protected TaskContext() { }
 
+    @CompileDynamic
     TaskContext clone() {
         def copy = (TaskContext)super.clone()
         copy.setHolder( (Map)holder.clone() )
@@ -199,7 +203,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return KryoHelper.serialize(map)
         }
         catch( Exception e ) {
-            log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
+            log.warn "Cannot serialize context map. Cause: ${e} -- Resume will not work on this process"
             log.debug "Failed to serialize delegate map items: ${dumpMap(holder)}", e
             return null
         }
@@ -320,6 +324,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
      * @param path The path to the template file. When relative the file is resolved against script {@code $baseDir/templates} folder
      * @return The resolved template path
      */
+    @CompileDynamic
     protected Path template( path ) {
         if( !path )
             throw new ProcessException("Process `$name` missing template name")

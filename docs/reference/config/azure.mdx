@@ -265,6 +265,12 @@ The file share mount options.
 
 The file share mount path.
 
+##### `azure.storage.nodeIdentity`
+
+<AddedInVersion version="27.04" />
+
+The managed identity Fusion uses on the compute nodes to authenticate to Azure storage, instead of a SAS token. Either the client ID of a managed identity attached to the nodes, or `'auto'` to use the identity the nodes run as. When set, Nextflow does not generate a SAS token for Fusion. Alias of [`azure.batch.poolIdentityClientId`](#azurebatchpoolidentityclientid) for any executor; takes precedence when both are set.
+
 ##### `azure.storage.sasToken`
 
 The blob storage shared access signature (SAS) token, which can be provided instead of an account key. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.

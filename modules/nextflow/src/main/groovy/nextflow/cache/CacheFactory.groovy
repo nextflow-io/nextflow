@@ -65,7 +65,7 @@ abstract class CacheFactory implements ExtensionPoint {
      * <p><b>Decide from the given config and nothing else.</b> Extensions are instantiated by pf4j's
      * {@code SingletonExtensionFactory}, so there is one instance per JVM shared by every session —
      * a lazy field or {@code @Memoized} here would leak one session's answer into the next, which
-     * matters for tests, {@code nf-console} and embedded use. The config is passed rather than read
+     * matters for tests and embedded use. The config is passed rather than read
      * from {@link Global} for the same reason, and because it is data: unlike the session, it cannot
      * be written back into. This method must be stateless and free of side effects.
      *

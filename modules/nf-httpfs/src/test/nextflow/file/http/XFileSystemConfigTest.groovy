@@ -54,4 +54,34 @@ class XFileSystemConfigTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should create from an explicit environment' () {
+        when:
+        def config = new XFileSystemConfig([NXF_HTTPFS_MAX_ATTEMPTS: '5', NXF_HTTPFS_DELAY: '0'])
+        then:
+        config.maxAttempts() == 5
+        config.backOffDelay() == 0
+        config.backOffBase() == XFileSystemConfig.DEFAULT_BACK_OFF_BASE
+        config.retryCodes() == XFileSystemConfig.DEFAULT_RETRY_CODES.tokenize(',').collect( it -> it as int )
+    }
+
+    def 'should replace and reload the global config' () {
+        given:
+        def custom = new XFileSystemConfig([NXF_HTTPFS_MAX_ATTEMPTS: '7'])
+
+        when:
+        XFileSystemConfig.reset(custom)
+        then:
+        XFileSystemConfig.config().is(custom)
+
+        when:
+        SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '9'])
+        XFileSystemConfig.reset()
+        then:
+        XFileSystemConfig.config().maxAttempts() == 9
+
+        cleanup:
+        SysEnv.pop()
+        XFileSystemConfig.reset()
+    }
 }

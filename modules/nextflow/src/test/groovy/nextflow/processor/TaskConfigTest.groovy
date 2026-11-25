@@ -790,8 +790,8 @@ class TaskConfigTest extends Specification {
         def labels = config.getResourceLabels(ResourceLabelPolicy.GOOGLE)
         then:
         labels == [
-            'nextflow_io_runname': 'crazy_darwin',
-            'nextflow_io_repository': 'https___github_com_foo_bar',
+            'nextflow-io-runname': 'crazy_darwin',
+            'nextflow-io-repository': 'https---github-com-foo-bar',
             'My.Team/Name': 'Genomics Team' ]
 
         when:
@@ -828,13 +828,13 @@ class TaskConfigTest extends Specification {
 
     def 'should decide the collision on the sanitized auto key' () {
         given:
-        def config = new TaskConfig(resourceLabels: ['nextflow_io_runname': 'custom'])
+        def config = new TaskConfig(resourceLabels: ['nextflow-io-runname': 'custom'])
         config.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin'])
 
         expect:
         // the declared key only collides once the auto key is mangled by the policy
-        config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow_io_runname': 'custom']
-        config.getResourceLabels(ResourceLabelPolicy.K8S) == ['nextflow.io/runName': 'crazy_darwin', 'nextflow_io_runname': 'custom']
+        config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow-io-runname': 'custom']
+        config.getResourceLabels(ResourceLabelPolicy.K8S) == ['nextflow.io/runName': 'crazy_darwin', 'nextflow-io-runname': 'custom']
     }
 
     def 'should carry over the auto resource labels on clone' () {

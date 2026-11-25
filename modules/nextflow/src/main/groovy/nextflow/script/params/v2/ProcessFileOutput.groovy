@@ -17,6 +17,7 @@
 package nextflow.script.params.v2
 
 import groovy.transform.CompileStatic
+import nextflow.file.FileHelper
 /**
  * Models a process file output, which defines a file
  * or set of files to be unstaged from a task work directory.
@@ -38,7 +39,7 @@ class ProcessFileOutput {
     }
 
     String getFilePattern(Map context) {
-        return context.resolveLazy(filePattern)?.toString()
+        return FileHelper.stripCurrentDirSegments(context.resolveLazy(filePattern)?.toString())
     }
 
 }

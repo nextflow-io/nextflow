@@ -36,7 +36,7 @@ class ProcessInputsDef implements Cloneable {
      * task against the task context and added to the task
      * environment.
      */
-    private Map<String,?> env = [:]
+    private Map<String,Object> env = [:]
 
     /**
      * Input files which will be evaluated for each task
@@ -80,7 +80,7 @@ class ProcessInputsDef implements Cloneable {
         return params.get(i)
     }
 
-    Map<String,?> getEnv() {
+    Map<String,Object> getEnv() {
         return env
     }
 

@@ -62,9 +62,11 @@ class BashWrapperBuilderWithAzTest extends Specification {
         then:
         binding.unstage_outputs == """\
                     IFS=\$'\\n'
-                    for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    set -f
+                    for name in \$(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
                         nxf_az_upload \$name '${AzHelper.toHttpUrl(target)}'
                     done
+                    set +f
                     unset IFS
                     """.stripIndent().rightTrim()
 
@@ -90,20 +92,37 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 fi
             }
 
+            nxf_az_download_error() {
+                local sas=${AZ_SAS:-}
+                local sig=${sas#*sig=}
+                sig=${sig%%&*}
+                ## show the azcopy output, without the SAS signature
+                [[ -z $3 ]] || >&2 echo "${3//"$sig"/<redacted>}"
+                >&2 echo "Unable to download path: $1 (azcopy exit status $2)"
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$2")
                 local ret
+                local out
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
-                        >&2 echo "Unable to download path: $source"
-                        return 1
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                    ret=$?
+                    ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
+                    ## or a transient error fails (and can be retried) instead of being staged as a directory
+                    if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
+                        nxf_az_download_error "$source" $ret "$out"
+                        return $ret
+                    fi
+                    mkdir -p "$target"
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || {
+                        ret=$?
+                        rm -rf "$target"
+                        nxf_az_download_error "$source" $ret "$out"
+                        return $ret
                     }
                 }
             }
@@ -143,9 +162,12 @@ class BashWrapperBuilderWithAzTest extends Specification {
         binding.unstage_outputs == """\
                     uploads=()
                     IFS=\$'\\n'
-                    for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}'")
+                    set -f
+                    for name in \$(set +f; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        printf -v qname %q "\$name"
+                        uploads+=("nxf_az_upload \$qname '${AzHelper.toHttpUrl(target)}'")
                     done
+                    set +f
                     unset IFS
                     nxf_parallel "\${uploads[@]}"
                     """.stripIndent()
@@ -231,20 +253,37 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 fi
             }
 
+            nxf_az_download_error() {
+                local sas=${AZ_SAS:-}
+                local sig=${sas#*sig=}
+                sig=${sig%%&*}
+                ## show the azcopy output, without the SAS signature
+                [[ -z $3 ]] || >&2 echo "${3//"$sig"/<redacted>}"
+                >&2 echo "Unable to download path: $1 (azcopy exit status $2)"
+            }
+
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$2")
                 local ret
+                local out
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
-                        >&2 echo "Unable to download path: $source"
-                        return 1
+                out=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                    ret=$?
+                    ## fall back to a recursive copy only when azcopy reports a directory source, so that a missing blob
+                    ## or a transient error fails (and can be retried) instead of being staged as a directory
+                    if (( ret > 128 )) || [[ $out != *"cannot use directory as source without --recursive"* ]]; then
+                        nxf_az_download_error "$source" $ret "$out"
+                        return $ret
+                    fi
+                    mkdir -p "$target"
+                    out=$(azcopy cp "$source/*?$AZ_SAS" "$target" --recursive 2>&1) || {
+                        ret=$?
+                        rm -rf "$target"
+                        nxf_az_download_error "$source" $ret "$out"
+                        return $ret
                     }
                 }
             }

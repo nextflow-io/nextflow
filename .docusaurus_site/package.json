@@ -37,7 +37,7 @@
         "remark-math": "6.0.0",
         "remark-sectionize": "2.1.0",
         "simple-git": "4.0.2",
-        "tailwindcss": "4.3.0"
+        "tailwindcss": "4.3.3"
     },
     "devDependencies": {
         "@docusaurus/module-type-aliases": "3.9.2",

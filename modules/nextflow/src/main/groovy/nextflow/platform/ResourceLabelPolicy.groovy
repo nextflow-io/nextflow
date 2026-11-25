@@ -48,10 +48,10 @@ abstract class ResourceLabelPolicy {
     /** No-op policy, for a backend accepting the labels verbatim e.g. the Seqera scheduler */
     static final ResourceLabelPolicy IDENTITY = new IdentityPolicy()
 
-    /** AWS Batch job tags: permissive charset, key up to 128 chars, value up to 256 */
+    /** AWS Batch job tags: permissive charset, {@code /} in keys rewritten to {@code :}, key up to 128 chars, value up to 256 */
     static final ResourceLabelPolicy AWS = new AwsPolicy()
 
-    /** Google Batch labels: lowercase {@code [a-z0-9_-]}, key starting with a letter, up to 63 chars */
+    /** Google Batch labels: lowercase {@code [a-z0-9_-]}, other chars rewritten to {@code -}, key starting with a letter, up to 63 chars */
     static final ResourceLabelPolicy GOOGLE = new GooglePolicy()
 
     /** Kubernetes pod labels: optional DNS subdomain prefix, alphanumeric bounded name and value */
@@ -139,6 +139,10 @@ abstract class ResourceLabelPolicy {
     /**
      * AWS Batch tag syntax: letters, digits, spaces and {@code + - = . _ : / @},
      * key up to 128 characters, value up to 256.
+     * <p>
+     * The {@code /} in a key is rewritten to {@code :}, so that {@code seqera.io/platform/workflowId}
+     * becomes {@code seqera.io:platform:workflowId}, the same key the Seqera scheduler tags its
+     * AWS resources with. Both therefore land under one AWS cost-allocation tag.
      */
     @CompileStatic
     private static class AwsPolicy extends ResourceLabelPolicy {
@@ -149,7 +153,7 @@ abstract class ResourceLabelPolicy {
 
         @Override
         String sanitizeKey(String key) {
-            return scrub(key, 128)
+            return scrub(key?.replace('/' as char, ':' as char), 128)
         }
 
         @Override
@@ -169,7 +173,8 @@ abstract class ResourceLabelPolicy {
     /**
      * Google Cloud label syntax: lowercase letters, digits, underscores and dashes;
      * the key must start with a lowercase letter; key and value up to 63 characters.
-     * Therefore {@code nextflow.io/runName} becomes {@code nextflow_io_runname}.
+     * Any other character is rewritten to {@code -}, as the Seqera scheduler does for its
+     * GCP labels, therefore {@code nextflow.io/runName} becomes {@code nextflow-io-runname}.
      */
     @CompileStatic
     private static class GooglePolicy extends ResourceLabelPolicy {
@@ -184,7 +189,7 @@ abstract class ResourceLabelPolicy {
                 return ''
             // the key must begin with a letter, hence drop whatever comes before the first one
             // -- safe as an ASCII regex since INVALID has already reduced it to [a-z0-9_-]
-            final scrubbed = INVALID.matcher(key.toLowerCase(Locale.ROOT)).replaceAll('_').replaceFirst(/^[^a-z]+/, '')
+            final scrubbed = INVALID.matcher(key.toLowerCase(Locale.ROOT)).replaceAll('-').replaceFirst(/^[^a-z]+/, '')
             return truncate(scrubbed, 63)
         }
 
@@ -192,7 +197,7 @@ abstract class ResourceLabelPolicy {
         String sanitizeValue(String value) {
             if( !value )
                 return ''
-            return truncate(INVALID.matcher(value.toLowerCase(Locale.ROOT)).replaceAll('_'), 63)
+            return truncate(INVALID.matcher(value.toLowerCase(Locale.ROOT)).replaceAll('-'), 63)
         }
 
         @Override

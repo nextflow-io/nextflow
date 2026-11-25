@@ -18,7 +18,6 @@ package nextflow.config.parser
 
 import nextflow.config.control.ConfigParser
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
@@ -29,14 +28,8 @@ import test.TestUtils
  */
 class ConfigAstBuilderTest extends Specification {
 
-    @Shared
-    ConfigParser parser
-
-    def setupSpec() {
-        parser = new ConfigParser()
-    }
-
     List<SyntaxException> check(String contents) {
+        final parser = new ConfigParser()
         return TestUtils.check(parser, contents)
     }
 
@@ -139,6 +132,18 @@ class ConfigAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Variable declarations cannot be mixed with config statements"
     }
 
+    def 'should report an error for an unmatched closing bracket' () {
+        when:
+        def errors = check(
+            '''\
+            process.cpus = 2
+            }
+            '''
+        )
+        then:
+        TestUtils.errorList(errors) == [[2, 1, "Unexpected input: '}'"]]
+    }
+
     def 'should report an error for unexpected end of file' () {
         when:
         def errors = check(
@@ -154,9 +159,7 @@ class ConfigAstBuilderTest extends Specification {
             '''
         )
         then:
-        errors.size() == 1
-        errors[0].getStartLine() == 9
-        errors[0].getOriginalMessage() == 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string'
+        TestUtils.errorList(errors) == [[9, 1, 'Unexpected end of file -- check for an unclosed brace, bracket, parenthesis, or string']]
     }
 
     def 'should report an invalid escape sequence at the exact position' () {

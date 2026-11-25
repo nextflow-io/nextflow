@@ -86,11 +86,10 @@ class ClientProxyThrottlerTest extends Specification {
     def 'should throttle requests' () {
 
         given:
-        def opts = new ThrottlingExecutor.Options().withRateLimit('1/sec')
+        long begin = System.currentTimeMillis()
+        def opts = new ThrottlingExecutor.Options().withRateLimit('10/sec')
         def client = new MyClient()
         def proxy = new MyClientProxy(client, opts)
-        long begin = System.currentTimeMillis()
-        sleep 50
 
         when:
         int count = 0
@@ -100,8 +99,9 @@ class ClientProxyThrottlerTest extends Specification {
 
         long delta = System.currentTimeMillis()-begin
         then:
-        delta > 3_000
-        delta < 5_000
+        // 5 requests at 10/sec need at least 400 ms
+        delta >= 350
+        delta < 2_000
         count == 5
     }
 
@@ -160,6 +160,7 @@ class ClientProxyThrottlerTest extends Specification {
                         .withRateLimit('1000/sec')
                         .withAutoThrottle()
                         .withErrorBurstDelay(Duration.of('5 sec'))
+                        .withRetryDelay(Duration.of('50ms'))
                         .onSuccess { success.incrementAndGet() }
                         .onFailure { failure.incrementAndGet() }
                         .onRateLimitChange { limitChange.incrementAndGet() }
@@ -191,6 +192,7 @@ class ClientProxyThrottlerTest extends Specification {
                         .withRateLimit('1000/sec')
                         .withAutoThrottle()
                         .withMaxRetries(1)
+                        .withRetryDelay(Duration.of('50ms'))
                         .onSuccess { success.incrementAndGet() }
                         .onFailure { failure.incrementAndGet() }
                         .onRateLimitChange { limitChange.incrementAndGet() }
@@ -222,14 +224,14 @@ class ClientProxyThrottlerTest extends Specification {
         def begin = System.currentTimeMillis()
 
         for( int i=0; i<10; i++ ) {
-            proxy.runThis { count.incrementAndGet(); sleep 500 }
+            proxy.runThis { count.incrementAndGet(); sleep 50 }
         }
 
         def delta = System.currentTimeMillis()-begin
-        println "delta=$delta"
         then:
+        // each call blocks until its task completes
         count.get() == 10
-        delta>5_000
+        delta >= 450
     }
 
 

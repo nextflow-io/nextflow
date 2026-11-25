@@ -14,14 +14,8 @@ concurrency:
 
 jobs:
   claude-code-action:
-    # Three guards. The actor check breaks the feedback loop: this workflow
-    # fires on pull_request_review, and Claude's own review body usually echoes
-    # the @claude mention that triggered it. The author_association check keeps
-    # the run from starting at all for a drive-by mention — this is a public
-    # repository, the action rejects anyone without write access anyway, and
-    # failing there costs a runner and leaves a red X on the pull request. And
-    # the issue_comment arm requires a pull_request payload, so a mention on a
-    # plain issue does not start a review with no diff to read.
+    # Skips Claude's own reviews (they echo the @claude mention), mentions by users without
+    # write access, and mentions on issues that are not pull requests.
     if: |
       (github.actor != 'claude[bot]')
       && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association)
@@ -30,27 +24,21 @@ jobs:
         (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
         (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
       )
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
-      # Was `read`, which is not enough to file a review or leave a comment —
-      # the whole point of the run.
+      # to post the review
       pull-requests: write
       issues: read
-      # Lets the action install its CI-status MCP server; without it the run
-      # warns and skips, and Claude cannot see whether the build passed.
+      # CI status of the pull request
       actions: read
       id-token: write
     steps:
       - name: Checkout PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
         with:
-          # Agent mode performs no branch setup of its own (unlike tag mode), and
-          # a comment event points at the default branch — without an explicit ref
-          # every file Claude reads would be master's copy, not the change's.
-          # This checks out contributor code, including from forks: nothing here
-          # builds or executes it, the credentials are not persisted, and the
-          # prompt below tells Claude the tree is data rather than instructions.
+          # Agent mode doesn't check out the pull request itself. Its code, possibly from a fork,
+          # is only read, never run.
           ref: refs/pull/${{ github.event.issue.number || github.event.pull_request.number }}/head
           fetch-depth: 1
           persist-credentials: false
@@ -60,18 +48,8 @@ jobs:
         timeout-minutes: 60
         with:
           anthropic_api_key: ${{ secrets.NEXTFLOW_ANTHROPIC_API_KEY }}
-          # Supplying `prompt` switches the action from tag mode to agent mode.
-          # Tag mode generates its own task prompt containing "What You CANNOT Do:
-          # Submit formal GitHub PR reviews / Approve pull requests (for security
-          # reasons)", which no system-prompt override can lift — the reviewer
-          # reaches an approve verdict and then posts it as a comment. Agent mode
-          # uses the prompt below verbatim.
-          #
-          # What agent mode gives up: the sticky progress comment, and the tag-mode
-          # tool defaults. Every tool Claude needs is therefore in claude_args below.
-          #
-          # Editing the prompt: keep every line at this indentation or deeper, or
-          # YAML ends the block scalar and reparses the rest as sibling keys.
+          # A `prompt` switches the action to agent mode, which can approve (tag mode can't) and
+          # has no default tools. Keep every prompt line at least at this indentation.
           prompt: |
             REPO: ${{ github.repository }}
             PR: ${{ github.event.issue.number || github.event.pull_request.number }}
@@ -141,10 +119,7 @@ jobs:
             human owns the decision. Say so too when a check you wanted was out of reach —
             an unavailable tool, a test you could not run — rather than implying coverage
             you do not have.
-          # Agent mode adds no tools of its own, so this list is everything Claude
-          # gets. Keep gh scoped to these four verbs: a blanket Bash(gh api:*) would
-          # grant write access to every GitHub endpoint, and no Bash beyond gh means
-          # a prompt injection in contributor code has nothing to reach for. Write is
-          # needed for the --body-file review body.
+          # All of Claude's tools. Only these gh verbs, since `gh api` would allow any write.
+          # Write is for the --body-file of the review.
           claude_args: |
             --allowedTools "Read,Grep,Glob,Write,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr comment:*),Bash(gh pr checks:*)"

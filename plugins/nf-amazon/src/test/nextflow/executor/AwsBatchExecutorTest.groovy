@@ -140,7 +140,7 @@ class AwsBatchExecutorTest extends Specification {
         false   | false       | true    | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd cp .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://foo/work/dir/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid\''
         and:
         true    | false       | false   | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
-        false   | true        | false   | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'
+        false   | true        | false   | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run > /nfs/work/dir/.command.log 2>&1'
     }
 
 }

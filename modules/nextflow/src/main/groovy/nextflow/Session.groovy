@@ -56,6 +56,7 @@ import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.exception.ScriptCompilationException
+import nextflow.executor.ArrayLauncherPool
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.extension.FilesEx
@@ -286,6 +287,8 @@ class Session implements ISession {
 
     /** Orchestration pool for agent tasks; lazily created -- see {@link #getAgentExecService}. */
     private volatile ExecutorService agentExecService
+
+    private volatile ArrayLauncherPool arrayLauncherPool
 
     private volatile TaskFault fault
 
@@ -744,6 +747,17 @@ class Session implements ISession {
         return agentExecService
     }
 
+    /**
+     * Get the pool that prepares the launchers of job array children.
+     *
+     * <p>Created lazily: a run with no job arrays allocates nothing.
+     */
+    synchronized ArrayLauncherPool getArrayLauncherPool() {
+        if( arrayLauncherPool == null )
+            arrayLauncherPool = new ArrayLauncherPool('ArrayLauncher')
+        return arrayLauncherPool
+    }
+
     ScriptBinding getBinding() { binding }
 
     @Memoized
@@ -838,6 +852,8 @@ class Session implements ISession {
         processesBarrier.awaitCompletion()
         log.debug "Session await > all processes finished"
         terminated = true
+        // wake up the task monitors so they don't wait for the next poll to notice the termination
+        executorFactory?.signalExecutors()
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
@@ -881,6 +897,7 @@ class Session implements ISession {
             execService = null
             agentExecService?.shutdown()
             agentExecService = null
+            arrayLauncherPool?.shutdown()
             log.trace "Session > executor shutdown"
 
             // -- close db
@@ -1077,6 +1094,7 @@ class Session implements ISession {
 
         execService?.shutdownNow()
         agentExecService?.shutdownNow()
+        arrayLauncherPool?.shutdown()
         GParsConfig.shutdown()
     }
 
@@ -1510,16 +1528,16 @@ class Session implements ISession {
         new HashMap<String, String>(System.getenv())
     }
 
-    @CompileDynamic
     def fetchContainers() {
 
         def result = [:]
-        if( config.process instanceof Map<String,?> ) {
+        if( config.process instanceof Map ) {
+            final process = (Map<String,?>) config.process
 
             /*
              * look for `container` definition at process level
              */
-            config.process.each { String name, value ->
+            process.each { String name, value ->
                 if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
                 }
@@ -1532,7 +1550,7 @@ class Session implements ISession {
             /*
              * default container definition
              */
-            def container = config.process.container
+            def container = process.container
             if( container ) {
                 if( result ) {
                     result['default'] = resolveClosure(container)

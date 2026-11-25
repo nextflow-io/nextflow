@@ -18,12 +18,13 @@ package nextflow.config.control
 
 import java.nio.file.Path
 
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.io.StringReaderSource
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.TestUtils
 
-import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
 import static test.TestUtils.tempFile
 
 /**
@@ -33,6 +34,9 @@ import static test.TestUtils.tempFile
  */
 class ResolveIncludeTest extends Specification {
 
+    @TempDir
+    Path root
+
     List<SyntaxException> check(List<Path> files) {
         final parser = new ConfigParser()
         return TestUtils.check(parser, files)
@@ -40,7 +44,6 @@ class ResolveIncludeTest extends Specification {
 
     def 'should report an error for an invalid include source' () {
         given:
-        def root = tempDir()
         def config = tempFile(root, 'nextflow.config',
             '''\
             includeConfig 'extra.config'
@@ -54,14 +57,10 @@ class ResolveIncludeTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 13
         errors[0].getOriginalMessage() == "Invalid include source: '${extra}'"
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should resolve an include' () {
         given:
-        def root = tempDir()
         def config = tempFile(root, 'nextflow.config',
             '''\
             includeConfig 'extra.config'
@@ -76,14 +75,10 @@ class ResolveIncludeTest extends Specification {
         def errors = check([config, extra])
         then:
         errors.size() == 0
-
-        cleanup:
-        deleteDir(root)
     }
 
     def 'should not resolve remote includes' () {
         given:
-        def root = tempDir()
         def config = tempFile(root, 'nextflow.config',
             '''\
             includeConfig 'http://example.com/nextflow.config'
@@ -93,14 +88,29 @@ class ResolveIncludeTest extends Specification {
         def errors = check([config])
         then:
         errors.size() == 0
+    }
 
-        cleanup:
-        deleteDir(root)
+    def 'should not resolve includes in a remote config' () {
+        given:
+        def parser = new ConfigParser()
+        def compiler = parser.compiler()
+        def reader = new StringReaderSource("includeConfig 'extra.config'\n", compiler.configuration()) {
+            @Override
+            URI getURI() { new URI('s3://bucket/conf/nextflow.config') }
+        }
+        def source = new SourceUnit('nextflow.config', reader, compiler.configuration(), compiler.classLoader(), compiler.createErrorCollector())
+        compiler.addSource(source)
+        compiler.compile(source)
+
+        when:
+        def visitor = new ResolveIncludeVisitor(source)
+        visitor.visit()
+        then:
+        visitor.getErrors().isEmpty()
     }
 
     def 'should not resolve dynamic includes' () {
         given:
-        def root = tempDir()
         def config = tempFile(root, 'nextflow.config',
             '''\
             includeConfig ({ 'extra.config' }())
@@ -110,9 +120,6 @@ class ResolveIncludeTest extends Specification {
         def errors = check([config])
         then:
         errors.size() == 0
-
-        cleanup:
-        deleteDir(root)
     }
 
 }

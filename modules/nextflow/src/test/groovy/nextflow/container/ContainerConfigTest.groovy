@@ -50,9 +50,11 @@ class ContainerConfigTest extends Specification {
         SysEnv.push(ENV)
         def cfg = new DockerConfig(OPTS)
         def result = cfg.entrypointOverride()
-        SysEnv.pop()
         then:
         result == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
 
         where:
         OPTS    | ENV          | EXPECTED

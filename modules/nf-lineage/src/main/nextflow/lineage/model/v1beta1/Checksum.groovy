@@ -37,13 +37,11 @@ class Checksum {
         new Checksum(value, algorithm, mode.toString().toLowerCase())
     }
 
-    static Checksum ofNextflow(String value) {
-        final mode = CacheHelper.HashMode.DEFAULT()
+    static Checksum ofNextflow(String value, CacheHelper.HashMode mode = CacheHelper.HashMode.DEFAULT()) {
         new Checksum(CacheHelper.hasher(value, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 
-    static Checksum ofNextflow(Path path) {
-        final mode = CacheHelper.HashMode.DEFAULT()
+    static Checksum ofNextflow(Path path, CacheHelper.HashMode mode = CacheHelper.HashMode.DEFAULT()) {
         new Checksum(CacheHelper.hasher(path, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 }
