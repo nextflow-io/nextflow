@@ -17,6 +17,10 @@ $ nextflow view [options] [project]
 
 The `view` command inspects a pipeline already stored in the global Nextflow cache. To download a pipeline into the global cache `~/.nextflow/assets`, use the `pull` command.
 
+<ChangedInVersion version="27.04">
+The `view` command accepts a [registry pipeline][cli-run-registry] address: a registry page URL, or a plain name when `NXF_HUB` is a registry host. It refers to the copy cached under the registry name. The `-r` option is a Git revision of the cached copy, not a registry version.
+</ChangedInVersion>
+
 ## Options
 
 ##### `-h, -help`
@@ -99,3 +103,5 @@ workflow {
   channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
+
+[cli-run-registry]: ./run#registry-pipelines

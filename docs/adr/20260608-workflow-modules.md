@@ -197,6 +197,8 @@ Note that `fastq_align_star` declares only its *direct* dependencies (`star/alig
 
 A module include is resolved relative to the *including file's* directory, not the project root. For the top-level script this is the project directory, so `modules/<scope>/<name>/` is unchanged. For a module's own `main.nf`, it is that module's directory, so an include in a workflow module resolves against the module's nested `modules/` directory.
 
+Amended by [Pipeline registry CLI](20261103-pipeline-registry-cli.md): any other script resolves against the nearest folder above it, up to the project directory, that holds a `.module-info` file, and otherwise against the project directory. An installed pipeline keeps scripts outside `modules/`, so this makes them resolve against the pipeline's own `modules/` rather than those of the calling project.
+
 There is no upward search: a nested include is never satisfied by a module vendored higher in the tree. This keeps resolution local and unambiguous -- a module's behavior does not depend on what its consumer happens to have installed -- at the cost of duplication in the tree.
 
 Auto-installation follows the same rule: an include of a module that is not vendored installs it at the level of the including file, at the version pinned in the including module's `requires.modules` if present. A pinned dependency that is vendored at a different version is upgraded to the pinned version, consistent with `module install`. An include from the top level has no pins to honor -- there is no pipeline spec yet -- and installs the latest version.

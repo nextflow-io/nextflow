@@ -17,6 +17,10 @@ $ nextflow info [options] [project]
 
 The `info` command prints runtime information about the hardware and software: the Nextflow version and build, the operating system, and the Groovy and Java runtimes. It can also print information about a specific project.
 
+<ChangedInVersion version="27.04">
+The `info` command accepts a [registry pipeline][cli-run-registry] address: a registry page URL, or a plain name when `NXF_HUB` is a registry host. It refers to the copy cached under the registry name.
+</ChangedInVersion>
+
 If no run name or session id is provided, it will clean the latest run.
 
 ## Options
@@ -67,3 +71,5 @@ $ nextflow info nextflow-io/hello
   * v1.1 [t]
     v1.2 [t]
 ```
+
+[cli-run-registry]: ./run#registry-pipelines

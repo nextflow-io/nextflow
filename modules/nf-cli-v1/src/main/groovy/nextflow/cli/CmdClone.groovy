@@ -40,7 +40,7 @@ class CmdClone extends CmdBase implements HubAware {
     @Parameter(required=true, description = 'name of the project to clone')
     List<String> args
 
-    @Parameter(names='-r', description = 'Revision of the project to clone (either a git branch, tag or commit SHA number)')
+    @Parameter(names='-r', description = 'Revision of the project to clone (a git branch, tag or commit SHA number, or a registry version)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')

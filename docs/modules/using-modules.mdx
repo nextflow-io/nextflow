@@ -221,11 +221,33 @@ Use flags to control this behavior:
 
 See [module remove][cli-module-remove] for the full command reference.
 
+## Pipelines
+
+<AddedInVersion version="27.04" />
+
+The `module` commands also handle pipelines published in the registry. A pipeline is installed into `modules/` like a module, and can be included like a workflow module:
+
+```console
+$ nextflow module install nf-core/rnaseq -version 3.14.0
+```
+
+```nextflow
+include { workflow as RNASEQ } from 'nf-core/rnaseq'
+```
+
+Nextflow downloads the pipeline's Git repository at the commit pinned by the release, without the `.git` directory. Registry includes in an installed pipeline resolve against the pipeline's own directory, so the pipeline uses its own `modules/`, not those of your project.
+
+The `list`, `view`, `search`, and `remove` commands work with pipelines the same way as with modules. The `-update-deps` option and the `module run` command apply only to modules. Use [`nextflow run`][cli-run-registry] to run a registry pipeline.
+
+See [Including a pipeline from the registry][workflow-typed-registry] for details.
+
 [cli-module-install]: ../reference/cli/module#module-install
 [cli-module-list]: ../reference/cli/module#module-list
 [cli-module-remove]: ../reference/cli/module#module-remove
 [cli-module-run]: ../reference/cli/module#module-run
 [cli-module-search]: ../reference/cli/module#module-search
 [cli-module-view]: ../reference/cli/module#module-view
+[cli-run-registry]: ../reference/cli/run#registry-pipelines
 [syntax-include]: ../reference/syntax#include
 [typed-params]: ../typed-parameters
+[workflow-typed-registry]: ../workflow-typed#including-a-pipeline-from-the-registry

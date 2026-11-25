@@ -157,7 +157,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(description = 'Project name or repository url')
     List<String> args
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (a git branch, tag or commit SHA number, or a registry version)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
