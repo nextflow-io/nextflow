@@ -21,9 +21,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.concurrent.ConcurrentHashMap
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
-
 import nextflow.serde.gson.GsonEncoder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -216,18 +213,19 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             if( decoded.plugins == null ) {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
-            final moved = parseCanonicalIds(body)
             final result = new HashMap<String, PluginInfo>()
             for( PluginDependency plugin : decoded.plugins ) {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
-                    final canonicalId = moved.get(plugin.id)
-                    if( canonicalId ) {
+                    final canonicalId = plugin.canonicalId
+                    if( canonicalId && isCanonicalId(plugin.id, canonicalId) ) {
                         result.put(canonicalId, pluginInfo)
                         // a move keeps the name
                         canonicalIds.put(PluginRef.name(canonicalId), canonicalId)
                     }
+                    else if( canonicalId )
+                        log.debug "Ignoring invalid canonicalId '${canonicalId}' for plugin ${plugin.id}"
                 }
                 else
                     log.debug "Registry ${resp.uri().host} has no releases for plugin: ${plugin}"
@@ -238,22 +236,6 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             final msg = "Unexpected error while fetching plugin metadata from: ${req.uri()}\n- message : ${e.message}\n- response: ${body}"
             throw new PluginRuntimeException(msg)
         }
-    }
-
-    // TODO remove once npr-api `PluginDependency` has `canonicalId`
-    private static Map<String,String> parseCanonicalIds(String body) {
-        final result = new HashMap<String,String>()
-        for( JsonElement it : JsonParser.parseString(body).asJsonObject.getAsJsonArray('plugins') ) {
-            final id = it.asJsonObject.get('id')
-            final canonicalId = it.asJsonObject.get('canonicalId')
-            if( !id?.isJsonPrimitive() || !canonicalId?.isJsonPrimitive() )
-                continue
-            if( isCanonicalId(id.asString, canonicalId.asString) )
-                result.put(id.asString, canonicalId.asString)
-            else
-                log.debug "Ignoring invalid canonicalId '${canonicalId.asString}' for plugin ${id.asString}"
-        }
-        return result
     }
 
     // a move keeps the name: `nf-foo` or `myorg/nf-foo` can only have `myorg/nf-foo`
