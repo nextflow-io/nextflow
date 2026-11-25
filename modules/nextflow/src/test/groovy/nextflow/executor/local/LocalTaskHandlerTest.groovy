@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 import nextflow.Global
+import nextflow.Session
 import nextflow.container.DockerConfig
 import nextflow.exception.ProcessException
 import nextflow.file.http.XPath
@@ -53,6 +54,33 @@ class LocalTaskHandlerTest extends Specification {
         builder.directory() == new File('/some/work/dir')
         builder.redirectErrorStream()
         builder.redirectOutput().file() == new File('/some/work/dir/.command.log')
+    }
+
+    def 'should keep the OSC 7577 token from local tasks only when the run reports' () {
+        given:
+        def executor = Mock(LocalExecutor) {
+            getSession() >> Stub(Session) { getConfig() >> config }
+        }
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new LocalTaskHandler(task, executor))
+        def pb = new ProcessBuilder('true')
+        pb.environment().put('OSC7577_TOKEN', 'dummy-token-replace-me')
+
+        when:
+        def builder = handler.createLaunchProcessBuilder()
+        then:
+        handler.fusionEnabled() >> false
+        handler.localProcessBuilder() >> pb
+        and:
+        builder.environment().containsKey('OSC7577_TOKEN') == inherited
+
+        where:
+        config               | inherited
+        [:]                  | true
+        [osc7577: true]      | false
     }
 
     def 'should create fusion process builder' () {
