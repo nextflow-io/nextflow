@@ -45,7 +45,7 @@ import java.nio.file.Paths
 @CompileStatic
 class CmdModuleInstall extends CmdBase {
 
-    @Parameter(names = ["-version"], description = "Module version")
+    @Parameter(names = ["-version"], description = "Module or pipeline version")
     String version
 
     @Parameter(names = ["-force"], description = "Force reinstall even if already installed", arity = 0)

@@ -38,7 +38,7 @@ import java.nio.file.Paths
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Remove an installed module")
+@Parameters(commandDescription = "Remove an installed module or pipeline")
 class CmdModuleRemove extends CmdBase {
 
     @Parameter(description = "<module>", required = true)
@@ -77,17 +77,18 @@ class CmdModuleRemove extends CmdBase {
 
         try {
             def filesRemoved = false
+            final kind = storage.getInstalledModule(reference)?.pipeline ? 'Pipeline' : 'Module'
 
             // Remove local files unless -keep-files is set
             if( !keepFiles ) {
                 filesRemoved = storage.removeModule(reference, force)
                 if( filesRemoved ) {
-                    println "Module ${reference} files removed successfully"
+                    println "${kind} ${reference} files removed successfully"
                 } else {
-                    println "Module ${reference} not found locally"
+                    println "Module or pipeline ${reference} not found locally"
                 }
             } else {
-                println "Keeping module files for ${reference} (-keep-files flag)"
+                println "Keeping ${kind.toLowerCase()} files for ${reference} (-keep-files flag)"
                 final moduleInfo = storage.getModuleInfo(reference)
                 if( Files.exists(moduleInfo) ) {
                     Files.delete(moduleInfo)
@@ -99,7 +100,7 @@ class CmdModuleRemove extends CmdBase {
             throw e
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Failed to remove module $reference: ${e.message}", e)
+            throw new AbortOperationException("Failed to remove ${reference}: ${e.message}", e)
         }
     }
 }

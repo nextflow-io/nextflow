@@ -198,7 +198,7 @@ class CmdModuleRemoveTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('Module nf-core/nonexistent not found locally')
+        output.contains('Module or pipeline nf-core/nonexistent not found locally')
     }
 
     def 'should fail with no arguments'() {
@@ -225,6 +225,50 @@ class CmdModuleRemoveTest extends Specification {
 
         then:
         thrown(AbortOperationException)
+    }
+
+    def 'should remove an installed pipeline'() {
+        given:
+        def dir = createPipeline(new ModuleStorage(tempDir))
+        def cmd = new CmdModuleRemove(args: ['nf-core/rnaseq'], root: tempDir)
+
+        when:
+        cmd.run()
+
+        then:
+        capture.toString().contains('Pipeline nf-core/rnaseq files removed successfully')
+        !Files.exists(dir)
+    }
+
+    def 'should refuse to remove a modified pipeline without -force'() {
+        given:
+        def dir = createPipeline(new ModuleStorage(tempDir))
+        dir.resolve('conf/base.config').text = 'process.cpus = 4\n'
+        ModuleChecksum.clearPipeline(dir)
+
+        when:
+        new CmdModuleRemove(args: ['nf-core/rnaseq'], root: tempDir).run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.startsWith('Pipeline nf-core/rnaseq has local modifications')
+        Files.exists(dir)
+
+        when:
+        new CmdModuleRemove(args: ['nf-core/rnaseq'], root: tempDir, force: true).run()
+
+        then:
+        !Files.exists(dir)
+    }
+
+    private Path createPipeline(ModuleStorage storage) {
+        def dir = storage.getModuleDir(new ModuleReference('nf-core', 'rnaseq'))
+        Files.createDirectories(dir.resolve('conf'))
+        dir.resolve('main.nf').text = 'workflow { }\n'
+        dir.resolve('conf/base.config').text = 'process.cpus = 2\n'
+        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: '3.14.0', checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleChecksum.clearPipeline(dir)
+        return dir
     }
 
     private Path createTestModule(ModuleStorage storage, ModuleReference reference, boolean withModuleInfo = false) {

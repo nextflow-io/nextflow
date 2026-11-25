@@ -29,11 +29,16 @@ import io.seqera.npr.api.schema.v1.ModuleChannelItem
 import io.seqera.npr.api.schema.v1.ModuleMetadata
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import io.seqera.npr.api.schema.v1.ModuleTool
+import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineRelease
+import io.seqera.npr.client.RegistryException
 import nextflow.cli.CmdBase
+import nextflow.cli.RegistrySupport
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleSpec
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 
@@ -47,10 +52,10 @@ import java.nio.file.Paths
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Show module information and usage template")
+@Parameters(commandDescription = "Show module or pipeline information and usage template")
 class CmdModuleView extends CmdBase {
 
-    @Parameter(names = ["-version"], description = "Module version")
+    @Parameter(names = ["-version"], description = "Module or pipeline version")
     String version
 
     @Parameter(
@@ -118,7 +123,16 @@ class CmdModuleView extends CmdBase {
             } else {
                 release = registryClient.getModule(reference.fullName).latest
             }
-        } catch( Exception e ) {
+        }
+        catch( RegistryException e ) {
+            // not a module: try the pipeline
+            if( e.statusCode == 404 ) {
+                viewPipeline(registryClient, registryConfig, reference)
+                return
+            }
+            log.warn "Failed to fetch metadata from registry: ${e.message}"
+        }
+        catch( Exception e ) {
             log.warn "Failed to fetch metadata from registry: ${e.message}"
         }
         if( !release ) {
@@ -135,6 +149,100 @@ class CmdModuleView extends CmdBase {
         } else {
             throw new AbortOperationException("Not implemented output mode $output)")
         }
+    }
+
+    private void viewPipeline(RegistryClient client, RegistryConfig registryConfig, ModuleReference reference) {
+        final name = reference.fullName
+        Pipeline pipeline = null
+        PipelineRelease release = null
+        try {
+            pipeline = client.getPipeline(name)
+            release = version ? client.getPipelineRelease(name, version) : pipeline?.latest
+        }
+        catch( Exception e ) {
+            if( !(e instanceof RegistryException && (e as RegistryException).statusCode == 404) )
+                log.warn "Failed to fetch metadata from registry: ${e.message}"
+        }
+        if( !pipeline || !release )
+            throw new AbortOperationException("No release information available for ${reference}")
+
+        final url = "${RegistrySupport.pageUrl(registryConfig.url)}/pipelines/${name}".toString()
+        final params = schemaParams(release.schema)
+        final include = "include { workflow as ${reference.name.toUpperCase().replaceAll(/[^A-Z0-9]/, '_')} } from '${name}'".toString()
+        final usage = "nextflow run ${url} -r ${release.version}".toString()
+
+        if( output == 'json' ) {
+            final info = [
+                name         : name,
+                version      : release.version,
+                kind         : ModuleSpec.KIND_PIPELINE,
+                repositoryUrl: pipeline.repositoryUrl,
+                gitRevision  : release.gitRevision,
+                commitId     : release.commitId,
+                url          : url,
+                description  : pipeline.metadata?.description,
+                keywords     : pipeline.metadata?.keywords,
+                params       : params,
+                usage        : usage
+            ]
+            println JsonOutput.prettyPrint(JsonOutput.toJson(info))
+            return
+        }
+
+        println ""
+        println "Pipeline:    ${name}"
+        println "Version:     ${release.version}"
+        println "Kind:        ${ModuleSpec.KIND_PIPELINE}"
+        println "URL:         ${url}"
+        println "Repository:  ${pipeline.repositoryUrl}"
+        println "Revision:    ${release.gitRevision}"
+        if( release.commitId )
+            println "Commit:      ${release.commitId}"
+        if( pipeline.metadata?.description )
+            println "Description: ${pipeline.metadata.description}"
+        if( pipeline.metadata?.keywords )
+            println "Keywords:    ${pipeline.metadata.keywords.join(', ')}"
+        if( params ) {
+            println ""
+            println "Parameters:"
+            params.each { p ->
+                println "  --${p.name}${p.type ? ' (' + p.type + ')' : ''}"
+                if( p.description )
+                    println "      ${p.description}"
+            }
+        }
+        println ""
+        println "Usage:"
+        println "  ${include}"
+        println "  ${usage}"
+        println ""
+    }
+
+    /** Lists params from `$defs`/`definitions` groups and top-level `properties`; types may be missing. */
+    protected static List<Map<String,String>> schemaParams(Map schema) {
+        final result = new ArrayList<Map<String,String>>()
+        if( !schema )
+            return result
+        final groups = (schema['$defs'] ?: schema['definitions']) as Map<String,Object>
+        final props = new ArrayList<Map>()
+        groups?.values()?.each { g ->
+            final p = (g as Map)?.get('properties')
+            if( p instanceof Map )
+                props << (p as Map)
+        }
+        if( schema.get('properties') instanceof Map )
+            props << (schema.get('properties') as Map)
+        props.each { Map m ->
+            m.each { k, v ->
+                final d = v instanceof Map ? (Map) v : [:]
+                result << [
+                    name       : k as String,
+                    type       : d['type'] as String,
+                    description: (d['description'] as String)?.replaceAll(/\R/, ' ')
+                ]
+            }
+        }
+        return result
     }
 
     /**

@@ -20,7 +20,11 @@ import groovy.json.JsonSlurper
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.ModuleKind
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
+import io.seqera.npr.api.schema.v1.ListPipelinesResponse
+import io.seqera.npr.api.schema.v1.PipelineMetadata
+import io.seqera.npr.api.schema.v1.PipelineSummary
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
+import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.cli.Launcher
 import org.junit.Rule
@@ -187,7 +191,7 @@ class CmdModuleSearchTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('No modules found')
+        output.contains('No modules or pipelines found')
 
     }
 
@@ -245,5 +249,102 @@ class CmdModuleSearchTest extends Specification {
         output.contains('nf-core/module1')
         output.contains('nf-core/module5')
         (1..5).every { i -> output.contains("Module ${i}") }
+    }
+
+    private CmdModuleSearch searchCmd(RegistryClient client, String output = 'simple') {
+        def cmd = new CmdModuleSearch(args: ['rna'], limit: 5, output: output, client: client)
+        cmd.launcher = Mock(Launcher) { getOptions() >> null }
+        return cmd
+    }
+
+    private static SearchModulesResponse modules(String... names) {
+        new SearchModulesResponse(query: 'rna', totalResults: names.size(), results: names.collect { new ModuleSearchResult(name: it, description: "Module $it") })
+    }
+
+    private static ListPipelinesResponse pipelines(String... names) {
+        new ListPipelinesResponse().pipelines(names.collect { new PipelineSummary().name(it).latestVersion('3.14.0').metadata(new PipelineMetadata().description('RNA-seq analysis')) })
+    }
+
+    def 'should list modules first, then pipelines'() {
+        given:
+        def client = Mock(RegistryClient)
+
+        when:
+        searchCmd(client).run()
+        def output = capture.toString()
+
+        then:
+        1 * client.searchModules('rna', 5) >> modules('nf-core/salmon')
+        1 * client.listPipelines('rna', 1, 5) >> pipelines('nf-core/rnaseq')
+        output.contains('Top 2 matching result(s):')
+        output.indexOf('nf-core/salmon') < output.indexOf('nf-core/rnaseq')
+        output.contains('  nf-core/rnaseq\n    Kind: Pipeline\n    Version: 3.14.0\n    Description: RNA-seq analysis')
+    }
+
+    def 'should append pipelines to the JSON results'() {
+        given:
+        def client = Mock(RegistryClient) {
+            searchModules('rna', 5) >> modules('nf-core/salmon')
+            listPipelines('rna', 1, 5) >> pipelines('nf-core/rnaseq')
+        }
+
+        when:
+        searchCmd(client, 'json').run()
+        def output = capture.toString()
+        def json = new JsonSlurper().parseText(output.substring(output.indexOf('{')))
+
+        then:
+        json.totalResults == 2
+        json.results*.name == ['nf-core/salmon', 'nf-core/rnaseq']
+        json.results[0].kind == 'Process'
+        json.results[1].kind == 'Pipeline'
+        json.results[1].latestVersion == '3.14.0'
+        json.results[1].description == 'RNA-seq analysis'
+    }
+
+    def 'should show pipelines when no module matches'() {
+        given:
+        def client = Mock(RegistryClient) {
+            searchModules('rna', 5) >> modules()
+            listPipelines('rna', 1, 5) >> pipelines('nf-core/rnaseq')
+        }
+
+        when:
+        searchCmd(client).run()
+        def output = capture.toString()
+
+        then:
+        output.contains('nf-core/rnaseq')
+        !output.contains('No modules or pipelines found')
+    }
+
+    def 'should show modules only when the pipeline search fails'() {
+        given:
+        def client = Mock(RegistryClient) {
+            searchModules('rna', 5) >> modules('nf-core/salmon')
+            listPipelines('rna', 1, 5) >> { throw new RegistryException('Server error', 500) }
+        }
+
+        when:
+        searchCmd(client).run()
+        def output = capture.toString()
+
+        then:
+        output.contains('Top 1 matching result(s):')
+        output.contains('nf-core/salmon')
+    }
+
+    def 'should report when neither modules nor pipelines match'() {
+        given:
+        def client = Mock(RegistryClient) {
+            searchModules('rna', 5) >> modules()
+            listPipelines('rna', 1, 5) >> new ListPipelinesResponse().pipelines([])
+        }
+
+        when:
+        searchCmd(client).run()
+
+        then:
+        capture.toString().contains('No modules or pipelines found')
     }
 }

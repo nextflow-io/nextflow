@@ -328,7 +328,7 @@ class ModuleStorage {
 
         if( integrity == ModuleIntegrity.MODIFIED && !force ) {
             throw new AbortOperationException(
-                "Module ${reference} has local modifications. " +
+                "${installed.pipeline ? 'Pipeline' : 'Module'} ${reference} has local modifications. " +
                     "Use '-force' to remove, or save your changes first."
             )
         }

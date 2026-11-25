@@ -40,7 +40,7 @@ import java.nio.file.Paths
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all installed modules")
+@Parameters(commandDescription = "List all installed modules and pipelines")
 class CmdModuleList extends CmdBase {
 
     @Parameter(
@@ -83,7 +83,7 @@ class CmdModuleList extends CmdBase {
             def installed = storage.listInstalled()
 
             if( installed.isEmpty() ) {
-                println "No modules installed"
+                println "No modules or pipelines installed"
                 return
             }
 
@@ -104,9 +104,9 @@ class CmdModuleList extends CmdBase {
 
     private void printFormattedList(List<InstalledModule> installed) {
         println ""
-        println "Installed modules:"
+        println "Installed modules and pipelines:"
         println ""
-        println "Module".padRight(40) + "Version".padRight(15) + "Kind".padRight(12) + "Status"
+        println "Name".padRight(40) + "Version".padRight(15) + "Kind".padRight(12) + "Status"
         println("-" * 82)
 
         installed.each { module ->
