@@ -228,6 +228,12 @@ The filename of the Nextflow log (default: `.nextflow.log`).
 
 When `false` (or `0`), the ANSI console does not emit [OSC 7501](osc-7501.mdx) program-status reports. When unset or `true`, reports are emitted if ANSI logging is enabled and standard output is a terminal. `osc7501 = false` in a config file also turns reporting off.
 
+##### `NXF_OSC7577`
+
+<AddedInVersion version="26.10" />
+
+When `true` (or `1`), the run tells the terminal how to resume it with [OSC 7577](osc-7577.mdx) (default: `false`). Reports are only written when standard output is a terminal that sets `OSC7577_TOKEN`. When set to a non-blank value, it takes precedence over `osc7577` in a config file.
+
 ##### `NXF_OFFLINE`
 
 When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
