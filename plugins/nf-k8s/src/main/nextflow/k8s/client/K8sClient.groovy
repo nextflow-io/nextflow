@@ -345,7 +345,7 @@ class K8sClient {
                 // this may happen when K8s node is shutdown and the pod is evicted
                 // therefore process exception is thrown so that the failure
                 // can be managed by the nextflow as re-triable execution
-                throw new NodeTerminationException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
+                throw new NodeTerminationException("Unable to find pod $name - The pod may be evicted by a node shutdown event", err)
             }
             throw err
         }
@@ -395,12 +395,14 @@ class K8sClient {
             try {
                 return podState(podName)
             }
-            /* pod might be deleted by control plane just after findPodNameForJob() call
-             * so try fallback to jobState
-             */
             catch (NodeTerminationException err) {
-                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
-                return jobStateFallback0(jobName)
+                if( err.cause instanceof K8sResponseException ) {
+                    // The pod disappeared between listing it and fetching its status.
+                    // Use the Job status because the missing pod does not establish why it failed.
+                    log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
+                    return jobStateFallback0(jobName)
+                }
+                return jobStateFallback0(jobName, err)
             }
         }
         else {
@@ -408,7 +410,7 @@ class K8sClient {
         }
     }
 
-    protected Map jobStateFallback0(String jobName) {
+    protected Map jobStateFallback0(String jobName, NodeTerminationException nodeTermination=null) {
         final K8sResponseJson jobResp = jobStatus(jobName)
         final jobStatus = jobResp.status as Map
         if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
@@ -420,7 +422,6 @@ class K8sClient {
                 final dummyPodStatus = [
                         terminated: [
                                 reason: "Completed",
-                                exitCode: 0,
                                 startedAt: jobStatus.startTime,
                                 finishedAt: jobStatus.completionTime,
                         ]
@@ -430,6 +431,12 @@ class K8sClient {
                 throw new ProcessFailedException("K8s Job $jobName succeeded but does not have Complete status. $allConditions")
             }
         }
+
+        // the pod was disrupted (e.g. preempted or evicted) and the job did not complete:
+        // the job status does not report the cause, therefore report the error raised for the pod.
+        // note: the job cannot start a new pod because its `backoffLimit` is zero
+        if( nodeTermination )
+            throw nodeTermination
 
         if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
             String message = 'unknown'
@@ -475,6 +482,10 @@ class K8sClient {
         final status = resp.status as Map
         final containerStatuses = status?.containerStatuses as List<Map>
 
+        // failures caused by the infrastructure (e.g. node preemption or shutdown) are reported
+        // by the pod status, not by the container state, therefore check them before returning it
+        checkInfraFailure(podName, resp)
+
         if( containerStatuses?.size()>0 ) {
             final container = containerStatuses.get(0)
             // note: when the pod is created by a Job submission
@@ -510,18 +521,83 @@ class K8sClient {
         }
 
         if( status?.phase == 'Failed' ) {
-            def msg = "K8s pod '$podName' execution failed"
-            if( status.reason ) msg += " - reason: ${status.reason}"
-            if( status.message ) msg += " - message: ${status.message}"
-            switch ( status.reason ) {
-                case 'OutOfcpu':    throw new K8sOutOfCpuException(msg)
-                case 'OutOfmemory': throw new K8sOutOfMemoryException(msg)
-                case 'Shutdown':    throw new NodeTerminationException(msg)
-                default:            throw new ProcessFailedException(msg)
-            }
+            throw new ProcessFailedException(podFailureMessage(podName, status))
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
+    }
+
+    /**
+     * Check if the pod was terminated by an infrastructure failure, e.g. a node preemption, a node
+     * shutdown or a node without enough resources to run it. These failures are reported by the pod
+     * `reason` and `DisruptionTarget` condition, while the container state only reports the exit code.
+     *
+     * See https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-conditions
+     *
+     * @param podName The pod name
+     * @param pod The pod object as returned by the K8s API
+     */
+    protected void checkInfraFailure(String podName, Map pod) {
+        final status = pod?.status as Map
+        final exitCode = terminatedExitCode(status?.containerStatuses as List<Map>)
+        // the pod completed successfully
+        if( exitCode == 0 )
+            return
+
+        final msg = podFailureMessage(podName, status)
+        // the pod is being deleted because of a disruption (e.g. preemption, eviction or taint): the
+        // `DisruptionTarget` condition is set at the start of the termination grace period and the pod
+        // is usually gone at the end of it, therefore report it while the container is still running.
+        // note: the condition alone is not enough because it is removed when the pod is not deleted
+        if( disruptionCondition(status) && (pod.metadata as Map)?.deletionTimestamp )
+            throw new NodeTerminationException(msg)
+
+        // the pod is still running
+        if( exitCode == null && status?.phase != 'Failed' )
+            return
+
+        switch( status?.reason ) {
+            case 'OutOfcpu':    throw new K8sOutOfCpuException(msg)
+            case 'OutOfmemory': throw new K8sOutOfMemoryException(msg)
+            case 'Evicted':
+            case 'Preempting':
+            case 'Shutdown':    throw new NodeTerminationException(msg)
+        }
+
+        if( disruptionCondition(status) )
+            throw new NodeTerminationException(msg)
+    }
+
+    protected static String podFailureMessage(String podName, Map status) {
+        def msg = "K8s pod '$podName' execution failed"
+        if( status?.reason ) msg += " - reason: ${status.reason}"
+        if( status?.message ) msg += " - message: ${status.message}"
+        final disruption = disruptionCondition(status)
+        if( disruption?.reason ) msg += " - disruption: ${disruption.reason}"
+        if( disruption?.message ) msg += " (${disruption.message})"
+        return msg
+    }
+
+    /**
+     * @param status The pod `status` object
+     * @return The `DisruptionTarget` condition when its status is `True`, or {@code null} otherwise
+     */
+    protected static Map disruptionCondition(Map status) {
+        if( !(status?.conditions instanceof List) )
+            return null
+        final allConditions = status.conditions as List<Map>
+        return allConditions.find { cond -> cond.type == 'DisruptionTarget' && cond.status == 'True' }
+    }
+
+    /**
+     * @param containerStatuses The pod `containerStatuses` list
+     * @return The exit code of the first container when it's terminated, or {@code null} otherwise
+     */
+    protected static Integer terminatedExitCode(List<Map> containerStatuses) {
+        if( !containerStatuses )
+            return null
+        final state = containerStatuses.get(0)?.state as Map
+        return (state?.terminated as Map)?.exitCode as Integer
     }
 
     protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {

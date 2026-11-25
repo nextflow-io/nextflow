@@ -24,6 +24,7 @@ import nextflow.exception.K8sOutOfMemoryException
 import javax.net.ssl.HttpsURLConnection
 
 import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import spock.lang.Specification
 /**
  *
@@ -1062,13 +1063,15 @@ class K8sClientTest extends Specification {
         e.message == "K8s pod in Failed state"
     }
 
-    def 'should fallback to job status when pod is gone and return exit code zero' () {
+    def 'should fallback to job status when pod is gone and not return hardcoded exit code' () {
         given:
         def JOB_STATUS_JSON = '''
         {
             "apiVersion": "batch/v1",
             "kind": "Job",
-            "metadata": { "name": "nf-abc123" },
+            "metadata": {
+                "name": "test-job"
+            },
             "status": {
                 "succeeded": 1,
                 "startTime": "2025-01-15T10:00:00Z",
@@ -1084,22 +1087,196 @@ class K8sClientTest extends Specification {
             }
         }
         '''
-        def JOB_NAME = 'nf-abc123'
         def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
 
         when:
-        def result = client.jobState(JOB_NAME)
+        def result = client.jobStateFallback0(JOB_NAME)
+
         then:
-        // findPodNameForJob returns null (pod is gone)
-        1 * client.findPodNameForJob(JOB_NAME) >> null
-        // falls back to jobStateFallback0 which calls jobStatus
         1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
         and:
+        result.terminated != null
         result.terminated.reason == 'Completed'
         result.terminated.startedAt == '2025-01-15T10:00:00Z'
         result.terminated.finishedAt == '2025-01-15T10:05:00Z'
-        // K8s only reports succeeded==1 when exit code is 0, so synthetic status should include it
-        result.terminated.exitCode == 0
+        // The key assertion: exitCode should not be present (null) so fallback to .exitcode file works
+        result.terminated.exitCode == null
+        result.terminated.exitcode == null
+    }
+
+    /*
+     * pod states captured on a real cluster (Kubernetes v1.37) while disrupting a pod with
+     * the scheduler preemption, the eviction API, a NoExecute taint, the kubelet eviction, a
+     * graceful node shutdown, a node lost without notice and a node deleted from the cluster.
+     * Only the attributes read by the client are kept, and the names are replaced.
+     * See the pull request discussion for the script used to reproduce them on a kind cluster
+     */
+    static final Map<String,String> POD_STATES = [
+        'running': '''{"metadata":{"name":"nf-4f5d3c2b1a"},"status":{"phase":"Running","conditions":[{"type":"Ready","status":"True"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"running":{"startedAt":"2026-11-11T15:48:57Z"}}}]}}''',
+        'succeeded': '''{"metadata":{"name":"nf-4f5d3c2b1a"},"status":{"phase":"Succeeded","conditions":[{"type":"Ready","status":"False","reason":"PodCompleted"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":0,"finishedAt":"2026-11-11T15:44:55Z","reason":"Completed","startedAt":"2026-11-11T15:44:55Z"}}}]}}''',
+        'exit-error': '''{"metadata":{"name":"nf-4f5d3c2b1a"},"status":{"phase":"Failed","conditions":[{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":3,"finishedAt":"2026-11-11T15:45:33Z","reason":"Error","startedAt":"2026-11-11T15:45:33Z"}}}]}}''',
+        'oom': '''{"metadata":{"name":"nf-4f5d3c2b1a"},"status":{"phase":"Failed","conditions":[{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":137,"finishedAt":"2026-11-11T15:46:09Z","reason":"OOMKilled","startedAt":"2026-11-11T15:46:09Z"}}}]}}''',
+        'kubelet-eviction': '''{"metadata":{"name":"nf-4f5d3c2b1a"},"status":{"phase":"Failed","reason":"Evicted","message":"Usage of EmptyDir volume \\"scratch\\" exceeds the limit \\"100Mi\\". ","conditions":[{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":137,"finishedAt":"2026-11-11T15:47:04Z","reason":"Error","startedAt":"2026-11-11T15:46:47Z"}}}]}}''',
+        'api-eviction-terminating': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-11T15:48:39Z"},"status":{"phase":"Running","conditions":[{"type":"DisruptionTarget","status":"True","reason":"EvictionByEvictionAPI","message":"Eviction API: evicting"},{"type":"Ready","status":"True"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"running":{"startedAt":"2026-11-11T15:48:25Z"}}}]}}''',
+        'preemption-terminating': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-11T15:49:11Z"},"status":{"phase":"Running","conditions":[{"type":"DisruptionTarget","status":"True","reason":"PreemptionByScheduler","message":"default-scheduler: preempting to accommodate a higher priority pod"},{"type":"Ready","status":"True"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"running":{"startedAt":"2026-11-11T15:48:57Z"}}}]}}''',
+        'preemption-terminated': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-11T15:49:26Z"},"status":{"phase":"Failed","conditions":[{"type":"DisruptionTarget","status":"True","reason":"PreemptionByScheduler","message":"default-scheduler: preempting to accommodate a higher priority pod"},{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":137,"finishedAt":"2026-11-11T15:49:26Z","reason":"Error","startedAt":"2026-11-11T15:49:13Z"}}}]}}''',
+        'taint-terminating': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-11T15:51:59Z"},"status":{"phase":"Running","conditions":[{"type":"DisruptionTarget","status":"True","reason":"DeletionByTaintManager","message":"Taint manager: deleting due to NoExecute taint"},{"type":"Ready","status":"True"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"running":{"startedAt":"2026-11-11T15:51:45Z"}}}]}}''',
+        'taint-terminated': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-11T15:53:19Z"},"status":{"phase":"Failed","conditions":[{"type":"DisruptionTarget","status":"True","reason":"DeletionByTaintManager","message":"Taint manager: deleting due to NoExecute taint"},{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":137,"finishedAt":"2026-11-11T15:53:19Z","reason":"Error","startedAt":"2026-11-11T15:53:05Z"}}}]}}''',
+        'node-shutdown': '''{"metadata":{"name":"nf-4f5d3c2b1a"},"status":{"phase":"Failed","reason":"Terminated","message":"Pod was terminated in response to imminent node shutdown.","conditions":[{"type":"DisruptionTarget","status":"True","reason":"TerminationByKubelet","message":"Pod was terminated in response to imminent node shutdown."},{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"terminated":{"exitCode":137,"finishedAt":"2026-11-24T15:52:03Z","reason":"Error","startedAt":"2026-11-24T15:51:50Z"}}}]}}''',
+        'node-lost-terminating': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-24T15:37:46Z"},"status":{"phase":"Running","conditions":[{"type":"Ready","status":"False"},{"type":"DisruptionTarget","status":"True","reason":"DeletionByTaintManager","message":"Taint manager: deleting due to NoExecute taint"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"running":{"startedAt":"2026-11-24T15:31:48Z"}}}]}}''',
+        'node-delete-terminated': '''{"metadata":{"name":"nf-4f5d3c2b1a","deletionTimestamp":"2026-11-24T15:47:16Z"},"status":{"phase":"Failed","conditions":[{"type":"DisruptionTarget","status":"True","reason":"DeletionByPodGC","message":"PodGC: node no longer exists"},{"type":"Ready","status":"False","reason":"PodFailed"}],"containerStatuses":[{"name":"nf-4f5d3c2b1a","state":{"running":{"startedAt":"2026-11-24T15:46:43Z"}}}]}}''',
+    ]
+
+    def 'should classify the pod states captured on a real cluster' () {
+        given:
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-4f5d3c2b1a'
+
+        when:
+        def state = null
+        def error = null
+        try { state = client.podState(POD_NAME) }
+        catch( Throwable t ) { error = t }
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(POD_STATES[CAPTURE])
+        and:
+        error?.getClass() == ERROR
+        error?.message == MESSAGE
+        error || state.keySet().first() == STATE
+
+        where:
+        CAPTURE                     | ERROR                     | STATE         | MESSAGE
+        'running'                   | null                      | 'running'     | null
+        'succeeded'                 | null                      | 'terminated'  | null
+        // task failures: the container state is returned, the handler reports its reason (e.g. OOMKilled)
+        'exit-error'                | null                      | 'terminated'  | null
+        'oom'                       | null                      | 'terminated'  | null
+        // infrastructure failures
+        'kubelet-eviction'          | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - reason: Evicted - message: Usage of EmptyDir volume \"scratch\" exceeds the limit \"100Mi\". "
+        'api-eviction-terminating'  | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: EvictionByEvictionAPI (Eviction API: evicting)"
+        'preemption-terminating'    | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: PreemptionByScheduler (default-scheduler: preempting to accommodate a higher priority pod)"
+        'preemption-terminated'     | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: PreemptionByScheduler (default-scheduler: preempting to accommodate a higher priority pod)"
+        'taint-terminating'         | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: DeletionByTaintManager (Taint manager: deleting due to NoExecute taint)"
+        'taint-terminated'          | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: DeletionByTaintManager (Taint manager: deleting due to NoExecute taint)"
+        'node-shutdown'             | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - reason: Terminated - message: Pod was terminated in response to imminent node shutdown. - disruption: TerminationByKubelet (Pod was terminated in response to imminent node shutdown.)"
+        'node-lost-terminating'     | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: DeletionByTaintManager (Taint manager: deleting due to NoExecute taint)"
+        'node-delete-terminated'    | NodeTerminationException  | null          | "K8s pod 'nf-4f5d3c2b1a' execution failed - disruption: DeletionByPodGC (PodGC: node no longer exists)"
+    }
+
+    def 'should check infrastructure failure' () {
+        given:
+        def client = Spy(K8sClient)
+        def status = [phase: PHASE, reason: REASON]
+        if( DISRUPTION )
+            status.conditions = [[type: 'DisruptionTarget', status: 'True', reason: DISRUPTION]]
+        if( STATE != null )
+            status.containerStatuses = [[name: 'nf-xyz', state: STATE]]
+        def pod = [metadata: DELETING ? [deletionTimestamp: '2026-11-11T15:49:11Z'] : [:], status: status]
+
+        when:
+        def error = null
+        try { client.checkInfraFailure('nf-xyz', pod) }
+        catch( Throwable t ) { error = t }
+        then:
+        error?.getClass() == EXPECTED
+
+        where:
+        PHASE       | REASON        | DISRUPTION                | DELETING  | STATE                         | EXPECTED
+        // being deleted because of a disruption, the container is still running during the grace period
+        'Running'   | null          | 'PreemptionByScheduler'   | true      | [running: [:]]                | NodeTerminationException
+        'Running'   | null          | 'EvictionByEvictionAPI'   | true      | [running: [:]]                | NodeTerminationException
+        'Pending'   | null          | 'DeletionByTaintManager'  | true      | [waiting: [:]]                | NodeTerminationException
+        // the condition is removed later when the pod is not deleted, therefore it's not enough
+        'Running'   | null          | 'PreemptionByScheduler'   | false     | [running: [:]]                | null
+        // deleted without a disruption (e.g. by nextflow itself)
+        'Running'   | null          | null                      | true      | [running: [:]]                | null
+        // terminated by a node disruption
+        'Failed'    | null          | 'PreemptionByScheduler'   | true      | [terminated: [exitCode: 137]] | NodeTerminationException
+        'Failed'    | null          | 'TerminationByKubelet'    | false     | [terminated: [exitCode: 143]] | NodeTerminationException
+        // completed successfully before being disrupted
+        'Succeeded' | null          | 'PreemptionByScheduler'   | true      | [terminated: [exitCode: 0]]   | null
+        // pod failures reported by the pod reason
+        'Failed'    | 'Evicted'     | null                      | false     | [terminated: [exitCode: 137]] | NodeTerminationException
+        'Failed'    | 'Evicted'     | null                      | false     | null                          | NodeTerminationException
+        'Failed'    | 'Preempting'  | null                      | false     | [terminated: [exitCode: 137]] | NodeTerminationException
+        'Failed'    | 'Shutdown'    | null                      | false     | [terminated: [exitCode: 143]] | NodeTerminationException
+        'Failed'    | 'Shutdown'    | null                      | false     | null                          | NodeTerminationException
+        'Failed'    | 'OutOfcpu'    | null                      | false     | null                          | K8sOutOfCpuException
+        'Failed'    | 'OutOfmemory' | null                      | false     | null                          | K8sOutOfMemoryException
+        // task failures
+        'Failed'    | null          | null                      | false     | [terminated: [exitCode: 1]]   | null
+        'Failed'    | 'DeadlineExceeded' | null                 | false     | null                          | null
+    }
+
+    def 'should report node termination when the job pod is disrupted' () {
+        given:
+        def JOB_STATUS_JSON = """
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": { "name": "test-job" },
+            "status": $JOB_STATUS
+        }
+        """
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+        final POD_NAME = 'test-job-abc12'
+        final ERROR = new NodeTerminationException("K8s pod '$POD_NAME' execution failed - disruption: PreemptionByScheduler")
+
+        when:
+        client.jobState(JOB_NAME)
+        then:
+        1 * client.findPodNameForJob(JOB_NAME) >> POD_NAME
+        1 * client.podState(POD_NAME) >> { throw ERROR }
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+        and:
+        def e = thrown(NodeTerminationException)
+        e.is(ERROR)
+
+        where:
+        JOB_STATUS << [
+            // the pod is terminating and the job did not fail yet
+            '{"active": 1, "startTime": "2026-11-11T15:49:12Z"}',
+            // the job failed because of the pod disruption
+            '{"failed": 1, "startTime": "2026-11-11T15:49:12Z", "conditions": [{"type": "FailureTarget", "status": "True", "reason": "BackoffLimitExceeded", "message": "Job has reached the specified backoff limit"}]}',
+        ]
+    }
+
+    def 'should report the job failure when the pod is gone (listed: #LISTED)' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": { "name": "test-job" },
+            "status": {
+                "failed": 1,
+                "startTime": "2026-11-11T15:49:12Z",
+                "conditions": [ {"type": "Failed", "status": "True", "reason": "BackoffLimitExceeded", "message": "Job has reached the specified backoff limit"} ]
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+        final POD_NAME = 'test-job-abc12'
+        final MISSING = '{"kind":"Status","details":{"kind":"pods","name":"test-job-abc12"},"code":404}'
+
+        when:
+        client.jobState(JOB_NAME)
+        then:
+        1 * client.findPodNameForJob(JOB_NAME) >> (LISTED ? POD_NAME : null)
+        (LISTED ? 1 : 0) * client.podStatus(POD_NAME) >> {
+            throw new K8sResponseException('Pod not found', new ByteArrayInputStream(MISSING.bytes))
+        }
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+        and:
+        def e = thrown(ProcessFailedException)
+        e.message == "K8s Job $JOB_NAME execution failed: Job has reached the specified backoff limit"
+
+        where:
+        LISTED << [false, true]
     }
 
     def 'should re-read token from disk and retry on 401 when tokenPath is set' () {

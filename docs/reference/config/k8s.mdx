@@ -86,6 +86,14 @@ The strategy for pulling container images. Can be `IfNotPresent`, `Always`, `Nev
 ##### `k8s.launchDir`
 The path where the workflow is launched and the user data is stored (default: `<volume-claim-mount-path>/<user-name>`). Must be a path in a shared K8s persistent volume.
 
+##### `k8s.maxInfraRetries`
+
+<AddedInVersion version="26.12" />
+
+The maximum number of times a task is automatically retried when its pod is terminated by an infrastructure failure, such as a node preemption or shutdown (default: `5`). Once exceeded, the failure is handled by the `errorStrategy` directive. Set to `0` to disable the automatic retry.
+
+The limit is checked against all the failures of the task: the automatic retries are counted as task failures, therefore they also count towards the `maxRetries` directive.
+
 ##### `k8s.namespace`
 
 The Kubernetes namespace to use (default: `default`).

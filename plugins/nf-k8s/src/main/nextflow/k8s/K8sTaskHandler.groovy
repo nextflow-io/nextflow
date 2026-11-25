@@ -31,6 +31,8 @@ import nextflow.container.DockerBuilder
 import nextflow.exception.K8sOutOfCpuException
 import nextflow.exception.K8sOutOfMemoryException
 import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessRetryableException
 import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
@@ -372,7 +374,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             return state
         }
-        catch (NodeTerminationException | PodUnschedulableException | K8sOutOfCpuException | K8sOutOfMemoryException e) {
+        catch (NodeTerminationException | K8sOutOfCpuException | K8sOutOfMemoryException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the error to the caller method
             final instant = Instant.now()
@@ -437,10 +439,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         final state = getState()
         if( state && state.terminated ) {
-            if( state.nodeTermination instanceof NodeTerminationException ||
-                state.nodeTermination instanceof PodUnschedulableException ) {
+            if( state.nodeTermination instanceof Throwable ) {
                 // keep track of the node termination error
-                task.error = (Throwable) state.nodeTermination
+                task.error = infraFailureError((Throwable) state.nodeTermination)
                 // mark the task as ABORTED since thr failure is caused by a node failure
                 task.aborted = true
             }
@@ -452,9 +453,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 // the K8s API is more reliable because the container may terminate before the exit file is written
                 // See https://github.com/nextflow-io/nextflow/issues/6436
                 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-                final terminated = state.terminated as Map
-                final k8sExitCode = terminated?.exitCode as Integer
-                final reason = terminated?.reason as String
+                log.trace("[k8s] Container Terminated state ${state.terminated}")
+                final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
                 // the K8s API can report the pod as terminated before the writes made by the task
                 // are visible on the node running the driver. The `.exitcode` file is the last file
                 // written by the task wrapper, therefore waiting for it also guarantees the
@@ -464,24 +464,16 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 // See https://github.com/nextflow-io/nextflow/issues/7247
                 if( (k8sExitCode == null || k8sExitCode == 0) && !isExitFileVisible() )
                     return false
-                log.debug("[k8s] Container Terminated state ${state.terminated}")
                 task.exitStatus = k8sExitCode != null ? k8sExitCode : readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
-                // expose termination reason so users can make decisions in errorStrategy
-                // K8s provides 'reason' when the container itself is killed (e.g. OOMKilled, Evicted)
-                // When the process inside is killed but the container exits normally, reason is null
-                // In that case, infer from exit code: 137 = SIGKILL (likely OOM), 143 = SIGTERM
-                if( reason && reason != 'Error' && reason != 'Completed' )
-                    task.terminationReason = reason
-                else if( k8sExitCode == 137 )
-                    task.terminationReason = 'OOMKilled(exit137)'
-                else if( k8sExitCode == 143 )
-                    task.terminationReason = 'SignalTerm(exit143)'
-                // classify infrastructure failures so Nextflow can auto-retry
-                if( isInfrastructureFailure(reason) ) {
-                    task.error = new NodeTerminationException("K8s infrastructure failure: ${reason}")
-                    task.aborted = true
+                // report the reason of the container failure (e.g. OOMKilled), if any
+                final reason = (state.terminated as Map)?.reason
+                if( k8sExitCode && reason && reason !in ['Error', 'Completed'] ) {
+                    def msg = "K8s pod '$podName' execution failed - reason: $reason"
+                    final message = (state.terminated as Map)?.message
+                    if( message ) msg += " - message: $message"
+                    task.error = new ProcessException(msg)
                 }
             }
             status = TaskStatus.COMPLETED
@@ -496,21 +488,24 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
-     * Determine if the K8s container termination reason indicates an infrastructure
-     * failure (as opposed to an application failure).
+     * Infrastructure failures are retried automatically, regardless of the task error strategy,
+     * until the task failures reach the `k8s.maxInfraRetries` limit. Then they are
+     * reported as a regular process failure, so that they are handled by the task error strategy.
+     *
+     * @param error The infrastructure failure error
+     * @return The error to be assigned to the task
      */
-    protected static boolean isInfrastructureFailure(String reason) {
-        if( !reason )
-            return false
-        switch( reason ) {
-            case 'Evicted':
-            case 'Preempting':
-            case 'DeadlineExceeded':
-            case 'Shutdown':
-                return true
-            default:
-                return false
+    protected Throwable infraFailureError(Throwable error) {
+        if( error !instanceof ProcessRetryableException )
+            return error
+        final max = k8sConfig.getMaxInfraRetries()
+        if( task.failCount < max ) {
+            // the task retry is logged without the failure cause, therefore report it here
+            log.info "[K8s] Task `$task.name` failed because of an infrastructure issue and it will be retried (${task.failCount + 1} of $max) -- ${error.message}"
+            return error
         }
+        log.debug "[K8s] Max infrastructure retries ($max) exceeded for task: `$task.name`"
+        return new ProcessException(error.message)
     }
 
     protected void saveJobLogOnError(TaskRun task) {

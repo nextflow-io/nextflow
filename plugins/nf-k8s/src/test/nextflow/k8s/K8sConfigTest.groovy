@@ -330,6 +330,15 @@ class K8sConfigTest extends Specification {
 
     }
 
+    def 'should return max infra retries' () {
+
+        expect:
+        new K8sConfig().getMaxInfraRetries() == 5
+        new K8sConfig(maxInfraRetries: 0).getMaxInfraRetries() == 0
+        new K8sConfig(maxInfraRetries: 2).getMaxInfraRetries() == 2
+
+    }
+
     def 'should return storage claim name' () {
         when:
         def cfg = new K8sConfig()

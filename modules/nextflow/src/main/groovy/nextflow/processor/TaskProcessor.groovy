@@ -1152,8 +1152,6 @@ class TaskProcessor {
             if( task && error instanceof ProcessException ) {
                 // expose current task exit status
                 task.config.exitStatus = task.exitStatus
-                task.config.terminationReason = task.terminationReason
-                task.config.aborted = task.aborted
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
                 //Add trace of the previous execution in the task context for next execution
@@ -1164,8 +1162,6 @@ class TaskProcessor {
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
                     def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
-                    if( task.terminationReason )
-                        msg += " [reason: ${task.terminationReason}]"
                     if( errorStrategy == IGNORE )
                         msg += " -- Error is ignored"
                     else if( errorStrategy == RETRY )
@@ -1231,13 +1227,7 @@ class TaskProcessor {
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
 
-        // always evaluate the error strategy (may have side effects like logging)
-        final configAction = task.config.getErrorStrategy()
-        // retryOn directive: if the termination reason matches, override to RETRY
-        final retryReasons = task.config.getRetryOn()
-        final action = (retryReasons && task.terminationReason in retryReasons)
-                ? RETRY
-                : configAction
+        final action = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
         if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
