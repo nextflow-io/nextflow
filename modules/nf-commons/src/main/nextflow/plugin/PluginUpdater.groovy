@@ -604,6 +604,7 @@ class PluginUpdater extends UpdateManager {
 
         if( !isAlreadyInstalled(new PluginRef(id, requestedVersion)) ) {
             fetchMissingMetadata(id)
+            // the registry may have just told us the plugin moved
             id = canonical(id)
         }
 
