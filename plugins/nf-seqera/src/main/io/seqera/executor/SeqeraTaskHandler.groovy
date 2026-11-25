@@ -113,7 +113,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final resourceReq = new ResourceRequirement()
             .cpuShares(task.config.getCpus() * 1024)
             .memoryMiB(memoryMiB())
-            .time(timeLimit())
+            .maxDurationSecs(maxDurationSecs())
         // add accelerator settings if defined
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -324,18 +324,17 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
-     * The process {@code time} directive, forwarded so the scheduler stops a task attempt that
-     * runs past it and fails it with exit code 140.
-     * <p>
-     * Sent as whole milliseconds ({@code 14400000ms}) rather than ISO-8601: the scheduler accepts
-     * both, but the value can come back as the granted time, which {@link #getGrantedTime()} parses
-     * with {@link Duration#of(String)}, and that does not read the ISO form.
+     * The process {@code time} directive in whole seconds, rounded up so a sub-second value is not
+     * sent as zero, which the scheduler rejects. The scheduler stops each attempt that runs past it
+     * and fails the task with exit code 140.
      *
-     * @return the time limit, or null when the process declares none (or a non-positive one)
+     * @return the limit in seconds, or null when the process declares none (or a non-positive one)
      */
-    protected String timeLimit() {
-        final time = task.config.getTime()
-        return time != null && time.toMillis() > 0 ? "${time.toMillis()}ms".toString() : null
+    protected Integer maxDurationSecs() {
+        final millis = task.config.getTime()?.toMillis()
+        if( millis == null || millis <= 0 )
+            return null
+        return (int) Math.min(Integer.MAX_VALUE, ((millis + 999L).intdiv(1000L)))
     }
 
     /**
@@ -571,14 +570,14 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             result.put('acceleratorName', resources.getAcceleratorName())
         if (resources.getAcceleratorCuda() != null)
             result.put('acceleratorCuda', resources.getAcceleratorCuda())
-        if (resources.getTime() != null)
-            result.put('time', resources.getTime())
+        if (resources.getMaxDurationSecs() != null)
+            result.put('maxDurationSecs', resources.getMaxDurationSecs())
         return result.isEmpty() ? null : result
     }
 
     protected Long getGrantedTime() {
-        final String time = cachedTaskState?.getResourceAllocation()?.getTime()
-        return time != null ? Duration.of(time).toMillis() : task.config.getTime()?.toMillis()
+        final Integer secs = cachedTaskState?.getResourceAllocation()?.getMaxDurationSecs()
+        return secs != null ? secs * 1000L : task.config.getTime()?.toMillis()
     }
 
     /**

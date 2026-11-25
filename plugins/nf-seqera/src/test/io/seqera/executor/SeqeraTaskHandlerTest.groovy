@@ -933,7 +933,7 @@ class SeqeraTaskHandlerTest extends Specification {
     def 'should fallback to taskState resourceRequirement when no attempts'() {
         given:
         def handler = createHandler()
-        def resources = new ResourceRequirement().cpuShares(1024).memoryMiB(2048).time('1h')
+        def resources = new ResourceRequirement().cpuShares(1024).memoryMiB(2048).maxDurationSecs(3600)
         handler.cachedTaskState = new SchedTaskState()
             .attempts([])
             .resourceAllocation(resources)
@@ -944,7 +944,7 @@ class SeqeraTaskHandlerTest extends Specification {
         then:
         result.cpuShares == 1024
         result.memoryMiB == 2048
-        result.time == '1h'
+        result.maxDurationSecs == 3600
     }
 
     def 'should fallback to taskState resourceRequirement when last attempt has no resources'() {
@@ -968,7 +968,7 @@ class SeqeraTaskHandlerTest extends Specification {
         given:
         def handler = createHandler()
         handler.cachedTaskState = new SchedTaskState()
-            .resourceAllocation(new ResourceRequirement().time('2h'))
+            .resourceAllocation(new ResourceRequirement().maxDurationSecs(7200))
 
         expect:
         handler.getGrantedTime() == Duration.of('2h').toMillis()
@@ -1103,10 +1103,10 @@ class SeqeraTaskHandlerTest extends Specification {
         req.acceleratorCount == 1
         req.acceleratorName == 'nvidia-l4'
         req.acceleratorCuda == '12.2'
-        req.time == '14400000ms'
+        req.maxDurationSecs == 14400
     }
 
-    def 'should forward the time directive as milliseconds the granted time can read back: #time'() {
+    def 'should forward the time directive in whole seconds, rounded up: #time'() {
         given:
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
@@ -1115,13 +1115,13 @@ class SeqeraTaskHandlerTest extends Specification {
         def handler = new SeqeraTaskHandler(taskRun, Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) })
 
         expect:
-        handler.timeLimit() == expected
-        expected == null || Duration.of(expected) == time
+        handler.maxDurationSecs() == expected
 
         where:
         time                     || expected
-        Duration.of('4h')        || '14400000ms'
-        Duration.of('1h 30m')    || '5400000ms'
+        Duration.of('4h')        || 14400
+        Duration.of('1h 30m')    || 5400
+        Duration.of('500ms')     || 1
         Duration.of('0s')        || null
         null                     || null
     }
