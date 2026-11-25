@@ -68,6 +68,14 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
     """)
     final Boolean osc7501
 
+    @ConfigOption
+    @Description("""
+        Report how to resume the run to the terminal with OSC 7577, the Program Resume Protocol (default: `false`).
+
+        Only used when standard output is a terminal that sets `OSC7577_TOKEN`. `NXF_OSC7577` takes precedence when set.
+    """)
+    final Boolean osc7577
+
     ConfigMap() {
     }
 
@@ -83,6 +91,7 @@ class ConfigMap extends LinkedHashMap implements ConfigScope {
         resume = opts.resume as boolean
         workDir = opts.workDir
         osc7501 = opts.containsKey('osc7501') ? opts.osc7501 as Boolean : null
+        osc7577 = opts.containsKey('osc7577') ? opts.osc7577 as Boolean : null
     }
 
 }
