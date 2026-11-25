@@ -1126,13 +1126,14 @@ class TaskProcessor {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
-            // -- retry without increasing the error counts
+            // -- track automatic retries separately so they do not consume the error strategy budget
             if( task && (error.cause instanceof ProcessRetryableException || error.cause instanceof CloudSpotTerminationException) ) {
                 if( error.cause instanceof ProcessRetryableException )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 task.failCount+=1
+                task.autoRetryCount+=1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
                     try {
@@ -1152,7 +1153,7 @@ class TaskProcessor {
             final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
             final submitErrMsg = submitTimeout ? error.cause.message : null
             final int submitRetries = submitTimeout ? ++task.submitRetries : 0
-            final int taskErrCount = !submitTimeout && task ? ++task.failCount : 0
+            final int taskErrCount = !submitTimeout && task ? ++task.failCount - task.autoRetryCount : 0
             final int procErrCount = !submitTimeout ? ++errorCount : errorCount
 
             // -- when is a task level error and the user has chosen to ignore error,

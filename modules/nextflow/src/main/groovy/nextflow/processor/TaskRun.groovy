@@ -349,6 +349,9 @@ class TaskRun implements Cloneable {
      */
     volatile int failCount
 
+    /** Automatic resubmissions included in the total failure count. */
+    volatile int autoRetryCount
+
     /**
      * The number of times the submit of the task has been retried
      */
