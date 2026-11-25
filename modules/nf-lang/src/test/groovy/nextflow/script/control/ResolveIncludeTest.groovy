@@ -16,7 +16,6 @@
 
 package nextflow.script.control
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.module.spi.FallbackRemoteModuleResolver
@@ -342,7 +341,7 @@ class ResolveIncludeTest extends Specification {
         errors[0].getOriginalMessage() == "Included name 'nope' is not defined in module '${module}'"
     }
 
-    def 'should resolve a pipeline include from the pipelines directory' () {
+    def 'should resolve a pipeline include from the modules directory' () {
         given:
         def main = tempFile(root, 'main.nf',
             '''\
@@ -350,7 +349,7 @@ class ResolveIncludeTest extends Specification {
 
             include { workflow as RNASEQ } from 'nf-core/rnaseq'
             ''')
-        def pipeline = tempFile(root, 'pipelines/nf-core/rnaseq/main.nf',
+        def pipeline = tempFile(root, 'modules/nf-core/rnaseq/main.nf',
             '''\
             nextflow.enable.types = true
 
@@ -365,28 +364,13 @@ class ResolveIncludeTest extends Specification {
         errors.isEmpty()
     }
 
-    def 'should report an error for a missing pipeline' () {
-        given:
-        def main = tempFile(root, 'main.nf',
-            '''\
-            nextflow.enable.types = true
-
-            include { workflow as RNASEQ } from 'nf-core/rnaseq'
-            ''')
-
-        when:
-        def errors = check(root, [main])
-        then:
-        TestUtils.errorList(errors) == [[3, 13, "Pipeline 'nf-core/rnaseq' not found in 'pipelines' directory -- use 'nextflow pipeline install' to install it first"]]
-    }
-
-    def 'should attempt a failing pipeline include only once: #TYPE' () {
+    def 'should attempt a failing remote include only once: #TYPE' () {
         given:
         def calls = 0
         Class<? extends Exception> error = ERROR
         RemoteModuleResolverProvider.instance = new FallbackRemoteModuleResolver() {
             @Override
-            Path resolvePipeline(String name, Path baseDir) {
+            Path resolve(String name, Path baseDir) {
                 calls++
                 throw error.newInstance("cannot install ${name}".toString())
             }
@@ -410,12 +394,12 @@ class ResolveIncludeTest extends Specification {
         TYPE = ERROR.simpleName
     }
 
-    def 'should retry a failed pipeline include on a new analysis of the same compiler' () {
+    def 'should retry a failed remote include on a new analysis of the same compiler' () {
         given:
         def calls = 0
         RemoteModuleResolverProvider.instance = new FallbackRemoteModuleResolver() {
             @Override
-            Path resolvePipeline(String name, Path baseDir) {
+            Path resolve(String name, Path baseDir) {
                 calls++
                 throw new IllegalStateException("cannot install ${name}")
             }
@@ -434,20 +418,6 @@ class ResolveIncludeTest extends Specification {
         parser.analyze()
         then:
         calls == 2
-    }
-
-    def 'should not resolve a module include from the pipelines directory' () {
-        given:
-        def main = tempFile(root, 'main.nf',
-            '''\
-            include { FASTQC } from 'nf-core/fastqc'
-            ''')
-        Files.createDirectories(root.resolve('pipelines/nf-core/fastqc'))
-
-        when:
-        def errors = check(root, [main])
-        then:
-        TestUtils.errorList(errors) == [[1, 13, "Module 'nf-core/fastqc' not found in 'modules' directory -- use 'nextflow module install' to install module first"]]
     }
 
     def 'should resolve a local and a module include by source string' () {

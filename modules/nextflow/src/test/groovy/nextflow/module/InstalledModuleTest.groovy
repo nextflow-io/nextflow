@@ -198,4 +198,44 @@ class InstalledModuleTest extends Specification {
         // Should handle gracefully - since checksum won't match, it should report as MODIFIED
         integrity in [ModuleIntegrity.VALID, ModuleIntegrity.MODIFIED, ModuleIntegrity.CORRUPTED]
     }
+
+    def 'should check the integrity of a pipeline over its whole tree'() {
+        given: 'a pipeline without meta.yml and with a vendored module'
+        def dir = tempDir.resolve('pipeline')
+        def vendored = dir.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(vendored)
+        dir.resolve('main.nf').text = 'workflow { }'
+        vendored.resolve('main.nf').text = 'process FASTQC { }'
+        ModuleInfo.save(vendored, 'checksum', 'x')
+        def installed = new InstalledModule(
+            reference: new ModuleReference('nf-core', 'rnaseq'),
+            directory: dir,
+            mainFile: dir.resolve('main.nf'),
+            manifestFile: dir.resolve('meta.yml'),
+            moduleInfoFile: dir.resolve('.module-info'),
+            kind: ModuleSpec.KIND_PIPELINE,
+            expectedChecksum: ModuleChecksum.computePipeline(dir)
+        )
+        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, checksum: installed.expectedChecksum])
+
+        expect:
+        installed.pipeline
+        installed.integrity == ModuleIntegrity.VALID
+
+        when: 'a nested folder with its own .module-info is edited'
+        vendored.resolve('main.nf').text = 'process FASTQC { script: "x" }'
+        ModuleChecksum.clearPipeline(dir)
+        then:
+        installed.integrity == ModuleIntegrity.VALID
+
+        when: 'a pipeline file is edited, the memoized checksum is used until cleared'
+        dir.resolve('main.nf').text = 'workflow { println "x" }'
+        then:
+        installed.integrity == ModuleIntegrity.VALID
+
+        when:
+        ModuleChecksum.clearPipeline(dir)
+        then:
+        installed.integrity == ModuleIntegrity.MODIFIED
+    }
 }

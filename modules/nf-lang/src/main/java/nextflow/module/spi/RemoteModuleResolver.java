@@ -16,14 +16,10 @@
 
 package nextflow.module.spi;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Properties;
 
 /**
  * Service Provider Interface for resolving remote modules referenced with '@scope/name' syntax.
@@ -48,22 +44,9 @@ public interface RemoteModuleResolver {
     String MODULES_DIR = "modules";
 
     /**
-     * Name of the directory under which pipelines are installed.
+     * Info file at the root of a module or pipeline installed from a registry.
      */
-    String PIPELINES_DIR = "pipelines";
-
-    /**
-     * Marker file at the root of an installed pipeline.
-     */
-    String PIPELINE_INFO_FILE = ".pipeline-info";
-
-    /**
-     * @return true if the include entries refer to a pipeline (its entry workflow or params)
-     * rather than to a module.
-     */
-    static boolean isPipelineInclude(Collection<String> entryNames) {
-        return entryNames.contains("workflow") || entryNames.contains("params");
-    }
+    String MODULE_INFO_FILE = ".module-info";
 
     /**
      * Determine the base directory against which a remote module include should be resolved,
@@ -77,6 +60,11 @@ public interface RemoteModuleResolver {
      * <p>A script is taken to belong to a vendored module when it lives under a {@code modules/}
      * directory within the project, which is where modules are installed at any depth.
      *
+     * <p>The nearest folder of the including script, up to the project directory, that holds a
+     * {@code .module-info} file (an installed module or pipeline) takes the place of the project
+     * directory in these rules, so any script of an installed pipeline resolves against the
+     * pipeline's own {@code modules/} directory.
+     *
      * @param includingFile the script containing the include statement (may be null)
      * @param projectDir    the project directory (may be null when unknown, in which case the
      *                      including script's own directory is used)
@@ -87,19 +75,19 @@ public interface RemoteModuleResolver {
             return projectDir;
         if( projectDir == null )
             return parent;
-        var root = findPipelineRoot(parent, projectDir);
+        var root = findInstalledRoot(parent, projectDir);
         return isVendoredModuleDir(parent, root) ? parent : root;
     }
 
     /**
      * @return the nearest directory from {@code dir} up to {@code projectDir} (inclusive) that
-     * holds a pipeline info file, or {@code projectDir} if there is none.
+     * holds a {@code .module-info} file, or {@code projectDir} if there is none.
      */
-    static Path findPipelineRoot(Path dir, Path projectDir) {
+    private static Path findInstalledRoot(Path dir, Path projectDir) {
         var stop = projectDir.toAbsolutePath().normalize();
         var current = dir.toAbsolutePath().normalize();
         while( current != null && current.startsWith(stop) ) {
-            if( Files.exists(current.resolve(PIPELINE_INFO_FILE)) )
+            if( Files.exists(current.resolve(MODULE_INFO_FILE)) )
                 return current;
             current = current.getParent();
         }
@@ -168,50 +156,6 @@ public interface RemoteModuleResolver {
      * @throws IllegalArgumentException if the module reference is invalid or resolution fails
      */
     Path resolve(String moduleName, Path baseDir);
-
-    /**
-     * Resolve a pipeline reference (e.g., 'scope/name') to the path of its main script.
-     *
-     * <p>The default implementation only looks on disk, under {@code baseDir/pipelines/}.
-     *
-     * @param name    The pipeline reference string
-     * @param baseDir0 The directory whose {@code pipelines/} directory is searched
-     * @return Path to the pipeline's main script: the {@code workflowPath} of its
-     *     pipeline info file, or {@code main.nf}
-     * @throws IllegalStateException if the pipeline is invalid or not installed
-     */
-    default Path resolvePipeline(String name, Path baseDir0) {
-        var baseDir = baseDir0 != null ? baseDir0 : Path.of(".").toAbsolutePath();
-        var pipelinesDir = baseDir.resolve(PIPELINES_DIR).normalize();
-        var resolved = pipelinesDir.resolve(name).normalize();
-        if( !resolved.startsWith(pipelinesDir) )
-            throw new IllegalStateException("Invalid pipeline name '" + name + "' -- path escapes the pipelines directory");
-        if( !Files.exists(resolved) )
-            throw new IllegalStateException("Pipeline '" + name + "' not found in 'pipelines' directory -- use 'nextflow pipeline install' to install it first");
-        var workflow = resolved.resolve(readWorkflowPath(resolved)).normalize();
-        if( !workflow.startsWith(resolved) )
-            throw new IllegalStateException("Invalid workflow path for pipeline '" + name + "' -- it must stay inside the pipeline directory");
-        return workflow;
-    }
-
-    /**
-     * @return the {@code workflowPath} recorded in the pipeline info file of the given
-     * pipeline directory, or {@code main.nf} if there is none
-     */
-    static String readWorkflowPath(Path pipelineDir) {
-        var file = pipelineDir.resolve(PIPELINE_INFO_FILE);
-        if( !Files.exists(file) )
-            return "main.nf";
-        var props = new Properties();
-        try( var reader = Files.newBufferedReader(file) ) {
-            props.load(reader);
-        }
-        catch( IOException e ) {
-            throw new UncheckedIOException("Cannot read " + file, e);
-        }
-        var result = props.getProperty("workflowPath");
-        return result != null && !result.isBlank() ? result : "main.nf";
-    }
 
     /**
      * Get the priority of this resolver. Higher priority resolvers are tried first.

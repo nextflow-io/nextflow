@@ -31,7 +31,6 @@ import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.client.RegistryException
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.module.spi.RemoteModuleResolver
 
 /**
  * Resolves, installs, lists and removes registry pipelines stored under {@code <baseDir>/pipelines}
@@ -43,6 +42,8 @@ class PipelineManager {
     private static final Pattern NAME_PATTERN = ~/^[a-z0-9][a-z0-9._-]*\/[a-z][a-z0-9._-]*$/
 
     private static final String DEFAULT_WORKFLOW = 'main.nf'
+
+    private static final String PIPELINES_DIR = 'pipelines'
 
     /** An installed pipeline directory with its {@code .pipeline-info} */
     static record InstalledPipeline(Path dir, PipelineInfo info) {}
@@ -70,7 +71,7 @@ class PipelineManager {
     Path pipelineDir(String name) {
         if( !isValidName(name) )
             throw new AbortOperationException("Invalid pipeline name '$name' -- expected <scope>/<name>, e.g. nf-core/rnaseq")
-        return baseDir.resolve(RemoteModuleResolver.PIPELINES_DIR).resolve(name)
+        return baseDir.resolve(PIPELINES_DIR).resolve(name)
     }
 
     /** Return the main script of a pipeline, installing the latest release when missing */
@@ -138,13 +139,13 @@ class PipelineManager {
 
     /** List installed pipelines, skipping in-flight '.tmp-' dirs; entries whose recorded name is invalid are skipped with a warning */
     List<InstalledPipeline> list() {
-        final root = baseDir.resolve(RemoteModuleResolver.PIPELINES_DIR)
+        final root = baseDir.resolve(PIPELINES_DIR)
         final result = new ArrayList<InstalledPipeline>()
         if( !Files.isDirectory(root) )
             return result
         final dirs = Files.walk(root, 2).withCloseable { stream ->
             stream
-                .filter { Path p -> root.relativize(p).nameCount == 2 && !p.fileName.toString().startsWith('.') && Files.exists(p.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)) }
+                .filter { Path p -> root.relativize(p).nameCount == 2 && !p.fileName.toString().startsWith('.') && Files.exists(p.resolve(PipelineInfo.INFO_FILE)) }
                 .sorted()
                 .toList()
         } as List<Path>

@@ -34,6 +34,8 @@ class ModuleSpec {
 
     static final String KIND_WORKFLOW = 'Workflow'
 
+    static final String KIND_PIPELINE = 'Pipeline'
+
     static final String TODO_TYPE = 'TODO: Add type'
 
     static final String TODO_DESCRIPTION = 'TODO: Add description'

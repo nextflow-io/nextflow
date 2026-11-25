@@ -19,7 +19,6 @@ package nextflow.module
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.module.spi.RemoteModuleResolver
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -215,14 +214,14 @@ class ModuleResolverTest extends Specification {
         ModuleResolver.pinnedVersion(tempDir, new ModuleReference('nf-core', 'fastqc')) == null
     }
 
-    def 'resolves a module without .module-info inside a pipeline root'() {
+    def 'resolves a module without .module-info vendored by a pipeline'() {
         given:
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = new ModuleStorage(tempDir).getModuleDir(reference)
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process TEST { }'
         moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
-        tempDir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).text = 'name=a/b\n'
+        ModuleInfo.save(tempDir, 'kind', ModuleInfo.KIND_PIPELINE)
 
         expect:
         new ModuleResolver(tempDir).resolve(reference, null, false) == moduleDir.resolve('main.nf')

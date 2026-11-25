@@ -129,7 +129,7 @@ public class ModuleResolver {
 
     /**
      * Resolve an include URI, remembering failures so that a failing remote include
-     * (e.g. a pipeline auto-install) is attempted once per resolver instance.
+     * (e.g. an auto-install) is attempted once per resolver instance.
      */
     public URI getIncludeUri(URI uri, IncludeNode node) {
         var key = uri + "|" + node.source.getText();
@@ -137,7 +137,7 @@ public class ModuleResolver {
         if( failure != null )
             throw sneakyThrow(failure);
         try {
-            return getIncludeUri(uri, node, projectDir);
+            return getIncludeUri(uri, node.source.getText(), projectDir);
         }
         catch( Exception e ) {
             // the remote resolver may throw a checked exception (e.g. from Groovy), rethrown as-is
@@ -185,23 +185,10 @@ public class ModuleResolver {
      * Resolve an include source to the URI of the included script.
      *
      * @param uri the URI of the including script
-     * @param node the include node
+     * @param source the include source
      * @param projectDir the project directory, used to resolve remote modules
      */
-    public static URI getIncludeUri(URI uri, IncludeNode node, Path projectDir) {
-        var names = node.entries.stream().map(e -> e.name).toList();
-        return getIncludeUri(uri, node.source.getText(), projectDir, RemoteModuleResolver.isPipelineInclude(names));
-    }
-
-    /**
-     * Resolve an include source as a module (not a pipeline) include. Callers that have the
-     * include node should use the other overload so pipeline includes resolve.
-     */
     public static URI getIncludeUri(URI uri, String source, Path projectDir) {
-        return getIncludeUri(uri, source, projectDir, false);
-    }
-
-    private static URI getIncludeUri(URI uri, String source, Path projectDir, boolean pipeline) {
         var localUri = getLocalIncludeUri(uri, source);
         if( localUri != null )
             return localUri;
@@ -210,11 +197,9 @@ public class ModuleResolver {
         // nested `modules/` directory (nested vendoring). Any other script -- the entry
         // script, or a plain local script -- resolves against the project directory.
         var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
-        var resolver = RemoteModuleResolverProvider.getInstance();
-        var path = pipeline
-            ? resolver.resolvePipeline(source, base)
-            : resolver.resolve(source, base);
-        return path.normalize()
+        return RemoteModuleResolverProvider.getInstance()
+            .resolve(source, base)
+            .normalize()
             .toUri();
     }
 

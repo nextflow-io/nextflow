@@ -25,13 +25,14 @@ import java.security.MessageDigest
 
 import groovy.transform.CompileStatic
 import nextflow.module.ModuleInfo
-import nextflow.module.spi.RemoteModuleResolver
 
 /**
  * Metadata of an installed pipeline, stored in its {@code .pipeline-info} file
  */
 @CompileStatic
 class PipelineInfo {
+
+    static final String INFO_FILE = '.pipeline-info'
 
     private static final List<String> FIELDS = ['name', 'version', 'workflowPath', 'repositoryUrl', 'revision', 'commitId', 'checksum', 'registryUrl']
 
@@ -45,7 +46,7 @@ class PipelineInfo {
     String registryUrl
 
     static PipelineInfo load(Path dir) {
-        final file = dir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE)
+        final file = dir.resolve(INFO_FILE)
         if( !Files.exists(file) )
             return null
         final props = new Properties()
@@ -63,7 +64,7 @@ class PipelineInfo {
             if( value != null )
                 props.setProperty(f, value.toString())
         }
-        dir.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE).withOutputStream { os -> props.store(os, null) }
+        dir.resolve(INFO_FILE).withOutputStream { os -> props.store(os, null) }
     }
 
     boolean isModified(Path dir) {
@@ -81,14 +82,14 @@ class PipelineInfo {
             FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs) {
                 if( d.fileName.toString() == '.git' )
                     return FileVisitResult.SKIP_SUBTREE
-                if( d != dir && (Files.exists(d.resolve(ModuleInfo.MODULE_INFO_FILE)) || Files.exists(d.resolve(RemoteModuleResolver.PIPELINE_INFO_FILE))) )
+                if( d != dir && (Files.exists(d.resolve(ModuleInfo.MODULE_INFO_FILE)) || Files.exists(d.resolve(INFO_FILE))) )
                     return FileVisitResult.SKIP_SUBTREE
                 return FileVisitResult.CONTINUE
             }
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                if( attrs.isRegularFile() && file.fileName.toString() != RemoteModuleResolver.PIPELINE_INFO_FILE )
+                if( attrs.isRegularFile() && file.fileName.toString() != INFO_FILE )
                     files.add(file)
                 return FileVisitResult.CONTINUE
             }

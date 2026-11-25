@@ -152,6 +152,12 @@ class ModuleStorage {
         installed.expectedChecksum = infoProps?.checksum
         installed.registryUrl = infoProps?.registryUrl
 
+        if( infoProps?.kind == ModuleInfo.KIND_PIPELINE ) {
+            installed.installedVersion = infoProps.version
+            installed.kind = ModuleSpec.KIND_PIPELINE
+            return installed
+        }
+
         // a directory without a readable spec is a module folder that is corrupted or was never
         // installed from a registry -- report it as such via the integrity status, instead of
         // failing here and taking down the recovery paths that would otherwise handle it

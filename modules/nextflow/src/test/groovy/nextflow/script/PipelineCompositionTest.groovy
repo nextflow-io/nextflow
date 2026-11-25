@@ -21,8 +21,9 @@ import java.nio.file.Path
 
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
-import nextflow.pipeline.PipelineInfo
 import nextflow.exception.ScriptRuntimeException
+import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
 import spock.lang.Timeout
 import spock.lang.Unroll
 import test.Dsl2Spec
@@ -674,14 +675,14 @@ class PipelineCompositionTest extends Dsl2Spec {
     }
 
     private void installPipeline(String name, Map<String,String> files) {
-        final dir = folder.resolve("pipelines/${name}")
+        final dir = folder.resolve("modules/${name}")
         Files.createDirectories(dir)
         files.each { file, text ->
             final target = dir.resolve(file)
             Files.createDirectories(target.parent)
             target.text = text.stripIndent()
         }
-        new PipelineInfo(name: name, version: '1.0.0', workflowPath: 'main.nf', checksum: PipelineInfo.checksum(dir)).save(dir)
+        ModuleInfo.save(dir, [kind: ModuleInfo.KIND_PIPELINE, version: '1.0.0', checksum: ModuleChecksum.computePipeline(dir)])
     }
 
     def 'should include a pipeline by registry name' () {
