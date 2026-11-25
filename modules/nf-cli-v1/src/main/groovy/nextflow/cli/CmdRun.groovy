@@ -417,6 +417,8 @@ class CmdRun extends CmdBase implements HubAware {
         runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
+        // `module run` has no run command to resume
+        runner.session.cliArgs = isModuleRun() ? null : launcher.normalizedArgs
         runner.session.ansiLog = launcher.options.ansiLog && !SysEnv.isAgentMode()
         runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug

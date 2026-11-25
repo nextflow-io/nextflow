@@ -34,6 +34,7 @@ import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.ProgramResume
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
 /**
@@ -183,9 +184,11 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {
-        return fusionEnabled()
+        final builder = fusionEnabled()
                 ? fusionProcessBuilder()
                 : localProcessBuilder()
+        ProgramResume.withholdToken(builder, session)
+        return builder
     }
 
     long elapsedTimeMillis() {

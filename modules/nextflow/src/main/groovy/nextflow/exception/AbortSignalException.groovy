@@ -30,8 +30,16 @@ import sun.misc.Signal
 
 class AbortSignalException extends RuntimeException {
 
+    private final String signalName
+
     AbortSignalException( Signal sig ) {
         super(sig.toString())
+        this.signalName = sig.getName()
     }
+
+    /**
+     * @return the signal name without the {@code SIG} prefix, e.g. {@code INT}, {@code TERM} or {@code HUP}
+     */
+    String getSignalName() { signalName }
 
 }

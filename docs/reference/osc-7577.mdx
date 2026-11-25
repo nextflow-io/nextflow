@@ -1,0 +1,58 @@
+---
+title: OSC 7577 program resume
+description: How Nextflow tells a terminal how to resume a run after a restart with the OSC 7577 Program Resume Protocol.
+---
+
+# OSC 7577 program resume
+
+<AddedInVersion version="26.10" />
+
+Nextflow can tell a terminal or multiplexer how to resume a running `nextflow run` after the terminal restarts, for example after a server reboot. The signal is the [Program Resume Protocol (OSC 7577)](https://www.superlogical.com/rex/docs/build/program-resume), revision 0.5 (2026-11-25). It is a young proposal, not an ECMA or xterm standard, and a terminal may ignore any report.
+
+This feature is off by default. A terminal that accepts a report starts the command again without the user typing it, so each run has to opt in.
+
+## Turn it on
+
+```groovy
+osc7577 = true
+```
+
+```bash
+export NXF_OSC7577=true
+```
+
+`NXF_OSC7577` takes precedence over the config option when it is set to a non-blank value, so `NXF_OSC7577=false` switches off a run that is configured on. See [`NXF_OSC7577`](env-vars.mdx) and [`osc7577`](config/unscoped.mdx).
+
+Nextflow writes a report only when all of these hold:
+
+- the run is opted in
+- standard output is a terminal
+- the terminal set `OSC7577_TOKEN` in the environment, which is how the protocol signals support
+- the command is a `nextflow run` (not `module run`) and not a preview
+
+## What Nextflow sends
+
+When the run starts, one report with:
+
+- `argv`: the launch command with `-resume <session id>` in place of any `-resume` the user gave. `-name` is dropped, because a rerun cannot reuse a run name. The launcher is the path the user typed, made absolute, or `nextflow` when that cannot be determined.
+- `cwd`: the launch directory, because the task cache lives in `.nextflow` there.
+- `pid`: the Nextflow process.
+
+For `nextflow run main.nf --input x -name happy_curie` the terminal can run:
+
+```bash
+/usr/local/bin/nextflow run -resume 6f1c1b2e-8f3a-4c43-9d7e-0a8f4d2b9c11 main.nf --input=x
+```
+
+in the same directory. This reuses the cached tasks of the original run.
+
+When the user is done with the run, one `clear` report: when the run succeeds, fails, or is stopped with Ctrl-C. Nextflow does not send `clear` when it ends because of SIGHUP or SIGTERM, because the specification forbids it: those signals mean the terminal is going away, which is when the record is needed.
+
+Every report carries a `mac`, the SHA-256 of the report body and the terminal's token. The token is never written to the terminal.
+
+## Limits
+
+- Environment variables are not part of the protocol. A run that depends on `NXF_WORK`, `NXF_OPTS`, `NXF_VER` or a cloud credentials profile set only on the command line resumes with whatever the terminal's shell provides.
+- When the protocol cannot carry the command (a control character in an argument, more than 64 arguments, more than 2048 bytes in total), Nextflow does not report.
+- Nextflow removes `OSC7577_TOKEN` from local task processes. Processes started by grid and cloud executors, plugins, and helper commands are not covered yet.
+- Nextflow does not report again after `SIGCONT` or when its resume command changes. A run's resume command does not change.

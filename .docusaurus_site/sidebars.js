@@ -328,7 +328,8 @@ module.exports = {
                     ]
                 },
                 "reference/env-vars",
-                "reference/osc-7501"
+                "reference/osc-7501",
+                "reference/osc-7577"
             ]
         },
         {
