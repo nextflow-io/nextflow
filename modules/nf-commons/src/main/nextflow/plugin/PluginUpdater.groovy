@@ -630,39 +630,15 @@ class PluginUpdater extends UpdateManager {
         }
 
         final folderName = "${PluginRef.dirName(id)}-$version".toString()
-        def pluginPath = pluginsStore.resolve(folderName)
-        final plainPath = isMoved(id) ? pluginsStore.resolve("${PluginRef.name(id)}-$version") : null
-        // read-only store: load the plain folder of an older Nextflow when the link cannot be written
-        if( plainPath && !FilesEx.exists(pluginPath) && !linkToPlain(pluginPath, plainPath, id, version) && isComplete(plainPath) )
-            pluginPath = plainPath
-        if( !FilesEx.exists(pluginPath) )
-            pluginPath = safeDownload(id, version)
-        if( plainPath && isComplete(pluginPath) && pluginPath != plainPath )
-            createLink(plainPath, pluginPath)
+        final pluginPath = install(id, version, folderName)
 
         // verify the plugin install path contains the expected manifest path
         if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
             log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
 
-        // load the plugin from the file system, unless it is already loaded under the namespace its zip declares
-        final declared = new NamespaceDescriptorFinder().find(pluginPath, folderName).pluginId
-        PluginWrapper wrapper = declared != id && PluginRef.name(declared) == id ? pluginManager.getPlugin(declared) : null
-        if( wrapper && wrapper.descriptor.version != version )
-            throw new PluginRuntimeException("Plugin $id@$version cannot be loaded -- its zip declares the ID $declared, already loaded with version ${wrapper.descriptor.version}")
-        if( !wrapper )
-            wrapper = pluginManager.loadPluginFromPath(pluginPath, folderName)
-        if( wrapper.pluginId != id ) {
-            if( id.contains('/') ) {
-                pluginManager.unloadUnresolved(wrapper.pluginId)
-                throw new PluginRuntimeException("Plugin $id cannot be loaded -- its zip declares the ID ${wrapper.pluginId}")
-            }
-            if( PluginRef.name(wrapper.pluginId) == id ) {
-                aliases.put(id, wrapper.pluginId)
-                linkToPlain(pluginsStore.resolve("${PluginRef.dirName(wrapper.pluginId)}-$version"), pluginPath, wrapper.pluginId, version)
-                id = wrapper.pluginId
-            }
-        }
+        final wrapper = loadOrReuse(id, version, pluginPath, folderName)
+        id = adoptDeclaredId(id, version, wrapper, pluginPath)
 
         // pull all required required deps
         final deps = wrapper.descriptor.dependencies ?: Collections.<PluginDependency>emptyList()
@@ -692,7 +668,54 @@ class PluginUpdater extends UpdateManager {
         if( pullOnly )
             return false
 
-        // pf4j matches dependency IDs exactly; `set`, not `replaceAll`: replaceAll breaks iterators on other threads
+        canonicalizeDependencies()
+        // resolve the plugins
+        pluginManager.resolvePlugins()
+        // finally start it
+        PluginState state = pluginManager.startPlugin(id)
+        return PluginState.STARTED == state
+    }
+
+    // finds or downloads the plugin folder, linking the plain and namespaced folders of a moved plugin
+    private Path install(String id, String version, String folderName) {
+        def pluginPath = pluginsStore.resolve(folderName)
+        final plainPath = isMoved(id) ? pluginsStore.resolve("${PluginRef.name(id)}-$version") : null
+        // read-only store: load the plain folder of an older Nextflow when the link cannot be written
+        if( plainPath && !FilesEx.exists(pluginPath) && !linkToPlain(pluginPath, plainPath, id, version) && isComplete(plainPath) )
+            pluginPath = plainPath
+        if( !FilesEx.exists(pluginPath) )
+            pluginPath = safeDownload(id, version)
+        if( plainPath && isComplete(pluginPath) && pluginPath != plainPath )
+            createLink(plainPath, pluginPath)
+        return pluginPath
+    }
+
+    // reuses the plugin when it is already loaded under the namespace its zip declares
+    private PluginWrapper loadOrReuse(String id, String version, Path pluginPath, String folderName) {
+        final declared = new NamespaceDescriptorFinder().find(pluginPath, folderName).pluginId
+        final wrapper = declared != id && PluginRef.name(declared) == id ? pluginManager.getPlugin(declared) : null
+        if( wrapper && wrapper.descriptor.version != version )
+            throw new PluginRuntimeException("Plugin $id@$version cannot be loaded -- its zip declares the ID $declared, already loaded with version ${wrapper.descriptor.version}")
+        return wrapper ?: pluginManager.loadPluginFromPath(pluginPath, folderName)
+    }
+
+    // adopts the namespaced ID a plain request loaded; refuses a mismatched namespaced request
+    private String adoptDeclaredId(String id, String version, PluginWrapper wrapper, Path pluginPath) {
+        if( wrapper.pluginId == id )
+            return id
+        if( id.contains('/') ) {
+            pluginManager.unloadUnresolved(wrapper.pluginId)
+            throw new PluginRuntimeException("Plugin $id cannot be loaded -- its zip declares the ID ${wrapper.pluginId}")
+        }
+        if( PluginRef.name(wrapper.pluginId) != id )
+            return id
+        aliases.put(id, wrapper.pluginId)
+        linkToPlain(pluginsStore.resolve("${PluginRef.dirName(wrapper.pluginId)}-$version"), pluginPath, wrapper.pluginId, version)
+        return wrapper.pluginId
+    }
+
+    // pf4j matches dependency IDs exactly; `set`, not `replaceAll`: replaceAll breaks iterators on other threads
+    private void canonicalizeDependencies() {
         for( PluginWrapper it : pluginManager.plugins ) {
             final list = it.descriptor.dependencies
             for( int i=0; i<list.size(); i++ ) {
@@ -701,11 +724,6 @@ class PluginUpdater extends UpdateManager {
                     list.set(i, dep)
             }
         }
-        // resolve the plugins
-        pluginManager.resolvePlugins()
-        // finally start it
-        PluginState state = pluginManager.startPlugin(id)
-        return PluginState.STARTED == state
     }
 
     /**
