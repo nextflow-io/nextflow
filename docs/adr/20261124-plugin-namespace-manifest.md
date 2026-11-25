@@ -21,7 +21,7 @@ Plugin-Namespace: myorg
 - Newer Nextflow loads the same zip as `myorg/nf-foo`.
 - The registry resolves `nf-foo` and `myorg/nf-foo` to the same record and the same releases, including the releases published before the move.
 - The registry tells Nextflow the namespaced ID of a moved plugin. Newer Nextflow changes every plain ID of that plugin to the namespaced ID. A run then loads the plugin only once.
-- After an enforcement date, an existing plugin must move before it can publish a new version, and new plugins must be namespaced.
+- Once enforcement is turned on, an existing plugin must move before it can publish a new version, and new plugins must be namespaced.
 
 This builds on the [namespaced plugin IDs ADR](20261111-namespaced-plugin-ids.md) and is an alternative to the link and freeze ADR (#451), which is option 1 below. It changes some rules of the namespaced plugin IDs ADR (see [Changes to the namespaced plugin IDs ADR](#changes-to-the-namespaced-plugin-ids-adr)).
 
@@ -174,7 +174,7 @@ Option 6.
 - A moved plugin may publish without `Plugin-Namespace`. This allows patch releases built from older branches (for example for core plugins). Newer Nextflow loads them as `myorg/nf-foo` through the hint.
 - The registry warns when a release of a moved plugin depends on a plugin with no plain name, because older Nextflow cannot load that release.
 
-**Enforcement.** After the enforcement date:
+**Enforcement.** An admin turns it on with the registry setting `registry.plugins.namespace-enforced` (environment variable `REGISTRY_PLUGINS_NAMESPACE_ENFORCED`). It is off by default. When it is on:
 
 - A publish to an existing unscoped plugin that has not moved is refused, with a message that says how to move it.
 - A claim of a new unscoped plugin is refused.
@@ -311,7 +311,7 @@ product = wrapper.descriptor.pluginId.tokenize('/').last()
 1. Registry and Gradle plugin releases, with enforcement off.
 2. Nextflow release with namespace support. It contains the namespaced plugin IDs work and this ADR together, and the core plugin ID change.
 3. Move the core plugins to `nextflow-io` and the Seqera plugins to `seqera`. Apply the xpack product-code change before the first build with `Plugin-Namespace`.
-4. Announce the enforcement date to plugin authors, with a how-to for claiming a namespace and moving a plugin.
+4. Tell plugin authors when enforcement will be turned on, with a how-to for claiming a namespace and moving a plugin.
 5. Turn enforcement on.
 
 ### Changes to the namespaced plugin IDs ADR
@@ -350,11 +350,11 @@ Other store layouts considered for the offline map: a marker file inside the plu
 - Older Nextflow sharing a store with newer Nextflow can fail offline with a version range (see Compatibility).
 - The ID shown by Nextflow (`myorg/nf-foo`) differs from `Plugin-Id` in the MANIFEST (`nf-foo`).
 - Authors of moved plugins keep plain dependencies while they support older Nextflow.
-- After the enforcement date, no new unscoped plugins are added.
+- Once enforcement is on, no new unscoped plugins are added.
 
 ## Open decisions
 
-- The enforcement date, and how long after the Nextflow release it falls.
+- When to turn enforcement on, and how long after the Nextflow release.
 - How an admin allows a single release that enforcement would refuse.
 - Whether an admin can move a plugin whose author does not respond.
 - Docs: ID format, the `Plugin-Namespace` attribute, the migration guide, and offline store preparation.
