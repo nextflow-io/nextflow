@@ -1301,5 +1301,50 @@ class AssetManagerTest extends Specification {
         manager.getLocalPath().toString().contains('1c3e9e7404127514d69369cd87f8036830f5cf64')
     }
 
+    def 'should use the repository of a clone cached under a local name' () {
+        given: 'a clone of other/hello cached under the name acme/hello'
+        def bare = tempDir.root.resolve("$REPOS_SUBDIR/acme/hello/$BARE_REPO").toFile()
+        bare.mkdirs()
+        Git.init().setBare(true).setDirectory(bare).call().close()
+        new File(bare, 'config') << '[remote "origin"]\n\turl = https://github.com/other/hello.git\n'
 
+        when: 'it is used by its local name only (offline registry run)'
+        def manager = new AssetManager('acme/hello', null, null, null, 'acme/hello')
+
+        then: 'the Git calls go to the cloned repository'
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/other/hello'
+
+        when: 'the local name is given with the Git address of another repository'
+        new AssetManager('https://github.com/acme/hello', null, null, null, 'acme/hello')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('downloaded from a different repository: `other/hello` -- use `nextflow drop acme/hello` to remove it')
+
+        when: 'it is given with its own Git address and local name'
+        manager = new AssetManager('https://github.com/other/hello', null, null, null, 'acme/hello')
+
+        then:
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/other/hello'
+    }
+
+    def 'should not check the cached clone of a plain Git run' () {
+        given: 'a clone whose origin URL path differs from the project URL path'
+        def bare = tempDir.root.resolve("$REPOS_SUBDIR/acme/hello/$BARE_REPO").toFile()
+        bare.mkdirs()
+        Git.init().setBare(true).setDirectory(bare).call().close()
+        new File(bare, 'config') << '[remote "origin"]\n\turl = https://github.com/other/hello.git\n'
+
+        when:
+        def manager = new AssetManager(name)
+
+        then:
+        manager.project == 'acme/hello'
+        manager.repositoryUrl == 'https://github.com/acme/hello'
+
+        where:
+        name << ['acme/hello', 'https://github.com/acme/hello']
+    }
 }

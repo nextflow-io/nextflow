@@ -17,6 +17,10 @@ $ nextflow clone [options] [project]
 
 The `clone` command downloads a pipeline from a Git-hosting platform into the *current directory* and modifies it accordingly. To download a pipeline into the global cache `~/.nextflow/assets`, use the `nextflow pull` command.
 
+<ChangedInVersion version="27.04">
+The `clone` command accepts a [registry address][cli-run-registry]. Nextflow clones the Git repository of the release given with `-r`, or of the latest published release, and checks out the commit pinned by the release.
+</ChangedInVersion>
+
 ## Options
 
 ##### `-d, -deep`
@@ -29,11 +33,11 @@ Print the command usage.
 
 ##### `-hub` (`github`)
 
-Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`. Can also be the host of a registry, for example `registry.nextflow.io`.
 
 ##### `-r` (`master`)
 
-Revision to clone. Can be a git branch, tag, or commit SHA number.
+Revision to clone. Can be a git branch, tag, or commit SHA number. For a registry pipeline, the release version.
 
 ##### `-user`
 
@@ -54,3 +58,12 @@ Clone a specific revision of a pipeline:
 $ nextflow clone nextflow-io/hello -r v1.1
 nextflow-io/hello cloned to: hello
 ```
+
+Clone a release of a registry pipeline:
+
+```console
+$ nextflow clone https://registry.nextflow.io/pipelines/nf-core/rnaseq -r 3.14.0
+nf-core/rnaseq@3.14.0 cloned to: rnaseq
+```
+
+[cli-run-registry]: ./run#registry-pipelines

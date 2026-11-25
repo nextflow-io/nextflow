@@ -25,6 +25,10 @@ import io.seqera.npr.api.schema.v1.ModuleChannelItem
 import io.seqera.npr.api.schema.v1.ModuleMetadata
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import io.seqera.npr.api.schema.v1.ModuleTool
+import io.seqera.npr.api.schema.v1.Pipeline
+import io.seqera.npr.api.schema.v1.PipelineMetadata
+import io.seqera.npr.api.schema.v1.PipelineRelease
+import io.seqera.npr.client.RegistryException
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
@@ -886,5 +890,99 @@ class CmdModuleViewTest extends Specification {
         json.output.html.items[0].type == 'file'
         json.output.html.items[0].description == 'HTML report'
         json.output.html.items[0].pattern == '*.html'
+    }
+
+    static final Map SCHEMA = [
+        '$defs'   : [input_output: [properties: [
+            input : [type: 'string', description: 'Samplesheet.\nCSV.'],
+            outdir: [description: 'Output dir (no type)']
+        ]]],
+        properties: [flag: [type: 'boolean', description: 'A top-level flag']]
+    ]
+
+    private static PipelineRelease pipelineRelease(String version) {
+        def r = new PipelineRelease().version(version).gitRevision(version).commitId('abc123')
+        r.schema = SCHEMA
+        return r
+    }
+
+    private static Pipeline pipeline() {
+        new Pipeline().latest(pipelineRelease('3.14.0')).repositoryUrl('https://github.com/nf-core/rnaseq')
+            .metadata(new PipelineMetadata().description('RNA-seq analysis').keywords(['rna', 'seq']))
+    }
+
+    private CmdModuleView viewCmd(RegistryClient client, String output = 'text') {
+        def cmd = new CmdModuleView(args: ['nf-core/rnaseq'], output: output, root: tempDir, client: client)
+        cmd.launcher = Mock(Launcher) { getOptions() >> null }
+        return cmd
+    }
+
+    def 'should show a pipeline when the module is not found'() {
+        given:
+        def client = Mock(RegistryClient)
+
+        when:
+        viewCmd(client).run()
+        def out = capture.toString()
+
+        then:
+        1 * client.getModule('nf-core/rnaseq') >> { throw new RegistryException('Not found', 404) }
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline()
+        out.contains('Pipeline:    nf-core/rnaseq')
+        out.contains('Version:     3.14.0')
+        out.contains('Kind:        Pipeline')
+        out.contains('URL:         https://registry.nextflow.io/pipelines/nf-core/rnaseq\n')
+        out.contains('Repository:  https://github.com/nf-core/rnaseq')
+        out.contains('Revision:    3.14.0')
+        out.contains('Commit:      abc123')
+        out.contains('Description: RNA-seq analysis')
+        out.contains('Keywords:    rna, seq')
+        out.contains('  --input (string)\n      Samplesheet. CSV.')
+        out.contains('  --outdir\n')
+        out.contains('  --flag (boolean)')
+        out.contains("Usage:\n  include { workflow as RNASEQ } from 'nf-core/rnaseq'\n  nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq -r 3.14.0")
+    }
+
+    def 'should show a pipeline release as JSON'() {
+        given:
+        def client = Mock(RegistryClient)
+        def cmd = viewCmd(client, 'json')
+        cmd.version = '3.13.0'
+
+        when:
+        cmd.run()
+        def out = capture.toString()
+        def json = new JsonSlurper().parseText(out.substring(out.indexOf('{'))) as Map
+
+        then:
+        1 * client.getModuleRelease('nf-core/rnaseq', '3.13.0') >> { throw new RegistryException('Not found', 404) }
+        1 * client.getPipeline('nf-core/rnaseq') >> pipeline()
+        1 * client.getPipelineRelease('nf-core/rnaseq', '3.13.0') >> pipelineRelease('3.13.0')
+        json.name == 'nf-core/rnaseq'
+        json.kind == 'Pipeline'
+        json.version == '3.13.0'
+        json.repositoryUrl == 'https://github.com/nf-core/rnaseq'
+        json.gitRevision == '3.13.0'
+        json.commitId == 'abc123'
+        json.url == 'https://registry.nextflow.io/pipelines/nf-core/rnaseq'
+        json.description == 'RNA-seq analysis'
+        json.keywords == ['rna', 'seq']
+        json.params*.name == ['input', 'outdir', 'flag']
+        json.usage == 'nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq -r 3.13.0'
+    }
+
+    def 'should fail when neither a module nor a pipeline is found'() {
+        given:
+        def client = Mock(RegistryClient) {
+            getModule(_) >> { throw new RegistryException('Not found', 404) }
+            getPipeline(_) >> { throw new RegistryException('Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry', new RegistryException('Not found', 404)) }
+        }
+
+        when:
+        viewCmd(client).run()
+
+        then: 'the registry detail is kept'
+        def e = thrown(AbortOperationException)
+        e.message == '`nf-core/rnaseq` not found in the registry -- Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry (Not found)'
     }
 }

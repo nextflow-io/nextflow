@@ -19,9 +19,11 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.HubOptions
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -41,7 +43,7 @@ class CmdPull extends CmdBase implements HubAware {
     @Parameter(names=['-a','-all'], description = 'Update all downloaded projects', arity = 0)
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (a git branch, tag or commit SHA number, or a registry version)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
@@ -55,6 +57,9 @@ class CmdPull extends CmdBase implements HubAware {
 
     @TestOnly
     protected File root
+
+    @TestOnly
+    protected RegistryClient registryClient
 
     @Override
     void run() {
@@ -88,8 +93,28 @@ class CmdPull extends CmdBase implements HubAware {
                     branches.each { rev -> pullProjectRevision(proj, rev) }
                 }
             } else {
-                pullProjectRevision(proj, revision)
+                pullProject(proj, revision)
             }
+        }
+    }
+
+    private void pullProject(String project, String revision) {
+        final address = RegistrySupport.registryAddress(project, hubProvider) { RegistrySupport.registryConfig(this) }
+        if( address )
+            pullRegistryRelease(address, revision)
+        else
+            pullProjectRevision(project, revision)
+    }
+
+    /** Download a registry release at its pinned commit, cached under its registry name as `run` does */
+    private void pullRegistryRelease(RegistrySupport.RegistryAddress address, String revision) {
+        final release = RegistrySupport.resolveRelease(address, revision, registryClient)
+        final rev = release.commitId ?: release.revision
+        try (final manager = new AssetManager(release.repositoryUrl, rev, null, new HubOptions(null, hubUser), release.name)) {
+            log.info "Checking ${release.name}@${release.version} ..."
+            final result = manager.download(rev, deep)
+            manager.updateModules()
+            log.info "${result ? ' ' + result : ' done'} - revision: ${manager.getScriptFile(release.workflowPath).revisionInfo}"
         }
     }
 

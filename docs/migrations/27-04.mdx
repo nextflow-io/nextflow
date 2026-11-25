@@ -10,6 +10,35 @@ unlisted: true
 Nextflow 27.04 has not been released yet. This page describes changes on the master branch and is updated as they are merged.
 :::
 
+## New features
+
+### Run pipelines from the registry
+
+You can run a pipeline published in the [Nextflow registry](https://registry.nextflow.io) with `nextflow run`. Address the registry explicitly, with a registry page URL or with a registry host as `-hub`:
+
+```bash
+nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
+nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+```
+
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release. A plain project name such as `nf-core/rnaseq` is still resolved with Git.
+
+See [Registry pipelines][cli-run-registry] for details.
+
+### Include pipelines from the registry
+
+You can include a registry pipeline by its registry name, as with [pipeline composition][pipeline-composition] from a local path:
+
+```nextflow
+nextflow.enable.types = true
+
+include { workflow as NFCORE_RNASEQ } from 'nf-core/rnaseq'
+```
+
+Pipelines are installed into `modules/` with `nextflow module install`, or automatically when missing, and are managed with the other `nextflow module` commands like modules.
+
+See [Including a pipeline from the registry][workflow-typed-registry] for details.
+
 ## Enhancements
 
 ### Lower memory usage
@@ -57,10 +86,13 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 - New config option: [`mail.smtp.timeout`][config-mail-smtp-timeout]
 - New config option: [`mail.smtp.writetimeout`][config-mail-smtp-writetimeout]
 
+[cli-run-registry]: ../reference/cli/run#registry-pipelines
 [cli-self-update-clean]: ../reference/cli/self-update#-clean
 [config-mail-smtp-connectiontimeout]: ../reference/config/mail#mailsmtpconnectiontimeout
 [config-mail-smtp-timeout]: ../reference/config/mail#mailsmtptimeout
 [config-mail-smtp-writetimeout]: ../reference/config/mail#mailsmtpwritetimeout
 [env-vars-NXF_OPTS]: ../reference/env-vars#nxf_opts
+[pipeline-composition]: ../workflow-typed#pipeline-composition
 [process-env-inputs]: ../process#input-environment-variables-env
 [stdlib-types]: ../reference/stdlib-types
+[workflow-typed-registry]: ../workflow-typed#including-a-pipeline-from-the-registry

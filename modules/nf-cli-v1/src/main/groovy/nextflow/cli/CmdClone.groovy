@@ -19,9 +19,12 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import nextflow.exception.AbortOperationException
+import nextflow.module.PipelineGitFetcher
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.util.TestOnly
 /**
  * CLI sub-command clone
  *
@@ -37,7 +40,7 @@ class CmdClone extends CmdBase implements HubAware {
     @Parameter(required=true, description = 'name of the project to clone')
     List<String> args
 
-    @Parameter(names='-r', description = 'Revision of the project to clone (either a git branch, tag or commit SHA number)')
+    @Parameter(names='-r', description = 'Revision of the project to clone (a git branch, tag or commit SHA number, or a registry version)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
@@ -46,25 +49,24 @@ class CmdClone extends CmdBase implements HubAware {
     @Override
     final String getName() { NAME }
 
+    @TestOnly
+    protected RegistryClient registryClient
+
     @Override
     void run() {
         // init plugin system
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
+        final address = RegistrySupport.registryAddress(pipeline, hubProvider) { RegistrySupport.registryConfig(this) }
+        if( address ) {
+            cloneRegistryRelease(address)
+            return
+        }
         try (final manager = new AssetManager(pipeline, toHubOptions())) {
             // the target directory is the second parameter
             // otherwise default the current pipeline name
-            def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
-            if( target.exists() ) {
-                if( target.isFile() )
-                    throw new AbortOperationException("A file with the same name already exists: $target")
-                if( !target.empty() )
-                    throw new AbortOperationException("Clone target directory must be empty: $target")
-            }
-            else if( !target.mkdirs() ) {
-                throw new AbortOperationException("Cannot create clone target directory: $target")
-            }
+            def target = targetDir(manager.getBaseName())
 
             manager.checkValidRemoteRepo()
             print "Cloning ${manager.getProjectWithRevision()} ..."
@@ -72,5 +74,30 @@ class CmdClone extends CmdBase implements HubAware {
             print "\r"
             println "${manager.getProjectWithRevision()} cloned to: $target"
         }
+    }
+
+    /** Clone the Git repository of a registry release at its pinned commit; `-r` is the registry version */
+    private void cloneRegistryRelease(RegistrySupport.RegistryAddress address) {
+        final release = RegistrySupport.resolveRelease(address, revision, registryClient)
+        final target = targetDir(release.name.tokenize('/').last())
+        final project = "${release.name}@${release.version}"
+        print "Cloning ${project} ..."
+        new PipelineGitFetcher().fetch(release.repositoryUrl, release.revision, release.commitId, target.toPath(), true, deep)
+        print "\r"
+        println "${project} cloned to: $target"
+    }
+
+    private File targetDir(String baseName) {
+        final target = new File(args.size()> 1 ? args[1] : baseName)
+        if( target.exists() ) {
+            if( target.isFile() )
+                throw new AbortOperationException("A file with the same name already exists: $target")
+            if( !target.empty() )
+                throw new AbortOperationException("Clone target directory must be empty: $target")
+        }
+        else if( !target.mkdirs() ) {
+            throw new AbortOperationException("Cannot create clone target directory: $target")
+        }
+        return target
     }
 }

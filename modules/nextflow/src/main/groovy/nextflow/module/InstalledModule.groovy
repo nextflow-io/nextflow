@@ -45,14 +45,23 @@ class InstalledModule {
     String expectedChecksum
     String registryUrl
 
+    boolean isPipeline() {
+        return kind == ModuleSpec.KIND_PIPELINE
+    }
+
+    /** {@code Pipeline} or {@code Module}, for messages */
+    String getKindLabel() {
+        return pipeline ? 'Pipeline' : 'Module'
+    }
+
     /**
      * Get the integrity status of this installed module
      *
      * @return ModuleIntegrity status
      */
     ModuleIntegrity getIntegrity() {
-        // Check if main.nf exists
-        if( !Files.exists(mainFile) || !Files.exists(manifestFile) ) {
+        // Check if main.nf exists (a pipeline has no meta.yml)
+        if( !Files.exists(mainFile) || (!pipeline && !Files.exists(manifestFile)) ) {
             return ModuleIntegrity.CORRUPTED
         }
 
@@ -63,7 +72,9 @@ class InstalledModule {
 
         try {
             // Compute actual checksum
-            def actualChecksum = ModuleChecksum.compute(directory)
+            def actualChecksum = pipeline
+                ? ModuleChecksum.computePipeline(directory)
+                : ModuleChecksum.compute(directory)
 
             // Compare with expected
             if( actualChecksum == expectedChecksum ) {

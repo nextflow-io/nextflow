@@ -18,6 +18,7 @@ package nextflow.module
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.module.spi.RemoteModuleResolver
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,7 +32,7 @@ import java.nio.file.Path
 @CompileStatic
 class ModuleInfo {
 
-    public static final String MODULE_INFO_FILE = ".module-info"
+    public static final String MODULE_INFO_FILE = RemoteModuleResolver.MODULE_INFO_FILE
 
 
     /**

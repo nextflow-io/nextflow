@@ -22,6 +22,9 @@ import java.nio.file.Path
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
+import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import spock.lang.Timeout
 import spock.lang.Unroll
 import test.Dsl2Spec
@@ -670,6 +673,86 @@ class PipelineCompositionTest extends Dsl2Spec {
         def result = runScript(script)
         then:
         result.val == 'WORLD'
+    }
+
+    private void installPipeline(String name, Map<String,String> files) {
+        final dir = folder.resolve("modules/${name}")
+        Files.createDirectories(dir)
+        files.each { file, text ->
+            final target = dir.resolve(file)
+            Files.createDirectories(target.parent)
+            target.text = text.stripIndent()
+        }
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: '1.0.0', checksum: ModuleChecksum.computePipeline(dir)])
+    }
+
+    def 'should include a pipeline by registry name' () {
+        given:
+        installPipeline('test/pipe', ['main.nf': 'nextflow.enable.types = true\n' + GREET])
+        def script = write([
+            'main.nf': '''
+                include { workflow as PIPE } from 'test/pipe'
+
+                workflow {
+                    main:
+                    PIPE( record(names: channel.of('World')) )
+                }
+                '''
+        ])
+
+        when:
+        // the pipeline is already installed, so the unreachable registry must not be called
+        def result = runScript(script, config: [registry: [url: 'http://localhost:0/unreachable']])
+        then:
+        result.val == 'Hello, World!'
+    }
+
+    def 'should resolve a registry module inside a pipeline against the pipeline' () {
+        given: 'the include is in a subfolder script, which resolved against its own folder before'
+        installPipeline('test/pipe', [
+            'main.nf': '''
+                nextflow.enable.types = true
+
+                include { GREET } from './subworkflows/local/greet'
+
+                params {
+                    name: String
+                }
+
+                workflow {
+                    main:
+                    greeting = GREET()
+
+                    publish:
+                    greeting = greeting
+                }
+
+                output {
+                    greeting: Value<String> {}
+                }
+                ''',
+            'subworkflows/local/greet.nf': "include { HELLO } from 'test/hello'\n\nworkflow GREET {\n main:\n greeting = HELLO()\n emit:\n greeting\n}\n",
+            'modules/test/hello/main.nf': 'workflow HELLO {\n emit: channel.value("from pipeline")\n}\n',
+            'modules/test/hello/meta.yml': 'name: test/hello\nversion: 1.0.0\n'
+        ])
+        Files.createDirectories(folder.resolve('modules/test/hello'))
+        folder.resolve('modules/test/hello/main.nf').text = 'workflow HELLO {\n emit: channel.value("from project")\n}\n'
+        folder.resolve('modules/test/hello/meta.yml').text = 'name: test/hello\nversion: 1.0.0\n'
+        def script = write([
+            'main.nf': '''
+                include { workflow as PIPE } from 'test/pipe'
+
+                workflow {
+                    main:
+                    PIPE( record(name: 'World') )
+                }
+                '''
+        ])
+
+        when:
+        def result = runScript(script, config: [registry: [url: 'http://localhost:0/unreachable']])
+        then:
+        result.val == 'from pipeline'
     }
 
 }

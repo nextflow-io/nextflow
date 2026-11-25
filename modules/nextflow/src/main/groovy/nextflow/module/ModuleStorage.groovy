@@ -27,10 +27,13 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 
+import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.stream.Stream
 import java.util.zip.ZipEntry
@@ -152,6 +155,12 @@ class ModuleStorage {
         installed.expectedChecksum = infoProps?.checksum
         installed.registryUrl = infoProps?.registryUrl
 
+        if( infoProps?.kind == ModuleSpec.KIND_PIPELINE ) {
+            installed.installedVersion = infoProps.version
+            installed.kind = ModuleSpec.KIND_PIPELINE
+            return installed
+        }
+
         // a directory without a readable spec is a module folder that is corrupted or was never
         // installed from a registry -- report it as such via the integrity status, instead of
         // failing here and taking down the recovery paths that would otherwise handle it
@@ -255,6 +264,63 @@ class ModuleStorage {
     }
 
     /**
+     * Install a registry pipeline: fetch its release into a temporary sibling folder,
+     * record its origin in {@code .module-info}, then replace the installed folder.
+     *
+     * @param reference The pipeline reference
+     * @param source The pipeline release
+     * @param fetcher The Git fetcher
+     * @return The InstalledModule object
+     */
+    InstalledModule installPipeline(ModuleReference reference, PipelineSource source, PipelineGitFetcher fetcher) {
+        final dir = getModuleDir(reference)
+        Files.createDirectories(dir.parent)
+        final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
+        try {
+            final commit = fetcher.fetch(source.repositoryUrl, source.revision, source.commitId, tmp)
+            // an include always uses main.nf
+            if( !Files.exists(tmp.resolve(Const.DEFAULT_MAIN_FILE_NAME)) ) {
+                final declared = source.workflowPath && source.workflowPath != Const.DEFAULT_MAIN_FILE_NAME ? " (its main script is `${source.workflowPath}`)" : ''
+                throw new AbortOperationException("Pipeline ${reference}@${source.version} has no `${Const.DEFAULT_MAIN_FILE_NAME}`${declared} and cannot be installed")
+            }
+            final checksum = ModuleChecksum.computePipeline(tmp)
+            ModuleChecksum.clearPipeline(tmp)
+            final info = [
+                kind: ModuleSpec.KIND_PIPELINE,
+                version: source.version,
+                repositoryUrl: source.repositoryUrl,
+                revision: source.revision,
+                commitId: source.commitId ?: commit,
+                workflowPath: source.workflowPath,
+                registryUrl: source.registryUrl,
+                checksum: checksum
+            ].findAll { k, v -> v != null } as Map<String,String>
+            ModuleInfo.save(tmp, info)
+            if( Files.exists(dir) ) {
+                ModuleChecksum.clearPipeline(dir)
+                FileHelper.deletePath(dir)
+            }
+            try {
+                Files.move(tmp, dir, StandardCopyOption.ATOMIC_MOVE)
+            }
+            catch( FileAlreadyExistsException | DirectoryNotEmptyException e ) {
+                throw new AbortOperationException("Cannot install pipeline ${reference}: ${dir} was changed by another process", e)
+            }
+        }
+        catch( Throwable e ) {
+            try {
+                FileHelper.deletePath(tmp)
+            }
+            catch( IOException ex ) {
+                log.warn "Cannot delete temporary directory ${tmp}: ${ex.message}"
+            }
+            throw e
+        }
+        log.debug "Installed pipeline ${reference}@${source.version} to ${dir}"
+        return getInstalledModule(reference)
+    }
+
+    /**
      * Remove an installed module
      *
      * @param reference The module reference
@@ -274,12 +340,13 @@ class ModuleStorage {
 
         if( integrity == ModuleIntegrity.MODIFIED && !force ) {
             throw new AbortOperationException(
-                "Module ${reference} has local modifications. " +
+                "${installed.kindLabel} ${reference} has local modifications. " +
                     "Use '-force' to remove, or save your changes first."
             )
         }
 
         try {
+            ModuleChecksum.clearPipeline(installed.directory)
             FileHelper.deletePath(installed.directory)
             log.debug "Removed module: ${reference}"
 

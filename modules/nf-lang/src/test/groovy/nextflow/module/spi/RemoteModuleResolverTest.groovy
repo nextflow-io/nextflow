@@ -81,4 +81,30 @@ class RemoteModuleResolverTest extends Specification {
         RemoteModuleResolver.resolveBaseDir(URI.create('untitled:Untitled-1'), projectDir) == projectDir
     }
 
+    def 'should resolve any script of an installed module against the module directory'() {
+        given:
+        def root = projectDir.resolve('modules/nf-core/rnaseq')
+        Files.createDirectories(root.resolve('subworkflows/local'))
+        root.resolve(RemoteModuleResolver.MODULE_INFO_FILE).text = 'kind=pipeline\n'
+
+        expect:
+        RemoteModuleResolver.resolveBaseDir(root.resolve('main.nf'), projectDir) == root
+        RemoteModuleResolver.resolveBaseDir(root.resolve('subworkflows/local/align.nf'), projectDir) == root
+    }
+
+    def 'should resolve a module vendored by an installed module against its own directory'() {
+        given:
+        def root = projectDir.resolve('modules/nf-core/rnaseq')
+        def installed = root.resolve('modules/nf-core/fastqc')
+        def vendored = root.resolve('modules/local/trim')
+        Files.createDirectories(installed)
+        Files.createDirectories(vendored)
+        root.resolve(RemoteModuleResolver.MODULE_INFO_FILE).text = 'kind=pipeline\n'
+        installed.resolve(RemoteModuleResolver.MODULE_INFO_FILE).text = 'checksum=x\n'
+
+        expect:
+        RemoteModuleResolver.resolveBaseDir(installed.resolve('main.nf'), projectDir) == installed
+        and: 'a folder without .module-info follows the rule within the installed module'
+        RemoteModuleResolver.resolveBaseDir(vendored.resolve('main.nf'), projectDir) == vendored
+    }
 }

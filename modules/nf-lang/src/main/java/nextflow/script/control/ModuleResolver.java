@@ -45,6 +45,8 @@ public class ModuleResolver {
     private Compiler compiler;
     private Path projectDir;
 
+    private Map<String, Exception> includeFailures = new HashMap<>();
+
     public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
         this.projectDir = projectDir;
@@ -101,15 +103,52 @@ public class ModuleResolver {
             return;
         if( source.getAST() instanceof ScriptNode sn ) {
             for( var in : sn.getIncludes() ) {
-                var include = in.source.getText();
-                if( include.startsWith("plugin/") )
+                if( in.source.getText().startsWith("plugin/") )
                     continue;
-                var dep = byUri.get(getIncludeUri(uri, include, projectDir));
+                var includeUri = tryGetIncludeUri(uri, in);
+                var dep = includeUri != null ? byUri.get(includeUri) : null;
                 if( dep != null )
                     visitDependencies(dep, byUri, visited, ordered);
             }
         }
         ordered.add(source);
+    }
+
+    /**
+     * @return the include URI, or null if it cannot be resolved (reported
+     * as an include error by {@link ResolveIncludeVisitor})
+     */
+    private URI tryGetIncludeUri(URI uri, IncludeNode node) {
+        try {
+            return getIncludeUri(uri, node);
+        }
+        catch( Exception e ) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolve an include URI, remembering failures so that a failing remote include
+     * (e.g. an auto-install) is attempted once per resolver instance.
+     */
+    public URI getIncludeUri(URI uri, IncludeNode node) {
+        var key = uri + "|" + node.source.getText();
+        var failure = includeFailures.get(key);
+        if( failure != null )
+            throw sneakyThrow(failure);
+        try {
+            return getIncludeUri(uri, node.source.getText(), projectDir);
+        }
+        catch( Exception e ) {
+            // the remote resolver may throw a checked exception (e.g. from Groovy), rethrown as-is
+            includeFailures.put(key, e);
+            throw sneakyThrow(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends Exception> RuntimeException sneakyThrow(Exception e) throws T {
+        throw (T) e;
     }
 
     private SourceUnit resolveInclude(IncludeNode node, SourceUnit sourceUnit, Function<URI,SourceUnit> sourceResolver) {
@@ -118,7 +157,9 @@ public class ModuleResolver {
             return null;
 
         var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source, projectDir);
+        var includeUri = tryGetIncludeUri(uri, node);
+        if( includeUri == null )
+            return null;
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )

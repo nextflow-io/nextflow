@@ -28,7 +28,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleResolver
-import nextflow.module.ModuleSpecFactory
+import nextflow.module.ModuleStorage
 
 import nextflow.util.TestOnly
 
@@ -41,11 +41,11 @@ import java.nio.file.Paths
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Slf4j
-@Parameters(commandDescription = "Install a module from the registry")
+@Parameters(commandDescription = "Install a module or pipeline from the registry")
 @CompileStatic
 class CmdModuleInstall extends CmdBase {
 
-    @Parameter(names = ["-version"], description = "Module version")
+    @Parameter(names = ["-version"], description = "Module or pipeline version")
     String version
 
     @Parameter(names = ["-force"], description = "Force reinstall even if already installed", arity = 0)
@@ -101,11 +101,11 @@ class CmdModuleInstall extends CmdBase {
             }
 
             // Install the module together with its transitive requires.modules dependencies
-            def installedMainFile = resolver.installWithDependencies(reference, version, force)
-            // Read the installed version from meta.yml to avoid a redundant registry call
-            def installedVersion = ModuleSpecFactory.fromYaml(installedMainFile.parent.resolve('meta.yml')).version
+            resolver.installWithDependencies(reference, version, force)
+            // Read the installed version locally to avoid a redundant registry call
+            final installed = new ModuleStorage(baseDir).getInstalledModule(reference)
 
-            println "Module ${reference}@${installedVersion} installed and configured successfully"
+            println "${installed.kindLabel} ${reference}@${installed.installedVersion} installed and configured successfully"
         }
         catch( AbortOperationException e ) {
             throw e

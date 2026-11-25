@@ -18,6 +18,7 @@ package nextflow.module.spi;
 
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -43,6 +44,11 @@ public interface RemoteModuleResolver {
     String MODULES_DIR = "modules";
 
     /**
+     * Info file at the root of a module or pipeline installed from a registry.
+     */
+    String MODULE_INFO_FILE = ".module-info";
+
+    /**
      * Determine the base directory against which a remote module include should be resolved,
      * i.e. the directory whose {@code modules/} directory is searched.
      *
@@ -54,6 +60,11 @@ public interface RemoteModuleResolver {
      * <p>A script is taken to belong to a vendored module when it lives under a {@code modules/}
      * directory within the project, which is where modules are installed at any depth.
      *
+     * <p>The nearest folder of the including script, up to the project directory, that holds a
+     * {@code .module-info} file (an installed module or pipeline) takes the place of the project
+     * directory in these rules, so any script of an installed pipeline resolves against the
+     * pipeline's own {@code modules/} directory.
+     *
      * @param includingFile the script containing the include statement (may be null)
      * @param projectDir    the project directory (may be null when unknown, in which case the
      *                      including script's own directory is used)
@@ -64,7 +75,23 @@ public interface RemoteModuleResolver {
             return projectDir;
         if( projectDir == null )
             return parent;
-        return isVendoredModuleDir(parent, projectDir) ? parent : projectDir;
+        var root = findInstalledRoot(parent, projectDir);
+        return isVendoredModuleDir(parent, root) ? parent : root;
+    }
+
+    /**
+     * @return the nearest directory from {@code dir} up to {@code projectDir} (inclusive) that
+     * holds a {@code .module-info} file, or {@code projectDir} if there is none.
+     */
+    private static Path findInstalledRoot(Path dir, Path projectDir) {
+        var stop = projectDir.toAbsolutePath().normalize();
+        var current = dir.toAbsolutePath().normalize();
+        while( current != null && current.startsWith(stop) ) {
+            if( Files.exists(current.resolve(MODULE_INFO_FILE)) )
+                return current;
+            current = current.getParent();
+        }
+        return projectDir;
     }
 
     /**

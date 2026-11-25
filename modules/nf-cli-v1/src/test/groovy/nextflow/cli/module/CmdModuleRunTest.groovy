@@ -16,12 +16,17 @@
 
 package nextflow.cli.module
 
+import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
@@ -292,6 +297,55 @@ class CmdModuleRunTest extends Specification {
 
         then:
         thrown(AbortOperationException)
+    }
+
+    def 'should refuse to run a pipeline'() {
+        given:
+        installPipeline('3.14.0')
+        def cmd = new CmdModuleRun()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/rnaseq']
+        cmd.root = tempDir
+        cmd.client = Mock(RegistryClient)
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == '`nf-core/rnaseq` is a pipeline -- use `nextflow run` or include it'
+    }
+
+    def 'should refuse a pipeline that is not installed without fetching it'() {
+        given:
+        def client = Mock(RegistryClient)
+        def cmd = new CmdModuleRun()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/rnaseq']
+        cmd.root = tempDir
+        cmd.client = client
+
+        when:
+        cmd.run()
+
+        then:
+        1 * client.getModule('nf-core/rnaseq') >> { throw new RegistryException('Not found', 404) }
+        1 * client.getPipeline('nf-core/rnaseq') >> new Pipeline()
+        0 * client._
+        def e = thrown(AbortOperationException)
+        e.message == '`nf-core/rnaseq` is a pipeline -- use `nextflow run` or include it'
+        !Files.exists(tempDir.resolve('modules'))
+    }
+
+    private void installPipeline(String version) {
+        def dir = Files.createDirectories(tempDir.resolve('modules/nf-core/rnaseq'))
+        dir.resolve('main.nf').text = 'workflow { }'
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleChecksum.clearPipeline(dir)
     }
 
     // Helper method to create a module package (tar.gz)

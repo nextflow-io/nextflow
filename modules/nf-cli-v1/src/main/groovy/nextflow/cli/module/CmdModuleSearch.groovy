@@ -21,15 +21,17 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
-import io.seqera.npr.api.schema.v1.SearchModulesResponse
+import io.seqera.npr.api.schema.v1.PipelineSummary
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleSpec
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 
@@ -42,8 +44,10 @@ import java.nio.file.Paths
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Search for modules in the registry")
+@Parameters(commandDescription = "Search for modules and pipelines in the registry")
 class CmdModuleSearch extends CmdBase {
+
+    private static final int MAX_PAGE_SIZE = 100
 
     @Parameter(names = ["-limit"], description = "Maximum number of results")
     int limit = 20
@@ -98,17 +102,22 @@ class CmdModuleSearch extends CmdBase {
 
         try {
             println "Searching for '${query}'..."
+            // modules first, pipelines fill the rest of the limit
             final results = client.searchModules(query, limit)
+            final modules = (results?.results ?: List.<ModuleSearchResult>of()).take(limit)
+            final pipelines = searchPipelines(client, query, limit - modules.size())
 
-            if( !results || results.totalResults == 0 || !results.results || results.results.isEmpty() ) {
-                println "No modules found"
+            if( !modules && !pipelines.pipelines ) {
+                println "No modules or pipelines found"
                 return
             }
 
             if( !output || output == 'simple' ) {
-                printFormattedResults(results)
+                printFormattedResults(modules, pipelines.pipelines)
             } else if( output == 'json' ) {
-                printJsonResults(results)
+                // the registry totals; pipelines are counted only when listed
+                final total = (results?.totalResults ?: modules.size()) + (pipelines.total ?: pipelines.pipelines.size())
+                printJsonResults(query, total, modules, pipelines.pipelines)
             } else {
                 throw new AbortOperationException("Not implemented output mode $output)")
             }
@@ -130,12 +139,47 @@ class CmdModuleSearch extends CmdBase {
         return result.kind != null ? result.kind.toString() : 'Process'
     }
 
-    private void printFormattedResults(SearchModulesResponse response) {
+    @Canonical
+    private static class PipelineResults {
+        List<PipelineSummary> pipelines = []
+        Long total
+    }
+
+    /**
+     * At most {@code max} pipelines matching the query, with the registry total;
+     * empty when the registry can't list pipelines
+     */
+    private static PipelineResults searchPipelines(RegistryClient client, String query, int max) {
+        final result = new PipelineResults()
+        if( max <= 0 )
+            return result
+        // the registry caps the page size, and the size must be the same on every page
+        final size = Math.min(max, MAX_PAGE_SIZE)
+        try {
+            for( int page = 1; result.pipelines.size() < max; page++ ) {
+                final response = client.listPipelines(query, page, size)
+                if( result.total == null )
+                    result.total = response?.totalSize
+                if( !response?.pipelines )
+                    break
+                result.pipelines.addAll(response.pipelines)
+                if( response.last )
+                    break
+            }
+        }
+        catch( Exception e ) {
+            log.debug "Failed to search pipelines: ${e.message}"
+        }
+        result.pipelines = result.pipelines.take(max)
+        return result
+    }
+
+    private void printFormattedResults(List<ModuleSearchResult> modules, List<PipelineSummary> pipelines) {
         println ""
-        println "Top ${response.totalResults} matching module(s):"
+        println "Top ${modules.size() + pipelines.size()} matching result(s):"
         println ""
 
-        response.results.each { ModuleSearchResult result ->
+        modules.each { ModuleSearchResult result ->
             println "  ${result.name}"
             println "    Kind: ${kindOf(result)}"
             if( result.description ) {
@@ -143,10 +187,19 @@ class CmdModuleSearch extends CmdBase {
             }
             println ""
         }
+        pipelines.each { PipelineSummary p ->
+            println "  ${p.name}"
+            println "    Kind: ${ModuleSpec.KIND_PIPELINE}"
+            println "    Version: ${p.latestVersion}"
+            if( p.metadata?.description ) {
+                println "    Description: ${p.metadata.description}"
+            }
+            println ""
+        }
     }
 
-    private void printJsonResults(SearchModulesResponse response) {
-        final modules = response.results.collect { ModuleSearchResult result ->
+    private void printJsonResults(String query, long total, List<ModuleSearchResult> modules, List<PipelineSummary> pipelines) {
+        final rows = modules.collect { ModuleSearchResult result ->
             [
                 name          : result.name,
                 repositoryPath: result.repositoryPath,
@@ -157,12 +210,21 @@ class CmdModuleSearch extends CmdBase {
                 tools         : result.tools,
                 revoked       : result.revoked
             ]
+        } as List<Map>
+        pipelines.each { PipelineSummary p ->
+            rows << [
+                name         : p.name,
+                kind         : ModuleSpec.KIND_PIPELINE,
+                latestVersion: p.latestVersion,
+                description  : p.metadata?.description,
+                keywords     : p.metadata?.keywords
+            ]
         }
 
         println JsonOutput.prettyPrint(JsonOutput.toJson(
-            query: response.query,
-            totalResults: response.totalResults,
-            results: modules
+            query: query,
+            totalResults: total,
+            results: rows
         ))
     }
 }

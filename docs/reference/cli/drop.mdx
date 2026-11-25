@@ -17,6 +17,10 @@ $ nextflow drop [options] [project]
 
 The `drop` command removes a project that was downloaded into the global cache. Use the `list` command to list the downloaded pipelines.
 
+<ChangedInVersion version="27.04">
+The `drop` command accepts a [registry address][cli-run-registry] and uses the copy cached under the registry name. The `-r` option is a Git revision of the cached copy, not a registry version.
+</ChangedInVersion>
+
 ## Options
 
 ##### `-f`
@@ -46,3 +50,5 @@ Drop the `nextflow-io/hello` project, ignoring any local changes:
 ```console
 $ nextflow drop nextflow-io/hello -f
 ```
+
+[cli-run-registry]: ./run#registry-pipelines

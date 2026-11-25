@@ -19,6 +19,7 @@ package nextflow.cli.module
 import groovy.json.JsonSlurper
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import org.junit.Rule
@@ -61,7 +62,7 @@ class CmdModuleListTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('Installed modules:')
+        output.contains('Installed modules and pipelines:')
         output.contains('nf-core/fastqc')
         output.contains('1.0.0')
         output.contains('nf-core/multiqc')
@@ -104,7 +105,7 @@ class CmdModuleListTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('No modules installed')
+        output.contains('No modules or pipelines installed')
     }
 
     def 'should show modified status for locally modified modules'() {
@@ -169,6 +170,45 @@ class CmdModuleListTest extends Specification {
         output.contains('Kind')
         output.contains('Process')    // fastqc defaults to Process
         output.contains('Workflow')   // align_wf declares kind: Workflow
+    }
+
+    def 'should list modules and pipelines together'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        createTestModule(storage, 'nf-core', 'fastqc', '1.0.0')
+        createPipeline(storage, 'nf-core', 'rnaseq', '3.14.0')
+
+        and:
+        def cmd = new CmdModuleList()
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+        def lines = capture.toString().readLines()
+
+        then:
+        lines.find { it.startsWith('nf-core/fastqc') } =~ /1\.0\.0\s+Process\s+OK/
+        lines.find { it.startsWith('nf-core/rnaseq') } =~ /3\.14\.0\s+Pipeline\s+OK/
+
+        when:
+        cmd.output = 'json'
+        cmd.run()
+        def out = capture.toString()
+        def json = new JsonSlurper().parseText(out.substring(out.indexOf('{')))
+
+        then:
+        json.modules.find { it.name == 'nf-core/fastqc' }.kind == 'Process'
+        json.modules.find { it.name == 'nf-core/rnaseq' }.kind == 'Pipeline'
+        json.modules.find { it.name == 'nf-core/rnaseq' }.version == '3.14.0'
+    }
+
+    private Path createPipeline(ModuleStorage storage, String scope, String name, String version) {
+        def dir = storage.getModuleDir(new ModuleReference(scope, name))
+        Files.createDirectories(dir)
+        dir.resolve('main.nf').text = 'workflow { }\n'
+        ModuleInfo.save(dir, [kind: ModuleSpec.KIND_PIPELINE, version: version, checksum: ModuleChecksum.computePipeline(dir)])
+        ModuleChecksum.clearPipeline(dir)
+        return dir
     }
 
     private Path createWorkflowModule(ModuleStorage storage, String scope, String name, String version) {

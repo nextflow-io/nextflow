@@ -79,6 +79,10 @@ Print the command usage.
 
 Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
+<ChangedInVersion version="27.04">
+The host of a registry, for example `registry.nextflow.io`, can be given to run a pipeline from the registry. See [Registry pipelines](#registry-pipelines).
+</ChangedInVersion>
+
 ##### `-latest`
 
 Pull the latest changes before the run.
@@ -142,6 +146,8 @@ Run the script using cached results. Use this to continue a run that stopped bec
 Project revision to run. Can be a git branch, tag, or commit SHA number.
 
 When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+
+For a [registry pipeline](#registry-pipelines), the revision must be a release version published in the registry. Defaults to the latest published release.
 
 ##### `-stub-run, -stub`
 
@@ -235,6 +241,34 @@ Send workflow status messages to the target URL over HTTP.
 
 Directory where intermediate result files are stored.
 
+## Registry pipelines
+
+<AddedInVersion version="27.04" />
+
+The `run` command can run a pipeline published in the [Nextflow registry](https://registry.nextflow.io). The registry is used only when it is addressed explicitly, in one of the following ways:
+
+- A registry page URL, for example `https://registry.nextflow.io/pipelines/nf-core/rnaseq`. The URL must be `<registry>/pipelines/<scope>/<name>`, where `<registry>` is a registry configured in [`registry.url`][config-registry] without the trailing `/api`, or the public registry `https://registry.nextflow.io`.
+
+- `-hub` set to the host of a configured registry or of the public registry, for example `-hub registry.nextflow.io`. Set the `NXF_HUB` environment variable to a registry host to use that registry by default.
+
+A plain project name such as `nf-core/rnaseq` is resolved with Git.
+
+Nextflow runs the release given with `-r`, or the latest published release, at the Git commit pinned by the release.
+
+Note the following:
+
+- There is no fallback to Git: any registry error stops the run.
+
+- Registry settings are read from `~/.nextflow/config`, `./nextflow.config`, and `-c` files, not from the pipeline config. The API key is sent only to the first entry of `registry.url`.
+
+- The pipeline is cached under its registry name. A registry pipeline should have the same name as its Git repository, as nf-core pipelines do, since both are cached under that name.
+
+- With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pull`][cli-pull] to download a registry pipeline ahead of time.
+
+- The [`pull`][cli-pull], [`clone`][cli-clone], [`info`][cli-info], [`view`][cli-view], and [`drop`][cli-drop] commands also accept registry addresses.
+
+- To include a registry pipeline in another pipeline, see [Including a pipeline from the registry][workflow-typed-registry].
+
 ## Examples
 
 Run a specific revision of a remote pipeline:
@@ -244,6 +278,25 @@ $ nextflow run nextflow-io/hello -r v1.1
 
 N E X T F L O W  ~  version 20.07.1
 Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
+```
+
+Run the latest release of a registry pipeline from its registry page URL:
+
+```console
+$ nextflow run https://registry.nextflow.io/pipelines/nf-core/rnaseq
+```
+
+Run a specific release of a registry pipeline, using the registry host as hub:
+
+```console
+$ nextflow run nf-core/rnaseq -hub registry.nextflow.io -r 3.14.0
+```
+
+Use the registry by default:
+
+```console
+$ export NXF_HUB=registry.nextflow.io
+$ nextflow run nf-core/rnaseq -r 3.14.0
 ```
 
 Choose a profile for running the project. This example assumes a profile named `docker` is defined in the config file:
@@ -286,5 +339,12 @@ See [Pipeline parameters][cli-params] for more information about writing custom 
 
 [agent-page]: ../../agent
 [cache-compare-hashes]: ../../cache-and-resume#comparing-the-hashes-of-two-runs
+[cli-clone]: ./clone
+[cli-drop]: ./drop
+[cli-info]: ./info
 [cli-params]: ../../cli#pipeline-parameters
+[cli-pull]: ./pull
+[cli-view]: ./view
+[config-registry]: ../config/registry
 [tracing-page]: ../../reports
+[workflow-typed-registry]: ../../workflow-typed#including-a-pipeline-from-the-registry
