@@ -18,7 +18,7 @@ $ nextflow clone [options] [project]
 The `clone` command downloads a pipeline from a Git-hosting platform into the *current directory* and modifies it accordingly. To download a pipeline into the global cache `~/.nextflow/assets`, use the `nextflow pull` command.
 
 <ChangedInVersion version="27.04">
-The `clone` command accepts a [registry pipeline][cli-run-registry] address: a registry page URL, or a plain name when `-hub` or `NXF_HUB` is a registry host. Nextflow clones the Git repository of the release given with `-r`, or of the latest published release, and checks out the commit pinned by the release.
+The `clone` command accepts a [registry address][cli-run-registry]. Nextflow clones the Git repository of the release given with `-r`, or of the latest published release, and checks out the commit pinned by the release.
 </ChangedInVersion>
 
 ## Options

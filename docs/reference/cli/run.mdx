@@ -257,7 +257,7 @@ Nextflow runs the release given with `-r`, or the latest published release, at t
 
 Note the following:
 
-- There is no fallback to Git. A pipeline that is not in the registry, a `-r` value that is not a published release, a revoked release, or an unreachable registry is an error.
+- There is no fallback to Git: any registry error stops the run.
 
 - Registry settings are read from `~/.nextflow/config`, `./nextflow.config`, and `-c` files, not from the pipeline config. The API key is sent only to the first entry of `registry.url`.
 
@@ -265,7 +265,7 @@ Note the following:
 
 - With `-offline`, the registry is not contacted, and the copy cached under the registry name is used, so give `-r` as a Git revision of the cached copy, such as the release commit or a tag that matches the release version. Use [`nextflow pull`][cli-pull] to download a registry pipeline ahead of time.
 
-- The [`pull`][cli-pull], [`clone`][cli-clone], [`info`][cli-info], [`view`][cli-view], and [`drop`][cli-drop] commands also accept registry addresses. The `info`, `view`, and `drop` commands work with the cached copy, so `-r` is a Git revision for `view` and `drop`.
+- The [`pull`][cli-pull], [`clone`][cli-clone], [`info`][cli-info], [`view`][cli-view], and [`drop`][cli-drop] commands also accept registry addresses.
 
 - To include a registry pipeline in another pipeline, see [Including a pipeline from the registry][workflow-typed-registry].
 

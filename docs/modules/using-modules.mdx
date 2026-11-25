@@ -235,8 +235,6 @@ $ nextflow module install nf-core/rnaseq -version 3.14.0
 include { workflow as RNASEQ } from 'nf-core/rnaseq'
 ```
 
-Nextflow downloads the pipeline's Git repository at the commit pinned by the release, without the `.git` directory. Registry includes in an installed pipeline resolve against the pipeline's own directory, so the pipeline uses its own `modules/`, not those of your project.
-
 The `list`, `view`, `search`, and `remove` commands work with pipelines the same way as with modules. The `-update-deps` option and the `module run` command apply only to modules. Use [`nextflow run`][cli-run-registry] to run a registry pipeline.
 
 See [Including a pipeline from the registry][workflow-typed-registry] for details.

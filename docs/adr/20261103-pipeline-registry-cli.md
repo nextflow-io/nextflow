@@ -43,14 +43,14 @@ Whether the name is a module or a pipeline matters only when it is downloaded: a
 
 ## Considered Options
 
-1. **CLI surface**: a separate `nextflow pipeline` command group, or the `module` commands covering both kinds plus the project commands for running.
-2. **Install folder**: `pipelines/<scope>/<name>` or `modules/<scope>/<name>`.
-3. **Kind detection**: from the include entries, or only when downloading.
-4. **Info file**: a separate `.pipeline-info`, or `.module-info` with `kind=pipeline`.
-5. **Include base directory** inside an installed pipeline.
-6. **Install source**: Git, or a bundle stored in the registry.
-7. **Run addressing**: how `nextflow run` knows that a name refers to the registry.
-8. **Run cache**: where `run` keeps a registry pipeline.
+1. CLI surface
+2. Install folder
+3. Kind detection
+4. Info file
+5. Include base directory
+6. Install source
+7. Run addressing
+8. Run cache
 
 ## Pros and Cons of the Options
 
@@ -100,10 +100,9 @@ Whether the name is a module or a pipeline matters only when it is downloaded: a
 
 - Bad, because `module list`, `remove` and the resolver would look for two files.
 
-**`.module-info` with `kind=pipeline`.**
+**`.module-info` with `kind=Pipeline`.**
 
 - Good, because one file marks every installed folder, and a file without `kind` stays a module, so existing installs are unaffected.
-- A pipeline has no `meta.yml`, so its version is read from `.module-info`, and its checksum covers the whole tree, skipping `.git` and nested folders with their own `.module-info`.
 
 ### Include base directory
 
@@ -159,7 +158,7 @@ Before this change, a `scope/name` include in any script not under `modules/` re
 **Cache under the registry name, with a local name in `AssetManager`.**
 
 - Good, because it is a small change, and `list`, `pull`, `info`, `view` and `drop` keep working.
-- Bad, because when a registry name differs from its Git repository, a plain Git run of the registry name uses the cached clone without a check.
+- Bad, because when a registry name differs from its Git repository, a plain Git run of the registry name uses the cached clone without a check. Registry names are expected to mirror Git names, as nf-core pipelines do, so that both runs share one cache entry and run the same code. This is a registry best practice, not enforced by Nextflow.
 
 **A separate registry folder** in the assets directory.
 
@@ -167,14 +166,14 @@ Before this change, a `scope/name` include in any script not under `modules/` re
 
 ## Solution or decision outcome
 
-- **CLI**: no `pipeline` command group. The `module` commands install, list, remove, search and view both kinds; the project commands run, pull, clone, inspect and drop registry pipelines.
+- **CLI**: no `pipeline` command group. The `module` commands install, list, remove, search and view both kinds; `run`, `pull`, `clone`, `info`, `view` and `drop` accept registry addresses.
 - **Install folder**: `modules/<scope>/<name>`, holding the whole Git tree at the pinned commit without `.git`, so `conf/` stays available for `includeConfig`.
 - **Kind**: found only when downloading, module first, pipeline on a 404.
-- **Info file**: `.module-info`, with `kind=pipeline` for pipelines.
+- **Info file**: `.module-info`, with `kind=Pipeline` for pipelines. A pipeline has no `meta.yml`, so its version is read from `.module-info`, and its checksum covers the whole tree, excluding `.git` and nested installed folders.
 - **Base directory**: the nearest folder holding `.module-info`.
-- **Install source**: Git now. The install code chooses the source in one place, so a bundle source can be added later.
+- **Install source**: Git now; a registry bundle is future work.
 - **Run addressing**: an explicit registry address, with no fallback to Git.
-- **Run cache**: the registry name.
+- **Run cache**: the registry name. `AssetManager` keeps two names: the local name (cache folder, `nextflow list`, `workflow.projectName`) and the remote Git project (`workflow.repository`). A clone of a different repository under the registry name is an error.
 
 ## Rationale & discussion
 
@@ -184,15 +183,15 @@ Finding the kind on download requires that a name is either a module or a pipeli
 
 ### Installing and including a pipeline
 
-An include always resolves `main.nf`. If a release declares another main script, `module install` warns. Versions, auto-install, local edits and `-force` follow the module rules. `module run` on a pipeline aborts and points to `nextflow run`.
+An include always resolves `main.nf`, so a pipeline without a top-level `main.nf` cannot be installed: it would leave a folder that fails on every later use. If `main.nf` exists but the release declares another main script, `module install` warns. Versions, auto-install, local edits and `-force` follow the module rules. `module run` on a pipeline aborts before downloading anything and points to `nextflow run`. `module remove -keep-files` is rejected for a pipeline, because without `.module-info` the folder can no longer be included.
 
 Modules that a pipeline commits without `.module-info` (nf-core `modules.json` style) are used as they are and never reinstalled, since the pipeline checksum covers them. Relative includes, which nf-core pipelines use today, already resolve correctly and do not change.
 
 ### Running a registry pipeline
 
-`run`, `pull` and `clone` resolve a registry address to the release's repository and pinned commit. `pull` supports it so that a node with network can prepare offline runs; `clone` keeps `.git` at the pinned commit.
+`run`, `pull` and `clone` resolve a registry address to the release's repository and pinned commit. `pull` supports it so that a node with network can prepare offline runs; `clone` keeps `.git` at the pinned commit, with the full history unless `-deep` is given, as for a Git project.
 
-- **Registry URL**: a configured `registry.url` without `/api`, followed by `/pipelines/<scope>/<name>`. The default public registry is always recognized, because the user typed its address. A URL on the host of a known Git provider stays a Git URL.
+- **Registry URL**: a configured `registry.url` without `/api`, followed by `/pipelines/<scope>/<name>`. The default public registry is always recognized, because the user typed its address.
 - **`-hub` / `NXF_HUB`**: a Git provider name is checked first, so existing setups behave the same, then a registry host.
 - **One registry**: an address is resolved only against the registry it names, and the API key is sent only to the primary registry.
 - **Version**: an address carries no version; the version is given with `-r`. The release runs at its pinned commit, not at its tag, because a tag can be moved.
@@ -200,12 +199,6 @@ Modules that a pipeline commits without `.module-info` (nf-core `modules.json` s
 - **Registry config**: read from the user config, the launch directory config and `-c` files, never from the pipeline config, which is not downloaded yet. It is read only for a possible registry address, because a launch config may be readable only once (Seqera Platform).
 
 **Offline and cache-only commands.** With `-offline`, the registry is not called: the run uses the copy cached under the registry name, and `-r` is a Git revision (a commit, or a tag equal to the version). This works for nf-core, whose versions are their Git tags. `info`, `view` and `drop` only read the cache, so they never call the registry and their `-r` is always a Git revision. A local version-to-commit map was not added.
-
-### Run cache
-
-A registry release is cached under its **registry name**. `AssetManager` keeps two names: the local name (cache folder, `nextflow list`, `workflow.projectName`) and the remote Git project (`workflow.repository`). A registry run is checked against the clone: a clone of a different repository under the registry name is an error.
-
-**Registry names mirror Git names.** A registry pipeline is expected to have the same `<scope>/<name>` as its Git repository, as nf-core pipelines do. Then the registry run and a plain Git run of the same name share one cache entry and run the same code. This is a registry best practice, not enforced by Nextflow.
 
 ## Future work
 

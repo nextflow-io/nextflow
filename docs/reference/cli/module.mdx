@@ -50,7 +50,7 @@ Scaffold a module without static typing. By default a module is scaffolded with 
 Install a module or pipeline from the registry into your project.
 Nextflow stores downloaded modules in the `modules/` directory and writes a `.module-info` file in each module directory to record the installed version.
 
-A pipeline is installed into `modules/` in the same way. Nextflow downloads the whole Git repository of the pipeline at the commit pinned by the release, without the `.git` directory, and records the release in `.module-info`.
+A pipeline is installed into `modules/` in the same way. Nextflow downloads the whole Git repository of the pipeline at the commit pinned by the release, without the `.git` directory. The repository must have a `main.nf` at the top level, since an include always uses `main.nf`.
 
 The following options are available:
 
@@ -106,7 +106,7 @@ Remove the module even if it has local modifications, or has no `.module-info` f
 
 ###### `-keep-files`
 
-Remove the `.module-info` file but keep the local files in the `modules/` directory.
+Remove the `.module-info` file but keep the local files in the `modules/` directory. Applies only to modules.
 
 ##### `run [options] [namespace/name | path] [--<input_name> <input-value>]` {#module-run}
 
@@ -127,13 +127,13 @@ Module version to run, for example `1.0.0`. Defaults to the latest version.
 ##### `search [options] [query]` {#module-search}
 
 Search for modules and pipelines in the registry by keyword or name.
-Returns the name and description of each matching module, followed by the name, latest version, and description of each matching pipeline.
+Returns matching modules and pipelines with their description.
 
 The following options are available:
 
-###### `-limit`
+###### `-limit` (`20`)
 
-Maximum number of results to return (default: varies by registry).
+Maximum number of results to return, across modules and pipelines. Modules are listed first.
 
 ###### `-o, -output` (`simple`)
 
