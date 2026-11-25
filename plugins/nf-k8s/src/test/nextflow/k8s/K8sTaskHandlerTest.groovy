@@ -556,8 +556,8 @@ class K8sTaskHandlerTest extends Specification {
         def result = handler.checkIfCompleted()
         then:
         1 * handler.getState() >> [terminated: termState]
-        1 * handler.saveJobLogOnError(task) >> null
-        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> { }
+        1 * handler.deleteJobIfSuccessful(task) >> { }
         and:
         result
         task.exitStatus == EXIT_CODE
@@ -890,8 +890,8 @@ class K8sTaskHandlerTest extends Specification {
         def result = handler.checkIfCompleted()
         then:
         1 * handler.getState() >> state
-        1 * handler.saveJobLogOnError(task) >> null
-        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> { }
+        1 * handler.deleteJobIfSuccessful(task) >> { }
         and:
         result
         handler.status == TaskStatus.COMPLETED
