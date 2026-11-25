@@ -1,0 +1,4 @@
+sample,fastq_1,fastq_2,clip_r1,trimgalore_args
+s1,data/s1_1.fq.gz,data/s1_2.fq.gz,,
+s2,data/s2.fq.gz,,5,
+s3,data/s3_1.fq.gz,data/s3_2.fq.gz,,--custom-trim
