@@ -28,7 +28,11 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
+import nextflow.exception.K8sOutOfCpuException
+import nextflow.exception.K8sOutOfMemoryException
 import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessRetryableException
 import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
@@ -370,7 +374,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             return state
         }
-        catch (NodeTerminationException | PodUnschedulableException e) {
+        catch (NodeTerminationException | K8sOutOfCpuException | K8sOutOfMemoryException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the error to the caller method
             final instant = Instant.now()
@@ -435,10 +439,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         final state = getState()
         if( state && state.terminated ) {
-            if( state.nodeTermination instanceof NodeTerminationException ||
-                state.nodeTermination instanceof PodUnschedulableException ) {
+            if( state.nodeTermination instanceof Throwable ) {
                 // keep track of the node termination error
-                task.error = (Throwable) state.nodeTermination
+                task.error = infraFailureError((Throwable) state.nodeTermination)
                 // mark the task as ABORTED since thr failure is caused by a node failure
                 task.aborted = true
             }
@@ -464,6 +467,14 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.exitStatus = k8sExitCode != null ? k8sExitCode : readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
+                // report the reason of the container failure (e.g. OOMKilled), if any
+                final reason = (state.terminated as Map)?.reason
+                if( k8sExitCode && reason && reason !in ['Error', 'Completed'] ) {
+                    def msg = "K8s pod '$podName' execution failed - reason: $reason"
+                    final message = (state.terminated as Map)?.message
+                    if( message ) msg += " - message: $message"
+                    task.error = new ProcessException(msg)
+                }
             }
             status = TaskStatus.COMPLETED
             saveJobLogOnError(task)
@@ -474,6 +485,27 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return false
+    }
+
+    /**
+     * Infrastructure failures are retried automatically, regardless of the task error strategy,
+     * until the task failures reach the `k8s.maxInfraRetries` limit. Then they are
+     * reported as a regular process failure, so that they are handled by the task error strategy.
+     *
+     * @param error The infrastructure failure error
+     * @return The error to be assigned to the task
+     */
+    protected Throwable infraFailureError(Throwable error) {
+        if( error !instanceof ProcessRetryableException )
+            return error
+        final max = k8sConfig.getMaxInfraRetries()
+        if( task.failCount < max ) {
+            // the task retry is logged without the failure cause, therefore report it here
+            log.info "[K8s] Task `$task.name` failed because of an infrastructure issue and it will be retried (${task.failCount + 1} of $max) -- ${error.message}"
+            return error
+        }
+        log.debug "[K8s] Max infrastructure retries ($max) exceeded for task: `$task.name`"
+        return new ProcessException(error.message)
     }
 
     protected void saveJobLogOnError(TaskRun task) {
