@@ -176,7 +176,6 @@ Plugin-Namespace: myorg
 
 - The response has one entry per requested ID. The `id` field is the requested ID, so older Nextflow finds the entry under the ID it asked for.
 - Each entry of a moved plugin has `canonicalId: "myorg/nf-foo"`, whichever ID was requested.
-
 - When one request has both IDs (for example `myorg/nf-foo` from the config and `nf-foo` from a dependency), the response has both entries.
 - The plain name is the part of `canonicalId` after the `/`, because a move keeps the name. So one field maps the plain name to the namespaced ID, and back.
 - New namespaced plugins and unscoped plugins have no `canonicalId`.
