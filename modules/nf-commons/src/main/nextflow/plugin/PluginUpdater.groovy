@@ -36,6 +36,7 @@ import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
 import nextflow.config.RegistryConfig
+import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -106,7 +107,11 @@ class PluginUpdater extends UpdateManager {
         final result = new HashMap<String,String>()
         for( def repo : this.@repositories ) {
             if( repo instanceof HttpPluginRepository )
-                repo.canonicalIds.each { k, v -> result.putIfAbsent(k, v) }
+                repo.canonicalIds.each { k, v ->
+                    final first = result.putIfAbsent(k, v)
+                    if( first && first != v )
+                        Bolts.warn1(log, "Plugin $k is $first in one registry and $v in another -- using $first")
+                }
         }
         aliases.putAll(result)
     }
@@ -221,7 +226,8 @@ class PluginUpdater extends UpdateManager {
      * registry. Here the releases of each plugin id are instead unioned across all
      * repositories. When the same {@code version} is served by more than one registry, the
      * earlier-listed registry wins, matching the priority order in which the registries are
-     * declared (first listed = highest priority).
+     * declared (first listed = highest priority). A moved plugin is listed under its namespaced ID
+     * and its plain name, with the plain-name releases of the registries that did not move it.
      *
      * @return a map of plugin id to its merged {@link PluginInfo}
      */
@@ -229,18 +235,20 @@ class PluginUpdater extends UpdateManager {
     Map<String, PluginInfo> getPluginsMap() {
         final result = new LinkedHashMap<String, PluginInfo>()
         for( UpdateRepository repo : getRepositories() ) {
+            final moves = repo instanceof HttpPluginRepository ? repo.canonicalIds : Collections.<String,String>emptyMap()
             for( Map.Entry<String, PluginInfo> entry : repo.getPlugins().entrySet() ) {
-                final merged = result.get(entry.key)
+                // a registry's own move wins; otherwise plain releases join the moved plugin
+                final key = moves.get(entry.key) ?: canonical(entry.key)
+                final merged = result.get(key)
                 if( merged == null )
-                    result.put(entry.key, copyPluginInfo(entry.value))
+                    result.put(key, copyPluginInfo(entry.value))
                 else
                     mergeReleases(merged, entry.value)
             }
         }
-        // a plugins.json index lists a moved plugin only under its plain name
         for( Map.Entry<String,String> it : aliases.entrySet() ) {
-            if( !result.containsKey(it.value) && result.containsKey(it.key) )
-                result.put(it.value, result.get(it.key))
+            if( result.containsKey(it.value) )
+                result.put(it.key, result.get(it.value))
         }
         return result
     }

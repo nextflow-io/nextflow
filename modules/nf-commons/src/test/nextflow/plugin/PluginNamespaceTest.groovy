@@ -325,6 +325,25 @@ class PluginNamespaceTest extends Specification {
 
         then:
         updater.aliases == ['nf-foo': 'org1/nf-foo']
+        updater.getPluginsMap().get('org2/nf-foo').releases*.version == ['1.0.0']
+    }
+
+    def 'should add the plain releases of a registry that did not move the plugin' () {
+        given:
+        registry(entry('nf-foo', 'myorg/nf-foo', zip('nf-foo', '1.0.0', ns: 'myorg')))
+        wiremock.stubFor(get(urlPathEqualTo('/mirror/v1/plugins/dependencies'))
+            .willReturn(aResponse().withStatus(200).withBody("""{"plugins":[${entry('nf-foo', null, zip('nf-foo', '2.0.0'))}]}""")))
+        def updater = updater()
+        updater.addRepository(new HttpPluginRepository('mirror', URI.create("http://localhost:${wiremock.port()}/mirror/")))
+
+        when:
+        updater.prepareAndStart('nf-foo', '2.0.0')
+
+        then:
+        updater.getPluginsMap().get('myorg/nf-foo').releases*.version == ['1.0.0', '2.0.0']
+        updater.getPluginsMap().get('nf-foo').releases*.version == ['1.0.0', '2.0.0']
+        loaded(updater) == ['myorg/nf-foo']
+        isFolder('myorg~nf-foo-2.0.0')
     }
 
     def 'should find a moved plugin by namespaced ID in a legacy plugins.json' () {
@@ -601,6 +620,14 @@ class PluginNamespaceTest extends Specification {
 
         where:
         NS << ['a~b', 'a/b', '..', '.', 'a@b']
+    }
+
+    def 'should read the namespace from the store folder in dev mode' () {
+        given:
+        def dir = stored('myorg~nf-foo-1.0.0', 'nf-foo', '1.0.0')
+
+        expect:
+        new DevPluginManager(store).createPluginDescriptorFinder().find(dir).pluginId == 'myorg/nf-foo'
     }
 
     def 'should map only from store links' () {
