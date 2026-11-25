@@ -438,8 +438,52 @@ class TaskProcessorTest extends Specification {
         1 * executor.submit(_)
         result == ErrorStrategy.RETRY
         task.failCount == 1
+        task.autoRetryCount == 1
         task.failed
         task.errorAction == ErrorStrategy.RETRY
+    }
+
+    def 'should preserve ordinary retries after #AUTOMATIC automatic retries' () {
+        given:
+        def pending = []
+        def launched = []
+        def executor = Mock(ExecutorService) {
+            submit(_ as Runnable) >> { Runnable command ->
+                pending << command
+                return null
+            }
+        }
+        def session = Mock(Session) { getExecService() >> executor }
+        def cache = Mock(TaskCacheStrategy) {
+            isEnabled(session) >> true
+            resolve(*_) >> { TaskRun task, hash, tryCache, resolver -> launched << task }
+        }
+        def proc = new TaskProcessor(session: session, executor: Mock(Executor), name: 'foo', taskBody: new BodyDef({ 'echo test' }, '..'))
+        proc.cacheStrategies = [cache]
+        def task = new TaskRun(name: 'foo', processor: proc, context: new TaskContext(holder: [:]))
+        task.config = new TaskConfig(errorStrategy: 'retry', maxRetries: 3, maxErrors: -1, attempt: 1)
+        def disruption = new ProcessFailedException('Process failed', new NodeTerminationException('Node terminated'))
+
+        when:
+        (1..AUTOMATIC).each { attempt ->
+            assert proc.resumeOrDie(task, disruption) == ErrorStrategy.RETRY
+            pending.remove(0).run()
+            task = launched.last()
+            assert task.config.attempt == 1
+            assert task.autoRetryCount == attempt
+        }
+        def result = proc.resumeOrDie(task, new ProcessFailedException('Application failed'))
+        pending.remove(0).run()
+
+        then:
+        result == ErrorStrategy.RETRY
+        launched.size() == AUTOMATIC + 1
+        launched.last().config.attempt == 2
+        task.config.retryCount == 1
+        task.failCount == AUTOMATIC + 1
+
+        where:
+        AUTOMATIC << [1, 3]
     }
 
     def 'should export env vars' () {
