@@ -163,7 +163,7 @@ Option 6.
 - The plain name is the part of `canonicalId` after the `/`, because a move keeps the name. So one field maps the plain name to the namespaced ID, and back.
 - New namespaced plugins and unscoped plugins have no `canonicalId`.
 - `/dependencies` already returns the dependencies of the requested plugins (up to 5 levels), so Nextflow gets every hint in one call.
-- The field is added in a new TypeSpec API version with `@added`. Nextflow decodes the response with Gson, which ignores unknown fields.
+- `canonicalId` is a plain optional field in the existing API version. Nextflow decodes the response with Gson, which ignores unknown fields.
 
 **`nextflowVersion` check.** The minimum Nextflow version for namespaced IDs (namespaced plugin IDs ADR) is the first Nextflow release that reads `Plugin-Namespace`. The check already applies only to the requested ID, so a moved plugin requested by its plain name passes. Dependencies found during the walk that have no plain name are left out of the response for older clients.
 
