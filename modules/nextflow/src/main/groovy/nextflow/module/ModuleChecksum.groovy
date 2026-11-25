@@ -19,6 +19,7 @@ package nextflow.module
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.ModuleChecksum as SharedChecksum
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -92,8 +93,10 @@ class ModuleChecksum {
 
         final digest = MessageDigest.getInstance('SHA-256')
         for( final file : files ) {
-            digest.update(dir.relativize(file).toString().getBytes())
-            digest.update(Files.readAllBytes(file))
+            final content = Files.readAllBytes(file)
+            // the path and length delimit each file
+            digest.update("${dir.relativize(file)}\0${content.length}\0".toString().getBytes(StandardCharsets.UTF_8))
+            digest.update(content)
         }
         return digest.digest().encodeHex().toString()
     }

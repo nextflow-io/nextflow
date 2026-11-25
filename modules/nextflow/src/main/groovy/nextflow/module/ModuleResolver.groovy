@@ -71,15 +71,16 @@ class ModuleResolver {
         if( installed ) {
             // Check integrity
             def integrity = installed.integrity
+            def kind = installed.kindLabel
             if( integrity == ModuleIntegrity.CORRUPTED ) {
                 throw new AbortOperationException(
-                    "Module ${reference} is corrupted (missing required files). " +
+                    "${kind} ${reference} is corrupted (missing required files). " +
                         "Please remove and reinstall."
                 )
             }
 
             if( integrity == ModuleIntegrity.MODIFIED ) {
-                log.warn1 "Module ${reference} has local modifications (checksum mismatch)"
+                log.warn1 "${kind} ${reference} has local modifications (checksum mismatch)"
             } else if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !insidePipeline() ) {
                 log.warn1 "Module ${reference} has no registry origin (.module-info missing)"
             }
@@ -87,11 +88,11 @@ class ModuleResolver {
             // Check if version matches
             if( version && installed.installedVersion != version ) {
                 if( autoInstall ) {
-                    log.info "Upgrading module ${reference} from ${installed.installedVersion} to ${version}"
+                    log.info "Upgrading ${kind.toLowerCase()} ${reference} from ${installed.installedVersion} to ${version}"
                     return installWithDependencies(reference, version)
                 } else {
                     throw new AbortOperationException(
-                        "Module ${reference} version mismatch: " +
+                        "${kind} ${reference} version mismatch: " +
                             "installed=${installed.installedVersion}, required=${version}. " +
                             "Run 'nextflow module install ${reference}@${version}' to update."
                     )
@@ -145,7 +146,7 @@ class ModuleResolver {
         if( !force && store.isInstalled(reference) ) {
             def installed = store.getInstalledModule(reference)
             def integrity = installed.integrity
-            def kind = installed.pipeline ? 'Pipeline' : 'Module'
+            def kind = installed.kindLabel
 
             // A corrupted module cannot be reused whatever version is asked for -- its files are
             // missing, so returning it would only defer the failure to the caller
@@ -190,7 +191,7 @@ class ModuleResolver {
             catch( RegistryException e ) {
                 if( e.statusCode != 404 )
                     throw e
-                return installPipeline(store, reference, null)
+                return installPipeline(store, reference, null, e)
             }
         }
 
@@ -205,7 +206,7 @@ class ModuleResolver {
             catch( RegistryException e ) {
                 if( e.statusCode != 404 )
                     throw e
-                return installPipeline(store, reference, version)
+                return installPipeline(store, reference, version, e)
             }
 
             log.info "Installing module ${reference}@${version}..."
@@ -224,28 +225,20 @@ class ModuleResolver {
         }
     }
 
-    private InstalledModule installPipeline(ModuleStorage store, ModuleReference reference, String version) {
-        final source = resolvePipeline(reference, version)
-        if( source.workflowPath && source.workflowPath != Const.DEFAULT_MAIN_FILE_NAME )
-            log.warn "Pipeline ${reference} declares `${source.workflowPath}` as its main script -- an include always uses `${Const.DEFAULT_MAIN_FILE_NAME}`"
+    /**
+     * @param moduleError The 404 of the module lookup
+     */
+    private InstalledModule installPipeline(ModuleStorage store, ModuleReference reference, String version, RegistryException moduleError) {
+        // module names can have more segments than pipeline names
+        if( !PipelineSource.isValidName(reference.fullName) )
+            throw PipelineSource.notFound(reference.toString() + (version ? '@' + version : ''), moduleError)
+        final source = PipelineSource.resolve(registryClient, reference.fullName, version)
         log.info "Installing pipeline ${reference}@${source.version}..."
         final installed = store.installPipeline(reference, source, fetcher)
+        if( source.workflowPath && source.workflowPath != Const.DEFAULT_MAIN_FILE_NAME )
+            log.warn "Pipeline ${reference} declares `${source.workflowPath}` as its main script -- an include always uses `${Const.DEFAULT_MAIN_FILE_NAME}`"
         log.info "Pipeline ${reference}@${source.version} installed successfully at ${installed.directory.toAbsolutePath()}"
         return installed
-    }
-
-    private PipelineSource resolvePipeline(ModuleReference reference, String version) {
-        final notFound = "Module or pipeline `${reference}${version ? '@' + version : ''}` not found in the registry"
-        if( !PipelineSource.isValidName(reference.fullName) )
-            throw new AbortOperationException(notFound)
-        try {
-            return PipelineSource.resolve(registryClient, reference.fullName, version)
-        }
-        catch( AbortOperationException e ) {
-            if( e.cause instanceof RegistryException && (e.cause as RegistryException).statusCode == 404 )
-                throw new AbortOperationException(notFound, e.cause)
-            throw e
-        }
     }
 
     /**

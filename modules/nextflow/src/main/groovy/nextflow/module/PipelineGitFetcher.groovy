@@ -42,19 +42,26 @@ class PipelineGitFetcher {
      * Fetch the pinned commit, or the revision when the release has no commit id
      *
      * @param keepGit Keep the `.git` folder, with `origin` set to the repository URL
-     * @param depth The history depth to fetch, 1 by default
+     * @param depth The history depth to fetch, by default 1, or the full history when keeping `.git`
      * @return The commit that was fetched
      */
     String fetch(String repositoryUrl, String revision, String commitId, Path target, boolean keepGit = false, Integer depth = null) {
         if( !revision && !commitId )
             throw new AbortOperationException("Cannot fetch $repositoryUrl: the release has neither a git revision nor a commit id")
+        // a clone keeps the full history unless a depth is given, as for a Git project
+        if( !depth && !keepGit )
+            depth = 1
         Git git = null
         String head
         try {
             // the revision can be a branch that moved after the release, so the commit takes precedence
-            git = commitId
-                ? fetchCommit(repositoryUrl, commitId, target, depth ?: 1)
-                : Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).setBranch(revision).setDepth(depth ?: 1).call()
+            if( commitId ) {
+                git = fetchCommit(repositoryUrl, commitId, target, depth)
+            }
+            else {
+                final clone = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).setBranch(revision)
+                git = (depth ? clone.setDepth(depth) : clone).call()
+            }
             head = git.repository.resolve('HEAD')?.name()
         }
         catch( GitAPIException | JGitInternalException e ) {
@@ -69,19 +76,27 @@ class PipelineGitFetcher {
         return head
     }
 
-    /** Shallow-fetch the commit; servers that refuse unadvertised commits get a full clone */
-    private static Git fetchCommit(String repositoryUrl, String commitId, Path target, int depth) {
-        Git git = Git.init().setDirectory(target.toFile()).call()
+    /**
+     * Shallow-fetch the commit, or clone the full repository when no depth is given;
+     * servers that refuse unadvertised commits get a full clone
+     */
+    private static Git fetchCommit(String repositoryUrl, String commitId, Path target, Integer depth) {
+        Git git = depth
+            ? Git.init().setDirectory(target.toFile()).call()
+            : Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
         try {
-            try {
-                git.remoteAdd().setName('origin').setUri(new URIish(repositoryUrl)).call()
-                git.fetch().setRemote('origin').setRefSpecs(new RefSpec(commitId)).setDepth(depth).call()
-            }
-            catch( GitAPIException | JGitInternalException e ) {
-                log.debug "Cannot fetch commit ${commitId} of ${repositoryUrl}, falling back to a full clone: ${e.message}"
-                git.close()
-                FileHelper.deletePath(target)
-                git = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
+            if( depth ) {
+                try {
+                    git.remoteAdd().setName('origin').setUri(new URIish(repositoryUrl)).call()
+                    git.fetch().setRemote('origin').setRefSpecs(new RefSpec(commitId)).setDepth(depth).call()
+                }
+                catch( GitAPIException | JGitInternalException e ) {
+                    log.debug "Cannot fetch commit ${commitId} of ${repositoryUrl}, falling back to a full clone: ${e.message}"
+                    git.close()
+                    // only .git was created here: the target folder can belong to the user
+                    FileHelper.deletePath(target.resolve('.git'))
+                    git = Git.cloneRepository().setURI(repositoryUrl).setDirectory(target.toFile()).call()
+                }
             }
             git.checkout().setName(commitId).call()
             return git

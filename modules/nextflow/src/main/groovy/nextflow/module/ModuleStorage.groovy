@@ -27,6 +27,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 
+import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -276,6 +278,11 @@ class ModuleStorage {
         final tmp = Files.createTempDirectory(dir.parent, ".tmp-${dir.fileName}-")
         try {
             final commit = fetcher.fetch(source.repositoryUrl, source.revision, source.commitId, tmp)
+            // an include always uses main.nf
+            if( !Files.exists(tmp.resolve(Const.DEFAULT_MAIN_FILE_NAME)) ) {
+                final declared = source.workflowPath && source.workflowPath != Const.DEFAULT_MAIN_FILE_NAME ? " (its main script is `${source.workflowPath}`)" : ''
+                throw new AbortOperationException("Pipeline ${reference}@${source.version} has no `${Const.DEFAULT_MAIN_FILE_NAME}`${declared} and cannot be installed")
+            }
             final checksum = ModuleChecksum.computePipeline(tmp)
             ModuleChecksum.clearPipeline(tmp)
             final info = [
@@ -293,7 +300,12 @@ class ModuleStorage {
                 ModuleChecksum.clearPipeline(dir)
                 FileHelper.deletePath(dir)
             }
-            Files.move(tmp, dir, StandardCopyOption.ATOMIC_MOVE)
+            try {
+                Files.move(tmp, dir, StandardCopyOption.ATOMIC_MOVE)
+            }
+            catch( FileAlreadyExistsException | DirectoryNotEmptyException e ) {
+                throw new AbortOperationException("Cannot install pipeline ${reference}: ${dir} was changed by another process", e)
+            }
         }
         catch( Throwable e ) {
             try {
@@ -328,7 +340,7 @@ class ModuleStorage {
 
         if( integrity == ModuleIntegrity.MODIFIED && !force ) {
             throw new AbortOperationException(
-                "${installed.pipeline ? 'Pipeline' : 'Module'} ${reference} has local modifications. " +
+                "${installed.kindLabel} ${reference} has local modifications. " +
                     "Use '-force' to remove, or save your changes first."
             )
         }

@@ -261,6 +261,19 @@ class CmdModuleRemoveTest extends Specification {
         !Files.exists(dir)
     }
 
+    def 'should refuse -keep-files for a pipeline'() {
+        given:
+        def dir = createPipeline(new ModuleStorage(tempDir))
+
+        when:
+        new CmdModuleRemove(args: ['nf-core/rnaseq'], root: tempDir, keepFiles: true).run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'nf-core/rnaseq is a pipeline -- -keep-files applies to modules only'
+        Files.exists(dir.resolve(ModuleInfo.MODULE_INFO_FILE))
+    }
+
     private Path createPipeline(ModuleStorage storage) {
         def dir = storage.getModuleDir(new ModuleReference('nf-core', 'rnaseq'))
         Files.createDirectories(dir.resolve('conf'))

@@ -19,6 +19,10 @@ package nextflow.module
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -214,16 +218,34 @@ class ModuleResolverTest extends Specification {
         ModuleResolver.pinnedVersion(tempDir, new ModuleReference('nf-core', 'fastqc')) == null
     }
 
-    def 'resolves a module without .module-info vendored by a pipeline'() {
+    def 'does not warn for a module without .module-info vendored by a pipeline'() {
         given:
-        def reference = new ModuleReference('nf-core', 'fastqc')
+        def logger = (Logger) LoggerFactory.getLogger(ModuleResolver)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        // a name of its own, since the warning is logged once per message
+        def reference = new ModuleReference('nf-core', 'vendored-by-pipeline')
         def moduleDir = new ModuleStorage(tempDir).getModuleDir(reference)
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process TEST { }'
-        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/vendored-by-pipeline\nversion: 1.0.0\n'
         ModuleInfo.save(tempDir, 'kind', ModuleInfo.KIND_PIPELINE)
+        def noOrigin = { appender.list.any { it.formattedMessage.contains('has no registry origin') } }
 
-        expect:
-        new ModuleResolver(tempDir).resolve(reference, null, false) == moduleDir.resolve('main.nf')
+        when:
+        def main = new ModuleResolver(tempDir).resolve(reference, null, false)
+        then:
+        main == moduleDir.resolve('main.nf')
+        !noOrigin()
+
+        when: 'outside a pipeline'
+        Files.delete(tempDir.resolve(ModuleInfo.MODULE_INFO_FILE))
+        new ModuleResolver(tempDir).resolve(reference, null, false)
+        then:
+        noOrigin()
+
+        cleanup:
+        logger.detachAppender(appender)
     }
 }

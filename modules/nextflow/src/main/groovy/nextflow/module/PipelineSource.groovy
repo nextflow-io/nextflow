@@ -62,7 +62,7 @@ class PipelineSource {
         }
         catch( RegistryException e ) {
             if( e.statusCode == 404 )
-                throw new AbortOperationException("Pipeline ${name}${version ? '@' + version : ''} not found in the registry", e)
+                throw notFound(name + (version ? '@' + version : ''), e)
             throw e
         }
         if( release == null )
@@ -77,5 +77,14 @@ class PipelineSource {
             revision: release.gitRevision,
             commitId: release.commitId,
             registryUrl: client.primaryUrl())
+    }
+
+    /**
+     * Not-found error that keeps the registry detail, since with several registries
+     * the 404 status is only the one of the last registry tried
+     */
+    static AbortOperationException notFound(String ref, RegistryException e) {
+        final cause = e.cause?.message && e.cause.message != e.message ? " (${e.cause.message})" : ''
+        return new AbortOperationException("`${ref}` not found in the registry -- ${e.message}${cause}", e)
     }
 }

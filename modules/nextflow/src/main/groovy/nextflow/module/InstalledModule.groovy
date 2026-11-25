@@ -49,6 +49,11 @@ class InstalledModule {
         return kind == ModuleSpec.KIND_PIPELINE
     }
 
+    /** {@code Pipeline} or {@code Module}, for messages */
+    String getKindLabel() {
+        return pipeline ? 'Pipeline' : 'Module'
+    }
+
     /**
      * Get the integrity status of this installed module
      *

@@ -16,7 +16,9 @@
 
 package nextflow.cli.module
 
+import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.CliOptions
@@ -313,6 +315,29 @@ class CmdModuleRunTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message == '`nf-core/rnaseq` is a pipeline -- use `nextflow run` or include it'
+    }
+
+    def 'should refuse a pipeline that is not installed without fetching it'() {
+        given:
+        def client = Mock(RegistryClient)
+        def cmd = new CmdModuleRun()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/rnaseq']
+        cmd.root = tempDir
+        cmd.client = client
+
+        when:
+        cmd.run()
+
+        then:
+        1 * client.getModule('nf-core/rnaseq') >> { throw new RegistryException('Not found', 404) }
+        1 * client.getPipeline('nf-core/rnaseq') >> new Pipeline()
+        0 * client._
+        def e = thrown(AbortOperationException)
+        e.message == '`nf-core/rnaseq` is a pipeline -- use `nextflow run` or include it'
+        !Files.exists(tempDir.resolve('modules'))
     }
 
     private void installPipeline(String version) {

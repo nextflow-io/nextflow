@@ -39,6 +39,7 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleSpec
+import nextflow.module.PipelineSource
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 
@@ -159,9 +160,14 @@ class CmdModuleView extends CmdBase {
             pipeline = client.getPipeline(name)
             release = version ? client.getPipelineRelease(name, version) : pipeline?.latest
         }
-        catch( Exception e ) {
-            if( !(e instanceof RegistryException && (e as RegistryException).statusCode == 404) )
+        catch( RegistryException e ) {
+            if( e.statusCode != 404 )
                 log.warn "Failed to fetch metadata from registry: ${e.message}"
+            else if( !pipeline )
+                throw PipelineSource.notFound(reference.toString(), e)
+        }
+        catch( Exception e ) {
+            log.warn "Failed to fetch metadata from registry: ${e.message}"
         }
         if( !pipeline || !release )
             throw new AbortOperationException("No release information available for ${reference}")

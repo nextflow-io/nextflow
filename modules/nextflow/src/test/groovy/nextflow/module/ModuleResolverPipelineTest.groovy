@@ -205,20 +205,32 @@ class ModuleResolverPipelineTest extends Specification {
         new Pipeline().repositoryUrl('u')                                | 'has no published release'
     }
 
-    def 'reports a name missing as both a module and a pipeline'() {
+    def 'reports a name missing as both a module and a pipeline with the registry detail'() {
         when:
         resolver().installWithDependencies(ref, VERSION)
         then:
         client.getModule(_) >> { throw notFound() }
         client.downloadModuleRelease(_, _, _) >> { throw notFound() }
-        client.getPipeline(_) >> { throw notFound() }
+        client.getPipeline(_) >> { throw new RegistryException('Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry', new RegistryException('Failed request: x', 404)) }
         def e = thrown(AbortOperationException)
         e.message == MESSAGE
 
         where:
         VERSION | MESSAGE
-        null    | 'Module or pipeline `nf-core/rnaseq` not found in the registry'
-        '1.0.0' | 'Module or pipeline `nf-core/rnaseq@1.0.0` not found in the registry'
+        null    | '`nf-core/rnaseq` not found in the registry -- Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry (Failed request: x)'
+        '1.0.0' | '`nf-core/rnaseq@1.0.0` not found in the registry -- Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry (Failed request: x)'
+    }
+
+    def 'fails to install a pipeline without main.nf and leaves no folder'() {
+        when:
+        resolver().installWithDependencies(ref)
+        then:
+        client.getModule(_) >> { throw notFound() }
+        client.getPipeline(_) >> pipeline(release('1.0.0')).workflowPath('workflows/rnaseq.nf')
+        1 * fetcher.fetch(*_) >> { args -> args[3].resolve('workflows').toFile().mkdirs(); null }
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline nf-core/rnaseq@1.0.0 has no `main.nf` (its main script is `workflows/rnaseq.nf`) and cannot be installed'
+        Files.list(dir().parent).count() == 0
     }
 
     def 'rethrows registry errors other than not found'() {

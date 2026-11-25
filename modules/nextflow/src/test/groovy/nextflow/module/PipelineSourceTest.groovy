@@ -78,8 +78,8 @@ class PipelineSourceTest extends Specification {
         NAME             | VERSION | PIPELINE_ERROR                          | LATEST | STATUS                        | REVOKED | MESSAGE
         'hello'          | null    | null                                    | true   | null                          | false   | 'Invalid pipeline name'
         'nf-core/a/b'    | null    | null                                    | true   | null                          | false   | 'Invalid pipeline name'
-        'nf-core/rnaseq' | null    | new RegistryException('Not found', 404) | true   | null                          | false   | 'nf-core/rnaseq not found in the registry'
-        'nf-core/rnaseq' | 'dev'   | null                                    | true   | null                          | false   | 'nf-core/rnaseq@dev not found in the registry'
+        'nf-core/rnaseq' | null    | new RegistryException('Not found', 404) | true   | null                          | false   | '`nf-core/rnaseq` not found in the registry -- Not found'
+        'nf-core/rnaseq' | 'dev'   | null                                    | true   | null                          | false   | '`nf-core/rnaseq@dev` not found in the registry -- Not found'
         'nf-core/rnaseq' | null    | null                                    | false  | null                          | false   | 'has no published release'
         'nf-core/rnaseq' | null    | null                                    | true   | PipelineReleaseStatus.REVOKED | false   | 'is revoked'
         'nf-core/rnaseq' | null    | null                                    | true   | null                          | true    | 'is revoked'

@@ -104,9 +104,8 @@ class CmdModuleInstall extends CmdBase {
             resolver.installWithDependencies(reference, version, force)
             // Read the installed version locally to avoid a redundant registry call
             final installed = new ModuleStorage(baseDir).getInstalledModule(reference)
-            final kind = installed.pipeline ? 'Pipeline' : 'Module'
 
-            println "${kind} ${reference}@${installed.installedVersion} installed and configured successfully"
+            println "${installed.kindLabel} ${reference}@${installed.installedVersion} installed and configured successfully"
         }
         catch( AbortOperationException e ) {
             throw e

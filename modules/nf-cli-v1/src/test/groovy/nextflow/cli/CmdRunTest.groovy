@@ -531,6 +531,18 @@ class CmdRunTest extends Specification {
         e.message.contains('Revision `1.0.0` of `acme/hello` is not in the local cache')
     }
 
+    def 'should fail clearly offline for an uncached registry pipeline' () {
+        given:
+        AssetManager.root = tempDir.getRoot().resolve('assets').toFile()
+
+        when:
+        runCmd(hubProvider: 'registry.nextflow.io', offline: true).getScriptFile0('acme/hello')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline `acme/hello` is not downloaded -- use `nextflow pull` to download it'
+    }
+
     def 'should look up the registry only for a registry address' () {
         given:
         def client = Mock(RegistryClient)

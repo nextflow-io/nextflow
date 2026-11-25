@@ -975,14 +975,14 @@ class CmdModuleViewTest extends Specification {
         given:
         def client = Mock(RegistryClient) {
             getModule(_) >> { throw new RegistryException('Not found', 404) }
-            getPipeline(_) >> { throw new RegistryException('Not found', 404) }
+            getPipeline(_) >> { throw new RegistryException('Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry', new RegistryException('Not found', 404)) }
         }
 
         when:
         viewCmd(client).run()
 
-        then:
+        then: 'the registry detail is kept'
         def e = thrown(AbortOperationException)
-        e.message == 'No release information available for nf-core/rnaseq'
+        e.message == '`nf-core/rnaseq` not found in the registry -- Unable to GET /v1/pipelines/nf-core/rnaseq from any configured registry (Not found)'
     }
 }

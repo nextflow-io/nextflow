@@ -707,12 +707,12 @@ class PipelineCompositionTest extends Dsl2Spec {
     }
 
     def 'should resolve a registry module inside a pipeline against the pipeline' () {
-        given:
+        given: 'the include is in a subfolder script, which resolved against its own folder before'
         installPipeline('test/pipe', [
             'main.nf': '''
                 nextflow.enable.types = true
 
-                include { HELLO } from 'test/hello'
+                include { GREET } from './subworkflows/local/greet'
 
                 params {
                     name: String
@@ -720,7 +720,7 @@ class PipelineCompositionTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    greeting = HELLO()
+                    greeting = GREET()
 
                     publish:
                     greeting = greeting
@@ -730,6 +730,7 @@ class PipelineCompositionTest extends Dsl2Spec {
                     greeting: Value<String> {}
                 }
                 ''',
+            'subworkflows/local/greet.nf': "include { HELLO } from 'test/hello'\n\nworkflow GREET {\n main:\n greeting = HELLO()\n emit:\n greeting\n}\n",
             'modules/test/hello/main.nf': 'workflow HELLO {\n emit: channel.value("from pipeline")\n}\n',
             'modules/test/hello/meta.yml': 'name: test/hello\nversion: 1.0.0\n'
         ])

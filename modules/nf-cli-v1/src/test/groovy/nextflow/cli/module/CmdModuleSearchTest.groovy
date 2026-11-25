@@ -275,7 +275,7 @@ class CmdModuleSearchTest extends Specification {
 
         then:
         1 * client.searchModules('rna', 5) >> modules('nf-core/salmon')
-        1 * client.listPipelines('rna', 1, 5) >> pipelines('nf-core/rnaseq')
+        1 * client.listPipelines('rna', 1, 4) >> pipelines('nf-core/rnaseq')
         output.contains('Top 2 matching result(s):')
         output.indexOf('nf-core/salmon') < output.indexOf('nf-core/rnaseq')
         output.contains('  nf-core/rnaseq\n    Kind: Pipeline\n    Version: 3.14.0\n    Description: RNA-seq analysis')
@@ -284,8 +284,8 @@ class CmdModuleSearchTest extends Specification {
     def 'should append pipelines to the JSON results'() {
         given:
         def client = Mock(RegistryClient) {
-            searchModules('rna', 5) >> modules('nf-core/salmon')
-            listPipelines('rna', 1, 5) >> pipelines('nf-core/rnaseq')
+            searchModules('rna', 5) >> new SearchModulesResponse(query: 'rna', totalResults: 40, results: [new ModuleSearchResult(name: 'nf-core/salmon')])
+            listPipelines('rna', 1, 4) >> pipelines('nf-core/rnaseq').totalSize(7L)
         }
 
         when:
@@ -293,8 +293,8 @@ class CmdModuleSearchTest extends Specification {
         def output = capture.toString()
         def json = new JsonSlurper().parseText(output.substring(output.indexOf('{')))
 
-        then:
-        json.totalResults == 2
+        then: 'the registry totals of both kinds'
+        json.totalResults == 47
         json.results*.name == ['nf-core/salmon', 'nf-core/rnaseq']
         json.results[0].kind == 'Process'
         json.results[1].kind == 'Pipeline'
@@ -318,11 +318,45 @@ class CmdModuleSearchTest extends Specification {
         !output.contains('No modules or pipelines found')
     }
 
+    def 'should not search pipelines when modules fill the limit'() {
+        given:
+        def client = Mock(RegistryClient)
+
+        when:
+        searchCmd(client, 'json').run()
+        def output = capture.toString()
+        def json = new JsonSlurper().parseText(output.substring(output.indexOf('{')))
+
+        then:
+        1 * client.searchModules('rna', 5) >> new SearchModulesResponse(query: 'rna', totalResults: 12, results: (1..5).collect { new ModuleSearchResult(name: "nf-core/m$it") })
+        0 * client.listPipelines(*_)
+        json.results.size() == 5
+        json.totalResults == 12
+    }
+
+    def 'should read further pipeline pages up to the limit'() {
+        given:
+        def client = Mock(RegistryClient)
+        def cmd = searchCmd(client)
+        cmd.limit = 150
+        def page = { int n -> pipelines(*(1..n).collect { "nf-core/p$it" } as String[]) }
+
+        when:
+        cmd.run()
+
+        then:
+        1 * client.searchModules('rna', 150) >> modules()
+        1 * client.listPipelines('rna', 1, 100) >> page(100).last(false)
+        1 * client.listPipelines('rna', 2, 100) >> page(100).last(false)
+        0 * client.listPipelines(*_)
+        capture.toString().contains('Top 150 matching result(s):')
+    }
+
     def 'should show modules only when the pipeline search fails'() {
         given:
         def client = Mock(RegistryClient) {
             searchModules('rna', 5) >> modules('nf-core/salmon')
-            listPipelines('rna', 1, 5) >> { throw new RegistryException('Server error', 500) }
+            listPipelines('rna', 1, 4) >> { throw new RegistryException('Server error', 500) }
         }
 
         when:

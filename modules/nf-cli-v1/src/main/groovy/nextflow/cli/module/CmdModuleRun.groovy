@@ -22,6 +22,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
+import io.seqera.npr.client.RegistryException
 import nextflow.Const
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigCmdAdapter
@@ -30,6 +31,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleResolver
 import nextflow.module.ModuleStorage
+import nextflow.module.PipelineSource
 import nextflow.module.RegistryClientFactory
 import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.util.TestOnly
@@ -100,17 +102,50 @@ class CmdModuleRun extends CmdRun {
             .build()
 
         final registryConfig = new RegistryConfig(config.registry as Map ?: Collections.emptyMap())
+        final client = this.client ?: RegistryClientFactory.forConfig(registryConfig)
+        // decide the kind before fetching anything
+        if( isPipeline(baseDir, client, reference) )
+            throw new AbortOperationException("`${reference}` is a pipeline -- use `nextflow run` or include it")
         final Path mainFile
         try {
-            final resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
+            final resolver = new ModuleResolver(baseDir, client)
             // vendor the module together with its transitive deps (pinned) before running,
             // consistent with `module install` and include-time auto-install
             mainFile = resolver.installWithDependencies(reference, version)
         } catch( Exception e ) {
             throw new AbortOperationException("Unable to install module: ${name}", e)
         }
-        if( new ModuleStorage(baseDir).getInstalledModule(reference)?.pipeline )
-            throw new AbortOperationException("`${reference}` is a pipeline -- use `nextflow run` or include it")
         return mainFile
+    }
+
+    /**
+     * Whether the reference is an installed pipeline, or a registry name that is a pipeline and not a module
+     */
+    private static boolean isPipeline(Path baseDir, RegistryClient client, ModuleReference reference) {
+        final installed = new ModuleStorage(baseDir).getInstalledModule(reference)
+        if( installed )
+            return installed.pipeline
+        RegistryException notFound
+        try {
+            client.getModule(reference.fullName)
+            return false
+        }
+        catch( RegistryException e ) {
+            if( e.statusCode != 404 )
+                throw new AbortOperationException("Unable to install module: ${reference}", e)
+            notFound = e
+        }
+        if( PipelineSource.isValidName(reference.fullName) ) {
+            try {
+                client.getPipeline(reference.fullName)
+                return true
+            }
+            catch( RegistryException e ) {
+                if( e.statusCode != 404 )
+                    throw new AbortOperationException("Unable to install module: ${reference}", e)
+                notFound = e
+            }
+        }
+        throw PipelineSource.notFound(reference.toString(), notFound)
     }
 }

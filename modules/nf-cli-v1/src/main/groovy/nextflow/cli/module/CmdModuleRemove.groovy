@@ -77,7 +77,11 @@ class CmdModuleRemove extends CmdBase {
 
         try {
             def filesRemoved = false
-            final kind = storage.getInstalledModule(reference)?.pipeline ? 'Pipeline' : 'Module'
+            final installed = storage.getInstalledModule(reference)
+            // without .module-info a pipeline folder can't be included
+            if( keepFiles && installed?.pipeline )
+                throw new AbortOperationException("${reference} is a pipeline -- -keep-files applies to modules only")
+            final kind = installed?.kindLabel ?: 'Module'
 
             // Remove local files unless -keep-files is set
             if( !keepFiles ) {

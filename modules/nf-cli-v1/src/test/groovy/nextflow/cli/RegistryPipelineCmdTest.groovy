@@ -24,6 +24,7 @@ import java.nio.file.Path
 import io.seqera.npr.api.schema.v1.Pipeline
 import io.seqera.npr.api.schema.v1.PipelineRelease
 import io.seqera.npr.client.RegistryClient
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -155,6 +156,25 @@ class RegistryPipelineCmdTest extends Specification {
         e.message == 'Unknown project `acme/other`'
     }
 
+    def 'should fail clearly for an uncached registry pipeline when NXF_HUB is a registry host' () {
+        given:
+        SysEnv.push(NXF_HUB: 'registry.nextflow.io')
+        CMD.launcher = launcher()
+
+        when:
+        CMD.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Pipeline `acme/other` is not downloaded -- use `nextflow pull` to download it'
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        CMD << [new CmdInfo(args: ['acme/other']), new CmdView(args: ['acme/other']), new CmdDrop(args: ['acme/other'])]
+    }
+
     def 'should list a cached registry pipeline under its registry name' () {
         given:
         pullRelease()
@@ -177,6 +197,8 @@ class RegistryPipelineCmdTest extends Specification {
         def git = Git.open(target.toFile())
         git.repository.resolve('HEAD').name() == v1
         new URIish(git.repository.config.getString('remote', 'origin', 'url')) == new URIish(bareUrl)
+        and: 'a full clone, as for a Git project'
+        git.repository.refDatabase.getRefsByPrefix('refs/remotes/origin/')
 
         cleanup:
         git?.close()

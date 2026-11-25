@@ -162,8 +162,12 @@ class AssetManager implements Closeable {
 
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
-        if( localName )
+        if( localName ) {
+            // without a URL nor a clone, the Git host is unknown
+            if( !hub && isNotInitialized() )
+                throw new AbortOperationException("Pipeline `$localName` is not downloaded -- use `nextflow pull` to download it")
             checkRemoteProject(isUrl(pipelineName))
+        }
         this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
