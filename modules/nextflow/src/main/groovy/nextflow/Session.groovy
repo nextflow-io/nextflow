@@ -222,6 +222,12 @@ class Session implements ISession {
 
     String commandLine
 
+    /**
+     * The normalized launcher arguments, one element per argument,
+     * e.g. {@code [run, main.nf, -resume, last]}
+     */
+    List<String> cliArgs
+
     /*
      * Project repository commit ID
      */
