@@ -41,6 +41,7 @@ import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.trace.Osc7577
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
@@ -121,6 +122,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             .redirectErrorStream(true)
         if( !fusionEnabled() )
             builder .directory(task.workDir.toFile())
+        // a task must not be able to register a resume command for the terminal of the run
+        builder.environment().remove(Osc7577.TOKEN_ENV)
 
         return builder
     }
