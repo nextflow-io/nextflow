@@ -223,6 +223,13 @@ class Session implements ISession {
 
     String commandLine
 
+    /**
+     * The command that resumes this run in the launch directory, one element per
+     * argument, or {@code null} when it cannot be expressed. Reported to the
+     * terminal with OSC 7577 when that is enabled
+     */
+    List<String> resumeCommand
+
     /*
      * Project repository commit ID
      */
