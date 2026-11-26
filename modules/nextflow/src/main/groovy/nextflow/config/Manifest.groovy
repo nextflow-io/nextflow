@@ -52,6 +52,13 @@ class Manifest implements ConfigScope {
     """)
     final List<Contributor> contributors
 
+    @Deprecated
+    @ConfigOption
+    @Description("""
+        Git repository default branch. Ignored: the default branch of the remote repository is used instead.
+    """)
+    final String defaultBranch
+
     @ConfigOption
     @Description("""
         Free text describing the workflow project.
@@ -144,6 +151,7 @@ class Manifest implements ConfigScope {
     Manifest(Map opts) {
         author = opts.author as String
         contributors = parseContributors(opts.contributors)
+        defaultBranch = opts.defaultBranch as String
         description = opts.description as String
         diagram = opts.diagram as String
         docsUrl = opts.docsUrl as String
@@ -182,6 +190,7 @@ class Manifest implements ConfigScope {
         return [
             author: author,
             contributors: contributors.stream().map(c -> c.toMap()).toList(),
+            defaultBranch: defaultBranch,
             description: description,
             homePage: homePage,
             gitmodules: gitmodules,

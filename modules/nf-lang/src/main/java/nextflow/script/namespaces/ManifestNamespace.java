@@ -36,6 +36,13 @@ public interface ManifestNamespace extends Namespace {
     """)
     List<Map> getContributors();
 
+    @Deprecated
+    @Constant("defaultBranch")
+    @Description("""
+        Git repository default branch. Ignored: the default branch of the remote repository is used instead.
+    """)
+    String getDefaultBranch();
+
     @Constant("description")
     @Description("""
         Free text describing the workflow project.

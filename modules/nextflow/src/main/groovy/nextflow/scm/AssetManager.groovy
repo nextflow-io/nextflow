@@ -661,7 +661,22 @@ class AssetManager implements Closeable {
         if( !localPath?.exists() ) {
             checkValidRemoteRepo(revision)
         }
-        return repository.download(revision, manifest)
+        final result = repository.download(revision, manifest)
+        checkManifestDefaultBranch(revision)
+        return result
+    }
+
+    /**
+     * Warn when the deprecated `manifest.defaultBranch` setting differs from the
+     * remote default branch, which is used instead when no revision is specified
+     */
+    private void checkManifestDefaultBranch(String revision) {
+        final branch = manifest.getDefaultBranch()
+        if( revision || !branch )
+            return
+        final actual = getDefaultBranch()
+        if( branch != actual )
+            log.warn1 "The `manifest.defaultBranch` setting is ignored -- running the default branch of the remote repository (`${actual}`). Use `-r ${branch}` to run the `${branch}` branch"
     }
 
     /**
@@ -871,6 +886,7 @@ class AssetManager implements Closeable {
             throw new IllegalStateException("Repository not initialized")
         }
         repository.tryCheckout(revision)
+        checkManifestDefaultBranch(revision)
     }
 
 

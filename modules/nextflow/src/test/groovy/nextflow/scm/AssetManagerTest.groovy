@@ -525,6 +525,35 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should warn when manifest default branch differs from the remote default branch' () {
+
+        given:
+        createLocalRepo('foo/bar', ['main.nf': "println 'Hello'", 'nextflow.config': "manifest.defaultBranch = 'dev'"])
+
+        when:
+        new AssetManager().build('foo/bar').tryCheckout()
+        then:
+        capture.toString().contains("The `manifest.defaultBranch` setting is ignored -- running the default branch of the remote repository (`${getLocalDefaultBranch()}`). Use `-r dev` to run the `dev` branch")
+    }
+
+    def 'should not warn when manifest default branch matches or a revision is specified' () {
+
+        given:
+        def commitId = createLocalRepo('foo/bar', ['main.nf': "println 'Hello'", 'nextflow.config': "manifest.defaultBranch = '${defaultBranch}'"])
+
+        when:
+        def manager = new AssetManager().build('foo/bar')
+        manager.tryCheckout(useRevision ? commitId : null)
+        then:
+        manager.getManifest().getDefaultBranch() == defaultBranch
+        !capture.toString().contains('manifest.defaultBranch')
+
+        where:
+        defaultBranch               | useRevision
+        getLocalDefaultBranch()     | false
+        'other'                     | true
+    }
+
     def 'should detect hub provider from the bare repository config' () {
 
         given:
@@ -799,7 +828,8 @@ class AssetManagerTest extends Specification {
 
         then:
         manager.isNotInitialized()
-        manager.getLocalPath() == null
+        manager.getLocalPath() == tempDir.root.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + REVISION_SUBDIR + '/HEAD').toFile()
+        !manager.getLocalPath().exists()
         !manager.isLocal()
         manager.getProjectPath() == tempDir.root.resolve(REPOS_SUBDIR + '/test-org/test-repo').toFile()
     }
@@ -820,7 +850,8 @@ class AssetManagerTest extends Specification {
         then:
         capture.toString().contains("The legacy pipeline cache at ${legacyPath} is no longer used")
         manager.isNotInitialized()
-        manager.getLocalPath() == null
+        !manager.getLocalPath().exists()
+        !manager.getLocalPath().toPath().startsWith(legacyPath)
         !manager.isLocal()
         !manager.isRunnable()
         manager.getLocalGitConfig() == null
@@ -884,7 +915,7 @@ class AssetManagerTest extends Specification {
         then:
         !manager.isNotInitialized()
         manager.getLocalGitConfig() == barePath.resolve('config').toFile()
-        manager.getLocalPath() == null
+        !manager.getLocalPath().exists()
         AssetManager.list() == ['test-org/test-repo']
     }
 

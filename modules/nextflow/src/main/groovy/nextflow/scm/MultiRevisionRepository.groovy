@@ -410,8 +410,16 @@ class MultiRevisionRepository {
     /**
      * @return The local path of the current revision, or {@code null} if it has not been downloaded
      */
+    /**
+     * @return The local directory of the current revision. If the revision is not downloaded,
+     *         returns a path under the clones directory that does not exist (clones are named by commit id)
+     */
     File getLocalPath() {
-        return localPathOverride ?: commitPath
+        if( localPathOverride )
+            return localPathOverride
+        if( commitPath )
+            return commitPath
+        return revisionSubdir ? new File(revisionSubdir, revision ?: Constants.HEAD) : null
     }
 
     protected Git getBareGit() {
