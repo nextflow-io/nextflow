@@ -80,6 +80,8 @@ The registries defined in `registry.url` are authoritative: when one or more are
 
 When the same plugin is published in more than one configured registry, Nextflow combines the available versions across all of them. If a given version is served by multiple registries, the registry listed first takes precedence.
 
+If a registry reports that a plugin moved into a namespace, for example from `nf-foo` to `myorg/nf-foo`, the `nf-foo` releases of the other registries are added to `myorg/nf-foo`. If two registries moved `nf-foo` into different namespaces, `nf-foo` refers to the plugin of the registry listed first. Use the full ID, such as `otherorg/nf-foo`, for the other one.
+
 See the [registry config scope][config-registry] for the full reference.
 
 Alternatively, to override the default registry without using the `registry` scope, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.

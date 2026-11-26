@@ -25,7 +25,6 @@ import groovy.util.logging.Slf4j
 import org.pf4j.CompoundPluginRepository
 import org.pf4j.DefaultPluginLoader
 import org.pf4j.DevelopmentPluginRepository
-import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptorFinder
 import org.pf4j.PluginLoader
 import org.pf4j.PluginDescriptor
@@ -131,7 +130,7 @@ class DevPluginManager extends CustomPluginManager {
      * default recursive first-match search over the whole plugin dir.
      */
     @CompileStatic
-    private static class DevManifestFinder extends ManifestPluginDescriptorFinder {
+    private static class DevManifestFinder extends NamespaceDescriptorFinder {
         @Override
         protected Manifest readManifestFromDirectory(Path pluginPath) {
             final file = builtManifest(pluginPath.toFile())

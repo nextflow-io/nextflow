@@ -63,6 +63,11 @@ class PluginRef implements Comparable<PluginRef> {
         return id.replace('/', '~')
     }
 
+    /** Name part of a plugin id: `myorg/nf-foo` gives `nf-foo` */
+    static String name(String id) {
+        return id.substring(id.indexOf('/')+1)
+    }
+
     @Override
     String toString() {
         version ? "${id}@${version}" : id

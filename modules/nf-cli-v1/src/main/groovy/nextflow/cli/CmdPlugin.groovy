@@ -212,7 +212,7 @@ class CmdPlugin extends CmdBase implements UsageAware {
 
         // fetch started plugin
         final pluginRef = PluginRef.parse(target)
-        final wrapper = Plugins.manager.getPlugin(pluginRef.id)
+        final wrapper = Plugins.getPlugin(pluginRef.id)
         if( !wrapper )
             throw new AbortOperationException("Cannot find target plugin: $target")
         final plugin = wrapper.getPlugin()

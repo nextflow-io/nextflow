@@ -26,8 +26,6 @@ import nextflow.Const
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginLoader
 import org.pf4j.DefaultPluginManager
-import org.pf4j.ManifestPluginDescriptorFinder
-import org.pf4j.PluginDescriptorFinder
 import org.pf4j.PluginLoader
 import org.pf4j.PluginRepository
 import org.pf4j.PluginWrapper
@@ -63,11 +61,6 @@ class LocalPluginManager extends CustomPluginManager {
     protected Path getLocalRoot() { getPluginsRoot() }
 
     @Override
-    protected PluginDescriptorFinder createPluginDescriptorFinder() {
-        return new ManifestPluginDescriptorFinder()
-    }
-
-    @Override
     protected PluginLoader createPluginLoader() {
         return new DefaultPluginLoader(this)
     }
@@ -97,7 +90,13 @@ class LocalPluginManager extends CustomPluginManager {
         return super.loadPluginFromPath(symlink)
     }
 
-    private Path createLinkFromPath(Path pluginPath) {
+    // the per-run link takes the folder name, so the finder reads the namespace from it
+    @Override
+    PluginWrapper loadPluginFromPath(Path pluginPath, String folderName) {
+        return super.loadPluginFromPath(createLinkFromPath(pluginPath, folderName))
+    }
+
+    private Path createLinkFromPath(Path pluginPath, String folderName=null) {
         if( pluginPath.startsWith(localRoot))
             return pluginPath
         if( !pluginPath )
@@ -106,7 +105,7 @@ class LocalPluginManager extends CustomPluginManager {
             throw new IllegalArgumentException("Plugin path must be a directory: $pluginPath")
 
         // create a symlink relative to the current root
-        final symlink = localRoot.resolve(pluginPath.getFileName())
+        final symlink = localRoot.resolve(folderName ?: pluginPath.getFileName().toString())
         createLink0(symlink, pluginPath)
         return symlink
     }

@@ -19,6 +19,7 @@ package nextflow.plugin
 
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.util.concurrent.ConcurrentHashMap
 
 import nextflow.serde.gson.GsonEncoder
 import groovy.transform.CompileStatic
@@ -56,6 +57,9 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     // Initialised eagerly so that getPlugin()/refresh() are safe to call even when prefetch()
     // was skipped (e.g. PluginUpdater skip-if-installed) or failed (non-fatal degradation).
     private Map<String, PluginInfo> plugins = new HashMap<>()
+
+    // plain name of a moved plugin to its `canonicalId`
+    private final Map<String,String> canonicalIds = new ConcurrentHashMap<>()
 
     HttpPluginRepository(String id, URI url) {
         this.id = id
@@ -131,7 +135,15 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
      * Like {@link #getPlugin(String)}, but throws the registry error instead of returning null.
      */
     PluginInfo fetchPlugin(String id) {
-        return plugins.computeIfAbsent(id) { key -> fetchMetadataByIds([key]).get(key) }
+        if( plugins.containsKey(id) )
+            return plugins.get(id)
+        final fetched = fetchMetadataByIds([id])
+        plugins.putAll(fetched)
+        return fetched.get(id)
+    }
+
+    Map<String,String> getCanonicalIds() {
+        return canonicalIds
     }
 
     @Override
@@ -206,6 +218,14 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
+                    final canonicalId = plugin.canonicalId
+                    if( canonicalId && isCanonicalId(plugin.id, canonicalId) ) {
+                        result.put(canonicalId, pluginInfo)
+                        // a move keeps the name
+                        canonicalIds.put(PluginRef.name(canonicalId), canonicalId)
+                    }
+                    else if( canonicalId )
+                        log.debug "Ignoring invalid canonicalId '${canonicalId}' for plugin ${plugin.id}"
                 }
                 else
                     log.debug "Registry ${resp.uri().host} has no releases for plugin: ${plugin}"
@@ -215,6 +235,18 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         catch( Exception e ) {
             final msg = "Unexpected error while fetching plugin metadata from: ${req.uri()}\n- message : ${e.message}\n- response: ${body}"
             throw new PluginRuntimeException(msg)
+        }
+    }
+
+    // a move keeps the name: `nf-foo` or `myorg/nf-foo` can only have `myorg/nf-foo`
+    private static boolean isCanonicalId(String id, String canonicalId) {
+        try {
+            return canonicalId.contains('/')
+                && PluginRef.parse(canonicalId).id == canonicalId
+                && (id.contains('/') ? canonicalId == id : PluginRef.name(canonicalId) == id)
+        }
+        catch( IllegalArgumentException e ) {
+            return false
         }
     }
 

@@ -19,7 +19,6 @@ package nextflow.plugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesEx
-import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDescriptor
 import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
@@ -27,6 +26,8 @@ import org.pf4j.update.PluginInfo
 import org.pf4j.update.UpdateRepository
 import org.pf4j.update.verifier.CompoundVerifier
 
+import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 
 /**
@@ -85,8 +86,10 @@ class LocalUpdateRepository implements UpdateRepository {
 
     private static Map<String, PluginInfo> loadPlugins(Path dir) {
         // each plugin is stored in a dir called $id-$version; grab the descriptor from each
-        final manifestReader = new ManifestPluginDescriptorFinder()
+        final manifestReader = new NamespaceDescriptorFinder()
         final descriptors = FilesEx.listFiles(dir)
+            // a link names a moved plugin's folder, which is listed on its own
+            .findAll { Files.isDirectory(it, LinkOption.NOFOLLOW_LINKS) }
             .collect { plugin -> new LocalPlugin(plugin, manifestReader.find(plugin)) }
 
         // now group the descriptors by id, to create a PluginInfo with list of versions

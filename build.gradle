@@ -99,6 +99,8 @@ allprojects {
     }
 
     repositories {
+        // TODO remove with the npr-api snapshot (see nprVersion in gradle.properties)
+        mavenLocal { content { includeVersionByRegex('io.seqera', 'npr-.*', '.*-canonicalid-SNAPSHOT') } }
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
