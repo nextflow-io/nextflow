@@ -37,9 +37,9 @@ Today a `/` in a plugin ID fails in several places:
 ## Non-goals
 
 - Authentication for private registries. Nextflow sends no token when it fetches plugin metadata or downloads a plugin. This is needed for private registries but is a separate decision.
-- Moving existing plugins into namespaces (e.g. `nf-amazon` to `nextflow/nf-amazon`).
+- Moving existing plugins into namespaces (e.g. `nf-amazon` to `nextflow-io/nf-amazon`).
 - Making the namespace required for new plugins.
-- Lookup across several registries. It already works with `registry.url` and does not change.
+- Changing how Nextflow combines several registries. This already works with `registry.url`. A registry that refuses a namespaced ID is skipped, and the next registry in the list is asked.
 
 ## Considered Options
 
@@ -79,28 +79,29 @@ Option 3.
 - The namespace is optional.
 - Naming rules for a namespaced ID are owned by the registry: the namespace follows the registry namespace rule (`^[a-z0-9]([a-z0-9-]{1,62}[a-z0-9])?$`), and the name follows the current plugin name rule. Unscoped IDs keep their current rules in each component, so no existing plugin is refused.
 - The ID is used as is in config (`plugins { id 'myorg/nf-foo@1.0.0' }`), in `include from 'plugin/myorg/nf-foo'`, in `nextflow plugin myorg/nf-foo:<cmd>` and in `Plugin-Dependencies`.
-- The `nf-core` namespace is protected in the registry, so nobody can publish `nf-core/...` plugins. The `nextflow` namespace is not protected. Seqera claims it as a normal namespace ( same as modules or pipelines ).
+- The `nf-core` namespace is protected in the registry, so nobody can publish `nf-core/...` plugins. `nextflow-io` and `seqera` are not protected. They are claimed as normal namespaces, as for modules and pipelines. Core and open-source plugins go in `nextflow-io`. Seqera plugins go in `seqera`.
 
 ### Nextflow
 
 Nextflow does not check the naming rules. It only checks the structure of a namespaced ID, because it turns the ID into file paths, and some sources (offline mode, test repositories, local plugins) never call the registry.
 
-- **ID check:** for a namespaced ID, `PluginRef.parse()` refuses more than one `/`, an empty part, a part equal to `.` or `..`, and a `~` (see below). Unscoped IDs are not checked, as today.
+- **ID check:** for a namespaced ID, `PluginRef.parse()` refuses more than one `/`, an empty part, a part equal to `.` or `..`, and a `~` (see below). Unscoped IDs are not checked, as today. This means an unscoped ID with a `~`, such as `a~b`, gets the same store folder as `a/b`. The public registry refuses `~` in plugin names, so this can only happen with local or test repositories.
 - **File names:** every file name built from the ID uses a flat name, with `~` in place of `/` (`PluginRef.dirName`): `myorg/nf-foo` becomes `myorg~nf-foo`.
   - **Plugins store:** `$NXF_HOME/plugins/<namespace>~<name>-<version>`. Unscoped plugins stay at `$NXF_HOME/plugins/<name>-<version>`.
   - **Lock file:** `nextflow-plugin-<namespace>~<name>-<version>.lock`.
   - The local plugin root symlink, offline mode (`LocalUpdateRepository`) and embedded mode (`EmbeddedPluginManager`) need no change: the store stays one level deep, and the plugin ID comes from the MANIFEST, not from the folder name.
 - **Why a flat store and not `<namespace>/<name>-<version>`:** a nested store, the layout of modules and pipelines, needs extra code in offline mode, embedded mode and the symlink name, plus creating the namespace folder. The flat store reuses the lock file scheme and keeps all of that code unchanged.
 - **Download** (`PluginUpdater.download0`): the unzipped directory is named after the zip file (`<name>-<version>.zip`), so for a namespaced plugin it does not match the store folder name. The move renames it.
-- **Registry refuses a namespaced ID:** an old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows a clear message with the registry response as a warning. The run then fails with "Cannot find version", as today.
+- **Registry refuses a namespaced ID:** an old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows the registry response as a warning, with a note that the registry may not support namespaced plugins. The run then fails with "Cannot find version", as today. The note is added only to a 400 answer, not to errors such as 429 or 503.
+- **Revoked namespace:** `/dependencies` leaves out the plugins of a revoked namespace, so Nextflow reports "Cannot find version", not "revoked".
 
 ### Registry (summary)
 
-The registry reuses its namespace model for modules and pipelines: ID validation with an optional `<namespace>/` prefix, a `namespace_id` column on plugins, publish permission through namespace membership, `%2F`-encoded IDs in API routes, download file name `<name>-<version>.zip`, a `plugins/` prefix in OCI storage, namespaced plugins left out of the legacy `plugins.json`, and namespace revoke, delete and "My plugins" support. It refuses a namespaced ID when the request's `nextflowVersion` is older than a configured minimum, with a clear message. See the ADR in the registry repository.
+The registry reuses its namespace model for modules and pipelines: ID validation with an optional `<namespace>/` prefix, a `namespace_id` column on plugins, publish permission through namespace membership, `%2F`-encoded IDs in API routes, download file name `<name>-<version>.zip`, a `plugins/` prefix in OCI storage, namespaced plugins left out of the legacy `plugins.json`, and namespace revoke, delete and "My plugins" support. It refuses a namespaced ID when the request's `nextflowVersion` is older than a configured minimum, with a clear message. The minimum is the first edge release with namespace support (planned: 26.12.0-edge). The docs name the stable release, 27.04. See the ADR in the registry repository.
 
 ### Gradle plugin (summary)
 
-A new optional `nextflowPlugin { namespace = 'myorg' }` setting. The ID becomes `myorg/<project.name>` in the MANIFEST, the release request and the local install path (`plugins/myorg/<name>-<version>`). The zip stays `<project.name>-<version>.zip`. See the ADR in the `nextflow-plugin-gradle` repository.
+A new optional `nextflowPlugin { namespace = 'myorg' }` setting. The ID becomes `myorg/<project.name>` in the MANIFEST, the release request and the local install path (`plugins/myorg~<name>-<version>`). The zip stays `<project.name>-<version>.zip`. See the ADR in the `nextflow-plugin-gradle` repository.
 
 ### Compatibility
 

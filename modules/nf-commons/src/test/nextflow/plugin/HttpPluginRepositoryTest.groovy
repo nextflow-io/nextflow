@@ -221,6 +221,23 @@ class HttpPluginRepositoryTest extends Specification {
         e.message.endsWith('\nThe registry may not support namespaced plugins')
     }
 
+    def 'add no namespace hint when the registry fails for another reason'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(STATUS).withBody('Error')))
+
+        when:
+        unit.fetchPlugin('myorg/nf-foo')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.contains("http status: $STATUS")
+        !e.message.contains('namespaced')
+
+        where:
+        STATUS << [404, 429, 503]
+    }
+
     def 'report a plugin as not found when the registry refuses it'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))

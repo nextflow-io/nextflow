@@ -191,8 +191,8 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
         if( resp.statusCode() != 200 ) {
             def msg = "Invalid response while fetching plugin metadata from: ${req.uri()}\n- http status: ${resp.statusCode()}\n- response   : ${body}"
-            // a registry without namespace support refuses any id with a `/`
-            if( specs.any { it.id.contains('/') } )
+            // only a 400 means the registry may not support namespaces
+            if( resp.statusCode() == 400 && specs.any { it.id.contains('/') } )
                 msg += "\nThe registry may not support namespaced plugins"
             throw new PluginRuntimeException(msg)
         }
