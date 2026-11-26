@@ -53,7 +53,9 @@ The contributor [ORCID](https://orcid.org/) URL.
 Nextflow can automatically detect the default branch when using a remote pipeline.
 </DeprecatedInVersion>
 
-Git repository default branch (default: `master`).
+Git repository default branch.
+
+As of version 27.04, this setting is ignored. Nextflow runs the default branch of the remote repository when no revision is specified, and prints a warning if it differs from this setting.
 
 ##### `manifest.description`
 

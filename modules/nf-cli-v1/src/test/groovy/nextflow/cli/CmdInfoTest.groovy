@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+import static nextflow.scm.MultiRevisionRepository.REPOS_SUBDIR
 
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf

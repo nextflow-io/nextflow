@@ -57,10 +57,6 @@ class CmdView extends CmdBase {
         try (final manager = new AssetManager(args[0], revision)) {
             if( !manager.isLocal() )
                 throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
-            if( revision && manager.isUsingLegacyStrategy()){
-                log.warn("The local asset ${args[0]} does not support multi-revision - 'revision' option is ignored\n" +
-                    "Consider updating the asset using 'nextflow pull ${args[0]} -r $revision -migrate'")
-            }
             if( all ) {
                 if( !quiet )
                     println "== content of path: ${manager.localPath}"

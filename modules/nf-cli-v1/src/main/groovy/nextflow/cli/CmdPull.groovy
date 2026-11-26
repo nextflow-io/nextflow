@@ -44,12 +44,6 @@ class CmdPull extends CmdBase implements HubAware {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-    Integer deep
-
-    @Parameter(names=['-m','-migrate'], description = 'Migrate projects to multi-revision strategy', arity = 0)
-    boolean migrate
-
     @Override
     final String getName() { NAME }
 
@@ -95,22 +89,12 @@ class CmdPull extends CmdBase implements HubAware {
 
     private pullProjectRevision(String project, String revision) {
         try (final manager = new AssetManager(project, toHubOptions())) {
-            if( manager.isUsingLegacyStrategy() ) {
-                if( migrate ) {
-                    log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
-                    manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
-                } else {
-                    log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
-                        "Consider updating the project ${project} using '-migrate' option"
-                }
-            }
-
             if( revision )
                 manager.setRevision(revision)
 
             log.info "Checking ${manager.getProjectWithRevision()} ..."
 
-            def result = manager.download(revision, deep)
+            def result = manager.download(revision)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

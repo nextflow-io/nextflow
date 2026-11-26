@@ -44,6 +44,12 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
   export NXF_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED"
   ```
 
+- Pipelines downloaded with the legacy asset layout (a single clone in `$NXF_ASSETS/<org>/<repo>`) are no longer used. Nextflow downloads them again into the multi-revision layout (`$NXF_ASSETS/.repos/<org>/<repo>`) and prints a warning for each leftover clone. Delete the leftover clones, or migrate them with `nextflow pull -migrate` using Nextflow 26.04 or 26.10 before upgrading. The `NXF_SCM_LEGACY` environment variable is no longer supported.
+
+  Nextflow no longer reads the Git provider from a leftover clone. If a pipeline is hosted outside GitHub, specify `-hub` (or the full repository URL) the first time you run or pull it after upgrading. If you run pipelines with `-offline`, pull them again before going offline.
+
+- The `manifest.defaultBranch` config option is ignored. Nextflow runs the default branch of the remote repository when no revision is specified, and prints a warning if it differs from `manifest.defaultBranch`. To run a different branch, specify it with `-r` or change the default branch of the repository.
+
 ### Cache-breaking changes
 
 - Java types that are not [standard types][stdlib-types], such as `Optional` or `AtomicInteger`, can no longer be stored in the task cache. A task whose inputs or outputs hold such a value is not cached and re-executes when you resume, with a warning.

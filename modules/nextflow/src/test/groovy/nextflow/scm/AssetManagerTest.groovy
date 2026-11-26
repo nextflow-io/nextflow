@@ -19,9 +19,9 @@ package nextflow.scm
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
-import static MultiRevisionRepositoryStrategy.BARE_REPO
-import static MultiRevisionRepositoryStrategy.REVISION_SUBDIR
-import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+import static nextflow.scm.MultiRevisionRepository.BARE_REPO
+import static nextflow.scm.MultiRevisionRepository.REPOS_SUBDIR
+import static nextflow.scm.MultiRevisionRepository.REVISION_SUBDIR
 
 import spock.lang.IgnoreIf
 
@@ -33,6 +33,7 @@ import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
+import test.OutputCapture
 import test.TemporaryPath
 import java.nio.file.Paths
 /**
@@ -76,6 +77,9 @@ class AssetManagerTest extends Specification {
     @Rule
     TemporaryPath tempDir = new TemporaryPath()
 
+    @Rule
+    OutputCapture capture = new OutputCapture()
+
     def setup() {
         AssetManager.root = tempDir.root.toFile()
     }
@@ -92,15 +96,49 @@ class AssetManagerTest extends Specification {
         return defaultBranch
     }
 
+    /**
+     * Create a multi-revision repository for the given project with a single commit,
+     * checked out in its clone directory, without accessing the network
+     */
+    private String createLocalRepo(String project, Map<String,String> files, String remoteUrl = "https://github.com/${project}.git") {
+        def source = tempDir.root.resolve('_source/' + project)
+        source.mkdirs()
+        files.each { name, text -> source.resolve(name).text = text }
+        def git = Git.init().setDirectory(source.toFile()).call()
+        git.add().addFilepattern('.').call()
+        def commitId = git.commit().setSign(false).setMessage('First commit').call().name()
+        git.close()
+
+        def projectDir = tempDir.root.resolve(REPOS_SUBDIR + '/' + project)
+        def bare = Git.cloneRepository()
+            .setBare(true)
+            .setURI(source.toFile().absolutePath)
+            .setGitDir(projectDir.resolve(BARE_REPO).toFile())
+            .call()
+        def config = bare.getRepository().getConfig()
+        config.setString('remote', 'origin', 'url', remoteUrl)
+        config.save()
+        bare.close()
+
+        Git.cloneRepository()
+            .setURI(source.toFile().absolutePath)
+            .setDirectory(projectDir.resolve(REVISION_SUBDIR + '/' + commitId).toFile())
+            .call()
+            .close()
+        return commitId
+    }
+
     def testList() {
 
         given:
         def folder = tempDir.getRoot()
-        folder.resolve('cbcrg/pipe1').mkdirs()
-        folder.resolve('cbcrg/pipe2').mkdirs()
-        folder.resolve('ncbi/blast').mkdirs()
+        folder.resolve(REPOS_SUBDIR +'/cbcrg/pipe1').mkdirs()
+        folder.resolve(REPOS_SUBDIR +'/cbcrg/pipe2').mkdirs()
         folder.resolve(REPOS_SUBDIR +'/ncbi/blast').mkdirs()
         folder.resolve(REPOS_SUBDIR +'/new/repo').mkdirs()
+        and: 'leftover clones of the legacy layout are ignored'
+        folder.resolve('ncbi/blast/.git').mkdirs()
+        folder.resolve('legacy/pipe3/.git').mkdirs()
 
         when:
         def list = AssetManager.list()
@@ -120,9 +158,9 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
-        folder.resolve('cbcrg/pipe1').mkdirs()
-        folder.resolve('cbcrg/pipe2').mkdirs()
-        folder.resolve('ncbi/blast').mkdirs()
+        folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe1').mkdirs()
+        folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe2').mkdirs()
+        folder.resolve(REPOS_SUBDIR + '/ncbi/blast').mkdirs()
 
         when:
         def result = new AssetManager().resolveName('x/y')
@@ -175,34 +213,12 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'test download with legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download()
-        then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
-
-        when:
-        manager.download()
-        then:
-        noExceptionThrown()
-
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'test download from tag twice with multi-revision'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("v1.2")
@@ -219,34 +235,12 @@ class AssetManagerTest extends Specification {
 
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'test download from tag twice legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download("v1.2")
-        then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello').toString()
-
-        when:
-        manager.download("v1.2")
-        then:
-        noExceptionThrown()
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'test download from hash twice with multi-revision'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
@@ -259,51 +253,7 @@ class AssetManagerTest extends Specification {
         def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
         noExceptionThrown()
-    }
-
-    // The hashes used here are NOT associated with tags.
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'test download from hash twice legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
-        then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
-
-        when:
-        def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
-        then:
-        noExceptionThrown()
         result == "Already-up-to-date"
-    }
-
-
-    // Downloading a branch first and then pulling the branch
-    // should work fine, unlike with tags.
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'test download from branch twice legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download("mybranch")
-        then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
-
-        when:
-        manager.download("mybranch")
-        then:
-        noExceptionThrown()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -313,7 +263,6 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("mybranch")
@@ -335,7 +284,6 @@ class AssetManagerTest extends Specification {
         def token  = System.getenv('NXF_AZURE_REPOS_TOKEN')
 
         def manager = new AssetManager().build('https://dev.azure.com/pditommaso/nf-azure-repo', [providers: [azurerepos: [ auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("master")
@@ -347,30 +295,6 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
-    // First clone a repo with a tag, then forget to include the -r argument
-    // when you execute nextflow.
-    // Note that while the download will work, execution will fail subsequently
-    // at a separate check - this just tests that we don't fail because of a detached head.
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'test download tag then branch legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download("v1.2")
-        then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
-
-        when:
-        manager.download()
-        then:
-        noExceptionThrown()
-    }
-
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'test download tag then branch with multi-revision'() {
 
@@ -378,7 +302,6 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("v1.2")
@@ -522,23 +445,17 @@ class AssetManagerTest extends Specification {
                 manifest {
                     homePage = 'http://foo.com'
                     mainScript = 'hello.nf'
-                    defaultBranch = 'super-stuff'
                     description = 'This pipeline do this and that'
                     author = 'Hi Dude'
                 }
                 '''
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        createLocalRepo('foo/bar', ['nextflow.config': config])
 
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
         then:
         holder.getMainScriptName() == 'hello.nf'
-        holder.manifest.getDefaultBranch() == 'super-stuff'
         holder.manifest.getHomePage() == 'http://foo.com'
         holder.manifest.getDescription() == 'This pipeline do this and that'
         holder.manifest.getAuthor() == 'Hi Dude'
@@ -548,11 +465,7 @@ class AssetManagerTest extends Specification {
     def 'should propagate explicit main script' () {
 
         given:
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        createLocalRepo('foo/bar', ['nextflow.config': 'empty: 1'])
 
         when:
         // pass an explicit script file via the new build(...) signature
@@ -571,11 +484,7 @@ class AssetManagerTest extends Specification {
     def 'should return default main script file' () {
 
         given:
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        createLocalRepo('foo/bar', ['nextflow.config': 'empty: 1'])
 
         when:
         def holder = new AssetManager()
@@ -584,7 +493,6 @@ class AssetManagerTest extends Specification {
         then:
         holder.getMainScriptName() == 'main.nf'
         holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.manifest.getDefaultBranch() == null
         holder.manifest.getDescription() == null
 
     }
@@ -617,7 +525,60 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should create a script file object legacy' () {
+    def 'should warn when manifest default branch differs from the remote default branch' () {
+
+        given:
+        createLocalRepo('foo/bar', ['main.nf': "println 'Hello'", 'nextflow.config': "manifest.defaultBranch = 'dev'"])
+
+        when:
+        new AssetManager().build('foo/bar').tryCheckout()
+        then:
+        capture.toString().contains("The `manifest.defaultBranch` setting is ignored -- running the default branch of the remote repository (`${getLocalDefaultBranch()}`). Use `-r dev` to run the `dev` branch")
+    }
+
+    def 'should not warn when manifest default branch matches or a revision is specified' () {
+
+        given:
+        def commitId = createLocalRepo('foo/bar', ['main.nf': "println 'Hello'", 'nextflow.config': "manifest.defaultBranch = '${defaultBranch}'"])
+
+        when:
+        def manager = new AssetManager().build('foo/bar')
+        manager.tryCheckout(useRevision ? commitId : null)
+        then:
+        manager.getManifest().getDefaultBranch() == defaultBranch
+        !capture.toString().contains('manifest.defaultBranch')
+
+        where:
+        defaultBranch               | useRevision
+        getLocalDefaultBranch()     | false
+        'other'                     | true
+    }
+
+    def 'should detect hub provider from the bare repository config' () {
+
+        given:
+        createLocalRepo('foo/bar', ['main.nf': "println 'Hello'"], 'https://gitlab.com/foo/bar.git')
+
+        when:
+        def manager = new AssetManager().build('foo/bar')
+        then:
+        manager.getHub() == 'gitlab'
+        manager.getLocalGitConfig() == tempDir.root.resolve(REPOS_SUBDIR + '/foo/bar/' + BARE_REPO + '/config').toFile()
+    }
+
+    def 'should reject a hub provider that does not match the bare repository config' () {
+
+        given:
+        createLocalRepo('foo/bar', ['main.nf': "println 'Hello'"], 'https://gitlab.com/foo/bar.git')
+
+        when:
+        new AssetManager().build('foo/bar', null, new HubOptions('github', null))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('has already been downloaded from a different provider: `gitlab`')
+    }
+
+    def 'should create a script file object from a local directory' () {
 
         given:
         def dir = tempDir.root
@@ -763,35 +724,12 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should download branch specified legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download("dev")
-        then:
-        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
-        and:
-        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
-
-        when:
-        manager.download()
-        then:
-        noExceptionThrown()
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download branch specified multi-revision'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("dev")
@@ -821,34 +759,12 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should download tag specified legacy'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-
-        when:
-        manager.download("v0.1")
-        then:
-        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
-        and:
-        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
-
-        when:
-        manager.download()
-        then:
-         noExceptionThrown()
-    }
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download tag specified with revision'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
 
         when:
         manager.download("v0.1")
@@ -856,26 +772,6 @@ class AssetManagerTest extends Specification {
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
         and:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
-
-        when:
-        manager.download()
-        then:
-        noExceptionThrown()
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should identify default branch when downloading repo legacy'() {
-
-        given:
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/socks', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-        when:
-        // simulate calling `nextflow run nextflow-io/socks` without specifying a revision
-        manager.download()
-        manager.checkout(null)
-        then:
-        manager.getCurrentRevision() == 'main'
 
         when:
         manager.download()
@@ -926,44 +822,52 @@ class AssetManagerTest extends Specification {
         branches.find { it.name == revision2 }.commitId == '1c3e9e7404127514d69369cd87f8036830f5cf64'
     }
 
-    def 'should select multi-revision strategy for uninitialized repository'() {
-        given:
-        def folder = tempDir.getRoot()
-        // No repositories exist yet
-
+    def 'should not be initialized when no local repository exists'() {
         when:
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
         manager.isNotInitialized()
-        manager.isUsingMultiRevisionStrategy()
-        !manager.isUsingLegacyStrategy()
+        manager.getLocalPath() == tempDir.root.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + REVISION_SUBDIR + '/HEAD').toFile()
+        !manager.getLocalPath().exists()
+        !manager.isLocal()
+        manager.getProjectPath() == tempDir.root.resolve(REPOS_SUBDIR + '/test-org/test-repo').toFile()
     }
 
-    def 'should select legacy strategy when legacy repository exists'() {
+    def 'should ignore a leftover legacy clone'() {
         given:
         def folder = tempDir.getRoot()
         def legacyPath = folder.resolve('test-org/test-repo')
         legacyPath.mkdirs()
-
-        // Create a proper git repository
-        def init = Git.init()
-        def repo = init.setDirectory(legacyPath.toFile()).call()
+        legacyPath.resolve('main.nf').text = "println 'Hello'"
+        def repo = Git.init().setDirectory(legacyPath.toFile()).call()
         repo.close()
-
-        // Add git config with remote url
         legacyPath.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.isOnlyLegacy()
-        manager.isUsingLegacyStrategy()
-        !manager.isUsingMultiRevisionStrategy()
+        capture.toString().contains("The legacy pipeline cache at ${legacyPath} is no longer used")
+        manager.isNotInitialized()
+        !manager.getLocalPath().exists()
+        !manager.getLocalPath().toPath().startsWith(legacyPath)
+        !manager.isLocal()
+        !manager.isRunnable()
+        manager.getLocalGitConfig() == null
+        manager.getBranchList() == []
+        AssetManager.list() == []
+
+        when:
+        manager.drop()
+
+        then:
+        thrown(AbortOperationException)
+        legacyPath.resolve('.git').exists()
+        legacyPath.resolve('main.nf').exists()
     }
 
-    def 'should select multi-revision strategy when bare repository exists'() {
+    def 'should use bare repository when it exists'() {
         given:
         def folder = tempDir.getRoot()
         def barePath = folder.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + BARE_REPO)
@@ -980,11 +884,11 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.isUsingMultiRevisionStrategy()
-        !manager.isUsingLegacyStrategy()
+        !manager.isNotInitialized()
+        manager.getLocalGitConfig() == barePath.resolve('config').toFile()
     }
 
-    def 'should prefer multi-revision strategy for hybrid repository'() {
+    def 'should ignore legacy clone when multi-revision repository exists'() {
         given:
         def folder = tempDir.getRoot()
         // Create legacy repository
@@ -1009,64 +913,10 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.isUsingMultiRevisionStrategy()
-        !manager.isUsingLegacyStrategy()
-    }
-
-    def 'should force legacy strategy when NXF_SCM_LEGACY is set'() {
-        given:
-        def folder = tempDir.getRoot()
-        // No repositories exist yet
-        and:
-        def originalValue = System.getenv('NXF_SCM_LEGACY')
-
-        when:
-        // Simulate NXF_SCM_LEGACY being set to true
-        nextflow.SysEnv.push([NXF_SCM_LEGACY: 'true'])
-        def manager = new AssetManager().build('test-org/test-repo')
-
-        then:
-        manager.isNotInitialized()
-        manager.isUsingLegacyStrategy()
-        !manager.isUsingMultiRevisionStrategy()
-
-        cleanup:
-        nextflow.SysEnv.pop()
-    }
-
-    def 'should switch strategy when explicitly set'() {
-        given:
-        def folder = tempDir.getRoot()
-
-        when:
-        def manager = new AssetManager().build('test-org/test-repo')
-        then:
-        manager.isUsingMultiRevisionStrategy()
-
-        when:
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-        then:
-        manager.isUsingLegacyStrategy()
-
-        when:
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
-        then:
-        manager.isUsingMultiRevisionStrategy()
-    }
-
-    def 'should not switch strategy if already using requested type'() {
-        given:
-        def folder = tempDir.getRoot()
-        def manager = new AssetManager().build('test-org/test-repo')
-
-        when:
-        def strategyBefore = manager.@strategy
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
-        def strategyAfter = manager.@strategy
-
-        then:
-        strategyBefore.is(strategyAfter)
-        manager.isUsingMultiRevisionStrategy()
+        !manager.isNotInitialized()
+        manager.getLocalGitConfig() == barePath.resolve('config').toFile()
+        !manager.getLocalPath().exists()
+        AssetManager.list() == ['test-org/test-repo']
     }
 
     def 'should detect repository status correctly'() {
@@ -1084,8 +934,7 @@ class AssetManagerTest extends Specification {
         legacyPath2.resolve('.git/config').text = GIT_CONFIG_TEXT
         def manager = new AssetManager().build('test-org/repo2')
         then:
-        !manager.isNotInitialized()
-        manager.isOnlyLegacy()
+        manager.isNotInitialized()
 
         when: 'only bare exists'
         def barePath3 = folder.resolve(REPOS_SUBDIR + '/test-org/repo3/' + BARE_REPO)
@@ -1099,8 +948,7 @@ class AssetManagerTest extends Specification {
         manager = new AssetManager().build('test-org/repo3')
         then:
         !manager.isNotInitialized()
-        !manager.isOnlyLegacy()
-        MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo3')
+        MultiRevisionRepository.checkProject(folder.toFile(), 'test-org/repo3')
 
         when: 'both exist'
         def legacyPath4 = folder.resolve('test-org/repo4')
@@ -1118,9 +966,7 @@ class AssetManagerTest extends Specification {
         manager = new AssetManager().build('test-org/repo4')
         then:
         !manager.isNotInitialized()
-        !manager.isOnlyLegacy()
-        LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo4')
-        MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo4')
+        MultiRevisionRepository.checkProject(folder.toFile(), 'test-org/repo4')
     }
 
     // ============================================
@@ -1138,7 +984,6 @@ class AssetManagerTest extends Specification {
 
         and: 'download two revisions'
         def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download(revision1)
         manager.download(revision2)
 
@@ -1168,7 +1013,6 @@ class AssetManagerTest extends Specification {
 
         and: 'download two revisions'
         def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download(revision1)
         manager.download(revision2)
 
@@ -1201,7 +1045,6 @@ class AssetManagerTest extends Specification {
 
         and: 'download a revision'
         def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download(revision)
 
         and: 'make local changes'
@@ -1230,7 +1073,6 @@ class AssetManagerTest extends Specification {
 
         and: 'create manager downloading a revision'
         def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download("v1.2")
 
         when: 'try to drop a revision that was never downloaded'
@@ -1255,7 +1097,6 @@ class AssetManagerTest extends Specification {
 
         and: 'download two revisions'
         def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download(revision1)
         manager.download(revision2)
 
@@ -1284,7 +1125,6 @@ class AssetManagerTest extends Specification {
 
         and: 'create manager and download revisions'
         def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
         manager.download(revision1)
         manager.download(revision2)
 

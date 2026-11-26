@@ -55,7 +55,7 @@ class Manifest implements ConfigScope {
     @Deprecated
     @ConfigOption
     @Description("""
-        Git repository default branch (default: `master`).
+        Git repository default branch. Ignored: the default branch of the remote repository is used instead.
     """)
     final String defaultBranch
 

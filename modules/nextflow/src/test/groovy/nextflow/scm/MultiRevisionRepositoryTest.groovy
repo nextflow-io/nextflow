@@ -25,9 +25,9 @@ import org.eclipse.jgit.transport.FetchResult
 import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.TrackingRefUpdate
 
-import static MultiRevisionRepositoryStrategy.BARE_REPO
-import static MultiRevisionRepositoryStrategy.REVISION_SUBDIR
-import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+import static nextflow.scm.MultiRevisionRepository.BARE_REPO
+import static nextflow.scm.MultiRevisionRepository.REVISION_SUBDIR
+import static nextflow.scm.MultiRevisionRepository.REPOS_SUBDIR
 
 import spock.lang.IgnoreIf
 
@@ -42,7 +42,7 @@ import test.TemporaryPath
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Timeout(60)
-class MultiRevisionRepositoryStrategyTest extends Specification {
+class MultiRevisionRepositoryTest extends Specification {
 
     @Rule
     TemporaryPath tempDir = new TemporaryPath()
@@ -51,11 +51,11 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         AssetManager.root = tempDir.root.toFile()
     }
 
-    private MultiRevisionRepositoryStrategy createStrategy(String project, String token) {
-        final strategy = new MultiRevisionRepositoryStrategy(project)
+    private MultiRevisionRepository createRepository(String project, String token) {
+        final repository = new MultiRevisionRepository(project)
         if( token )
-            strategy.setProvider(new GithubRepositoryProvider(project, new ProviderConfig('github').setAuth(token)))
-        return strategy
+            repository.setProvider(new GithubRepositoryProvider(project, new ProviderConfig('github').setAuth(token)))
+        return repository
     }
 
     def 'should list commits'() {
@@ -63,18 +63,18 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         def folder = tempDir.getRoot()
 
         when:
-        def strategy = createStrategy('cbcrg/pipe1', null)
+        def repository = createRepository('cbcrg/pipe1', null)
         folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe1/' + REVISION_SUBDIR + '/12345').mkdirs()
         folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe1/' + REVISION_SUBDIR + '/67890').mkdirs()
-        def list = strategy.listDownloadedCommits()
+        def list = repository.listDownloadedCommits()
         then:
         list.sort() == ['12345', '67890']
 
         when:
-        strategy = createStrategy('cbcrg/pipe2', null)
+        repository = createRepository('cbcrg/pipe2', null)
         folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe2/' + REVISION_SUBDIR + '/abcde').mkdirs()
         folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe2/' + REVISION_SUBDIR + '/fghij').mkdirs()
-        list = strategy.listDownloadedCommits()
+        list = repository.listDownloadedCommits()
         then:
         list.sort() == ['abcde', 'fghij']
     }
@@ -86,20 +86,19 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def strategy = createStrategy('nextflow-io/hello', token)
+        def repository = createRepository('nextflow-io/hello', token)
         def manifest = Mock(Manifest) {
-            getDefaultBranch() >> 'master'
             getRecurseSubmodules() >> false
         }
 
         when:
-        strategy.checkBareRepo(manifest)
+        repository.checkBareRepo(manifest)
         then:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/config').exists()
 
         expect:
-        strategy.revisionToCommitWithBareRepo('v1.2') == '1b420d060d3fad67027154ac48e3bdea06f058da'
+        repository.revisionToCommitWithBareRepo('v1.2') == '1b420d060d3fad67027154ac48e3bdea06f058da'
 
     }
 
@@ -110,27 +109,26 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def strategy = createStrategy('nextflow-io/hello', token)
+        def repository = createRepository('nextflow-io/hello', token)
         def manifest = Mock(Manifest) {
-            getDefaultBranch() >> 'master'
             getRecurseSubmodules() >> false
         }
 
         when:
-        strategy.download('7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8', 1, manifest)
+        repository.download('7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8', manifest)
         then:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8/.git').isDirectory()
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
 
         when:
         // tag v1.2 -> commit 1b420d060d3fad67027154ac48e3bdea06f058da
-        strategy.download('v1.2', 1, manifest)
+        repository.download('v1.2', manifest)
         then:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
 
         when:
-        strategy.download('mybranch', 1, manifest)
+        repository.download('mybranch', manifest)
         then:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
@@ -149,11 +147,11 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         config.save()
         git.close()
 
-        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def repository = new MultiRevisionRepository('test/project')
 
         when:
         // Access the private method via Groovy's metaclass
-        def refSpec = strategy.invokeMethod('refSpecForName', 'some-revision')
+        def refSpec = repository.invokeMethod('refSpecForName', 'some-revision')
 
         then:
         // When revision is not found locally or remotely, it's treated as a commit
@@ -167,15 +165,14 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         // Use a test repo with known branches
-        def strategy = createStrategy('nextflow-io/hello', token)
+        def repository = createRepository('nextflow-io/hello', token)
         def manifest = Mock(Manifest) {
-            getDefaultBranch() >> 'master'
             getRecurseSubmodules() >> false
         }
 
         when:
         // First, create bare repo with default branch only
-        strategy.checkBareRepo(manifest)
+        repository.checkBareRepo(manifest)
 
         then:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
@@ -183,7 +180,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         when:
         // Now try to download 'mybranch' which exists remotely but wasn't fetched initially
         // Clear the local branch ref to simulate it not existing locally
-        def bareGit = Git.open(strategy.getBareRepo())
+        def bareGit = Git.open(repository.getBareRepo())
         def localBranchRef = bareGit.getRepository().findRef("refs/heads/mybranch")
         // If mybranch was fetched during clone, delete it to simulate fresh fetch scenario
         if (localBranchRef) {
@@ -192,7 +189,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         bareGit.close()
 
         // This should succeed by querying remote refs
-        strategy.download('mybranch', 1, manifest)
+        repository.download('mybranch', manifest)
 
         then:
         noExceptionThrown()
@@ -202,7 +199,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         when:
         // Now try to download tag 'v1.2' which exists remotely but wasn't fetched initially
         // Clear the local tag ref to simulate it not existing locally
-        bareGit = Git.open(strategy.getBareRepo())
+        bareGit = Git.open(repository.getBareRepo())
         def localTagRef = bareGit.getRepository().findRef("refs/tags/v1.2")
         // If v1.2 was fetched during clone, delete it to simulate fresh fetch scenario
         if (localTagRef) {
@@ -211,7 +208,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         bareGit.close()
 
         // This should succeed by querying remote refs
-        strategy.download('v1.2', 1, manifest)
+        repository.download('v1.2', manifest)
 
         then:
         noExceptionThrown()
@@ -231,13 +228,13 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
 
     def 'verifyFetchResult should pass silently for happy results'() {
         given:
-        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def repository = new MultiRevisionRepository('test/project')
         def fetchResult = Mock(FetchResult) {
             getTrackingRefUpdates() >> [mockUpdate(resultCode)]
         }
 
         when:
-        strategy.verifyFetchResult(fetchResult, 'main', 'bare repo')
+        repository.verifyFetchResult(fetchResult, 'main', 'bare repo')
 
         then:
         noExceptionThrown()
@@ -248,13 +245,13 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
 
     def 'verifyFetchResult should warn but not throw on FORCED'() {
         given:
-        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def repository = new MultiRevisionRepository('test/project')
         def fetchResult = Mock(FetchResult) {
             getTrackingRefUpdates() >> [mockUpdate(RefUpdate.Result.FORCED)]
         }
 
         when:
-        strategy.verifyFetchResult(fetchResult, 'main', 'bare repo')
+        repository.verifyFetchResult(fetchResult, 'main', 'bare repo')
 
         then:
         noExceptionThrown()
@@ -262,13 +259,13 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
 
     def 'verifyFetchResult should abort on rejected or failure results'() {
         given:
-        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def repository = new MultiRevisionRepository('test/project')
         def fetchResult = Mock(FetchResult) {
             getTrackingRefUpdates() >> [mockUpdate(resultCode, 'refs/tags/v1.0', 'refs/tags/v1.0')]
         }
 
         when:
-        strategy.verifyFetchResult(fetchResult, 'v1.0', 'bare repo')
+        repository.verifyFetchResult(fetchResult, 'v1.0', 'bare repo')
 
         then:
         def ex = thrown(AbortOperationException)
@@ -301,23 +298,22 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         work.push().setRemote(upstreamDir.absolutePath).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
         work.close()
 
-        and: 'a strategy targeting the local upstream'
+        and: 'a repository targeting the local upstream'
         def provider = Mock(RepositoryProvider) {
             hasCredentials() >> false
             getCloneUrl() >> upstreamDir.absolutePath
         }
-        def strategy = new MultiRevisionRepositoryStrategy('test/forced', 'main')
-        strategy.setProvider(provider)
+        def repository = new MultiRevisionRepository('test/forced', 'main')
+        repository.setProvider(provider)
         def manifest = Mock(Manifest) {
-            getDefaultBranch() >> 'main'
             getRecurseSubmodules() >> false
         }
 
         when: 'first fetch creates the bare repo'
-        strategy.checkBareRepo(manifest)
+        repository.checkBareRepo(manifest)
 
         then: 'local bare repo points at commit A'
-        def bareGit = Git.open(strategy.getBareRepo())
+        def bareGit = Git.open(repository.getBareRepo())
         bareGit.getRepository().resolve('refs/heads/main').name() == commitA.name()
         bareGit.close()
 
@@ -329,11 +325,11 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         work.push().setRemote(upstreamDir.absolutePath).setForce(true).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
         work.close()
 
-        and: 'strategy fetches again'
-        strategy.checkBareRepo(manifest)
+        and: 'repository fetches again'
+        repository.checkBareRepo(manifest)
 
         then: 'local bare repo now points at commit B'
-        def bareGitB = Git.open(strategy.getBareRepo())
+        def bareGitB = Git.open(repository.getBareRepo())
         bareGitB.getRepository().resolve('refs/heads/main').name() == commitB.name()
         commitB.name() != commitA.name()
         bareGitB.close()
@@ -348,7 +344,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         config.save()
 
         when:
-        AbstractRepositoryStrategy.removeBitbucketToken(git, PROVIDER)
+        MultiRevisionRepository.removeBitbucketToken(git, PROVIDER)
         then:
         git.getRepository().getConfig().getString('remote', 'origin', 'url') == EXPECTED
 

@@ -15,11 +15,11 @@
  */
 package nextflow.scm
 
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.junit.Rule
-import spock.lang.IgnoreIf
-import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
 import test.TemporaryPath
@@ -34,16 +34,24 @@ class GitReferenceHelperTest extends Specification {
         AssetManager.root = tempDir.root.toFile()
     }
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'can filter remote branches'() {
         given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
-        manager.download()
-        def branches = manager.getBranchList()
+        def source = tempDir.root.resolve('source')
+        source.mkdirs()
+        source.resolve('main.nf').text = "println 'Hello'"
+        def repo = Git.init().setDirectory(source.toFile()).setInitialBranch('master').call()
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('First commit').call()
+        repo.close()
+        and:
+        def clone = Git.cloneRepository()
+            .setURI(source.toFile().absolutePath)
+            .setDirectory(tempDir.root.resolve('clone').toFile())
+            .call()
+        if( !clone.getRepository().findRef('refs/remotes/origin/HEAD') )
+            clone.getRepository().updateRef('refs/remotes/origin/HEAD').link('refs/remotes/origin/master')
+        def branches = clone.branchList().setListMode(ListBranchCommand.ListMode.ALL).call()
+        clone.close()
 
         when:
         def remote_head = branches.find { it.name == 'refs/remotes/origin/HEAD' }
