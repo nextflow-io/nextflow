@@ -277,11 +277,11 @@ class MultiRevisionRepository {
         finally {
             file.delete()
         }
-        return "downloaded from ${redactUrlPassword(getGitRepositoryUrl())}"
+        return "downloaded from ${redactUrlPassword(provider.getCloneUrl())}"
     }
 
-    /** Checkout in multi-revision is just updating the commit dir. This methods check if bare repo, commit id and commit path exists.
-     * If exists updates the revision that updates the localPath reference. If some
+    /**
+     * Switch to a revision that is already downloaded, by pointing the local path at its clone.
      *
      * @param revision
      * @throws RefNotFoundException
@@ -354,7 +354,7 @@ class MultiRevisionRepository {
         }
 
         // return status message
-        return "downloaded from ${redactUrlPassword(getGitRepositoryUrl())}"
+        return "downloaded from ${redactUrlPassword(provider.getCloneUrl())}"
     }
 
     private RefSpec refSpecForName(String revision) {
@@ -451,6 +451,8 @@ class MultiRevisionRepository {
     }
 
     boolean isClean() {
+        if( !commitPath?.exists() )
+            return true
         try {
             getCommitGit().status().call().isClean()
         }
@@ -466,7 +468,7 @@ class MultiRevisionRepository {
         return getDefaultBranchFromBareRepo()
     }
 
-    protected String getDefaultBranch() {
+    String getDefaultBranch() {
         return getRemoteDefaultBranch() ?: Const.DEFAULT_BRANCH
     }
 
@@ -493,10 +495,6 @@ class MultiRevisionRepository {
         if( localPathOverride )
             return new File(localPathOverride, '.git/config')
         return hasBareRepo() ? new File(this.bareRepo, 'config') : null
-    }
-
-    String getGitRepositoryUrl() {
-        return provider.getCloneUrl()
     }
 
     List<String> listDownloadedCommits() {

@@ -449,7 +449,7 @@ class AssetManager implements Closeable {
     }
 
     String getGitRepositoryUrl() {
-        return repository?.getGitRepositoryUrl() ?: provider.getCloneUrl()
+        return provider.getCloneUrl()
     }
 
     File getLocalPath() {
@@ -497,7 +497,7 @@ class AssetManager implements Closeable {
     }
 
     String getDefaultBranch() {
-        return repository?.getRemoteDefaultBranch() ?: DEFAULT_BRANCH
+        return repository ? repository.getDefaultBranch() : DEFAULT_BRANCH
     }
 
     @Memoized
@@ -584,7 +584,7 @@ class AssetManager implements Closeable {
      *         and the current HEAD, false if differences do exist
      */
     boolean isClean() {
-        return repository?.isClean() ?: true
+        return repository ? repository.isClean() : true
     }
 
     /**

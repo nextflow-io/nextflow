@@ -46,7 +46,9 @@ Use `nextflow self-update -clean` to delete every installed Nextflow version exc
 
 - Pipelines downloaded with the legacy asset layout (a single clone in `$NXF_ASSETS/<org>/<repo>`) are no longer used. Nextflow downloads them again into the multi-revision layout (`$NXF_ASSETS/.repos/<org>/<repo>`) and prints a warning for each leftover clone. Delete the leftover clones, or migrate them with `nextflow pull -migrate` using Nextflow 26.04 or 26.10 before upgrading. The `NXF_SCM_LEGACY` environment variable is no longer supported.
 
-- The `manifest.defaultBranch` config option was removed. Nextflow detects the default branch of a remote pipeline automatically.
+  Nextflow no longer reads the Git provider from a leftover clone. If a pipeline is hosted outside GitHub, specify `-hub` (or the full repository URL) the first time you run or pull it after upgrading. If you run pipelines with `-offline`, pull them again before going offline.
+
+- The `manifest.defaultBranch` config option was removed. Nextflow uses the default branch of the remote repository when no revision is specified. Remove the setting from your pipeline config to avoid an unrecognized config option warning, and replace any references to `workflow.manifest.defaultBranch` in your scripts. If the setting pointed to a branch other than the repository default, specify it with `-r` or change the default branch of the repository.
 
 ### Cache-breaking changes
 

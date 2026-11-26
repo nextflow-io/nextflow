@@ -33,6 +33,7 @@ import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
+import test.OutputCapture
 import test.TemporaryPath
 import java.nio.file.Paths
 /**
@@ -76,6 +77,9 @@ class AssetManagerTest extends Specification {
     @Rule
     TemporaryPath tempDir = new TemporaryPath()
 
+    @Rule
+    OutputCapture capture = new OutputCapture()
+
     def setup() {
         AssetManager.root = tempDir.root.toFile()
     }
@@ -96,7 +100,7 @@ class AssetManagerTest extends Specification {
      * Create a multi-revision repository for the given project with a single commit,
      * checked out in its clone directory, without accessing the network
      */
-    private String createLocalRepo(String project, Map<String,String> files) {
+    private String createLocalRepo(String project, Map<String,String> files, String remoteUrl = "https://github.com/${project}.git") {
         def source = tempDir.root.resolve('_source/' + project)
         source.mkdirs()
         files.each { name, text -> source.resolve(name).text = text }
@@ -112,7 +116,7 @@ class AssetManagerTest extends Specification {
             .setGitDir(projectDir.resolve(BARE_REPO).toFile())
             .call()
         def config = bare.getRepository().getConfig()
-        config.setString('remote', 'origin', 'url', "https://github.com/${project}.git".toString())
+        config.setString('remote', 'origin', 'url', remoteUrl)
         config.save()
         bare.close()
 
@@ -521,6 +525,30 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should detect hub provider from the bare repository config' () {
+
+        given:
+        createLocalRepo('foo/bar', ['main.nf': "println 'Hello'"], 'https://gitlab.com/foo/bar.git')
+
+        when:
+        def manager = new AssetManager().build('foo/bar')
+        then:
+        manager.getHub() == 'gitlab'
+        manager.getLocalGitConfig() == tempDir.root.resolve(REPOS_SUBDIR + '/foo/bar/' + BARE_REPO + '/config').toFile()
+    }
+
+    def 'should reject a hub provider that does not match the bare repository config' () {
+
+        given:
+        createLocalRepo('foo/bar', ['main.nf': "println 'Hello'"], 'https://gitlab.com/foo/bar.git')
+
+        when:
+        new AssetManager().build('foo/bar', null, new HubOptions('github', null))
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('has already been downloaded from a different provider: `gitlab`')
+    }
+
     def 'should create a script file object from a local directory' () {
 
         given:
@@ -790,6 +818,7 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
+        capture.toString().contains("The legacy pipeline cache at ${legacyPath} is no longer used")
         manager.isNotInitialized()
         manager.getLocalPath() == null
         !manager.isLocal()
