@@ -44,6 +44,7 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
         final result = new ArrayList<TraceObserverV2>(5)
         createAnsiLogObserver(result)
         createAgentLogObserver(result)
+        createResumeObserver(result)
         createGraphObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
@@ -66,6 +67,12 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
             session.logObserver = observer
             result << observer
         }
+    }
+
+    protected void createResumeObserver(Collection<TraceObserverV2> result) {
+        final observer = ResumeObserver.create()
+        if( observer )
+            result << observer
     }
 
     protected void createReportObserver(Collection<TraceObserverV2> result) {

@@ -34,6 +34,7 @@ import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.Osc7577
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
 import nextflow.util.StringUtils
@@ -184,9 +185,12 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {
-        return fusionEnabled()
+        final pb = fusionEnabled()
                 ? fusionProcessBuilder()
                 : localProcessBuilder()
+        // a task must not be able to register a resume command for the terminal of the run
+        pb.environment().remove(Osc7577.TOKEN_ENV)
+        return pb
     }
 
     long elapsedTimeMillis() {

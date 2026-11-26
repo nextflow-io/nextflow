@@ -254,6 +254,14 @@ Extra options for the Java VM that runs Nextflow, as a space-separated list, e.g
 
 Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
+##### `NXF_OSC7577`
+
+<AddedInVersion version="26.11" />
+
+When `true`, `nextflow run` tells the terminal how to resume it after the terminal restarts, using the [Program Resume Protocol (OSC 7577)](https://www.superlogical.com/rex/docs/build/program-resume) (default: `false`).
+
+Nextflow reports `nextflow run -resume <session-id> ...`, with the original arguments, and the launch directory. The terminal decides whether to run it again. Nothing is sent unless standard output is a terminal and the terminal set `OSC7577_TOKEN`. Nextflow does not pass that token to tasks.
+
 ##### `NXF_PARAMS_FILE`
 
 Defines the path location of the pipeline parameters file .

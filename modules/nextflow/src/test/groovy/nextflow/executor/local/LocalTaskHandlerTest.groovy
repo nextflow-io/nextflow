@@ -59,6 +59,29 @@ class LocalTaskHandlerTest extends Specification {
         builder.redirectOutput().file() == new File('/some/work/dir/.command.log')
     }
 
+    def 'should not pass the terminal resume token to the task' () {
+        given:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
+        def handler = Spy(new LocalTaskHandler(task, Mock(LocalExecutor)))
+        and:
+        def source = new ProcessBuilder()
+        source.environment().put('OSC7577_TOKEN', 'dummy-token-replace-me')
+        source.environment().put('SOME_OTHER_VAR', 'kept')
+
+        when:
+        def builder = handler.createLaunchProcessBuilder()
+        then:
+        handler.fusionEnabled() >> false
+        handler.localProcessBuilder() >> source
+        and:
+        !builder.environment().containsKey('OSC7577_TOKEN')
+        builder.environment().get('SOME_OTHER_VAR') == 'kept'
+    }
+
     def 'should create fusion process builder' () {
         given:
         Global.config = [:]

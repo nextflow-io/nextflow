@@ -72,6 +72,8 @@ class Launcher {
 
     private String cliString
 
+    private String launcherPath
+
     private List<CmdBase> allCommands
 
     private List<String> normalizedArgs
@@ -196,6 +198,7 @@ class Launcher {
     @PackageScope
     Launcher parseMainArgs(String... args) {
         this.cliString = makeCli(System.getenv('NXF_CLI'), args)
+        this.launcherPath = ResumeCommand.launcherPath(System.getenv('NXF_CLI'), args)
         this.colsString = System.getenv('COLUMNS')
 
         normalizedArgs = normalizeArgs(args)
@@ -295,6 +298,9 @@ class Launcher {
     List<String> getNormalizedArgs() { normalizedArgs }
 
     String getCliString() { cliString }
+
+    /** The program that launched this run, as an absolute path when the user ran one */
+    String getLauncherPath() { launcherPath }
 
     boolean isDaemon() { daemonMode }
 
