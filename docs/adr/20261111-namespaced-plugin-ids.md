@@ -185,7 +185,7 @@ Plugin-Namespace: myorg
 
 ### Nextflow
 
-**ID check.** Nextflow does not check the naming rules. The registry does. Nextflow checks only the structure of a namespaced ID. It needs this check because it turns the ID into file paths, and some sources never call the registry (offline mode, test repositories, local plugins). For a namespaced ID, `PluginRef.parse()` refuses more than one `/`, an empty part, a part equal to `.` or `..`, and a `~`. Unscoped IDs are not checked, as today.
+**ID check.** Nextflow does not check the naming rules. The registry does. Nextflow checks only the structure of a namespaced ID. It needs this check because it turns the ID into file paths, and some sources never call the registry (offline mode, test repositories, local plugins). For a namespaced ID, `PluginRef.parse()` refuses more than one `/`, an empty part, a part equal to `.` or `..`, and a `~`. Unscoped IDs are not checked, as today. This means an unscoped ID with a `~`, such as `a~b`, gets the same store folder as `a/b`. The public registry refuses `~` in plugin names, so this can only happen with local or test repositories.
 
 **File names.** Every file name built from the ID uses a flat name, with `~` in place of `/` (`PluginRef.dirName`): `myorg/nf-foo` becomes `myorg~nf-foo`.
 
@@ -246,9 +246,9 @@ Nextflow skips the registry call for pinned plugins already in the store. When a
 - The offline docs say: fill the store online with the Nextflow version used offline, and copy it with links kept (`cp -a`, `rsync -a`).
 - `nextflow plugin install` asks the registry for every requested plugin, also for plugins already in the store, so it can add the missing links.
 
-**Registry refuses a namespaced ID.** An old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows the registry response as a warning, with a note that the registry may not support namespaced plugins. The run then fails with "Cannot find version", as today.
+**Registry refuses a namespaced ID.** An old registry answers 400 to a metadata request with a `/` in an ID. A new registry can also refuse one (bad name, old Nextflow). Nextflow shows the registry response as a warning, with a note that the registry may not support namespaced plugins. The run then fails with "Cannot find version", as today. The note is added only to a 400 answer, not to errors such as 429 or 503.
 
-**Several registries.** `registry.url` can list several registries. Nextflow asks each one for the requested IDs and combines the releases of each ID. When two registries serve the same version, the first one in the list wins. With a moved plugin:
+**Several registries.** `registry.url` can list several registries. Nextflow asks each one for the requested IDs and combines the releases of each ID. When two registries serve the same version, the first one in the list wins. A registry that refuses an ID is skipped, and the next one is asked. With a moved plugin:
 
 - One registry moved `nf-foo` to `myorg`, another has plain `nf-foo` and no move (a mirror, or an older registry). A request for `nf-foo` gives one plugin, `myorg/nf-foo`, with the releases of both registries. The list order decides only which registry wins a version they both serve. A release that only the other registry has is stored in `myorg~nf-foo-<ver>` and loads as `myorg/nf-foo`, like an old release of a moved plugin.
 - The same two registries, with a request for `myorg/nf-foo`. Only the registry that moved the plugin knows this ID. The other one returns nothing (new registry) or refuses the ID (old registry, shown as a warning). Its plain releases are not used. Nextflow does not also ask for the plain name: that is one more request per registry, only to cover a registry that did not move the plugin.
@@ -264,9 +264,9 @@ Nextflow skips the registry call for pinned plugins already in the store. When a
 - Reuses its namespace model for modules and pipelines: ID validation with an optional `<namespace>/` prefix, a `namespace_id` column on plugins, publish permission through namespace membership, `%2F`-encoded IDs in API routes, download file name `<name>-<version>.zip`, and a `plugins/` prefix in OCI storage.
 - Namespaced plugins are left out of the legacy `plugins.json`. Moved plugins stay in it under their plain name.
 - On publish, it checks `Plugin-Id` against the plugin name and `Plugin-Namespace` against the namespace. A moved plugin may publish without `Plugin-Namespace`, for patch releases built from older branches.
-- It refuses a namespaced ID when the request's `nextflowVersion` is older than a configured minimum: the first Nextflow release that reads `Plugin-Namespace`. For such a client, `/dependencies` also leaves out namespaced plugins found in the dependency walk, and the releases that depend on one.
+- It refuses a namespaced ID when the request's `nextflowVersion` is older than a configured minimum: the first edge release that reads `Plugin-Namespace` (planned: 26.12.0-edge). The docs name the stable release, 27.04. For such a client, `/dependencies` also leaves out namespaced plugins found in the dependency walk, and the releases that depend on one.
 - Move: the owner of an unscoped plugin who is a member of the target namespace, or an admin, moves it from the plugin page. The record keeps its ID and gets the namespace. Both IDs resolve to it, and `/dependencies` returns the `canonicalId` hint.
-- Revoked namespace: the namespaced ID returns 410, and the plain name of a moved plugin keeps working.
+- Revoked namespace: the namespaced ID returns 410 on metadata and download. `/dependencies` leaves it out, so Nextflow reports "Cannot find version", not "revoked". The plain name of a moved plugin keeps working.
 - Enforcement is a registry flag (`REGISTRY_PLUGINS_NAMESPACE_ENFORCED`), off by default. When on, unscoped plugins that did not move cannot publish, and new unscoped plugins cannot be claimed.
 
 See the ADR in the registry repository.
