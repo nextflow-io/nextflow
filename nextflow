@@ -256,10 +256,27 @@ function clean_unused_versions() {
     done
 }
 
+# prints the name of the CI service this runs on, if any -- only whether a variable is set
+# is checked, its value is never read or sent
+function ci_provider() {
+    local x name
+    for x in GITHUB_ACTIONS:github GITLAB_CI:gitlab BITBUCKET_BUILD_NUMBER:bitbucket TF_BUILD:azure \
+             CIRCLECI:circleci JENKINS_URL:jenkins BUILDKITE:buildkite CODEBUILD_BUILD_ID:codebuild \
+             TEAMCITY_VERSION:teamcity TRAVIS:travis DRONE:drone; do
+        name=${x%%:*}
+        [[ ${!name:-} ]] && printf '%s' "${x#*:}" && return
+    done
+    [[ ${CI:-false} != false && $CI != 0 ]] && printf 'other'
+}
+
 function check_latest() {
     [[ $cmd != run ]] && return 0
     [[ $NXF_OFFLINE == true || $NXF_DISABLE_CHECK_LATEST == true ]] && return 0
-    local latest=$(get_ver "$NXF_BASE/$(current_ver)/version?current=$NXF_VER")
+    local query="current=$NXF_VER"
+    [[ $module_run ]] && query+="&cmd=module-run"
+    local ci=$(ci_provider)
+    [[ $ci ]] && query+="&ci=$ci"
+    local latest=$(get_ver "$NXF_BASE/$(current_ver)/version?$query")
     if [[ -n "$latest" && $(cmp_ver "$latest" "$NXF_VER") -gt 0 ]]; then
       echo_yellow "Nextflow $latest is available - Please consider updating your version to it"
     fi
@@ -325,6 +342,8 @@ declare -a commands=(clone config drop help history info ls pull run view node c
 [ "$NXF_CLI_OPTS" ] && args+=($NXF_CLI_OPTS)
 
 cmd=''
+prev=''
+module_run=''
 while [[ $# != 0 ]]; do
     case $1 in
     -D*)
@@ -358,9 +377,14 @@ while [[ $# != 0 ]]; do
       fi
       ;;
     *)
-      [[ $1 && $1 != -* && ! "$cmd" && ${commands[*]} =~ $1 ]] && cmd=$1
+      if [[ $1 && $1 != -* && ! "$cmd" && ${commands[*]} =~ $1 ]]; then
+        cmd=$1
+        # `module run` is parsed as `run` (`module` isn't in $commands)
+        [[ $cmd == run && ($prev == module || $prev == modules) ]] && module_run=1
+      fi
       ;;
     esac
+    prev=$1
     shift
 done
 

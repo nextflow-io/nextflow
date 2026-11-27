@@ -122,6 +122,8 @@ Defines the DSL version that should be used in not specified otherwise in the sc
 
 Nextflow automatically checks for a newer version of itself unless this option is enabled (default: `false`).
 
+The check runs for `nextflow run` and `nextflow module run`. The request sends the current Nextflow version, whether the command was `module run`, and the name of the CI service (e.g. `github`, `gitlab`) when one is detected from its standard environment variables. The values of those variables, the pipeline name and its parameters are never sent.
+
 ##### `NXF_DISABLE_JOBS_CANCELLATION`
 
 Disables the cancellation of child jobs on workflow execution termination.
