@@ -43,6 +43,7 @@ class ExecutorOptsTest extends Specification {
         then:
         config.endpoint == 'https://sched.example.com'
         config.region == null
+        config.additionalRegions == null
         config.provider == null
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('5 sec')
@@ -88,6 +89,65 @@ class ExecutorOptsTest extends Specification {
         then:
         config.endpoint == 'https://sched.example.com'
         config.region == 'us-west-2'
+    }
+
+    def 'should parse additional regions' () {
+        expect:
+        new ExecutorOpts([endpoint: 'https://sched.example.com', additionalRegions: VALUE]).additionalRegions*.region == EXPECTED
+
+        where:
+        VALUE                                           | EXPECTED
+        null                                            | null
+        []                                              | null
+        ''                                              | null
+        ['us-east-1', 'us-west-2']                      | ['us-east-1', 'us-west-2']
+        'us-east-1'                                     | ['us-east-1']
+        'us-east-1, us-west-2'                          | ['us-east-1', 'us-west-2']
+        [' us-east-1 ', '']                             | ['us-east-1']
+        ['us-east-1', [region: 'us-west-2']]            | ['us-east-1', 'us-west-2']
+        [null, 'us-east-1']                             | ['us-east-1']
+    }
+
+    def 'should parse additional regions with network' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            additionalRegions: [
+                'us-east-1',
+                [region: 'us-west-2', network: [vpcId: 'vpc-1', subnetIds: ['subnet-1', 'subnet-2'], securityGroups: 'sg-1, sg-2']],
+                [region: 'eu-west-1', network: [subnetIds: ['subnet-3']]],
+                [region: 'ap-south-1', network: [:]]
+            ]
+        ])
+
+        then:
+        config.additionalRegions == [
+            new AdditionalRegionOpts('us-east-1'),
+            new AdditionalRegionOpts('us-west-2', 'vpc-1', ['subnet-1', 'subnet-2'], ['sg-1', 'sg-2']),
+            new AdditionalRegionOpts('eu-west-1', null, ['subnet-3'], null),
+            new AdditionalRegionOpts('ap-south-1')
+        ]
+        !config.additionalRegions[0].hasNetwork()
+        config.additionalRegions[1].hasNetwork()
+        config.additionalRegions[2].hasNetwork()
+        !config.additionalRegions[3].hasNetwork()
+    }
+
+    def 'should reject invalid additional regions' () {
+        when:
+        new ExecutorOpts([endpoint: 'https://sched.example.com', additionalRegions: VALUE])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains(MESSAGE)
+
+        where:
+        VALUE                                                       | MESSAGE
+        [[network: [vpcId: 'vpc-1']]]                               | "Missing 'region'"
+        [[region: ' ']]                                             | "Missing 'region'"
+        [[region: 'us-east-1', subnets: ['subnet-1']]]              | "Unknown option 'subnets' in 'seqera.executor.additionalRegions'"
+        [[region: 'us-east-1', network: 'vpc-1']]                   | "Invalid 'network'"
+        [[region: 'us-east-1', network: [vpc: 'vpc-1']]]            | "Unknown option 'vpc' in 'seqera.executor.additionalRegions.network'"
     }
 
     def 'should create config with custom batch flush interval' () {

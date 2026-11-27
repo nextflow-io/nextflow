@@ -387,6 +387,7 @@ class SeqeraExecutorTest extends Specification {
             provider: 'aws',
             strategy: 'vm',
             region: 'eu-west-1',
+            additionalRegions: ['eu-central-1', [region: 'eu-west-2', network: [vpcId: 'vpc-1', subnetIds: ['subnet-1'], securityGroups: ['sg-1']]]],
             fusionMode: 'native'
         )
         def executor = new SeqeraExecutor()
@@ -402,6 +403,11 @@ class SeqeraExecutorTest extends Specification {
         captured.getProvider() == 'aws'
         captured.getStrategy() == 'vm'
         captured.getRegion() == 'eu-west-1'
+        captured.getAdditionalRegions()*.getRegion() == ['eu-central-1', 'eu-west-2']
+        captured.getAdditionalRegions()[0].getNetwork() == null
+        captured.getAdditionalRegions()[1].getNetwork().getVpcId() == 'vpc-1'
+        captured.getAdditionalRegions()[1].getNetwork().getSubnetIds() == ['subnet-1']
+        captured.getAdditionalRegions()[1].getNetwork().getSecurityGroups() == ['sg-1']
         captured.getFusionMode() == FusionMode.NATIVE
 
         cleanup:
