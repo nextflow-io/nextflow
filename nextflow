@@ -125,7 +125,7 @@ function get_ver() {
     if command -v curl &>/dev/null; then
         curl -fsSL "$1"
     elif command -v wget &>/dev/null; then
-        wget "$1" >/dev/null 2>&1
+        wget -qO- "$1" 2>/dev/null
     else
         echo_red "ERROR: Cannot find 'curl' nor 'wget' utility -- please install one of them"
         exit 1
