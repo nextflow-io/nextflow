@@ -47,11 +47,25 @@ class PluginRef implements Comparable<PluginRef> {
         final tokens = fqid.tokenize('@') as List<String>
         final id = tokens[0]
         final ver = tokens[1]
+        // '~' replaces '/' in file names, so a namespaced id cannot contain it
+        final parts = id?.contains('/') ? id.split('/', -1) : null
+        if( parts && (parts.size() > 2 || parts.any { it in ['', '.', '..'] || it.contains('~') }) )
+            throw new IllegalArgumentException("Invalid plugin ID '$id' -- expected format: [<namespace>/]<name>")
         if( ver || defaultPlugins==null )
             return new PluginRef(id, ver)
         if( defaultPlugins.hasPlugin(id) )
             return defaultPlugins.getPlugin(id)
         return new PluginRef(id)
+    }
+
+    /** File name prefix of a plugin id: `myorg/nf-foo` becomes `myorg~nf-foo` */
+    static String dirName(String id) {
+        return id.replace('/', '~')
+    }
+
+    /** Name part of a plugin id: `myorg/nf-foo` gives `nf-foo` */
+    static String name(String id) {
+        return id.substring(id.indexOf('/')+1)
     }
 
     @Override

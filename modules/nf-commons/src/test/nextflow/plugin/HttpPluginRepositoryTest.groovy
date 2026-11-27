@@ -24,6 +24,7 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule
 import nextflow.BuildInfo
 import nextflow.Global
 import org.junit.Rule
+import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -70,6 +71,58 @@ class HttpPluginRepositoryTest extends Specification {
         then:
         def plugins = unit.getPlugins()
         plugins.size() == 0
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'prefetch the namespaced ID of a moved plugin'() {
+        given:
+        wiremock.stubFor(get(urlPathEqualTo("/v1/plugins/dependencies"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    { "id": "nf-bar", "releases": [ { "version": "1.0.0", "url": "http://example.com/bar.zip", "date": "2025-03-21T10:40:36Z" } ] },
+                    { "id": "nf-foo", "canonicalId": "myorg/nf-foo", "releases": [ { "version": "1.0.0", "url": "http://example.com/foo.zip", "date": "2025-03-21T10:40:36Z" } ] }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("nf-bar")])
+
+        then:
+        unit.canonicalIds == ['nf-foo': 'myorg/nf-foo']
+        unit.getPlugins().keySet() == ['nf-bar', 'nf-foo', 'myorg/nf-foo'] as Set
+        unit.getPlugin('myorg/nf-foo').is(unit.getPlugin('nf-foo'))
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'ignore an invalid canonicalId'() {
+        given:
+        def release = '"releases": [ { "version": "1.0.0", "url": "http://example.com/a.zip", "date": "2025-03-21T10:40:36Z" } ]'
+        wiremock.stubFor(get(urlPathEqualTo("/v1/plugins/dependencies"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
+                  "plugins": [
+                    { "id": "nf-a", "canonicalId": "myorg/nf-other", $release },
+                    { "id": "nf-b", "canonicalId": "a/b/nf-b", $release },
+                    { "id": "nf-c", "canonicalId": "my~org/nf-c", $release },
+                    { "id": "myorg/nf-d", "canonicalId": "other/nf-d", $release },
+                    { "id": "nf-e", "canonicalId": "myorg/nf-e@1.0.0", $release },
+                    { "id": "nf-f", "canonicalId": "myorg/nf-f", $release }
+                  ]
+                }
+                """)))
+
+        when:
+        unit.prefetch([new PluginRef("nf-a")])
+
+        then:
+        unit.canonicalIds == ['nf-f': 'myorg/nf-f']
+        unit.getPlugins().keySet() == ['nf-a', 'nf-b', 'nf-c', 'myorg/nf-d', 'nf-e', 'nf-f', 'myorg/nf-f'] as Set
     }
 
     // ------------------------------------------------------------------------
@@ -200,6 +253,64 @@ class HttpPluginRepositoryTest extends Specification {
         then:
         noExceptionThrown()
         unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'add a namespace hint when the registry refuses a namespaced plugin id'() {
+        given:
+        def body = '{"type":"INVALID_PLUGIN_ID","message":"Plugin id \'myorg/nf-foo\' is invalid"}'
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody(body)))
+
+        when:
+        unit.fetchPlugin('myorg/nf-foo')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.startsWith('Invalid response while fetching plugin metadata from:')
+        e.message.contains(body)
+        e.message.endsWith('\nThe registry may not support namespaced plugins')
+    }
+
+    def 'add no namespace hint when the registry fails for another reason'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(STATUS).withBody('Error')))
+
+        when:
+        unit.fetchPlugin('myorg/nf-foo')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.contains("http status: $STATUS")
+        !e.message.contains('namespaced')
+
+        where:
+        STATUS << [404, 429, 503]
+    }
+
+    def 'report a plugin as not found when the registry refuses it'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=myorg%2Fnf-foo&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody('Bad request')))
+
+        expect:
+        unit.getPlugin('myorg/nf-foo') == null
+    }
+
+    def 'add no namespace hint when the registry refuses an unscoped plugin id'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse().withStatus(400).withBody('Bad request')))
+
+        when:
+        unit.fetchPlugin('nf-fake')
+
+        then:
+        def e = thrown(PluginRuntimeException)
+        e.message.startsWith('Invalid response while fetching plugin metadata from:')
+        !e.message.contains('namespaced')
     }
 
     // ------------------------------------------------------------------------

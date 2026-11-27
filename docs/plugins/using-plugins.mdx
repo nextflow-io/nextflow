@@ -15,6 +15,31 @@ A plugin identifier consists of the plugin name and version, separated by an `@`
 nf-hello@0.5.0
 ```
 
+<AddedInVersion version="27.04" />
+
+The plugin name can be prefixed with a namespace, separated by a `/` symbol. The full format is `[<namespace>/]<name>[@<version>]`:
+
+```
+myorg/nf-foo@1.0.0
+```
+
+The namespace is optional. Plugins with the same name in different namespaces, such as `myorg/nf-foo` and `otherorg/nf-foo`, are different plugins and can be used in the same run.
+
+An existing plugin can move into a namespace and keep its name, for example from `nf-foo` to `myorg/nf-foo`. The plugin zip keeps `Plugin-Id: nf-foo` in its `MANIFEST.MF` file and declares the namespace in the `Plugin-Namespace` attribute:
+
+```
+Plugin-Id: nf-foo
+Plugin-Namespace: myorg
+```
+
+Nextflow loads a moved plugin as `myorg/nf-foo`. This is true even if a pipeline or another plugin asks for `nf-foo`. The plugin is loaded only once. When the configuration or the `-plugins` option uses `nf-foo`, Nextflow prints a warning such as:
+
+```
+Plugin `nf-foo` has moved to `myorg/nf-foo` -- update your config
+```
+
+Older Nextflow versions ignore `Plugin-Namespace` and keep loading the plugin as `nf-foo`.
+
 The plugin version is optional. If it is not specified, Nextflow will download the latest version of the plugin that meets the minimum Nextflow version requirements specified by the plugin.
 
 :::note
@@ -42,6 +67,18 @@ plugins {
 }
 ```
 
+Use the full plugin ID to declare a namespaced plugin and to include its functions:
+
+```nextflow
+plugins {
+    id 'myorg/nf-foo@1.0.0'
+}
+```
+
+```nextflow
+include { foo } from 'plugin/myorg/nf-foo'
+```
+
 To configure plugins at runtime, use the `-plugins` option. For example:
 
 ```bash
@@ -56,23 +93,35 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
 
+Each plugin is stored in a directory named `<name>-<version>`. A namespaced plugin is stored in a directory named `<namespace>~<name>-<version>`.
+
+A moved plugin is stored once. Nextflow creates a symbolic link with the other name, for example `nf-foo-1.0.0` pointing to `myorg~nf-foo-1.0.0`. Nextflow uses these links to know which plugins moved when it runs offline.
+
 ## Offline usage
 
 When running Nextflow in an offline environment, any required plugins must be downloaded and moved into the offline environment prior to any runs.
 
 To use Nextflow plugins in an offline environment:
 
-1. Install a self-contained version of Nextflow in an environment with an internet connection. See [Standalone distribution][install-standalone] for more information.
+1. Install a self-contained version of Nextflow in an environment with an internet connection. See [Standalone distribution][install-standalone] for more information. Use the same Nextflow version that you use offline.
 
 2. Run `nextflow plugin install <plugin-name>@<version>` for each required plugin to download it. Alternatively, run the pipeline once, which will automatically download all plugins required by the pipeline.
 
-3. Copy the `nextflow` binary and `$HOME/.nextflow` directory to the offline environment.
+3. Copy the `nextflow` binary and `$HOME/.nextflow` directory to the offline environment. Keep the symbolic links in the plugins directory, for example with `cp -a` or `rsync -a`.
 
 4. Specify each plugin and its version in Nextflow configuration files or at runtime. See [Configuration][using-plugins-config] for more information.
 
     :::warning
     Nextflow will attempt to download newer versions of plugins if their versions are not set. See [Identifiers][using-plugins-identifiers] for more information.
     :::
+
+:::note
+A plugin directory created by a Nextflow version without namespace support has no links for moved plugins. Run `nextflow plugin install` again with a newer Nextflow version, online, to add them.
+:::
+
+:::warning
+An old Nextflow (no namespace support) can fail offline on a version range such as `nf-foo@~1.0.0`. This happens when it shares the plugins directory with a newer Nextflow. To avoid this, use exact versions or a separate plugins directory.
+:::
 
 [install-standalone]: ../install#standalone-distribution
 [using-plugins-config]: ./using-plugins#configuration
