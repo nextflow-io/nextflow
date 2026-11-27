@@ -356,10 +356,10 @@ product = wrapper.descriptor.pluginId.tokenize('/').last()
 
 ### Rollout
 
-1. Registry and Gradle plugin releases, with enforcement off.
-2. Nextflow release with namespace support, including the core plugin ID change.
-3. Set the registry minimum Nextflow version for namespaced IDs to that release.
-4. Move the core plugins to `nextflow-io` and the Seqera plugins to `seqera`. Apply the xpack product-code change before the first build with `Plugin-Namespace`.
+1. Release the registry and the Gradle plugin, with enforcement off. Set `namespaced-min-nextflow-version` to 26.12.0-edge, the first release planned with namespace support. No Nextflow release is that new yet, so this refuses nothing that works today. If namespace support misses that release, change the value.
+2. Move the core plugins to `nextflow-io`. This must come before step 3, because that release asks for `nextflow-io/...` IDs. Older Nextflow keeps using the plain names.
+3. Nextflow release with namespace support, including the core plugin ID change.
+4. Move the Seqera plugins to `seqera`. Apply the xpack product-code change before the first build with `Plugin-Namespace`.
 5. Tell plugin authors when enforcement will be turned on, with a how-to for claiming a namespace and moving a plugin.
 6. Turn enforcement on.
 
