@@ -71,6 +71,16 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String region
 
+    @ConfigOption(types=[String])
+    @Description("""
+        Additional cloud regions the scheduler can use for task execution, besides `region`.
+        Each entry is either a region name or a map with the `region` and, optionally, the
+        `network` to run tasks in (`vpcId`, `subnetIds`, `securityGroups`). For example:
+        `['us-east-1', [region: 'us-west-2', network: [vpcId: 'vpc-1', subnetIds: ['subnet-1'], securityGroups: ['sg-1']]]]`.
+        A comma-separated string of region names is also accepted.
+    """)
+    final List additionalRegions
+
     @ConfigOption
     @Description("""
         The EC2 key pair name for SSH access to instances.
@@ -176,6 +186,7 @@ class ExecutorOpts implements ConfigScope {
         this.provider = opts.provider as String
         this.strategy = opts.strategy as String
         this.region = opts.region as String
+        this.additionalRegions = AdditionalRegionOpts.parse(opts.additionalRegions)
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
@@ -231,6 +242,10 @@ class ExecutorOpts implements ConfigScope {
 
     String getRegion() {
         return region
+    }
+
+    List<AdditionalRegionOpts> getAdditionalRegions() {
+        return additionalRegions as List<AdditionalRegionOpts>
     }
 
     String getKeyPairName() {

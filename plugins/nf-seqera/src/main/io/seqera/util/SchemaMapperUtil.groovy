@@ -17,12 +17,15 @@
 package io.seqera.util
 
 import groovy.transform.CompileStatic
+import io.seqera.config.AdditionalRegionOpts
 import io.seqera.config.MachineRequirementOpts
 import io.seqera.config.SchedulingRequirementOpts
+import io.seqera.sched.api.schema.v1a1.AdditionalRegion
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.DiskRequirement
 import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.MachineRequirement
+import io.seqera.sched.api.schema.v1a1.NetworkSpec
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import io.seqera.sched.api.schema.v1a1.SchedulingRequirement
@@ -87,6 +90,29 @@ class SchemaMapperUtil {
             return null
         new SchedulingRequirement()
             .maxCpusPerUser(opts.maxCpusPerUser)
+    }
+
+    /**
+     * Maps the additional regions config to the AdditionalRegion API objects.
+     *
+     * @param opts the config options (can be null)
+     * @return the AdditionalRegion API objects, or null if none is specified
+     */
+    static List<AdditionalRegion> toAdditionalRegions(List<AdditionalRegionOpts> opts) {
+        if (!opts)
+            return null
+        return opts.collect { AdditionalRegionOpts it ->
+            new AdditionalRegion()
+                .region(it.region)
+                .network(it.hasNetwork() ? toNetworkSpec(it) : null)
+        }
+    }
+
+    private static NetworkSpec toNetworkSpec(AdditionalRegionOpts opts) {
+        new NetworkSpec()
+            .vpcId(opts.vpcId)
+            .subnetIds(opts.subnetIds)
+            .securityGroups(opts.securityGroups)
     }
 
     /**

@@ -16,10 +16,13 @@
 
 package io.seqera.util
 
+import io.seqera.config.AdditionalRegionOpts
 import io.seqera.config.MachineRequirementOpts
 import io.seqera.config.SchedulingRequirementOpts
+import io.seqera.sched.api.schema.v1a1.AdditionalRegion
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
+import io.seqera.sched.api.schema.v1a1.NetworkSpec
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import nextflow.cloud.types.PriceModel
@@ -657,6 +660,21 @@ class MapperUtilTest extends Specification {
         def e = thrown(IllegalArgumentException)
         e.message.contains('diskType')
         e.message.contains('nvme')
+    }
+
+    def 'should map additional regions' () {
+        expect:
+        SchemaMapperUtil.toAdditionalRegions(null) == null
+        SchemaMapperUtil.toAdditionalRegions([]) == null
+
+        and:
+        SchemaMapperUtil.toAdditionalRegions([
+            new AdditionalRegionOpts('us-east-1'),
+            new AdditionalRegionOpts('us-west-2', 'vpc-1', ['subnet-1'], ['sg-1'])
+        ]) == [
+            new AdditionalRegion().region('us-east-1'),
+            new AdditionalRegion().region('us-west-2').network(new NetworkSpec().vpcId('vpc-1').subnetIds(['subnet-1']).securityGroups(['sg-1']))
+        ]
     }
 
 }

@@ -13,6 +13,25 @@ Preview feature: may change in a future release.
 
 The `seqera` scope controls the interactions with Seqera services, including the [Seqera executor][seqera-executor].
 
+##### `seqera.executor.additionalRegions`
+
+Additional cloud regions the scheduler can use for task execution, besides `region`. Each entry is either a region name or a map with the `region` and, optionally, the `network` to run tasks in that region:
+
+- `vpcId`: the VPC ID.
+- `subnetIds`: the list of subnet IDs.
+- `securityGroups`: the list of security group IDs.
+
+For example:
+
+```groovy
+seqera.executor.additionalRegions = [
+    'us-east-1',
+    [region: 'us-west-2', network: [vpcId: 'vpc-123', subnetIds: ['subnet-a', 'subnet-b'], securityGroups: ['sg-1']]]
+]
+```
+
+A comma-separated string of region names (e.g. `'us-east-1,us-west-2'`) is also accepted.
+
 ##### `seqera.executor.autoLabels`
 
 <DeprecatedInVersion version="26.10">
